@@ -15,6 +15,7 @@ import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
+import { getFreeStarterTemplate } from './data/freeStarterTemplate';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
@@ -1762,6 +1763,50 @@ export default function App() {
     setActiveSlideId(duplicatedSlides[0].id);
   };
 
+  // Applies the free-tier starter template: a fixed 5-page site (Home, About, Our Work,
+  // Pricing, Contact) linked through one shared navbar. This REPLACES the whole site
+  // (all current pages/elements) rather than appending, since it is a full starter-site action.
+  const handleApplyFreeStarterTemplate = () => {
+    const confirmed = window.confirm(
+      'سيتم استبدال كل صفحات موقعك الحالية بقالب جاهز من خمس صفحات (مدخل، من نحن، أعمالنا، الأسعار، اتصال). هل تريد المتابعة؟'
+    );
+    if (!confirmed) return;
+
+    const { pages: templatePages, elements: templateElements } = getFreeStarterTemplate();
+    const suffix = Date.now();
+
+    const idMap: Record<string, string> = {};
+    templatePages.forEach((p) => { idMap[p.id] = `${p.id}-${suffix}`; });
+    templatePages.forEach((p) => {
+      p.slides.forEach((s) => { idMap[s.id] = `${s.id}-${suffix}`; });
+    });
+
+    const newPages: Page[] = templatePages.map((p) => ({
+      ...p,
+      id: idMap[p.id],
+      slides: p.slides.map((s) => ({ ...s, id: idMap[s.id] })),
+      navbar: {
+        ...p.navbar,
+        items: p.navbar.items.map((item) => ({
+          ...item,
+          linkTargetId: item.linkTargetId ? (idMap[item.linkTargetId] || item.linkTargetId) : item.linkTargetId,
+        })),
+        ctaLinkTargetId: p.navbar.ctaLinkTargetId ? (idMap[p.navbar.ctaLinkTargetId] || p.navbar.ctaLinkTargetId) : p.navbar.ctaLinkTargetId,
+      },
+    }));
+
+    const newElements: CanvasElement[] = templateElements.map((el) => ({
+      ...el,
+      id: `${el.id}-${suffix}`,
+      slideId: idMap[el.slideId] || el.slideId,
+    }));
+
+    setPages(newPages);
+    setElements(newElements);
+    setActivePageId(newPages[0].id);
+    setActiveSlideId(newPages[0].slides[0].id);
+  };
+
   const handleUpdatePage = (updates: Partial<Page>) => {
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, ...updates } : p));
   };
@@ -2117,6 +2162,7 @@ export default function App() {
           onSelectTableCell={setActiveTableCell}
           navbar={currentPage.navbar}
           isPreviewActive={isPreviewActive}
+          activePageId={activePageId}
         />
         {isCanvasLoading && (
           <div className="absolute inset-0 bg-white/75 backdrop-blur-xs z-50 flex flex-col items-center justify-center select-none text-right font-sans">
@@ -2148,6 +2194,7 @@ export default function App() {
         onCopyCurrentPage={handleCopyCurrentPage}
         onAddSlideTemplate={handleAddSlideTemplate}
         onAddPageTemplate={handleAddPageTemplate}
+        onApplyFreeStarterTemplate={handleApplyFreeStarterTemplate}
         onDeleteSlide={handleDeleteSlide}
         onUpdateSlideHeight={handleUpdateSlideHeight}
         onAddElement={(type, customContent, customStyles, extraData) => {
@@ -2156,11 +2203,8 @@ export default function App() {
         onAddGroup={handleAddGroup}
         navbar={currentPage.navbar}
         onUpdateNavbar={(updates) => {
-          setPages(pages.map(p => 
-            p.id === currentPage.id 
-              ? { ...p, navbar: { ...p.navbar, ...updates } } 
-              : p
-          ));
+          // The navbar is one shared header across the whole site: apply to every page, not just the current one
+          setPages(pages.map(p => ({ ...p, navbar: { ...p.navbar, ...updates } })));
         }}
         selectedElement={selectedElement}
         elements={elements}

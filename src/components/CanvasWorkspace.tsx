@@ -34,6 +34,7 @@ interface CanvasWorkspaceProps {
   onSelectElement: (id: string | null) => void;
   onSelectSlide: (slideId: string) => void;
   onSelectPage?: (pageId: string) => void;
+  activePageId?: string;
   onUpdateElementPosition: (id: string, x: number, y: number) => void;
   onUpdateElementSize: (id: string, width: number, height: number, x?: number, y?: number) => void;
   onUpdateElementRotation?: (id: string, rotation: number) => void;
@@ -668,6 +669,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onSelectElement,
   onSelectSlide,
   onSelectPage,
+  activePageId,
   onUpdateElementPosition,
   onUpdateElementSize,
   onUpdateElementRotation,
@@ -1906,15 +1908,38 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
             {/* Nav links */}
             <div className="hidden md:flex items-center gap-6 text-xs font-medium text-neutral-600">
-              {navbar.items.map((item) => (
-                <span key={item.id} className="hover:text-[#0071e3] cursor-pointer transition-colors">
-                  {item.label}
-                </span>
-              ))}
+              {navbar.items.map((item) => {
+                const isPageLink = item.linkType === 'page' && !!item.linkTargetId;
+                const isActive = isPageLink && item.linkTargetId === activePageId;
+                return (
+                  <span
+                    key={item.id}
+                    onClick={(e) => {
+                      if (isPageLink) {
+                        e.stopPropagation();
+                        onSelectPage?.(item.linkTargetId as string);
+                      }
+                    }}
+                    className={`transition-colors ${
+                      isPageLink ? 'cursor-pointer hover:text-[#0071e3]' : 'cursor-default'
+                    } ${isActive ? 'text-[#0071e3] font-bold' : ''}`}
+                  >
+                    {item.label}
+                  </span>
+                );
+              })}
             </div>
 
             {/* Action CTA Button */}
-            <button className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95">
+            <button
+              onClick={(e) => {
+                if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
+                  e.stopPropagation();
+                  onSelectPage?.(navbar.ctaLinkTargetId);
+                }
+              }}
+              className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
+            >
               {navbar.ctaText || 'ابدأ الآن'}
             </button>
           </div>
@@ -3607,50 +3632,75 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           );
                         })()}
 
-                        {elem.type === 'pricing' && (
-                          <div className="w-full h-full bg-white rounded-2xl border border-black/[0.08] shadow-md p-4 flex flex-col justify-between text-right">
-                            {/* Plan Header */}
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-[10.5px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2.5 py-0.5 rounded-full">
-                                  {elem.pricingPlan || 'الباقة الأكثر طلباً'}
-                                </span>
-                                <span className="text-[11px] text-neutral-400 font-medium">★ مميز</span>
-                              </div>
-                              <div className="flex items-baseline gap-1 my-1">
-                                <span className="text-2xl font-black text-neutral-900 tracking-tight">
-                                  {elem.pricingPrice || '199 ر.س'}
-                                </span>
-                                <span className="text-xs text-neutral-500 font-medium">
-                                  / {elem.pricingPeriod || 'شهرياً'}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-neutral-500 mt-1">
-                                {elem.content || 'الحل الأمثل لإطلاق موقعك والبدء في استقبال العملاء.'}
-                              </p>
-                            </div>
-
-                            {/* Features Checklist */}
-                            <div className="space-y-1.5 my-2 border-t border-b border-black/[0.06] py-2.5">
-                              {(elem.pricingFeatures || [
-                                'تصميم متجاوب كامل مع الجوال',
-                                'دعم فني واستشارات متواصلة',
-                                'سيرفرات سريعة ونطاق مجاني',
-                                'شهادة أمان SSL مدمجة'
-                              ]).map((feat, fIdx) => (
-                                <div key={fIdx} className="flex items-center gap-2 text-xs text-neutral-700">
-                                  <span className="text-emerald-500 font-bold text-xs">✓</span>
-                                  <span className="truncate">{feat}</span>
+                        {elem.type === 'pricing' && (() => {
+                          const accent = elem.styles.color || '#0071e3';
+                          const cardBg = elem.styles.backgroundColor || '#ffffff';
+                          const cardBorderColor = elem.styles.borderColor || 'rgba(0,0,0,0.08)';
+                          const cardBorderWidth = elem.styles.borderWidth ?? 1;
+                          const cardRadius = elem.styles.borderRadius ?? 16;
+                          const isFeatured = !!elem.pricingFeatured;
+                          return (
+                            <div
+                              className={`w-full h-full p-4 flex flex-col justify-between text-right ${isFeatured ? 'shadow-lg' : 'shadow-sm'}`}
+                              style={{
+                                backgroundColor: cardBg,
+                                borderColor: cardBorderColor,
+                                borderWidth: cardBorderWidth,
+                                borderStyle: 'solid',
+                                borderRadius: cardRadius,
+                              }}
+                            >
+                              {/* Plan Header */}
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span
+                                    className="text-[10.5px] font-bold px-2.5 py-0.5 rounded-full"
+                                    style={{ color: accent, backgroundColor: `${accent}1a` }}
+                                  >
+                                    {elem.pricingPlan || 'الباقة الأكثر طلباً'}
+                                  </span>
+                                  {isFeatured && (
+                                    <span className="text-[11px] font-bold" style={{ color: accent }}>★ الأكثر طلباً</span>
+                                  )}
                                 </div>
-                              ))}
-                            </div>
+                                <div className="flex items-baseline gap-1 my-1">
+                                  <span className="text-2xl font-black text-neutral-900 tracking-tight">
+                                    {elem.pricingPrice || '199 ر.س'}
+                                  </span>
+                                  <span className="text-xs text-neutral-500 font-medium">
+                                    / {elem.pricingPeriod || 'شهرياً'}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-neutral-500 mt-1">
+                                  {elem.content || 'الحل الأمثل لإطلاق موقعك والبدء في استقبال العملاء.'}
+                                </p>
+                              </div>
 
-                            {/* CTA Button */}
-                            <button className="w-full py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-xl text-xs font-bold shadow-sm transition-all text-center">
-                              اشترك الآن وابدأ
-                            </button>
-                          </div>
-                        )}
+                              {/* Features Checklist */}
+                              <div className="space-y-1.5 my-2 border-t border-b border-black/[0.06] py-2.5">
+                                {(elem.pricingFeatures || [
+                                  'تصميم متجاوب كامل مع الجوال',
+                                  'دعم فني واستشارات متواصلة',
+                                  'سيرفرات سريعة ونطاق مجاني',
+                                  'شهادة أمان SSL مدمجة'
+                                ]).map((feat, fIdx) => (
+                                  <div key={fIdx} className="flex items-center gap-2 text-xs text-neutral-700">
+                                    <span className="text-emerald-500 font-bold text-xs">✓</span>
+                                    <span className="truncate">{feat}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* CTA Button */}
+                              <button
+                                className="w-full py-2 text-white rounded-xl text-xs font-bold shadow-sm transition-all text-center"
+                                style={{ backgroundColor: accent }}
+                              >
+                                {elem.pricingCtaText || 'اشترك الآن وابدأ'}
+                              </button>
+                            </div>
+                          );
+                        })()}
 
                         {elem.type === 'calendar' && (
                           <InteractiveCalendarWidget elem={elem} />

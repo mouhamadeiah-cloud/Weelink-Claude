@@ -101,6 +101,8 @@ export interface CanvasElement {
   pricingPrice?: string;
   pricingPeriod?: string;
   pricingFeatures?: string[];
+  pricingFeatured?: boolean; // shows the featured/recommended ribbon on this tier only
+  pricingCtaText?: string; // overrides the default CTA button text on the pricing card
   calendarTitle?: string;
   calendarSlots?: string[];
   calendarWorkingDays?: string[]; // e.g. ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday']
@@ -193,6 +195,8 @@ export interface NavbarItem {
   id: string;
   label: string;
   href: string;
+  linkType?: LinkType; // when 'page', clicking this item navigates to another page in the site
+  linkTargetId?: string; // target Page id (used when linkType === 'page')
 }
 
 export interface NavbarConfig {
@@ -201,6 +205,8 @@ export interface NavbarConfig {
   items: NavbarItem[];
   ctaText: string;
   ctaHref: string;
+  ctaLinkType?: LinkType; // when 'page', clicking the CTA button navigates to another page in the site
+  ctaLinkTargetId?: string; // target Page id (used when ctaLinkType === 'page')
   bgColor: string;
   textColor: string;
   isSticky: boolean;

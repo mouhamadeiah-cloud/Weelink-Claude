@@ -158,6 +158,7 @@ interface RightDrawerProps {
   onCopyCurrentPage?: (pageId: string) => void;
   onAddSlideTemplate?: (template: any) => void;
   onAddPageTemplate?: (template: any) => void;
+  onApplyFreeStarterTemplate?: () => void;
   onDeleteSlide: (slideId: string) => void;
   onUpdateSlideHeight: (slideId: string, height: number) => void;
   onAddElement: (type: ElementType, customContent?: string, customStyles?: any, extraData?: Partial<CanvasElement>) => void;
@@ -3045,350 +3046,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
   };
 };
 
-const SLIDE_TEMPLATES = [
-  {
-    name: 'شريحة هيرو ترحيبية 🚀',
-    description: 'شريحة رئيسية ترحيبية تحتوي على شعار، عنوان كبير، نص تعريفي، وزر تواصل مباشر.',
-    height: 520,
-    backgroundColor: '#ffffff',
-    elements: [
-      {
-        type: 'shape' as const,
-        name: 'بطاقة هيرو الخلفية',
-        x: 30,
-        y: 20,
-        width: 740,
-        height: 480,
-        isGroupContainer: true,
-        styles: {
-          backgroundColor: '#fafafa',
-          borderRadius: 24,
-          borderColor: 'rgba(0,0,0,0.06)',
-          shadow: 'apple'
-        },
-        content: ''
-      },
-      {
-        type: 'badge' as const,
-        name: 'شارة التميز',
-        x: 280,
-        y: 60,
-        width: 240,
-        height: 32,
-        content: '✦ خيارك الذكي لبناء المواقع',
-        styles: {
-          fontSize: 13,
-          backgroundColor: '#e6f1fc',
-          color: '#0071e3',
-          borderRadius: 12,
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'heading' as const,
-        name: 'العنوان الرئيسي للترحيب',
-        x: 80,
-        y: 110,
-        width: 640,
-        height: 100,
-        content: 'ابنِ حضورك الرقمي في دقائق معدودة وبلمسات فريدة',
-        styles: {
-          fontSize: 32,
-          fontWeight: 'bold',
-          color: '#1d1d1f',
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'paragraph' as const,
-        name: 'النص التعريفي المساعد',
-        x: 100,
-        y: 230,
-        width: 600,
-        height: 80,
-        content: 'منصتنا توفر لك حرية التصميم المطلقة عبر كانفاس السحب والإفلات التفاعلي، مع مئات الشرائح والمكونات الجاهزة لبناء موقع متجاوب يخدم أهدافك بالكامل وبكل ثقة.',
-        styles: {
-          fontSize: 15,
-          color: '#636366',
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'button' as const,
-        name: 'زر الانطلاق الفوري',
-        x: 280,
-        y: 330,
-        width: 240,
-        height: 48,
-        content: 'تواصل معنا الآن 📲',
-        styles: {
-          backgroundColor: '#0071e3',
-          color: '#ffffff',
-          fontSize: 16,
-          fontWeight: 'bold',
-          borderRadius: 16,
-          textAlign: 'center'
-        }
-      }
-    ]
-  },
-  {
-    name: 'شريحة الخدمات والميزات 🌟',
-    description: 'عرض مزايا وخدمات شركتك أو مشروعك في تصميم متقن يعتمد على 3 كروت متناسقة.',
-    height: 520,
-    backgroundColor: '#ffffff',
-    elements: [
-      {
-        type: 'heading' as const,
-        name: 'عنوان شريحة الخدمات',
-        x: 50,
-        y: 40,
-        width: 700,
-        height: 50,
-        content: 'ما الذي يجعل منصتنا الخيار الأفضل لك دائماً؟',
-        styles: {
-          fontSize: 24,
-          fontWeight: 'bold',
-          color: '#1d1d1f',
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'shape' as const,
-        name: 'ميزة الأداء الفائق',
-        x: 50,
-        y: 120,
-        width: 210,
-        height: 320,
-        isGroupContainer: true,
-        styles: {
-          backgroundColor: '#f5f5f7',
-          borderRadius: 20,
-          borderColor: 'rgba(0,0,0,0.04)'
-        },
-        content: ''
-      },
-      {
-        type: 'heading' as const,
-        name: 'عنوان الأداء',
-        x: 65,
-        y: 150,
-        width: 180,
-        height: 35,
-        content: 'سرعة فائقة البرق',
-        styles: {
-          fontSize: 16,
-          fontWeight: 'bold',
-          color: '#1d1d1f',
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'paragraph' as const,
-        name: 'تفاصيل الأداء',
-        x: 65,
-        y: 200,
-        width: 180,
-        height: 120,
-        content: 'موقعك سيفتح خلال أجزاء من الثانية بفضل خوادمنا الفائقة وتقنيات التخزين الذكية لحضور احترافي يتعدى كل الحدود وتطلعات زوارك.',
-        styles: {
-          fontSize: 12,
-          color: '#636366',
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'shape' as const,
-        name: 'ميزة الأمان المشدد',
-        x: 295,
-        y: 120,
-        width: 210,
-        height: 320,
-        isGroupContainer: true,
-        styles: {
-          backgroundColor: '#f5f5f7',
-          borderRadius: 20,
-          borderColor: 'rgba(0,0,0,0.04)'
-        },
-        content: ''
-      },
-      {
-        type: 'heading' as const,
-        name: 'عنوان الأمان',
-        x: 310,
-        y: 150,
-        width: 180,
-        height: 35,
-        content: 'أمان وتشفير كامل',
-        styles: {
-          fontSize: 16,
-          fontWeight: 'bold',
-          color: '#1d1d1f',
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'paragraph' as const,
-        name: 'تفاصيل الأمان',
-        x: 310,
-        y: 200,
-        width: 180,
-        height: 120,
-        content: 'حماية متكاملة لبياناتك وبيانات زوارك مع شهادات SSL مجانية وتخزين آمن ومبني كلياً بأعلى المعايير الأمنية التي تحميك.',
-        styles: {
-          fontSize: 12,
-          color: '#636366',
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'shape' as const,
-        name: 'ميزة التخصيص الحر',
-        x: 540,
-        y: 120,
-        width: 210,
-        height: 320,
-        isGroupContainer: true,
-        styles: {
-          backgroundColor: '#f5f5f7',
-          borderRadius: 20,
-          borderColor: 'rgba(0,0,0,0.04)'
-        },
-        content: ''
-      },
-      {
-        type: 'heading' as const,
-        name: 'عنوان التخصيص',
-        x: 555,
-        y: 150,
-        width: 180,
-        height: 35,
-        content: 'تخصيص لامتناهي',
-        styles: {
-          fontSize: 16,
-          fontWeight: 'bold',
-          color: '#1d1d1f',
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'paragraph' as const,
-        name: 'تفاصيل التخصيص',
-        x: 555,
-        y: 200,
-        width: 180,
-        height: 120,
-        content: 'عدل الألوان، والخطوط، والطبقات، والمسافات بحرية تامة دون أي قيود، وبشكل يعبر عن شخصيتك وتصميمك التجاري البديع.',
-        styles: {
-          fontSize: 12,
-          color: '#636366',
-          textAlign: 'center'
-        }
-      }
-    ]
-  },
-  {
-    name: 'شريحة حجز المواعيد والاتصال 📅',
-    description: 'شريحة متطورة مزودة بـ Kalender حجز موعد فعلي وزر تواصل أخضر لـ WhatsApp.',
-    height: 520,
-    backgroundColor: '#ffffff',
-    elements: [
-      {
-        type: 'heading' as const,
-        name: 'عنوان الحجز والاتصال',
-        x: 50,
-        y: 30,
-        width: 700,
-        height: 40,
-        content: 'تفضل بجدولة استشارة مجانية لمشروعك الآن',
-        styles: {
-          fontSize: 22,
-          fontWeight: 'bold',
-          color: '#1d1d1f',
-          textAlign: 'center'
-        }
-      },
-      {
-        type: 'calendar' as const,
-        name: 'جدول حجز المواعيد واللقاءات',
-        x: 50,
-        y: 85,
-        width: 700,
-        height: 340,
-        calendarTitle: 'مواعيد الاستشارة الفنية والتقنية والاجتماعات',
-        calendarSlots: ['09:00 ص - 10:00 ص', '11:00 ص - 12:00 م', '02:00 م - 03:00 م', '04:00 م - 05:00 م'],
-        content: 'احجز موعد استشارة',
-        styles: {
-          backgroundColor: '#ffffff',
-          borderRadius: 20,
-          shadow: 'apple'
-        }
-      },
-      {
-        type: 'button' as const,
-        name: 'زر واتساب الأخضر',
-        x: 250,
-        y: 445,
-        width: 300,
-        height: 45,
-        content: 'راسلنا مباشرة على واتساب 📲',
-        styles: {
-          backgroundColor: '#34c759',
-          color: '#ffffff',
-          fontSize: 14,
-          fontWeight: 'bold',
-          borderRadius: 14,
-          textAlign: 'center'
-        }
-      }
-    ]
-  }
-];
-
-const PAGE_TEMPLATES = [
-  {
-    name: 'صفحة هبوط متكاملة للتسويق (SaaS Core Landing)',
-    description: 'صفحة متكاملة تتألف من ٣ شرائح متتالية: ترحيب مميز، قائمة ميزات فريدة، وجدول الحجز والاتصال الفوري.',
-    slides: [
-      {
-        name: 'الترحيب الرئيسي',
-        height: 520,
-        backgroundColor: '#ffffff',
-        elements: SLIDE_TEMPLATES[0].elements
-      },
-      {
-        name: 'الميزات والخدمات',
-        height: 520,
-        backgroundColor: '#f9f9fb',
-        elements: SLIDE_TEMPLATES[1].elements
-      },
-      {
-        name: 'حجز المواعيد والتواصل',
-        height: 520,
-        backgroundColor: '#ffffff',
-        elements: SLIDE_TEMPLATES[2].elements
-      }
-    ]
-  },
-  {
-    name: 'صفحة الحجز المباشر السريع (Direct Action Hub)',
-    description: 'صفحة مخصصة للحصول على الإجراء السريع: تبدأ بجدولة المواعيد المباشرة وتنتهي ببطاقة تواصل رئيسية.',
-    slides: [
-      {
-        name: 'جدولة اللقاءات والاستشارات',
-        height: 520,
-        backgroundColor: '#ffffff',
-        elements: SLIDE_TEMPLATES[2].elements
-      },
-      {
-        name: 'بطاقة الترحيب والتعريف بالمنصة',
-        height: 520,
-        backgroundColor: '#f5f5f7',
-        elements: SLIDE_TEMPLATES[0].elements
-      }
-    ]
-  }
-];
+// (old primitive SLIDE_TEMPLATES / PAGE_TEMPLATES removed — replaced by the free starter template in src/data/freeStarterTemplate.ts)
 
 export const RightDrawer: React.FC<RightDrawerProps> = ({
   isOpen,
@@ -3411,6 +3069,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onCopyCurrentPage,
   onAddSlideTemplate,
   onAddPageTemplate,
+  onApplyFreeStarterTemplate,
   onDeleteSlide,
   onAddElement,
   onAddGroup,
@@ -12461,33 +12120,28 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           </button>
                         </div>
 
-                        {/* 2. Ready Pages Section */}
+                        {/* 2. Ready Site Template Section */}
                         <div className="space-y-2">
                           <h4 className="text-xs font-bold text-neutral-700 border-b border-neutral-100 pb-1.5 px-1">
-                            صفحات ويب جاهزة للتعديل والاستخدام:
+                            موقع جاهز للتعديل والاستخدام:
                           </h4>
-                          <div className="grid grid-cols-1 gap-2.5">
-                            {PAGE_TEMPLATES.map((tpl, pIdx) => (
-                              <button
-                                key={pIdx}
-                                type="button"
-                                onClick={() => onAddPageTemplate && onAddPageTemplate(tpl)}
-                                className="w-full bg-neutral-50 hover:bg-neutral-100/90 border border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
-                              >
-                                <div className="flex items-center justify-between w-full">
-                                  <span className="text-xs font-bold text-neutral-800 group-hover:text-[#0071e3] transition-colors">
-                                    {tpl.name}
-                                  </span>
-                                  <span className="text-[10px] text-[#0071e3] font-semibold bg-[#0071e3]/5 border border-[#0071e3]/10 px-1.5 py-0.5 rounded-md">
-                                    {tpl.slides.length} شرائح
-                                  </span>
-                                </div>
-                                <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
-                                  {tpl.description}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onApplyFreeStarterTemplate && onApplyFreeStarterTemplate()}
+                            className="w-full bg-gradient-to-br from-[#1F5D50]/5 to-[#1F5D50]/[0.02] hover:from-[#1F5D50]/10 hover:to-[#1F5D50]/5 border border-[#1F5D50]/20 hover:border-[#1F5D50] rounded-2xl p-3.5 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-bold text-neutral-800 group-hover:text-[#1F5D50] transition-colors">
+                                القالب الأساسي: موقع تعريفي بخمس صفحات
+                              </span>
+                              <span className="text-[10px] text-[#1F5D50] font-semibold bg-[#1F5D50]/10 border border-[#1F5D50]/15 px-1.5 py-0.5 rounded-md">
+                                5 صفحات
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
+                              مدخل، من نحن، أعمالنا، الأسعار، واتصل بنا — كل صفحة مرتبطة بالأخرى عبر شريط التنقل العلوي. سيستبدل هذا كل صفحات موقعك الحالية.
+                            </span>
+                          </button>
                         </div>
                       </div>
                     )}

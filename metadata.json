@@ -1,0 +1,8 @@
+{
+  "name": "27.09 weelink ",
+  "description": "منصة Weelink المتطورة لإنشاء وتصميم مواقع الإنترنت في المنطقة العربية بتجربة بصرية فائقة ومساحات عمل حرة.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global safety net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSimulatedOrPublic(userId) {
+      return userId == 'mouhamadeiah' || userId.matches('^sim_[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Design document schema validation helper (allows partial/merge updates)
+    function isValidDesign(data, userId) {
+      return (!('userId' in data) || data.userId == userId)
+        && (!('pages' in data) || data.pages is list)
+        && (!('elements' in data) || data.elements is list)
+        && (!('updatedAt' in data) || data.updatedAt == request.time || data.updatedAt is string);
+    }
+
+    // Match statement for the designs collection
+    match /designs/{userId} {
+      allow get: if isOwner(userId) || isSimulatedOrPublic(userId);
+      allow list: if false; // Users can only fetch their own design document directly by UID, no list queries
+      
+      allow create, update: if (isOwner(userId) || isSimulatedOrPublic(userId))
+        && isValidId(userId)
+        && isValidDesign(incoming(), userId)
+        && (!('createdAt' in incoming()) || incoming().createdAt == request.time || incoming().createdAt is string);
+        
+      allow delete: if isOwner(userId) || isSimulatedOrPublic(userId);
+    }
+
+    // Match statement for simulated_users login/registration
+    match /simulated_users/{email} {
+      allow get, create, update: if true;
+    }
+
+    // Match statement for platform_directory onboarding steps
+    match /platform_directory/{userId} {
+      allow get, write: if isOwner(userId) || isSimulatedOrPublic(userId);
+    }
+  }
+}

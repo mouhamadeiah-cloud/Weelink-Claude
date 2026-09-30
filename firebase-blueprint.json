@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "Design": {
+      "title": "Design Workspace",
+      "description": "User custom landing page design containing pages, slides, and free-grid canvas elements.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The Firebase Authentication UID of the owner."
+        },
+        "pages": {
+          "type": "array",
+          "description": "The array of Page objects defining the navigation and slides."
+        },
+        "elements": {
+          "type": "array",
+          "description": "The canvas elements placed on the pages/slides."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of the last update."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The creation timestamp."
+        }
+      },
+      "required": ["userId", "pages", "elements"]
+    }
+  },
+  "firestore": {
+    "/designs/{userId}": {
+      "schema": "Design",
+      "description": "The complete workspace design document synced and owned by each user."
+    }
+  }
+}

@@ -208,6 +208,8 @@ interface RightDrawerProps {
   userEmail?: string;
   onCompleteChat?: (collectedData: any) => void;
   onStepChange?: (stepNum: number) => void;
+  isWeeAiChatCollapsed?: boolean;
+  onToggleWeeAiChat?: () => void;
 }
 
 export const SIXTY_FONTS = [
@@ -3437,9 +3439,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   userEmail,
   onCompleteChat,
   onStepChange,
+  isWeeAiChatCollapsed: externalIsWeeAiChatCollapsed,
+  onToggleWeeAiChat: externalOnToggleWeeAiChat,
 }) => {
   // Wee AI chat container collapse state inside the control panel
-  const [isWeeAiChatCollapsed, setIsWeeAiChatCollapsed] = useState<boolean>(true);
+  // (controlled from the parent when provided, e.g. to auto-open for new users; falls back to local state otherwise)
+  const [internalWeeAiChatCollapsed, setInternalWeeAiChatCollapsed] = useState<boolean>(true);
+  const isWeeAiChatCollapsed = externalIsWeeAiChatCollapsed !== undefined ? externalIsWeeAiChatCollapsed : internalWeeAiChatCollapsed;
+  const toggleWeeAiChat = externalOnToggleWeeAiChat || (() => setInternalWeeAiChatCollapsed(prev => !prev));
 
   // Ref to aside element to detect clicking outside and handle automatic scrolling
   const asideRef = useRef<HTMLElement>(null);
@@ -4160,7 +4167,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {/* AI Toggle Button next to name */}
             <button
               type="button"
-              onClick={() => setIsWeeAiChatCollapsed(prev => !prev)}
+              onClick={toggleWeeAiChat}
               className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9.5px] font-black transition-all cursor-pointer ${
                 isWeeAiChatCollapsed 
                   ? 'bg-[#0071e3]/10 text-[#0071e3] border-[#0071e3]/20 hover:bg-[#0071e3]/25' 
@@ -14626,7 +14633,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           userEmail={userEmail || ''}
           onCompleteChat={onCompleteChat}
           isCollapsed={isWeeAiChatCollapsed}
-          onToggleCollapse={() => setIsWeeAiChatCollapsed(prev => !prev)}
+          onToggleCollapse={toggleWeeAiChat}
           onStepChange={onStepChange}
         />
 

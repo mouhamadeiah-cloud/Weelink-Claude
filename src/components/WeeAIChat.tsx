@@ -199,20 +199,35 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     setStep(1);
   };
 
-  // Load existing progress from LocalStorage
+  // Load existing progress: Firebase first (source of truth across devices), LocalStorage as offline fallback
   useEffect(() => {
-    const loadProgress = () => {
+    const applyData = (data: any) => {
+      if (data.personalInfo) setPersonalInfo(data.personalInfo);
+      if (data.addressInfo) setAddressInfo(data.addressInfo);
+      if (data.contactInfo) setContactInfo(data.contactInfo);
+      if (data.catalogInfo) setCatalogInfo(data.catalogInfo);
+      if (data.aiAnswers) setAiAnswers(data.aiAnswers);
+      if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep);
+    };
+
+    const loadProgress = async () => {
       if (!userId) return;
+
+      try {
+        const snap = await getDoc(doc(db, 'platform_directory', userId));
+        if (snap.exists()) {
+          applyData(snap.data());
+          return;
+        }
+      } catch (err) {
+        console.warn("Error loading chat progress from Firebase, falling back to local cache:", err);
+      }
+
+      // Fallback: local cache (offline, or before first cloud sync)
       try {
         const stored = localStorage.getItem('weelink_chat_progress_' + userId);
         if (stored) {
-          const data = JSON.parse(stored);
-          if (data.personalInfo) setPersonalInfo(data.personalInfo);
-          if (data.addressInfo) setAddressInfo(data.addressInfo);
-          if (data.contactInfo) setContactInfo(data.contactInfo);
-          if (data.catalogInfo) setCatalogInfo(data.catalogInfo);
-          if (data.aiAnswers) setAiAnswers(data.aiAnswers);
-          if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep);
+          applyData(JSON.parse(stored));
           return;
         }
         resetToBlankDefaults();
@@ -247,23 +262,30 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     }
   }, [step]);
 
-  // Save progress at each transition silently to LocalStorage
+  // Save progress at each transition: instantly to LocalStorage, and live up to Firebase
   const saveProgress = (nextStep: number) => {
     if (!userId) return;
+    const dataToSave = {
+      personalInfo,
+      addressInfo,
+      contactInfo,
+      catalogInfo,
+      aiAnswers,
+      currentStep: nextStep,
+      updatedAt: new Date().toISOString()
+    };
     try {
-      const dataToSave = {
-        personalInfo,
-        addressInfo,
-        contactInfo,
-        catalogInfo,
-        aiAnswers,
-        currentStep: nextStep,
-        updatedAt: new Date().toISOString()
-      };
       localStorage.setItem('weelink_chat_progress_' + userId, JSON.stringify(dataToSave));
     } catch (e) {
-      console.warn("Silent save failed:", e);
+      console.warn("Silent local save failed:", e);
     }
+    // Live upload to Firebase so progress/step follows the user across devices and sessions
+    setDoc(doc(db, 'platform_directory', userId), {
+      ...dataToSave,
+      updatedAt: serverTimestamp()
+    }, { merge: true }).catch((err) => {
+      console.warn("Silent cloud save failed (kept locally, will retry next step):", err);
+    });
   };
 
   const goToNextStep = () => {

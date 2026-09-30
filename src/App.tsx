@@ -17,8 +17,9 @@ import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 
 // Firebase Imports
-import { auth, loginWithGoogle, logoutUser } from './services/firebase';
+import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const sanitizeData = (data: any): any => {
   if (data === null || data === undefined) return null;
@@ -38,6 +39,24 @@ const sanitizeData = (data: any): any => {
     return cleaned;
   }
   return data;
+};
+
+// Converts string[][] table cells to [{ row: string[] }] to avoid nested arrays (unsupported by Firestore)
+const serializeElements = (elements: CanvasElement[]): any[] => {
+  const mapped = elements.map(el => {
+    if (el.tableConfig) {
+      const { cells, ...rest } = el.tableConfig;
+      return {
+        ...el,
+        tableConfig: {
+          ...rest,
+          cells: cells ? cells.map(row => ({ row })) : []
+        }
+      };
+    }
+    return el;
+  });
+  return sanitizeData(mapped);
 };
 
 const deserializeElements = (dataElements: any[]): CanvasElement[] => {
@@ -155,7 +174,8 @@ export default function App() {
   const elementsRef = useRef<CanvasElement[]>(elements);
   const isInitialLoadComplete = useRef<boolean>(false);
 
-  const loadLocalWorkspace = (userId: string) => {
+  // Loads pages/elements from LocalStorage only (offline fallback / pre-cloud-sync bootstrap)
+  const loadLocalDesign = (userId: string) => {
     try {
       const storedPages = localStorage.getItem(`weelink_pages_${userId}`) || localStorage.getItem('weelink_pages');
       const storedElements = localStorage.getItem(`weelink_elements_${userId}`) || localStorage.getItem('weelink_elements');
@@ -202,20 +222,65 @@ export default function App() {
       setElements(loadedElements);
       setHistory([loadedElements]);
       setHistoryIndex(0);
-      
+    } catch (e) {
+      console.error("Error loading local workspace:", e);
+    }
+  };
+
+  // Loads onboarding/chat-completion status from LocalStorage only (offline fallback)
+  const loadLocalChatStatus = (userId: string) => {
+    try {
       const chatProgressStored = localStorage.getItem(`weelink_chat_progress_${userId}`);
       if (chatProgressStored) {
         const chatData = JSON.parse(chatProgressStored);
-        if (chatData.currentStep === 13) {
-          setIsChatActive(false);
-        } else {
-          setIsChatActive(true);
-        }
+        setIsChatActive(chatData.currentStep !== 13);
       } else {
         setIsChatActive(true);
       }
     } catch (e) {
-      console.error("Error loading local workspace:", e);
+      console.error("Error loading local chat status:", e);
+      setIsChatActive(true);
+    }
+  };
+
+  // Loads the user's workspace: Firebase first (source of truth, synced across devices),
+  // falling back to the local cache when offline or before the first cloud sync.
+  const loadUserWorkspace = async (userId: string) => {
+    let loadedDesignFromCloud = false;
+    try {
+      const designSnap = await getDoc(doc(db, 'designs', userId));
+      if (designSnap.exists()) {
+        const data: any = designSnap.data();
+        const cloudPages: Page[] = Array.isArray(data.pages) ? data.pages : [];
+        if (cloudPages.length > 0) {
+          const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
+          setPages(cloudPages);
+          setElements(cloudElements);
+          setHistory([cloudElements]);
+          setHistoryIndex(0);
+          loadedDesignFromCloud = true;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load design from Firebase, falling back to local cache:", e);
+    }
+    if (!loadedDesignFromCloud) {
+      loadLocalDesign(userId);
+    }
+
+    let loadedChatStatusFromCloud = false;
+    try {
+      const progressSnap = await getDoc(doc(db, 'platform_directory', userId));
+      if (progressSnap.exists()) {
+        const chatData: any = progressSnap.data();
+        setIsChatActive(chatData.currentStep !== 13);
+        loadedChatStatusFromCloud = true;
+      }
+    } catch (e) {
+      console.warn("Could not load onboarding progress from Firebase, falling back to local cache:", e);
+    }
+    if (!loadedChatStatusFromCloud) {
+      loadLocalChatStatus(userId);
     }
   };
 
@@ -236,12 +301,12 @@ export default function App() {
         setActiveUserUid(user.uid);
         localStorage.removeItem('weelink_simulated_user_uid');
         localStorage.removeItem('weelink_simulated_user_email');
-        loadLocalWorkspace(user.uid);
+        await loadUserWorkspace(user.uid);
       } else {
         setCurrentUser(null);
         const simUid = localStorage.getItem('weelink_simulated_user_uid') || 'mouhamadeiah';
         setActiveUserUid(simUid);
-        loadLocalWorkspace(simUid);
+        await loadUserWorkspace(simUid);
       }
       setIsAuthActive(true);
       setIsFirebaseLoading(false);
@@ -267,6 +332,32 @@ export default function App() {
         localStorage.setItem('weelink_elements', JSON.stringify(elements));
       } catch (e) {
         console.warn("Could not save to LocalStorage:", e);
+      }
+    }, 1200); // 1.2s debounce to avoid spamming writes
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid]);
+
+  // 3. Debounced live auto-save to Firebase whenever pages or elements change
+  useEffect(() => {
+    // Skip saving during initial boot/loading to prevent overwrite races
+    if (!isInitialLoadComplete.current || isFirebaseLoading) {
+      return;
+    }
+
+    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        setIsSavingCloud(true);
+        await setDoc(doc(db, 'designs', targetUserId), {
+          pages: sanitizeData(pages),
+          elements: serializeElements(elements),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Cloud save failed (kept locally, will retry on next change):", e);
+      } finally {
+        setIsSavingCloud(false);
       }
     }, 1200); // 1.2s debounce to avoid spamming writes
 
@@ -384,7 +475,7 @@ export default function App() {
       }
     } else {
       // Existing user: fetch their page
-      loadLocalWorkspace(userUid);
+      loadUserWorkspace(userUid);
     }
     setIsSavingCloud(false);
     isInitialLoadComplete.current = true;
@@ -2096,6 +2187,8 @@ export default function App() {
         userEmail={currentUser ? (currentUser.email || '') : (localStorage.getItem('weelink_simulated_user_email') || '')}
         onCompleteChat={handleCompleteChat}
         onStepChange={handleStepChange}
+        isWeeAiChatCollapsed={!isChatActive}
+        onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
       />
 
       {/* Workspace Hub Drawer Panel */}

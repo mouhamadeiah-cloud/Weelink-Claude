@@ -17,9 +17,8 @@ import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 
 // Firebase Imports
-import { auth, db, loginWithGoogle, logoutUser, handleFirestoreError, OperationType } from './services/firebase';
+import { auth, loginWithGoogle, logoutUser } from './services/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const sanitizeData = (data: any): any => {
   if (data === null || data === undefined) return null;
@@ -39,24 +38,6 @@ const sanitizeData = (data: any): any => {
     return cleaned;
   }
   return data;
-};
-
-const serializeElements = (elements: CanvasElement[]): any[] => {
-  const mapped = elements.map(el => {
-    if (el.tableConfig) {
-      const { cells, ...rest } = el.tableConfig;
-      return {
-        ...el,
-        tableConfig: {
-          ...rest,
-          // Convert string[][] to [{ row: string[] }] to avoid nested arrays in Firestore
-          cells: cells ? cells.map(row => ({ row })) : []
-        }
-      };
-    }
-    return el;
-  });
-  return sanitizeData(mapped);
 };
 
 const deserializeElements = (dataElements: any[]): CanvasElement[] => {
@@ -442,7 +423,7 @@ export default function App() {
     }
   };
 
-  const handleStepChange = (stepNum: number) => {
+  const handleStepChange = (_stepNum: number) => {
     setIsCanvasLoading(true);
     setTimeout(() => {
       setIsCanvasLoading(false);

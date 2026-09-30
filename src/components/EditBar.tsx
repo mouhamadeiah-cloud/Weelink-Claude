@@ -24,7 +24,6 @@ import {
   Lock,
   Unlock,
   Plus,
-  Type,
   Sparkles,
   CreditCard,
   Settings

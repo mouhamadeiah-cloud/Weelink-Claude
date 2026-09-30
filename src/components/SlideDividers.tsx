@@ -14,7 +14,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'straight',
     name: 'مستقيم (عادي)',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         {/* Top: White */}
         <rect x="0" y="0" width="60" height="22" fill="#ffffff" />
@@ -29,7 +29,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'wave',
     name: 'موجة ناعمة',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <path d="M0,22 C15,14 30,30 45,22 C52,18 56,20 60,22 L60,44 L0,44 Z" fill="#9ca3af" />
@@ -47,7 +47,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'slanted',
     name: 'ميلان زاوي',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <polygon points="0,32 60,16 60,44 0,44" fill="#9ca3af" />
@@ -65,7 +65,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'curve-down',
     name: 'قوس مقعر لأسفل',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <path d="M0,16 Q30,34 60,16 L60,44 L0,44 Z" fill="#9ca3af" />
@@ -83,7 +83,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'curve-up',
     name: 'قوس محدب لأعلى',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <path d="M0,30 Q30,12 60,30 L60,44 L0,44 Z" fill="#9ca3af" />
@@ -101,7 +101,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'triangle',
     name: 'سهم مثلث V',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <polygon points="0,18 30,32 60,18 60,44 0,44" fill="#9ca3af" />
@@ -119,7 +119,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'asymmetric-wave',
     name: 'موجة متدفقة',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <path d="M0,28 C20,34 35,10 60,24 L60,44 L0,44 Z" fill="#9ca3af" />
@@ -137,7 +137,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'double-wave',
     name: 'موجة مزدوجة',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <path d="M0,22 Q15,14 30,22 T60,22 L60,44 L0,44 Z" fill="#9ca3af" />
@@ -155,7 +155,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'zigzag',
     name: 'تعرج متدرج',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <polyline points="0,24 10,18 20,24 30,18 40,24 50,18 60,24" fill="none" stroke="#6b7280" strokeWidth="1" />
@@ -173,7 +173,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'tilt-right',
     name: 'انحدار يمين',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <polygon points="0,16 60,32 60,44 0,44" fill="#9ca3af" />
@@ -191,7 +191,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'tilt-left',
     name: 'انحدار يسار',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <polygon points="0,32 60,16 60,44 0,44" fill="#9ca3af" />
@@ -209,7 +209,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
   {
     id: 'clouds',
     name: 'سحابي منحني',
-    renderPreview: (active) => (
+    renderPreview: (_active) => (
       <svg viewBox="0 0 60 44" className="w-full h-full rounded-md overflow-hidden">
         <rect x="0" y="0" width="60" height="44" fill="#ffffff" />
         <path d="M0,26 Q10,14 20,24 Q30,12 40,24 Q50,14 60,26 L60,44 L0,44 Z" fill="#9ca3af" />

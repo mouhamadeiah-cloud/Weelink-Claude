@@ -6,31 +6,24 @@ import {
   ChevronLeft, 
   Sparkles, 
   Check, 
-  Trash2, 
   Image as ImageIcon,
   ExternalLink,
-  Layers,
   ArrowUpCircle,
   Plus,
   RefreshCw,
-  X,
-  Sticker,
-  Shapes,
-  Smile
+  X
 } from 'lucide-react';
 import { 
   GALLERY_CATEGORIES, 
   UNSPLASH_GALLERY_PHOTOS, 
   GalleryImageItem,
   GRAPHIC_CATEGORIES, 
-  GRAPHICS_ITEMS, 
-  GraphicItem 
+  GRAPHICS_ITEMS 
 } from '../data/graphicsPresets';
 import { CanvasElement } from '../types';
 import { 
   fetchUnsplashPhotos, 
-  trackUnsplashDownload, 
-  getUnsplashAccessKey 
+  trackUnsplashDownload 
 } from '../services/unsplashService';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';

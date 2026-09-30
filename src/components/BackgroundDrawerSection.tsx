@@ -1,16 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, 
-  Image as ImageIcon, 
   Search, 
   Trash2, 
   Check, 
-  Sparkles, 
   Loader2, 
-  ExternalLink,
-  Layers,
-  Maximize2,
-  RefreshCw,
   Key,
   ChevronDown,
   Info
@@ -18,10 +12,8 @@ import {
 import { 
   MANDATORY_BG_COLORS, 
   FIFTY_SOLID_COLORS, 
-  TWENTY_FIVE_GRADIENTS,
   PASTEL_SOFT_GRADIENTS,
   RICH_MULTI_GRADIENTS,
-  GradientPreset,
   CURATED_UNSPLASH_PHOTOS,
   UnsplashPreset 
 } from '../data/backgroundPresets';

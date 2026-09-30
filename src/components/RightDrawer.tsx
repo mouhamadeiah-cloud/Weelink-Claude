@@ -24,7 +24,6 @@ import {
   Lock, 
   Unlock, 
   Copy, 
-  Zap, 
   Sparkles, 
   PaintRoller, 
   Check, 
@@ -35,8 +34,6 @@ import {
   Component, 
   FileText, 
   Sun, 
-  Palette as PaletteIcon, 
-  Link2, 
   ExternalLink, 
   Globe, 
   Trash2,
@@ -53,22 +50,18 @@ import {
   Tag,
   Plus,
   Play,
-  CheckCircle2,
-  Clock,
   Stethoscope,
-  FileSpreadsheet,
   RotateCw,
   RotateCcw,
   Images,
   Upload,
   Download,
-  ArrowUpDown,
   Search
 } from 'lucide-react';
-import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape, getGlowShadowStyle, getLightGradientStyle, LinkType, ContactType, GalleryItem, GalleryLayout } from '../types';
+import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape, getGlowShadowStyle, getLightGradientStyle, ContactType } from '../types';
 import { MASK_SHAPES } from '../utils/maskShapes';
 import { Icon } from '@iconify/react';
-import { TWENTY_PAGE_PALETTES, PagePalette } from '../data/palettes';
+import { TWENTY_PAGE_PALETTES } from '../data/palettes';
 import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { BackgroundDrawerSection } from './BackgroundDrawerSection';
 import { ImageDrawerSection } from './ImageDrawerSection';
@@ -4022,14 +4015,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     !(el.type === 'shape' && el.isGroupContainer)
   );
 
-  const colorsPalette = [
-    '#1d1d1f', '#0071e3', '#4f46e5', '#059669', '#d97706', '#dc2626', 
-    '#6b7280', '#ffffff', '#f5f5f7', '#000000', '#2563eb', '#7c3aed'
-  ];
-
   // Update a single slot in the custom palette
   const handleUpdateCustomColorSlot = (slotIdx: number, newColor: string) => {
-    const updated: [string, string, string, string, string] = [...customColors];
+    const updated: [string, string, string, string, string] = [...customColors] as [string, string, string, string, string];
     updated[slotIdx] = newColor;
     setCustomColors(updated);
     onApplyPagePalette(updated);

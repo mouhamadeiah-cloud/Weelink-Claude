@@ -10,7 +10,6 @@ import {
   Sparkles, 
   Chrome, 
   LogOut, 
-  Plus, 
   Trash2, 
   Send, 
   ArrowLeftRight, 

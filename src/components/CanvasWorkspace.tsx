@@ -6,19 +6,15 @@ import {
   DevicePreviewMode,
   getGlowShadowStyle,
   getLightGradientStyle,
-  GalleryItem,
-  GalleryLayout
+  GalleryItem
 } from '../types';
 import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
 import { Icon } from '@iconify/react';
 import { 
-  Move, 
   Trash2, 
   Copy, 
-  Lock, 
-  Unlock, 
   ExternalLink,
   Plus,
   RotateCw,
@@ -26,8 +22,7 @@ import {
   ChevronRight,
   ChevronLeft,
   X,
-  Download,
-  Images
+  Download
 } from 'lucide-react';
 
 interface CanvasWorkspaceProps {

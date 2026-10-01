@@ -4235,8 +4235,60 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     return acc;
   }, {});
 
-  const ungroupedElements = slideElements.filter(el => 
-    !allGroupedChildIds.has(el.id) && 
+  // صورة مصغرة افتراضية لمحتوى المجموعة: تعرض شكل الحاوية الحقيقي (مربع/دائرة/كبسولة)
+  // مع كتل رمادية صغيرة تمثل كل عنصر فرعي (صورة = كتلة مليئة، نص = شريط رفيع، زر = كبسولة ملونة)
+  // هذا يعمل مع أي مجموعة فعلية على الشريحة، وليس فقط النماذج الجاهزة
+  const renderGroupThumb = (container: CanvasElement | undefined, groupChildren: CanvasElement[]) => {
+    const cw = container?.width || 300;
+    const ch = container?.height || 200;
+    const clip = container?.clipPath || '';
+    const isRound = clip.includes('circle') || clip.includes('capsule');
+    const thumbW = 30;
+    const thumbH = Math.max(16, Math.min(26, Math.round((ch / cw) * thumbW)));
+    const bgRaw = container?.styles?.backgroundColor;
+    const bg = bgRaw && bgRaw !== 'transparent' ? bgRaw : '#f1f5f9';
+
+    return (
+      <div
+        className={`relative shrink-0 overflow-hidden border border-black/10 ${isRound ? 'rounded-full' : 'rounded-[4px]'}`}
+        style={{ width: thumbW, height: thumbH, backgroundColor: bg }}
+      >
+        {groupChildren.map(child => {
+          const left = ((child.x - (container?.x || 0)) / cw) * 100;
+          const top = ((child.y - (container?.y || 0)) / ch) * 100;
+          const w = (child.width / cw) * 100;
+          const h = (child.height / ch) * 100;
+          const isBlock = child.type === 'image' || child.type === 'video';
+          const isButton = child.type === 'button';
+          const isInput = child.type === 'input';
+          const blockColor = isButton
+            ? (child.styles?.backgroundColor || '#0071e3')
+            : isBlock
+              ? '#cbd5e1'
+              : isInput
+                ? '#ffffff'
+                : '#9ca3af';
+          return (
+            <div
+              key={child.id}
+              className="absolute rounded-[1px]"
+              style={{
+                left: `${left}%`,
+                top: `${top}%`,
+                width: `${Math.max(w, 4)}%`,
+                height: `${Math.max(h, 8)}%`,
+                backgroundColor: blockColor,
+                border: isInput ? '0.5px solid #cbd5e1' : undefined,
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  };
+
+  const ungroupedElements = slideElements.filter(el =>
+    !allGroupedChildIds.has(el.id) &&
     !(el.type === 'shape' && el.isGroupContainer)
   );
 
@@ -4609,15 +4661,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                             onSelectElement(grp.container.id);
                                           }
                                         }}
-                                        className="w-full py-1 px-3 rounded-full bg-blue-50/90 hover:bg-blue-100/90 border border-blue-200/80 text-blue-900 flex items-center justify-between transition-all cursor-pointer shadow-3xs"
+                                        className="w-full py-1.5 px-3 rounded-2xl bg-blue-50/90 hover:bg-blue-100/90 border border-blue-200/80 text-blue-900 flex items-center justify-between transition-all cursor-pointer shadow-3xs"
                                         title="مجموعة عناصر"
                                       >
-                                        <div className="flex items-center gap-1.5 truncate">
-                                          {isGroupExpanded ? (
-                                            <FolderOpen size={12} className="text-[#0071e3] shrink-0" />
-                                          ) : (
-                                            <Folder size={12} className="text-[#0071e3] shrink-0" />
-                                          )}
+                                        <div className="flex items-center gap-2 truncate">
+                                          {renderGroupThumb(grp.container, grp.elements)}
                                           <span className="text-[10.5px] font-bold truncate">
                                             {grp.name}
                                           </span>
@@ -8596,8 +8644,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 'group-templates': [
                   { id: 'all', label: 'الكل' },
                   { id: 'empty', label: 'مجموعات فارغة' },
-                  { id: 'marketing', label: 'بطاقات تسويقية' },
-                  { id: 'forms', label: 'نماذج واتصال' },
+                  { id: 'team', label: 'فريق وأشخاص' },
+                  { id: 'steps', label: 'خطوات' },
+                  { id: 'features', label: 'ميزات' },
+                  { id: 'stats', label: 'إحصائيات' },
+                  { id: 'basic', label: 'صناديق بسيطة' },
+                  { id: 'pricing', label: 'باقات' },
+                  { id: 'forms', label: 'تواصل' },
                 ],
                 text: [
                   { id: 'heading', label: 'عنوان' },
@@ -8685,531 +8738,191 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               const TEMPLATES_MAP: Record<string, TemplateItem[]> = {
                 'group-templates': [
                   {
-                    id: 'grp-empty-square',
-                    title: 'مجموعة فارغة (مستطيل دائري)',
-                    sub: 'إطار هندسي فارغ بلمسة آبل الأنيقة مستعد لاستقبال عناصرك',
-                    subCategories: ['empty'],
+                    id: 'grp-team-member',
+                    title: 'بطاقة عضو فريق',
+                    sub: 'صورة شخصية مع الاسم والمسمى الوظيفي ونبذة قصيرة',
+                    subCategories: ['team'],
                     type: 'shape',
                     preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl border border-dashed border-neutral-300 flex items-center justify-center text-[10px] text-neutral-400">
-                        📁 فارغة (مستطيل)
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'مجموعة مستطيل دائري',
-                        width: 320,
-                        height: 250,
-                        clipPath: 'clip-shape-window-arch',
-                        styles: { backgroundColor: '#f8fafc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, []);
-                    }
-                  },
-                  {
-                    id: 'grp-empty-circle',
-                    title: 'مجموعة فارغة (دائرة)',
-                    sub: 'حاوية دائرية جذابة لضم وترتيب العناصر بداخلها',
-                    subCategories: ['empty'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center">
-                        <div className="w-12 h-12 bg-neutral-100 rounded-full border border-dashed border-neutral-300 flex items-center justify-center text-[8px] text-neutral-400">
-                          📁 دائرة
+                      <div className="w-full h-18 bg-white rounded-xl p-1.5 flex gap-1.5 border border-neutral-200">
+                        <div className="w-8 h-full bg-neutral-200 rounded-lg shrink-0" />
+                        <div className="flex-1 flex flex-col justify-center gap-1">
+                          <div className="h-2 bg-neutral-400 rounded-md w-3/4" />
+                          <div className="h-1.5 bg-blue-400 rounded-md w-1/2" />
+                          <div className="h-1.5 bg-neutral-200 rounded-md w-full" />
                         </div>
                       </div>
                     ),
                     action: () => {
                       onAddGroup?.({
-                        name: 'مجموعة دائرية',
-                        width: 260,
-                        height: 260,
-                        styles: { backgroundColor: '#f0fdf4', borderRadius: 9999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }
-                      }, []);
-                    }
-                  },
-                  {
-                    id: 'grp-empty-wide',
-                    title: 'مجموعة عريضة ملونة',
-                    sub: 'حاوية عريضة بخلفية تدرج ناعم وجميل',
-                    subCategories: ['empty'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-blue-50/50 rounded-xl border border-blue-200 flex items-center justify-center text-[9px] text-blue-600 font-bold">
-                        📁 مجموعة عريضة ملونة
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'مجموعة عريضة ملونة',
-                        width: 460,
-                        height: 180,
-                        clipPath: 'clip-shape-tunnel',
-                        styles: { backgroundColor: '#eff6ff', borderRadius: 28, borderWidth: 1, borderColor: '#bfdbfe', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, []);
-                    }
-                  },
-                  {
-                    id: 'grp-feature-classic',
-                    title: 'بطاقة ميزات (صورة + نص + زر)',
-                    sub: 'بطاقة عرض كلاسيكية للميزات والخدمات',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200">
-                        <div className="h-6 bg-neutral-200 rounded-lg" />
-                        <div className="h-3 bg-neutral-300 rounded-md w-3/4 mx-auto" />
-                        <div className="h-4 bg-blue-500 rounded-md w-1/2 mx-auto" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'بطاقة ميزات كلاسيكية',
-                        width: 320,
-                        height: 280,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'image', name: 'صورة الميزة', x: 20, y: 20, width: 280, height: 110, styles: { borderRadius: 16 } },
-                        { type: 'heading', name: 'عنوان الميزة', content: 'تصميم واجهات احترافية', x: 20, y: 150, width: 280, height: 40, styles: { fontSize: 18, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' } },
-                        { type: 'button', name: 'زر الإجراء', content: 'اكتشف المزيد ✦', x: 20, y: 205, width: 280, height: 44, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-product-dual',
-                    title: 'مقارنة منتجين (صورتين + زر)',
-                    sub: 'مجموعة عرض متجاورة للمقارنات والمنتجات',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200">
-                        <div className="flex gap-1 h-8">
-                          <div className="flex-1 bg-neutral-200 rounded-md" />
-                          <div className="flex-1 bg-neutral-200 rounded-md" />
-                        </div>
-                        <div className="h-4 bg-blue-500 rounded-md" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'مقارنة منتجين متجاورين',
+                        name: 'بطاقة عضو فريق',
                         width: 340,
-                        height: 260,
-                        clipPath: 'clip-shape-arch-dome',
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
+                        height: 150,
+                        styles: { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 20, glowColor: 'rgba(0,0,0,0.12)', glowPosition: 'bottom' }
                       }, [
-                        { type: 'image', name: 'صورة المنتج الأول', x: 20, y: 20, width: 140, height: 100, styles: { borderRadius: 12 } },
-                        { type: 'image', name: 'صورة المنتج الثاني', x: 180, y: 20, width: 140, height: 100, styles: { borderRadius: 12 } },
-                        { type: 'heading', name: 'عنوان المقارنة', content: 'مقارنة تفصيلية شاملة', x: 20, y: 140, width: 300, height: 35, styles: { fontSize: 15, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' } },
-                        { type: 'button', name: 'زر الاشتراك', content: 'اشترك بالباقة الآن', x: 20, y: 190, width: 300, height: 42, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
+                        { type: 'image', name: 'صورة العضو', x: 16, y: 16, width: 112, height: 112, styles: { borderRadius: 14 } },
+                        { type: 'heading', name: 'الاسم', content: 'اسم عضو الفريق', x: 146, y: 18, width: 178, height: 28, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
+                        { type: 'paragraph', name: 'المسمى الوظيفي', content: 'المسمى الوظيفي', x: 146, y: 50, width: 178, height: 22, styles: { fontSize: 12, fontWeight: '600', color: '#0071e3', textAlign: 'right' } },
+                        { type: 'paragraph', name: 'نبذة مختصرة', content: 'سطر قصير يوضح خبرة هذا الشخص ودوره في الفريق.', x: 146, y: 76, width: 178, height: 56, styles: { fontSize: 11, color: '#4b5563', textAlign: 'right' } }
                       ]);
                     }
                   },
                   {
-                    id: 'grp-interactive-pro',
-                    title: 'تفاعلية (صورة + زرين + نص)',
-                    sub: 'تصميم عصري متكامل مع زرين تفاعليين',
-                    subCategories: ['marketing'],
+                    id: 'grp-process-step',
+                    title: 'خطوة ضمن عملية',
+                    sub: 'رقم متسلسل مع عنوان ونص وزر، لعرض خطوات عمل أو مراحل خدمة',
+                    subCategories: ['steps'],
                     type: 'shape',
                     preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200">
-                        <div className="h-5 bg-neutral-200 rounded-md" />
-                        <div className="h-2 bg-neutral-300 rounded-md w-3/4" />
-                        <div className="flex gap-1 h-4">
-                          <div className="flex-1 bg-blue-500 rounded-md" />
-                          <div className="flex-1 bg-neutral-300 rounded-md" />
+                      <div className="w-full h-18 bg-white rounded-xl p-1.5 flex flex-col justify-between">
+                        <div className="text-blue-500 font-bold text-sm leading-none">01</div>
+                        <div className="h-2 bg-neutral-400 rounded-md w-3/4" />
+                        <div className="h-4 bg-blue-500 rounded-md w-1/3" />
+                      </div>
+                    ),
+                    action: () => {
+                      onAddGroup?.({
+                        name: 'خطوة ضمن عملية',
+                        width: 300,
+                        height: 210,
+                        styles: { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0 }
+                      }, [
+                        { type: 'heading', name: 'رقم الخطوة', content: '01', x: 16, y: 10, width: 90, height: 50, styles: { fontSize: 36, fontWeight: 'bold', color: '#0071e3', textAlign: 'right' } },
+                        { type: 'heading', name: 'عنوان الخطوة', content: 'اسم الخطوة', x: 16, y: 68, width: 268, height: 32, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
+                        { type: 'paragraph', name: 'شرح الخطوة', content: 'وصف مختصر وواضح لما يحدث في هذه الخطوة.', x: 16, y: 104, width: 268, height: 48, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } },
+                        { type: 'button', name: 'رابط الخطوة', content: 'اقرأ المزيد', x: 16, y: 160, width: 130, height: 38, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 10, fontWeight: 'bold', textAlign: 'center' } }
+                      ]);
+                    }
+                  },
+                  {
+                    id: 'grp-feature-photo',
+                    title: 'بطاقة ميزة بصورة',
+                    sub: 'صورة مع عنوان ووصف قصير، لعرض ميزة أو خدمة واحدة',
+                    subCategories: ['features'],
+                    type: 'shape',
+                    preview: (
+                      <div className="w-full h-18 bg-white rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200">
+                        <div className="h-9 bg-neutral-200 rounded-lg" />
+                        <div className="h-2 bg-neutral-400 rounded-md w-2/3 mx-auto" />
+                        <div className="h-1.5 bg-neutral-200 rounded-md w-full" />
+                      </div>
+                    ),
+                    action: () => {
+                      onAddGroup?.({
+                        name: 'بطاقة ميزة بصورة',
+                        width: 300,
+                        height: 260,
+                        styles: { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 20, glowColor: 'rgba(0,0,0,0.12)', glowPosition: 'bottom' }
+                      }, [
+                        { type: 'image', name: 'صورة الميزة', x: 16, y: 16, width: 268, height: 130, clipPath: 'clip-shape-brush-splatter' },
+                        { type: 'heading', name: 'عنوان الميزة', content: 'اسم الميزة أو الخدمة', x: 16, y: 158, width: 268, height: 30, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' } },
+                        { type: 'paragraph', name: 'وصف الميزة', content: 'شرح قصير يوضح فائدة هذه الميزة للعميل.', x: 16, y: 192, width: 268, height: 50, styles: { fontSize: 12, color: '#4b5563', textAlign: 'center' } }
+                      ]);
+                    }
+                  },
+                  {
+                    id: 'grp-stat-circle',
+                    title: 'بطاقة إحصائية دائرية',
+                    sub: 'رقم كبير داخل دائرة بسيطة مع توصيف قصير',
+                    subCategories: ['stats'],
+                    type: 'shape',
+                    preview: (
+                      <div className="w-full h-18 bg-white rounded-xl flex items-center justify-center">
+                        <div className="w-14 h-14 rounded-full bg-blue-50 border border-blue-200 flex flex-col items-center justify-center">
+                          <span className="text-blue-600 font-bold text-[10px]">+120</span>
                         </div>
                       </div>
                     ),
                     action: () => {
                       onAddGroup?.({
-                        name: 'بطاقة تفاعلية متقدمة',
-                        width: 320,
-                        height: 330,
-                        clipPath: 'clip-shape-mosque',
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
+                        name: 'بطاقة إحصائية دائرية',
+                        width: 220,
+                        height: 220,
+                        clipPath: 'clip-shape-geo-circle',
+                        styles: { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }
                       }, [
-                        { type: 'image', name: 'صورة الغلاف', x: 20, y: 20, width: 280, height: 110, styles: { borderRadius: 16 } },
-                        { type: 'heading', name: 'عنوان البطاقة', content: 'انضم لمجتمع المصممين', x: 20, y: 145, width: 280, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
-                        { type: 'paragraph', name: 'شرح تكميلي', content: 'مساحة ملهمة لتبادل الخبرات وتطوير المهارات الرقمية.', x: 20, y: 185, width: 280, height: 45, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } },
-                        { type: 'button', name: 'زر التسجيل', content: 'تسجيل سريع', x: 20, y: 250, width: 130, height: 42, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } },
-                        { type: 'button', name: 'زر المزيد', content: 'المزيد ✦', x: 170, y: 250, width: 130, height: 42, styles: { backgroundColor: '#f1f5f9', color: '#0f172a', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
+                        { type: 'heading', name: 'الرقم', content: '+120', x: 40, y: 62, width: 140, height: 50, styles: { fontSize: 34, fontWeight: 'bold', color: '#0071e3', textAlign: 'center' } },
+                        { type: 'paragraph', name: 'توصيف الرقم', content: 'وصف قصير للرقم', x: 30, y: 118, width: 160, height: 46, styles: { fontSize: 12, color: '#475569', textAlign: 'center' } }
                       ]);
                     }
                   },
                   {
-                    id: 'grp-contact-input',
-                    title: 'بطاقة اتصال (إدخال بريد + زر)',
-                    sub: 'استمارة تواصل سريعة ومثالية للمبيعات',
-                    subCategories: ['forms'],
+                    id: 'grp-simple-box-button',
+                    title: 'صندوق بسيط مع زر',
+                    sub: 'عنوان ونص وزر واحد داخل صندوق بحدود رفيعة، للاستخدام العام',
+                    subCategories: ['basic'],
                     type: 'shape',
                     preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-2 flex flex-col justify-between border border-neutral-200 text-right">
-                        <div className="h-3 bg-neutral-400 rounded-md w-3/4" />
-                        <div className="h-5 bg-white border border-neutral-300 rounded-md" />
-                        <div className="h-5 bg-blue-500 rounded-md" />
+                      <div className="w-full h-18 bg-white rounded-xl p-1.5 flex flex-col justify-between border border-neutral-300">
+                        <div className="h-2.5 bg-neutral-400 rounded-md w-2/3" />
+                        <div className="h-3 bg-neutral-200 rounded-md w-full" />
+                        <div className="h-4 bg-blue-500 rounded-md w-1/3" />
                       </div>
                     ),
                     action: () => {
                       onAddGroup?.({
-                        name: 'بطاقة تواصل سريعة',
-                        width: 320,
-                        height: 250,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'heading', name: 'عنوان النموذج', content: 'تواصل معنا مباشرة', x: 20, y: 20, width: 280, height: 35, styles: { fontSize: 18, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
-                        { type: 'paragraph', name: 'شرح بسيط', content: 'أدخل بريدك الإلكتروني وسنتصل بك فوراً.', x: 20, y: 60, width: 280, height: 40, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } },
-                        { type: 'input', name: 'حقل البريد', content: 'أدخل بريدك الإلكتروني...', x: 20, y: 110, width: 280, height: 42, styles: { borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' } },
-                        { type: 'button', name: 'زر الإرسال', content: 'إرسال الطلب 📬', x: 20, y: 175, width: 280, height: 44, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-quote-input',
-                    title: 'طلب عرض سعر (حقلين + زر)',
-                    sub: 'نموذج تجميع بيانات متطور للمشاريع',
-                    subCategories: ['forms'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200">
-                        <div className="h-3 bg-neutral-400 rounded-md w-1/2" />
-                        <div className="h-4 bg-white border border-neutral-200 rounded-md" />
-                        <div className="h-4 bg-white border border-neutral-200 rounded-md" />
-                        <div className="h-4 bg-blue-500 rounded-md" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'طلب عرض سعر مخصص',
-                        width: 320,
-                        height: 290,
-                        clipPath: 'clip-shape-crescent',
-                        styles: { backgroundColor: '#f8fafc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'heading', name: 'عنوان النموذج', content: 'طلب عرض سعر مخصص', x: 20, y: 20, width: 280, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
-                        { type: 'input', name: 'الاسم الكامل', content: 'الاسم الكامل...', x: 20, y: 65, width: 280, height: 40, styles: { borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' } },
-                        { type: 'input', name: 'رقم الجوال', content: 'رقم الجوال...', x: 20, y: 115, width: 280, height: 40, styles: { borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' } },
-                        { type: 'button', name: 'زر التقديم', content: 'احصل على التسعيرة فوراً', x: 20, y: 180, width: 280, height: 44, styles: { backgroundColor: '#1d4ed8', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-newsletter',
-                    title: 'الاشتراك البريدي الناري',
-                    sub: 'نشرة إخبارية بتدرج ملون جذاب وشارة نار',
-                    subCategories: ['marketing', 'forms'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-1.5 flex flex-col justify-between border border-purple-200 text-right">
-                        <div className="h-2.5 bg-purple-600 rounded-md w-1/3" />
-                        <div className="h-4 bg-white border border-purple-200 rounded-md" />
-                        <div className="h-4 bg-purple-600 rounded-md" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'النشرة الإخبارية المميزة',
-                        width: 320,
-                        height: 285,
-                        clipPath: 'clip-shape-dew-drop',
-                        styles: { backgroundColor: '#faf5ff', borderRadius: 26, borderWidth: 1, borderColor: '#e9d5ff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'badge', name: 'شارة تميز', content: '🔥 عرض محدود', x: 20, y: 20, width: 110, height: 26, styles: { fontSize: 10, backgroundColor: '#fdf4ff', color: '#c084fc', borderRadius: 8, textAlign: 'center' } },
-                        { type: 'heading', name: 'العنوان', content: 'انضم للنشرة الحصرية', x: 20, y: 60, width: 280, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#581c87', textAlign: 'right' } },
-                        { type: 'input', name: 'البريد', content: 'بريدك الإلكتروني المميز...', x: 20, y: 110, width: 280, height: 42, styles: { borderRadius: 12, borderWidth: 1, borderColor: '#d8b4fe' } },
-                        { type: 'button', name: 'زر الاشتراك', content: 'اشترك الآن مجاناً', x: 20, y: 175, width: 280, height: 44, styles: { backgroundColor: '#a855f7', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-profile-card',
-                    title: 'بطاقة خبير (أفاتار + شارة + اسم)',
-                    sub: 'بطاقة تعريفية بالموظفين أو الخبراء والمستشارين',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1.5 flex flex-col items-center justify-between border border-neutral-200">
-                        <div className="w-7 h-7 bg-neutral-200 rounded-full" />
-                        <div className="h-2.5 bg-neutral-400 rounded-md w-1/2" />
-                        <div className="h-3 bg-blue-500 rounded-md w-3/4" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'بطاقة خبير ومستشار',
-                        width: 300,
-                        height: 310,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'image', name: 'أفاتار الخبير', x: 110, y: 20, width: 80, height: 80, styles: { borderRadius: 9999 } },
-                        { type: 'heading', name: 'الاسم', content: 'م. أحمد الحارثي', x: 20, y: 115, width: 260, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', textAlign: 'center' } },
-                        { type: 'badge', name: 'التخصص', content: 'مستشار تقني وتطوير ويب', x: 80, y: 155, width: 140, height: 26, styles: { fontSize: 10, backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: 999, textAlign: 'center' } },
-                        { type: 'paragraph', name: 'نبذة', content: 'شغوف بتطوير الويب وبناء الهويات الرقمية المتكاملة والمميزة.', x: 20, y: 195, width: 260, height: 40, styles: { fontSize: 11, color: '#475569', textAlign: 'center' } },
-                        { type: 'button', name: 'زر تواصل', content: 'احجز جلسة استشارية', x: 20, y: 245, width: 260, height: 42, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-stat-card',
-                    title: 'بطاقة إحصائية متميزة',
-                    sub: 'عرض رقم كبير مع شارة نمو خضراء مميزة',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-emerald-50/50 rounded-xl p-1.5 flex flex-col justify-between border border-emerald-200 text-right">
-                        <div className="text-emerald-600 font-bold text-sm">+98%</div>
-                        <div className="h-2 bg-emerald-700 rounded-md w-3/4" />
-                        <div className="h-4 bg-emerald-200 rounded-md w-1/2" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'بطاقة إحصائية نجاح',
+                        name: 'صندوق بسيط مع زر',
                         width: 300,
                         height: 200,
-                        clipPath: 'clip-shape-blob-cloud',
-                        styles: { backgroundColor: '#f0fdf4', borderRadius: 24, borderWidth: 1, borderColor: '#bbf7d0' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' }
                       }, [
-                        { type: 'heading', name: 'الرقم الإحصائي', content: '+98%', x: 20, y: 20, width: 260, height: 50, styles: { fontSize: 42, fontWeight: 'bold', color: '#15803d', textAlign: 'right' } },
-                        { type: 'paragraph', name: 'التوصيف', content: 'معدل رضا وسعادة شركاء النجاح لعام ٢٠٢٦.', x: 20, y: 80, width: 260, height: 40, styles: { fontSize: 12, color: '#166534', textAlign: 'right' } },
-                        { type: 'badge', name: 'شارة نمو', content: '📈 زيادة بمعدل 5%', x: 20, y: 130, width: 140, height: 26, styles: { fontSize: 10, backgroundColor: '#dcfce7', color: '#15803d', borderRadius: 8, textAlign: 'center' } }
+                        { type: 'heading', name: 'العنوان', content: 'عنوان مختصر وواضح', x: 18, y: 18, width: 264, height: 32, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
+                        { type: 'paragraph', name: 'الوصف', content: 'نص توضيحي قصير يشرح الفكرة أو الخدمة المعروضة هنا.', x: 18, y: 54, width: 264, height: 68, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } },
+                        { type: 'button', name: 'الزر', content: 'اعرف المزيد', x: 18, y: 132, width: 140, height: 42, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 10, fontWeight: 'bold', textAlign: 'center' } }
                       ]);
                     }
                   },
                   {
-                    id: 'grp-testimonial',
-                    title: 'بطاقة تقييم (نجوم + توصية)',
-                    sub: 'آراء وشهادات العملاء بنجوم تذهيب فاخرة',
-                    subCategories: ['marketing'],
+                    id: 'grp-pricing-card',
+                    title: 'بطاقة باقة أو تسعير',
+                    sub: 'اسم الباقة والسعر ووصف قصير وزر اشتراك',
+                    subCategories: ['pricing'],
                     type: 'shape',
                     preview: (
                       <div className="w-full h-18 bg-white rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200">
-                        <div className="text-amber-500 text-[10px]">★★★★★</div>
-                        <div className="h-4 bg-neutral-100 rounded-md" />
-                        <div className="h-2.5 bg-neutral-300 rounded-md w-1/2" />
+                        <div className="h-2 bg-neutral-400 rounded-md w-1/2" />
+                        <div className="h-5 bg-blue-100 rounded-md w-2/3" />
+                        <div className="h-4 bg-blue-500 rounded-md w-full" />
                       </div>
                     ),
                     action: () => {
                       onAddGroup?.({
-                        name: 'بطاقة آراء عملاء',
-                        width: 320,
-                        height: 230,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'badge', name: 'نجوم التقييم', content: '★  ★  ★  ★  ★', x: 20, y: 20, width: 120, height: 26, styles: { fontSize: 11, color: '#f59e0b', backgroundColor: 'transparent', textAlign: 'right' } },
-                        { type: 'paragraph', name: 'التوصية', content: '« سرعة فائقة في التنفيذ والتزام تام بالمعايير الجمالية الراقية والحديثة للهوية العربية. »', x: 20, y: 60, width: 280, height: 60, styles: { fontSize: 12, color: '#334155', textAlign: 'right', fontStyle: 'italic' } },
-                        { type: 'heading', name: 'الكاتب والمنصب', content: 'سارة السويدي - مديرة تسويق رفيعة', x: 20, y: 140, width: 280, height: 35, styles: { fontSize: 11, fontWeight: 'bold', color: '#64748b', textAlign: 'right' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-promo-alert',
-                    title: 'إعلان ساخن (شارة نار + عرض)',
-                    sub: 'إعلان ملفت ومميز لزيادة نسبة النقر والمبيعات',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-amber-50 rounded-xl p-1.5 flex flex-col justify-between border border-amber-200">
-                        <div className="h-3 bg-orange-600 rounded-md w-1/3" />
-                        <div className="h-3 bg-neutral-800 rounded-md w-3/4" />
-                        <div className="h-4 bg-orange-500 rounded-md w-1/2" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'بطاقة العرض الساخن',
-                        width: 320,
-                        height: 220,
-                        styles: { backgroundColor: '#fffbeb', borderRadius: 24, borderWidth: 1, borderColor: '#fde68a' }
-                      }, [
-                        { type: 'badge', name: 'شارة نارية', content: '🔥 عرض محدود', x: 20, y: 20, width: 110, height: 26, styles: { fontSize: 10, backgroundColor: '#fef3c7', color: '#ea580c', borderRadius: 8, textAlign: 'center' } },
-                        { type: 'heading', name: 'عنوان العرض', content: 'خصم 50% على باقات الهوية', x: 20, y: 60, width: 280, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#78350f', textAlign: 'right' } },
-                        { type: 'paragraph', name: 'وصف العرض', content: 'ينتهي هذا العرض الحصري بنهاية الأسبوع الحالي.', x: 20, y: 100, width: 280, height: 35, styles: { fontSize: 11, color: '#92400e', textAlign: 'right' } },
-                        { type: 'button', name: 'زر عرض السعر', content: 'احصل على الخصم الفوري ✦', x: 20, y: 145, width: 280, height: 44, styles: { backgroundColor: '#ea580c', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-faq-item',
-                    title: 'سؤال وجواب (سؤال + فاصل)',
-                    sub: 'فقرة سؤال وجواب للأسئلة الشائعة وتسهيل تجربة العميل',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-white rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200">
-                        <div className="h-3 bg-neutral-800 rounded-md w-3/4" />
-                        <div className="h-1 bg-neutral-200 rounded-full" />
-                        <div className="h-4 bg-neutral-400 rounded-md w-full" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'بطاقة سؤال وجواب فردي',
-                        width: 320,
-                        height: 190,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'heading', name: 'السؤال', content: 'هل المنصة تدعم اللغة العربية؟', x: 20, y: 20, width: 280, height: 35, styles: { fontSize: 14, fontWeight: 'bold', color: '#0f172a', textAlign: 'right' } },
-                        { type: 'badge', name: 'فاصل نقاط', content: '⚫   ⚫   ⚫', x: 20, y: 60, width: 140, height: 20, styles: { fontSize: 10, color: '#cbd5e1', backgroundColor: 'transparent', textAlign: 'right' } },
-                        { type: 'paragraph', name: 'الإجابة', content: 'نعم، تدعم اللغة العربية بالكامل وبخطوط وتنسيقات هوية آبل البصرية الراقية لتناسب المحتوى العربي الفخم.', x: 20, y: 90, width: 280, height: 60, styles: { fontSize: 11, color: '#475569', textAlign: 'right' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-download-file',
-                    title: 'تحميل ملف (شارة PDF + وصف)',
-                    sub: 'حاوية مثالية لتحميل الكتيبات والأدلة الرقمية',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200 text-right">
-                        <div className="h-3.5 bg-red-500 rounded-md w-1/4" />
-                        <div className="h-2.5 bg-neutral-800 rounded-md w-3/4" />
-                        <div className="h-4 bg-red-500 rounded-md" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'بطاقة تحميل ملف الكتيب',
-                        width: 320,
-                        height: 220,
-                        styles: { backgroundColor: '#fcfcfc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'badge', name: 'شارة نوع الملف', content: 'PDF 📄', x: 20, y: 20, width: 80, height: 26, styles: { fontSize: 11, backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: 8, textAlign: 'center' } },
-                        { type: 'heading', name: 'العنوان', content: 'كتيب الهوية البصرية المتكامل', x: 20, y: 55, width: 280, height: 35, styles: { fontSize: 15, fontWeight: 'bold', color: '#0f172a', textAlign: 'right' } },
-                        { type: 'paragraph', name: 'الوصف', content: 'دليل شامل يضم الألوان والخطوط والأشكال المعتمدة.', x: 20, y: 95, width: 280, height: 35, styles: { fontSize: 11, color: '#64748b', textAlign: 'right' } },
-                        { type: 'button', name: 'زر التحميل', content: 'تحميل الكتيب مجاناً', x: 20, y: 140, width: 280, height: 44, styles: { backgroundColor: '#dc2626', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-price-gold',
-                    title: 'السعر الذهبي (شارة + سعر + زر)',
-                    sub: 'عرض باقة مميزة مع شارة الأكثر مبيعاً وعلامات نجاح',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-amber-50 rounded-xl p-1 flex flex-col justify-between border border-amber-400 items-center">
-                        <div className="h-2.5 bg-amber-500 rounded-md w-1/2" />
-                        <div className="text-blue-600 font-extrabold text-[11px]">299 ر.س</div>
-                        <div className="h-3.5 bg-blue-500 rounded-md w-full" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'بطاقة الباقة الذهبية',
-                        width: 320,
-                        height: 235,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 2, borderColor: '#ca8a04', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'badge', name: 'شارة تميز باقة', content: '🏆 الأكثر مبيعاً ورواجاً', x: 80, y: 16, width: 160, height: 26, styles: { fontSize: 10, backgroundColor: '#fefce8', color: '#ca8a04', borderRadius: 999, textAlign: 'center' } },
-                        { type: 'heading', name: 'اسم الباقة', content: 'الباقة الذهبية الشاملة', x: 20, y: 55, width: 280, height: 35, styles: { fontSize: 15, fontWeight: 'bold', color: '#0f172a', textAlign: 'center' } },
-                        { type: 'heading', name: 'سعر الباقة', content: '299 ر.س / شهرياً', x: 20, y: 90, width: 280, height: 35, styles: { fontSize: 20, fontWeight: 'bold', color: '#0071e3', textAlign: 'center' } },
-                        { type: 'button', name: 'زر الشراء', content: 'اشترك الآن في الباقة الذهبية', x: 20, y: 140, width: 280, height: 44, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-team-member',
-                    title: 'بطاقة فريق العمل المتميزة',
-                    sub: 'عرض صورة دائرية لعضو الفريق مع نبذة وزر تواصل',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1 flex flex-col items-center justify-between border border-neutral-200">
-                        <div className="w-6 h-6 bg-neutral-200 rounded-full" />
-                        <div className="h-2 bg-neutral-500 rounded-md w-1/3" />
-                        <div className="h-3 bg-blue-600 rounded-md w-3/4" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'بطاقة عضو فريق العمل',
+                        name: 'بطاقة باقة أو تسعير',
                         width: 300,
                         height: 300,
-                        clipPath: 'clip-shape-arch-classic',
-                        styles: { backgroundColor: '#f8fafc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 20, glowColor: 'rgba(0,0,0,0.12)', glowPosition: 'bottom' }
                       }, [
-                        { type: 'image', name: 'أفاتار العضو', x: 110, y: 20, width: 80, height: 80, styles: { borderRadius: 9999 } },
-                        { type: 'heading', name: 'اسم العضو', content: 'د. ليلى الفايز', x: 20, y: 115, width: 260, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', textAlign: 'center' } },
-                        { type: 'paragraph', name: 'توصيف عضو', content: 'خبيرة تجربة المستخدم وباحثة سلوك المستهلك الرقمي.', x: 20, y: 155, width: 260, height: 40, styles: { fontSize: 11, color: '#475569', textAlign: 'center' } },
-                        { type: 'button', name: 'زر تواصل لينكدإن', content: 'تواصل عبر لينكد إن 🔗', x: 20, y: 215, width: 260, height: 42, styles: { backgroundColor: '#0077b5', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
+                        { type: 'heading', name: 'اسم الباقة', content: 'اسم الباقة', x: 18, y: 18, width: 264, height: 28, styles: { fontSize: 15, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
+                        { type: 'heading', name: 'السعر', content: 'السعر الشهري', x: 18, y: 52, width: 264, height: 44, styles: { fontSize: 30, fontWeight: 'bold', color: '#0071e3', textAlign: 'right' } },
+                        { type: 'paragraph', name: 'وصف الباقة', content: 'أهم ما تتضمنه هذه الباقة بجملة واحدة.', x: 18, y: 104, width: 264, height: 50, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } },
+                        { type: 'button', name: 'زر الاشتراك', content: 'اختر هذه الباقة', x: 18, y: 220, width: 264, height: 44, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
                       ]);
                     }
                   },
                   {
-                    id: 'grp-appointment-box',
-                    title: 'حجز موعد (حقل تاريخ + زر)',
-                    sub: 'استمارة تجميع بيانات سريعة لحجز الاستشارات',
+                    id: 'grp-quick-contact',
+                    title: 'بطاقة تواصل سريع',
+                    sub: 'عنوان وحقل بريد وزر إرسال، لجمع طلبات التواصل',
                     subCategories: ['forms'],
                     type: 'shape',
                     preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200 text-right">
-                        <div className="h-3 bg-neutral-800 rounded-md w-1/2" />
-                        <div className="h-5 bg-white border border-neutral-200 rounded-md" />
-                        <div className="h-4.5 bg-blue-500 rounded-md" />
+                      <div className="w-full h-18 bg-neutral-50 rounded-full p-2 flex flex-col justify-center gap-1 border border-neutral-200">
+                        <div className="h-2 bg-neutral-400 rounded-md w-1/2 mx-auto" />
+                        <div className="h-4 bg-white border border-neutral-300 rounded-md" />
+                        <div className="h-4 bg-blue-500 rounded-md" />
                       </div>
                     ),
                     action: () => {
                       onAddGroup?.({
-                        name: 'بطاقة حجز موعد استشارة',
+                        name: 'بطاقة تواصل سريع',
                         width: 320,
-                        height: 215,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
+                        height: 230,
+                        clipPath: 'clip-shape-geo-capsule',
+                        styles: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' }
                       }, [
-                        { type: 'heading', name: 'عنوان حجز مواعيد', content: 'حجز مكالمة استكشافية', x: 20, y: 20, width: 280, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', textAlign: 'right' } },
-                        { type: 'input', name: 'تاريخ الموعد', content: 'حدد تاريخ وميعاد المقابلة...', x: 20, y: 65, width: 280, height: 40, styles: { borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' } },
-                        { type: 'button', name: 'زر التأكيد', content: 'تأكيد وحجز الموعد الآن', x: 20, y: 125, width: 280, height: 44, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-branch-map',
-                    title: 'بطاقة فرع الرياض والاتصال',
-                    sub: 'تضمين خريطة للفرع بالإضافة لزر اتصال مباشر لسرعة التنسيق',
-                    subCategories: ['forms'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200">
-                        <div className="h-7 bg-neutral-300 rounded-md" />
-                        <div className="h-2 bg-neutral-800 rounded-md w-3/4" />
-                        <div className="h-4 bg-green-500 rounded-md" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'فرع مدينة الرياض الرئيسي',
-                        width: 320,
-                        height: 310,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
-                      }, [
-                        { type: 'map', name: 'موقع الفرع الخريطة', content: 'الرياض، المملكة العربية السعودية', x: 20, y: 20, width: 280, height: 120, styles: { borderRadius: 14 } },
-                        { type: 'heading', name: 'العنوان النصي', content: 'فرع مدينة الرياض الرئيسي', x: 20, y: 155, width: 280, height: 35, styles: { fontSize: 15, fontWeight: 'bold', color: '#0f172a', textAlign: 'right' } },
-                        { type: 'button', name: 'زر الاتصال المباشر', content: 'اتصل بنا الآن 📞', x: 20, y: 205, width: 280, height: 44, styles: { backgroundColor: '#16a34a', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
-                      ]);
-                    }
-                  },
-                  {
-                    id: 'grp-video-promo',
-                    title: 'مشاهدة فيديو (مشغل + زر اشتراك)',
-                    sub: 'بطاقة مجهزة بمشغل فيديو تفاعلي وزر اشتراك أحمر',
-                    subCategories: ['marketing'],
-                    type: 'shape',
-                    preview: (
-                      <div className="w-full h-18 bg-neutral-50 rounded-xl p-1.5 flex flex-col justify-between border border-neutral-200">
-                        <div className="h-7 bg-neutral-300 rounded-md" />
-                        <div className="h-4 bg-red-600 rounded-md" />
-                      </div>
-                    ),
-                    action: () => {
-                      onAddGroup?.({
-                        name: 'بطاقة عرض الفيديو والتفاعل',
-                        width: 320,
-                        height: 310,
-                        styles: { backgroundColor: '#111827', borderRadius: 24, borderWidth: 1, borderColor: '#374151' }
-                      }, [
-                        { type: 'video', name: 'مشغل الفيديو الفرعي', content: 'فيديو مقدمة التصميم الإبداعي', x: 20, y: 20, width: 280, height: 120, styles: { borderRadius: 14 } },
-                        { type: 'heading', name: 'عنوان الفيديو', content: 'فيديو مقدمة التصميم الإبداعي', x: 20, y: 155, width: 280, height: 35, styles: { fontSize: 13, fontWeight: 'bold', color: '#ffffff', textAlign: 'center' } },
-                        { type: 'button', name: 'زر يوتيوب', content: 'اشترك بقناتنا يوتيوب 🎬', x: 20, y: 205, width: 280, height: 44, styles: { backgroundColor: '#dc2626', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
+                        { type: 'heading', name: 'عنوان النموذج', content: 'تواصل معنا', x: 40, y: 26, width: 240, height: 30, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' } },
+                        { type: 'input', name: 'حقل البريد', content: 'بريدك الإلكتروني', x: 40, y: 64, width: 240, height: 40, styles: { borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' } },
+                        { type: 'button', name: 'زر الإرسال', content: 'إرسال', x: 40, y: 112, width: 240, height: 42, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 10, fontWeight: 'bold', textAlign: 'center' } }
                       ]);
                     }
                   }

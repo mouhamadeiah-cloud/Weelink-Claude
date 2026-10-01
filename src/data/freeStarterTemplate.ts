@@ -1,8 +1,8 @@
 // Free starter template: a fixed 5-page site (Home, About, Our Work, Pricing, Contact),
-// each page reachable from the shared navbar. This is the platform's ready-made
-// free-tier template — every element here uses only existing platform element types
-// (heading, paragraph, image, icon, shape, button, pricing, map), no external/invented components.
-// Generated data — see applyFreeStarterTemplate() in App.tsx for how it is applied.
+// each page reachable from the shared navbar. Every element here uses only existing platform
+// element/style capabilities (fixed background image, glass/transparent cards, corner-bleeding
+// geometric shapes, clip-path image crops, glow/shadow, borders, one entrance animation) —
+// no external or invented components. See applyFreeStarterTemplate() in App.tsx.
 
 import type { Page, CanvasElement } from '../types';
 
@@ -65,7 +65,7 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
         "id": "free-home-slide",
         "name": "المدخل",
         "height": 680,
-        "backgroundColor": "#FAF7F2",
+        "backgroundColor": "#14241F",
         "backgroundImage": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1920&q=85",
         "backgroundSize": "cover",
         "backgroundPosition": "center",
@@ -326,95 +326,122 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
 
   const elements: CanvasElement[] = [
   {
-    "id": "free-home-el-1",
+    "id": "free-home-overlay",
     "name": "shape",
     "type": "shape",
-    "x": 680,
+    "x": 0,
     "y": 0,
-    "width": 600,
+    "width": 1280,
     "height": 680,
     "content": "",
     "slideId": "free-home-slide",
     "styles": {
-      "backgroundColor": "rgba(250,247,242,0.93)"
+      "backgroundColor": "rgba(10,20,18,0.46)"
     }
   },
   {
-    "id": "free-home-el-2",
+    "id": "free-home-circle",
+    "name": "shape",
+    "type": "shape",
+    "x": 980,
+    "y": -140,
+    "width": 420,
+    "height": 420,
+    "content": "",
+    "slideId": "free-home-slide",
+    "styles": {
+      "backgroundColor": "rgba(255,255,255,0.07)",
+      "borderColor": "rgba(255,255,255,0.22)",
+      "borderWidth": 1,
+      "borderRadius": 9999
+    }
+  },
+  {
+    "id": "free-home-glass",
+    "name": "shape",
+    "type": "shape",
+    "x": 100,
+    "y": 140,
+    "width": 620,
+    "height": 400,
+    "content": "",
+    "slideId": "free-home-slide",
+    "styles": {
+      "backgroundColor": "rgba(255,255,255,0.10)",
+      "borderColor": "rgba(255,255,255,0.28)",
+      "borderWidth": 1,
+      "borderRadius": 32,
+      "glowIntensity": 44,
+      "glowColor": "rgba(0,0,0,0.38)",
+      "glowPosition": "bottom"
+    }
+  },
+  {
+    "id": "free-home-logo",
     "name": "image",
     "type": "image",
-    "x": 740,
-    "y": 90,
-    "width": 64,
-    "height": 64,
+    "x": 140,
+    "y": 182,
+    "width": 60,
+    "height": 60,
     "content": "",
     "slideId": "free-home-slide",
     "styles": {
       "borderRadius": 999,
-      "objectFit": "cover"
+      "objectFit": "cover",
+      "borderColor": "rgba(255,255,255,0.55)",
+      "borderWidth": 2
     },
     "imageUrl": "https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?auto=format&fit=crop&w=400&q=85"
   },
   {
-    "id": "free-home-el-3",
+    "id": "free-home-heading",
     "name": "heading",
     "type": "heading",
-    "x": 740,
-    "y": 176,
-    "width": 480,
-    "height": 120,
+    "x": 140,
+    "y": 268,
+    "width": 520,
+    "height": 112,
     "content": "حيث تلتقي الجودة بالثقة",
     "slideId": "free-home-slide",
     "styles": {
-      "fontSize": 40,
+      "fontSize": 42,
       "fontWeight": "bold",
-      "color": "#1C1B19",
+      "color": "#FFFFFF",
       "fontFamily": "El Messiri",
       "textAlign": "right",
-      "lineHeight": 1.25
+      "lineHeight": 1.2,
+      "animation": "slide-up",
+      "animationTrigger": "once",
+      "animationDuration": 1.1
     }
   },
   {
-    "id": "free-home-el-4",
-    "name": "shape",
-    "type": "shape",
-    "x": 1200,
-    "y": 176,
-    "width": 4,
-    "height": 110,
-    "content": "",
-    "slideId": "free-home-slide",
-    "styles": {
-      "backgroundColor": "#1F5D50",
-      "borderRadius": 2
-    }
-  },
-  {
-    "id": "free-home-el-5",
+    "id": "free-home-intro",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 740,
-    "y": 306,
-    "width": 460,
-    "height": 100,
+    "x": 140,
+    "y": 396,
+    "width": 520,
+    "height": 90,
     "content": "نرحب بكم في صفحتنا الإلكترونية، صممناها لتقديم خدماتنا بأسلوب واضح يعكس احترافيتنا ويليق بثقتكم.",
     "slideId": "free-home-slide",
     "styles": {
       "fontSize": 16,
-      "color": "#3D3830",
+      "color": "rgba(255,255,255,0.86)",
       "fontFamily": "IBM Plex Sans Arabic",
       "textAlign": "right",
       "lineHeight": 1.8
     }
   },
   {
-    "id": "free-home-el-6",
+    "id": "free-home-cta",
     "name": "button",
     "type": "button",
-    "x": 740,
-    "y": 430,
+    "x": 140,
+    "y": 502,
     "width": 200,
-    "height": 50,
+    "height": 52,
     "content": "تواصل معنا",
     "slideId": "free-home-slide",
     "styles": {
@@ -423,90 +450,107 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
       "fontSize": 15,
       "fontWeight": "600",
       "borderRadius": 9999,
-      "textAlign": "center"
+      "textAlign": "center",
+      "glowIntensity": 26,
+      "glowColor": "rgba(31,93,80,0.55)",
+      "glowPosition": "bottom"
     },
-    "linkType": "page",
-    "linkTargetId": "page-contact",
-    "linkUrl": "#page-page-contact"
+    "linkType": "contact",
+    "contactType": "whatsapp",
+    "contactValue": "963991234567",
+    "linkUrl": "https://wa.me/963991234567"
   },
   {
-    "id": "free-about-el-1",
-    "name": "image",
-    "type": "image",
-    "x": 100,
-    "y": 80,
-    "width": 480,
-    "height": 460,
+    "id": "free-about-block",
+    "name": "shape",
+    "type": "shape",
+    "x": 660,
+    "y": 90,
+    "width": 380,
+    "height": 400,
     "content": "",
     "slideId": "free-about-slide",
     "styles": {
-      "borderRadius": 12,
-      "borderColor": "#E6E1D6",
-      "borderWidth": 1,
-      "objectFit": "cover"
-    },
-    "imageUrl": "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=900&q=85"
+      "backgroundColor": "rgba(31,93,80,0.08)",
+      "borderRadius": 24
+    }
   },
   {
-    "id": "free-about-el-2",
+    "id": "free-about-image",
+    "name": "image",
+    "type": "image",
+    "x": 700,
+    "y": 120,
+    "width": 320,
+    "height": 380,
+    "content": "",
+    "slideId": "free-about-slide",
+    "styles": {
+      "objectFit": "cover"
+    },
+    "imageUrl": "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=85",
+    "clipPath": "clip-shape-arch-classic"
+  },
+  {
+    "id": "free-about-heading",
     "name": "heading",
     "type": "heading",
-    "x": 620,
-    "y": 80,
-    "width": 400,
-    "height": 50,
+    "x": 140,
+    "y": 120,
+    "width": 420,
+    "height": 70,
     "content": "من نحن",
     "slideId": "free-about-slide",
     "styles": {
-      "fontSize": 32,
+      "fontSize": 34,
       "fontWeight": "bold",
       "color": "#1C1B19",
       "fontFamily": "El Messiri",
-      "textAlign": "right",
-      "lineHeight": 1.25
+      "textAlign": "right"
     }
   },
   {
-    "id": "free-about-el-3",
-    "name": "shape",
-    "type": "shape",
-    "x": 1020,
-    "y": 84,
-    "width": 4,
-    "height": 42,
-    "content": "",
-    "slideId": "free-about-slide",
-    "styles": {
-      "backgroundColor": "#1F5D50",
-      "borderRadius": 2
-    }
-  },
-  {
-    "id": "free-about-el-4",
+    "id": "free-about-text",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 620,
-    "y": 160,
-    "width": 560,
-    "height": 320,
+    "x": 140,
+    "y": 210,
+    "width": 440,
+    "height": 340,
     "content": "نحن فريق شغوف يؤمن بأن كل تفصيل صغير يصنع فرقًا كبيرًا في تجربة العميل. تأسس عملنا على الرغبة في تقديم خدمة تجمع بين الجودة والصدق في التعامل، ونحرص في كل مرة على أن نترك أثرًا إيجابيًا يستحق الثقة. نستمع لاحتياجات كل عميل على حدة، ونعمل على تحويلها إلى نتائج ملموسة تلبي تطلعاته.",
     "slideId": "free-about-slide",
     "styles": {
-      "fontSize": 16,
+      "fontSize": 15.5,
       "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
       "textAlign": "right",
-      "lineHeight": 2
+      "lineHeight": 1.9
     }
   },
   {
-    "id": "free-work-el-header",
+    "id": "free-work-accent",
+    "name": "shape",
+    "type": "shape",
+    "x": -110,
+    "y": 760,
+    "width": 300,
+    "height": 300,
+    "content": "",
+    "slideId": "free-work-slide",
+    "styles": {
+      "backgroundColor": "rgba(31,93,80,0.08)",
+      "borderRadius": 40
+    },
+    "rotation": 20
+  },
+  {
+    "id": "free-work-header",
     "name": "heading",
     "type": "heading",
-    "x": 780,
-    "y": 70,
+    "x": 140,
+    "y": 50,
     "width": 400,
-    "height": 50,
+    "height": 56,
     "content": "أعمالنا",
     "slideId": "free-work-slide",
     "styles": {
@@ -514,332 +558,438 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
       "fontWeight": "bold",
       "color": "#1C1B19",
       "fontFamily": "El Messiri",
-      "textAlign": "right",
-      "lineHeight": 1.25
+      "textAlign": "right"
     }
   },
   {
-    "id": "free-work-el-sub",
+    "id": "free-work-sub",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 780,
-    "y": 122,
-    "width": 400,
+    "x": 140,
+    "y": 108,
+    "width": 500,
     "height": 40,
-    "content": "نماذج من أعمال أنجزناها بعناية لعملائنا",
+    "content": "نماذج من أعمال أنجزناها بعناية لعملائنا.",
     "slideId": "free-work-slide",
     "styles": {
       "fontSize": 15,
       "color": "#6B6459",
       "fontFamily": "IBM Plex Sans Arabic",
-      "textAlign": "right",
-      "lineHeight": 1.5
+      "textAlign": "right"
+    }
+  },
+  {
+    "id": "free-work-card-1",
+    "name": "shape",
+    "type": "shape",
+    "x": 140,
+    "y": 180,
+    "width": 1000,
+    "height": 130,
+    "content": "",
+    "slideId": "free-work-slide",
+    "styles": {
+      "backgroundColor": "rgba(31,93,80,0.05)",
+      "borderRadius": 28,
+      "borderColor": "rgba(0,0,0,0.05)",
+      "borderWidth": 1
     }
   },
   {
     "id": "free-work-img-1",
     "name": "image",
     "type": "image",
-    "x": 100,
-    "y": 220,
-    "width": 340,
-    "height": 240,
+    "x": 140,
+    "y": 195,
+    "width": 240,
+    "height": 100,
     "content": "",
     "slideId": "free-work-slide",
     "styles": {
-      "borderRadius": 10,
+      "borderRadius": 22,
       "objectFit": "cover"
     },
-    "imageUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=700&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=700&q=85"
   },
   {
     "id": "free-work-cap-1",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 100,
-    "y": 470,
-    "width": 340,
-    "height": 70,
-    "content": "مشروع أنجز بعناية فائقة لتلبية احتياجات عميل يبحث عن التميز.",
+    "x": 500,
+    "y": 195,
+    "width": 330,
+    "height": 100,
+    "content": "مشروع أنجز بعناية فائقة لتلبية احتياجات العميل.",
     "slideId": "free-work-slide",
     "styles": {
-      "fontSize": 13.5,
-      "color": "#6B6459",
+      "fontSize": 14.5,
+      "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
       "textAlign": "right",
-      "lineHeight": 1.6
+      "lineHeight": 1.7
+    }
+  },
+  {
+    "id": "free-work-card-2",
+    "name": "shape",
+    "type": "shape",
+    "x": 140,
+    "y": 330,
+    "width": 1000,
+    "height": 130,
+    "content": "",
+    "slideId": "free-work-slide",
+    "styles": {
+      "backgroundColor": "rgba(196,154,88,0.07)",
+      "borderRadius": 20,
+      "borderColor": "rgba(0,0,0,0.05)",
+      "borderWidth": 1
     }
   },
   {
     "id": "free-work-img-2",
     "name": "image",
     "type": "image",
-    "x": 470,
-    "y": 220,
-    "width": 340,
-    "height": 240,
+    "x": 870,
+    "y": 345,
+    "width": 240,
+    "height": 100,
     "content": "",
     "slideId": "free-work-slide",
     "styles": {
-      "borderRadius": 10,
+      "borderRadius": 14,
       "objectFit": "cover"
     },
-    "imageUrl": "https://images.unsplash.com/photo-1586724237569-f3d0c1dee8c6?auto=format&fit=crop&w=700&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1586724237569-f3d0c1dee8c6?auto=format&fit=crop&w=700&q=85"
   },
   {
     "id": "free-work-cap-2",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 470,
-    "y": 470,
-    "width": 340,
-    "height": 70,
+    "x": 140,
+    "y": 345,
+    "width": 330,
+    "height": 100,
     "content": "نتيجة نهائية تعكس شغفنا بالتفاصيل الدقيقة.",
     "slideId": "free-work-slide",
     "styles": {
-      "fontSize": 13.5,
-      "color": "#6B6459",
+      "fontSize": 14.5,
+      "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
       "textAlign": "right",
-      "lineHeight": 1.6
+      "lineHeight": 1.7
+    }
+  },
+  {
+    "id": "free-work-card-3",
+    "name": "shape",
+    "type": "shape",
+    "x": 140,
+    "y": 480,
+    "width": 1000,
+    "height": 130,
+    "content": "",
+    "slideId": "free-work-slide",
+    "styles": {
+      "backgroundColor": "rgba(31,93,80,0.05)",
+      "borderRadius": 28,
+      "borderColor": "rgba(0,0,0,0.05)",
+      "borderWidth": 1
     }
   },
   {
     "id": "free-work-img-3",
     "name": "image",
     "type": "image",
-    "x": 840,
-    "y": 220,
-    "width": 340,
-    "height": 240,
+    "x": 140,
+    "y": 495,
+    "width": 240,
+    "height": 100,
     "content": "",
     "slideId": "free-work-slide",
     "styles": {
-      "borderRadius": 10,
+      "borderRadius": 22,
       "objectFit": "cover"
     },
-    "imageUrl": "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=700&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=700&q=85"
   },
   {
     "id": "free-work-cap-3",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 840,
-    "y": 470,
-    "width": 340,
-    "height": 70,
+    "x": 500,
+    "y": 495,
+    "width": 330,
+    "height": 100,
     "content": "تجربة ناجحة حقّقت رضا عميلنا الكامل.",
     "slideId": "free-work-slide",
     "styles": {
-      "fontSize": 13.5,
-      "color": "#6B6459",
+      "fontSize": 14.5,
+      "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
       "textAlign": "right",
-      "lineHeight": 1.6
+      "lineHeight": 1.7
+    }
+  },
+  {
+    "id": "free-work-card-4",
+    "name": "shape",
+    "type": "shape",
+    "x": 140,
+    "y": 630,
+    "width": 1000,
+    "height": 130,
+    "content": "",
+    "slideId": "free-work-slide",
+    "styles": {
+      "backgroundColor": "rgba(196,154,88,0.07)",
+      "borderRadius": 20,
+      "borderColor": "rgba(0,0,0,0.05)",
+      "borderWidth": 1
     }
   },
   {
     "id": "free-work-img-4",
     "name": "image",
     "type": "image",
-    "x": 270,
-    "y": 580,
-    "width": 340,
-    "height": 240,
+    "x": 870,
+    "y": 645,
+    "width": 240,
+    "height": 100,
     "content": "",
     "slideId": "free-work-slide",
     "styles": {
-      "borderRadius": 10,
+      "borderRadius": 14,
       "objectFit": "cover"
     },
-    "imageUrl": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=700&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=700&q=85"
   },
   {
     "id": "free-work-cap-4",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 270,
-    "y": 830,
-    "width": 340,
-    "height": 70,
+    "x": 140,
+    "y": 645,
+    "width": 330,
+    "height": 100,
     "content": "حل مخصص صُمم خصيصًا ليلائم طبيعة العمل.",
     "slideId": "free-work-slide",
     "styles": {
-      "fontSize": 13.5,
-      "color": "#6B6459",
+      "fontSize": 14.5,
+      "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
       "textAlign": "right",
-      "lineHeight": 1.6
+      "lineHeight": 1.7
+    }
+  },
+  {
+    "id": "free-work-card-5",
+    "name": "shape",
+    "type": "shape",
+    "x": 140,
+    "y": 780,
+    "width": 1000,
+    "height": 130,
+    "content": "",
+    "slideId": "free-work-slide",
+    "styles": {
+      "backgroundColor": "rgba(31,93,80,0.05)",
+      "borderRadius": 28,
+      "borderColor": "rgba(0,0,0,0.05)",
+      "borderWidth": 1
     }
   },
   {
     "id": "free-work-img-5",
     "name": "image",
     "type": "image",
-    "x": 670,
-    "y": 580,
-    "width": 340,
-    "height": 240,
+    "x": 140,
+    "y": 795,
+    "width": 240,
+    "height": 100,
     "content": "",
     "slideId": "free-work-slide",
     "styles": {
-      "borderRadius": 10,
+      "borderRadius": 22,
       "objectFit": "cover"
     },
-    "imageUrl": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=85"
   },
   {
     "id": "free-work-cap-5",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 670,
-    "y": 830,
-    "width": 340,
-    "height": 70,
+    "x": 500,
+    "y": 795,
+    "width": 330,
+    "height": 100,
     "content": "لحظة من رحلة عمل نفخر بها ونعتز بنتائجها.",
     "slideId": "free-work-slide",
     "styles": {
-      "fontSize": 13.5,
-      "color": "#6B6459",
+      "fontSize": 14.5,
+      "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
       "textAlign": "right",
-      "lineHeight": 1.6
+      "lineHeight": 1.7
+    }
+  },
+  {
+    "id": "free-pricing-bg-circle",
+    "name": "shape",
+    "type": "shape",
+    "x": 450,
+    "y": 160,
+    "width": 380,
+    "height": 380,
+    "content": "",
+    "slideId": "free-pricing-slide",
+    "styles": {
+      "backgroundColor": "rgba(31,93,80,0.08)",
+      "borderRadius": 9999
     }
   },
   {
     "id": "free-pricing-header",
     "name": "heading",
     "type": "heading",
-    "x": 100,
-    "y": 70,
-    "width": 1080,
+    "x": 0,
+    "y": 60,
+    "width": 1280,
     "height": 50,
     "content": "باقات الأسعار",
     "slideId": "free-pricing-slide",
     "styles": {
-      "fontSize": 32,
+      "fontSize": 30,
       "fontWeight": "bold",
       "color": "#1C1B19",
       "fontFamily": "El Messiri",
-      "textAlign": "center",
-      "lineHeight": 1.25
+      "textAlign": "center"
     }
   },
   {
     "id": "free-pricing-sub",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 100,
-    "y": 125,
-    "width": 1080,
-    "height": 40,
+    "x": 0,
+    "y": 112,
+    "width": 1280,
+    "height": 34,
     "content": "اختر الباقة التي تناسب احتياجاتك",
     "slideId": "free-pricing-slide",
     "styles": {
       "fontSize": 15,
       "color": "#6B6459",
       "fontFamily": "IBM Plex Sans Arabic",
-      "textAlign": "center",
-      "lineHeight": 1.5
+      "textAlign": "center"
     }
   },
   {
     "id": "free-pricing-tier-1",
     "name": "pricing",
     "type": "pricing",
-    "x": 100,
-    "y": 210,
+    "x": 140,
+    "y": 190,
     "width": 320,
     "height": 380,
-    "content": "",
+    "content": "تبدأ رحلتك معنا بخطوات واثقة.",
     "slideId": "free-pricing-slide",
     "styles": {
-      "backgroundColor": "#FFFFFF",
-      "color": "#1F5D50",
-      "borderRadius": 16,
-      "textAlign": "center",
-      "borderColor": "#E6E1D6",
-      "borderWidth": 1
+      "borderColor": "rgba(0,0,0,0.08)",
+      "borderWidth": 1,
+      "borderRadius": 24,
+      "backgroundColor": "#FFFFFF"
     },
-    "pricingPlan": "الباقة الأساسية",
-    "pricingPrice": "٢٥$",
+    "pricingPlan": "الأساسية",
+    "pricingPrice": "199 ر.س",
     "pricingPeriod": "شهريًا",
     "pricingFeatures": [
       "استشارة أولى مجانية",
-      "متابعة عبر واتساب",
-      "مدة تنفيذ قياسية"
+      "دعم عبر البريد الإلكتروني",
+      "تسليم خلال 5 أيام"
     ],
-    "pricingFeatured": false,
-    "pricingCtaText": "اختر هذه الباقة"
+    "pricingCtaText": "ابدأ الآن"
   },
   {
     "id": "free-pricing-tier-2",
     "name": "pricing",
     "type": "pricing",
     "x": 480,
-    "y": 210,
+    "y": 160,
     "width": 320,
-    "height": 380,
-    "content": "",
+    "height": 410,
+    "content": "الخيار الأنسب لمعظم عملائنا.",
     "slideId": "free-pricing-slide",
     "styles": {
-      "backgroundColor": "#FFFFFF",
-      "color": "#1F5D50",
-      "borderRadius": 16,
-      "textAlign": "center",
       "borderColor": "#1F5D50",
-      "borderWidth": 2
+      "borderWidth": 2,
+      "borderRadius": 24,
+      "backgroundColor": "#FFFFFF",
+      "glowIntensity": 36,
+      "glowColor": "rgba(31,93,80,0.30)",
+      "glowPosition": "bottom",
+      "color": "#1F5D50"
     },
-    "pricingPlan": "الباقة المميزة",
-    "pricingPrice": "٤٥$",
+    "pricingPlan": "المتقدمة",
+    "pricingPrice": "399 ر.س",
     "pricingPeriod": "شهريًا",
     "pricingFeatures": [
-      "كل ميزات الباقة الأساسية",
-      "أولوية في التنفيذ",
-      "متابعة أسبوعية مباشرة",
-      "تعديلات إضافية مجانية"
+      "كل مزايا الباقة الأساسية",
+      "دعم أولوية عبر واتساب",
+      "تسليم خلال 48 ساعة",
+      "مراجعتان مجانيتان"
     ],
     "pricingFeatured": true,
-    "pricingCtaText": "اختر هذه الباقة"
+    "pricingCtaText": "اشترك الآن"
   },
   {
     "id": "free-pricing-tier-3",
     "name": "pricing",
     "type": "pricing",
-    "x": 860,
-    "y": 210,
+    "x": 820,
+    "y": 190,
     "width": 320,
     "height": 380,
-    "content": "",
+    "content": "تغطية شاملة للأعمال الكبيرة.",
     "slideId": "free-pricing-slide",
     "styles": {
-      "backgroundColor": "#FFFFFF",
-      "color": "#1F5D50",
-      "borderRadius": 16,
-      "textAlign": "center",
-      "borderColor": "#E6E1D6",
-      "borderWidth": 1
+      "borderColor": "rgba(0,0,0,0.08)",
+      "borderWidth": 1,
+      "borderRadius": 24,
+      "backgroundColor": "#FFFFFF"
     },
-    "pricingPlan": "الباقة الشاملة",
-    "pricingPrice": "٧٥$",
+    "pricingPlan": "الاحترافية",
+    "pricingPrice": "699 ر.س",
     "pricingPeriod": "شهريًا",
     "pricingFeatures": [
-      "كل ميزات الباقة المميزة",
-      "دعم على مدار الساعة",
-      "تقرير أداء شهري",
-      "مدير حساب مخصص"
+      "كل مزايا الباقة المتقدمة",
+      "مدير حساب مخصص",
+      "تقارير أداء أسبوعية"
     ],
-    "pricingFeatured": false,
-    "pricingCtaText": "اختر هذه الباقة"
+    "pricingCtaText": "تواصل معنا"
+  },
+  {
+    "id": "free-contact-corner",
+    "name": "shape",
+    "type": "shape",
+    "x": -90,
+    "y": 360,
+    "width": 320,
+    "height": 320,
+    "content": "",
+    "slideId": "free-contact-slide",
+    "styles": {
+      "backgroundColor": "rgba(31,93,80,0.08)",
+      "borderRadius": 9999
+    }
   },
   {
     "id": "free-contact-heading",
     "name": "heading",
     "type": "heading",
-    "x": 680,
-    "y": 70,
-    "width": 480,
-    "height": 50,
+    "x": 140,
+    "y": 56,
+    "width": 420,
+    "height": 60,
     "content": "تواصل معنا",
     "slideId": "free-contact-slide",
     "styles": {
@@ -847,46 +997,50 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
       "fontWeight": "bold",
       "color": "#1C1B19",
       "fontFamily": "El Messiri",
-      "textAlign": "right",
-      "lineHeight": 1.25
-    }
-  },
-  {
-    "id": "free-contact-rule",
-    "name": "shape",
-    "type": "shape",
-    "x": 1164,
-    "y": 74,
-    "width": 4,
-    "height": 42,
-    "content": "",
-    "slideId": "free-contact-slide",
-    "styles": {
-      "backgroundColor": "#1F5D50",
-      "borderRadius": 2
+      "textAlign": "right"
     }
   },
   {
     "id": "free-contact-map",
     "name": "map",
     "type": "map",
-    "x": 100,
-    "y": 150,
-    "width": 560,
-    "height": 400,
+    "x": 140,
+    "y": 140,
+    "width": 500,
+    "height": 420,
     "content": "دمشق، سوريا",
     "slideId": "free-contact-slide",
     "styles": {
-      "borderRadius": 16
+      "borderRadius": 24
     },
     "mapLocation": "دمشق، سوريا"
+  },
+  {
+    "id": "free-contact-card",
+    "name": "shape",
+    "type": "shape",
+    "x": 700,
+    "y": 140,
+    "width": 440,
+    "height": 420,
+    "content": "",
+    "slideId": "free-contact-slide",
+    "styles": {
+      "backgroundColor": "#FFFFFF",
+      "borderColor": "rgba(0,0,0,0.06)",
+      "borderWidth": 1,
+      "borderRadius": 28,
+      "glowIntensity": 28,
+      "glowColor": "rgba(0,0,0,0.10)",
+      "glowPosition": "bottom"
+    }
   },
   {
     "id": "free-contact-icon-phone",
     "name": "icon",
     "type": "icon",
-    "x": 1128,
-    "y": 150,
+    "x": 1070,
+    "y": 180,
     "width": 32,
     "height": 32,
     "content": "iconify:mdi:phone",
@@ -899,30 +1053,29 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
     "id": "free-contact-text-phone",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 680,
-    "y": 154,
-    "width": 430,
+    "x": 740,
+    "y": 180,
+    "width": 310,
     "height": 32,
-    "content": "٩٦٣ ٩٩١ ٢٣٤ ٥٦٧+",
+    "content": "+963 991 234 567",
     "slideId": "free-contact-slide",
     "styles": {
       "fontSize": 15,
       "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
-      "textAlign": "right",
-      "lineHeight": 1.4
+      "textAlign": "right"
     },
     "linkType": "contact",
     "contactType": "phone",
-    "contactValue": "+963991234567",
+    "contactValue": "+963 991 234 567",
     "linkUrl": "tel:+963991234567"
   },
   {
     "id": "free-contact-icon-whatsapp",
     "name": "icon",
     "type": "icon",
-    "x": 1128,
-    "y": 220,
+    "x": 1070,
+    "y": 244,
     "width": 32,
     "height": 32,
     "content": "iconify:mdi:whatsapp",
@@ -935,9 +1088,9 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
     "id": "free-contact-text-whatsapp",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 680,
-    "y": 224,
-    "width": 430,
+    "x": 740,
+    "y": 244,
+    "width": 310,
     "height": 32,
     "content": "تواصل عبر واتساب",
     "slideId": "free-contact-slide",
@@ -945,20 +1098,19 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
       "fontSize": 15,
       "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
-      "textAlign": "right",
-      "lineHeight": 1.4
+      "textAlign": "right"
     },
     "linkType": "contact",
     "contactType": "whatsapp",
-    "contactValue": "963991234567",
+    "contactValue": "تواصل عبر واتساب",
     "linkUrl": "https://wa.me/963991234567"
   },
   {
     "id": "free-contact-icon-email",
     "name": "icon",
     "type": "icon",
-    "x": 1128,
-    "y": 290,
+    "x": 1070,
+    "y": 308,
     "width": 32,
     "height": 32,
     "content": "iconify:mdi:email-outline",
@@ -971,9 +1123,9 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
     "id": "free-contact-text-email",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 680,
-    "y": 294,
-    "width": 430,
+    "x": 740,
+    "y": 308,
+    "width": 310,
     "height": 32,
     "content": "info@example.com",
     "slideId": "free-contact-slide",
@@ -981,8 +1133,7 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
       "fontSize": 15,
       "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
-      "textAlign": "right",
-      "lineHeight": 1.4
+      "textAlign": "right"
     },
     "linkType": "contact",
     "contactType": "email",
@@ -993,8 +1144,8 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
     "id": "free-contact-icon-address",
     "name": "icon",
     "type": "icon",
-    "x": 1128,
-    "y": 360,
+    "x": 1070,
+    "y": 372,
     "width": 32,
     "height": 32,
     "content": "iconify:mdi:map-marker-outline",
@@ -1007,9 +1158,9 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
     "id": "free-contact-text-address",
     "name": "paragraph",
     "type": "paragraph",
-    "x": 680,
-    "y": 364,
-    "width": 430,
+    "x": 740,
+    "y": 372,
+    "width": 310,
     "height": 32,
     "content": "دمشق، سوريا",
     "slideId": "free-contact-slide",
@@ -1017,22 +1168,21 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
       "fontSize": 15,
       "color": "#3D3830",
       "fontFamily": "IBM Plex Sans Arabic",
-      "textAlign": "right",
-      "lineHeight": 1.4
+      "textAlign": "right"
     }
   },
   {
     "id": "free-contact-social-fb",
     "name": "icon",
     "type": "icon",
-    "x": 1120,
-    "y": 450,
-    "width": 40,
-    "height": 40,
+    "x": 1070,
+    "y": 446,
+    "width": 30,
+    "height": 30,
     "content": "iconify:simple-icons:facebook",
     "slideId": "free-contact-slide",
     "styles": {
-      "color": "#6B6459"
+      "color": "#1877F2"
     },
     "linkType": "contact",
     "contactType": "facebook",
@@ -1043,14 +1193,14 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
     "id": "free-contact-social-ig",
     "name": "icon",
     "type": "icon",
-    "x": 1064,
-    "y": 450,
-    "width": 40,
-    "height": 40,
+    "x": 1020,
+    "y": 446,
+    "width": 30,
+    "height": 30,
     "content": "iconify:simple-icons:instagram",
     "slideId": "free-contact-slide",
     "styles": {
-      "color": "#6B6459"
+      "color": "#E1306C"
     },
     "linkType": "contact",
     "contactType": "instagram",
@@ -1061,14 +1211,14 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
     "id": "free-contact-social-tt",
     "name": "icon",
     "type": "icon",
-    "x": 1008,
-    "y": 450,
-    "width": 40,
-    "height": 40,
+    "x": 970,
+    "y": 446,
+    "width": 30,
+    "height": 30,
     "content": "iconify:simple-icons:tiktok",
     "slideId": "free-contact-slide",
     "styles": {
-      "color": "#6B6459"
+      "color": "#000000"
     },
     "linkType": "contact",
     "contactType": "tiktok",

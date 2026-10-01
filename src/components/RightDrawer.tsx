@@ -539,7 +539,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 140,
           width: 260,
           height: 30,
-          content: '💻 تصميم مواقع وتطبيقات عصرية',
+          content: 'تصميم مواقع وتطبيقات عصرية',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -569,7 +569,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 400,
           width: 230,
           height: 44,
-          content: '🚀 اطلب عرض تصميم مجاني',
+          content: 'اطلب عرض تصميم مجاني',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', glowIntensity: 20, glowColor: 'rgba(0,113,227,0.3)', glowPosition: 'bottom' }
         },
         {
@@ -581,7 +581,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 290,
           clipPath: 'clip-shape-geo-circle',
           content: 'circle',
-          styles: { backgroundImage: '/CatalogLibrary/webdesign-circle.jpg', backgroundSize: 'cover', animation: 'scale-up', animationTrigger: 'once', animationDuration: 1.1 }
+          styles: { backgroundImage: '/Library/melinda-gimpel-xcVW_sFp4jQ-unsplash.jpg', backgroundSize: 'cover', animation: 'scale-up', animationTrigger: 'once', animationDuration: 1.1 }
         },
         {
           type: 'shape',
@@ -626,8 +626,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 0,
           width: 800,
           height: 580,
-          content: '/CatalogLibrary/car-bg.jpg',
-          imageUrl: '/CatalogLibrary/car-bg.jpg',
+          content: '/Library/the-blowup-4t2qMFwQsgI-unsplash.jpg',
+          imageUrl: '/Library/the-blowup-4t2qMFwQsgI-unsplash.jpg',
           styles: { objectFit: 'cover', opacity: 0.28, backgroundAttachment: 'fixed' }
         },
         {
@@ -658,8 +658,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 70,
           width: 300,
           height: 300,
-          content: '/CatalogLibrary/car-hero.jpg',
-          imageUrl: '/CatalogLibrary/car-hero.jpg',
+          content: '/Library/tim-arterbury-hsztMXLuC6s-unsplash.jpg',
+          imageUrl: '/Library/tim-arterbury-hsztMXLuC6s-unsplash.jpg',
           clipPath: 'clip-shape-geo-octagon',
           styles: { objectFit: 'cover' }
         },
@@ -679,7 +679,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 170,
           width: 270,
           height: 30,
-          content: '🚗 صالة عرض السيارات الفاخرة',
+          content: 'صالة عرض السيارات الفاخرة',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: '#5aa9ff', borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -709,7 +709,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 440,
           width: 240,
           height: 46,
-          content: '🔑 احجز جولة تجربة قيادة',
+          content: 'احجز جولة تجربة قيادة',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2.2 }
         }
       ];
@@ -747,7 +747,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 220,
           clipPath: 'clip-shape-geo-circle',
           content: 'circle',
-          styles: { backgroundImage: '/CatalogLibrary/ac-circle.jpg', backgroundSize: 'cover' }
+          styles: { backgroundImage: '/Library/pavel-neznanov-w95Fb7EEcjE-unsplash.jpg', backgroundSize: 'cover' }
         },
         {
           type: 'shape',
@@ -765,7 +765,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 170,
           width: 260,
           height: 30,
-          content: '❄️ أنظمة تبريد وتكييف ذكية',
+          content: 'أنظمة تبريد وتكييف ذكية',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -795,7 +795,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 390,
           width: 60,
           height: 60,
-          content: '❄️',
+          content: '',
           styles: { fontSize: 36, textAlign: 'center' }
         },
         {
@@ -805,7 +805,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 420,
           width: 230,
           height: 44,
-          content: '🔧 اطلب فني صيانة الآن',
+          content: 'اطلب فني صيانة الآن',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', glowIntensity: 18, glowColor: 'rgba(52,199,89,0.3)', glowPosition: 'bottom' }
         }
       ];
@@ -819,8 +819,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 0,
           width: 800,
           height: 580,
-          content: '/CatalogLibrary/coffee-bg.jpg',
-          imageUrl: '/CatalogLibrary/coffee-bg.jpg',
+          content: '/Library/toa-heftiba-vP2ti9kJefE-unsplash.jpg',
+          imageUrl: '/Library/toa-heftiba-vP2ti9kJefE-unsplash.jpg',
           styles: { objectFit: 'cover', opacity: 0.18 }
         },
         {
@@ -832,7 +832,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 180,
           clipPath: 'clip-shape-blob-org-a',
           content: 'blob',
-          styles: { backgroundImage: '/CatalogLibrary/coffee-blob.jpg', backgroundSize: 'cover' }
+          styles: { backgroundImage: '/Library/manuel-gast-zIzMHDnFKik-unsplash.jpg', backgroundSize: 'cover' }
         },
         {
           type: 'image',
@@ -841,8 +841,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 60,
           width: 280,
           height: 280,
-          content: '/CatalogLibrary/coffee-cup.jpg',
-          imageUrl: '/CatalogLibrary/coffee-cup.jpg',
+          content: '/Library/toa-heftiba-vP2ti9kJefE-unsplash.jpg',
+          imageUrl: '/Library/toa-heftiba-vP2ti9kJefE-unsplash.jpg',
           styles: { objectFit: 'cover', borderRadius: 24, borderWidth: 6, borderColor: '#ffffff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.18)', glowPosition: 'bottom' }
         },
         {
@@ -861,7 +861,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 180,
           width: 220,
           height: 30,
-          content: '☕ تحميص طازج يوميًا',
+          content: 'تحميص طازج يوميًا',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -891,7 +891,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 440,
           width: 230,
           height: 44,
-          content: '🛍️ تسوّق حبوب القهوة',
+          content: 'تسوّق حبوب القهوة',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -917,7 +917,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 440,
           clipPath: 'clip-shape-blob-wavy',
           content: 'blob',
-          styles: { backgroundImage: '/CatalogLibrary/fashion-blob.jpg', backgroundSize: 'cover', animation: 'slide-left', animationTrigger: 'once', animationDuration: 1.2 }
+          styles: { backgroundImage: '/Library/ryunosuke-kikuno-RKwivgSTXVI-unsplash.jpg', backgroundSize: 'cover', animation: 'slide-left', animationTrigger: 'once', animationDuration: 1.2 }
         },
         {
           type: 'heading',
@@ -945,7 +945,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 345,
           width: 240,
           height: 30,
-          content: '👗 تشكيلة الموسم الجديدة',
+          content: 'تشكيلة الموسم الجديدة',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -965,7 +965,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 485,
           width: 220,
           height: 40,
-          content: '🛒 تصفّح المجموعة الآن',
+          content: 'تصفّح المجموعة الآن',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -980,8 +980,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 0,
           width: 800,
           height: 580,
-          content: '/CatalogLibrary/mechanic-bg.jpg',
-          imageUrl: '/CatalogLibrary/mechanic-bg.jpg',
+          content: '/Library/nejc-soklic-wO42Rmamef8-unsplash.jpg',
+          imageUrl: '/Library/nejc-soklic-wO42Rmamef8-unsplash.jpg',
           styles: { objectFit: 'cover', opacity: 0.22 }
         },
         {
@@ -1012,8 +1012,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 70,
           width: 290,
           height: 290,
-          content: '/CatalogLibrary/mechanic-hero.jpg',
-          imageUrl: '/CatalogLibrary/mechanic-hero.jpg',
+          content: '/Library/govind-krishnan-oVFRll_Kp6Q-unsplash.jpg',
+          imageUrl: '/Library/govind-krishnan-oVFRll_Kp6Q-unsplash.jpg',
           clipPath: 'clip-shape-geo-hexagon',
           styles: { objectFit: 'cover' }
         },
@@ -1033,7 +1033,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 170,
           width: 240,
           height: 30,
-          content: '🔧 صيانة وإصلاح فوري',
+          content: 'صيانة وإصلاح فوري',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1063,7 +1063,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 440,
           width: 200,
           height: 46,
-          content: '⚡ اطلب فني الآن',
+          content: 'اطلب فني الآن',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#050505', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2 }
         }
       ];
@@ -1101,7 +1101,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 220,
           clipPath: 'clip-shape-geo-capsule',
           content: 'capsule',
-          styles: { backgroundImage: '/CatalogLibrary/retail-capsule.jpg', backgroundSize: 'cover' }
+          styles: { backgroundImage: '/Library/roman-serdyuk-wFFw_xUTXOY-unsplash.jpg', backgroundSize: 'cover' }
         },
         {
           type: 'shape',
@@ -1119,7 +1119,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 180,
           width: 270,
           height: 30,
-          content: '🛒 أسعار تنافسية وتشكيلة واسعة',
+          content: 'أسعار تنافسية وتشكيلة واسعة',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2.5 }
         },
         {
@@ -1149,7 +1149,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 420,
           width: 220,
           height: 40,
-          content: '📦 تصفح كتالوج المنتجات',
+          content: 'تصفح كتالوج المنتجات',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1186,7 +1186,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 300,
           clipPath: 'clip-shape-blob-bubble',
           content: 'blob',
-          styles: { backgroundImage: '/CatalogLibrary/beauty-bubble.jpg', backgroundSize: 'cover' }
+          styles: { backgroundImage: '/Library/neeqolah-creative-works-CUzWd1cwFCQ-unsplash.jpg', backgroundSize: 'cover' }
         },
         {
           type: 'shape',
@@ -1204,7 +1204,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 170,
           width: 230,
           height: 30,
-          content: '💇‍♀️ عناية وتجميل راقية',
+          content: 'عناية وتجميل راقية',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1234,7 +1234,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 420,
           width: 210,
           height: 44,
-          content: '📅 احجزي موعدك الآن',
+          content: 'احجزي موعدك الآن',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -1248,8 +1248,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 0,
           width: 800,
           height: 580,
-          content: '/CatalogLibrary/restaurant-bg.jpg',
-          imageUrl: '/CatalogLibrary/restaurant-bg.jpg',
+          content: '/Library/mae-mu-rgRbqFweGF0-unsplash.jpg',
+          imageUrl: '/Library/mae-mu-rgRbqFweGF0-unsplash.jpg',
           styles: { objectFit: 'cover', opacity: 0.25, backgroundAttachment: 'fixed' }
         },
         {
@@ -1270,8 +1270,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 70,
           width: 280,
           height: 280,
-          content: '/CatalogLibrary/restaurant-hero.jpg',
-          imageUrl: '/CatalogLibrary/restaurant-hero.jpg',
+          content: '/Library/danielle-suijkerbuijk-Eza6E_v2ZYo-unsplash.jpg',
+          imageUrl: '/Library/danielle-suijkerbuijk-Eza6E_v2ZYo-unsplash.jpg',
           clipPath: 'clip-shape-geo-circle',
           styles: { objectFit: 'cover' }
         },
@@ -1291,7 +1291,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 170,
           width: 220,
           height: 30,
-          content: '🍽️ نكهات طازجة يوميًا',
+          content: 'نكهات طازجة يوميًا',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1321,7 +1321,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 440,
           width: 230,
           height: 44,
-          content: '📞 اطلب أو احجز طاولتك',
+          content: 'اطلب أو احجز طاولتك',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', glowIntensity: 18, glowColor: 'rgba(234,88,12,0.3)', glowPosition: 'bottom' }
         }
       ];
@@ -1345,8 +1345,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 50,
           width: 300,
           height: 420,
-          content: '/CatalogLibrary/realestate-hero.jpg',
-          imageUrl: '/CatalogLibrary/realestate-hero.jpg',
+          content: '/Library/steve-a-johnson-UFMPOCJDg5w-unsplash.jpg',
+          imageUrl: '/Library/steve-a-johnson-UFMPOCJDg5w-unsplash.jpg',
           clipPath: 'clip-shape-arch-classic',
           styles: { objectFit: 'cover' }
         },
@@ -1377,7 +1377,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 160,
           width: 280,
           height: 30,
-          content: '🏠 عقارات مميزة بمواقع استراتيجية',
+          content: 'عقارات مميزة بمواقع استراتيجية',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1407,7 +1407,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 420,
           width: 220,
           height: 44,
-          content: '🔍 تصفح العقارات المتاحة',
+          content: 'تصفح العقارات المتاحة',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -1443,8 +1443,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 220,
           width: 260,
           height: 260,
-          content: '/CatalogLibrary/tiling-hero.jpg',
-          imageUrl: '/CatalogLibrary/tiling-hero.jpg',
+          content: '/Library/sufyan-P4UWWE8JcCA-unsplash.jpg',
+          imageUrl: '/Library/sufyan-P4UWWE8JcCA-unsplash.jpg',
           clipPath: 'clip-shape-geo-circle',
           styles: { objectFit: 'cover', animation: 'scale-up', animationTrigger: 'once', animationDuration: 1.1 }
         },
@@ -1464,7 +1464,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 150,
           width: 250,
           height: 30,
-          content: '🧱 حرفية في تركيب البلاط',
+          content: 'حرفية في تركيب البلاط',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1508,8 +1508,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 0,
           width: 800,
           height: 580,
-          content: '/CatalogLibrary/moving-bg.jpg',
-          imageUrl: '/CatalogLibrary/moving-bg.jpg',
+          content: '/Library/warren-umoh-aQVnWyP3AYA-unsplash.jpg',
+          imageUrl: '/Library/warren-umoh-aQVnWyP3AYA-unsplash.jpg',
           styles: { objectFit: 'cover', opacity: 0.3, backgroundAttachment: 'fixed' }
         },
         {
@@ -1541,8 +1541,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 80,
           width: 300,
           height: 200,
-          content: '/CatalogLibrary/moving-hero.jpg',
-          imageUrl: '/CatalogLibrary/moving-hero.jpg',
+          content: '/Library/tim-mossholder-fxB2UAO0dcY-unsplash.jpg',
+          imageUrl: '/Library/tim-mossholder-fxB2UAO0dcY-unsplash.jpg',
           clipPath: 'clip-shape-geo-capsule',
           styles: { objectFit: 'cover' }
         },
@@ -1562,7 +1562,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 180,
           width: 200,
           height: 30,
-          content: '🚚 نقل آمن وسريع',
+          content: 'نقل آمن وسريع',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: '#5aa9ff', borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1592,7 +1592,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 440,
           width: 220,
           height: 44,
-          content: '📦 اطلب عرض نقل الآن',
+          content: 'اطلب عرض نقل الآن',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2.2 }
         }
       ];
@@ -1619,7 +1619,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 260,
           clipPath: 'clip-shape-blob-org-a',
           content: 'blob',
-          styles: { backgroundImage: 'url(/CatalogLibrary/furniture-blob.jpg)', backgroundSize: 'cover' }
+          styles: { backgroundImage: '/Library/manuel-gast-zIzMHDnFKik-unsplash.jpg', backgroundSize: 'cover' }
         },
         {
           type: 'shape',
@@ -1637,7 +1637,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 160,
           width: 270,
           height: 30,
-          content: '🛋️ تشكيلة أثاث منزلي متكاملة',
+          content: 'تشكيلة أثاث منزلي متكاملة',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1667,7 +1667,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 430,
           width: 220,
           height: 40,
-          content: '🛒 تصفح تشكيلة الأثاث',
+          content: 'تصفح تشكيلة الأثاث',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -1681,8 +1681,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 0,
           width: 800,
           height: 580,
-          content: '/CatalogLibrary/cooking-bg.jpg',
-          imageUrl: '/CatalogLibrary/cooking-bg.jpg',
+          content: '/Library/danielle-suijkerbuijk-Eza6E_v2ZYo-unsplash.jpg',
+          imageUrl: '/Library/danielle-suijkerbuijk-Eza6E_v2ZYo-unsplash.jpg',
           styles: { objectFit: 'cover', opacity: 0.2 }
         },
         {
@@ -1703,8 +1703,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 70,
           width: 270,
           height: 270,
-          content: '/CatalogLibrary/cooking-hero.jpg',
-          imageUrl: '/CatalogLibrary/cooking-hero.jpg',
+          content: '/Library/mae-mu-rgRbqFweGF0-unsplash.jpg',
+          imageUrl: '/Library/mae-mu-rgRbqFweGF0-unsplash.jpg',
           styles: { objectFit: 'cover', borderRadius: 9999, borderWidth: 6, borderColor: '#ffffff', glowIntensity: 22, glowColor: 'rgba(0,0,0,0.16)', glowPosition: 'bottom', animation: 'fade', animationTrigger: 'once', animationDuration: 1 }
         },
         {
@@ -1723,7 +1723,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 180,
           width: 220,
           height: 30,
-          content: '🍲 نكهة البيت الأصيلة',
+          content: 'نكهة البيت الأصيلة',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1753,7 +1753,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 440,
           width: 220,
           height: 44,
-          content: '📞 اطلب وجبتك المنزلية',
+          content: 'اطلب وجبتك المنزلية',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -1769,7 +1769,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 320,
           clipPath: 'clip-shape-brush-splatter',
           content: 'splatter',
-          styles: { backgroundImage: 'url(/CatalogLibrary/painter-splash.jpg)', backgroundSize: 'cover' }
+          styles: { backgroundImage: '/Library/david-pisnoy-46juD4zY1XA-unsplash.jpg', backgroundSize: 'cover' }
         },
         {
           type: 'shape',
@@ -1805,7 +1805,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 160,
           width: 270,
           height: 30,
-          content: '🎨 دهانات داخلية وخارجية بجودة عالية',
+          content: 'دهانات داخلية وخارجية بجودة عالية',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1835,7 +1835,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 430,
           width: 220,
           height: 40,
-          content: '🖌️ اطلب معاينة مجانية',
+          content: 'اطلب معاينة مجانية',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -1850,8 +1850,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 0,
           width: 800,
           height: 580,
-          content: '/CatalogLibrary/electronics-bg.jpg',
-          imageUrl: '/CatalogLibrary/electronics-bg.jpg',
+          content: '/Library/shapelined-iU61cR0uyEw-unsplash.jpg',
+          imageUrl: '/Library/shapelined-iU61cR0uyEw-unsplash.jpg',
           styles: { objectFit: 'cover', opacity: 0.2 }
         },
         {
@@ -1871,8 +1871,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 80,
           width: 260,
           height: 260,
-          content: '/CatalogLibrary/electronics-hero.jpg',
-          imageUrl: '/CatalogLibrary/electronics-hero.jpg',
+          content: '/Library/trophim-laptev-EuT-zxm2RY8-unsplash.jpg',
+          imageUrl: '/Library/trophim-laptev-EuT-zxm2RY8-unsplash.jpg',
           clipPath: 'clip-shape-geo-hexagon',
           styles: { objectFit: 'cover' }
         },
@@ -1892,7 +1892,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 170,
           width: 270,
           height: 30,
-          content: '🔌 صيانة احترافية لجميع الأجهزة',
+          content: 'صيانة احترافية لجميع الأجهزة',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1922,7 +1922,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 440,
           width: 190,
           height: 44,
-          content: '⚡ اطلب فني صيانة',
+          content: 'اطلب فني صيانة',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2 }
         }
       ];
@@ -1940,7 +1940,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 240,
           clipPath: 'clip-shape-geo-capsule',
           content: 'capsule',
-          styles: { backgroundImage: 'url(/CatalogLibrary/wholesale-capsule.jpg)', backgroundSize: 'cover' }
+          styles: { backgroundImage: '/Library/scottsdale-mint-dk067dlyYk4-unsplash.jpg', backgroundSize: 'cover' }
         },
         {
           type: 'shape',
@@ -1958,7 +1958,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 150,
           width: 280,
           height: 30,
-          content: '📦 أسعار جملة تنافسية لكل القطاعات',
+          content: 'أسعار جملة تنافسية لكل القطاعات',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -1988,7 +1988,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 410,
           width: 220,
           height: 40,
-          content: '🤝 تواصل لعروض الجملة',
+          content: 'تواصل لعروض الجملة',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -2013,8 +2013,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 200,
           width: 280,
           height: 280,
-          content: '/CatalogLibrary/socialdev-hero.jpg',
-          imageUrl: '/CatalogLibrary/socialdev-hero.jpg',
+          content: '/Library/nasser-eledroos-456Ct_hXg7U-unsplash.jpg',
+          imageUrl: '/Library/nasser-eledroos-456Ct_hXg7U-unsplash.jpg',
           clipPath: 'clip-shape-geo-circle',
           styles: { objectFit: 'cover' }
         },
@@ -2034,7 +2034,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 150,
           width: 260,
           height: 30,
-          content: '🤝 برامج تطوير وخدمات مجتمعية',
+          content: 'برامج تطوير وخدمات مجتمعية',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -2064,7 +2064,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 420,
           width: 210,
           height: 44,
-          content: '📋 تعرف على برامجنا',
+          content: 'تعرف على برامجنا',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -2078,8 +2078,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 0,
           width: 800,
           height: 580,
-          content: '/CatalogLibrary/blacksmith-bg.jpg',
-          imageUrl: '/CatalogLibrary/blacksmith-bg.jpg',
+          content: '/Library/buddha-elemental-3d-BzJczbqqiBI-unsplash.jpg',
+          imageUrl: '/Library/buddha-elemental-3d-BzJczbqqiBI-unsplash.jpg',
           styles: { objectFit: 'cover', opacity: 0.25 }
         },
         {
@@ -2099,8 +2099,8 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 70,
           width: 280,
           height: 280,
-          content: '/CatalogLibrary/blacksmith-hero.jpg',
-          imageUrl: '/CatalogLibrary/blacksmith-hero.jpg',
+          content: '/Library/trophim-laptev-tzs6YfTZ2ps-unsplash.jpg',
+          imageUrl: '/Library/trophim-laptev-tzs6YfTZ2ps-unsplash.jpg',
           clipPath: 'clip-shape-geo-octagon',
           styles: { objectFit: 'cover' }
         },
@@ -2120,7 +2120,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 170,
           width: 230,
           height: 30,
-          content: '🔥 أعمال حدادة فنية ودقيقة',
+          content: 'أعمال حدادة فنية ودقيقة',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -2150,7 +2150,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 430,
           width: 220,
           height: 40,
-          content: '🛠️ اطلب تصميم حدادة',
+          content: 'اطلب تصميم حدادة',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
@@ -2187,7 +2187,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           height: 300,
           clipPath: 'clip-shape-geo-hexagon',
           content: 'hexagon',
-          styles: { backgroundImage: 'url(/CatalogLibrary/equipment-hexagon.jpg)', backgroundSize: 'cover' }
+          styles: { backgroundImage: '/Library/tim-arterbury-hsztMXLuC6s-unsplash.jpg', backgroundSize: 'cover' }
         },
         {
           type: 'shape',
@@ -2205,7 +2205,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 160,
           width: 280,
           height: 30,
-          content: '🏗️ تأجير معدات وعدد بناء متكاملة',
+          content: 'تأجير معدات وعدد بناء متكاملة',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
@@ -2235,7 +2235,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 420,
           width: 220,
           height: 44,
-          content: '📞 اطلب عرض تأجير',
+          content: 'اطلب عرض تأجير',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];

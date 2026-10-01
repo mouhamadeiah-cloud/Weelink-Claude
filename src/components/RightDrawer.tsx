@@ -521,112 +521,726 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
   // ==========================================
   if (categoryId === 'intro') {
     if (index === 0) {
-      // Doctor / Medical / Health Intro (أطباء ومراكز طبية) - Image Right, Text Left
+      // Web & App Design Studio Intro (استوديو تصميم مواقع وتطبيقات)
       elements = [
-        // Background full image - Clinic Interior
-        {
-          type: 'image',
-          name: 'خلفية كاملة - العيادة الطبية',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          content: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1280&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=1280&q=80',
-          styles: { objectFit: 'cover', opacity: 0.12 }
-        },
-        // Decorative background overlapping glass circles
         {
           type: 'shape',
-          name: 'دائرة خلفية زمردية شفافة',
-          x: 350,
-          y: 40,
-          width: 140,
-          height: 140,
-          content: 'circle',
-          styles: { backgroundColor: 'rgba(16, 185, 129, 0.05)' }
-        },
-        {
-          type: 'shape',
-          name: 'دائرة خلفية زرقاء شفافة',
-          x: 400,
-          y: 20,
-          width: 100,
-          height: 100,
-          content: 'circle',
-          styles: { backgroundColor: 'rgba(14, 165, 233, 0.04)' }
-        },
-        // Professional doctor image - WITH CLASSIC ARCH CLIP PATH
-        {
-          type: 'image',
-          name: 'صورة الطبيب الاستشاري',
-          x: 450,
-          y: 60,
-          width: 310,
-          height: 460,
-          content: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=800&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=800&q=80',
-          clipPath: 'clip-shape-arch-classic', // 🏛️ ARCH CLIP PATH
-          styles: { objectFit: 'cover' }
-        },
-        // Logo image 1 - DEFINED AFTER IMAGES SO IT SITS ON TOP!
-        {
-          type: 'image',
-          name: 'شعار المركز الطبي',
-          x: 480,
-          y: 80,
-          width: 70,
-          height: 70,
-          content: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 9999, objectFit: 'cover', borderWidth: 1.5, borderColor: '#0071e3' }
-        },
-        // Floating left-side text container
-        {
-          type: 'shape',
-          name: 'حاوية المعلومات الطبية الطافية',
+          name: 'لوحة المحتوى الزجاجية',
           x: 30,
-          y: 130,
-          width: 390,
-          height: 390,
-          styles: { backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: 24, shadow: 'apple', borderWidth: 1, borderColor: 'rgba(0,113,227,0.08)' }
+          y: 110,
+          width: 430,
+          height: 360,
+          styles: { backgroundColor: col.card, borderRadius: 28, glowIntensity: 26, glowColor: 'rgba(0,0,0,0.12)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }
         },
-        // Heading with standard text
+        {
+          type: 'badge',
+          name: 'شارة الاستوديو',
+          x: 60,
+          y: 140,
+          width: 260,
+          height: 30,
+          content: '💻 تصميم مواقع وتطبيقات عصرية',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
         {
           type: 'heading',
-          name: 'العنوان الطبي الترحيبي',
+          name: 'عنوان الاستوديو',
           x: 60,
-          y: 180,
-          width: 330,
+          y: 185,
+          width: 360,
           height: 90,
-          content: 'رعاية صحية استشارية متكاملة تليق بعائلتك',
-          styles: { fontSize: 26, color: '#1d1d1f', fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
+          content: 'استوديو بكسل رايت — واجهات تحوّل أفكارك إلى منتجات رقمية',
+          styles: { fontSize: 23, color: col.text, fontWeight: 'bold', fontFamily: 'Kufam', textAlign: 'right', lineHeight: 1.3 }
         },
         {
           type: 'paragraph',
-          name: 'النص الطبي التعريفي',
+          name: 'نص الاستوديو التعريفي',
           x: 60,
           y: 290,
-          width: 330,
-          height: 110,
-          content: 'يقدم مركزنا الطبي نخبة من الأطباء الاستشاريين المعتمدين لتقديم خدمات التشخيص الدقيق والرعاية الصحية الراقية على مدار الساعة بأحدث المعدات والأجهزة الطبية المتوافقة مع معايير الجودة العالمية.',
+          width: 360,
+          height: 90,
+          content: 'نصمم ونطوّر مواقع وتطبيقات جوال سريعة الاستجابة بهوية بصرية مميزة، من الفكرة الأولى حتى الإطلاق ومتابعة الأداء.',
           styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
         },
         {
           type: 'button',
-          name: 'زر حجز الكشف الطبي',
+          name: 'زر طلب عرض تصميم',
           x: 60,
-          y: 415,
-          width: 330,
-          height: 46,
-          content: '📅 احجز موعد كشف مباشر الآن',
-          styles: { fontSize: 13, backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+          y: 400,
+          width: 230,
+          height: 44,
+          content: '🚀 اطلب عرض تصميم مجاني',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', glowIntensity: 20, glowColor: 'rgba(0,113,227,0.3)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'shape',
+          name: 'دائرة صورة فريق العمل في بيئة تقنية',
+          x: 480,
+          y: 40,
+          width: 290,
+          height: 290,
+          clipPath: 'clip-shape-geo-circle',
+          content: 'circle',
+          styles: { backgroundImage: '/CatalogLibrary/webdesign-circle.jpg', backgroundSize: 'cover', animation: 'scale-up', animationTrigger: 'once', animationDuration: 1.1 }
+        },
+        {
+          type: 'shape',
+          name: 'كبسولة لمعة لونية زاوية علوية',
+          x: 700,
+          y: -30,
+          width: 160,
+          height: 90,
+          clipPath: 'clip-shape-geo-capsule',
+          content: 'capsule',
+          styles: { backgroundColor: 'rgba(0,113,227,0.12)' }
+        },
+        {
+          type: 'shape',
+          name: 'سداسي زخرفي زاوية سفلية',
+          x: -40,
+          y: 460,
+          width: 160,
+          height: 160,
+          clipPath: 'clip-shape-geo-hexagon',
+          content: 'hexagon',
+          styles: { backgroundColor: col.bgShape }
+        },
+        {
+          type: 'card',
+          name: 'بطاقة الدعم الفني',
+          x: 500,
+          y: 370,
+          width: 260,
+          height: 130,
+          content: 'دعم فني واستجابة سريعة على مدار الساعة لضمان استمرار أعمالك دون انقطاع.',
+          styles: {}
         }
       ];
     } else if (index === 1) {
-      // Restaurant / Gourmet Intro (مطاعم ومأكولات طازجة) - Image Right (Lotus Clip), Text Left, Fixed BG
+      // Car Dealership Intro (معرض سيارات فاخرة)
       elements = [
-        // Background full image - Restaurant Interior (FIXED/PARALLAX)
+        {
+          type: 'image',
+          name: 'خلفية كاملة - صالة عرض السيارات',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/CatalogLibrary/car-bg.jpg',
+          imageUrl: '/CatalogLibrary/car-bg.jpg',
+          styles: { objectFit: 'cover', opacity: 0.28, backgroundAttachment: 'fixed' }
+        },
+        {
+          type: 'shape',
+          name: 'شريط قطري زخرفي',
+          x: -60,
+          y: 380,
+          width: 900,
+          height: 220,
+          content: 'slab',
+          styles: { backgroundColor: 'rgba(0,113,227,0.08)' },
+          rotation: -6
+        },
+        {
+          type: 'shape',
+          name: 'إطار ذهبي حول صورة السيارة',
+          x: 440,
+          y: 50,
+          width: 340,
+          height: 340,
+          content: 'frame',
+          styles: { backgroundColor: 'transparent', borderWidth: 3, borderColor: col.accent, borderRadius: 24 }
+        },
+        {
+          type: 'image',
+          name: 'صورة السيارة الفاخرة المقصوصة',
+          x: 460,
+          y: 70,
+          width: 300,
+          height: 300,
+          content: '/CatalogLibrary/car-hero.jpg',
+          imageUrl: '/CatalogLibrary/car-hero.jpg',
+          clipPath: 'clip-shape-geo-octagon',
+          styles: { objectFit: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة المعلومات الزجاجية الداكنة',
+          x: 40,
+          y: 140,
+          width: 380,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 30, glowColor: 'rgba(0,0,0,0.5)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة صالة العرض',
+          x: 70,
+          y: 170,
+          width: 270,
+          height: 30,
+          content: '🚗 صالة عرض السيارات الفاخرة',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: '#5aa9ff', borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان معرض السيارات',
+          x: 70,
+          y: 215,
+          width: 320,
+          height: 90,
+          content: 'معرض النخبة للسيارات — فخامة تلامس الطريق',
+          styles: { fontSize: 25, color: col.text, fontWeight: 'bold', fontFamily: 'Changa', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص معرض السيارات',
+          x: 70,
+          y: 320,
+          width: 320,
+          height: 110,
+          content: 'نوفر تشكيلة متميزة من السيارات الفاخرة والمستعملة المفحوصة بعناية مع ضمان شامل وخيارات تمويل مرنة لتختار سيارتك المثالية بثقة.',
+          styles: { fontSize: 12, color: '#a1a1a6', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر حجز جولة تجربة قيادة',
+          x: 70,
+          y: 440,
+          width: 240,
+          height: 46,
+          content: '🔑 احجز جولة تجربة قيادة',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2.2 }
+        }
+      ];
+    } else if (index === 2) {
+      // Cooling & AC Intro (تبريد وتكييف)
+      elements = [
+        {
+          type: 'shape',
+          name: 'دائرة خلفية كبيرة فاتحة',
+          x: 620,
+          y: -80,
+          width: 320,
+          height: 320,
+          clipPath: 'clip-shape-geo-circle',
+          content: 'circle',
+          styles: { backgroundColor: col.bgShape }
+        },
+        {
+          type: 'shape',
+          name: 'دائرة تظليل متوسطة',
+          x: 560,
+          y: -20,
+          width: 200,
+          height: 200,
+          clipPath: 'clip-shape-geo-circle',
+          content: 'circle',
+          styles: { backgroundColor: 'rgba(52,199,89,0.12)' }
+        },
+        {
+          type: 'shape',
+          name: 'دائرة صورة تكييف داخلي',
+          x: -30,
+          y: 400,
+          width: 220,
+          height: 220,
+          clipPath: 'clip-shape-geo-circle',
+          content: 'circle',
+          styles: { backgroundImage: '/CatalogLibrary/ac-circle.jpg', backgroundSize: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة المحتوى',
+          x: 50,
+          y: 140,
+          width: 430,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 28, glowIntensity: 22, glowColor: 'rgba(52,199,89,0.18)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة التبريد',
+          x: 80,
+          y: 170,
+          width: 260,
+          height: 30,
+          content: '❄️ أنظمة تبريد وتكييف ذكية',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان التكييف',
+          x: 80,
+          y: 215,
+          width: 370,
+          height: 90,
+          content: 'فريش إير — هواء نقي وبرودة مستدامة في كل الفصول',
+          styles: { fontSize: 24, color: col.text, fontWeight: 'bold', fontFamily: 'Mada', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص التكييف',
+          x: 80,
+          y: 320,
+          width: 370,
+          height: 90,
+          content: 'تركيب وصيانة أنظمة التكييف المركزي والسبليت لأحدث الموديلات الموفرة للطاقة، مع فرق فنية معتمدة تصلك في نفس اليوم.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'icon',
+          name: 'أيقونة ثلج',
+          x: 420,
+          y: 390,
+          width: 60,
+          height: 60,
+          content: '❄️',
+          styles: { fontSize: 36, textAlign: 'center' }
+        },
+        {
+          type: 'button',
+          name: 'زر طلب فني تكييف',
+          x: 80,
+          y: 420,
+          width: 230,
+          height: 44,
+          content: '🔧 اطلب فني صيانة الآن',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', glowIntensity: 18, glowColor: 'rgba(52,199,89,0.3)', glowPosition: 'bottom' }
+        }
+      ];
+    } else if (index === 3) {
+      // Coffee Roastery Intro (محمصة قهوة)
+      elements = [
+        {
+          type: 'image',
+          name: 'خلفية كاملة - جلسة قهوة',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/CatalogLibrary/coffee-bg.jpg',
+          imageUrl: '/CatalogLibrary/coffee-bg.jpg',
+          styles: { objectFit: 'cover', opacity: 0.18 }
+        },
+        {
+          type: 'shape',
+          name: 'بقعة بن زخرفية سفلية',
+          x: -20,
+          y: 420,
+          width: 180,
+          height: 180,
+          clipPath: 'clip-shape-blob-org-a',
+          content: 'blob',
+          styles: { backgroundImage: '/CatalogLibrary/coffee-blob.jpg', backgroundSize: 'cover' }
+        },
+        {
+          type: 'image',
+          name: 'صورة فنجان القهوة بإطار أبيض',
+          x: 480,
+          y: 60,
+          width: 280,
+          height: 280,
+          content: '/CatalogLibrary/coffee-cup.jpg',
+          imageUrl: '/CatalogLibrary/coffee-cup.jpg',
+          styles: { objectFit: 'cover', borderRadius: 24, borderWidth: 6, borderColor: '#ffffff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.18)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة محتوى المحمصة',
+          x: 40,
+          y: 150,
+          width: 400,
+          height: 320,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 20, glowColor: 'rgba(255,149,0,0.15)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة التحميص الطازج',
+          x: 70,
+          y: 180,
+          width: 220,
+          height: 30,
+          content: '☕ تحميص طازج يوميًا',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان المحمصة',
+          x: 70,
+          y: 225,
+          width: 340,
+          height: 90,
+          content: 'محمصة الأصالة — نكهة البن الحقيقية من الحبة إلى الكوب',
+          styles: { fontSize: 24, color: col.text, fontWeight: 'bold', fontFamily: 'Rakkas', textAlign: 'right', lineHeight: 1.35 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص المحمصة',
+          x: 70,
+          y: 330,
+          width: 340,
+          height: 90,
+          content: 'نحمّص أجود حبوب البن المختارة من أفضل المزارع العالمية طازجة كل صباح، لنقدم لك تجربة قهوة استثنائية بنكهة غنية وعطر لا يُنسى.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر تسوق حبوب القهوة',
+          x: 70,
+          y: 440,
+          width: 230,
+          height: 44,
+          content: '🛍️ تسوّق حبوب القهوة',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    } else if (index === 4) {
+      // Fashion & Clothing Intro (الموضة والملبوسات)
+      elements = [
+        {
+          type: 'shape',
+          name: 'كتلة لونية تحريرية علوية',
+          x: -40,
+          y: -40,
+          width: 420,
+          height: 300,
+          styles: { backgroundColor: col.accent, borderRadius: 32 },
+          rotation: -4
+        },
+        {
+          type: 'shape',
+          name: 'صورة أزياء بشكل موجي',
+          x: 420,
+          y: 80,
+          width: 340,
+          height: 440,
+          clipPath: 'clip-shape-blob-wavy',
+          content: 'blob',
+          styles: { backgroundImage: '/CatalogLibrary/fashion-blob.jpg', backgroundSize: 'cover', animation: 'slide-left', animationTrigger: 'once', animationDuration: 1.2 }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الأزياء',
+          x: 60,
+          y: 90,
+          width: 340,
+          height: 90,
+          content: 'أتيليه لورا — أزياء عصرية تحتفي بأسلوبك الخاص',
+          styles: { fontSize: 23, color: '#ffffff', fontWeight: 'bold', fontFamily: 'Alexandria', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة المحتوى السفلية',
+          x: 30,
+          y: 320,
+          width: 380,
+          height: 220,
+          styles: { backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 26, glowIntensity: 22, glowColor: 'rgba(191,90,242,0.18)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة تشكيلة الموسم',
+          x: 60,
+          y: 345,
+          width: 240,
+          height: 30,
+          content: '👗 تشكيلة الموسم الجديدة',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الأزياء',
+          x: 60,
+          y: 390,
+          width: 340,
+          height: 90,
+          content: 'تصاميم حصرية وقطع مختارة بعناية من أفضل الخامات العالمية لتواكب أحدث صيحات الموضة بذوق راقٍ يناسب كل المناسبات.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر تصفح المجموعة',
+          x: 60,
+          y: 485,
+          width: 220,
+          height: 40,
+          content: '🛒 تصفّح المجموعة الآن',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    }
+ else if (index === 5) {
+      // Mechanic Workshop Intro (ورشة ميكانيك)
+      elements = [
+        {
+          type: 'image',
+          name: 'خلفية كاملة - ورشة الصيانة',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/CatalogLibrary/mechanic-bg.jpg',
+          imageUrl: '/CatalogLibrary/mechanic-bg.jpg',
+          styles: { objectFit: 'cover', opacity: 0.22 }
+        },
+        {
+          type: 'shape',
+          name: 'شريحة قطرية خلفية',
+          x: -80,
+          y: -40,
+          width: 500,
+          height: 650,
+          content: 'slab',
+          styles: { backgroundColor: 'rgba(48,209,88,0.06)' },
+          rotation: 8
+        },
+        {
+          type: 'shape',
+          name: 'إطار سداسي حول صورة الورشة',
+          x: 450,
+          y: 50,
+          width: 330,
+          height: 330,
+          content: 'frame',
+          styles: { backgroundColor: 'transparent', borderWidth: 3, borderColor: col.accent, borderRadius: 20 }
+        },
+        {
+          type: 'image',
+          name: 'صورة أدوات الورشة المقصوصة',
+          x: 470,
+          y: 70,
+          width: 290,
+          height: 290,
+          content: '/CatalogLibrary/mechanic-hero.jpg',
+          imageUrl: '/CatalogLibrary/mechanic-hero.jpg',
+          clipPath: 'clip-shape-geo-hexagon',
+          styles: { objectFit: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة محتوى الورشة',
+          x: 40,
+          y: 140,
+          width: 380,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 26, glowColor: 'rgba(48,209,88,0.2)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة الصيانة الفورية',
+          x: 70,
+          y: 170,
+          width: 240,
+          height: 30,
+          content: '🔧 صيانة وإصلاح فوري',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الورشة',
+          x: 70,
+          y: 215,
+          width: 320,
+          height: 100,
+          content: 'ورشة الدقة — صيانة ميكانيكية موثوقة بخبرة الأبطال',
+          styles: { fontSize: 30, color: '#ffffff', fontWeight: 'bold', fontFamily: 'Jomhuria', textAlign: 'right', lineHeight: 1.2 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الورشة',
+          x: 70,
+          y: 330,
+          width: 320,
+          height: 100,
+          content: 'فحص شامل وصيانة دورية لجميع أنواع السيارات بأحدث أجهزة الفحص الكمبيوتري وفنيين معتمدين، مع ضمان حقيقي على كل قطعة غيار.',
+          styles: { fontSize: 12, color: '#a1a1a6', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر طلب فني الآن',
+          x: 70,
+          y: 440,
+          width: 200,
+          height: 46,
+          content: '⚡ اطلب فني الآن',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#050505', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2 }
+        }
+      ];
+    } else if (index === 6) {
+      // Retail Trade Intro (تجارة بالمفرق)
+      elements = [
+        {
+          type: 'shape',
+          name: 'نقطة زخرفية علوية كبيرة',
+          x: 650,
+          y: 30,
+          width: 90,
+          height: 90,
+          clipPath: 'clip-shape-geo-circle',
+          content: 'circle',
+          styles: { backgroundColor: col.bgShape }
+        },
+        {
+          type: 'shape',
+          name: 'نقطة زخرفية علوية صغيرة',
+          x: 600,
+          y: 140,
+          width: 50,
+          height: 50,
+          clipPath: 'clip-shape-geo-circle',
+          content: 'circle',
+          styles: { backgroundColor: 'rgba(22,163,74,0.15)' }
+        },
+        {
+          type: 'shape',
+          name: 'كبسولة صورة المتجر',
+          x: 460,
+          y: 220,
+          width: 300,
+          height: 220,
+          clipPath: 'clip-shape-geo-capsule',
+          content: 'capsule',
+          styles: { backgroundImage: '/CatalogLibrary/retail-capsule.jpg', backgroundSize: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة محتوى المتجر',
+          x: 40,
+          y: 150,
+          width: 390,
+          height: 300,
+          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 18, glowColor: 'rgba(22,163,74,0.15)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة الأسعار التنافسية',
+          x: 70,
+          y: 180,
+          width: 270,
+          height: 30,
+          content: '🛒 أسعار تنافسية وتشكيلة واسعة',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2.5 }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان المتجر',
+          x: 70,
+          y: 225,
+          width: 340,
+          height: 90,
+          content: 'سوق الوفرة للتجارة بالمفرق — كل ما تحتاجه تحت سقف واحد',
+          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', fontFamily: 'Tajawal', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص المتجر',
+          x: 70,
+          y: 325,
+          width: 340,
+          height: 90,
+          content: 'نوفر تشكيلة واسعة من المنتجات المنزلية والتجارية بأسعار الجملة مباشرة للمستهلك، مع تحديث يومي للمخزون وتوصيل سريع.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر تصفح الكتالوج',
+          x: 70,
+          y: 420,
+          width: 220,
+          height: 40,
+          content: '📦 تصفح كتالوج المنتجات',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'card',
+          name: 'بطاقة التخفيضات الأسبوعية',
+          x: 480,
+          y: 460,
+          width: 270,
+          height: 100,
+          content: 'تخفيضات أسبوعية وعروض حصرية لعملاء الجملة والمفرق على مدار العام.',
+          styles: {}
+        }
+      ];
+    } else if (index === 7) {
+      // Beauty Salon & Barbershop Intro (صالونات تجميل وحلاقة)
+      elements = [
+        {
+          type: 'shape',
+          name: 'بقعة زخرفية علوية',
+          x: -60,
+          y: -60,
+          width: 300,
+          height: 300,
+          clipPath: 'clip-shape-blob-splash',
+          content: 'blob',
+          styles: { backgroundColor: col.bgShape }
+        },
+        {
+          type: 'shape',
+          name: 'فقاعة صورة الصالون',
+          x: 560,
+          y: 340,
+          width: 300,
+          height: 300,
+          clipPath: 'clip-shape-blob-bubble',
+          content: 'blob',
+          styles: { backgroundImage: '/CatalogLibrary/beauty-bubble.jpg', backgroundSize: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة محتوى الصالون',
+          x: 50,
+          y: 140,
+          width: 400,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 28, glowIntensity: 22, glowColor: 'rgba(124,58,237,0.16)', glowPosition: 'bottom', borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.18)' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة العناية الراقية',
+          x: 80,
+          y: 170,
+          width: 230,
+          height: 30,
+          content: '💇‍♀️ عناية وتجميل راقية',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الصالون',
+          x: 80,
+          y: 215,
+          width: 340,
+          height: 90,
+          content: 'صالون لمسات — جمالك يستحق لمسة احترافية فاخرة',
+          styles: { fontSize: 25, color: col.text, fontWeight: 'bold', fontFamily: 'Aref Ruqaa', textAlign: 'right', lineHeight: 1.35 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الصالون',
+          x: 80,
+          y: 320,
+          width: 340,
+          height: 90,
+          content: 'نقدم خدمات تصفيف وعناية بالشعر والبشرة على أيدي خبيرات متخصصات باستخدام منتجات عالمية راقية في جو هادئ يليق بتجربتك.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر حجز الموعد',
+          x: 80,
+          y: 420,
+          width: 210,
+          height: 44,
+          content: '📅 احجزي موعدك الآن',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    } else if (index === 8) {
+      // Restaurant & Cafe Intro (مطعم وكافيه)
+      elements = [
         {
           type: 'image',
           name: 'خلفية كاملة - صالة المطعم',
@@ -634,1050 +1248,995 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 0,
           width: 800,
           height: 580,
-          content: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1280&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1280&q=80',
-          styles: { objectFit: 'cover', backgroundAttachment: 'fixed', opacity: 0.35 }
+          content: '/CatalogLibrary/restaurant-bg.jpg',
+          imageUrl: '/CatalogLibrary/restaurant-bg.jpg',
+          styles: { objectFit: 'cover', opacity: 0.25, backgroundAttachment: 'fixed' }
         },
-        // Decorative background overlapping orange glass shapes
         {
           type: 'shape',
-          name: 'مربع خلفي برتقالي شفاف',
-          x: 350,
-          y: 40,
-          width: 140,
-          height: 140,
-          content: 'rect',
-          styles: { backgroundColor: 'rgba(249, 115, 22, 0.05)', borderRadius: 30 }
+          name: 'حلقة لونية خلف صورة الطبق',
+          x: 450,
+          y: 50,
+          width: 320,
+          height: 320,
+          clipPath: 'clip-shape-geo-circle',
+          content: 'circle',
+          styles: { backgroundColor: 'rgba(234,88,12,0.08)' }
         },
-        // Gourmet Specialty dish image - WITH LOTUS CLIP PATH
         {
           type: 'image',
-          name: 'طبق الهمبرغر الفاخر المميز',
-          x: 450,
-          y: 80,
-          width: 310,
-          height: 420,
-          content: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
-          clipPath: 'clip-shape-lotus', // 🪷 LOTUS CLIP PATH
+          name: 'صورة الطبق الشهي المقصوصة',
+          x: 470,
+          y: 70,
+          width: 280,
+          height: 280,
+          content: '/CatalogLibrary/restaurant-hero.jpg',
+          imageUrl: '/CatalogLibrary/restaurant-hero.jpg',
+          clipPath: 'clip-shape-geo-circle',
           styles: { objectFit: 'cover' }
         },
-        // Logo image 1 - DEFINED AFTER IMAGES SO IT SITS ON TOP!
-        {
-          type: 'image',
-          name: 'شعار مطعم لو شيف',
-          x: 480,
-          y: 100,
-          width: 70,
-          height: 70,
-          content: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 9999, objectFit: 'cover', borderWidth: 1.5, borderColor: '#ff9500' }
-        },
-        // Floating left-side text container
         {
           type: 'shape',
-          name: 'حاوية معلومات المنيو الطافية',
-          x: 30,
-          y: 130,
-          width: 390,
-          height: 390,
-          styles: { backgroundColor: 'rgba(15, 23, 42, 0.88)', borderRadius: 24, shadow: 'apple', borderWidth: 1, borderColor: 'rgba(255,149,0,0.15)' }
-        },
-        // Heading with standard text
-        {
-          type: 'heading',
-          name: 'العنوان الغذائي الترحيبي',
-          x: 60,
-          y: 180,
-          width: 330,
-          height: 90,
-          content: 'تجربة طهي فاخرة ونكهات أصيلة تستحق التجربة',
-          styles: { fontSize: 26, color: '#ffffff', fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
-        },
-        {
-          type: 'paragraph',
-          name: 'النص الغذائي التعريفي',
-          x: 60,
-          y: 290,
-          width: 330,
-          height: 110,
-          content: 'نطهو بحب مستخدمين أجود المكونات الطازجة واللحوم البلدية المنتقاة يومياً، لنقدم لك قائمة مأكولات غنية ومتنوعة تُعد خصيصاً على أيدي أشهر الطهاة الدوليين.',
-          styles: { fontSize: 12, color: '#cbd5e1', textAlign: 'right', lineHeight: 1.6 }
-        },
-        {
-          type: 'button',
-          name: 'زر منيو المطعم',
-          x: 60,
-          y: 415,
-          width: 330,
-          height: 46,
-          content: '🛒 تصفح منيو الطعام واطلب الآن',
-          styles: { fontSize: 13, backgroundColor: '#ff9500', color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
-        }
-      ];
-    } else if (index === 2) {
-      // Technical Professional / Consultant / Engineering Intro (مهندسين وفنيين وصيانة) - Image Right, Text Left, Fixed BG
-      elements = [
-        // Background full image - Architecture Blueprint (FIXED/PARALLAX)
-        {
-          type: 'image',
-          name: 'خلفية كاملة - مخططات البناء والآليات',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          content: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1280&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1280&q=80',
-          styles: { objectFit: 'cover', backgroundAttachment: 'fixed', opacity: 0.15 }
-        },
-        // Decorative background green glass rectangle
-        {
-          type: 'shape',
-          name: 'مربع خلفي أخضر شفاف',
-          x: 350,
-          y: 40,
-          width: 140,
-          height: 140,
-          content: 'rect',
-          styles: { backgroundColor: 'rgba(22, 163, 74, 0.05)', borderRadius: 30 }
-        },
-        // Technical professional image - WITH LEAF OPPOSITE CLIP PATH
-        {
-          type: 'image',
-          name: 'صورة مهندس المشروع الفني',
-          x: 450,
-          y: 60,
-          width: 310,
-          height: 460,
-          content: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&w=800&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&w=800&q=80',
-          clipPath: 'clip-shape-geo-leaf-opposite', // 🍃 LEAF CURVE CLIP PATH
-          styles: { objectFit: 'cover' }
-        },
-        // Logo image 1 - DEFINED AFTER IMAGES SO IT SITS ON TOP!
-        {
-          type: 'image',
-          name: 'شعار المكتب الهندسي الفني',
-          x: 480,
-          y: 80,
-          width: 70,
-          height: 70,
-          content: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 12, objectFit: 'cover', borderWidth: 1.5, borderColor: '#34c759' }
-        },
-        // Floating left-side text container
-        {
-          type: 'shape',
-          name: 'حاوية معلومات المهندس الطافية',
-          x: 30,
-          y: 130,
-          width: 390,
-          height: 390,
-          styles: { backgroundColor: '#ffffff', borderRadius: 24, shadow: 'apple', borderWidth: 1, borderColor: 'rgba(52,199,89,0.1)' }
-        },
-        // Heading with standard text
-        {
-          type: 'heading',
-          name: 'العنوان الهندسي الترحيبي',
-          x: 60,
-          y: 180,
-          width: 330,
-          height: 90,
-          content: 'حلول الهندسة والصيانة الشاملة بموثوقية وأمان',
-          styles: { fontSize: 26, color: '#1d1d1f', fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
-        },
-        {
-          type: 'paragraph',
-          name: 'النص الهندسي التعريفي',
-          x: 60,
-          y: 290,
-          width: 330,
-          height: 110,
-          content: 'نحن نقدم مشاريع الهندسة والصيانة المتكاملة للأنظمة الكهربائية والتهوية والتكييف والتمديدات الصحية بأيدي مهندسين استشاريين وفنيين معتمدين لراحة بالك وسلامة ممتلكاتك.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
-        },
-        {
-          type: 'button',
-          name: 'زر صيانة المهندس',
-          x: 60,
-          y: 415,
-          width: 330,
-          height: 46,
-          content: '🛠️ اطلب فني صيانة طارئة الآن',
-          styles: { fontSize: 13, backgroundColor: '#34c759', color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
-        }
-      ];
-    } else if (index === 3) {
-      // Creative Agency / Digital (تسويق وإبداع) - Image Left, Text Right
-      elements = [
-        // Solid modern background
-        {
-          type: 'shape',
-          name: 'خلفية الشريحة الإبداعية',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          styles: { backgroundColor: '#0f172a', borderRadius: 0 }
-        },
-        // Image 1: Logo
-        {
-          type: 'image',
-          name: 'شعار الوكالة الإبداعية',
-          x: 690,
-          y: 40,
-          width: 70,
-          height: 70,
-          content: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 9999, objectFit: 'cover', borderWidth: 1.5, borderColor: '#bf5af2' }
-        },
-        // Image 2: Laptop and design desk (LEFT)
-        {
-          type: 'image',
-          name: 'بيئة التصميم والعمل الإبداعي',
+          name: 'لوحة محتوى المطعم',
           x: 40,
-          y: 60,
-          width: 360,
-          height: 460,
-          content: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80',
-          styles: { borderRadius: 24, objectFit: 'cover', shadow: 'apple' }
-        },
-        // Floating right-side text container
-        {
-          type: 'shape',
-          name: 'حاوية معلومات الوكالة',
-          x: 420,
-          y: 120,
-          width: 350,
-          height: 400,
-          styles: { backgroundColor: 'rgba(30, 41, 59, 0.9)', borderRadius: 24, shadow: 'apple', borderWidth: 1, borderColor: 'rgba(191,90,242,0.15)' }
+          y: 140,
+          width: 390,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 22, glowColor: 'rgba(234,88,12,0.18)', glowPosition: 'bottom' }
         },
         {
           type: 'badge',
-          name: 'شارة الوكالة',
-          x: 450,
-          y: 150,
-          width: 160,
-          height: 28,
-          content: '✨ وكالة كرييتف ديجيتال',
-          styles: { fontSize: 11, backgroundColor: '#fae8ff', color: '#bf5af2', borderRadius: 8, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
-          type: 'heading',
-          name: 'العنوان الإبداعي الترحيبي',
-          x: 450,
-          y: 190,
-          width: 290,
-          height: 90,
-          content: 'نصنع لبراندك قيمة سوقية مضاعفة بلمسة إبداعية',
-          styles: { fontSize: 25, color: '#ffffff', fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
-        },
-        {
-          type: 'paragraph',
-          name: 'النص الإبداعي التعريفي',
-          x: 450,
-          y: 295,
-          width: 290,
-          height: 110,
-          content: 'نحن شركة رائدة في تصميم الهويات البصرية المتكاملة وتطوير المواقع والصفحات السحابية التفاعلية الفاخرة التي تزيد مبيعاتك وتجذب عملاءك الجدد بكفاءة منقطعة النظير.',
-          styles: { fontSize: 12, color: '#cbd5e1', textAlign: 'right', lineHeight: 1.6 }
-        },
-        {
-          type: 'button',
-          name: 'زر التواصل مع الوكالة',
-          x: 450,
-          y: 420,
-          width: 290,
-          height: 46,
-          content: '🚀 ابدأ جلستك الاستشارية مجاناً',
-          styles: { fontSize: 13, backgroundColor: '#bf5af2', color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
-        }
-      ];
-    } else if (index === 4) {
-      // Modern E-Commerce / Fashion Store (متجر إلكتروني) - Centered Top, Two Products Side-by-Side Below
-      elements = [
-        // Solid soft background
-        {
-          type: 'shape',
-          name: 'خلفية متجر الأزياء',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          styles: { backgroundColor: '#fdf4ff', borderRadius: 0 }
-        },
-        // Image 1: Logo Centered
-        {
-          type: 'image',
-          name: 'شعار البوتيك العصري',
-          x: 365,
-          y: 30,
-          width: 70,
-          height: 70,
-          content: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 9999, objectFit: 'cover', borderWidth: 1.5, borderColor: '#ec4899' }
-        },
-        // Centered Texts
-        {
-          type: 'badge',
-          name: 'شارة المتجر',
-          x: 310,
-          y: 110,
-          width: 180,
-          height: 28,
-          content: '🛍️ بوتيك الأناقة العصرية',
-          styles: { fontSize: 11, backgroundColor: '#fce7f3', color: '#db2777', borderRadius: 8, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
-          type: 'heading',
-          name: 'عنوان المتجر الرئيسي',
-          x: 80,
-          y: 150,
-          width: 640,
-          height: 40,
-          content: 'أحدث صيحات الموضة والأزياء الراقية بلمستك الخاصة',
-          styles: { fontSize: 24, color: '#1d1d1f', fontWeight: 'bold', textAlign: 'center' }
-        },
-        {
-          type: 'paragraph',
-          name: 'وصف المتجر والتشكيلة',
-          x: 100,
-          y: 195,
-          width: 600,
-          height: 50,
-          content: 'تصفحي الآن تشكيلتنا الخريفية الفاخرة من الفساتين والإكسسوارات العصرية المنتقاة بعناية لتبدي متألقة في كل وقت، مع توصيل سريع وضمان استرجاع كامل.',
-          styles: { fontSize: 12, color: '#4b5563', textAlign: 'center', lineHeight: 1.5 }
-        },
-        // Two Product images side by side
-        {
-          type: 'image',
-          name: 'عرض المنتج الأول - فساتين',
-          x: 100,
-          y: 260,
-          width: 280,
-          height: 210,
-          content: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=400&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=400&q=80',
-          styles: { borderRadius: 16, objectFit: 'cover', shadow: 'apple' }
-        },
-        {
-          type: 'image',
-          name: 'عرض المنتج الثاني - إكسسوارات',
-          x: 420,
-          y: 260,
-          width: 280,
-          height: 210,
-          content: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=400&q=80',
-          styles: { borderRadius: 16, objectFit: 'cover', shadow: 'apple' }
-        },
-        // Button in center bottom
-        {
-          type: 'button',
-          name: 'زر تسوق المتجر',
-          x: 290,
-          y: 490,
+          name: 'شارة نكهات طازجة',
+          x: 70,
+          y: 170,
           width: 220,
-          height: 46,
-          content: '🛍️ تسوقي التشكيلة الجديدة الآن',
-          styles: { fontSize: 13, backgroundColor: '#ec4899', color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
-        }
-      ];
-    } else if (index === 5) {
-      // Law Firm / Legal Consultant (مكتب محاماة) - High Contrast Dark, Image Left, Text Right, Fixed BG
-      elements = [
-        // Background full image - Architecture/Court (FIXED/PARALLAX)
-        {
-          type: 'image',
-          name: 'خلفية كاملة - صالة المحكمة والمكاتب',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          content: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1280&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1280&q=80',
-          styles: { objectFit: 'cover', backgroundAttachment: 'fixed', opacity: 0.1 }
-        },
-        // Logo image 1
-        {
-          type: 'image',
-          name: 'شعار مكتب المحاماة',
-          x: 40,
-          y: 40,
-          width: 70,
-          height: 70,
-          content: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 9999, objectFit: 'cover', borderWidth: 1.5, borderColor: '#eab308' }
-        },
-        // Image 2: Law gavel/desk (LEFT)
-        {
-          type: 'image',
-          name: 'كتاب القوانين والمطرقة القضائية',
-          x: 40,
-          y: 120,
-          width: 360,
-          height: 400,
-          content: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=800&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=800&q=80',
-          styles: { borderRadius: 24, objectFit: 'cover', shadow: 'apple' }
-        },
-        // Floating right-side text container (Slate Dark)
-        {
-          type: 'shape',
-          name: 'حاوية معلومات القانون',
-          x: 420,
-          y: 120,
-          width: 350,
-          height: 400,
-          styles: { backgroundColor: '#1e293b', borderRadius: 24, shadow: 'apple', borderWidth: 1, borderColor: 'rgba(234,179,8,0.15)' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة القانون',
-          x: 450,
-          y: 150,
-          width: 170,
-          height: 28,
-          content: '⚖️ مكتب الشامسي للمحاماة',
-          styles: { fontSize: 11, backgroundColor: '#fef9c3', color: '#ca8a04', borderRadius: 8, textAlign: 'center', fontWeight: 'bold' }
+          height: 30,
+          content: '🍽️ نكهات طازجة يوميًا',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
           type: 'heading',
-          name: 'العنوان القانوني الرئيسي',
-          x: 450,
-          y: 190,
-          width: 290,
-          height: 90,
-          content: 'استشارات قانونية تخصصية وحلول قضائية رائدة',
-          styles: { fontSize: 25, color: '#ffffff', fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
+          name: 'عنوان المطعم',
+          x: 70,
+          y: 215,
+          width: 330,
+          height: 100,
+          content: 'مطعم الفرن الذهبي — مذاق أصيل يجمع العائلة على مائدة واحدة',
+          styles: { fontSize: 23, color: col.text, fontWeight: 'bold', fontFamily: 'Lemonada', textAlign: 'right', lineHeight: 1.35, animation: 'slide-up', animationTrigger: 'once', animationDuration: 1.1 }
         },
         {
           type: 'paragraph',
-          name: 'النص القانوني التعريفي',
-          x: 450,
-          y: 295,
-          width: 290,
-          height: 110,
-          content: 'نحن نقدم حلولاً قانونية متكاملة لخدمة الشركات والمؤسسات والأفراد في قضايا المال، الاستثمار، والتحكيم التجاري، بأيدي نخبة من أكبر المحامين ذوي الخبرة الطويلة.',
-          styles: { fontSize: 12, color: '#cbd5e1', textAlign: 'right', lineHeight: 1.6 }
-        },
-        {
-          type: 'button',
-          name: 'زر الاستشارة القانونية',
-          x: 450,
-          y: 420,
-          width: 290,
-          height: 46,
-          content: '💬 تواصل للاستشارة الفورية',
-          styles: { fontSize: 13, backgroundColor: '#eab308', color: '#111827', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
-        }
-      ];
-    } else if (index === 6) {
-      // Real Estate / Property Agency (عقارات وإعمار) - Left Bento Grid, Text Right
-      elements = [
-        // Solid modern slate background
-        {
-          type: 'shape',
-          name: 'خلفية شريحة العقارات',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          styles: { backgroundColor: '#f8fafc', borderRadius: 0 }
-        },
-        // Image 1: Logo
-        {
-          type: 'image',
-          name: 'شعار إعمار وعقارات النخبة',
-          x: 40,
-          y: 40,
-          width: 60,
-          height: 60,
-          content: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 9999, objectFit: 'cover', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }
-        },
-        // Bento Images on Left
-        {
-          type: 'image',
-          name: 'بينتو 1 - الفلل السكنية الفاخرة',
-          x: 40,
-          y: 120,
-          width: 360,
-          height: 240,
-          content: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
-          styles: { borderRadius: 20, objectFit: 'cover', shadow: 'apple' }
-        },
-        {
-          type: 'image',
-          name: 'بينتو 2 - الديكور والتصميم الداخلي المودرن',
-          x: 40,
-          y: 380,
-          width: 360,
-          height: 140,
-          content: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=400&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=400&q=80',
-          styles: { borderRadius: 20, objectFit: 'cover', shadow: 'apple' }
-        },
-        // Floating text container on Right
-        {
-          type: 'shape',
-          name: 'حاوية معلومات العقارات والفلل',
-          x: 420,
-          y: 120,
-          width: 350,
-          height: 400,
-          styles: { backgroundColor: '#ffffff', borderRadius: 24, shadow: 'apple', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة العقارات',
-          x: 450,
-          y: 150,
-          width: 170,
-          height: 28,
-          content: '🏠 عقارات وإعمار النخبة',
-          styles: { fontSize: 11, backgroundColor: '#f0fdf4', color: '#16a34a', borderRadius: 8, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
-          type: 'heading',
-          name: 'العنوان العقاري الترحيبي',
-          x: 450,
-          y: 190,
-          width: 290,
+          name: 'نص المطعم',
+          x: 70,
+          y: 330,
+          width: 330,
           height: 90,
-          content: 'ابحث عن منزل أحلامك في أفخم المجمعات السكنية',
-          styles: { fontSize: 25, color: '#1d1d1f', fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
-        },
-        {
-          type: 'paragraph',
-          name: 'النص العقاري التعريفي',
-          x: 450,
-          y: 295,
-          width: 290,
-          height: 110,
-          content: 'نحن نوفر لك باقة حصرية من الفلل الفاخرة، الشقق العصرية، والمجمعات السكنية الراقية بأسعار منافسة وبخيارات تمويل وسداد مرنة تلبي طموحات عائلتك الاستثمارية.',
+          content: 'نقدم أشهى الأطباق الشرقية والعالمية المحضّرة من مكونات طازجة يوميًا، في جو عائلي دافئ يناسب كل المناسبات والسهرات الخاصة.',
           styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
         },
         {
           type: 'button',
-          name: 'زر الاستشارة العقارية',
-          x: 450,
-          y: 420,
-          width: 290,
-          height: 46,
-          content: '📞 احجز استشارة عقارية مجانية',
-          styles: { fontSize: 13, backgroundColor: '#16a34a', color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+          name: 'زر طلب أو حجز طاولة',
+          x: 70,
+          y: 440,
+          width: 230,
+          height: 44,
+          content: '📞 اطلب أو احجز طاولتك',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', glowIntensity: 18, glowColor: 'rgba(234,88,12,0.3)', glowPosition: 'bottom' }
         }
       ];
-    } else if (index === 7) {
-      // Education / Academy (أكاديمية وتدريب إلكتروني) - Centered Top, Large Mockup Image Below
+    } else if (index === 9) {
+      // Real Estate Intro (تجارة العقارات)
       elements = [
-        // Background
         {
           type: 'shape',
-          name: 'خلفية الشريحة التعليمية',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          styles: { backgroundColor: '#f0fdf4', borderRadius: 0 }
+          name: 'إطار حول صورة العقار',
+          x: 440,
+          y: 30,
+          width: 340,
+          height: 460,
+          content: 'frame',
+          styles: { backgroundColor: 'transparent', borderWidth: 2, borderColor: col.accent, borderRadius: 16 }
         },
-        // Image 1: Logo
         {
           type: 'image',
-          name: 'شعار الأكاديمية والتدريب',
-          x: 40,
-          y: 40,
-          width: 60,
-          height: 60,
-          content: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 12, objectFit: 'cover', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }
+          name: 'صورة العقار بقوس كلاسيكي',
+          x: 460,
+          y: 50,
+          width: 300,
+          height: 420,
+          content: '/CatalogLibrary/realestate-hero.jpg',
+          imageUrl: '/CatalogLibrary/realestate-hero.jpg',
+          clipPath: 'clip-shape-arch-classic',
+          styles: { objectFit: 'cover' }
         },
-        // Centered texts at top
+        {
+          type: 'shape',
+          name: 'مثلث زخرفي زاوية سفلية',
+          x: -30,
+          y: 460,
+          width: 160,
+          height: 160,
+          clipPath: 'clip-shape-geo-triangle',
+          content: 'triangle',
+          styles: { backgroundColor: col.bgShape }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة محتوى العقارات',
+          x: 40,
+          y: 130,
+          width: 380,
+          height: 340,
+          styles: { backgroundColor: col.card, borderRadius: 22, glowIntensity: 18, glowColor: 'rgba(71,85,105,0.14)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(71,85,105,0.12)' }
+        },
         {
           type: 'badge',
-          name: 'شارة الأكاديمية',
-          x: 320,
-          y: 40,
-          width: 160,
-          height: 28,
-          content: '🎓 أكاديمية بروأكاديمي للتعليم',
-          styles: { fontSize: 11, backgroundColor: '#dcfce7', color: '#15803d', borderRadius: 8, textAlign: 'center', fontWeight: 'bold' }
+          name: 'شارة عقارات مميزة',
+          x: 70,
+          y: 160,
+          width: 280,
+          height: 30,
+          content: '🏠 عقارات مميزة بمواقع استراتيجية',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
           type: 'heading',
-          name: 'عنوان الأكاديمية الرئيسي',
-          x: 100,
-          y: 80,
-          width: 600,
-          height: 40,
-          content: 'طور مهاراتك المهنية والبرمجية مع كبار الخبراء',
-          styles: { fontSize: 24, color: '#1d1d1f', fontWeight: 'bold', textAlign: 'center' }
+          name: 'عنوان العقارات',
+          x: 70,
+          y: 205,
+          width: 330,
+          height: 90,
+          content: 'مجموعة الأفق العقارية — استثمارك الآمن نحو منزل الأحلام',
+          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', fontFamily: 'Readex Pro', textAlign: 'right', lineHeight: 1.35 }
         },
-        // Large mockup/player in center
-        {
-          type: 'image',
-          name: 'شاشة الدرس والتطبيق العملي التفاعلي',
-          x: 100,
-          y: 135,
-          width: 600,
-          height: 310,
-          content: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-          styles: { borderRadius: 16, objectFit: 'cover', shadow: 'apple' }
-        },
-        // Paragraph below center image
         {
           type: 'paragraph',
-          name: 'وصف مسارات التعلم',
-          x: 100,
-          y: 460,
-          width: 600,
-          height: 40,
-          content: 'انضم لأكثر من 50 ألف طالب واستمتع بمسارات تعليمية تفاعلية شاملة بالبرمجة والتصميم والتسويق مع الحصول على شهادات تدريبية معتمدة.',
-          styles: { fontSize: 12, color: '#374151', textAlign: 'center', lineHeight: 1.5 }
+          name: 'نص العقارات',
+          x: 70,
+          y: 310,
+          width: 330,
+          height: 100,
+          content: 'نوفر محفظة متنوعة من الشقق والفلل والأراضي في أرقى المواقع، مع استشارات تمويل عقاري ومتابعة قانونية كاملة حتى تسليم المفاتيح.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
         },
-        // Button at center bottom
         {
           type: 'button',
-          name: 'زر تصفح الكورسات',
-          x: 290,
-          y: 510,
+          name: 'زر تصفح العقارات',
+          x: 70,
+          y: 420,
           width: 220,
           height: 44,
-          content: '⚡ ابدأ تصفح الكورسات مجاناً',
-          styles: { fontSize: 13, backgroundColor: '#15803d', color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
-        }
-      ];
-    } else if (index === 8) {
-      // Beauty Salon / Spa (صالون عناية وتجميل) - Image Left (Organic Shape Mask), Text Right
-      elements = [
-        // Solid soft cream/pink background
-        {
-          type: 'shape',
-          name: 'خلفية صالون التجميل والسبا',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          styles: { backgroundColor: '#fff7ed', borderRadius: 0 }
-        },
-        // Image 1: Logo
-        {
-          type: 'image',
-          name: 'شعار روزا سبا والعناية',
-          x: 40,
-          y: 40,
-          width: 60,
-          height: 60,
-          content: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 9999, objectFit: 'cover', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }
-        },
-        // Image 2: Spa and care organic masked shape (LEFT)
-        {
-          type: 'image',
-          name: 'العناية بالبشرة والتدليك الطبيعي',
-          x: 40,
-          y: 120,
-          width: 360,
-          height: 400,
-          content: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80',
-          styles: { borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%', objectFit: 'cover', shadow: 'apple' }
-        },
-        // Floating text container on Right
-        {
-          type: 'shape',
-          name: 'حاوية معلومات التجميل والعناية',
-          x: 420,
-          y: 120,
-          width: 350,
-          height: 400,
-          styles: { backgroundColor: '#ffffff', borderRadius: 24, shadow: 'apple', borderWidth: 1, borderColor: 'rgba(234,88,12,0.06)' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة العناية',
-          x: 450,
-          y: 150,
-          width: 170,
-          height: 28,
-          content: '🌸 صالون روزا سبا والعناية',
-          styles: { fontSize: 11, backgroundColor: '#ffedd5', color: '#ea580c', borderRadius: 8, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
-          type: 'heading',
-          name: 'العنوان الجمالي الترحيبي',
-          x: 450,
-          y: 190,
-          width: 290,
-          height: 90,
-          content: 'استرخي واستعيدي نضارتك وجمالك الطبيعي',
-          styles: { fontSize: 25, color: '#1d1d1f', fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
-        },
-        {
-          type: 'paragraph',
-          name: 'النص الجمالي التعريفي',
-          x: 450,
-          y: 295,
-          width: 290,
-          height: 110,
-          content: 'نحن نقدم أرقى خدمات العناية بالبشرة، المساج الاسترخائي، والمكياج العلاجي الفاخر بأيدي خبيرات دوليات معتمدات لتبدي متألقة وجميلة في كل المناسبات السعيدة.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
-        },
-        {
-          type: 'button',
-          name: 'زر حجز صالون التجميل',
-          x: 450,
-          y: 420,
-          width: 290,
-          height: 46,
-          content: '📞 احجزي جلستك التجميلية الآن',
-          styles: { fontSize: 13, backgroundColor: '#ea580c', color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
-        }
-      ];
-    } else {
-      // Fitness Trainer / Gym (مدرب شخصي وفتنس) - High Energy Dark Theme, Image Left, Text Right, Fixed BG
-      elements = [
-        // Background full image - Gym (FIXED/PARALLAX)
-        {
-          type: 'image',
-          name: 'خلفية كاملة - صالة الحديد والتدريب',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          content: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1280&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1280&q=80',
-          styles: { objectFit: 'cover', backgroundAttachment: 'fixed', opacity: 0.15 }
-        },
-        // Image 1: Logo
-        {
-          type: 'image',
-          name: 'شعار أكاديمية الفتنس والتدريب',
-          x: 40,
-          y: 40,
-          width: 60,
-          height: 60,
-          content: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=150&h=150&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=150&h=150&q=80',
-          styles: { borderRadius: 12, objectFit: 'cover', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
-        },
-        // Image 2: Fitness trainer lifiting weights (LEFT)
-        {
-          type: 'image',
-          name: 'التدريب الشاق وبناء العضلات',
-          x: 40,
-          y: 120,
-          width: 360,
-          height: 400,
-          content: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
-          imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
-          styles: { borderRadius: 24, objectFit: 'cover', shadow: 'apple' }
-        },
-        // Floating text container on Right (Slate Dark)
-        {
-          type: 'shape',
-          name: 'حاوية معلومات التمرين',
-          x: 420,
-          y: 120,
-          width: 350,
-          height: 400,
-          styles: { backgroundColor: '#111827', borderRadius: 24, shadow: 'apple', borderWidth: 1, borderColor: 'rgba(234,179,8,0.1)' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة التمرين',
-          x: 450,
-          y: 150,
-          width: 170,
-          height: 28,
-          content: '🔥 أكاديمية التحدي والفتنس',
-          styles: { fontSize: 11, backgroundColor: '#fef9c3', color: '#ca8a04', borderRadius: 8, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
-          type: 'heading',
-          name: 'العنوان الرياضي الترحيبي',
-          x: 450,
-          y: 190,
-          width: 290,
-          height: 90,
-          content: 'ابنِ جسماً قوياً وعش حياة صحية ونشيطة',
-          styles: { fontSize: 25, color: '#ffffff', fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
-        },
-        {
-          type: 'paragraph',
-          name: 'النص الرياضي التعريفي',
-          x: 450,
-          y: 295,
-          width: 290,
-          height: 110,
-          content: 'برامج تدريب شخصية، كوتشينغ مخصص، وخطط غذائية علمية تساعدك على حرق الدهون وبناء الكتلة العضلية وتحقيق أهدافك اللياقية بسرعة بأيدي كبار المدربين.',
-          styles: { fontSize: 12, color: '#9ca3af', textAlign: 'right', lineHeight: 1.6 }
-        },
-        {
-          type: 'button',
-          name: 'زر اشتراك الفتنس',
-          x: 450,
-          y: 420,
-          width: 290,
-          height: 46,
-          content: '💪 اشترك وتحدّ نفسك الآن',
-          styles: { fontSize: 13, backgroundColor: '#ca8a04', color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+          content: '🔍 تصفح العقارات المتاحة',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
     }
   }
+
 
   // ==========================================
   // ABOUT US SLIDES (شريحة من نحن)
   // ==========================================
   else if (categoryId === 'about') {
     if (index === 0) {
-      // 2-Column Story with Circular Avatar Frame (Layout 4)
+      // Tiling / Floor & Wall Tiles (بلاط)
       elements = [
+        { type: 'shape', name: 'بلاطة زخرفية 1', x: 610, y: 40, width: 55, height: 55, styles: { backgroundColor: col.accent, borderRadius: 8 } },
+        { type: 'shape', name: 'بلاطة زخرفية 2', x: 675, y: 40, width: 55, height: 55, styles: { backgroundColor: col.bgShape, borderRadius: 8 } },
+        { type: 'shape', name: 'بلاطة زخرفية 3', x: 610, y: 105, width: 55, height: 55, styles: { backgroundColor: col.bgShape, borderRadius: 8 } },
+        { type: 'shape', name: 'بلاطة زخرفية 4', x: 675, y: 105, width: 55, height: 55, styles: { backgroundColor: col.accent, borderRadius: 8 } },
         {
           type: 'shape',
-          name: 'خلفية الصفحة',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          styles: { backgroundColor: col.bg, borderRadius: 0 }
-        },
-        // Circular Avatar Layer
-        {
-          type: 'shape',
-          name: 'حلقة إطار الأفاتار الملونة',
-          x: 80,
-          y: 110,
-          width: 280,
-          height: 280,
-          styles: { backgroundColor: col.accent + '20', borderRadius: 140 }
+          name: 'إطار دائري حول صورة البلاط',
+          x: 460,
+          y: 200,
+          width: 300,
+          height: 300,
+          content: 'frame',
+          styles: { backgroundColor: 'transparent', borderWidth: 2, borderColor: col.accent, borderRadius: 150 }
         },
         {
           type: 'image',
-          name: 'صورة الهوية أو المؤسس',
-          x: 95,
-          y: 125,
-          width: 250,
-          height: 250,
-          content: getImg('about', 0),
-          styles: { borderRadius: 125, objectFit: 'cover' }
+          name: 'صورة تركيب البلاط',
+          x: 480,
+          y: 220,
+          width: 260,
+          height: 260,
+          content: '/CatalogLibrary/tiling-hero.jpg',
+          imageUrl: '/CatalogLibrary/tiling-hero.jpg',
+          clipPath: 'clip-shape-geo-circle',
+          styles: { objectFit: 'cover', animation: 'scale-up', animationTrigger: 'once', animationDuration: 1.1 }
         },
-        // Overlapping card forming custom layout
         {
           type: 'shape',
-          name: 'بطاقة الإنجازات الصغيرة',
-          x: 230,
-          y: 330,
-          width: 150,
-          height: 90,
-          styles: { backgroundColor: col.accent, borderRadius: 16, shadow: 'apple' }
+          name: 'لوحة قصة البلاط',
+          x: 40,
+          y: 120,
+          width: 400,
+          height: 360,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 22, glowColor: 'rgba(0,0,0,0.12)', glowPosition: 'bottom' }
         },
-        {
-          type: 'heading',
-          name: 'رقم الإنجاز',
-          x: 240,
-          y: 340,
-          width: 130,
-          height: 30,
-          content: '+150 عميل',
-          styles: { fontSize: 18, color: '#ffffff', fontWeight: 'bold', textAlign: 'center' }
-        },
-        {
-          type: 'paragraph',
-          name: 'وصف الإنجاز',
-          x: 240,
-          y: 375,
-          width: 130,
-          height: 40,
-          content: 'ثقة مستمرة وتواصل دائم',
-          styles: { fontSize: 10, color: '#e2e8f0', textAlign: 'center' }
-        },
-        // Right Side Content
         {
           type: 'badge',
-          name: 'شارة قصتنا',
-          x: 410,
-          y: 110,
-          width: 120,
-          height: 28,
-          content: '✦ من نحن وقصتنا',
-          styles: { fontSize: 11, backgroundColor: col.bgShape, color: col.accent, borderRadius: 8, textAlign: 'center' }
+          name: 'شارة الحرفية',
+          x: 70,
+          y: 150,
+          width: 250,
+          height: 30,
+          content: '🧱 حرفية في تركيب البلاط',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
           type: 'heading',
-          name: 'عنوان من نحن',
-          x: 410,
-          y: 150,
-          width: 350,
-          height: 80,
-          content: 'نحن شركاء نجاحك في الفضاء الرقمي المتكامل',
-          styles: { fontSize: 26, color: col.text, fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
+          name: 'عنوان البلاط',
+          x: 70,
+          y: 195,
+          width: 340,
+          height: 90,
+          content: 'مؤسسة الحرفة الدقيقة للبلاط — دقة لا تقبل العشوائية',
+          styles: { fontSize: 23, color: col.text, fontWeight: 'bold', fontFamily: 'Cairo', textAlign: 'right', lineHeight: 1.3 }
         },
         {
           type: 'paragraph',
-          name: 'تفاصيل قصتنا',
-          x: 410,
-          y: 245,
-          width: 350,
-          height: 130,
-          content: 'بدأت رحلتنا في وي لينك بشغف لتمكين رواد الأعمال وأصحاب المتاجر والمطاعم من التواجد الإلكتروني المنسق. نوظف أحدث تصاميم واجهات المستخدم والربط السحابي الذكي لمنحك تميزاً وسهولة تشغيل ليس لها مثيل.',
-          styles: { fontSize: 13, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
+          name: 'نص البلاط',
+          x: 70,
+          y: 300,
+          width: 340,
+          height: 110,
+          content: 'بدأنا كفريق صغير من الحرفيين المتخصصين في تركيب وتصميم البلاط والسيراميك، واليوم ننفذ مشاريع فلل وشركات كاملة بخبرة تتجاوز خمسة عشر عامًا ودقة قياس بالمليمتر.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
         },
         {
-          type: 'button',
-          name: 'زر استكشف خدماتنا',
-          x: 410,
-          y: 390,
-          width: 190,
-          height: 46,
-          content: 'تعرف على خدماتنا المتميزة ✦',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+          type: 'card',
+          name: 'بطاقة إحصائية البلاط',
+          x: 460,
+          y: 400,
+          width: 230,
+          height: 100,
+          content: 'أكثر من 400 مشروع بلاط منفذ بدقة واحترافية عالية.',
+          styles: {}
         }
       ];
-    } else {
-      // High-impact About Us (Quote/Values) Layout
+    } else if (index === 1) {
+      // Moving & Transport Services (نقليات)
       elements = [
         {
-          type: 'shape',
-          name: 'خلفية الشريحة',
+          type: 'image',
+          name: 'خلفية كاملة - خدمات النقليات',
           x: 0,
           y: 0,
           width: 800,
           height: 580,
-          styles: { backgroundColor: col.bg, borderRadius: 0 }
+          content: '/CatalogLibrary/moving-bg.jpg',
+          imageUrl: '/CatalogLibrary/moving-bg.jpg',
+          styles: { objectFit: 'cover', opacity: 0.3, backgroundAttachment: 'fixed' }
+        },
+        {
+          type: 'shape',
+          name: 'سهم مثلث زخرفي',
+          x: 610,
+          y: 180,
+          width: 150,
+          height: 150,
+          clipPath: 'clip-shape-geo-triangle',
+          content: 'triangle',
+          styles: { backgroundColor: 'rgba(0,113,227,0.14)' },
+          rotation: 90
+        },
+        {
+          type: 'shape',
+          name: 'إطار كبسولة النقل',
+          x: 440,
+          y: 60,
+          width: 340,
+          height: 220,
+          content: 'frame',
+          styles: { backgroundColor: 'transparent', borderWidth: 3, borderColor: col.accent, borderRadius: 40 }
+        },
+        {
+          type: 'image',
+          name: 'صورة أسطول النقل',
+          x: 460,
+          y: 80,
+          width: 300,
+          height: 200,
+          content: '/CatalogLibrary/moving-hero.jpg',
+          imageUrl: '/CatalogLibrary/moving-hero.jpg',
+          clipPath: 'clip-shape-geo-capsule',
+          styles: { objectFit: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة قصة النقليات',
+          x: 40,
+          y: 150,
+          width: 380,
+          height: 320,
+          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 28, glowColor: 'rgba(0,0,0,0.5)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
         },
         {
           type: 'badge',
-          name: 'شارة من نحن العامة',
-          x: 280,
-          y: 60,
-          width: 240,
-          height: 32,
-          content: `★ رؤيتنا وقيمنا الراسخة — نموذج ${index + 1}`,
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center' }
-        },
-        {
-          type: 'heading',
-          name: 'العنوان لنموذج من نحن',
-          x: 60,
-          y: 110,
-          width: 680,
-          height: 80,
-          content: 'نصنع المستحيل ونوفر الحلول بأسهل الطرق والأساليب الحديثة',
-          styles: { fontSize: 28, color: col.text, fontWeight: 'bold', textAlign: 'center' }
-        },
-        // Three side-by-side values cards (1. 2. 3.)
-        {
-          type: 'shape',
-          name: 'بطاقة قيم 1',
-          x: 50,
-          y: 210,
-          width: 220,
-          height: 240,
-          styles: { backgroundColor: col.card, borderRadius: 20, shadow: 'apple' }
-        },
-        {
-          type: 'heading',
-          name: 'ترقيم قيمة 1',
+          name: 'شارة النقل الآمن',
           x: 70,
-          y: 230,
-          width: 180,
-          height: 40,
-          content: '01. الجودة الفائقة',
-          styles: { fontSize: 18, color: col.accent, fontWeight: 'bold', textAlign: 'right' }
+          y: 180,
+          width: 200,
+          height: 30,
+          content: '🚚 نقل آمن وسريع',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: '#5aa9ff', borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
-          type: 'paragraph',
-          name: 'وصف قيمة 1',
+          type: 'heading',
+          name: 'عنوان النقليات',
           x: 70,
-          y: 280,
-          width: 180,
-          height: 140,
-          content: 'نحن ملتزمون بتقديم أعلى مستويات الدقة والمحاذاة الفنية، واختيار الخطوط والألوان الأكثر عصرية وجاذبية لتناسب مشروعك بامتياز.',
-          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.5 }
-        },
-
-        {
-          type: 'shape',
-          name: 'بطاقة قيم 2',
-          x: 290,
-          y: 210,
-          width: 220,
-          height: 240,
-          styles: { backgroundColor: col.card, borderRadius: 20, shadow: 'apple' }
-        },
-        {
-          type: 'heading',
-          name: 'ترقيم قيمة 2',
-          x: 310,
-          y: 230,
-          width: 180,
-          height: 40,
-          content: '02. السرعة الفورية',
-          styles: { fontSize: 18, color: col.accent, fontWeight: 'bold', textAlign: 'right' }
+          y: 225,
+          width: 320,
+          height: 90,
+          content: 'شركة الوصول السريع للنقليات — أمانتك تحت إشرافنا الكامل',
+          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', fontFamily: 'Baloo Bhaijaan 2', textAlign: 'right', lineHeight: 1.3 }
         },
         {
           type: 'paragraph',
-          name: 'وصف قيمة 2',
-          x: 310,
-          y: 280,
-          width: 180,
-          height: 140,
-          content: 'الربط السحابي فائق السرعة يعني تحديث وتزامن معلوماتك لحظة بلحظة دون أي تأخير، وبكبسة زر واحدة بسيطة ومضمونة دائماً.',
-          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.5 }
-        },
-
-        {
-          type: 'shape',
-          name: 'بطاقة قيم 3',
-          x: 530,
-          y: 210,
-          width: 220,
-          height: 240,
-          styles: { backgroundColor: col.card, borderRadius: 20, shadow: 'apple' }
-        },
-        {
-          type: 'heading',
-          name: 'ترقيم قيمة 3',
-          x: 550,
-          y: 230,
-          width: 180,
-          height: 40,
-          content: '03. الدعم الدائم',
-          styles: { fontSize: 18, color: col.accent, fontWeight: 'bold', textAlign: 'right' }
-        },
-        {
-          type: 'paragraph',
-          name: 'وصف قيمة 3',
-          x: 550,
-          y: 280,
-          width: 180,
-          height: 140,
-          content: 'فريقنا متاح لتلقي اقتراحاتك واستشاراتك الفنية مجاناً ومباشرة للتأكد من نجاح موقعك الإلكتروني على محركات البحث وتحقيق العائد المنشود.',
-          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.5 }
+          name: 'نص النقليات',
+          x: 70,
+          y: 325,
+          width: 320,
+          height: 100,
+          content: 'نقدم خدمات نقل العفش والبضائع بين المدن بأسطول مجهز وفريق مدرب على التغليف والتحميل الآمن، مع تتبع مباشر لشحنتك من الباب إلى الباب.',
+          styles: { fontSize: 12, color: '#a1a1a6', textAlign: 'right', lineHeight: 1.6 }
         },
         {
           type: 'button',
-          name: 'زر نهاية من نحن',
-          x: 300,
-          y: 480,
-          width: 200,
+          name: 'زر طلب عرض نقل',
+          x: 70,
+          y: 440,
+          width: 220,
           height: 44,
-          content: 'انضم لشركاء النجاح 🚀',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 10, textAlign: 'center' }
+          content: '📦 اطلب عرض نقل الآن',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2.2 }
+        }
+      ];
+    } else if (index === 2) {
+      // Home Furniture Sales (بيع أثاث منزلي)
+      elements = [
+        {
+          type: 'shape',
+          name: 'ورقة زخرفية علوية',
+          x: -50,
+          y: -50,
+          width: 260,
+          height: 260,
+          clipPath: 'clip-shape-leaf-classic',
+          content: 'leaf',
+          styles: { backgroundColor: col.bgShape }
+        },
+        {
+          type: 'shape',
+          name: 'بقعة صورة الأثاث',
+          x: 470,
+          y: 230,
+          width: 300,
+          height: 260,
+          clipPath: 'clip-shape-blob-org-a',
+          content: 'blob',
+          styles: { backgroundImage: 'url(/CatalogLibrary/furniture-blob.jpg)', backgroundSize: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة قصة الأثاث',
+          x: 40,
+          y: 130,
+          width: 400,
+          height: 350,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 20, glowColor: 'rgba(0,0,0,0.1)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة تشكيلة الأثاث',
+          x: 70,
+          y: 160,
+          width: 270,
+          height: 30,
+          content: '🛋️ تشكيلة أثاث منزلي متكاملة',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الأثاث',
+          x: 70,
+          y: 205,
+          width: 340,
+          height: 90,
+          content: 'معرض البيت الأنيق للأثاث المنزلي — راحة تدوم وجمال يلفت الأنظار',
+          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', fontFamily: 'Almarai', textAlign: 'right', lineHeight: 1.35 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الأثاث',
+          x: 70,
+          y: 310,
+          width: 340,
+          height: 110,
+          content: 'نوفر تشكيلة واسعة من الأثاث المنزلي والمكتبي بتصاميم عصرية وخامات متينة تناسب جميع الأذواق والمساحات، مع خدمة تركيب وتوصيل مجانية داخل المدينة.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر تصفح الأثاث',
+          x: 70,
+          y: 430,
+          width: 220,
+          height: 40,
+          content: '🛒 تصفح تشكيلة الأثاث',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    } else if (index === 3) {
+      // Home Cooking (طبخ منزلي)
+      elements = [
+        {
+          type: 'image',
+          name: 'خلفية كاملة - طبخ منزلي',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/CatalogLibrary/cooking-bg.jpg',
+          imageUrl: '/CatalogLibrary/cooking-bg.jpg',
+          styles: { objectFit: 'cover', opacity: 0.2 }
+        },
+        {
+          type: 'shape',
+          name: 'قلب زخرفي صغير',
+          x: 650,
+          y: 380,
+          width: 90,
+          height: 90,
+          clipPath: 'clip-shape-heart',
+          content: 'heart',
+          styles: { backgroundColor: 'rgba(255,149,0,0.18)' }
+        },
+        {
+          type: 'image',
+          name: 'صورة طبخ منزلي بإطار أبيض',
+          x: 480,
+          y: 70,
+          width: 270,
+          height: 270,
+          content: '/CatalogLibrary/cooking-hero.jpg',
+          imageUrl: '/CatalogLibrary/cooking-hero.jpg',
+          styles: { objectFit: 'cover', borderRadius: 9999, borderWidth: 6, borderColor: '#ffffff', glowIntensity: 22, glowColor: 'rgba(0,0,0,0.16)', glowPosition: 'bottom', animation: 'fade', animationTrigger: 'once', animationDuration: 1 }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة قصة الطبخ',
+          x: 40,
+          y: 150,
+          width: 400,
+          height: 320,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 18, glowColor: 'rgba(255,149,0,0.14)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة نكهة البيت',
+          x: 70,
+          y: 180,
+          width: 220,
+          height: 30,
+          content: '🍲 نكهة البيت الأصيلة',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الطبخ المنزلي',
+          x: 70,
+          y: 225,
+          width: 340,
+          height: 90,
+          content: 'مطبخ الأصالة المنزلي — طعم بيتنا في بيتك',
+          styles: { fontSize: 24, color: col.text, fontWeight: 'bold', fontFamily: 'Marhey', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الطبخ المنزلي',
+          x: 70,
+          y: 330,
+          width: 340,
+          height: 100,
+          content: 'نحضّر أطباقنا يوميًا بأيدٍ منزلية خبيرة من مكونات طبيعية طازجة، لنوصل لك نكهة البيت الحقيقية لحفلاتك وولائمك ووجباتك اليومية بثقة وجودة.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر طلب وجبة منزلية',
+          x: 70,
+          y: 440,
+          width: 220,
+          height: 44,
+          content: '📞 اطلب وجبتك المنزلية',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    } else if (index === 4) {
+      // Painter (دهان)
+      elements = [
+        {
+          type: 'shape',
+          name: 'لطخة فرشاة صورة الدهان',
+          x: 460,
+          y: 60,
+          width: 320,
+          height: 320,
+          clipPath: 'clip-shape-brush-splatter',
+          content: 'splatter',
+          styles: { backgroundImage: 'url(/CatalogLibrary/painter-splash.jpg)', backgroundSize: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'عينة لون 1',
+          x: 650,
+          y: 400,
+          width: 50,
+          height: 50,
+          styles: { backgroundColor: col.accent, borderRadius: 10 }
+        },
+        {
+          type: 'shape',
+          name: 'عينة لون 2',
+          x: 710,
+          y: 400,
+          width: 50,
+          height: 50,
+          styles: { backgroundColor: col.bgShape, borderRadius: 10 }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة قصة الدهان',
+          x: 40,
+          y: 130,
+          width: 400,
+          height: 350,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 20, glowColor: 'rgba(191,90,242,0.16)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة الدهانات',
+          x: 70,
+          y: 160,
+          width: 270,
+          height: 30,
+          content: '🎨 دهانات داخلية وخارجية بجودة عالية',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الدهان',
+          x: 70,
+          y: 205,
+          width: 340,
+          height: 90,
+          content: 'فرشاة الإبداع للدهانات — ألوان تعيد الحياة لمساحتك',
+          styles: { fontSize: 23, color: col.text, fontWeight: 'bold', fontFamily: 'Reem Kufi', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الدهان',
+          x: 70,
+          y: 310,
+          width: 340,
+          height: 110,
+          content: 'ننفذ أعمال الدهان الداخلي والخارجي للفلل والشقق والمحال التجارية بأحدث تقنيات الديكورات والدهانات العازلة، مع ضمان جودة التنفيذ ونظافة الموقع بعد الانتهاء.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر معاينة الدهان',
+          x: 70,
+          y: 430,
+          width: 220,
+          height: 40,
+          content: '🖌️ اطلب معاينة مجانية',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    }
+ else if (index === 5) {
+      // Electronics Repair (صيانة إلكترونيات)
+      elements = [
+        {
+          type: 'image',
+          name: 'خلفية كاملة - صيانة إلكترونيات',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/CatalogLibrary/electronics-bg.jpg',
+          imageUrl: '/CatalogLibrary/electronics-bg.jpg',
+          styles: { objectFit: 'cover', opacity: 0.2 }
+        },
+        {
+          type: 'shape',
+          name: 'إطار سداسي صيانة الإلكترونيات',
+          x: 450,
+          y: 60,
+          width: 300,
+          height: 300,
+          content: 'frame',
+          styles: { backgroundColor: 'transparent', borderWidth: 3, borderColor: col.accent, borderRadius: 20 }
+        },
+        {
+          type: 'image',
+          name: 'صورة صيانة الأجهزة',
+          x: 470,
+          y: 80,
+          width: 260,
+          height: 260,
+          content: '/CatalogLibrary/electronics-hero.jpg',
+          imageUrl: '/CatalogLibrary/electronics-hero.jpg',
+          clipPath: 'clip-shape-geo-hexagon',
+          styles: { objectFit: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة قصة الإلكترونيات',
+          x: 40,
+          y: 140,
+          width: 380,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 26, glowColor: 'rgba(48,209,88,0.2)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة الصيانة الاحترافية',
+          x: 70,
+          y: 170,
+          width: 270,
+          height: 30,
+          content: '🔌 صيانة احترافية لجميع الأجهزة',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الإلكترونيات',
+          x: 70,
+          y: 215,
+          width: 320,
+          height: 90,
+          content: 'مركز التقنية الذكية لصيانة الإلكترونيات — إصلاح دقيق بضمان حقيقي',
+          styles: { fontSize: 21, color: '#ffffff', fontWeight: 'bold', fontFamily: 'Harmattan', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الإلكترونيات',
+          x: 70,
+          y: 315,
+          width: 320,
+          height: 110,
+          content: 'نصلّح الهواتف والحاسبات والأجهزة المنزلية الإلكترونية على يد فنيين معتمدين باستخدام قطع غيار أصلية، مع فحص مجاني وتسليم سريع خلال نفس اليوم.',
+          styles: { fontSize: 12, color: '#a1a1a6', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر طلب فني صيانة إلكترونيات',
+          x: 70,
+          y: 440,
+          width: 190,
+          height: 44,
+          content: '⚡ اطلب فني صيانة',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2 }
+        }
+      ];
+    } else if (index === 6) {
+      // Wholesale Trade (تجارة بالجملة)
+      elements = [
+        { type: 'shape', name: 'صندوق زخرفي 1', x: -30, y: 440, width: 130, height: 90, styles: { backgroundColor: col.bgShape, borderRadius: 10 } },
+        { type: 'shape', name: 'صندوق زخرفي 2', x: 60, y: 480, width: 110, height: 70, styles: { backgroundColor: 'rgba(22,163,74,0.14)', borderRadius: 10 } },
+        {
+          type: 'shape',
+          name: 'كبسولة صورة المستودع',
+          x: 460,
+          y: 200,
+          width: 300,
+          height: 240,
+          clipPath: 'clip-shape-geo-capsule',
+          content: 'capsule',
+          styles: { backgroundImage: 'url(/CatalogLibrary/wholesale-capsule.jpg)', backgroundSize: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة قصة الجملة',
+          x: 40,
+          y: 120,
+          width: 400,
+          height: 360,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 18, glowColor: 'rgba(22,163,74,0.15)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة أسعار الجملة',
+          x: 70,
+          y: 150,
+          width: 280,
+          height: 30,
+          content: '📦 أسعار جملة تنافسية لكل القطاعات',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان تجارة الجملة',
+          x: 70,
+          y: 195,
+          width: 340,
+          height: 90,
+          content: 'مستودعات الوفرة للتجارة بالجملة — كمية وثقة بلا حدود',
+          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', fontFamily: 'Katibeh', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص تجارة الجملة',
+          x: 70,
+          y: 300,
+          width: 340,
+          height: 110,
+          content: 'نورّد مختلف أنواع البضائع والمستلزمات التجارية بكميات كبيرة وأسعار تنافسية مباشرة من المصدر، مع خدمة شحن وتوصيل منظمة لكل تجار التجزئة والمشاريع.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر تواصل الجملة',
+          x: 70,
+          y: 410,
+          width: 220,
+          height: 40,
+          content: '🤝 تواصل لعروض الجملة',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    } else if (index === 7) {
+      // Social Development Services (تطوير وخدمات اجتماعية)
+      elements = [
+        {
+          type: 'shape',
+          name: 'بتلة زخرفية علوية',
+          x: -40,
+          y: -40,
+          width: 250,
+          height: 250,
+          clipPath: 'clip-shape-petal',
+          content: 'petal',
+          styles: { backgroundColor: col.bgShape }
+        },
+        {
+          type: 'image',
+          name: 'صورة برامج التنمية المجتمعية',
+          x: 470,
+          y: 200,
+          width: 280,
+          height: 280,
+          content: '/CatalogLibrary/socialdev-hero.jpg',
+          imageUrl: '/CatalogLibrary/socialdev-hero.jpg',
+          clipPath: 'clip-shape-geo-circle',
+          styles: { objectFit: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة قصة التطوير المجتمعي',
+          x: 40,
+          y: 120,
+          width: 400,
+          height: 360,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 22, glowColor: 'rgba(124,58,237,0.16)', glowPosition: 'bottom', borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.18)' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة البرامج المجتمعية',
+          x: 70,
+          y: 150,
+          width: 260,
+          height: 30,
+          content: '🤝 برامج تطوير وخدمات مجتمعية',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان التطوير المجتمعي',
+          x: 70,
+          y: 195,
+          width: 340,
+          height: 90,
+          content: 'مؤسسة الأثر الإيجابي للتطوير المجتمعي — نصنع التغيير معًا',
+          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', fontFamily: 'Lateef', textAlign: 'right', lineHeight: 1.35 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص التطوير المجتمعي',
+          x: 70,
+          y: 300,
+          width: 340,
+          height: 110,
+          content: 'نعمل مع الأفراد والمجتمعات المحلية على تصميم وتنفيذ برامج تدريبية وتنموية واجتماعية تخدم الفئات الأكثر حاجة، بشراكات فعالة ونتائج ملموسة على الأرض.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر برامج التطوير',
+          x: 70,
+          y: 420,
+          width: 210,
+          height: 44,
+          content: '📋 تعرف على برامجنا',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    } else if (index === 8) {
+      // Blacksmith (حداد)
+      elements = [
+        {
+          type: 'image',
+          name: 'خلفية كاملة - ورشة الحدادة',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/CatalogLibrary/blacksmith-bg.jpg',
+          imageUrl: '/CatalogLibrary/blacksmith-bg.jpg',
+          styles: { objectFit: 'cover', opacity: 0.25 }
+        },
+        {
+          type: 'shape',
+          name: 'إطار ثماني الحدادة',
+          x: 450,
+          y: 50,
+          width: 320,
+          height: 320,
+          content: 'frame',
+          styles: { backgroundColor: 'transparent', borderWidth: 4, borderColor: col.accent, borderRadius: 24 }
+        },
+        {
+          type: 'image',
+          name: 'صورة أعمال الحدادة',
+          x: 470,
+          y: 70,
+          width: 280,
+          height: 280,
+          content: '/CatalogLibrary/blacksmith-hero.jpg',
+          imageUrl: '/CatalogLibrary/blacksmith-hero.jpg',
+          clipPath: 'clip-shape-geo-octagon',
+          styles: { objectFit: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة قصة الحدادة',
+          x: 40,
+          y: 140,
+          width: 390,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 22, glowColor: 'rgba(234,88,12,0.18)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة الحدادة الفنية',
+          x: 70,
+          y: 170,
+          width: 230,
+          height: 30,
+          content: '🔥 أعمال حدادة فنية ودقيقة',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الحدادة',
+          x: 70,
+          y: 215,
+          width: 330,
+          height: 90,
+          content: 'ورشة اللهب للحدادة الفنية — قوة الحديد بلمسة إبداعية',
+          styles: { fontSize: 23, color: col.text, fontWeight: 'bold', fontFamily: 'Mirza', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الحدادة',
+          x: 70,
+          y: 320,
+          width: 330,
+          height: 100,
+          content: 'ننفّذ بوابات ودرابزين وأعمال حدادة فنية ومعمارية بدقة واحترافية عالية، من التصميم حتى التركيب النهائي، باستخدام أجود أنواع الحديد والخامات المعتمدة.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر طلب تصميم حدادة',
+          x: 70,
+          y: 430,
+          width: 220,
+          height: 40,
+          content: '🛠️ اطلب تصميم حدادة',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    } else if (index === 9) {
+      // Construction Equipment & Tool Rental (معدات بناء وتأجير عدد)
+      elements = [
+        {
+          type: 'shape',
+          name: 'مثلث زخرفي زاوية سفلية',
+          x: -30,
+          y: 440,
+          width: 170,
+          height: 170,
+          clipPath: 'clip-shape-geo-triangle',
+          content: 'triangle',
+          styles: { backgroundColor: col.bgShape }
+        },
+        {
+          type: 'shape',
+          name: 'إطار سداسي معدات البناء',
+          x: 440,
+          y: 40,
+          width: 340,
+          height: 340,
+          content: 'frame',
+          styles: { backgroundColor: 'transparent', borderWidth: 2, borderColor: col.accent, borderRadius: 20 }
+        },
+        {
+          type: 'shape',
+          name: 'سداسي صورة المعدات',
+          x: 460,
+          y: 60,
+          width: 300,
+          height: 300,
+          clipPath: 'clip-shape-geo-hexagon',
+          content: 'hexagon',
+          styles: { backgroundImage: 'url(/CatalogLibrary/equipment-hexagon.jpg)', backgroundSize: 'cover' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة قصة معدات البناء',
+          x: 40,
+          y: 130,
+          width: 400,
+          height: 350,
+          styles: { backgroundColor: col.card, borderRadius: 22, glowIntensity: 18, glowColor: 'rgba(71,85,105,0.14)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(71,85,105,0.12)' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة تأجير المعدات',
+          x: 70,
+          y: 160,
+          width: 280,
+          height: 30,
+          content: '🏗️ تأجير معدات وعدد بناء متكاملة',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان معدات البناء',
+          x: 70,
+          y: 205,
+          width: 340,
+          height: 90,
+          content: 'مجموعة الإنشاء الحديثة لتأجير المعدات — قوة العمل بين يديك',
+          styles: { fontSize: 21, color: col.text, fontWeight: 'bold', fontFamily: 'Markazi Text', textAlign: 'right', lineHeight: 1.35 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص معدات البناء',
+          x: 70,
+          y: 305,
+          width: 340,
+          height: 110,
+          content: 'نوفر تأجير معدات ورافعات وعدد بناء متنوعة بحالة فنية ممتازة لجميع مشاريع الإنشاء والمقاولات، مع صيانة دورية وفرق دعم فني متواجدة على مدار الأسبوع.',
+          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر طلب عرض تأجير',
+          x: 70,
+          y: 420,
+          width: 220,
+          height: 44,
+          content: '📞 اطلب عرض تأجير',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
     }
@@ -1705,7 +2264,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 80,
         width: 680,
         height: 420,
-        styles: { backgroundColor: col.card, borderRadius: 32, shadow: 'apple', borderColor: col.accent + '30', borderWidth: 1.5 }
+        styles: { backgroundColor: col.card, borderRadius: 32, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom', borderColor: col.accent + '30', borderWidth: 1.5 }
       },
       // Dotted/Dashed coupon divider
       {
@@ -1845,7 +2404,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 150,
           width: 220,
           height: 370,
-          styles: { backgroundColor: col.card, borderRadius: 24, shadow: 'apple' }
+          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
         },
         {
           type: 'heading',
@@ -1896,7 +2455,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 135,
           width: 220,
           height: 400,
-          styles: { backgroundColor: col.bgShape, borderRadius: 24, shadow: 'apple', borderColor: col.accent + '40', borderWidth: 2 }
+          styles: { backgroundColor: col.bgShape, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom', borderColor: col.accent + '40', borderWidth: 2 }
         },
         {
           type: 'badge',
@@ -1957,7 +2516,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
           y: 150,
           width: 220,
           height: 370,
-          styles: { backgroundColor: col.card, borderRadius: 24, shadow: 'apple' }
+          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
         },
         {
           type: 'heading',
@@ -2098,7 +2657,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 180,
         width: 220,
         height: 320,
-        styles: { backgroundColor: col.card, borderRadius: 24, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'image',
@@ -2138,7 +2697,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 180,
         width: 220,
         height: 320,
-        styles: { backgroundColor: col.card, borderRadius: 24, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'image',
@@ -2178,7 +2737,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 180,
         width: 220,
         height: 320,
-        styles: { backgroundColor: col.card, borderRadius: 24, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'image',
@@ -2236,7 +2795,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         width: 380,
         height: 380,
         content: 'دمشق، سوريا',
-        styles: { borderRadius: 28, shadow: 'apple' }
+        styles: { borderRadius: 28, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       // Right side: beautiful structured layout (inputs & contact info)
       {
@@ -2335,7 +2894,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 170,
         width: 330,
         height: 150,
-        styles: { backgroundColor: col.card, borderRadius: 20, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'heading',
@@ -2365,7 +2924,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 170,
         width: 330,
         height: 150,
-        styles: { backgroundColor: col.card, borderRadius: 20, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'heading',
@@ -2395,7 +2954,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 350,
         width: 330,
         height: 150,
-        styles: { backgroundColor: col.card, borderRadius: 20, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'heading',
@@ -2425,7 +2984,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 350,
         width: 330,
         height: 150,
-        styles: { backgroundColor: col.card, borderRadius: 20, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'heading',
@@ -2493,7 +3052,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         width: 220,
         height: 320,
         content: getImg('gallery', 0),
-        styles: { borderRadius: 20, objectFit: 'cover', shadow: 'apple' }
+        styles: { borderRadius: 20, objectFit: 'cover', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'image',
@@ -2503,7 +3062,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         width: 240,
         height: 350,
         content: getImg('gallery', 1),
-        styles: { borderRadius: 24, objectFit: 'cover', shadow: 'apple', borderColor: col.accent, borderWidth: 1.5 }
+        styles: { borderRadius: 24, objectFit: 'cover', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom', borderColor: col.accent, borderWidth: 1.5 }
       },
       {
         type: 'image',
@@ -2513,7 +3072,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         width: 220,
         height: 320,
         content: getImg('gallery', 2),
-        styles: { borderRadius: 20, objectFit: 'cover', shadow: 'apple' }
+        styles: { borderRadius: 20, objectFit: 'cover', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'paragraph',
@@ -2627,7 +3186,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         width: 640,
         height: 330,
         content: 'https://www.w3schools.com/html/mov_bbb.mp4',
-        styles: { borderRadius: 24, shadow: 'apple' }
+        styles: { borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'paragraph',
@@ -2664,7 +3223,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 60,
         width: 400,
         height: 460,
-        styles: { backgroundColor: col.card, borderRadius: 32, shadow: 'apple', borderColor: col.accent + '20', borderWidth: 1 }
+        styles: { backgroundColor: col.card, borderRadius: 32, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom', borderColor: col.accent + '20', borderWidth: 1 }
       },
       {
         type: 'image',
@@ -2751,7 +3310,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 180,
         width: 220,
         height: 320,
-        styles: { backgroundColor: col.card, borderRadius: 24, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'image',
@@ -2791,7 +3350,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 180,
         width: 220,
         height: 320,
-        styles: { backgroundColor: col.card, borderRadius: 24, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'image',
@@ -2831,7 +3390,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 180,
         width: 220,
         height: 320,
-        styles: { backgroundColor: col.card, borderRadius: 24, shadow: 'apple' }
+        styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       },
       {
         type: 'image',
@@ -2918,7 +3477,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         y: 310,
         width: 600,
         height: 150,
-        styles: { backgroundColor: col.card, borderRadius: 24, shadow: 'apple', borderWidth: 1, borderColor: col.text + '10' }
+        styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom', borderWidth: 1, borderColor: col.text + '10' }
       },
       {
         type: 'heading',
@@ -3011,10 +3570,10 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
       
       // Geometric shapes: Circle, Rounded Square, Squircle (Pill), Square
       const shapes = [
-        { borderRadius: 9999, borderWidth: 4, borderColor: '#ffffff', shadow: 'apple' },
-        { borderRadius: 16, borderWidth: 4, borderColor: '#ffffff', shadow: 'apple' },
-        { borderRadius: 32, borderWidth: 4, borderColor: '#ffffff', shadow: 'apple' },
-        { borderRadius: 0, borderWidth: 4, borderColor: '#ffffff', shadow: 'apple' }
+        { borderRadius: 9999, borderWidth: 4, borderColor: '#ffffff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
+        { borderRadius: 16, borderWidth: 4, borderColor: '#ffffff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
+        { borderRadius: 32, borderWidth: 4, borderColor: '#ffffff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
+        { borderRadius: 0, borderWidth: 4, borderColor: '#ffffff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
       ];
       const chosenShape = shapes[index % shapes.length];
 
@@ -8142,7 +8701,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         width: 320,
                         height: 250,
                         clipPath: 'clip-shape-window-arch',
-                        styles: { backgroundColor: '#f8fafc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }
+                        styles: { backgroundColor: '#f8fafc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, []);
                     }
                   },
@@ -8185,7 +8744,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         width: 460,
                         height: 180,
                         clipPath: 'clip-shape-tunnel',
-                        styles: { backgroundColor: '#eff6ff', borderRadius: 28, borderWidth: 1, borderColor: '#bfdbfe', shadow: 'apple' }
+                        styles: { backgroundColor: '#eff6ff', borderRadius: 28, borderWidth: 1, borderColor: '#bfdbfe', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, []);
                     }
                   },
@@ -8207,7 +8766,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         name: 'بطاقة ميزات كلاسيكية',
                         width: 320,
                         height: 280,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'image', name: 'صورة الميزة', x: 20, y: 20, width: 280, height: 110, styles: { borderRadius: 16 } },
                         { type: 'heading', name: 'عنوان الميزة', content: 'تصميم واجهات احترافية', x: 20, y: 150, width: 280, height: 40, styles: { fontSize: 18, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' } },
@@ -8236,7 +8795,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         width: 340,
                         height: 260,
                         clipPath: 'clip-shape-arch-dome',
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'image', name: 'صورة المنتج الأول', x: 20, y: 20, width: 140, height: 100, styles: { borderRadius: 12 } },
                         { type: 'image', name: 'صورة المنتج الثاني', x: 180, y: 20, width: 140, height: 100, styles: { borderRadius: 12 } },
@@ -8267,7 +8826,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         width: 320,
                         height: 330,
                         clipPath: 'clip-shape-mosque',
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'image', name: 'صورة الغلاف', x: 20, y: 20, width: 280, height: 110, styles: { borderRadius: 16 } },
                         { type: 'heading', name: 'عنوان البطاقة', content: 'انضم لمجتمع المصممين', x: 20, y: 145, width: 280, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
@@ -8295,7 +8854,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         name: 'بطاقة تواصل سريعة',
                         width: 320,
                         height: 250,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'heading', name: 'عنوان النموذج', content: 'تواصل معنا مباشرة', x: 20, y: 20, width: 280, height: 35, styles: { fontSize: 18, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
                         { type: 'paragraph', name: 'شرح بسيط', content: 'أدخل بريدك الإلكتروني وسنتصل بك فوراً.', x: 20, y: 60, width: 280, height: 40, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } },
@@ -8324,7 +8883,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         width: 320,
                         height: 290,
                         clipPath: 'clip-shape-crescent',
-                        styles: { backgroundColor: '#f8fafc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }
+                        styles: { backgroundColor: '#f8fafc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'heading', name: 'عنوان النموذج', content: 'طلب عرض سعر مخصص', x: 20, y: 20, width: 280, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
                         { type: 'input', name: 'الاسم الكامل', content: 'الاسم الكامل...', x: 20, y: 65, width: 280, height: 40, styles: { borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' } },
@@ -8352,7 +8911,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         width: 320,
                         height: 285,
                         clipPath: 'clip-shape-dew-drop',
-                        styles: { backgroundColor: '#faf5ff', borderRadius: 26, borderWidth: 1, borderColor: '#e9d5ff', shadow: 'apple' }
+                        styles: { backgroundColor: '#faf5ff', borderRadius: 26, borderWidth: 1, borderColor: '#e9d5ff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'badge', name: 'شارة تميز', content: '🔥 عرض محدود', x: 20, y: 20, width: 110, height: 26, styles: { fontSize: 10, backgroundColor: '#fdf4ff', color: '#c084fc', borderRadius: 8, textAlign: 'center' } },
                         { type: 'heading', name: 'العنوان', content: 'انضم للنشرة الحصرية', x: 20, y: 60, width: 280, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#581c87', textAlign: 'right' } },
@@ -8379,7 +8938,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         name: 'بطاقة خبير ومستشار',
                         width: 300,
                         height: 310,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'image', name: 'أفاتار الخبير', x: 110, y: 20, width: 80, height: 80, styles: { borderRadius: 9999 } },
                         { type: 'heading', name: 'الاسم', content: 'م. أحمد الحارثي', x: 20, y: 115, width: 260, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', textAlign: 'center' } },
@@ -8434,7 +8993,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         name: 'بطاقة آراء عملاء',
                         width: 320,
                         height: 230,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'badge', name: 'نجوم التقييم', content: '★  ★  ★  ★  ★', x: 20, y: 20, width: 120, height: 26, styles: { fontSize: 11, color: '#f59e0b', backgroundColor: 'transparent', textAlign: 'right' } },
                         { type: 'paragraph', name: 'التوصية', content: '« سرعة فائقة في التنفيذ والتزام تام بالمعايير الجمالية الراقية والحديثة للهوية العربية. »', x: 20, y: 60, width: 280, height: 60, styles: { fontSize: 12, color: '#334155', textAlign: 'right', fontStyle: 'italic' } },
@@ -8487,7 +9046,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         name: 'بطاقة سؤال وجواب فردي',
                         width: 320,
                         height: 190,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'heading', name: 'السؤال', content: 'هل المنصة تدعم اللغة العربية؟', x: 20, y: 20, width: 280, height: 35, styles: { fontSize: 14, fontWeight: 'bold', color: '#0f172a', textAlign: 'right' } },
                         { type: 'badge', name: 'فاصل نقاط', content: '⚫   ⚫   ⚫', x: 20, y: 60, width: 140, height: 20, styles: { fontSize: 10, color: '#cbd5e1', backgroundColor: 'transparent', textAlign: 'right' } },
@@ -8513,7 +9072,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         name: 'بطاقة تحميل ملف الكتيب',
                         width: 320,
                         height: 220,
-                        styles: { backgroundColor: '#fcfcfc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }
+                        styles: { backgroundColor: '#fcfcfc', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'badge', name: 'شارة نوع الملف', content: 'PDF 📄', x: 20, y: 20, width: 80, height: 26, styles: { fontSize: 11, backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: 8, textAlign: 'center' } },
                         { type: 'heading', name: 'العنوان', content: 'كتيب الهوية البصرية المتكامل', x: 20, y: 55, width: 280, height: 35, styles: { fontSize: 15, fontWeight: 'bold', color: '#0f172a', textAlign: 'right' } },
@@ -8540,7 +9099,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         name: 'بطاقة الباقة الذهبية',
                         width: 320,
                         height: 235,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 2, borderColor: '#ca8a04', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 2, borderColor: '#ca8a04', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'badge', name: 'شارة تميز باقة', content: '🏆 الأكثر مبيعاً ورواجاً', x: 80, y: 16, width: 160, height: 26, styles: { fontSize: 10, backgroundColor: '#fefce8', color: '#ca8a04', borderRadius: 999, textAlign: 'center' } },
                         { type: 'heading', name: 'اسم الباقة', content: 'الباقة الذهبية الشاملة', x: 20, y: 55, width: 280, height: 35, styles: { fontSize: 15, fontWeight: 'bold', color: '#0f172a', textAlign: 'center' } },
@@ -8595,7 +9154,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         name: 'بطاقة حجز موعد استشارة',
                         width: 320,
                         height: 215,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'heading', name: 'عنوان حجز مواعيد', content: 'حجز مكالمة استكشافية', x: 20, y: 20, width: 280, height: 35, styles: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', textAlign: 'right' } },
                         { type: 'input', name: 'تاريخ الموعد', content: 'حدد تاريخ وميعاد المقابلة...', x: 20, y: 65, width: 280, height: 40, styles: { borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' } },
@@ -8621,7 +9180,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         name: 'فرع مدينة الرياض الرئيسي',
                         width: 320,
                         height: 310,
-                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadow: 'apple' }
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
                       }, [
                         { type: 'map', name: 'موقع الفرع الخريطة', content: 'الرياض، المملكة العربية السعودية', x: 20, y: 20, width: 280, height: 120, styles: { borderRadius: 14 } },
                         { type: 'heading', name: 'العنوان النصي', content: 'فرع مدينة الرياض الرئيسي', x: 20, y: 155, width: 280, height: 35, styles: { fontSize: 15, fontWeight: 'bold', color: '#0f172a', textAlign: 'right' } },
@@ -8741,7 +9300,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       onAddElement(
                         'card',
                         'د. أحمد السعيد - استشاري طب وجراحة. احجز موعدك الطبي الآن واستمتع برعاية شاملة على أيدي أمهر الأطباء.',
-                        { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: '#0071e320', shadow: 'apple' },
+                        { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: '#0071e320', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
                         { name: 'صفحة الدكتور', width: 340, height: 210 }
                       );
                     }
@@ -8763,7 +9322,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       onAddElement(
                         'card',
                         '«منصة Weelink غيرت مفهوم بناء المواقع لدينا تماماً، سهولة فائقة ودعم عربي أصيل وفريد.»',
-                        { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: '#f59e0b30', shadow: 'apple' },
+                        { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: '#f59e0b30', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
                         { name: 'اقتباس وشهادة عميل', width: 320, height: 160 }
                       );
                     }
@@ -8801,7 +9360,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('image', 'بانر ترويسة رئيسي', { borderRadius: 20, shadow: 'apple' }, { name: 'صورة واجهة رئيسية', width: 560, height: 260, imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1000&auto=format&fit=crop' });
+                      onAddElement('image', 'بانر ترويسة رئيسي', { borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'صورة واجهة رئيسية', width: 560, height: 260, imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1000&auto=format&fit=crop' });
                     }
                   },
                   {
@@ -8818,7 +9377,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('image', 'إطار صورة عصري', { borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }, { name: 'صورة بإطار فاخر', width: 380, height: 240, imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1000&auto=format&fit=crop' });
+                      onAddElement('image', 'إطار صورة عصري', { borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'صورة بإطار فاخر', width: 380, height: 240, imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1000&auto=format&fit=crop' });
                     }
                   },
                   {
@@ -8835,7 +9394,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('image', 'صورة الملف الشخصي', { borderRadius: 9999, borderWidth: 3, borderColor: '#0071e3', shadow: 'apple' }, { name: 'أفاتار شخصي', width: 140, height: 140, imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop' });
+                      onAddElement('image', 'صورة الملف الشخصي', { borderRadius: 9999, borderWidth: 3, borderColor: '#0071e3', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'أفاتار شخصي', width: 140, height: 140, imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop' });
                     }
                   },
                   {
@@ -9022,7 +9581,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('button', 'تواصل معنا الآن 📞', { backgroundColor: '#1e3a8a', color: '#ffffff', borderRadius: 9999, fontWeight: 'bold', shadow: 'apple' }, { name: 'كبسولة كحلي داكن', width: 180, height: 44 });
+                      onAddElement('button', 'تواصل معنا الآن 📞', { backgroundColor: '#1e3a8a', color: '#ffffff', borderRadius: 9999, fontWeight: 'bold', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'كبسولة كحلي داكن', width: 180, height: 44 });
                     }
                   },
                   {
@@ -9037,7 +9596,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('button', 'العضوية الذهبية 👑', { backgroundColor: '#d97706', color: '#ffffff', borderRadius: 9999, fontWeight: 'bold', shadow: 'apple' }, { name: 'كبسولة ذهبية ملكية', width: 180, height: 44 });
+                      onAddElement('button', 'العضوية الذهبية 👑', { backgroundColor: '#d97706', color: '#ffffff', borderRadius: 9999, fontWeight: 'bold', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'كبسولة ذهبية ملكية', width: 180, height: 44 });
                     }
                   },
                   {
@@ -9174,7 +9733,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('button', 'ابدأ رحلتك الممتعة 🌅', { backgroundGradient: 'linear-gradient(90deg, #f97316 0%, #ec4899 100%)', color: '#ffffff', borderRadius: 14, fontWeight: 'bold', shadow: 'apple' }, { name: 'تدرج الغروب', width: 180, height: 46 });
+                      onAddElement('button', 'ابدأ رحلتك الممتعة 🌅', { backgroundGradient: 'linear-gradient(90deg, #f97316 0%, #ec4899 100%)', color: '#ffffff', borderRadius: 14, fontWeight: 'bold', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'تدرج الغروب', width: 180, height: 46 });
                     }
                   },
                   {
@@ -9189,7 +9748,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('button', 'تسجيل الدخول الآمن 🔑', { backgroundGradient: 'linear-gradient(90deg, #2563eb 0%, #22d3ee 100%)', color: '#ffffff', borderRadius: 14, fontWeight: 'bold', shadow: 'apple' }, { name: 'تدرج المحيط', width: 180, height: 46 });
+                      onAddElement('button', 'تسجيل الدخول الآمن 🔑', { backgroundGradient: 'linear-gradient(90deg, #2563eb 0%, #22d3ee 100%)', color: '#ffffff', borderRadius: 14, fontWeight: 'bold', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'تدرج المحيط', width: 180, height: 46 });
                     }
                   },
                   {
@@ -9219,7 +9778,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('button', 'عالم المبدعين 🎨', { backgroundGradient: 'linear-gradient(90deg, #9333ea 0%, #ec4899 100%)', color: '#ffffff', borderRadius: 14, fontWeight: 'bold', shadow: 'apple' }, { name: 'تدرج السديم', width: 180, height: 46 });
+                      onAddElement('button', 'عالم المبدعين 🎨', { backgroundGradient: 'linear-gradient(90deg, #9333ea 0%, #ec4899 100%)', color: '#ffffff', borderRadius: 14, fontWeight: 'bold', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'تدرج السديم', width: 180, height: 46 });
                     }
                   },
                   {
@@ -9264,7 +9823,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('button', 'الاشتراك الملكي 💎', { backgroundGradient: 'linear-gradient(90deg, #ca8a04 0%, #fde047 100%)', color: '#78350f', borderRadius: 14, fontWeight: 'bold', shadow: 'apple' }, { name: 'تدرج ذهبي ملكي', width: 180, height: 46 });
+                      onAddElement('button', 'الاشتراك الملكي 💎', { backgroundGradient: 'linear-gradient(90deg, #ca8a04 0%, #fde047 100%)', color: '#78350f', borderRadius: 14, fontWeight: 'bold', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'تدرج ذهبي ملكي', width: 180, height: 46 });
                     }
                   },
                   {
@@ -9309,7 +9868,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('button', 'دخول عالم الميتافيرس 🤖', { backgroundGradient: 'linear-gradient(90deg, #06b6d4 0%, #d946ef 100%)', color: '#ffffff', borderRadius: 14, fontWeight: 'bold', shadow: 'apple' }, { name: 'تدرج نيون سايبر', width: 180, height: 46 });
+                      onAddElement('button', 'دخول عالم الميتافيرس 🤖', { backgroundGradient: 'linear-gradient(90deg, #06b6d4 0%, #d946ef 100%)', color: '#ffffff', borderRadius: 14, fontWeight: 'bold', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'تدرج نيون سايبر', width: 180, height: 46 });
                     }
                   },
 
@@ -9633,7 +10192,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }, { name: 'بطاقة مربعة ناصعة', width: 180, height: 180 });
+                      onAddElement('shape', '', { backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بطاقة مربعة ناصعة', width: 180, height: 180 });
                     }
                   },
                   {
@@ -9648,7 +10207,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: '#0f172a', borderRadius: 18, shadow: 'apple' }, { name: 'بطاقة مربعة كحلي', width: 180, height: 180 });
+                      onAddElement('shape', '', { backgroundColor: '#0f172a', borderRadius: 18, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بطاقة مربعة كحلي', width: 180, height: 180 });
                     }
                   },
                   {
@@ -9663,7 +10222,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)', shadow: 'apple' }, { name: 'بطاقة مربعة زجاجية', width: 180, height: 180 });
+                      onAddElement('shape', '', { backgroundColor: 'rgba(255,255,255,0.75)', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بطاقة مربعة زجاجية', width: 180, height: 180 });
                     }
                   },
 
@@ -9682,7 +10241,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: '#ffffff', borderRadius: 9999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple' }, { name: 'بطاقة دائرية بيضاء', width: 180, height: 180 });
+                      onAddElement('shape', '', { backgroundColor: '#ffffff', borderRadius: 9999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بطاقة دائرية بيضاء', width: 180, height: 180 });
                     }
                   },
                   {
@@ -9697,7 +10256,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #4f46e5, #7c3aed)', borderRadius: 9999, shadow: 'apple' }, { name: 'بطاقة دائرية متدرجة', width: 180, height: 180 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #4f46e5, #7c3aed)', borderRadius: 9999, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بطاقة دائرية متدرجة', width: 180, height: 180 });
                     }
                   },
                   {
@@ -9712,7 +10271,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: '#facc15', borderRadius: '50% / 60%', shadow: 'apple' }, { name: 'صندوق بيضاوي ناعم', width: 170, height: 200 });
+                      onAddElement('shape', '', { backgroundColor: '#facc15', borderRadius: '50% / 60%', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'صندوق بيضاوي ناعم', width: 170, height: 200 });
                     }
                   },
 
@@ -9731,7 +10290,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #0284c7, #0369a1)', borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%', shadow: 'apple' }, { name: 'بقعة مائية ديناميكية', width: 160, height: 160 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #0284c7, #0369a1)', borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بقعة مائية ديناميكية', width: 160, height: 160 });
                     }
                   },
                   {
@@ -9746,7 +10305,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #ec4899, #f43f5e)', borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%', shadow: 'apple' }, { name: 'بقعة عضوية منسابة', width: 160, height: 160 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #ec4899, #f43f5e)', borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بقعة عضوية منسابة', width: 160, height: 160 });
                     }
                   },
                   {
@@ -9761,7 +10320,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #8b5cf6, #d946ef)', borderRadius: '40% 60% 60% 40% / 60% 60% 40% 40%', shadow: 'apple' }, { name: 'بقعة طاقة متوهجة', width: 160, height: 160 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #8b5cf6, #d946ef)', borderRadius: '40% 60% 60% 40% / 60% 60% 40% 40%', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بقعة طاقة متوهجة', width: 160, height: 160 });
                     }
                   },
 
@@ -9780,7 +10339,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', 'عنوان إبداعي', { backgroundColor: 'linear-gradient(90deg, #ef4444, #f97316)', color: '#ffffff', shadow: 'apple', fontSize: 13, fontWeight: 'bold' }, { clipPath: 'polygon(10% 0%, 100% 12%, 95% 85%, 0% 100%, 8% 50%)', name: 'ضربة فرشاة عرضية', width: 230, height: 60 });
+                      onAddElement('shape', 'عنوان إبداعي', { backgroundColor: 'linear-gradient(90deg, #ef4444, #f97316)', color: '#ffffff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom', fontSize: 13, fontWeight: 'bold' }, { clipPath: 'polygon(10% 0%, 100% 12%, 95% 85%, 0% 100%, 8% 50%)', name: 'ضربة فرشاة عرضية', width: 230, height: 60 });
                     }
                   },
                   {
@@ -9795,7 +10354,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(180deg, #3b82f6, #06b6d4)', shadow: 'apple' }, { clipPath: 'polygon(12% 10%, 85% 0%, 100% 90%, 0% 95%, 50% 100%)', name: 'ضربة فرشاة طولية', width: 70, height: 220 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(180deg, #3b82f6, #06b6d4)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { clipPath: 'polygon(12% 10%, 85% 0%, 100% 90%, 0% 95%, 50% 100%)', name: 'ضربة فرشاة طولية', width: 70, height: 220 });
                     }
                   },
 
@@ -9814,7 +10373,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #ef4444, #dc2626)', shadow: 'apple' }, { clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)', name: 'مثلث متساوي الأضلاع', width: 150, height: 150 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #ef4444, #dc2626)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)', name: 'مثلث متساوي الأضلاع', width: 150, height: 150 });
                     }
                   },
                   {
@@ -9829,7 +10388,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', shadow: 'apple' }, { clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', name: 'معين هندسي متناظر', width: 150, height: 150 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', name: 'معين هندسي متناظر', width: 150, height: 150 });
                     }
                   },
                   {
@@ -9844,7 +10403,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #06b6d4, #0891b2)', shadow: 'apple' }, { clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)', name: 'سداسي الأضلاع', width: 160, height: 140 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #06b6d4, #0891b2)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)', name: 'سداسي الأضلاع', width: 160, height: 140 });
                     }
                   },
                   {
@@ -9859,7 +10418,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #10b981, #059669)', shadow: 'apple' }, { clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)', name: 'ثماني الأضلاع', width: 150, height: 150 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #10b981, #059669)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)', name: 'ثماني الأضلاع', width: 150, height: 150 });
                     }
                   },
                   {
@@ -9874,7 +10433,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', shadow: 'apple' }, { clipPath: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)', name: 'خماسي الأضلاع', width: 150, height: 150 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { clipPath: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)', name: 'خماسي الأضلاع', width: 150, height: 150 });
                     }
                   },
                   {
@@ -9889,7 +10448,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #3b82f6, #2563eb)', shadow: 'apple' }, { clipPath: 'polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%)', name: 'متوازي أضلاع عصري', width: 180, height: 120 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #3b82f6, #2563eb)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { clipPath: 'polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%)', name: 'متوازي أضلاع عصري', width: 180, height: 120 });
                     }
                   },
 
@@ -9908,7 +10467,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #f59e0b, #d97706)', shadow: 'apple' }, { clipPath: 'polygon(50% 0%, 65% 20%, 90% 10%, 80% 35%, 100% 50%, 80% 65%, 90% 90%, 65% 80%, 50% 100%, 35% 80%, 10% 90%, 20% 65%, 0% 50%, 20% 35%, 10% 10%, 35% 20%)', name: 'نجمة ثمانية إسلامية', width: 150, height: 150 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #f59e0b, #d97706)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { clipPath: 'polygon(50% 0%, 65% 20%, 90% 10%, 80% 35%, 100% 50%, 80% 65%, 90% 90%, 65% 80%, 50% 100%, 35% 80%, 10% 90%, 20% 65%, 0% 50%, 20% 35%, 10% 10%, 35% 20%)', name: 'نجمة ثمانية إسلامية', width: 150, height: 150 });
                     }
                   },
                   {
@@ -9923,7 +10482,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #ef4444, #e11d48)', shadow: 'apple' }, { clipPath: 'polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 95%, 0% 50%, 0% 20%, 20% 0%)', name: 'قلب حب متناسق', width: 140, height: 140 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #ef4444, #e11d48)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { clipPath: 'polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 95%, 0% 50%, 0% 20%, 20% 0%)', name: 'قلب حب متناسق', width: 140, height: 140 });
                     }
                   },
                   {
@@ -9938,7 +10497,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: '#10b981', borderRadius: '48px 0px 48px 0px', shadow: 'apple' }, { name: 'ورقة شجر طبيعية', width: 180, height: 140 });
+                      onAddElement('shape', '', { backgroundColor: '#10b981', borderRadius: '48px 0px 48px 0px', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'ورقة شجر طبيعية', width: 180, height: 140 });
                     }
                   },
 
@@ -9957,7 +10516,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #d97706, #b45309)', borderRadius: '120px 120px 12px 12px / 160px 160px 0% 0%', shadow: 'apple' }, { name: 'قوس مغربي فخم', width: 180, height: 230 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #d97706, #b45309)', borderRadius: '120px 120px 12px 12px / 160px 160px 0% 0%', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'قوس مغربي فخم', width: 180, height: 230 });
                     }
                   },
                   {
@@ -9972,7 +10531,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: '#3b82f6', clipPath: 'polygon(50% 0%, 100% 30%, 100% 100%, 0% 100%, 0% 30%)', shadow: 'apple' }, { name: 'قوس شامي مدبب', width: 170, height: 220 });
+                      onAddElement('shape', '', { backgroundColor: '#3b82f6', clipPath: 'polygon(50% 0%, 100% 30%, 100% 100%, 0% 100%, 0% 30%)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'قوس شامي مدبب', width: 170, height: 220 });
                     }
                   },
                   {
@@ -9987,7 +10546,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #10b981, #047857)', borderRadius: '120px 120px 12px 12px', shadow: 'apple' }, { name: 'قوس أندلسي عريق', width: 180, height: 240 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #10b981, #047857)', borderRadius: '120px 120px 12px 12px', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'قوس أندلسي عريق', width: 180, height: 240 });
                     }
                   },
 
@@ -10006,7 +10565,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: '#0ea5e9', borderRadius: '50% 50% 50% 0', shadow: 'apple' }, { name: 'قطرة ماء كبيرة', width: 160, height: 160 });
+                      onAddElement('shape', '', { backgroundColor: '#0ea5e9', borderRadius: '50% 50% 50% 0', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'قطرة ماء كبيرة', width: 160, height: 160 });
                     }
                   },
                   {
@@ -10021,7 +10580,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(180deg, #ef4444, #b91c1c)', clipPath: 'polygon(0% 0%, 100% 0%, 100% 70%, 90% 75%, 80% 70%, 70% 85%, 60% 75%, 50% 70%, 40% 90%, 30% 75%, 20% 70%, 10% 80%, 0% 70%)', shadow: 'apple' }, { name: 'بطاقة تسيل أطرافها', width: 220, height: 180 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(180deg, #ef4444, #b91c1c)', clipPath: 'polygon(0% 0%, 100% 0%, 100% 70%, 90% 75%, 80% 70%, 70% 85%, 60% 75%, 50% 70%, 40% 90%, 30% 75%, 20% 70%, 10% 80%, 0% 70%)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بطاقة تسيل أطرافها', width: 220, height: 180 });
                     }
                   },
                   {
@@ -10036,7 +10595,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #3b82f6, #0ea5e9)', clipPath: 'polygon(0% 20%, 25% 10%, 50% 20%, 75% 30%, 100% 20%, 100% 100%, 0% 100%)', shadow: 'apple' }, { name: 'بطاقة بمنحنى جيبي علوي', width: 240, height: 180 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #3b82f6, #0ea5e9)', clipPath: 'polygon(0% 20%, 25% 10%, 50% 20%, 75% 30%, 100% 20%, 100% 100%, 0% 100%)', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'بطاقة بمنحنى جيبي علوي', width: 240, height: 180 });
                     }
                   },
 
@@ -10055,7 +10614,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #ca8a04, #f59e0b)', borderRadius: '90px 90px 12px 12px / 160px 160px 0% 0%', shadow: 'apple' }, { name: 'قبة شرقية بصلية', width: 180, height: 210 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #ca8a04, #f59e0b)', borderRadius: '90px 90px 12px 12px / 160px 160px 0% 0%', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'قبة شرقية بصلية', width: 180, height: 210 });
                     }
                   },
                   {
@@ -10070,7 +10629,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderRadius: '80px 80px 16px 16px / 120px 120px 0% 0%', shadow: 'apple' }, { name: 'قبة تاج محل', width: 180, height: 220 });
+                      onAddElement('shape', '', { backgroundColor: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderRadius: '80px 80px 16px 16px / 120px 120px 0% 0%', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'قبة تاج محل', width: 180, height: 220 });
                     }
                   },
                   {
@@ -10085,7 +10644,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('shape', '', { backgroundColor: '#059669', borderRadius: '75px 75px 12px 12px / 150px 150px 0% 0%', shadow: 'apple' }, { name: 'قبة فارسية مدببة', width: 170, height: 230 });
+                      onAddElement('shape', '', { backgroundColor: '#059669', borderRadius: '75px 75px 12px 12px / 150px 150px 0% 0%', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'قبة فارسية مدببة', width: 170, height: 230 });
                     }
                   },
                   // 20 Creative Visual Cutout Masks with direct live photo preview
@@ -11441,7 +12000,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('video', 'مشغل فيديو عرضي تفاعلي', { borderRadius: 20, shadow: 'apple' }, { name: 'مشغل فيديو عرضي', videoUrl: videoAddUrl || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', width: 480, height: 270 });
+                      onAddElement('video', 'مشغل فيديو عرضي تفاعلي', { borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'مشغل فيديو عرضي', videoUrl: videoAddUrl || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', width: 480, height: 270 });
                     }
                   },
                   {
@@ -11457,7 +12016,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('video', 'مشغل فيديو طولي تفاعلي', { borderRadius: 24, shadow: 'apple' }, { name: 'مشغل فيديو طولي', videoUrl: videoAddUrl || 'https://www.tiktok.com/@tiktok/video/7106362547144887554', width: 220, height: 380 });
+                      onAddElement('video', 'مشغل فيديو طولي تفاعلي', { borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'مشغل فيديو طولي', videoUrl: videoAddUrl || 'https://www.tiktok.com/@tiktok/video/7106362547144887554', width: 220, height: 380 });
                     }
                   },
                 ],
@@ -11477,7 +12036,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     ),
                     action: () => {
                       const loc = mapAddLocation || 'الرياض، المملكة العربية السعودية';
-                      onAddElement('map', loc, { borderRadius: 20, shadow: 'apple' }, { name: 'خرائط جوجل', mapLocation: loc, width: 420, height: 250 });
+                      onAddElement('map', loc, { borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'خرائط جوجل', mapLocation: loc, width: 420, height: 250 });
                     }
                   },
                   {
@@ -11495,7 +12054,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     ),
                     action: () => {
                       const loc = mapAddLocation || 'دبي، شارع الشيخ زايد، الإمارات العربية المتحدة';
-                      onAddElement('map', loc, { borderRadius: 24, shadow: 'apple' }, { name: 'خريطة فرع دبي', mapLocation: loc, width: 440, height: 260 });
+                      onAddElement('map', loc, { borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'خريطة فرع دبي', mapLocation: loc, width: 440, height: 260 });
                     }
                   },
                   {
@@ -11511,7 +12070,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     ),
                     action: () => {
                       const loc = mapAddLocation || 'القاهرة، المعادي، مصر';
-                      onAddElement('map', loc, { borderRadius: 16, shadow: 'apple' }, { name: 'خريطة مصغرة', mapLocation: loc, width: 280, height: 180 });
+                      onAddElement('map', loc, { borderRadius: 16, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'خريطة مصغرة', mapLocation: loc, width: 280, height: 180 });
                     }
                   },
                 ],
@@ -11533,7 +12092,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('pricing', 'الحل المتكامل لرواد الأعمال والمشاريع الطموحة.', { backgroundColor: '#ffffff', borderRadius: 24, shadow: 'apple' }, { name: 'حاوية أسعار متقدمة', pricingPlan: 'باقة الأعمال الاحترافية', pricingPrice: '199 ر.س', pricingPeriod: 'شهرياً', pricingFeatures: ['تصميم متجاوب كامل مع الجوال', 'دعم فني واستشارات متواصلة', 'سيرفرات سريعة ونطاق مجاني', 'شهادة أمان SSL مدمجة'], width: 320, height: 380 });
+                      onAddElement('pricing', 'الحل المتكامل لرواد الأعمال والمشاريع الطموحة.', { backgroundColor: '#ffffff', borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'حاوية أسعار متقدمة', pricingPlan: 'باقة الأعمال الاحترافية', pricingPrice: '199 ر.س', pricingPeriod: 'شهرياً', pricingFeatures: ['تصميم متجاوب كامل مع الجوال', 'دعم فني واستشارات متواصلة', 'سيرفرات سريعة ونطاق مجاني', 'شهادة أمان SSL مدمجة'], width: 320, height: 380 });
                     }
                   },
                   {
@@ -11553,7 +12112,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('pricing', 'بداية ممتازة لتأسيس وجودك الرقمي بأقل تكلفة.', { backgroundColor: '#ffffff', borderRadius: 24, shadow: 'apple' }, { name: 'باقة الانطلاق', pricingPlan: 'باقة البداية', pricingPrice: '79 ر.س', pricingPeriod: 'شهرياً', pricingFeatures: ['موقع صفحة واحدة سريعة', 'دعم فني عبر البريد', 'شهادة أمان SSL مجانية'], width: 300, height: 340 });
+                      onAddElement('pricing', 'بداية ممتازة لتأسيس وجودك الرقمي بأقل تكلفة.', { backgroundColor: '#ffffff', borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'باقة الانطلاق', pricingPlan: 'باقة البداية', pricingPrice: '79 ر.س', pricingPeriod: 'شهرياً', pricingFeatures: ['موقع صفحة واحدة سريعة', 'دعم فني عبر البريد', 'شهادة أمان SSL مجانية'], width: 300, height: 340 });
                     }
                   },
                 ],
@@ -11592,7 +12151,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       onAddElement('calendar', calAddTitle, { 
                         backgroundColor: '#ffffff', 
                         borderRadius: 24, 
-                        shadow: 'apple' 
+                        glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' 
                       }, { 
                         name: 'بطاقة حجز مواعيد عرضية', 
                         calendarTitle: calAddTitle, 
@@ -11644,7 +12203,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       onAddElement('calendar', 'حجز موعد استشارة متخصصة', { 
                         backgroundColor: '#ffffff', 
                         borderRadius: 24, 
-                        shadow: 'apple' 
+                        glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' 
                       }, { 
                         name: 'بطاقة استشارة مهنية', 
                         calendarTitle: 'حجز موعد استشارة متخصصة', 
@@ -11694,7 +12253,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       onAddElement('calendar', 'اختر توقيت زيارتك المفضل', { 
                         backgroundColor: '#ffffff', 
                         borderRadius: 20, 
-                        shadow: 'apple' 
+                        glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' 
                       }, { 
                         name: 'حجز فترات وساعات', 
                         calendarTitle: 'اختر توقيت زيارتك المفضل', 
@@ -11729,7 +12288,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('table', 'جدول متابعة الخدمات والمشاريع', { borderRadius: 16, shadow: 'apple' }, { name: 'جدول sheet', width: 420, height: 200 });
+                      onAddElement('table', 'جدول متابعة الخدمات والمشاريع', { borderRadius: 16, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'جدول sheet', width: 420, height: 200 });
                     }
                   },
                   {
@@ -11750,7 +12309,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('table', 'جدول أسعار الخدمات والحلول البرمجية', { borderRadius: 16, shadow: 'apple' }, { name: 'جدول تكاليف', width: 400, height: 180 });
+                      onAddElement('table', 'جدول أسعار الخدمات والحلول البرمجية', { borderRadius: 16, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'جدول تكاليف', width: 400, height: 180 });
                     }
                   },
                 ],
@@ -11769,7 +12328,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('html', '<div style="padding: 20px; text-align: center; color: #0071e3; font-weight: bold; font-family: sans-serif;">محتوى كود HTML مخصص ✦</div>', { borderRadius: 16, shadow: 'apple' }, { name: 'حاوية Html مخصصة', width: 380, height: 180 });
+                      onAddElement('html', '<div style="padding: 20px; text-align: center; color: #0071e3; font-weight: bold; font-family: sans-serif;">محتوى كود HTML مخصص ✦</div>', { borderRadius: 16, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'حاوية Html مخصصة', width: 380, height: 180 });
                     }
                   },
                   {
@@ -11810,7 +12369,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('gallery', 'معرض صور رئيسي', { borderRadius: 20, shadow: 'apple' }, {
+                      onAddElement('gallery', 'معرض صور رئيسي', { borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, {
                         name: 'معرض صور 🖼️',
                         width: 540,
                         height: 380,
@@ -11852,7 +12411,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('gallery', 'معرض مصغرات يسار', { borderRadius: 20, shadow: 'apple' }, {
+                      onAddElement('gallery', 'معرض مصغرات يسار', { borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, {
                         name: 'معرض صور شبكة يسار',
                         width: 560,
                         height: 380,
@@ -11894,7 +12453,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('gallery', 'معرض مصغرات يمين', { borderRadius: 20, shadow: 'apple' }, {
+                      onAddElement('gallery', 'معرض مصغرات يمين', { borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, {
                         name: 'معرض صور شبكة يمين',
                         width: 560,
                         height: 380,
@@ -11936,7 +12495,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('gallery', 'معرض مصغرات عمودي', { borderRadius: 20, shadow: 'apple' }, {
+                      onAddElement('gallery', 'معرض مصغرات عمودي', { borderRadius: 20, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, {
                         name: 'معرض صور عمودي',
                         width: 540,
                         height: 380,
@@ -13197,7 +13756,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             onAddElement('calendar', calAddTitle, { 
                               backgroundColor: '#ffffff', 
                               borderRadius: 24, 
-                              shadow: 'apple' 
+                              glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' 
                             }, { 
                               name: 'بطاقة حجز مواعيد عرضية', 
                               calendarTitle: calAddTitle, 
@@ -13475,7 +14034,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             onAddElement(
                               'table',
                               'جدول مخصص',
-                              { borderRadius: 12, shadow: 'apple' },
+                              { borderRadius: 12, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
                               {
                                 name: 'جدول مخصص',
                                 width: Math.max(300, calculatedWidth),

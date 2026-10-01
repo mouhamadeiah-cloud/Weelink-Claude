@@ -1,8 +1,10 @@
 // Free starter template: a fixed 5-page site (Home, About, Our Work, Pricing, Contact),
-// each page reachable from the shared navbar. Every element here uses only existing platform
-// element/style capabilities (fixed background image, glass/transparent cards, corner-bleeding
-// geometric shapes, clip-path image crops, glow/shadow, borders, one entrance animation) —
-// no external or invented components. See applyFreeStarterTemplate() in App.tsx.
+// each page reachable from the shared navbar. Backgrounds use the user's own curated photo
+// library (public/Library) instead of generic stock photography — a bold full-strength hero
+// image on Home, and a faint (5-8% opacity) textured wash behind the other four pages so the
+// foreground content (cards, text) stays the focus. Every element uses only existing platform
+// element/style capabilities — no external or invented components.
+// See applyFreeStarterTemplate() in App.tsx.
 
 import type { Page, CanvasElement } from '../types';
 
@@ -66,7 +68,7 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
         "name": "المدخل",
         "height": 680,
         "backgroundColor": "#14241F",
-        "backgroundImage": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1920&q=85",
+        "backgroundImage": "/Library/milad-fakurian-OHc-XS8ZtG8-unsplash.jpg",
         "backgroundSize": "cover",
         "backgroundPosition": "center",
         "backgroundAttachment": "fixed",
@@ -132,6 +134,10 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
         "name": "من نحن",
         "height": 640,
         "backgroundColor": "#FFFFFF",
+        "backgroundImage": "/Library/francesco-ungaro-WtnY2b6PPNA-unsplash.jpg",
+        "backgroundSize": "cover",
+        "backgroundPosition": "center",
+        "backgroundOpacity": 0.07,
         "dividerShape": "straight"
       }
     ]
@@ -194,6 +200,10 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
         "name": "أعمالنا",
         "height": 950,
         "backgroundColor": "#FAF7F2",
+        "backgroundImage": "/Library/dmitry-khotsinskiy-lOIFjuJfKRU-unsplash.jpg",
+        "backgroundSize": "cover",
+        "backgroundPosition": "center",
+        "backgroundOpacity": 0.05,
         "dividerShape": "straight"
       }
     ]
@@ -256,6 +266,10 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
         "name": "الأسعار",
         "height": 640,
         "backgroundColor": "#FAF7F2",
+        "backgroundImage": "/Library/martin-martz-DI0lpZocxl4-unsplash.jpg",
+        "backgroundSize": "cover",
+        "backgroundPosition": "center",
+        "backgroundOpacity": 0.06,
         "dividerShape": "straight"
       }
     ]
@@ -318,6 +332,10 @@ export function getFreeStarterTemplate(): { pages: Page[]; elements: CanvasEleme
         "name": "تواصل معنا",
         "height": 620,
         "backgroundColor": "#FAF7F2",
+        "backgroundImage": "/Library/nong-VysNxCRm7_U-unsplash.jpg",
+        "backgroundSize": "cover",
+        "backgroundPosition": "center",
+        "backgroundOpacity": 0.08,
         "dividerShape": "straight"
       }
     ]

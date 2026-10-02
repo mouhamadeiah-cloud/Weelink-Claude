@@ -2131,7 +2131,7 @@ export default function App() {
     <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col antialiased selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
       {/* Modal for Firebase Domain Authorization Guidance */}
       {authErrorModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full p-6 text-right relative overflow-hidden">
             <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-4 text-2xl mx-auto">
               🌐

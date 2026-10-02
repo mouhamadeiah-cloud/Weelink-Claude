@@ -4633,10 +4633,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
   return (
     <>
-      {/* Floating Edge Arrow Toggle Button */}
+      {/* Floating Edge Arrow Toggle Button.
+          z-index kept above the page's own navbar (which can be set sticky with z-index 100000 by
+          the user inside the canvas) so this app control — "لوحة التحكم" — always stays reachable
+          and on top of it, never covered by a sticky navbar scrolling underneath it. */}
       <button
         onClick={onToggle}
-        className="fixed top-32 right-0 z-[101] w-7 h-11 bg-white/95 backdrop-blur-md border border-r-0 border-neutral-300 rounded-l-xl shadow-[-3px_2px_12px_rgba(0,0,0,0.1)] flex items-center justify-center text-neutral-600 hover:text-[#0071e3] transition-all hover:w-8 active:scale-95 group focus:outline-none"
+        className="fixed top-32 right-0 z-[999999] w-7 h-11 bg-white/95 backdrop-blur-md border border-r-0 border-neutral-300 rounded-l-xl shadow-[-3px_2px_12px_rgba(0,0,0,0.1)] flex items-center justify-center text-neutral-600 hover:text-[#0071e3] transition-all hover:w-8 active:scale-95 group focus:outline-none"
         title={isOpen ? "إغلاق لوحة التحكم" : "فتح لوحة التحكم"}
         aria-label={isOpen ? "إغلاق لوحة التحكم" : "فتح لوحة التحكم"}
       >
@@ -4657,7 +4660,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         style={asideStyle}
-        className={`fixed top-26 right-0 bottom-0 z-[100] w-[320px] sm:w-[350px] md:w-[24vw] min-w-[290px] max-w-[430px] bg-white border-l-2 border-t-2 border-b-2 border-neutral-300 shadow-[-16px_0_40px_rgba(0,0,0,0.12)] rounded-l-2xl flex flex-col select-none text-right overflow-visible ${
+        className={`fixed top-26 right-0 bottom-0 z-[999999] w-[320px] sm:w-[350px] md:w-[24vw] min-w-[290px] max-w-[430px] bg-white border-l-2 border-t-2 border-b-2 border-neutral-300 shadow-[-16px_0_40px_rgba(0,0,0,0.12)] rounded-l-2xl flex flex-col select-none text-right overflow-visible ${
           isOpen && !isMinimized ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         dir="rtl"
@@ -15358,6 +15361,22 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                 <div className="space-y-2 pt-2 border-t border-black/[0.06]">
                   <SectionHeader title="اسم الموقع" />
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-neutral-800 block">
+                      اسم الشركة / اسم صاحب الموقع:
+                    </label>
+                    <input
+                      type="text"
+                      value={navbar.brandName || ''}
+                      onChange={(e) => onUpdateNavbar({ brandName: e.target.value })}
+                      className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:bg-white focus:outline-none transition-all"
+                      placeholder="مثال: متجر الأمل..."
+                      dir="rtl"
+                    />
+                    <p className="text-[10px] text-neutral-400 leading-tight">
+                      هذا الاسم هو ما يظهر في النافبار — اكتب اسم شركتك أو اسمك الشخصي، فهو لا يُملأ تلقائيًا.
+                    </p>
+                  </div>
                   <PillTabs
                     options={[
                       { value: 'show', label: 'إظهار اسم الموقع' },
@@ -15680,7 +15699,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
       {/* Floating Minimized Widget in the Viewport */}
       {isOpen && isMinimized && (
-        <div className="fixed bottom-6 right-6 z-[1000] flex flex-col items-center select-none" dir="rtl">
+        <div className="fixed bottom-6 right-6 z-[999999] flex flex-col items-center select-none" dir="rtl">
           {/* Label tooltip */}
           <span className="bg-neutral-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-full mb-2 shadow-lg border border-white/15 backdrop-blur-md select-none tracking-wide animate-pulse">
             لوحة التحكم نشطة ✦

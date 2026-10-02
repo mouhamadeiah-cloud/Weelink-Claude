@@ -635,6 +635,10 @@ export default function App() {
         glowColor: currentPage.navbar.glowColor,
         glowIntensity: currentPage.navbar.glowIntensity,
         glowPosition: currentPage.navbar.glowPosition,
+        borderColor: currentPage.navbar.borderColor,
+        borderWidth: currentPage.navbar.borderWidth,
+        borderRadius: currentPage.navbar.borderRadius,
+        borderStyle: currentPage.navbar.borderStyle,
       });
       setCopiedType('navbar');
     }
@@ -774,6 +778,10 @@ export default function App() {
           glowColor: copiedFormat.glowColor,
           glowIntensity: copiedFormat.glowIntensity,
           glowPosition: copiedFormat.glowPosition,
+          borderColor: copiedFormat.borderColor,
+          borderWidth: copiedFormat.borderWidth,
+          borderRadius: copiedFormat.borderRadius,
+          borderStyle: copiedFormat.borderStyle,
         },
       })));
       setCopiedFormat(null);

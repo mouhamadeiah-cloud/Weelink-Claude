@@ -188,18 +188,16 @@ export const EditBar: React.FC<EditBarProps> = ({
           </button>
         )}
 
-        {/* 3. أيقونة الإطار (غير متاحة للنافبار) */}
-        {!isNavbarSelected && (
-          <button
-            type="button"
-            onClick={() => onSelectTool('border')}
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-neutral-600 hover:text-black hover:bg-black/[0.05] active:scale-95 transition-all cursor-pointer"
-            title="الإطار (فتح في لوحة التحكم)"
-            aria-label="إطار"
-          >
-            <Square size={15} strokeWidth={2} />
-          </button>
-        )}
+        {/* 3. أيقونة الإطار */}
+        <button
+          type="button"
+          onClick={() => onSelectTool('border')}
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-neutral-600 hover:text-black hover:bg-black/[0.05] active:scale-95 transition-all cursor-pointer"
+          title="الإطار (فتح في لوحة التحكم)"
+          aria-label="إطار"
+        >
+          <Square size={15} strokeWidth={2} />
+        </button>
 
         {/* 4. نسخ التصميم (رول الدهان) - لا يفتح لوحة التحكم */}
         {onCopyFormat && (

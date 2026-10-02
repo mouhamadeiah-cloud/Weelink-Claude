@@ -697,15 +697,19 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   const localScaleRef = useRef(1);
   const localSlidesRef = useRef(slides);
+  const navbarRef = useRef<HTMLElement>(null);
+  const isNavbarStickyRef = useRef(navbar.isSticky);
 
   // Synchronize slides ref on each render
   localSlidesRef.current = slides;
+  isNavbarStickyRef.current = navbar.isSticky;
 
   useEffect(() => {
     const handleScroll = () => {
       const workspaceScroll = workspaceRef.current ? workspaceRef.current.scrollTop : 0;
       const windowScroll = typeof window !== 'undefined' ? (window.pageYOffset || document.documentElement.scrollTop) : 0;
       const currentScroll = Math.max(workspaceScroll, windowScroll);
+      const currentScale = localScaleRef.current || 1;
 
       // Directly update the CSS transform style of fixed backgrounds (smooth 60fps/120fps, no React re-renders!)
       const bgElements = workspaceRef.current?.querySelectorAll('.slide-bg-fixed');
@@ -724,10 +728,22 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             unscaledTop += s.height;
           }
 
-          const currentScale = localScaleRef.current || 1;
           const offsetY = (currentScroll / currentScale) - unscaledTop;
           element.style.transform = `translate3d(0, ${offsetY}px, 0)`;
         });
+      }
+
+      // Native CSS `position: sticky` breaks under the device-frame's `transform: scale(...)`
+      // ancestor (a well-known CSS limitation), so the navbar's "floating at top" effect is
+      // reproduced manually here with the same translate3d technique used for fixed backgrounds.
+      const navEl = navbarRef.current;
+      if (navEl) {
+        if (isNavbarStickyRef.current) {
+          const offsetY = Math.max(0, currentScroll / currentScale);
+          navEl.style.transform = `translate3d(0, ${offsetY}px, 0)`;
+        } else if (navEl.style.transform) {
+          navEl.style.transform = '';
+        }
       }
     };
 
@@ -1896,17 +1912,25 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
         {/* 1. Navbar - Narrow Strip (نافبار وهو شريحة ضيقة) */}
         <nav
+          ref={navbarRef}
           onClick={(e) => {
             if (isPreviewActive) return;
             e.stopPropagation();
             onSelectElement(null);
             onSelectNavbar?.();
           }}
-          className={`relative w-full border-b border-black/[0.06] z-20 transition-all overflow-hidden ${
-            navbar.isSticky ? 'sticky top-0 shadow-xs' : ''
+          className={`relative w-full z-20 transition-all overflow-hidden ${
+            navbar.borderStyle && navbar.borderStyle !== 'none' ? '' : 'border-b border-black/[0.06]'
+          } ${
+            navbar.isSticky ? 'navbar-sticky-js shadow-xs' : ''
           } ${isNavbarSelected && !isPreviewActive ? 'ring-2 ring-[#0071e3]/50' : ''} ${isPreviewActive ? '' : 'cursor-pointer'}`}
           style={{
             backgroundColor: navbar.bgColor,
+            willChange: navbar.isSticky ? 'transform' : undefined,
+            borderStyle: navbar.borderStyle && navbar.borderStyle !== 'none' ? navbar.borderStyle : undefined,
+            borderWidth: navbar.borderStyle && navbar.borderStyle !== 'none' ? `${navbar.borderWidth ?? 0}px` : undefined,
+            borderColor: navbar.borderStyle && navbar.borderStyle !== 'none' ? (navbar.borderColor || 'transparent') : undefined,
+            borderRadius: navbar.borderRadius ? `${navbar.borderRadius}px` : undefined,
             boxShadow: [
               getGlowShadowStyle(navbar.glowIntensity, navbar.glowColor, navbar.glowPosition, false),
               getGlowShadowStyle(navbar.innerGlowIntensity, navbar.innerGlowColor, navbar.innerGlowPosition, true),

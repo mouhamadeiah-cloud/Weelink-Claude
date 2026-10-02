@@ -223,6 +223,11 @@ export interface NavbarConfig {
   // Hamburger menu mode (collapses nav links/cta behind a toggle)
   isHamburgerMode?: boolean;
   hamburgerDirection?: 'vertical' | 'horizontal';
+  // Border / frame — same field names/logic as a slide's border editing
+  borderColor?: string;
+  borderWidth?: number;
+  borderRadius?: number;
+  borderStyle?: string;
 }
 
 export interface Page {

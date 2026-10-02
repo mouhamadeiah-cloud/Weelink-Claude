@@ -178,8 +178,12 @@ export default function App() {
   // Loads pages/elements from LocalStorage only (offline fallback / pre-cloud-sync bootstrap)
   const loadLocalDesign = (userId: string) => {
     try {
-      const storedPages = localStorage.getItem(`weelink_pages_${userId}`) || localStorage.getItem('weelink_pages');
-      const storedElements = localStorage.getItem(`weelink_elements_${userId}`) || localStorage.getItem('weelink_elements');
+      // IMPORTANT: no fallback to the old non-namespaced 'weelink_pages'/'weelink_elements'
+      // keys here. That fallback used to leak the last signed-in user's design to any
+      // other/new user on the same browser whenever their own per-user key didn't exist
+      // yet (e.g. a brand-new signup). Each user's data must come ONLY from their own key.
+      const storedPages = localStorage.getItem(`weelink_pages_${userId}`);
+      const storedElements = localStorage.getItem(`weelink_elements_${userId}`);
       
       let loadedPages: Page[] = [];
       let loadedElements: CanvasElement[] = [];
@@ -328,9 +332,8 @@ export default function App() {
         const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
         localStorage.setItem(`weelink_pages_${targetUserId}`, JSON.stringify(pages));
         localStorage.setItem(`weelink_elements_${targetUserId}`, JSON.stringify(elements));
-        // Backwards compatibility legacy keys
-        localStorage.setItem('weelink_pages', JSON.stringify(pages));
-        localStorage.setItem('weelink_elements', JSON.stringify(elements));
+        // NOTE: deliberately no longer writing the old non-namespaced 'weelink_pages'/
+        // 'weelink_elements' keys — they were the source of a cross-account data leak.
       } catch (e) {
         console.warn("Could not save to LocalStorage:", e);
       }
@@ -504,10 +507,7 @@ export default function App() {
     try {
       localStorage.setItem(`weelink_pages_${targetUserId}`, JSON.stringify(pages));
       localStorage.setItem(`weelink_elements_${targetUserId}`, JSON.stringify(elements));
-      // Legacy compatibility
-      localStorage.setItem('weelink_pages', JSON.stringify(pages));
-      localStorage.setItem('weelink_elements', JSON.stringify(elements));
-      
+
       alert('تم حفظ الصفحة والشرائح بنجاح محلياً!');
     } catch (error) {
       console.error("Manual save failed:", error);
@@ -528,6 +528,18 @@ export default function App() {
         await logoutUser();
         localStorage.removeItem('weelink_simulated_user_uid');
         localStorage.removeItem('weelink_simulated_user_email');
+        // Critical: clear the in-memory design when logging out. Without this,
+        // the previous account's pages/elements stay in React state, and if a
+        // DIFFERENT person then signs up as a new user on this same browser
+        // without a page refresh, handleAuthSuccess's "preserve current design
+        // for the new user" logic would hand them the previous user's page.
+        setPages([initialPage]);
+        setElements([]);
+        setSelectedElementId(null);
+        setActivePageId('page-home');
+        setActiveSlideId('slide-1');
+        setHistory([[]]);
+        setHistoryIndex(0);
         setActiveUserUid('mouhamadeiah');
         setIsAuthActive(true);
       } catch (e) {

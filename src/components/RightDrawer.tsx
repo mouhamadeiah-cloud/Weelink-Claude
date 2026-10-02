@@ -56,7 +56,11 @@ import {
   Images,
   Upload,
   Download,
-  Search
+  Search,
+  BadgeCheck,
+  Smile,
+  ArrowUpToLine,
+  ArrowDownToLine
 } from 'lucide-react';
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape, getGlowShadowStyle, getLightGradientStyle, ContactType } from '../types';
 import { MASK_SHAPES } from '../utils/maskShapes';
@@ -3819,6 +3823,31 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const isWeeAiChatCollapsed = externalIsWeeAiChatCollapsed !== undefined ? externalIsWeeAiChatCollapsed : internalWeeAiChatCollapsed;
   const toggleWeeAiChat = externalOnToggleWeeAiChat || (() => setInternalWeeAiChatCollapsed(prev => !prev));
 
+  // Shared handler for ImageDrawerSection's onAddImage — used by BOTH call sites
+  // (add-new-image entry point and add-image/replace-existing entry point) so the
+  // insertion behavior can never drift between them.
+  const handleAddImageElement = (imageUrl: string, title: string, width: number, height: number, isGraphic: boolean) => {
+    const finalWidth = isGraphic ? 140 : 200;
+    const finalHeight = isGraphic ? 140 : 130;
+
+    onAddElement(
+      'image',
+      title || 'صورة مضافة',
+      {
+        borderRadius: isGraphic ? 16 : 20,
+        shadow: isGraphic ? 'none' : 'apple',
+        objectFit: isGraphic ? 'contain' : 'cover',
+        backgroundColor: isGraphic ? 'transparent' : undefined,
+      },
+      {
+        name: title || (isGraphic ? 'عنصر جرافيك' : 'صورة مضافة'),
+        width: finalWidth,
+        height: finalHeight,
+        imageUrl,
+      }
+    );
+  };
+
   // Ref to aside element to detect clicking outside and handle automatic scrolling
   const asideRef = useRef<HTMLElement>(null);
 
@@ -4559,8 +4588,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       case 'gallery': return <Images size={12} className="text-pink-500" />;
       case 'divider': return <Minus size={12} className="text-neutral-400" />;
       case 'shape': return <Shapes size={12} className="text-indigo-500" />;
-      case 'badge': return <Sparkles size={12} className="text-amber-500" />;
-      case 'icon': return <Sparkles size={12} className="text-amber-500" />;
+      case 'badge': return <BadgeCheck size={12} className="text-amber-500" />;
+      case 'icon': return <Smile size={12} className="text-fuchsia-500" />;
       case 'video': return <Video size={12} className="text-rose-500" />;
       case 'map': return <MapPin size={12} className="text-emerald-600" />;
       case 'pricing': return <Tag size={12} className="text-amber-600" />;
@@ -4759,7 +4788,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           className="p-1 text-neutral-600 hover:text-blue-600 hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
                           title="تحريك لأعلى"
                         >
-                          <ArrowUp size={11} />
+                          <ArrowUp size={11} strokeWidth={2.2} />
                         </button>
                         <button
                           type="button"
@@ -4767,7 +4796,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           className="p-1 text-neutral-600 hover:text-blue-600 hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
                           title="تحريك لأسفل"
                         >
-                          <ArrowDown size={11} />
+                          <ArrowDown size={11} strokeWidth={2.2} />
                         </button>
                         <button
                           type="button"
@@ -4828,7 +4857,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     className="p-0.5 text-neutral-500 hover:text-blue-600 hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
                                     title="تحريك لأعلى"
                                   >
-                                    <ArrowUp size={10} />
+                                    <ArrowUp size={11} strokeWidth={2.2} />
                                   </button>
                                   <button
                                     type="button"
@@ -4836,7 +4865,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     className="p-0.5 text-neutral-500 hover:text-blue-600 hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
                                     title="تحريك لأسفل"
                                   >
-                                    <ArrowDown size={10} />
+                                    <ArrowDown size={11} strokeWidth={2.2} />
                                   </button>
                                   <button
                                     type="button"
@@ -7156,7 +7185,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                           className="w-5 h-5 rounded flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-200/80 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                                           title="تقديم لأعلى"
                                         >
-                                          <ArrowUp size={11} strokeWidth={2.5} />
+                                          <ArrowUp size={11} strokeWidth={2.2} />
                                         </button>
                                         <button
                                           type="button"
@@ -7165,7 +7194,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                           className="w-5 h-5 rounded flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-200/80 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
                                           title="تأخير لأسفل"
                                         >
-                                          <ArrowDown size={11} strokeWidth={2.5} />
+                                          <ArrowDown size={11} strokeWidth={2.2} />
                                         </button>
                                       </div>
                                       {items.length > 2 && (
@@ -12743,28 +12772,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               if (activeAddCategory === 'image') {
                 return (
                   <ImageDrawerSection
-                    onAddImage={(imageUrl, title, width, height, isGraphic) => {
-                      // Unified relatively small and compact size for neat initial insertion (can be resized by user later)
-                      const finalWidth = isGraphic ? 140 : 200;
-                      const finalHeight = isGraphic ? 140 : 130;
-
-                      onAddElement(
-                        'image',
-                        title || 'صورة مضافة',
-                        {
-                          borderRadius: isGraphic ? 16 : 20,
-                          shadow: isGraphic ? 'none' : 'apple',
-                          objectFit: isGraphic ? 'contain' : 'cover',
-                          backgroundColor: isGraphic ? 'transparent' : undefined,
-                        },
-                        {
-                          name: title || (isGraphic ? 'عنصر جرافيك' : 'صورة مضافة'),
-                          width: finalWidth,
-                          height: finalHeight,
-                          imageUrl,
-                        }
-                      );
-                    }}
+                    onAddImage={handleAddImageElement}
                     onBack={() => setActiveAddCategory(null)}
                     canvasElements={elements}
                   />
@@ -14674,10 +14682,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           title="أسفل الجميع (إرسال للقاع)"
                         >
                           <span className="text-neutral-500 hover:text-black">
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M7 6l5 5 5-5" />
-                              <path d="M7 13l5 5 5-5" />
-                            </svg>
+                            <ArrowDownToLine size={18} strokeWidth={2.2} />
                           </span>
                           <span className="text-[10px] font-bold">أسفل</span>
                         </button>
@@ -14689,9 +14694,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           title="طبقة للأسفل (تراجع خطوة)"
                         >
                           <span className="text-neutral-500 hover:text-black">
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M6 9l6 6 6-6" />
-                            </svg>
+                            <ChevronDown size={18} strokeWidth={2.2} />
                           </span>
                           <span className="text-[10px] font-bold">لأسفل</span>
                         </button>
@@ -14703,9 +14706,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           title="طبقة للأعلى (تقدم خطوة)"
                         >
                           <span className="text-neutral-500 hover:text-black">
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M18 15l-6-6-6 6" />
-                            </svg>
+                            <ChevronUp size={18} strokeWidth={2.2} />
                           </span>
                           <span className="text-[10px] font-bold">للأعلى</span>
                         </button>
@@ -14717,10 +14718,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           title="أعلى الجميع (إحضار للمقدمة)"
                         >
                           <span className="text-neutral-500 hover:text-black">
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M17 18l-5-5-5 5" />
-                              <path d="M17 11l-5-5-5 5" />
-                            </svg>
+                            <ArrowUpToLine size={18} strokeWidth={2.2} />
                           </span>
                           <span className="text-[10px] font-bold">أعلى</span>
                         </button>
@@ -14829,27 +14827,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {/* TOOL: Add/Edit Image (تبديل/تعديل الصورة) */}
             {activeSection === 'add-image' && (
               <ImageDrawerSection
-                onAddImage={(imageUrl, title, width, height, isGraphic) => {
-                  const finalWidth = isGraphic ? 140 : 200;
-                  const finalHeight = isGraphic ? 140 : 130;
-
-                  onAddElement(
-                    'image',
-                    title || 'صورة مضافة',
-                    {
-                      borderRadius: isGraphic ? 16 : 20,
-                      shadow: isGraphic ? 'none' : 'apple',
-                      objectFit: isGraphic ? 'contain' : 'cover',
-                      backgroundColor: isGraphic ? 'transparent' : undefined,
-                    },
-                    {
-                      name: title || (isGraphic ? 'عنصر جرافيك' : 'صورة مضافة'),
-                      width: finalWidth,
-                      height: finalHeight,
-                      imageUrl,
-                    }
-                  );
-                }}
+                onAddImage={handleAddImageElement}
                 onBack={() => {
                   if (selectedElement) {
                     onSelectSection('format');

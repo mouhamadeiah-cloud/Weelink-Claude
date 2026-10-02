@@ -406,42 +406,39 @@ export default function App() {
   const handleAuthSuccess = (userUid: string, isNewUser: boolean) => {
     setActiveUserUid(userUid);
     if (isNewUser) {
-      // Preserve current pages/elements if they already designed something
-      const currentPages = pagesRef.current && pagesRef.current.length > 0 ? pagesRef.current : [];
-      const currentElements = elementsRef.current || [];
-      
-      let finalPages = currentPages;
-      let finalElements = currentElements;
-      
-      if (finalPages.length === 0) {
-        // Setup a brand new empty page layout with a blank slide and empty navbar
-        const blankPage: Page = {
-          id: 'page-home',
-          name: 'الرئيسية',
-          slug: '/',
-          navbar: {
-            brandName: 'wee',
-            items: [],
-            ctaText: '',
-            ctaHref: '',
-            bgColor: '#ffffff',
-            textColor: '#1d1d1f',
-            isSticky: true,
-          },
-          slides: [
-            {
-              id: 'slide-1',
-              name: 'شريحة فارغة',
-              height: 560,
-              backgroundColor: '#ffffff',
-              dividerShape: 'straight',
-            }
-          ]
-        };
-        finalPages = [blankPage];
-        finalElements = [];
-      }
-      
+      // ALWAYS start a brand-new account with a blank page. The editor screen
+      // (isAuthActive === false) never renders before authentication succeeds,
+      // so there is no such thing as "guest work designed before signup" to
+      // preserve here — anything left in pagesRef/elementsRef at this point is
+      // always a PREVIOUS account's leftover in-memory state from this same
+      // browser tab, and handing it to a new account is exactly the
+      // cross-account data leak that was reported. Never reuse it.
+      const blankPage: Page = {
+        id: 'page-home',
+        name: 'الرئيسية',
+        slug: '/',
+        navbar: {
+          brandName: 'wee',
+          items: [],
+          ctaText: '',
+          ctaHref: '',
+          bgColor: '#ffffff',
+          textColor: '#1d1d1f',
+          isSticky: true,
+        },
+        slides: [
+          {
+            id: 'slide-1',
+            name: 'شريحة فارغة',
+            height: 560,
+            backgroundColor: '#ffffff',
+            dividerShape: 'straight',
+          }
+        ]
+      };
+      const finalPages: Page[] = [blankPage];
+      const finalElements: CanvasElement[] = [];
+
       setPages(finalPages);
       setElements(finalElements);
       setHistory([finalElements]);

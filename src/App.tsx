@@ -549,6 +549,8 @@ export default function App() {
   const [selectedElementId, setSelectedElementId] = useState<string | null>('el-1');
   const [activeSlideId, setActiveSlideId] = useState<string>('slide-1');
   const [activeTableCell, setActiveTableCell] = useState<{ elementId: string; row: number; col: number } | null>(null);
+  // Navbar selection (clicking the navbar in the canvas, like selecting a slide, opens navbar-specific editing)
+  const [isNavbarSelected, setIsNavbarSelected] = useState<boolean>(false);
 
   // History stack for Undo / Redo
   const [history, setHistory] = useState<CanvasElement[][]>([elements]);
@@ -580,7 +582,7 @@ export default function App() {
 
   // Format painter state (نسخ التنسيق - رول الدهان)
   const [copiedFormat, setCopiedFormat] = useState<any | null>(null);
-  const [copiedType, setCopiedType] = useState<'element' | 'slide' | null>(null);
+  const [copiedType, setCopiedType] = useState<'element' | 'slide' | 'navbar' | null>(null);
 
   const handleCopyFormat = () => {
     if (copiedFormat) {
@@ -617,13 +619,32 @@ export default function App() {
         height: currentSlide.height,
       });
       setCopiedType('slide');
+    } else if (isNavbarSelected) {
+      // Copy navbar styles
+      setCopiedFormat({
+        bgColor: currentPage.navbar.bgColor,
+        textColor: currentPage.navbar.textColor,
+        backgroundImage: currentPage.navbar.backgroundImage,
+        backgroundSize: currentPage.navbar.backgroundSize,
+        backgroundPosition: currentPage.navbar.backgroundPosition,
+        backgroundOpacity: currentPage.navbar.backgroundOpacity,
+        textOpacity: currentPage.navbar.textOpacity,
+        innerGlowColor: currentPage.navbar.innerGlowColor,
+        innerGlowIntensity: currentPage.navbar.innerGlowIntensity,
+        innerGlowPosition: currentPage.navbar.innerGlowPosition,
+        glowColor: currentPage.navbar.glowColor,
+        glowIntensity: currentPage.navbar.glowIntensity,
+        glowPosition: currentPage.navbar.glowPosition,
+      });
+      setCopiedType('navbar');
     }
   };
 
   const handleSelectSlide = (id: string) => {
     setActiveSlideId(id);
+    setIsNavbarSelected(false);
     setIsRightDrawerOpen(false); // Hide the control panel when a slide is selected
-    
+
     if (copiedFormat && copiedType === 'slide') {
       // Apply slide styles to this slide
       const updatedSlides = currentPage.slides.map(s => {
@@ -665,7 +686,10 @@ export default function App() {
     if (id !== selectedElementId) {
       setActiveTableCell(null);
     }
-    
+    if (id) {
+      setIsNavbarSelected(false);
+    }
+
     if (id && copiedFormat && copiedType === 'element') {
       // Apply style to this element!
       const targetElement = elements.find(el => el.id === id);
@@ -724,6 +748,37 @@ export default function App() {
     }
     
     setSelectedElementId(id);
+  };
+
+  // Selecting the navbar (clicking it in the canvas) — mirrors handleSelectSlide/handleSelectElement
+  const handleSelectNavbar = () => {
+    if (isPreviewActive) return;
+    setSelectedElementId(null);
+    setIsNavbarSelected(true);
+
+    if (copiedFormat && copiedType === 'navbar') {
+      setPages(pages.map(p => ({
+        ...p,
+        navbar: {
+          ...p.navbar,
+          bgColor: copiedFormat.bgColor,
+          textColor: copiedFormat.textColor,
+          backgroundImage: copiedFormat.backgroundImage,
+          backgroundSize: copiedFormat.backgroundSize,
+          backgroundPosition: copiedFormat.backgroundPosition,
+          backgroundOpacity: copiedFormat.backgroundOpacity,
+          textOpacity: copiedFormat.textOpacity,
+          innerGlowColor: copiedFormat.innerGlowColor,
+          innerGlowIntensity: copiedFormat.innerGlowIntensity,
+          innerGlowPosition: copiedFormat.innerGlowPosition,
+          glowColor: copiedFormat.glowColor,
+          glowIntensity: copiedFormat.glowIntensity,
+          glowPosition: copiedFormat.glowPosition,
+        },
+      })));
+      setCopiedFormat(null);
+      setCopiedType(null);
+    }
   };
 
   // Tool Selection from any icon: Opens Control Drawer and selects corresponding tool
@@ -2149,6 +2204,7 @@ export default function App() {
             isFormatCopied={!!copiedFormat}
             onToggleGroupContainer={handleToggleGroupContainer}
             onUpdateElement={handleUpdateElementById}
+            isNavbarSelected={isNavbarSelected}
           />
         )}
       </div>
@@ -2164,6 +2220,8 @@ export default function App() {
           onSelectElement={handleSelectElement}
           onSelectSlide={handleSelectSlide}
           onSelectPage={setActivePageId}
+          isNavbarSelected={isNavbarSelected}
+          onSelectNavbar={handleSelectNavbar}
           onUpdateElementPosition={handleUpdateElementPosition}
           onUpdateElementSize={handleUpdateElementSize}
           onUpdateElementRotation={handleUpdateElementRotation}
@@ -2201,6 +2259,7 @@ export default function App() {
         slides={currentPage.slides}
         activeSlideId={activeSlideId}
         onSelectSlide={handleSelectSlide}
+        isNavbarSelected={isNavbarSelected}
         onAddSlide={handleAddSlide}
         onAddPage={handleAddPage}
         onDeletePage={handleDeletePage}

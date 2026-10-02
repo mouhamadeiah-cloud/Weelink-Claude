@@ -101,8 +101,6 @@ export interface CanvasElement {
   pricingPrice?: string;
   pricingPeriod?: string;
   pricingFeatures?: string[];
-  pricingFeatured?: boolean; // shows the featured/recommended ribbon on this tier only
-  pricingCtaText?: string; // overrides the default CTA button text on the pricing card
   calendarTitle?: string;
   calendarSlots?: string[];
   calendarWorkingDays?: string[]; // e.g. ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday']
@@ -195,8 +193,6 @@ export interface NavbarItem {
   id: string;
   label: string;
   href: string;
-  linkType?: LinkType; // when 'page', clicking this item navigates to another page in the site
-  linkTargetId?: string; // target Page id (used when linkType === 'page')
 }
 
 export interface NavbarConfig {
@@ -205,11 +201,28 @@ export interface NavbarConfig {
   items: NavbarItem[];
   ctaText: string;
   ctaHref: string;
-  ctaLinkType?: LinkType; // when 'page', clicking the CTA button navigates to another page in the site
-  ctaLinkTargetId?: string; // target Page id (used when ctaLinkType === 'page')
   bgColor: string;
   textColor: string;
   isSticky: boolean;
+  // Background image (same logic as a slide's background image)
+  backgroundImage?: string;
+  backgroundSize?: 'cover' | 'contain' | 'auto';
+  backgroundPosition?: string;
+  // Opacity — applies to the background (color/image) and the text/content, same logic as a slide
+  backgroundOpacity?: number;
+  textOpacity?: number;
+  // Lighting (inner glow) — same field names/logic as a slide's "الإضاءة"
+  innerGlowColor?: string;
+  innerGlowIntensity?: number;
+  innerGlowPosition?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  // Outer shadow — same field names/logic as a slide's "الظلال"
+  glowColor?: string;
+  glowIntensity?: number;
+  glowPosition?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  // Settings: fixed/floating at the top vs. scrolling away with the page is already `isSticky`.
+  // Hamburger menu mode (collapses nav links/cta behind a toggle)
+  isHamburgerMode?: boolean;
+  hamburgerDirection?: 'vertical' | 'horizontal';
 }
 
 export interface Page {

@@ -22,7 +22,8 @@ import {
   ChevronRight,
   ChevronLeft,
   X,
-  Download
+  Download,
+  Menu
 } from 'lucide-react';
 
 interface CanvasWorkspaceProps {
@@ -54,6 +55,8 @@ interface CanvasWorkspaceProps {
   onUpdateSlideHeight?: (slideId: string, height: number) => void;
   activeTableCell?: { elementId: string; row: number; col: number } | null;
   onSelectTableCell?: (cell: { elementId: string; row: number; col: number } | null) => void;
+  isNavbarSelected?: boolean;
+  onSelectNavbar?: () => void;
 }
 
 interface InteractiveCalendarWidgetProps {
@@ -684,7 +687,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onUpdateSlideHeight,
   activeTableCell,
   onSelectTableCell,
+  isNavbarSelected = false,
+  onSelectNavbar,
 }) => {
+  const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   // Workspace width observer & Scaling calculation
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(1280);
@@ -1889,38 +1895,130 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         )}
 
         {/* 1. Navbar - Narrow Strip (نافبار وهو شريحة ضيقة) */}
-        <nav 
-          className={`w-full border-b border-black/[0.06] z-20 transition-all ${
+        <nav
+          onClick={(e) => {
+            if (isPreviewActive) return;
+            e.stopPropagation();
+            onSelectElement(null);
+            onSelectNavbar?.();
+          }}
+          className={`relative w-full border-b border-black/[0.06] z-20 transition-all overflow-hidden ${
             navbar.isSticky ? 'sticky top-0 shadow-xs' : ''
-          }`}
-          style={{ backgroundColor: navbar.bgColor, color: navbar.textColor }}
+          } ${isNavbarSelected && !isPreviewActive ? 'ring-2 ring-[#0071e3]/50' : ''} ${isPreviewActive ? '' : 'cursor-pointer'}`}
+          style={{
+            backgroundColor: navbar.bgColor,
+            boxShadow: [
+              getGlowShadowStyle(navbar.glowIntensity, navbar.glowColor, navbar.glowPosition, false),
+              getGlowShadowStyle(navbar.innerGlowIntensity, navbar.innerGlowColor, navbar.innerGlowPosition, true),
+            ].filter(Boolean).join(', ') || undefined,
+          }}
         >
-          <div className="w-full px-6 sm:px-10 py-3.5 flex items-center justify-between">
+          {/* Background image layer (same logic as a slide's background), respects backgroundOpacity without fading the content */}
+          {navbar.backgroundImage && (
+            <div
+              className="absolute inset-0 pointer-events-none transition-opacity duration-150"
+              style={{
+                backgroundColor: navbar.bgColor,
+                backgroundImage: `url("${navbar.backgroundImage}")`,
+                backgroundSize: navbar.backgroundSize || 'cover',
+                backgroundPosition: navbar.backgroundPosition || 'center',
+                opacity: navbar.backgroundOpacity ?? 1,
+              }}
+            />
+          )}
+
+          <div
+            className="relative w-full px-6 sm:px-10 py-3.5 flex items-center justify-between"
+            style={{ color: navbar.textColor, opacity: navbar.textOpacity ?? 1 }}
+          >
             {/* Logo / Brand Name */}
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-[#0071e3] text-white flex items-center justify-center font-bold text-xs shadow-xs">
                 {navbar.brandName ? navbar.brandName.charAt(0) : 'W'}
               </div>
-              <span className="font-bold text-sm tracking-tight text-[#1d1d1f]">
+              <span className="font-bold text-sm tracking-tight" style={{ color: navbar.textColor }}>
                 {navbar.brandName || 'weelink'}
               </span>
             </div>
 
-            {/* Nav links */}
-            <div className="hidden md:flex items-center gap-6 text-xs font-medium text-neutral-600">
+            {navbar.isHamburgerMode ? (
+              /* Hamburger toggle replaces the links + CTA row */
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsHamburgerOpen((prev) => !prev);
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/[0.06] transition-all cursor-pointer"
+                style={{ color: navbar.textColor }}
+                title="فتح/إغلاق قائمة النافبار"
+              >
+                {isHamburgerOpen ? <X size={18} strokeWidth={2.2} /> : <Menu size={18} strokeWidth={2.2} />}
+              </button>
+            ) : (
+              <>
+                {/* Nav links */}
+                <div className="hidden md:flex items-center gap-6 text-xs font-medium" style={{ color: navbar.textColor }}>
+                  {navbar.items.map((item) => {
+                    const isPageLink = item.linkType === 'page' && !!item.linkTargetId;
+                    const isActive = isPageLink && item.linkTargetId === activePageId;
+                    return (
+                      <span
+                        key={item.id}
+                        onClick={(e) => {
+                          if (isPageLink) {
+                            e.stopPropagation();
+                            onSelectPage?.(item.linkTargetId as string);
+                          }
+                        }}
+                        className={`transition-colors ${
+                          isPageLink ? 'cursor-pointer hover:text-[#0071e3]' : 'cursor-default'
+                        } ${isActive ? 'text-[#0071e3] font-bold' : ''}`}
+                      >
+                        {item.label}
+                      </span>
+                    );
+                  })}
+                </div>
+
+                {/* Action CTA Button */}
+                <button
+                  onClick={(e) => {
+                    if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
+                      e.stopPropagation();
+                      onSelectPage?.(navbar.ctaLinkTargetId);
+                    }
+                  }}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
+                >
+                  {navbar.ctaText || 'ابدأ الآن'}
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Hamburger-opened panel (vertical: stacked list, horizontal: wrapped row) */}
+          {navbar.isHamburgerMode && isHamburgerOpen && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className={`relative border-t border-black/[0.06] px-6 py-3 ${
+                navbar.hamburgerDirection === 'horizontal' ? 'flex flex-row flex-wrap items-center gap-4' : 'flex flex-col items-start gap-2.5'
+              }`}
+              style={{ color: navbar.textColor, opacity: navbar.textOpacity ?? 1 }}
+            >
               {navbar.items.map((item) => {
                 const isPageLink = item.linkType === 'page' && !!item.linkTargetId;
                 const isActive = isPageLink && item.linkTargetId === activePageId;
                 return (
                   <span
                     key={item.id}
-                    onClick={(e) => {
+                    onClick={() => {
                       if (isPageLink) {
-                        e.stopPropagation();
                         onSelectPage?.(item.linkTargetId as string);
+                        setIsHamburgerOpen(false);
                       }
                     }}
-                    className={`transition-colors ${
+                    className={`text-xs font-medium transition-colors ${
                       isPageLink ? 'cursor-pointer hover:text-[#0071e3]' : 'cursor-default'
                     } ${isActive ? 'text-[#0071e3] font-bold' : ''}`}
                   >
@@ -1928,21 +2026,19 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   </span>
                 );
               })}
+              <button
+                onClick={() => {
+                  if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
+                    onSelectPage?.(navbar.ctaLinkTargetId);
+                    setIsHamburgerOpen(false);
+                  }
+                }}
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
+              >
+                {navbar.ctaText || 'ابدأ الآن'}
+              </button>
             </div>
-
-            {/* Action CTA Button */}
-            <button
-              onClick={(e) => {
-                if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
-                  e.stopPropagation();
-                  onSelectPage?.(navbar.ctaLinkTargetId);
-                }
-              }}
-              className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
-            >
-              {navbar.ctaText || 'ابدأ الآن'}
-            </button>
-          </div>
+          )}
         </nav>
 
         {/* 2. Webpage Slides Container (الشرائح مساحات عمل حرة freegrid) */}

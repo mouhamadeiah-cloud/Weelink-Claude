@@ -41,7 +41,7 @@ const uploadDataUrlToStorage = async (dataurl: string, baseName: string): Promis
 };
 
 interface BackgroundDrawerSectionProps {
-  targetType: 'slide' | 'element';
+  targetType: 'slide' | 'element' | 'navbar';
   targetName: string;
   currentBgColor?: string;
   currentBgImage?: string;
@@ -257,7 +257,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           تعديل خلفية: <span className="text-[#0071e3] font-semibold">{targetName}</span>
         </span>
         <span className="text-[10px] bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md font-medium">
-          {targetType === 'slide' ? 'شريحة' : 'عنصر'}
+          {targetType === 'slide' ? 'شريحة' : targetType === 'navbar' ? 'نافبار' : 'عنصر'}
         </span>
       </div>
 

@@ -51,6 +51,7 @@ interface EditBarProps {
   isFormatCopied?: boolean;
   onToggleGroupContainer?: () => void;
   onUpdateElement?: (id: string, updates: Partial<CanvasElement>) => void;
+  isNavbarSelected?: boolean;
 }
 
 export const EditBar: React.FC<EditBarProps> = ({
@@ -72,10 +73,13 @@ export const EditBar: React.FC<EditBarProps> = ({
   isFormatCopied,
   onToggleGroupContainer,
   onUpdateElement,
+  isNavbarSelected = false,
 }) => {
-  const currentTargetName = selectedElement 
-    ? selectedElement.name 
-    : (selectedSlide ? selectedSlide.name : 'شريحة ١');
+  const currentTargetName = isNavbarSelected
+    ? 'النافبار'
+    : selectedElement
+      ? selectedElement.name
+      : (selectedSlide ? selectedSlide.name : 'شريحة ١');
 
   const [nameInput, setNameInput] = useState(currentTargetName);
 
@@ -157,7 +161,7 @@ export const EditBar: React.FC<EditBarProps> = ({
         </div>
 
         {/* 1. أيقونة اللون */}
-        {!isSlideSelected && (
+        {(!isSlideSelected || isNavbarSelected) && (
           <button
             type="button"
             onClick={() => onSelectTool('color')}
@@ -184,16 +188,18 @@ export const EditBar: React.FC<EditBarProps> = ({
           </button>
         )}
 
-        {/* 3. أيقونة الإطار */}
-        <button
-          type="button"
-          onClick={() => onSelectTool('border')}
-          className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-neutral-600 hover:text-black hover:bg-black/[0.05] active:scale-95 transition-all cursor-pointer"
-          title="الإطار (فتح في لوحة التحكم)"
-          aria-label="إطار"
-        >
-          <Square size={15} strokeWidth={2} />
-        </button>
+        {/* 3. أيقونة الإطار (غير متاحة للنافبار) */}
+        {!isNavbarSelected && (
+          <button
+            type="button"
+            onClick={() => onSelectTool('border')}
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-neutral-600 hover:text-black hover:bg-black/[0.05] active:scale-95 transition-all cursor-pointer"
+            title="الإطار (فتح في لوحة التحكم)"
+            aria-label="إطار"
+          >
+            <Square size={15} strokeWidth={2} />
+          </button>
+        )}
 
         {/* 4. نسخ التصميم (رول الدهان) - لا يفتح لوحة التحكم */}
         {onCopyFormat && (
@@ -269,6 +275,19 @@ export const EditBar: React.FC<EditBarProps> = ({
         >
           <BoxSelect size={15} strokeWidth={2} />
         </button>
+
+        {/* ترس إعدادات النافبار - ثابت/متحرك + قائمة Hamburger */}
+        {isNavbarSelected && (
+          <button
+            type="button"
+            onClick={() => onSelectTool('navbar-settings' as DrawerSection)}
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-[#0071e3] bg-[#0071e3]/12 hover:bg-[#0071e3]/20 active:scale-95 transition-all cursor-pointer ring-1 ring-[#0071e3]/30"
+            title="إعدادات النافبار (التثبيت وقائمة Hamburger)"
+            aria-label="إعدادات النافبار"
+          >
+            <Settings size={15} strokeWidth={2} />
+          </button>
+        )}
 
         {/* ترس إعدادات المعرض - يظهر عند تحديد معرض صور */}
         {selectedElement?.type === 'gallery' && (

@@ -69,6 +69,7 @@ import { TWENTY_PAGE_PALETTES } from '../data/palettes';
 import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { BackgroundDrawerSection } from './BackgroundDrawerSection';
 import { ImageDrawerSection } from './ImageDrawerSection';
+import { ColorSwatchPicker, Slider, PillTabs, SectionHeader } from './ui/SharedControls';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
 import { fetchUnsplashPhotos } from '../services/unsplashService';
@@ -117,9 +118,10 @@ export type DrawerSection =
   | 'elements' 
   | 'add-text'
   | 'add-image'
-  | 'slides' 
-  | 'navbar' 
-  | 'color' 
+  | 'slides'
+  | 'navbar'
+  | 'navbar-settings'
+  | 'color'
   | 'background' 
   | 'border' 
   | 'opacity' 
@@ -169,6 +171,7 @@ interface RightDrawerProps {
   onAddGroup?: (containerShape: Partial<CanvasElement>, childElements: Partial<CanvasElement>[]) => void;
   navbar: NavbarConfig;
   onUpdateNavbar: (newNav: Partial<NavbarConfig>) => void;
+  isNavbarSelected?: boolean;
   selectedElement: CanvasElement | null;
   elements: CanvasElement[];
   onSelectElement: (id: string | null) => void;
@@ -3816,6 +3819,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onStepChange,
   isWeeAiChatCollapsed: externalIsWeeAiChatCollapsed,
   onToggleWeeAiChat: externalOnToggleWeeAiChat,
+  navbar,
+  onUpdateNavbar,
+  isNavbarSelected = false,
 }) => {
   // Wee AI chat container collapse state inside the control panel
   // (controlled from the parent when provided, e.g. to auto-open for new users; falls back to local state otherwise)
@@ -5318,9 +5324,20 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {/* ============================================================== */}
 
             {/* TOOL: Color (الألوان - لون صلب، وتدرج لوني يطبق على النص/العنصر نفسه) */}
-            {activeSection === 'color' && (
+            {activeSection === 'color' && isNavbarSelected && navbar && (
               <div className="space-y-4 text-right" dir="rtl">
-                
+                <SectionHeader title="لون نصوص النافبار" />
+                <ColorSwatchPicker
+                  swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
+                  selectedValue={navbar.textColor}
+                  onSelect={(color) => onUpdateNavbar({ textColor: color })}
+                />
+              </div>
+            )}
+
+            {activeSection === 'color' && !isNavbarSelected && (
+              <div className="space-y-4 text-right" dir="rtl">
+
                 {(selectedElement?.type === 'image' || selectedElement?.type === 'gallery') ? (
                   <div className="space-y-4">
                     {/* Header */}
@@ -5686,7 +5703,26 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             )}
 
             {/* TOOL: Shadow (الظلال) */}
-            {activeSection === 'shadow' && (() => {
+            {activeSection === 'shadow' && isNavbarSelected && navbar && (
+              <div className="space-y-5 text-right" dir="rtl">
+                <SectionHeader title="ظلال النافبار الخارجية" />
+                <Slider
+                  label="شدة الظل"
+                  value={navbar.glowIntensity ?? 0}
+                  min={0}
+                  max={100}
+                  onChange={(v) => onUpdateNavbar({ glowIntensity: v })}
+                  formatValue={(v) => `${v}%`}
+                />
+                <ColorSwatchPicker
+                  swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
+                  selectedValue={navbar.glowColor || '#1d1d1f'}
+                  onSelect={(color) => onUpdateNavbar({ glowColor: color })}
+                />
+              </div>
+            )}
+
+            {activeSection === 'shadow' && !isNavbarSelected && (() => {
               const isTargetElement = shadowTarget === 'element' && !!selectedElement;
 
               // Read values based on target (glowIntensity/glowColor/glowPosition maps to outer shadow/glow)
@@ -5956,7 +5992,22 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             })()}
 
             {/* TOOL: Background (تعديل الخلفية - لون، الصورة، المعرض كالمخطط اليدوي) */}
-            {activeSection === 'background' && (
+            {activeSection === 'background' && isNavbarSelected && navbar && (
+              <BackgroundDrawerSection
+                targetType="navbar"
+                targetName="النافبار"
+                currentBgColor={navbar.bgColor}
+                currentBgImage={navbar.backgroundImage}
+                currentBgSize={navbar.backgroundSize}
+                currentBgAttachment="scroll"
+                onApplyColor={(color) => onUpdateNavbar({ bgColor: color, backgroundImage: undefined })}
+                onApplyGradient={(gradientCss) => onUpdateNavbar({ bgColor: gradientCss, backgroundImage: undefined })}
+                onApplyImage={(imageUrl, size = 'cover') => onUpdateNavbar({ backgroundImage: imageUrl, backgroundSize: size })}
+                onRemoveImage={() => onUpdateNavbar({ backgroundImage: undefined })}
+              />
+            )}
+
+            {activeSection === 'background' && !isNavbarSelected && (
               <BackgroundDrawerSection
                 targetType={selectedElement ? 'element' : 'slide'}
                 targetName={selectedElement ? selectedElement.name : (activeSlide ? activeSlide.name : 'شريحة')}
@@ -6295,7 +6346,29 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             })()}
 
             {/* TOOL: Opacity (الشفافية: خيار العنصر وخيار الخلفية) */}
-            {activeSection === 'opacity' && (() => {
+            {activeSection === 'opacity' && isNavbarSelected && navbar && (
+              <div className="space-y-5 text-right" dir="rtl">
+                <SectionHeader title="شفافية النافبار" />
+                <Slider
+                  label="شفافية الخلفية"
+                  value={Math.round((navbar.backgroundOpacity ?? 1) * 100)}
+                  min={0}
+                  max={100}
+                  onChange={(v) => onUpdateNavbar({ backgroundOpacity: v / 100 })}
+                  formatValue={(v) => `${v}%`}
+                />
+                <Slider
+                  label="شفافية النصوص"
+                  value={Math.round((navbar.textOpacity ?? 1) * 100)}
+                  min={0}
+                  max={100}
+                  onChange={(v) => onUpdateNavbar({ textOpacity: v / 100 })}
+                  formatValue={(v) => `${v}%`}
+                />
+              </div>
+            )}
+
+            {activeSection === 'opacity' && !isNavbarSelected && (() => {
               const isTargetElement = opacityTarget === 'element' && !!selectedElement;
               
               // Check if element has background
@@ -6501,7 +6574,26 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             })()}
 
             {/* TOOL: Lighting (الإضاءة) */}
-            {activeSection === 'lighting' && (() => {
+            {activeSection === 'lighting' && isNavbarSelected && navbar && (
+              <div className="space-y-5 text-right" dir="rtl">
+                <SectionHeader title="إضاءة النافبار" />
+                <Slider
+                  label="شدة الإضاءة"
+                  value={navbar.innerGlowIntensity ?? 0}
+                  min={0}
+                  max={100}
+                  onChange={(v) => onUpdateNavbar({ innerGlowIntensity: v })}
+                  formatValue={(v) => `${v}%`}
+                />
+                <ColorSwatchPicker
+                  swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
+                  selectedValue={navbar.innerGlowColor || '#0071e3'}
+                  onSelect={(color) => onUpdateNavbar({ innerGlowColor: color })}
+                />
+              </div>
+            )}
+
+            {activeSection === 'lighting' && !isNavbarSelected && (() => {
               const isTargetElement = lightingTarget === 'element' && !!selectedElement;
 
               // Read values based on target (innerGlowIntensity/innerGlowColor/innerGlowPosition maps to inner lighting)
@@ -14839,6 +14931,55 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 selectedElement={selectedElement}
                 onUpdateElement={onUpdateElement}
               />
+            )}
+
+            {/* TOOL: Navbar settings (ترس الإعدادات) — sticky/scroll + hamburger menu mode */}
+            {activeSection === 'navbar-settings' && navbar && (
+              <div className="space-y-6 text-right" dir="rtl">
+                <div className="space-y-2">
+                  <SectionHeader title="سلوك النافبار عند التمرير" />
+                  <PillTabs
+                    options={[
+                      { value: 'sticky', label: 'ثابت عائم في الرأس' },
+                      { value: 'scroll', label: 'متحرك مع الصفحة' },
+                    ]}
+                    value={navbar.isSticky ? 'sticky' : 'scroll'}
+                    onChange={(v) => onUpdateNavbar({ isSticky: v === 'sticky' })}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-black/[0.06]">
+                  <SectionHeader title="قائمة Hamburger" />
+                  <p className="text-[11px] text-neutral-500 -mt-1">
+                    تحويل روابط وزر النافبار إلى أيقونة واحدة تفتح وتغلق القائمة.
+                  </p>
+                  <PillTabs
+                    options={[
+                      { value: 'off', label: 'غير مفعّلة' },
+                      { value: 'on', label: 'مفعّلة' },
+                    ]}
+                    value={navbar.isHamburgerMode ? 'on' : 'off'}
+                    onChange={(v) => onUpdateNavbar({ isHamburgerMode: v === 'on' })}
+                    className="w-full"
+                  />
+
+                  {navbar.isHamburgerMode && (
+                    <div className="pt-2 space-y-2">
+                      <span className="text-[11px] font-bold text-neutral-700">اتجاه فتح القائمة:</span>
+                      <PillTabs
+                        options={[
+                          { value: 'vertical', label: 'طولي (قائمة منسدلة)' },
+                          { value: 'horizontal', label: 'عرضي (صف واحد)' },
+                        ]}
+                        value={navbar.hamburgerDirection || 'vertical'}
+                        onChange={(v) => onUpdateNavbar({ hamburgerDirection: v as 'vertical' | 'horizontal' })}
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* Default for other tools */}

@@ -4235,54 +4235,111 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     return acc;
   }, {});
 
-  // صورة مصغرة افتراضية لمحتوى المجموعة: تعرض شكل الحاوية الحقيقي (مربع/دائرة/كبسولة)
-  // مع كتل رمادية صغيرة تمثل كل عنصر فرعي (صورة = كتلة مليئة، نص = شريط رفيع، زر = كبسولة ملونة)
-  // هذا يعمل مع أي مجموعة فعلية على الشريحة، وليس فقط النماذج الجاهزة
+  // صورة مصغرة حقيقية لمحتوى المجموعة كما ستبدو فعلياً على الصفحة:
+  // نرسم الحاوية وعناصرها بأحجامها وألوانها وأشكالها ونصوصها الحقيقية (بمقاسها الكامل)
+  // ثم نصغّر اللوحة بأكملها عبر CSS transform:scale — فتكون معاينة أمينة لنفس
+  // التصميم الفعلي (مو رموزاً أو أشرطة تخمينية)، وتعمل مع أي مجموعة حقيقية على الشريحة.
+  const renderGroupChildPreview = (el: CanvasElement, offsetX: number, offsetY: number) => {
+    const st = el.styles || {};
+    const clip = el.clipPath ? `url(#${el.clipPath})` : undefined;
+    const baseStyle: React.CSSProperties = {
+      position: 'absolute',
+      left: el.x - offsetX,
+      top: el.y - offsetY,
+      width: el.width,
+      height: el.height,
+      borderRadius: el.clipPath ? undefined : (typeof st.borderRadius === 'string' ? st.borderRadius : `${st.borderRadius || 0}px`),
+      clipPath: clip,
+      overflow: 'hidden',
+    };
+
+    if (el.type === 'image' || el.type === 'video') {
+      return (
+        <div key={el.id} style={{ ...baseStyle, backgroundColor: '#d1d5db' }}>
+          {el.imageUrl && (
+            <img src={el.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          )}
+        </div>
+      );
+    }
+
+    if (el.type === 'button' || el.type === 'badge' || el.type === 'input') {
+      return (
+        <div
+          key={el.id}
+          style={{
+            ...baseStyle,
+            backgroundColor: st.backgroundColor || (el.type === 'input' ? '#ffffff' : '#0071e3'),
+            border: el.type === 'input' ? `1px solid ${st.borderColor || '#d1d5db'}` : undefined,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: st.textAlign === 'left' ? 'flex-start' : st.textAlign === 'center' ? 'center' : 'flex-end',
+            color: st.color || '#ffffff',
+            fontSize: st.fontSize || 14,
+            fontWeight: st.fontWeight === 'bold' ? 'bold' : 'normal',
+            whiteSpace: 'nowrap',
+            padding: '0 4px',
+          }}
+        >
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{el.content}</span>
+        </div>
+      );
+    }
+
+    // shape زخرفي، أو عنوان/فقرة نصية
+    const isShape = el.type === 'shape';
+    return (
+      <div
+        key={el.id}
+        style={{
+          ...baseStyle,
+          backgroundColor: isShape ? (st.backgroundColor || '#cbd5e1') : 'transparent',
+          color: st.color || '#1d1d1f',
+          fontSize: st.fontSize || 14,
+          fontWeight: st.fontWeight === 'bold' ? 'bold' : 'normal',
+          textAlign: st.textAlign || 'right',
+          lineHeight: 1.15,
+        }}
+      >
+        {!isShape && el.content}
+      </div>
+    );
+  };
+
   const renderGroupThumb = (container: CanvasElement | undefined, groupChildren: CanvasElement[]) => {
     const cw = container?.width || 300;
     const ch = container?.height || 200;
-    const clip = container?.clipPath || '';
-    const isRound = clip.includes('circle') || clip.includes('capsule');
-    const thumbW = 30;
-    const thumbH = Math.max(16, Math.min(26, Math.round((ch / cw) * thumbW)));
-    const bgRaw = container?.styles?.backgroundColor;
-    const bg = bgRaw && bgRaw !== 'transparent' ? bgRaw : '#f1f5f9';
+    const outerW = 34;
+    const outerH = 26;
+    const scale = Math.min(outerW / cw, outerH / ch);
+    const containerClip = container?.clipPath;
+    const containerBgRaw = container?.styles?.backgroundColor;
+    const containerBg = containerBgRaw && containerBgRaw !== 'transparent' ? containerBgRaw : 'transparent';
+    const offsetX = container?.x || 0;
+    const offsetY = container?.y || 0;
 
     return (
       <div
-        className={`relative shrink-0 overflow-hidden border border-black/10 ${isRound ? 'rounded-full' : 'rounded-[4px]'}`}
-        style={{ width: thumbW, height: thumbH, backgroundColor: bg }}
+        className="relative shrink-0 overflow-hidden rounded-[6px] border border-dashed border-black/10"
+        style={{ width: outerW, height: outerH }}
       >
-        {groupChildren.map(child => {
-          const left = ((child.x - (container?.x || 0)) / cw) * 100;
-          const top = ((child.y - (container?.y || 0)) / ch) * 100;
-          const w = (child.width / cw) * 100;
-          const h = (child.height / ch) * 100;
-          const isBlock = child.type === 'image' || child.type === 'video';
-          const isButton = child.type === 'button';
-          const isInput = child.type === 'input';
-          const blockColor = isButton
-            ? (child.styles?.backgroundColor || '#0071e3')
-            : isBlock
-              ? '#cbd5e1'
-              : isInput
-                ? '#ffffff'
-                : '#9ca3af';
-          return (
-            <div
-              key={child.id}
-              className="absolute rounded-[1px]"
-              style={{
-                left: `${left}%`,
-                top: `${top}%`,
-                width: `${Math.max(w, 4)}%`,
-                height: `${Math.max(h, 8)}%`,
-                backgroundColor: blockColor,
-                border: isInput ? '0.5px solid #cbd5e1' : undefined,
-              }}
-            />
-          );
-        })}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: cw,
+            height: ch,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            backgroundColor: containerBg,
+            borderRadius: containerClip ? undefined : 10,
+            clipPath: containerClip ? `url(#${containerClip})` : undefined,
+            border: container && !containerClip && containerBg !== 'transparent' ? `1px solid ${container.styles?.borderColor || 'rgba(0,0,0,0.08)'}` : undefined,
+          }}
+        >
+          {groupChildren.map(child => renderGroupChildPreview(child, offsetX, offsetY))}
+        </div>
       </div>
     );
   };
@@ -8923,6 +8980,94 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         { type: 'heading', name: 'عنوان النموذج', content: 'تواصل معنا', x: 40, y: 26, width: 240, height: 30, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' } },
                         { type: 'input', name: 'حقل البريد', content: 'بريدك الإلكتروني', x: 40, y: 64, width: 240, height: 40, styles: { borderRadius: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' } },
                         { type: 'button', name: 'زر الإرسال', content: 'إرسال', x: 40, y: 112, width: 240, height: 42, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 10, fontWeight: 'bold', textAlign: 'center' } }
+                      ]);
+                    }
+                  },
+                  {
+                    id: 'grp-feature-overlap-label',
+                    title: 'بطاقة ميزة بصورة عائمة فوق تسمية',
+                    sub: 'الصورة تطفو فوق شكل ملون، مع نص داخل التسمية ووصف أسفلها',
+                    subCategories: ['features'],
+                    type: 'shape',
+                    preview: (
+                      <div className="w-full h-18 bg-neutral-900 rounded-xl p-1.5 flex flex-col items-center">
+                        <div className="relative w-full h-10">
+                          <div className="absolute inset-x-2 bottom-0 h-6 bg-amber-500 rounded-md" />
+                          <div className="absolute inset-x-0 top-0 h-8 bg-neutral-300 rounded-md mx-1" />
+                        </div>
+                        <div className="h-1.5 bg-neutral-500 rounded-md w-2/3 mt-1.5" />
+                      </div>
+                    ),
+                    action: () => {
+                      onAddGroup?.({
+                        name: 'بطاقة ميزة بصورة عائمة',
+                        width: 260,
+                        height: 270,
+                        styles: { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0 }
+                      }, [
+                        { type: 'shape', name: 'شكل التسمية', x: 20, y: 120, width: 220, height: 80, styles: { backgroundColor: '#f5a623', borderRadius: 8 } },
+                        { type: 'image', name: 'صورة الميزة', x: 10, y: 10, width: 240, height: 140, styles: { borderRadius: 10 } },
+                        { type: 'paragraph', name: 'نص التسمية', content: 'نص قصير داخل الشكل', x: 40, y: 156, width: 180, height: 36, styles: { fontSize: 13, fontWeight: 'bold', color: '#ffffff', textAlign: 'center' } },
+                        { type: 'paragraph', name: 'وصف الميزة', content: 'وصف مختصر يوضح الفكرة بجملة واحدة.', x: 10, y: 214, width: 240, height: 46, styles: { fontSize: 11, color: '#6b7280', textAlign: 'center' } }
+                      ]);
+                    }
+                  },
+                  {
+                    id: 'grp-team-pocket',
+                    title: 'بطاقة عضو فريق بشكل جيب ملون',
+                    sub: 'صورة دائرية تطفو فوق شكل ملون يحمل الاسم والمسمى الوظيفي',
+                    subCategories: ['team'],
+                    type: 'shape',
+                    preview: (
+                      <div className="w-full h-18 bg-neutral-50 rounded-xl flex flex-col items-center justify-center gap-0.5 p-1">
+                        <div className="relative w-10 h-10">
+                          <div className="absolute inset-x-0 bottom-0 h-7 bg-orange-500 rounded-md" />
+                          <div className="absolute inset-x-1.5 top-0 w-7 h-7 bg-neutral-300 rounded-full" />
+                        </div>
+                        <div className="h-1.5 bg-neutral-400 rounded-md w-1/2" />
+                      </div>
+                    ),
+                    action: () => {
+                      onAddGroup?.({
+                        name: 'بطاقة عضو فريق بشكل جيب',
+                        width: 180,
+                        height: 215,
+                        styles: { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0 }
+                      }, [
+                        { type: 'shape', name: 'الجيب الملون', x: 10, y: 60, width: 160, height: 140, styles: { backgroundColor: '#e8832f', borderRadius: 20 } },
+                        { type: 'image', name: 'صورة العضو', x: 40, y: 10, width: 100, height: 100, clipPath: 'clip-shape-geo-circle' },
+                        { type: 'heading', name: 'الاسم', content: 'اسم العضو', x: 20, y: 120, width: 140, height: 28, styles: { fontSize: 14, fontWeight: 'bold', color: '#ffffff', textAlign: 'center' } },
+                        { type: 'paragraph', name: 'المسمى الوظيفي', content: 'المسمى الوظيفي', x: 20, y: 150, width: 140, height: 40, styles: { fontSize: 11, color: '#fff7ed', textAlign: 'center' } }
+                      ]);
+                    }
+                  },
+                  {
+                    id: 'grp-team-accent-bar',
+                    title: 'بطاقة عضو فريق بشريط ملون',
+                    sub: 'صورة دائرية تطفو فوق شريط ملون رفيع، مع الاسم والوصف على خلفية بيضاء',
+                    subCategories: ['team'],
+                    type: 'shape',
+                    preview: (
+                      <div className="w-full h-18 bg-white rounded-xl flex flex-col items-center justify-center gap-0.5 p-1 border border-neutral-200">
+                        <div className="relative w-10 h-9">
+                          <div className="absolute inset-x-0 bottom-1 h-3 bg-amber-400 rounded-sm" />
+                          <div className="absolute inset-x-1.5 top-0 w-7 h-7 bg-neutral-300 rounded-full" />
+                        </div>
+                        <div className="h-1.5 bg-neutral-500 rounded-md w-1/2" />
+                        <div className="h-1 bg-neutral-200 rounded-md w-2/3" />
+                      </div>
+                    ),
+                    action: () => {
+                      onAddGroup?.({
+                        name: 'بطاقة عضو فريق بشريط ملون',
+                        width: 180,
+                        height: 225,
+                        styles: { backgroundColor: 'transparent', borderWidth: 0, borderRadius: 0 }
+                      }, [
+                        { type: 'shape', name: 'الشريط الملون', x: 10, y: 85, width: 160, height: 55, styles: { backgroundColor: '#f5c518', borderRadius: 4 } },
+                        { type: 'image', name: 'صورة العضو', x: 50, y: 15, width: 80, height: 80, clipPath: 'clip-shape-geo-circle' },
+                        { type: 'heading', name: 'الاسم', content: 'اسم العضو', x: 10, y: 150, width: 160, height: 26, styles: { fontSize: 14, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' } },
+                        { type: 'paragraph', name: 'الوصف', content: 'وصف قصير أو دور العضو هنا.', x: 10, y: 178, width: 160, height: 40, styles: { fontSize: 11, color: '#4b5563', textAlign: 'center' } }
                       ]);
                     }
                   }

@@ -1274,347 +1274,294 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
         }
       ];
     } else if (index === 6) {
-      // Retail Trade Intro (تجارة بالمفرق)
-      elements = [
-        {
-          type: 'shape',
-          name: 'نقطة زخرفية علوية كبيرة',
-          x: 650,
-          y: 30,
-          width: 90,
-          height: 90,
-          clipPath: 'clip-shape-geo-circle',
-          content: 'circle',
-          styles: { backgroundColor: col.bgShape }
-        },
-        {
-          type: 'shape',
-          name: 'نقطة زخرفية علوية صغيرة',
-          x: 600,
-          y: 140,
-          width: 50,
-          height: 50,
-          clipPath: 'clip-shape-geo-circle',
-          content: 'circle',
-          styles: { backgroundColor: 'rgba(22,163,74,0.15)' }
-        },
-        {
-          type: 'shape',
-          name: 'كبسولة صورة المتجر',
-          x: 460,
-          y: 220,
-          width: 300,
-          height: 220,
-          clipPath: 'clip-shape-geo-capsule',
-          content: 'capsule',
-          styles: { backgroundImage: '/Library/roman-serdyuk-wFFw_xUTXOY-unsplash.jpg', backgroundSize: 'cover' }
-        },
-        {
-          type: 'shape',
-          name: 'لوحة محتوى المتجر',
-          x: 40,
-          y: 150,
-          width: 390,
-          height: 300,
-          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 18, glowColor: 'rgba(22,163,74,0.15)', glowPosition: 'bottom' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة الأسعار التنافسية',
-          x: 70,
-          y: 180,
-          width: 270,
-          height: 30,
-          content: 'أسعار تنافسية وتشكيلة واسعة',
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2.5 }
-        },
-        {
-          type: 'heading',
-          name: 'عنوان المتجر',
-          x: 70,
-          y: 225,
-          width: 340,
-          height: 90,
-          content: 'سوق الوفرة للتجارة بالمفرق — كل ما تحتاجه تحت سقف واحد',
-          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', fontFamily: 'Tajawal', textAlign: 'right', lineHeight: 1.3 }
-        },
-        {
-          type: 'paragraph',
-          name: 'نص المتجر',
-          x: 70,
-          y: 325,
-          width: 340,
-          height: 90,
-          content: 'نوفر تشكيلة واسعة من المنتجات المنزلية والتجارية بأسعار الجملة مباشرة للمستهلك، مع تحديث يومي للمخزون وتوصيل سريع.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
-        },
-        {
-          type: 'button',
-          name: 'زر تصفح الكتالوج',
-          x: 70,
-          y: 420,
-          width: 220,
-          height: 40,
-          content: 'تصفح كتالوج المنتجات',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
-          type: 'card',
-          name: 'بطاقة التخفيضات الأسبوعية',
-          x: 480,
-          y: 460,
-          width: 270,
-          height: 100,
-          content: 'تخفيضات أسبوعية وعروض حصرية لعملاء الجملة والمفرق على مدار العام.',
-          styles: {}
-        }
-      ];
-    } else if (index === 7) {
-      // Beauty Salon & Barbershop Intro (صالونات تجميل وحلاقة)
-      elements = [
-        {
-          type: 'shape',
-          name: 'بقعة زخرفية علوية',
-          x: -60,
-          y: -60,
-          width: 300,
-          height: 300,
-          clipPath: 'clip-shape-blob-splash',
-          content: 'blob',
-          styles: { backgroundColor: col.bgShape }
-        },
-        {
-          type: 'shape',
-          name: 'فقاعة صورة الصالون',
-          x: 560,
-          y: 340,
-          width: 300,
-          height: 300,
-          clipPath: 'clip-shape-blob-bubble',
-          content: 'blob',
-          styles: { backgroundImage: '/Library/neeqolah-creative-works-CUzWd1cwFCQ-unsplash.jpg', backgroundSize: 'cover' }
-        },
-        {
-          type: 'shape',
-          name: 'لوحة محتوى الصالون',
-          x: 50,
-          y: 140,
-          width: 400,
-          height: 330,
-          styles: { backgroundColor: col.card, borderRadius: 28, glowIntensity: 22, glowColor: 'rgba(124,58,237,0.16)', glowPosition: 'bottom', borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.18)' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة العناية الراقية',
-          x: 80,
-          y: 170,
-          width: 230,
-          height: 30,
-          content: 'عناية وتجميل راقية',
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
-          type: 'heading',
-          name: 'عنوان الصالون',
-          x: 80,
-          y: 215,
-          width: 340,
-          height: 90,
-          content: 'صالون لمسات — جمالك يستحق لمسة احترافية فاخرة',
-          styles: { fontSize: 25, color: col.text, fontWeight: 'bold', fontFamily: 'Aref Ruqaa', textAlign: 'right', lineHeight: 1.35 }
-        },
-        {
-          type: 'paragraph',
-          name: 'نص الصالون',
-          x: 80,
-          y: 320,
-          width: 340,
-          height: 90,
-          content: 'نقدم خدمات تصفيف وعناية بالشعر والبشرة على أيدي خبيرات متخصصات باستخدام منتجات عالمية راقية في جو هادئ يليق بتجربتك.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
-        },
-        {
-          type: 'button',
-          name: 'زر حجز الموعد',
-          x: 80,
-          y: 420,
-          width: 210,
-          height: 44,
-          content: 'احجزي موعدك الآن',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
-        }
-      ];
-    } else if (index === 8) {
-      // Restaurant & Cafe Intro (مطعم وكافيه)
+      // خلفية ثابتة (صورة واقعية) + صورة مشروع مميزة + تعريف بالمشروع
       elements = [
         {
           type: 'image',
-          name: 'خلفية كاملة - صالة المطعم',
+          name: 'خلفية كاملة - الشيما السابعة',
           x: 0,
           y: 0,
           width: 800,
           height: 580,
-          content: '/Library/mae-mu-rgRbqFweGF0-unsplash.jpg',
-          imageUrl: '/Library/mae-mu-rgRbqFweGF0-unsplash.jpg',
-          styles: { objectFit: 'cover', opacity: 0.25, backgroundAttachment: 'fixed' }
+          content: '/Library/compressed/intro-extra-static1.jpg',
+          imageUrl: '/Library/compressed/intro-extra-static1.jpg',
+          styles: { objectFit: 'cover', opacity: 0.85, backgroundAttachment: 'fixed' }
         },
         {
           type: 'shape',
-          name: 'حلقة لونية خلف صورة الطبق',
-          x: 450,
-          y: 50,
-          width: 320,
-          height: 320,
-          clipPath: 'clip-shape-geo-circle',
-          content: 'circle',
-          styles: { backgroundColor: 'rgba(234,88,12,0.08)' }
-        },
-        {
-          type: 'image',
-          name: 'صورة الطبق الشهي المقصوصة',
-          x: 470,
-          y: 70,
-          width: 280,
-          height: 280,
-          content: '/Library/danielle-suijkerbuijk-Eza6E_v2ZYo-unsplash.jpg',
-          imageUrl: '/Library/danielle-suijkerbuijk-Eza6E_v2ZYo-unsplash.jpg',
-          clipPath: 'clip-shape-geo-circle',
-          styles: { objectFit: 'cover' }
-        },
-        {
-          type: 'shape',
-          name: 'لوحة محتوى المطعم',
-          x: 40,
-          y: 140,
-          width: 390,
-          height: 330,
-          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 22, glowColor: 'rgba(234,88,12,0.18)', glowPosition: 'bottom' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة نكهات طازجة',
-          x: 70,
-          y: 170,
-          width: 220,
-          height: 30,
-          content: 'نكهات طازجة يوميًا',
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
-          type: 'heading',
-          name: 'عنوان المطعم',
-          x: 70,
-          y: 215,
-          width: 330,
-          height: 100,
-          content: 'مطعم الفرن الذهبي — مذاق أصيل يجمع العائلة على مائدة واحدة',
-          styles: { fontSize: 23, color: col.text, fontWeight: 'bold', fontFamily: 'Lemonada', textAlign: 'right', lineHeight: 1.35, animation: 'slide-up', animationTrigger: 'once', animationDuration: 1.1 }
-        },
-        {
-          type: 'paragraph',
-          name: 'نص المطعم',
-          x: 70,
-          y: 330,
-          width: 330,
-          height: 90,
-          content: 'نقدم أشهى الأطباق الشرقية والعالمية المحضّرة من مكونات طازجة يوميًا، في جو عائلي دافئ يناسب كل المناسبات والسهرات الخاصة.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
-        },
-        {
-          type: 'button',
-          name: 'زر طلب أو حجز طاولة',
-          x: 70,
-          y: 440,
-          width: 230,
-          height: 44,
-          content: 'اطلب أو احجز طاولتك',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', glowIntensity: 18, glowColor: 'rgba(234,88,12,0.3)', glowPosition: 'bottom' }
-        }
-      ];
-    } else if (index === 9) {
-      // Real Estate Intro (تجارة العقارات)
-      elements = [
-        {
-          type: 'shape',
-          name: 'إطار حول صورة العقار',
-          x: 440,
-          y: 30,
-          width: 340,
-          height: 460,
-          content: 'frame',
-          styles: { backgroundColor: 'transparent', borderWidth: 2, borderColor: col.accent, borderRadius: 16 }
-        },
-        {
-          type: 'image',
-          name: 'صورة العقار بقوس كلاسيكي',
-          x: 460,
-          y: 50,
-          width: 300,
-          height: 420,
-          content: '/Library/steve-a-johnson-UFMPOCJDg5w-unsplash.jpg',
-          imageUrl: '/Library/steve-a-johnson-UFMPOCJDg5w-unsplash.jpg',
-          clipPath: 'clip-shape-arch-classic',
-          styles: { objectFit: 'cover' }
-        },
-        {
-          type: 'shape',
-          name: 'مثلث زخرفي زاوية سفلية',
-          x: -30,
-          y: 460,
-          width: 160,
-          height: 160,
-          clipPath: 'clip-shape-geo-triangle',
-          content: 'triangle',
-          styles: { backgroundColor: col.bgShape }
-        },
-        {
-          type: 'shape',
-          name: 'لوحة محتوى العقارات',
-          x: 40,
+          name: 'لوحة المحتوى',
+          x: 50,
           y: 130,
           width: 380,
           height: 340,
-          styles: { backgroundColor: col.card, borderRadius: 22, glowIntensity: 18, glowColor: 'rgba(71,85,105,0.14)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(71,85,105,0.12)' }
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.18)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
         },
         {
           type: 'badge',
-          name: 'شارة عقارات مميزة',
-          x: 70,
+          name: 'شارة تعريف المشروع',
+          x: 80,
           y: 160,
-          width: 280,
+          width: 260,
           height: 30,
-          content: 'عقارات مميزة بمواقع استراتيجية',
+          content: 'تعرف على مشروعنا',
           styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
           type: 'heading',
-          name: 'عنوان العقارات',
-          x: 70,
+          name: 'عنوان تعريف المشروع',
+          x: 80,
           y: 205,
-          width: 330,
+          width: 320,
           height: 90,
-          content: 'مجموعة الأفق العقارية — استثمارك الآمن نحو منزل الأحلام',
-          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', fontFamily: 'Readex Pro', textAlign: 'right', lineHeight: 1.35 }
+          content: 'فكرة بسيطة تحولت إلى مشروع نفخر به اليوم',
+          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
         },
         {
           type: 'paragraph',
-          name: 'نص العقارات',
-          x: 70,
-          y: 310,
-          width: 330,
-          height: 100,
-          content: 'نوفر محفظة متنوعة من الشقق والفلل والأراضي في أرقى المواقع، مع استشارات تمويل عقاري ومتابعة قانونية كاملة حتى تسليم المفاتيح.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+          name: 'نص تعريف المشروع',
+          x: 80,
+          y: 305,
+          width: 320,
+          height: 90,
+          content: 'بدأنا بخطوة صغيرة وإيمان كبير بالفكرة، واليوم نقدّم تجربة متكاملة لعملائنا بثقة وشغف.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
         },
         {
           type: 'button',
-          name: 'زر تصفح العقارات',
-          x: 70,
+          name: 'زر تعرف على القصة',
+          x: 80,
           y: 420,
-          width: 220,
+          width: 200,
           height: 44,
-          content: 'تصفح العقارات المتاحة',
+          content: 'تعرف على القصة',
           styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'image',
+          name: 'صورة المشروع المميزة',
+          x: 470,
+          y: 80,
+          width: 290,
+          height: 290,
+          content: '/Library/compressed/intro-extra-animated1.jpg',
+          imageUrl: '/Library/compressed/intro-extra-animated1.jpg',
+          styles: { objectFit: 'cover', borderRadius: 24, borderWidth: 6, borderColor: '#ffffff', glowIntensity: 26, glowColor: 'rgba(0,0,0,0.22)', glowPosition: 'bottom' }
+        }
+      ];
+    } else if (index === 7) {
+      // خلفية متحركة (تأثير طفو بطيء) + صورة مشروع مميزة + تعريف بالمشروع
+      elements = [
+        {
+          type: 'image',
+          name: 'الطبقة البصرية الرئيسية',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/Library/compressed/intro-extra-animated1.jpg',
+          imageUrl: '/Library/compressed/intro-extra-animated1.jpg',
+          styles: { objectFit: 'cover', opacity: 0.9, animation: 'float', animationTrigger: 'loop', animationDuration: 6 }
+        },
+        {
+          type: 'image',
+          name: 'صورة المشروع المميزة',
+          x: 40,
+          y: 80,
+          width: 290,
+          height: 290,
+          content: '/Library/compressed/intro-extra-static2.jpg',
+          imageUrl: '/Library/compressed/intro-extra-static2.jpg',
+          styles: { objectFit: 'cover', borderRadius: 24, borderWidth: 6, borderColor: '#ffffff', glowIntensity: 26, glowColor: 'rgba(0,0,0,0.22)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة المحتوى',
+          x: 370,
+          y: 130,
+          width: 380,
+          height: 340,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.18)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة تعريف المشروع 2',
+          x: 400,
+          y: 160,
+          width: 260,
+          height: 30,
+          content: 'مشروعنا بين يديك',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان تعريف المشروع 2',
+          x: 400,
+          y: 205,
+          width: 320,
+          height: 90,
+          content: 'نبني تجربة رقمية تعكس هوية مشروعك بدقة',
+          styles: { fontSize: 22, color: col.text, fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص تعريف المشروع 2',
+          x: 400,
+          y: 305,
+          width: 320,
+          height: 90,
+          content: 'كل تفصيلة مدروسة لتمنحك حضوراً رقمياً يليق بطموحك.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر ابدأ مشروعك',
+          x: 400,
+          y: 420,
+          width: 200,
+          height: 44,
+          content: 'ابدأ مشروعك الآن',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    } else if (index === 8) {
+      // خلفية ثابتة + صورة مشروع علوية + لوحة تعريف سفلية مركزية
+      elements = [
+        {
+          type: 'image',
+          name: 'خلفية كاملة - الشيما التاسعة',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/Library/compressed/intro-extra-static2.jpg',
+          imageUrl: '/Library/compressed/intro-extra-static2.jpg',
+          styles: { objectFit: 'cover', opacity: 0.9, backgroundAttachment: 'scroll' }
+        },
+        {
+          type: 'image',
+          name: 'صورة المشروع العلوية',
+          x: 250,
+          y: 50,
+          width: 300,
+          height: 260,
+          content: '/Library/compressed/intro-extra-animated2.jpg',
+          imageUrl: '/Library/compressed/intro-extra-animated2.jpg',
+          styles: { objectFit: 'cover', borderRadius: 24, borderWidth: 6, borderColor: '#ffffff', glowIntensity: 26, glowColor: 'rgba(0,0,0,0.22)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة المحتوى السفلية',
+          x: 150,
+          y: 340,
+          width: 500,
+          height: 190,
+          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 22, glowColor: 'rgba(0,0,0,0.16)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان تعريف المشروع 3',
+          x: 180,
+          y: 365,
+          width: 440,
+          height: 40,
+          content: 'مشروع وُلد من شغف حقيقي بالتفاصيل',
+          styles: { fontSize: 20, color: col.text, fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص تعريف المشروع 3',
+          x: 180,
+          y: 410,
+          width: 440,
+          height: 60,
+          content: 'نؤمن أن الجودة تبدأ من الاهتمام بأدق التفاصيل في كل خطوة.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر اكتشف المزيد',
+          x: 300,
+          y: 480,
+          width: 200,
+          height: 40,
+          content: 'اكتشف المزيد',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        }
+      ];
+    } else if (index === 9) {
+      // خلفية متحركة (تأثير طفو بطيء) + صورة مشروع دائرية + تعريف بالمشروع
+      elements = [
+        {
+          type: 'image',
+          name: 'المشهد البصري المتحرك',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/Library/compressed/intro-extra-animated2.jpg',
+          imageUrl: '/Library/compressed/intro-extra-animated2.jpg',
+          styles: { objectFit: 'cover', opacity: 0.88, animation: 'float', animationTrigger: 'loop', animationDuration: 5.5 }
+        },
+        {
+          type: 'shape',
+          name: 'لوحة المحتوى 4',
+          x: 50,
+          y: 90,
+          width: 360,
+          height: 400,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.18)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
+        },
+        {
+          type: 'badge',
+          name: 'شارة تعريف المشروع 4',
+          x: 80,
+          y: 120,
+          width: 260,
+          height: 30,
+          content: 'هذا ما نقدمه',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان تعريف المشروع 4',
+          x: 80,
+          y: 165,
+          width: 300,
+          height: 90,
+          content: 'نحوّل الأفكار إلى تجارب رقمية ملموسة',
+          styles: { fontSize: 21, color: col.text, fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص تعريف المشروع 4',
+          x: 80,
+          y: 265,
+          width: 300,
+          height: 120,
+          content: 'فريقنا يعمل بشغف ليقدّم لك نتيجة تستحق فعلاً أن تحمل اسم مشروعك.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر تعرف علينا أكثر',
+          x: 80,
+          y: 410,
+          width: 200,
+          height: 44,
+          content: 'تعرف علينا أكثر',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'image',
+          name: 'صورة المشروع الدائرية',
+          x: 460,
+          y: 130,
+          width: 300,
+          height: 300,
+          content: '/Library/compressed/intro-extra-static1.jpg',
+          imageUrl: '/Library/compressed/intro-extra-static1.jpg',
+          clipPath: 'clip-shape-geo-circle',
+          styles: { objectFit: 'cover' }
         }
       ];
     }

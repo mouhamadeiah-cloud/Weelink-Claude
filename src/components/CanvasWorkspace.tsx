@@ -4115,7 +4115,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         </footer>
         </div>
       </div>
-    </div>
 
     {/* Floating drop compression indicator */}
     {isDroppingPhoto && (

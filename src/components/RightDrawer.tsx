@@ -14999,18 +14999,29 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                   </div>
 
                   {/* MINI SLIDE LAYOUT VIEW (صورة مصغرة حقيقية تعبر عن الهيكل الفعلي للشريحة) */}
-                  <div 
+                  <div
                     className="w-full h-[135px] relative overflow-hidden"
                     style={{ backgroundColor: templatePayload.backgroundColor || '#ffffff' }}
                   >
+                    {/* Background image layer (own opacity, independent of overlaid content) */}
+                    {templatePayload.backgroundImage && (
+                      <div
+                        className="absolute inset-0 pointer-events-none select-none"
+                        style={{
+                          backgroundImage: `url(${templatePayload.backgroundImage})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          opacity: templatePayload.backgroundOpacity ?? 1,
+                        }}
+                      />
+                    )}
                     {/* Inner scaled container: 1280px wide and 580px high, scaled down to fit perfectly */}
-                    <div 
+                    <div
                       className="absolute top-0 left-0 origin-top-left pointer-events-none select-none"
                       style={{
                         width: '1280px',
                         height: '580px',
                         transform: 'scale(0.23)',
-                        backgroundColor: templatePayload.backgroundColor || '#ffffff',
                       }}
                     >
                       {/* Map through elements of the slide template to render exact miniature representations */}

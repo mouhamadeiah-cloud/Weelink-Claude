@@ -1619,13 +1619,20 @@ export default function App() {
     setActiveSlideId(newSlideId);
   };
 
-  const handleAddSlideTemplate = (template: { name: string; height: number; backgroundColor: string; elements: any[] }) => {
+  const handleAddSlideTemplate = (template: { name: string; height: number; backgroundColor: string; backgroundImage?: string; backgroundOpacity?: number; backgroundAttachment?: 'scroll' | 'fixed'; elements: any[] }) => {
     const newSlideId = `slide-${Date.now()}`;
     const newSlide: Slide = {
       id: newSlideId,
       name: template.name,
       height: template.height,
       backgroundColor: template.backgroundColor,
+      ...(template.backgroundImage ? {
+        backgroundImage: template.backgroundImage,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundOpacity: template.backgroundOpacity ?? 1,
+        backgroundAttachment: template.backgroundAttachment || 'scroll',
+      } : {}),
     };
 
     const newElements: CanvasElement[] = template.elements.map((el, idx) => {

@@ -193,6 +193,8 @@ export interface NavbarItem {
   id: string;
   label: string;
   href: string;
+  linkType?: LinkType;
+  linkTargetId?: string;
 }
 
 export interface NavbarConfig {
@@ -201,9 +203,13 @@ export interface NavbarConfig {
   items: NavbarItem[];
   ctaText: string;
   ctaHref: string;
+  ctaLinkType?: LinkType;
+  ctaLinkTargetId?: string;
   bgColor: string;
   textColor: string;
   isSticky: boolean;
+  // Navbar strip height/length in px (default 60 when unset)
+  height?: number;
   // Background image (same logic as a slide's background image)
   backgroundImage?: string;
   backgroundSize?: 'cover' | 'contain' | 'auto';
@@ -219,15 +225,22 @@ export interface NavbarConfig {
   glowColor?: string;
   glowIntensity?: number;
   glowPosition?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-  // Settings: fixed/floating at the top vs. scrolling away with the page is already `isSticky`.
-  // Hamburger menu mode (collapses nav links/cta behind a toggle)
-  isHamburgerMode?: boolean;
-  hamburgerDirection?: 'vertical' | 'horizontal';
   // Border / frame — same field names/logic as a slide's border editing
   borderColor?: string;
   borderWidth?: number;
   borderRadius?: number;
   borderStyle?: string;
+  // Site name (brand) visibility + an actual user-uploaded logo image (shown instead of the letter badge)
+  showBrandName?: boolean;
+  logoUrl?: string;
+  // Page-name (nav items) row alignment
+  itemsAlign?: 'right' | 'center' | 'left';
+  // Page-name (nav items) "frame" styling: font + background + border around each label
+  itemsFontFamily?: string;
+  itemsFrameBgColor?: string;
+  itemsFrameBorderColor?: string;
+  itemsFrameBorderWidth?: number;
+  itemsFrameBorderRadius?: number;
 }
 
 export interface Page {

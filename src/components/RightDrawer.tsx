@@ -4251,6 +4251,26 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const [galleryTargetReplaceIndex, setGalleryTargetReplaceIndex] = useState<number | null>(null);
 
+  // Navbar logo upload state
+  const [isNavbarLogoUploading, setIsNavbarLogoUploading] = useState(false);
+  const navbarLogoFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleNavbarLogoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    setIsNavbarLogoUploading(true);
+    try {
+      const downloadUrl = await uploadGalleryImageToStorage(file);
+      onUpdateNavbar({ logoUrl: downloadUrl });
+    } catch (err) {
+      console.error('Navbar logo upload failed', err);
+    } finally {
+      setIsNavbarLogoUploading(false);
+    }
+  };
+
   const handleLoadUnsplashForGallery = async (query: string) => {
     setIsUnsplashLoading(true);
     try {
@@ -5703,24 +5723,186 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             )}
 
             {/* TOOL: Shadow (الظلال) */}
-            {activeSection === 'shadow' && isNavbarSelected && navbar && (
-              <div className="space-y-5 text-right" dir="rtl">
-                <SectionHeader title="ظلال النافبار الخارجية" />
-                <Slider
-                  label="شدة الظل"
-                  value={navbar.glowIntensity ?? 0}
-                  min={0}
-                  max={100}
-                  onChange={(v) => onUpdateNavbar({ glowIntensity: v })}
-                  formatValue={(v) => `${v}%`}
-                />
-                <ColorSwatchPicker
-                  swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
-                  selectedValue={navbar.glowColor || '#1d1d1f'}
-                  onSelect={(color) => onUpdateNavbar({ glowColor: color })}
-                />
-              </div>
-            )}
+            {activeSection === 'shadow' && isNavbarSelected && navbar && (() => {
+              // Reuses the exact element/slide "shadow" structure below (intensity slider, page-palette
+              // swatches, 50 basic colors, free color picker, 9-direction grid) instead of a bespoke
+              // simplified panel, targeted directly at the navbar (no element/slide switcher needed).
+              const activeShadowIntensity = navbar.glowIntensity ?? 0;
+              const activeShadowColor = navbar.glowColor || '#1d1d1f';
+              const activeShadowPosition = navbar.glowPosition || 'center';
+
+              const updateShadowIntensity = (intensity: number) => onUpdateNavbar({ glowIntensity: intensity });
+              const updateShadowColor = (color: string) => onUpdateNavbar({ glowColor: color });
+              const updateShadowPosition = (pos: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left') =>
+                onUpdateNavbar({ glowPosition: pos });
+
+              const BASIC_50_COLORS = [
+                '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b',
+                '#fb923c', '#f97316', '#ea580c', '#c2410c', '#9a3412',
+                '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#854d0e',
+                '#4ade80', '#22c55e', '#16a34a', '#15803d', '#14532d',
+                '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e', '#115e59',
+                '#22d3ee', '#06b6d4', '#0891b2', '#0e7490', '#155e75',
+                '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af',
+                '#c084fc', '#a855f7', '#9333ea', '#7e22ce', '#6b21a8',
+                '#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d',
+                '#ffffff', '#f3f4f6', '#e5e7eb', '#4b5563', '#111827'
+              ];
+
+              const DIRECTION_CELLS = [
+                { id: 'top-left', label: 'أعلى يسار', name: 'زاوية علوية يسار' },
+                { id: 'top', label: 'أعلى', name: 'أعلى الوسط' },
+                { id: 'top-right', label: 'أعلى يمين', name: 'زاوية علوية يمين' },
+                { id: 'left', label: 'يسار', name: 'الوسط يسار' },
+                { id: 'center', label: 'الوسط', name: 'من جميع الجهات' },
+                { id: 'right', label: 'يمين', name: 'الوسط يمين' },
+                { id: 'bottom-left', label: 'أسفل يسار', name: 'زاوية سفلية يسار' },
+                { id: 'bottom', label: 'أسفل', name: 'أسفل الوسط' },
+                { id: 'bottom-right', label: 'أسفل يمين', name: 'زاوية سفلية يمين' },
+              ] as const;
+
+              return (
+                <div className="space-y-4 text-right" dir="rtl">
+                  <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
+                    <span className="text-[11px] font-bold text-[#0071e3]">تعديل ظل النافبار</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-neutral-700 font-bold">درجة وشدة الظل (Shadow Intensity):</span>
+                      <span className="font-mono text-[#0071e3] font-bold">{activeShadowIntensity}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="50"
+                      value={activeShadowIntensity}
+                      onChange={(e) => updateShadowIntensity(Number(e.target.value))}
+                      className="w-full accent-[#0071e3] cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+                      <span>إيقاف (0px)</span>
+                      <span>متوسط (25px)</span>
+                      <span>شديد (50px)</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-neutral-800 block">لون الظل الخارجي (Shadow Color):</span>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-neutral-400 font-semibold block">ألوان الصفحة الافتراضية:</span>
+                      <div className="flex gap-2 p-1.5 bg-neutral-50 rounded-xl border border-neutral-200/65">
+                        {customColors.map((hex, idx) => {
+                          const isSelected = activeShadowColor.toLowerCase() === hex.toLowerCase();
+                          return (
+                            <button
+                              key={`navbar-shadow-palette-color-${idx}-${hex}`}
+                              onClick={() => updateShadowColor(hex)}
+                              className={`w-7 h-7 rounded-full border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-3xs flex items-center justify-center ${
+                                isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                              }`}
+                              style={{ backgroundColor: hex }}
+                              title={`لون الصفحة ${idx + 1}: ${hex}`}
+                            >
+                              {isSelected && (
+                                <Check size={12} className={['#ffffff', '#e5e5ea', '#f5f5f7'].includes(hex.toLowerCase()) ? 'text-black' : 'text-white'} strokeWidth={3} />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-neutral-400 font-semibold block">الخمسون لوناً الأساسية:</span>
+                        <span className="text-[9px] text-neutral-400 font-mono" dir="ltr">50 basic colors</span>
+                      </div>
+                      <div className="p-2 bg-neutral-50 rounded-2xl border border-neutral-200/70 max-h-40 overflow-y-auto pr-1">
+                        <div className="grid grid-cols-10 gap-1.5">
+                          {BASIC_50_COLORS.map((hex, idx) => {
+                            const isSelected = activeShadowColor.toLowerCase() === hex.toLowerCase();
+                            return (
+                              <button
+                                key={`navbar-shadow-basic-color-${idx}-${hex}`}
+                                onClick={() => updateShadowColor(hex)}
+                                className={`w-5 h-5 rounded-md border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-4xs flex items-center justify-center ${
+                                  isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                                }`}
+                                style={{ backgroundColor: hex }}
+                                title={hex}
+                              >
+                                {isSelected && (
+                                  <Check size={10} className={['#ffffff', '#f3f4f6', '#e5e7eb'].includes(hex.toLowerCase()) ? 'text-black' : 'text-white'} strokeWidth={3} />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 bg-neutral-50 p-1.5 rounded-xl border border-neutral-200">
+                      <input
+                        type="color"
+                        value={activeShadowColor.startsWith('#') ? activeShadowColor : '#1d1d1f'}
+                        onChange={(e) => updateShadowColor(e.target.value)}
+                        className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent shrink-0 shadow-3xs"
+                      />
+                      <input
+                        type="text"
+                        value={activeShadowColor}
+                        onChange={(e) => updateShadowColor(e.target.value)}
+                        placeholder="اختر لوناً حراً"
+                        className="flex-1 text-[11px] px-2 py-1 bg-white rounded-md border border-neutral-200 font-mono text-left"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <span className="text-xs font-bold text-neutral-800 block">توجيه اتجاه وزاوية الظل (Shadow Position):</span>
+                    <p className="text-[10px] text-neutral-500 leading-tight">
+                      انقر على المربع لتوجيه الظل في الاتجاه المرغوب. تبرز المعاينات شكل الظل الخارجي المطبق على مربع رمادي افتراضي:
+                    </p>
+
+                    <div className="bg-neutral-100 p-3 rounded-2xl border border-neutral-200/80 flex justify-center items-center">
+                      <div className="grid grid-cols-3 gap-3.5 max-w-[240px] w-full">
+                        {DIRECTION_CELLS.map((cell) => {
+                          const isSelected = activeShadowPosition === cell.id;
+                          const previewIntensity = activeShadowIntensity > 0 ? Math.min(activeShadowIntensity, 16) : 10;
+                          const boxPreviewShadow = getGlowShadowStyle(previewIntensity, activeShadowColor, cell.id, false);
+
+                          return (
+                            <button
+                              key={`navbar-shadow-dir-${cell.id}`}
+                              onClick={() => updateShadowPosition(cell.id)}
+                              className={`relative aspect-square rounded-xl p-1 transition-all flex flex-col items-center justify-center cursor-pointer border-2 bg-white ${
+                                isSelected ? 'border-[#0071e3] bg-[#0071e3]/5 shadow-xs scale-105 z-10' : 'border-transparent hover:border-neutral-300'
+                              }`}
+                              title={cell.name}
+                            >
+                              <div className="w-9 h-9 rounded-lg bg-neutral-300 transition-all flex items-center justify-center border border-neutral-300/40" style={{ boxShadow: boxPreviewShadow }}>
+                                {isSelected ? (
+                                  <span className="w-4 h-4 rounded-full bg-[#0071e3] text-white flex items-center justify-center font-bold shadow-4xs shrink-0 z-20">
+                                    <Check size={10} strokeWidth={3} />
+                                  </span>
+                                ) : (
+                                  <span className="text-[8.5px] font-bold text-neutral-500/80 pointer-events-none select-none z-10">
+                                    {cell.label}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {activeSection === 'shadow' && !isNavbarSelected && (() => {
               const isTargetElement = shadowTarget === 'element' && !!selectedElement;
@@ -6615,24 +6797,189 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             })()}
 
             {/* TOOL: Lighting (الإضاءة) */}
-            {activeSection === 'lighting' && isNavbarSelected && navbar && (
-              <div className="space-y-5 text-right" dir="rtl">
-                <SectionHeader title="إضاءة النافبار" />
-                <Slider
-                  label="شدة الإضاءة"
-                  value={navbar.innerGlowIntensity ?? 0}
-                  min={0}
-                  max={100}
-                  onChange={(v) => onUpdateNavbar({ innerGlowIntensity: v })}
-                  formatValue={(v) => `${v}%`}
-                />
-                <ColorSwatchPicker
-                  swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
-                  selectedValue={navbar.innerGlowColor || '#0071e3'}
-                  onSelect={(color) => onUpdateNavbar({ innerGlowColor: color })}
-                />
-              </div>
-            )}
+            {activeSection === 'lighting' && isNavbarSelected && navbar && (() => {
+              // Reuses the exact element/slide "lighting" structure below (intensity slider, page-palette
+              // swatches, 50 basic colors, free color picker, 9-direction grid with live preview) instead
+              // of a bespoke simplified panel, targeted directly at the navbar.
+              const activeLightIntensity = navbar.innerGlowIntensity ?? 0;
+              const activeLightColor = navbar.innerGlowColor || '#0071e3';
+              const activeLightPosition = navbar.innerGlowPosition || 'center';
+
+              const updateLightIntensity = (intensity: number) => onUpdateNavbar({ innerGlowIntensity: intensity });
+              const updateLightColor = (color: string) => onUpdateNavbar({ innerGlowColor: color });
+              const updateLightPosition = (pos: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left') =>
+                onUpdateNavbar({ innerGlowPosition: pos });
+
+              const BASIC_50_COLORS = [
+                '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b',
+                '#fb923c', '#f97316', '#ea580c', '#c2410c', '#9a3412',
+                '#fbbf24', '#f59e0b', '#d97706', '#b45309', '#854d0e',
+                '#4ade80', '#22c55e', '#16a34a', '#15803d', '#14532d',
+                '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e', '#115e59',
+                '#22d3ee', '#06b6d4', '#0891b2', '#0e7490', '#155e75',
+                '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af',
+                '#c084fc', '#a855f7', '#9333ea', '#7e22ce', '#6b21a8',
+                '#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d',
+                '#ffffff', '#f3f4f6', '#e5e7eb', '#4b5563', '#111827'
+              ];
+
+              const DIRECTION_CELLS = [
+                { id: 'top-left', label: 'أعلى يسار', name: 'زاوية علوية يسار' },
+                { id: 'top', label: 'أعلى', name: 'أعلى الوسط' },
+                { id: 'top-right', label: 'أعلى يمين', name: 'زاوية علوية يمين' },
+                { id: 'left', label: 'يسار', name: 'الوسط يسار' },
+                { id: 'center', label: 'الوسط', name: 'من جميع الجهات' },
+                { id: 'right', label: 'يمين', name: 'الوسط يمين' },
+                { id: 'bottom-left', label: 'أسفل يسار', name: 'زاوية سفلية يسار' },
+                { id: 'bottom', label: 'أسفل', name: 'أسفل الوسط' },
+                { id: 'bottom-right', label: 'أسفل يمين', name: 'زاوية سفلية يمين' },
+              ] as const;
+
+              return (
+                <div className="space-y-4 text-right" dir="rtl">
+                  <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
+                    <span className="text-[11px] font-bold text-[#0071e3]">تعديل إضاءة النافبار</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-neutral-700 font-bold">شدة ومدى الإضاءة الداخلية (Lighting Intensity):</span>
+                      <span className="font-mono text-[#0071e3] font-bold">{activeLightIntensity}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="50"
+                      value={activeLightIntensity}
+                      onChange={(e) => updateLightIntensity(Number(e.target.value))}
+                      className="w-full accent-[#0071e3] cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+                      <span>إيقاف (0px)</span>
+                      <span>متوسط (25px)</span>
+                      <span>شديد (50px)</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-neutral-800 block">لون الإضاءة والتوهج الداخلي (Light Color):</span>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-neutral-400 font-semibold block">ألوان الصفحة الافتراضية:</span>
+                      <div className="flex gap-2 p-1.5 bg-neutral-50 rounded-xl border border-neutral-200/65">
+                        {customColors.map((hex, idx) => {
+                          const isSelected = activeLightColor.toLowerCase() === hex.toLowerCase();
+                          return (
+                            <button
+                              key={`navbar-light-palette-color-${idx}-${hex}`}
+                              onClick={() => updateLightColor(hex)}
+                              className={`w-7 h-7 rounded-full border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-3xs flex items-center justify-center ${
+                                isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                              }`}
+                              style={{ backgroundColor: hex }}
+                              title={`لون الصفحة ${idx + 1}: ${hex}`}
+                            >
+                              {isSelected && (
+                                <Check size={12} className={['#ffffff', '#e5e5ea', '#f5f5f7'].includes(hex.toLowerCase()) ? 'text-black' : 'text-white'} strokeWidth={3} />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-neutral-400 font-semibold block">الخمسون لوناً الأساسية:</span>
+                        <span className="text-[9px] text-neutral-400 font-mono" dir="ltr">50 basic colors</span>
+                      </div>
+                      <div className="p-2 bg-neutral-50 rounded-2xl border border-neutral-200/70 max-h-40 overflow-y-auto pr-1">
+                        <div className="grid grid-cols-10 gap-1.5">
+                          {BASIC_50_COLORS.map((hex, idx) => {
+                            const isSelected = activeLightColor.toLowerCase() === hex.toLowerCase();
+                            return (
+                              <button
+                                key={`navbar-light-basic-color-${idx}-${hex}`}
+                                onClick={() => updateLightColor(hex)}
+                                className={`w-5 h-5 rounded-md border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-4xs flex items-center justify-center ${
+                                  isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                                }`}
+                                style={{ backgroundColor: hex }}
+                                title={hex}
+                              >
+                                {isSelected && (
+                                  <Check size={10} className={['#ffffff', '#f3f4f6', '#e5e7eb'].includes(hex.toLowerCase()) ? 'text-black' : 'text-white'} strokeWidth={3} />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 bg-neutral-50 p-1.5 rounded-xl border border-neutral-200">
+                      <input
+                        type="color"
+                        value={activeLightColor.startsWith('#') ? activeLightColor : '#0071e3'}
+                        onChange={(e) => updateLightColor(e.target.value)}
+                        className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent shrink-0 shadow-3xs"
+                      />
+                      <input
+                        type="text"
+                        value={activeLightColor}
+                        onChange={(e) => updateLightColor(e.target.value)}
+                        placeholder="اختر لوناً حراً"
+                        className="flex-1 text-[11px] px-2 py-1 bg-white rounded-md border border-neutral-200 font-mono text-left"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <span className="text-xs font-bold text-neutral-800 block">توجيه اتجاه وزاوية الإضاءة الداخلية (Light Position):</span>
+                    <p className="text-[10px] text-neutral-500 leading-tight">
+                      انقر على المربع لتوجيه الإضاءة في الاتجاه المرغوب. تبرز المعاينات شكل الإضاءة الداخلية (inset) المطبقة على مربع رمادي افتراضي:
+                    </p>
+
+                    <div className="bg-neutral-100 p-3 rounded-2xl border border-neutral-200/80 flex justify-center items-center">
+                      <div className="grid grid-cols-3 gap-3.5 max-w-[240px] w-full">
+                        {DIRECTION_CELLS.map((cell) => {
+                          const isSelected = activeLightPosition === cell.id;
+                          const previewIntensity = activeLightIntensity > 0 ? Math.min(activeLightIntensity, 16) : 10;
+
+                          return (
+                            <button
+                              key={`navbar-light-dir-${cell.id}`}
+                              onClick={() => updateLightPosition(cell.id)}
+                              className={`relative aspect-square rounded-xl p-1 transition-all flex flex-col items-center justify-center cursor-pointer border-2 bg-white ${
+                                isSelected ? 'border-[#0071e3] bg-[#0071e3]/5 shadow-xs scale-105 z-10' : 'border-transparent hover:border-neutral-300'
+                              }`}
+                              title={cell.name}
+                            >
+                              <div className="w-9 h-9 rounded-lg bg-neutral-300 relative overflow-hidden transition-all flex items-center justify-center border border-neutral-300/40">
+                                <div
+                                  className="absolute inset-0 pointer-events-none mix-blend-screen"
+                                  style={getLightGradientStyle(previewIntensity, activeLightColor, cell.id)}
+                                />
+                                {isSelected ? (
+                                  <span className="w-4 h-4 rounded-full bg-[#0071e3] text-white flex items-center justify-center font-bold shadow-4xs shrink-0 z-20">
+                                    <Check size={10} strokeWidth={3} />
+                                  </span>
+                                ) : (
+                                  <span className="text-[8.5px] font-bold text-[#1d1d1f] pointer-events-none select-none z-10 bg-white/40 px-1 rounded-sm">
+                                    {cell.label}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {activeSection === 'lighting' && !isNavbarSelected && (() => {
               const isTargetElement = lightingTarget === 'element' && !!selectedElement;
@@ -14974,7 +15321,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               />
             )}
 
-            {/* TOOL: Navbar settings (ترس الإعدادات) — sticky/scroll + hamburger menu mode */}
+            {/* TOOL: Navbar settings (ترس الإعدادات) — التثبيت، الطول، اسم الموقع، وتموضع/تنسيق أسماء الصفحات */}
             {activeSection === 'navbar-settings' && navbar && (
               <div className="space-y-6 text-right" dir="rtl">
                 <div className="space-y-2">
@@ -14991,34 +15338,133 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-black/[0.06]">
-                  <SectionHeader title="قائمة Hamburger" />
-                  <p className="text-[11px] text-neutral-500 -mt-1">
-                    تحويل روابط وزر النافبار إلى أيقونة واحدة تفتح وتغلق القائمة.
-                  </p>
+                  <Slider
+                    label="طول (ارتفاع) النافبار"
+                    value={navbar.height ?? 60}
+                    min={44}
+                    max={140}
+                    onChange={(v) => onUpdateNavbar({ height: v })}
+                    formatValue={(v) => `${v}px`}
+                  />
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-black/[0.06]">
+                  <SectionHeader title="اسم الموقع" />
                   <PillTabs
                     options={[
-                      { value: 'off', label: 'غير مفعّلة' },
-                      { value: 'on', label: 'مفعّلة' },
+                      { value: 'show', label: 'إظهار اسم الموقع' },
+                      { value: 'hide', label: 'إخفاء اسم الموقع' },
                     ]}
-                    value={navbar.isHamburgerMode ? 'on' : 'off'}
-                    onChange={(v) => onUpdateNavbar({ isHamburgerMode: v === 'on' })}
+                    value={navbar.showBrandName === false ? 'hide' : 'show'}
+                    onChange={(v) => onUpdateNavbar({ showBrandName: v === 'show' })}
                     className="w-full"
                   />
 
-                  {navbar.isHamburgerMode && (
-                    <div className="pt-2 space-y-2">
-                      <span className="text-[11px] font-bold text-neutral-700">اتجاه فتح القائمة:</span>
-                      <PillTabs
-                        options={[
-                          { value: 'vertical', label: 'طولي (قائمة منسدلة)' },
-                          { value: 'horizontal', label: 'عرضي (صف واحد)' },
-                        ]}
-                        value={navbar.hamburgerDirection || 'vertical'}
-                        onChange={(v) => onUpdateNavbar({ hamburgerDirection: v as 'vertical' | 'horizontal' })}
-                        className="w-full"
-                      />
+                  <div className="flex items-center gap-2.5 pt-1">
+                    <div className="w-9 h-9 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shrink-0">
+                      {navbar.logoUrl ? (
+                        <img src={navbar.logoUrl} alt="شعار الموقع" className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="text-[10px] text-neutral-400 font-bold">بدون شعار</span>
+                      )}
                     </div>
-                  )}
+                    <input
+                      ref={navbarLogoFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleNavbarLogoFileChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => navbarLogoFileInputRef.current?.click()}
+                      disabled={isNavbarLogoUploading}
+                      className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20 transition-all cursor-pointer disabled:opacity-60"
+                    >
+                      {isNavbarLogoUploading ? 'جارٍ رفع الشعار...' : (navbar.logoUrl ? 'تغيير الشعار' : 'رفع شعار من الجهاز')}
+                    </button>
+                    {navbar.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => onUpdateNavbar({ logoUrl: undefined })}
+                        className="py-1.5 px-2.5 text-xs font-bold rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
+                      >
+                        إزالة
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-neutral-400 leading-tight">
+                    عند رفع شعار، يظهر بدل الحرف الافتراضي بجانب اسم الموقع.
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-black/[0.06]">
+                  <SectionHeader title="تموضع أسماء صفحات الموقع" />
+                  <PillTabs
+                    options={[
+                      { value: 'right', label: 'اليمين' },
+                      { value: 'center', label: 'الوسط' },
+                      { value: 'left', label: 'اليسار' },
+                    ]}
+                    value={navbar.itemsAlign || 'right'}
+                    onChange={(v) => onUpdateNavbar({ itemsAlign: v as 'right' | 'center' | 'left' })}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-3 pt-2 border-t border-black/[0.06]">
+                  <SectionHeader title="إطار أسماء الصفحات" />
+                  <p className="text-[11px] text-neutral-500 -mt-1">
+                    إطار اختياري حول كل اسم صفحة في النافبار: سمك وتدوير الحواف ولون الإطار، ولون خلفية النص.
+                  </p>
+                  <Slider
+                    label="سمك الإطار"
+                    value={navbar.itemsFrameBorderWidth ?? 0}
+                    min={0}
+                    max={6}
+                    onChange={(v) => onUpdateNavbar({ itemsFrameBorderWidth: v })}
+                    formatValue={(v) => `${v}px`}
+                  />
+                  <Slider
+                    label="تدوير حواف الإطار"
+                    value={navbar.itemsFrameBorderRadius ?? 0}
+                    min={0}
+                    max={24}
+                    onChange={(v) => onUpdateNavbar({ itemsFrameBorderRadius: v })}
+                    formatValue={(v) => `${v}px`}
+                  />
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-bold text-neutral-700 block">لون الإطار</span>
+                    <ColorSwatchPicker
+                      swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
+                      selectedValue={navbar.itemsFrameBorderColor || 'transparent'}
+                      onSelect={(color) => onUpdateNavbar({ itemsFrameBorderColor: color })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-bold text-neutral-700 block">لون خلفية النص</span>
+                    <ColorSwatchPicker
+                      swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
+                      selectedValue={navbar.itemsFrameBgColor || 'transparent'}
+                      onSelect={(color) => onUpdateNavbar({ itemsFrameBgColor: color })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-bold text-neutral-700 block">نوع الخط لأسماء الصفحات</span>
+                    <select
+                      value={navbar.itemsFontFamily || ''}
+                      onChange={(e) => onUpdateNavbar({ itemsFontFamily: e.target.value || undefined })}
+                      className="w-full px-2.5 py-2 bg-white border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
+                      style={{ fontFamily: navbar.itemsFontFamily || undefined }}
+                    >
+                      <option value="">الخط الافتراضي</option>
+                      {SIXTY_FONTS.map((f) => (
+                        <option key={f.font} value={f.font} style={{ fontFamily: f.font }}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             )}

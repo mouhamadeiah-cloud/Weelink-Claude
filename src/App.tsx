@@ -639,6 +639,14 @@ export default function App() {
         borderWidth: currentPage.navbar.borderWidth,
         borderRadius: currentPage.navbar.borderRadius,
         borderStyle: currentPage.navbar.borderStyle,
+        height: currentPage.navbar.height,
+        showBrandName: currentPage.navbar.showBrandName,
+        itemsAlign: currentPage.navbar.itemsAlign,
+        itemsFontFamily: currentPage.navbar.itemsFontFamily,
+        itemsFrameBgColor: currentPage.navbar.itemsFrameBgColor,
+        itemsFrameBorderColor: currentPage.navbar.itemsFrameBorderColor,
+        itemsFrameBorderWidth: currentPage.navbar.itemsFrameBorderWidth,
+        itemsFrameBorderRadius: currentPage.navbar.itemsFrameBorderRadius,
       });
       setCopiedType('navbar');
     }
@@ -782,6 +790,14 @@ export default function App() {
           borderWidth: copiedFormat.borderWidth,
           borderRadius: copiedFormat.borderRadius,
           borderStyle: copiedFormat.borderStyle,
+          height: copiedFormat.height,
+          showBrandName: copiedFormat.showBrandName,
+          itemsAlign: copiedFormat.itemsAlign,
+          itemsFontFamily: copiedFormat.itemsFontFamily,
+          itemsFrameBgColor: copiedFormat.itemsFrameBgColor,
+          itemsFrameBorderColor: copiedFormat.itemsFrameBorderColor,
+          itemsFrameBorderWidth: copiedFormat.itemsFrameBorderWidth,
+          itemsFrameBorderRadius: copiedFormat.itemsFrameBorderRadius,
         },
       })));
       setCopiedFormat(null);

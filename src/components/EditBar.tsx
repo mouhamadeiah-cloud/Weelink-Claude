@@ -274,13 +274,13 @@ export const EditBar: React.FC<EditBarProps> = ({
           <BoxSelect size={15} strokeWidth={2} />
         </button>
 
-        {/* ترس إعدادات النافبار - ثابت/متحرك + قائمة Hamburger */}
+        {/* ترس إعدادات النافبار - التثبيت، الطول، اسم الموقع، وتموضع/تنسيق أسماء الصفحات */}
         {isNavbarSelected && (
           <button
             type="button"
             onClick={() => onSelectTool('navbar-settings' as DrawerSection)}
             className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-[#0071e3] bg-[#0071e3]/12 hover:bg-[#0071e3]/20 active:scale-95 transition-all cursor-pointer ring-1 ring-[#0071e3]/30"
-            title="إعدادات النافبار (التثبيت وقائمة Hamburger)"
+            title="إعدادات النافبار (التثبيت، الطول، وأسماء الصفحات)"
             aria-label="إعدادات النافبار"
           >
             <Settings size={15} strokeWidth={2} />

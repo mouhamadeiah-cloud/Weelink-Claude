@@ -22,8 +22,7 @@ import {
   ChevronRight,
   ChevronLeft,
   X,
-  Download,
-  Menu
+  Download
 } from 'lucide-react';
 
 interface CanvasWorkspaceProps {
@@ -690,7 +689,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   isNavbarSelected = false,
   onSelectNavbar,
 }) => {
-  const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   // Workspace width observer & Scaling calculation
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(1280);
@@ -699,10 +697,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const localSlidesRef = useRef(slides);
   const navbarRef = useRef<HTMLElement>(null);
   const isNavbarStickyRef = useRef(navbar.isSticky);
+  const navbarHeightRef = useRef(navbar.height ?? 60);
 
   // Synchronize slides ref on each render
   localSlidesRef.current = slides;
   isNavbarStickyRef.current = navbar.isSticky;
+  navbarHeightRef.current = navbar.height ?? 60;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -720,7 +720,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           if (!slideId) return;
 
           // Calculate unscaled slide top relative to the workspace container
-          let unscaledTop = 60; // navbar height
+          let unscaledTop = navbarHeightRef.current;
           for (const s of localSlidesRef.current) {
             if (s.id === slideId) {
               break;
@@ -770,7 +770,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   }, []);
 
   const getSlideUnscaledTop = (targetSlideId: string) => {
-    let top = 60; // navbar height is 60px
+    let top = navbar.height ?? 60; // navbar height (configurable)
     for (const s of slides) {
       if (s.id === targetSlideId) {
         return top;
@@ -1859,7 +1859,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     }
   };
 
-  const totalUnscaledHeight = 60 + slides.reduce((sum, s) => sum + s.height, 0);
+  const totalUnscaledHeight = (navbar.height ?? 60) + slides.reduce((sum, s) => sum + s.height, 0);
   const totalScaledHeight = totalUnscaledHeight * scaleFactor;
 
   return (
@@ -1919,13 +1919,19 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             onSelectElement(null);
             onSelectNavbar?.();
           }}
-          className={`relative w-full z-20 transition-all overflow-hidden ${
+          className={`relative w-full overflow-hidden ${
             navbar.borderStyle && navbar.borderStyle !== 'none' ? '' : 'border-b border-black/[0.06]'
           } ${
-            navbar.isSticky ? 'navbar-sticky-js shadow-xs' : ''
+            navbar.isSticky ? 'navbar-sticky-js' : ''
           } ${isNavbarSelected && !isPreviewActive ? 'ring-2 ring-[#0071e3]/50' : ''} ${isPreviewActive ? '' : 'cursor-pointer'}`}
           style={{
-            backgroundColor: navbar.bgColor,
+            // Z-index kept far above any slide element's (which can reach ~50+) so nothing ever floats over the navbar.
+            zIndex: 100000,
+            minHeight: `${navbar.height ?? 60}px`,
+            // Only colors/shadow/border transition — `transform` is driven imperatively every scroll
+            // frame (see handleScroll above), and animating it via CSS at the same time causes the
+            // lag/"jitter" effect where the navbar visibly catches up a beat behind the scroll.
+            transition: 'background-color 150ms, border-color 150ms, box-shadow 150ms',
             willChange: navbar.isSticky ? 'transform' : undefined,
             borderStyle: navbar.borderStyle && navbar.borderStyle !== 'none' ? navbar.borderStyle : undefined,
             borderWidth: navbar.borderStyle && navbar.borderStyle !== 'none' ? `${navbar.borderWidth ?? 0}px` : undefined,
@@ -1937,132 +1943,103 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             ].filter(Boolean).join(', ') || undefined,
           }}
         >
-          {/* Background image layer (same logic as a slide's background), respects backgroundOpacity without fading the content */}
-          {navbar.backgroundImage && (
-            <div
-              className="absolute inset-0 pointer-events-none transition-opacity duration-150"
-              style={{
-                backgroundColor: navbar.bgColor,
-                backgroundImage: `url("${navbar.backgroundImage}")`,
-                backgroundSize: navbar.backgroundSize || 'cover',
-                backgroundPosition: navbar.backgroundPosition || 'center',
-                opacity: navbar.backgroundOpacity ?? 1,
-              }}
-            />
-          )}
+          {/* Background layer (same logic as a slide's background layer): color AND image both
+              respect backgroundOpacity here — putting the color directly on <nav> (as before) made
+              the opacity slider affect only an image overlay and do nothing when there was no image. */}
+          <div
+            className="absolute inset-0 pointer-events-none transition-opacity duration-150"
+            style={{
+              backgroundColor: navbar.bgColor?.includes('gradient') ? undefined : (navbar.bgColor || '#ffffff'),
+              backgroundImage: navbar.backgroundImage
+                ? `url("${navbar.backgroundImage}")`
+                : (navbar.bgColor?.includes('gradient') ? navbar.bgColor : undefined),
+              backgroundSize: navbar.backgroundSize || 'cover',
+              backgroundPosition: navbar.backgroundPosition || 'center',
+              opacity: navbar.backgroundOpacity ?? 1,
+            }}
+          />
 
           <div
-            className="relative w-full px-6 sm:px-10 py-3.5 flex items-center justify-between"
-            style={{ color: navbar.textColor, opacity: navbar.textOpacity ?? 1 }}
+            className="relative w-full h-full px-6 sm:px-10 flex items-center justify-between"
+            style={{ color: navbar.textColor, opacity: navbar.textOpacity ?? 1, minHeight: `${navbar.height ?? 60}px` }}
           >
-            {/* Logo / Brand Name */}
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#0071e3] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                {navbar.brandName ? navbar.brandName.charAt(0) : 'W'}
+            {/* Logo / Brand Name (can be hidden entirely via navbar.showBrandName); logoUrl is an
+                actual image the user uploaded — shown instead of the default letter badge. */}
+            {navbar.showBrandName !== false ? (
+              <div className="flex items-center gap-2 shrink-0">
+                {navbar.logoUrl ? (
+                  <img
+                    src={navbar.logoUrl}
+                    alt={navbar.brandName || 'شعار'}
+                    className="w-7 h-7 rounded-lg object-contain shrink-0"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-lg bg-[#0071e3] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                    {navbar.brandName ? navbar.brandName.charAt(0) : 'W'}
+                  </div>
+                )}
+                <span className="font-bold text-sm tracking-tight" style={{ color: navbar.textColor }}>
+                  {navbar.brandName || 'weelink'}
+                </span>
               </div>
-              <span className="font-bold text-sm tracking-tight" style={{ color: navbar.textColor }}>
-                {navbar.brandName || 'weelink'}
-              </span>
-            </div>
-
-            {navbar.isHamburgerMode ? (
-              /* Hamburger toggle replaces the links + CTA row */
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsHamburgerOpen((prev) => !prev);
-                }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/[0.06] transition-all cursor-pointer"
-                style={{ color: navbar.textColor }}
-                title="فتح/إغلاق قائمة النافبار"
-              >
-                {isHamburgerOpen ? <X size={18} strokeWidth={2.2} /> : <Menu size={18} strokeWidth={2.2} />}
-              </button>
             ) : (
-              <>
-                {/* Nav links */}
-                <div className="hidden md:flex items-center gap-6 text-xs font-medium" style={{ color: navbar.textColor }}>
-                  {navbar.items.map((item) => {
-                    const isPageLink = item.linkType === 'page' && !!item.linkTargetId;
-                    const isActive = isPageLink && item.linkTargetId === activePageId;
-                    return (
-                      <span
-                        key={item.id}
-                        onClick={(e) => {
-                          if (isPageLink) {
-                            e.stopPropagation();
-                            onSelectPage?.(item.linkTargetId as string);
-                          }
-                        }}
-                        className={`transition-colors ${
-                          isPageLink ? 'cursor-pointer hover:text-[#0071e3]' : 'cursor-default'
-                        } ${isActive ? 'text-[#0071e3] font-bold' : ''}`}
-                      >
-                        {item.label}
-                      </span>
-                    );
-                  })}
-                </div>
-
-                {/* Action CTA Button */}
-                <button
-                  onClick={(e) => {
-                    if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
-                      e.stopPropagation();
-                      onSelectPage?.(navbar.ctaLinkTargetId);
-                    }
-                  }}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
-                >
-                  {navbar.ctaText || 'ابدأ الآن'}
-                </button>
-              </>
+              // No brand/logo shown: leave a small visual gap (about one page-name's width) from the
+              // page edge instead of butting the page names flush against it.
+              <span className="shrink-0 w-16" />
             )}
-          </div>
 
-          {/* Hamburger-opened panel (vertical: stacked list, horizontal: wrapped row) */}
-          {navbar.isHamburgerMode && isHamburgerOpen && (
+            {/* Nav links (page names): plain names only, no hover color/active-bold/underline marks —
+                any visual distinction (frame, background, font) is purely opt-in via navbar-settings. */}
             <div
-              onClick={(e) => e.stopPropagation()}
-              className={`relative border-t border-black/[0.06] px-6 py-3 ${
-                navbar.hamburgerDirection === 'horizontal' ? 'flex flex-row flex-wrap items-center gap-4' : 'flex flex-col items-start gap-2.5'
+              className={`hidden md:flex flex-1 items-center gap-2.5 text-xs font-medium px-4 ${
+                navbar.itemsAlign === 'left' ? 'justify-end' : navbar.itemsAlign === 'center' ? 'justify-center' : 'justify-start'
               }`}
-              style={{ color: navbar.textColor, opacity: navbar.textOpacity ?? 1 }}
+              style={{ color: navbar.textColor }}
             >
               {navbar.items.map((item) => {
                 const isPageLink = item.linkType === 'page' && !!item.linkTargetId;
-                const isActive = isPageLink && item.linkTargetId === activePageId;
+                const hasFrame = Boolean(
+                  navbar.itemsFrameBgColor ||
+                  (navbar.itemsFrameBorderWidth && navbar.itemsFrameBorderWidth > 0)
+                );
                 return (
                   <span
                     key={item.id}
-                    onClick={() => {
+                    onClick={(e) => {
                       if (isPageLink) {
+                        e.stopPropagation();
                         onSelectPage?.(item.linkTargetId as string);
-                        setIsHamburgerOpen(false);
                       }
                     }}
-                    className={`text-xs font-medium transition-colors ${
-                      isPageLink ? 'cursor-pointer hover:text-[#0071e3]' : 'cursor-default'
-                    } ${isActive ? 'text-[#0071e3] font-bold' : ''}`}
+                    className={`${hasFrame ? 'px-2.5 py-1' : ''} ${isPageLink ? 'cursor-pointer' : 'cursor-default'}`}
+                    style={{
+                      fontFamily: navbar.itemsFontFamily || undefined,
+                      backgroundColor: navbar.itemsFrameBgColor || undefined,
+                      borderWidth: navbar.itemsFrameBorderWidth ? `${navbar.itemsFrameBorderWidth}px` : undefined,
+                      borderStyle: navbar.itemsFrameBorderWidth ? 'solid' : undefined,
+                      borderColor: navbar.itemsFrameBorderColor || undefined,
+                      borderRadius: navbar.itemsFrameBorderRadius ? `${navbar.itemsFrameBorderRadius}px` : undefined,
+                    }}
                   >
                     {item.label}
                   </span>
                 );
               })}
-              <button
-                onClick={() => {
-                  if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
-                    onSelectPage?.(navbar.ctaLinkTargetId);
-                    setIsHamburgerOpen(false);
-                  }
-                }}
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
-              >
-                {navbar.ctaText || 'ابدأ الآن'}
-              </button>
             </div>
-          )}
+
+            {/* Action CTA Button */}
+            <button
+              onClick={(e) => {
+                if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
+                  e.stopPropagation();
+                  onSelectPage?.(navbar.ctaLinkTargetId);
+                }
+              }}
+              className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
+            >
+              {navbar.ctaText || 'ابدأ الآن'}
+            </button>
+          </div>
         </nav>
 
         {/* 2. Webpage Slides Container (الشرائح مساحات عمل حرة freegrid) */}

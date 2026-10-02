@@ -1869,6 +1869,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const totalScaledHeight = totalUnscaledHeight * scaleFactor;
   // Height (in on-screen/scaled px) of the mobile device notch, which sits above the navbar.
   const notchHeightScaled = (previewMode === 'mobile' ? 24 : 0) * scaleFactor;
+  // Navbar strip width (unscaled, before its own scale transform below) — a percentage of the page's
+  // own width (navbar.width, default 100 = full-bleed). Centered automatically by the Scaling
+  // Wrapper's `items-center`, so narrowing it just insets it evenly from both edges.
+  const navWidthPx = baseWidth * ((navbar.width ?? 100) / 100);
 
   return (
     <div 
@@ -1932,7 +1936,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           style={{
             position: navbar.isSticky ? 'sticky' : 'relative',
             top: `${notchHeightScaled}px`,
-            width: `${baseWidth}px`,
+            width: `${navWidthPx}px`,
             transformOrigin: 'top center',
             transform: `scale(${scaleFactor})`,
             // Z-index kept far above any slide element's (which can reach ~50+) so nothing ever floats over the navbar.
@@ -1969,13 +1973,31 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             }}
           />
 
+          {/* Navbar Internal Lighting Overlay (same pattern as a slide's): an inset box-shadow painted
+              on <nav> itself is drawn BEHIND this background layer (CSS paint order), so it was
+              invisible whenever the background was opaque — only showing when opacity made the
+              background see-through. A dedicated overlay div painted AFTER the background (like
+              slides/elements already do) fixes this: it's always visible regardless of opacity. */}
+          {Boolean(navbar.innerGlowIntensity && navbar.innerGlowIntensity > 0) && (
+            <div
+              className="absolute inset-0 pointer-events-none transition-all duration-150 mix-blend-screen"
+              style={{
+                borderRadius: navbar.borderRadius ? `${navbar.borderRadius}px` : undefined,
+                ...getLightGradientStyle(navbar.innerGlowIntensity, navbar.innerGlowColor, navbar.innerGlowPosition),
+              }}
+            />
+          )}
+
           <div
             className="relative w-full h-full px-6 sm:px-10 flex items-center justify-between"
             style={{ color: navbar.textColor, opacity: navbar.textOpacity ?? 1, minHeight: `${navbar.height ?? 60}px` }}
           >
-            {/* Logo / Brand Name (can be hidden entirely via navbar.showBrandName); logoUrl is an
-                actual image the user uploaded — shown instead of the default letter badge. */}
-            {navbar.showBrandName !== false ? (
+            {/* Logo / Brand Name (can be hidden entirely via navbar.showBrandName). Both the logo and
+                the name come ONLY from the user's own input (navbar.logoUrl / navbar.brandName) —
+                never a platform-name fallback ("weelink"/"W"): the platform's own name must never
+                leak into the user's published page. If the user hasn't set either yet, nothing is
+                shown here (just the alignment spacer below). */}
+            {navbar.showBrandName !== false && (navbar.logoUrl || navbar.brandName) ? (
               <div className="flex items-center gap-2 shrink-0">
                 {navbar.logoUrl ? (
                   <img
@@ -1985,12 +2007,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   />
                 ) : (
                   <div className="w-7 h-7 rounded-lg bg-[#0071e3] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
-                    {navbar.brandName ? navbar.brandName.charAt(0) : 'W'}
+                    {navbar.brandName.charAt(0)}
                   </div>
                 )}
-                <span className="font-bold text-sm tracking-tight" style={{ color: navbar.textColor }}>
-                  {navbar.brandName || 'weelink'}
-                </span>
+                {navbar.brandName && (
+                  <span className="font-bold text-sm tracking-tight" style={{ color: navbar.textColor }}>
+                    {navbar.brandName}
+                  </span>
+                )}
               </div>
             ) : (
               // No brand/logo shown: leave a small visual gap (about one page-name's width) from the
@@ -1999,9 +2023,13 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             )}
 
             {/* Nav links (page names): plain names only, no hover color/active-bold/underline marks —
-                any visual distinction (frame, background, font) is purely opt-in via navbar-settings. */}
+                any visual distinction (frame, background, font) is purely opt-in via navbar-settings.
+                Always rendered (no `hidden md:flex` viewport media-query) — this canvas is scaled to
+                simulate mobile/tablet/desktop regardless of the real browser window width, so hiding
+                by a viewport media query was hiding the page names any time the actual editor window
+                was narrower than 768px, independent of the chosen device-preview mode. */}
             <div
-              className={`hidden md:flex flex-1 items-center gap-2.5 text-xs font-medium px-4 ${
+              className={`flex flex-1 items-center gap-2.5 text-xs font-medium px-4 flex-wrap ${
                 navbar.itemsAlign === 'left' ? 'justify-end' : navbar.itemsAlign === 'center' ? 'justify-center' : 'justify-start'
               }`}
               style={{ color: navbar.textColor }}
@@ -2053,19 +2081,21 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         </nav>
 
         {/* Device Mode Wrapper Frame: the device-mockup chrome (border/rounded corners/shadow) around
-            the slides. Positioned absolutely and scaled exactly like before, now starting right below
-            the notch+navbar (which live above it in the flow, outside this transformed container,
-            instead of as descendants of it) so the navbar above can use native `position: sticky`. */}
+            the slides. A normal FLOW sibling now (not absolutely positioned), exactly like the notch
+            and navbar above it: an unscaled-size box with its own `transform: scale(...)`, centered by
+            the Scaling Wrapper's `items-center`. Using absolute positioning with a hand-computed `top`
+            offset here previously caused it to overlap the bottom of the (unscaled, flow-sized) navbar
+            whenever scaleFactor < 1 — the overlap flickered during scroll, which was the real cause of
+            the reported jitter, not the sticky mechanics themselves. As a flow sibling, it simply stacks
+            after the navbar with no overlap (at the cost of a small, accepted blank gap when
+            scaleFactor < 1, since each sibling's flow height is its unscaled size). */}
         <div
           className={`bg-white transition-all duration-300 relative flex flex-col select-none ${getContainerWidthClass()}`}
           onClick={(e) => e.stopPropagation()}
           style={{
             width: `${baseWidth}px`,
             transformOrigin: 'top center',
-            position: 'absolute',
-            top: `${notchHeightScaled + (navbar.height ?? 60) * scaleFactor}px`,
-            left: '50%',
-            transform: `translate3d(-50%, 0, 0) scale(${scaleFactor})`,
+            transform: `scale(${scaleFactor})`,
           }}
         >
           {/* 2. Webpage Slides Container (الشرائح مساحات عمل حرة freegrid) */}

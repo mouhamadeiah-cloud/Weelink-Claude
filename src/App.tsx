@@ -94,7 +94,8 @@ const initialPage: Page = {
   name: 'الرئيسية',
   slug: '/',
   navbar: {
-    brandName: 'weelink',
+    // Never default this to the platform's own name — it must come from the user's own input.
+    brandName: '',
     items: [
       { id: '1', label: 'الرئيسية', href: '#' },
     ],
@@ -201,7 +202,8 @@ export default function App() {
           name: 'الرئيسية',
           slug: '/',
           navbar: {
-            brandName: 'wee',
+            // Never default this to the platform's own name — it must come from the user's own input.
+            brandName: '',
             items: [],
             ctaText: '',
             ctaHref: '',
@@ -418,7 +420,8 @@ export default function App() {
         name: 'الرئيسية',
         slug: '/',
         navbar: {
-          brandName: 'wee',
+          // Never default this to the platform's own name — it must come from the user's own input.
+          brandName: '',
           items: [],
           ctaText: '',
           ctaHref: '',
@@ -640,6 +643,7 @@ export default function App() {
         borderRadius: currentPage.navbar.borderRadius,
         borderStyle: currentPage.navbar.borderStyle,
         height: currentPage.navbar.height,
+        width: currentPage.navbar.width,
         showBrandName: currentPage.navbar.showBrandName,
         itemsAlign: currentPage.navbar.itemsAlign,
         itemsFontFamily: currentPage.navbar.itemsFontFamily,
@@ -791,6 +795,7 @@ export default function App() {
           borderRadius: copiedFormat.borderRadius,
           borderStyle: copiedFormat.borderStyle,
           height: copiedFormat.height,
+          width: copiedFormat.width,
           showBrandName: copiedFormat.showBrandName,
           itemsAlign: copiedFormat.itemsAlign,
           itemsFontFamily: copiedFormat.itemsFontFamily,
@@ -2244,6 +2249,7 @@ export default function App() {
           onSelectElement={handleSelectElement}
           onSelectSlide={handleSelectSlide}
           onSelectPage={setActivePageId}
+          allPages={pages}
           isNavbarSelected={isNavbarSelected}
           onSelectNavbar={handleSelectNavbar}
           onUpdateElementPosition={handleUpdateElementPosition}

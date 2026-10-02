@@ -15346,6 +15346,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     onChange={(v) => onUpdateNavbar({ height: v })}
                     formatValue={(v) => `${v}px`}
                   />
+                  <Slider
+                    label="عرض النافبار"
+                    value={navbar.width ?? 100}
+                    min={40}
+                    max={100}
+                    onChange={(v) => onUpdateNavbar({ width: v })}
+                    formatValue={(v) => `${v}%`}
+                  />
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-black/[0.06]">

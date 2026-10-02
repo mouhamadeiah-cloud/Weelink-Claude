@@ -210,6 +210,9 @@ export interface NavbarConfig {
   isSticky: boolean;
   // Navbar strip height/length in px (default 60 when unset)
   height?: number;
+  // Navbar strip width, as a percentage of the page width (default 100 when unset = full-bleed).
+  // Less than 100 insets it from both edges (centered), for a narrower "floating" navbar look.
+  width?: number;
   // Background image (same logic as a slide's background image)
   backgroundImage?: string;
   backgroundSize?: 'cover' | 'contain' | 'auto';

@@ -521,550 +521,756 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
   // ==========================================
   if (categoryId === 'intro') {
     if (index === 0) {
-      // Web & App Design Studio Intro (استوديو تصميم مواقع وتطبيقات)
+      // SCHEMA 1 — الخلفية الكاملة: صورة خلفية كاملة + صف بطاقات زجاجية شبه شفافة تطفو فوقها
       elements = [
         {
-          type: 'shape',
-          name: 'لوحة المحتوى الزجاجية',
-          x: 30,
-          y: 110,
-          width: 430,
-          height: 360,
-          styles: { backgroundColor: col.card, borderRadius: 28, glowIntensity: 26, glowColor: 'rgba(0,0,0,0.12)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة الاستوديو',
-          x: 60,
-          y: 140,
-          width: 260,
-          height: 30,
-          content: 'تصميم مواقع وتطبيقات عصرية',
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+          type: 'image',
+          name: 'خلفية كاملة - الشيما الأولى',
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 580,
+          content: '/Library/compressed/intro-schema1-bg.jpg',
+          imageUrl: '/Library/compressed/intro-schema1-bg.jpg',
+          styles: { objectFit: 'cover', opacity: 1 }
         },
         {
           type: 'heading',
-          name: 'عنوان الاستوديو',
+          name: 'عنوان الشيما الأولى',
           x: 60,
-          y: 185,
-          width: 360,
-          height: 90,
-          content: 'استوديو بكسل رايت — واجهات تحوّل أفكارك إلى منتجات رقمية',
-          styles: { fontSize: 23, color: col.text, fontWeight: 'bold', fontFamily: 'Kufam', textAlign: 'right', lineHeight: 1.3 }
+          y: 55,
+          width: 680,
+          height: 70,
+          content: 'نرتقي بتجربتك من الفكرة الأولى حتى التنفيذ الكامل',
+          styles: { fontSize: 26, color: '#ffffff', fontWeight: 'bold', textAlign: 'center', lineHeight: 1.3 }
         },
         {
           type: 'paragraph',
-          name: 'نص الاستوديو التعريفي',
-          x: 60,
-          y: 290,
-          width: 360,
-          height: 90,
-          content: 'نصمم ونطوّر مواقع وتطبيقات جوال سريعة الاستجابة بهوية بصرية مميزة، من الفكرة الأولى حتى الإطلاق ومتابعة الأداء.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+          name: 'نص تعريفي للشيما الأولى',
+          x: 110,
+          y: 130,
+          width: 580,
+          height: 36,
+          content: 'فريق متكامل يرافقك خطوة بخطوة لتحقيق نتائج تفوق التوقعات.',
+          styles: { fontSize: 13, color: 'rgba(255,255,255,0.85)', textAlign: 'center' }
         },
         {
           type: 'button',
-          name: 'زر طلب عرض تصميم',
-          x: 60,
-          y: 400,
-          width: 230,
+          name: 'زر البدء',
+          x: 300,
+          y: 180,
+          width: 200,
           height: 44,
-          content: 'اطلب عرض تصميم مجاني',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', glowIntensity: 20, glowColor: 'rgba(0,113,227,0.3)', glowPosition: 'bottom' }
+          content: 'ابدأ الآن',
+          styles: { fontSize: 13, backgroundColor: '#ffffff', color: '#1d1d1f', borderRadius: 999, textAlign: 'center', fontWeight: 'bold' }
         },
         {
           type: 'shape',
-          name: 'دائرة صورة فريق العمل في بيئة تقنية',
-          x: 480,
-          y: 40,
-          width: 290,
-          height: 290,
-          clipPath: 'clip-shape-geo-circle',
-          content: 'circle',
-          styles: { backgroundImage: '/Library/melinda-gimpel-xcVW_sFp4jQ-unsplash.jpg', backgroundSize: 'cover', animation: 'scale-up', animationTrigger: 'once', animationDuration: 1.1 }
+          name: 'بطاقة زجاجية 1',
+          x: 50,
+          y: 270,
+          width: 220,
+          height: 230,
+          styles: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 20 }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة الزجاجية 1',
+          x: 70,
+          y: 295,
+          width: 180,
+          height: 30,
+          content: 'جودة لا تقبل المساومة',
+          styles: { fontSize: 14, color: '#ffffff', fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة الزجاجية 1',
+          x: 70,
+          y: 335,
+          width: 180,
+          height: 140,
+          content: 'نختار الأفضل في كل تفصيلة لنضمن رضاك الكامل.',
+          styles: { fontSize: 11, color: 'rgba(255,255,255,0.75)', textAlign: 'center', lineHeight: 1.6 }
         },
         {
           type: 'shape',
-          name: 'كبسولة لمعة لونية زاوية علوية',
-          x: 700,
-          y: -30,
-          width: 160,
-          height: 90,
-          clipPath: 'clip-shape-geo-capsule',
-          content: 'capsule',
-          styles: { backgroundColor: 'rgba(0,113,227,0.12)' }
+          name: 'بطاقة زجاجية 2',
+          x: 290,
+          y: 270,
+          width: 220,
+          height: 230,
+          styles: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 20 }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة الزجاجية 2',
+          x: 310,
+          y: 295,
+          width: 180,
+          height: 30,
+          content: 'تسليم سريع وفي الموعد',
+          styles: { fontSize: 14, color: '#ffffff', fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة الزجاجية 2',
+          x: 310,
+          y: 335,
+          width: 180,
+          height: 140,
+          content: 'التزام تام بالمواعيد دون أي تأخير يزعجك.',
+          styles: { fontSize: 11, color: 'rgba(255,255,255,0.75)', textAlign: 'center', lineHeight: 1.6 }
         },
         {
           type: 'shape',
-          name: 'سداسي زخرفي زاوية سفلية',
-          x: -40,
-          y: 460,
-          width: 160,
-          height: 160,
-          clipPath: 'clip-shape-geo-hexagon',
-          content: 'hexagon',
-          styles: { backgroundColor: col.bgShape }
+          name: 'بطاقة زجاجية 3',
+          x: 530,
+          y: 270,
+          width: 220,
+          height: 230,
+          styles: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 20 }
         },
         {
-          type: 'card',
-          name: 'بطاقة الدعم الفني',
-          x: 500,
-          y: 370,
-          width: 260,
-          height: 130,
-          content: 'دعم فني واستجابة سريعة على مدار الساعة لضمان استمرار أعمالك دون انقطاع.',
-          styles: {}
+          type: 'heading',
+          name: 'عنوان البطاقة الزجاجية 3',
+          x: 550,
+          y: 295,
+          width: 180,
+          height: 30,
+          content: 'دعم متواصل على مدار الساعة',
+          styles: { fontSize: 14, color: '#ffffff', fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة الزجاجية 3',
+          x: 550,
+          y: 335,
+          width: 180,
+          height: 140,
+          content: 'فريقنا جاهز للرد على استفساراتك في أي وقت.',
+          styles: { fontSize: 11, color: 'rgba(255,255,255,0.75)', textAlign: 'center', lineHeight: 1.6 }
         }
       ];
     } else if (index === 1) {
-      // Car Dealership Intro (معرض سيارات فاخرة)
+      // SCHEMA 2 — الانقسام الصريح: نص تعريفي بجهة، وعوضاً عن صورة واحدة صف من 3 بطاقات عمودية بالجهة الأخرى
       elements = [
         {
-          type: 'image',
-          name: 'خلفية كاملة - صالة عرض السيارات',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          content: '/Library/the-blowup-4t2qMFwQsgI-unsplash.jpg',
-          imageUrl: '/Library/the-blowup-4t2qMFwQsgI-unsplash.jpg',
-          styles: { objectFit: 'cover', opacity: 0.28, backgroundAttachment: 'fixed' }
-        },
-        {
-          type: 'shape',
-          name: 'شريط قطري زخرفي',
-          x: -60,
-          y: 380,
-          width: 900,
-          height: 220,
-          content: 'slab',
-          styles: { backgroundColor: 'rgba(0,113,227,0.08)' },
-          rotation: -6
-        },
-        {
-          type: 'shape',
-          name: 'إطار ذهبي حول صورة السيارة',
-          x: 440,
-          y: 50,
-          width: 340,
-          height: 340,
-          content: 'frame',
-          styles: { backgroundColor: 'transparent', borderWidth: 3, borderColor: col.accent, borderRadius: 24 }
-        },
-        {
-          type: 'image',
-          name: 'صورة السيارة الفاخرة المقصوصة',
-          x: 460,
-          y: 70,
-          width: 300,
-          height: 300,
-          content: '/Library/tim-arterbury-hsztMXLuC6s-unsplash.jpg',
-          imageUrl: '/Library/tim-arterbury-hsztMXLuC6s-unsplash.jpg',
-          clipPath: 'clip-shape-geo-octagon',
-          styles: { objectFit: 'cover' }
-        },
-        {
-          type: 'shape',
-          name: 'لوحة المعلومات الزجاجية الداكنة',
-          x: 40,
-          y: 140,
-          width: 380,
-          height: 330,
-          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 30, glowColor: 'rgba(0,0,0,0.5)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
-        },
-        {
           type: 'badge',
-          name: 'شارة صالة العرض',
-          x: 70,
-          y: 170,
-          width: 270,
+          name: 'شارة الشيما الثانية',
+          x: 60,
+          y: 50,
+          width: 220,
           height: 30,
-          content: 'صالة عرض السيارات الفاخرة',
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: '#5aa9ff', borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+          content: 'لماذا تختارنا',
+          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
           type: 'heading',
-          name: 'عنوان معرض السيارات',
-          x: 70,
-          y: 215,
-          width: 320,
-          height: 90,
-          content: 'معرض النخبة للسيارات — فخامة تلامس الطريق',
-          styles: { fontSize: 25, color: col.text, fontWeight: 'bold', fontFamily: 'Changa', textAlign: 'right', lineHeight: 1.3 }
+          name: 'عنوان الشيما الثانية',
+          x: 60,
+          y: 95,
+          width: 340,
+          height: 100,
+          content: 'شريك موثوق يحوّل أهدافك إلى إنجازات ملموسة',
+          styles: { fontSize: 23, color: col.text, fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
         },
         {
           type: 'paragraph',
-          name: 'نص معرض السيارات',
-          x: 70,
-          y: 320,
-          width: 320,
-          height: 110,
-          content: 'نوفر تشكيلة متميزة من السيارات الفاخرة والمستعملة المفحوصة بعناية مع ضمان شامل وخيارات تمويل مرنة لتختار سيارتك المثالية بثقة.',
-          styles: { fontSize: 12, color: '#a1a1a6', textAlign: 'right', lineHeight: 1.6 }
+          name: 'نص الشيما الثانية',
+          x: 60,
+          y: 205,
+          width: 340,
+          height: 80,
+          content: 'نجمع بين الخبرة والدقة لنقدّم لك حلولاً تناسب احتياجك فعلاً، لا مجرد وعود تسويقية.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
         },
         {
           type: 'button',
-          name: 'زر حجز جولة تجربة قيادة',
-          x: 70,
-          y: 440,
-          width: 240,
-          height: 46,
-          content: 'احجز جولة تجربة قيادة',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2.2 }
+          name: 'زر خدماتنا',
+          x: 60,
+          y: 300,
+          width: 210,
+          height: 44,
+          content: 'تعرف على خدماتنا',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'shape',
+          name: 'بطاقة عمودية 1',
+          x: 430,
+          y: 50,
+          width: 330,
+          height: 150,
+          styles: { backgroundColor: col.card, borderRadius: 20, glowIntensity: 18, glowColor: 'rgba(0,0,0,0.12)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'image',
+          name: 'صورة البطاقة العمودية 1',
+          x: 450,
+          y: 66,
+          width: 100,
+          height: 118,
+          content: '/Library/compressed/intro-schema2-side.jpg',
+          imageUrl: '/Library/compressed/intro-schema2-side.jpg',
+          styles: { objectFit: 'cover', borderRadius: 14 }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة العمودية 1',
+          x: 565,
+          y: 70,
+          width: 175,
+          height: 50,
+          content: 'إطلاق سريع لموقعك',
+          styles: { fontSize: 14, color: col.text, fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة العمودية 1',
+          x: 565,
+          y: 122,
+          width: 175,
+          height: 60,
+          content: 'نرافقك من اليوم الأول وحتى الانطلاق الفعلي دون تعقيد.',
+          styles: { fontSize: 11, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.5 }
+        },
+        {
+          type: 'shape',
+          name: 'بطاقة عمودية 2',
+          x: 430,
+          y: 220,
+          width: 330,
+          height: 150,
+          styles: { backgroundColor: col.card, borderRadius: 20, glowIntensity: 18, glowColor: 'rgba(0,0,0,0.12)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة العمودية 2',
+          x: 455,
+          y: 240,
+          width: 280,
+          height: 30,
+          content: 'تواصل مباشر وشفاف',
+          styles: { fontSize: 14, color: col.text, fontWeight: 'bold', textAlign: 'right' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة العمودية 2',
+          x: 455,
+          y: 275,
+          width: 280,
+          height: 80,
+          content: 'نطلعك أولاً بأول على كل خطوة، دون أي غموض أو مفاجآت.',
+          styles: { fontSize: 11, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'shape',
+          name: 'بطاقة عمودية 3',
+          x: 430,
+          y: 390,
+          width: 330,
+          height: 150,
+          styles: { backgroundColor: col.card, borderRadius: 20, glowIntensity: 18, glowColor: 'rgba(0,0,0,0.12)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة العمودية 3',
+          x: 455,
+          y: 410,
+          width: 280,
+          height: 30,
+          content: 'أسعار واضحة بلا مفاجآت',
+          styles: { fontSize: 14, color: col.text, fontWeight: 'bold', textAlign: 'right' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة العمودية 3',
+          x: 455,
+          y: 445,
+          width: 280,
+          height: 80,
+          content: 'تعرف على التكلفة الكاملة من البداية دون رسوم خفية لاحقاً.',
+          styles: { fontSize: 11, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
         }
       ];
     } else if (index === 2) {
-      // Cooling & AC Intro (تبريد وتكييف)
+      // SCHEMA 3 — الإطار العائم: بطاقة مركزية كبيرة بارزة وبطاقتان أصغر حولها بزاوية دوران خفيفة
       elements = [
         {
-          type: 'shape',
-          name: 'دائرة خلفية كبيرة فاتحة',
-          x: 620,
-          y: -80,
-          width: 320,
-          height: 320,
-          clipPath: 'clip-shape-geo-circle',
-          content: 'circle',
-          styles: { backgroundColor: col.bgShape }
+          type: 'heading',
+          name: 'عنوان الشيما الثالثة',
+          x: 200,
+          y: 18,
+          width: 400,
+          height: 40,
+          content: 'اختر الباقة التي تناسبك',
+          styles: { fontSize: 20, color: col.text, fontWeight: 'bold', textAlign: 'center' }
         },
         {
           type: 'shape',
-          name: 'دائرة تظليل متوسطة',
-          x: 560,
-          y: -20,
+          name: 'بطاقة جانبية يسار',
+          x: 40,
+          y: 150,
           width: 200,
-          height: 200,
-          clipPath: 'clip-shape-geo-circle',
-          content: 'circle',
-          styles: { backgroundColor: 'rgba(52,199,89,0.12)' }
-        },
-        {
-          type: 'shape',
-          name: 'دائرة صورة تكييف داخلي',
-          x: -30,
-          y: 400,
-          width: 220,
-          height: 220,
-          clipPath: 'clip-shape-geo-circle',
-          content: 'circle',
-          styles: { backgroundImage: '/Library/pavel-neznanov-w95Fb7EEcjE-unsplash.jpg', backgroundSize: 'cover' }
-        },
-        {
-          type: 'shape',
-          name: 'لوحة المحتوى',
-          x: 50,
-          y: 140,
-          width: 430,
-          height: 330,
-          styles: { backgroundColor: col.card, borderRadius: 28, glowIntensity: 22, glowColor: 'rgba(52,199,89,0.18)', glowPosition: 'bottom' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة التبريد',
-          x: 80,
-          y: 170,
-          width: 260,
-          height: 30,
-          content: 'أنظمة تبريد وتكييف ذكية',
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+          height: 260,
+          rotation: -6,
+          styles: { backgroundColor: col.card, borderRadius: 22, glowIntensity: 16, glowColor: 'rgba(0,0,0,0.1)', glowPosition: 'bottom' }
         },
         {
           type: 'heading',
-          name: 'عنوان التكييف',
-          x: 80,
-          y: 215,
-          width: 370,
-          height: 90,
-          content: 'فريش إير — هواء نقي وبرودة مستدامة في كل الفصول',
-          styles: { fontSize: 24, color: col.text, fontWeight: 'bold', fontFamily: 'Mada', textAlign: 'right', lineHeight: 1.3 }
+          name: 'عنوان البطاقة الجانبية اليسرى',
+          x: 60,
+          y: 180,
+          width: 160,
+          height: 26,
+          content: 'الباقة الأساسية',
+          styles: { fontSize: 13, color: col.text, fontWeight: 'bold', textAlign: 'center' }
         },
         {
           type: 'paragraph',
-          name: 'نص التكييف',
-          x: 80,
-          y: 320,
-          width: 370,
+          name: 'نص البطاقة الجانبية اليسرى',
+          x: 60,
+          y: 215,
+          width: 160,
           height: 90,
-          content: 'تركيب وصيانة أنظمة التكييف المركزي والسبليت لأحدث الموديلات الموفرة للطاقة، مع فرق فنية معتمدة تصلك في نفس اليوم.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+          content: 'تغطية أساسية تناسب البدايات.',
+          styles: { fontSize: 10, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center', lineHeight: 1.5 }
         },
         {
-          type: 'icon',
-          name: 'أيقونة ثلج',
-          x: 420,
-          y: 390,
-          width: 60,
-          height: 60,
-          content: '',
-          styles: { fontSize: 36, textAlign: 'center' }
+          type: 'shape',
+          name: 'بطاقة جانبية يمين',
+          x: 560,
+          y: 180,
+          width: 200,
+          height: 260,
+          rotation: 6,
+          styles: { backgroundColor: col.card, borderRadius: 22, glowIntensity: 16, glowColor: 'rgba(0,0,0,0.1)', glowPosition: 'bottom' }
         },
         {
-          type: 'button',
-          name: 'زر طلب فني تكييف',
-          x: 80,
-          y: 420,
-          width: 230,
-          height: 44,
-          content: 'اطلب فني صيانة الآن',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', glowIntensity: 18, glowColor: 'rgba(52,199,89,0.3)', glowPosition: 'bottom' }
+          type: 'heading',
+          name: 'عنوان البطاقة الجانبية اليمنى',
+          x: 580,
+          y: 210,
+          width: 160,
+          height: 26,
+          content: 'الباقة الشاملة',
+          styles: { fontSize: 13, color: col.text, fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة الجانبية اليمنى',
+          x: 580,
+          y: 245,
+          width: 160,
+          height: 90,
+          content: 'كل ما تحتاجه في باقة واحدة متكاملة.',
+          styles: { fontSize: 10, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center', lineHeight: 1.5 }
+        },
+        {
+          type: 'shape',
+          name: 'البطاقة المركزية البارزة',
+          x: 250,
+          y: 70,
+          width: 300,
+          height: 400,
+          styles: { backgroundColor: col.card, borderRadius: 28, glowIntensity: 26, glowColor: 'rgba(0,0,0,0.16)', glowPosition: 'bottom', borderWidth: 1, borderColor: col.accent + '30' }
+        },
+        {
+          type: 'image',
+          name: 'صورة البطاقة المركزية',
+          x: 270,
+          y: 90,
+          width: 260,
+          height: 220,
+          content: '/Library/compressed/intro-schema3-floating.jpg',
+          imageUrl: '/Library/compressed/intro-schema3-floating.jpg',
+          styles: { objectFit: 'cover', borderRadius: 18 }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة المركزية',
+          x: 270,
+          y: 325,
+          width: 260,
+          height: 30,
+          content: 'الباقة المميزة',
+          styles: { fontSize: 16, color: col.text, fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة المركزية',
+          x: 270,
+          y: 360,
+          width: 260,
+          height: 90,
+          content: 'الخيار الأكثر طلباً، يجمع كل مزايانا في تجربة واحدة متكاملة.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center', lineHeight: 1.6 }
         }
       ];
     } else if (index === 3) {
-      // Coffee Roastery Intro (محمصة قهوة)
+      // SCHEMA 4 — التركيز النصي المحوري: عنوان مركزي وتحته صف بطاقات أفقي بعرض متساوٍ
       elements = [
         {
-          type: 'image',
-          name: 'خلفية كاملة - جلسة قهوة',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          content: '/Library/toa-heftiba-vP2ti9kJefE-unsplash.jpg',
-          imageUrl: '/Library/toa-heftiba-vP2ti9kJefE-unsplash.jpg',
-          styles: { objectFit: 'cover', opacity: 0.18 }
-        },
-        {
-          type: 'shape',
-          name: 'بقعة بن زخرفية سفلية',
-          x: -20,
-          y: 420,
-          width: 180,
-          height: 180,
-          clipPath: 'clip-shape-blob-org-a',
-          content: 'blob',
-          styles: { backgroundImage: '/Library/manuel-gast-zIzMHDnFKik-unsplash.jpg', backgroundSize: 'cover' }
-        },
-        {
-          type: 'image',
-          name: 'صورة فنجان القهوة بإطار أبيض',
-          x: 480,
-          y: 60,
-          width: 280,
-          height: 280,
-          content: '/Library/toa-heftiba-vP2ti9kJefE-unsplash.jpg',
-          imageUrl: '/Library/toa-heftiba-vP2ti9kJefE-unsplash.jpg',
-          styles: { objectFit: 'cover', borderRadius: 24, borderWidth: 6, borderColor: '#ffffff', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.18)', glowPosition: 'bottom' }
-        },
-        {
-          type: 'shape',
-          name: 'لوحة محتوى المحمصة',
-          x: 40,
-          y: 150,
-          width: 400,
-          height: 320,
-          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 20, glowColor: 'rgba(255,149,0,0.15)', glowPosition: 'bottom' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة التحميص الطازج',
-          x: 70,
-          y: 180,
-          width: 220,
-          height: 30,
-          content: 'تحميص طازج يوميًا',
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
           type: 'heading',
-          name: 'عنوان المحمصة',
-          x: 70,
-          y: 225,
-          width: 340,
-          height: 90,
-          content: 'محمصة الأصالة — نكهة البن الحقيقية من الحبة إلى الكوب',
-          styles: { fontSize: 24, color: col.text, fontWeight: 'bold', fontFamily: 'Rakkas', textAlign: 'right', lineHeight: 1.35 }
+          name: 'عنوان الشيما الرابعة',
+          x: 80,
+          y: 45,
+          width: 640,
+          height: 50,
+          content: 'كل ما تحتاجه في مكان واحد',
+          styles: { fontSize: 25, color: col.text, fontWeight: 'bold', textAlign: 'center' }
         },
         {
           type: 'paragraph',
-          name: 'نص المحمصة',
-          x: 70,
-          y: 330,
-          width: 340,
-          height: 90,
-          content: 'نحمّص أجود حبوب البن المختارة من أفضل المزارع العالمية طازجة كل صباح، لنقدم لك تجربة قهوة استثنائية بنكهة غنية وعطر لا يُنسى.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+          name: 'نص الشيما الرابعة',
+          x: 140,
+          y: 100,
+          width: 520,
+          height: 36,
+          content: 'باقات مرنة تناسب احتياجك مهما كان حجم مشروعك.',
+          styles: { fontSize: 13, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center' }
+        },
+        {
+          type: 'shape',
+          name: 'بطاقة أفقية 1',
+          x: 60,
+          y: 165,
+          width: 220,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 20, borderWidth: 1, borderColor: col.text + '12' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة الأفقية 1',
+          x: 80,
+          y: 195,
+          width: 180,
+          height: 28,
+          content: 'الأساسية',
+          styles: { fontSize: 15, color: col.text, fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة الأفقية 1',
+          x: 80,
+          y: 235,
+          width: 180,
+          height: 110,
+          content: 'تغطية البداية المثالية لمن يريد الانطلاق بثقة.',
+          styles: { fontSize: 11, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center', lineHeight: 1.6 }
         },
         {
           type: 'button',
-          name: 'زر تسوق حبوب القهوة',
-          x: 70,
-          y: 440,
-          width: 230,
-          height: 44,
-          content: 'تسوّق حبوب القهوة',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+          name: 'زر البطاقة الأفقية 1',
+          x: 90,
+          y: 435,
+          width: 160,
+          height: 38,
+          content: 'اختر الباقة',
+          styles: { fontSize: 12, backgroundColor: col.accent, color: '#ffffff', borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'shape',
+          name: 'بطاقة أفقية 2',
+          x: 300,
+          y: 165,
+          width: 220,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 20, borderWidth: 1, borderColor: col.accent + '40' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة الأفقية 2',
+          x: 320,
+          y: 195,
+          width: 180,
+          height: 28,
+          content: 'الاحترافية',
+          styles: { fontSize: 15, color: col.text, fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة الأفقية 2',
+          x: 320,
+          y: 235,
+          width: 180,
+          height: 110,
+          content: 'مزايا أوسع تناسب الأعمال المتنامية والطموحة.',
+          styles: { fontSize: 11, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر البطاقة الأفقية 2',
+          x: 330,
+          y: 435,
+          width: 160,
+          height: 38,
+          content: 'اختر الباقة',
+          styles: { fontSize: 12, backgroundColor: col.accent, color: '#ffffff', borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+        },
+        {
+          type: 'shape',
+          name: 'بطاقة أفقية 3',
+          x: 540,
+          y: 165,
+          width: 220,
+          height: 330,
+          styles: { backgroundColor: col.card, borderRadius: 20, borderWidth: 1, borderColor: col.text + '12' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة الأفقية 3',
+          x: 560,
+          y: 195,
+          width: 180,
+          height: 28,
+          content: 'المؤسسات',
+          styles: { fontSize: 15, color: col.text, fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة الأفقية 3',
+          x: 560,
+          y: 235,
+          width: 180,
+          height: 110,
+          content: 'حلول مخصصة بالكامل تواكب حجم مؤسستك.',
+          styles: { fontSize: 11, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center', lineHeight: 1.6 }
+        },
+        {
+          type: 'button',
+          name: 'زر البطاقة الأفقية 3',
+          x: 570,
+          y: 435,
+          width: 160,
+          height: 38,
+          content: 'تواصل معنا',
+          styles: { fontSize: 12, backgroundColor: col.accent, color: '#ffffff', borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
     } else if (index === 4) {
-      // Fashion & Clothing Intro (الموضة والملبوسات)
+      // SCHEMA 5 — الشبكة التركيبية: شبكة بطاقات موزعة بشكل غير متماثل، بطاقة كبيرة مميزة وبطاقتان أصغر
       elements = [
         {
-          type: 'shape',
-          name: 'كتلة لونية تحريرية علوية',
-          x: -40,
-          y: -40,
-          width: 420,
-          height: 300,
-          styles: { backgroundColor: col.accent, borderRadius: 32 },
-          rotation: -4
+          type: 'badge',
+          name: 'شارة الشيما الخامسة',
+          x: 50,
+          y: 25,
+          width: 200,
+          height: 28,
+          content: 'مزايا متعددة',
+          styles: { fontSize: 11, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
         },
         {
           type: 'shape',
-          name: 'صورة أزياء بشكل موجي',
-          x: 420,
-          y: 80,
-          width: 340,
-          height: 440,
-          clipPath: 'clip-shape-blob-wavy',
-          content: 'blob',
-          styles: { backgroundImage: '/Library/ryunosuke-kikuno-RKwivgSTXVI-unsplash.jpg', backgroundSize: 'cover', animation: 'slide-left', animationTrigger: 'once', animationDuration: 1.2 }
+          name: 'بطاقة شبكية صغيرة 1',
+          x: 50,
+          y: 65,
+          width: 330,
+          height: 220,
+          styles: { backgroundColor: col.card, borderRadius: 20, glowIntensity: 14, glowColor: 'rgba(0,0,0,0.1)', glowPosition: 'bottom' }
         },
         {
           type: 'heading',
-          name: 'عنوان الأزياء',
-          x: 60,
-          y: 90,
-          width: 340,
-          height: 90,
-          content: 'أتيليه لورا — أزياء عصرية تحتفي بأسلوبك الخاص',
-          styles: { fontSize: 23, color: '#ffffff', fontWeight: 'bold', fontFamily: 'Alexandria', textAlign: 'right', lineHeight: 1.3 }
-        },
-        {
-          type: 'shape',
-          name: 'لوحة المحتوى السفلية',
-          x: 30,
-          y: 320,
-          width: 380,
-          height: 220,
-          styles: { backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 26, glowIntensity: 22, glowColor: 'rgba(191,90,242,0.18)', glowPosition: 'bottom' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة تشكيلة الموسم',
-          x: 60,
-          y: 345,
-          width: 240,
-          height: 30,
-          content: 'تشكيلة الموسم الجديدة',
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
+          name: 'عنوان البطاقة الشبكية 1',
+          x: 80,
+          y: 95,
+          width: 270,
+          height: 28,
+          content: 'نتائج قابلة للقياس',
+          styles: { fontSize: 14, color: col.text, fontWeight: 'bold', textAlign: 'right' }
         },
         {
           type: 'paragraph',
-          name: 'نص الأزياء',
-          x: 60,
-          y: 390,
-          width: 340,
-          height: 90,
-          content: 'تصاميم حصرية وقطع مختارة بعناية من أفضل الخامات العالمية لتواكب أحدث صيحات الموضة بذوق راقٍ يناسب كل المناسبات.',
-          styles: { fontSize: 12, color: '#636366', textAlign: 'right', lineHeight: 1.6 }
+          name: 'نص البطاقة الشبكية 1',
+          x: 80,
+          y: 135,
+          width: 270,
+          height: 130,
+          content: 'تقارير دورية واضحة تُظهر لك أثر كل خطوة نتخذها معك.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
         },
         {
-          type: 'button',
-          name: 'زر تصفح المجموعة',
-          x: 60,
-          y: 485,
-          width: 220,
-          height: 40,
-          content: 'تصفّح المجموعة الآن',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 12, textAlign: 'center', fontWeight: 'bold' }
+          type: 'shape',
+          name: 'بطاقة شبكية صغيرة 2',
+          x: 50,
+          y: 305,
+          width: 330,
+          height: 220,
+          styles: { backgroundColor: col.card, borderRadius: 20, glowIntensity: 14, glowColor: 'rgba(0,0,0,0.1)', glowPosition: 'bottom' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة الشبكية 2',
+          x: 80,
+          y: 335,
+          width: 270,
+          height: 28,
+          content: 'فريق عمل متمرس',
+          styles: { fontSize: 14, color: col.text, fontWeight: 'bold', textAlign: 'right' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة الشبكية 2',
+          x: 80,
+          y: 375,
+          width: 270,
+          height: 130,
+          content: 'خبرات متنوعة تجتمع لخدمة مشروعك من كل الجوانب.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
+        },
+        {
+          type: 'shape',
+          name: 'البطاقة الشبكية الكبيرة المميزة',
+          x: 410,
+          y: 65,
+          width: 340,
+          height: 460,
+          styles: { backgroundColor: col.card, borderRadius: 26, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.16)', glowPosition: 'bottom', borderWidth: 1, borderColor: col.accent + '30' }
+        },
+        {
+          type: 'image',
+          name: 'صورة البطاقة الشبكية الكبيرة',
+          x: 430,
+          y: 85,
+          width: 300,
+          height: 260,
+          content: '/Library/compressed/intro-schema5-accent.jpg',
+          imageUrl: '/Library/compressed/intro-schema5-accent.jpg',
+          styles: { objectFit: 'cover', borderRadius: 18 }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان البطاقة الشبكية الكبيرة',
+          x: 430,
+          y: 365,
+          width: 300,
+          height: 30,
+          content: 'الخيار الأكثر تكاملاً',
+          styles: { fontSize: 16, color: col.text, fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص البطاقة الشبكية الكبيرة',
+          x: 430,
+          y: 400,
+          width: 300,
+          height: 100,
+          content: 'يجمع كل ما تحتاجه في تجربة واحدة متكاملة ومصممة حول أهدافك.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center', lineHeight: 1.6 }
         }
       ];
-    }
- else if (index === 5) {
-      // Mechanic Workshop Intro (ورشة ميكانيك)
+    } else if (index === 5) {
+      // SCHEMA 6 — البساطة: أقل زخرفة ممكنة، بلا ظل أو حدود بارزة، فقط فواصل رفيعة بين الصفوف
       elements = [
         {
-          type: 'image',
-          name: 'خلفية كاملة - ورشة الصيانة',
-          x: 0,
-          y: 0,
-          width: 800,
-          height: 580,
-          content: '/Library/nejc-soklic-wO42Rmamef8-unsplash.jpg',
-          imageUrl: '/Library/nejc-soklic-wO42Rmamef8-unsplash.jpg',
-          styles: { objectFit: 'cover', opacity: 0.22 }
-        },
-        {
-          type: 'shape',
-          name: 'شريحة قطرية خلفية',
-          x: -80,
-          y: -40,
-          width: 500,
-          height: 650,
-          content: 'slab',
-          styles: { backgroundColor: 'rgba(48,209,88,0.06)' },
-          rotation: 8
-        },
-        {
-          type: 'shape',
-          name: 'إطار سداسي حول صورة الورشة',
-          x: 450,
-          y: 50,
-          width: 330,
-          height: 330,
-          content: 'frame',
-          styles: { backgroundColor: 'transparent', borderWidth: 3, borderColor: col.accent, borderRadius: 20 }
-        },
-        {
-          type: 'image',
-          name: 'صورة أدوات الورشة المقصوصة',
-          x: 470,
-          y: 70,
-          width: 290,
-          height: 290,
-          content: '/Library/govind-krishnan-oVFRll_Kp6Q-unsplash.jpg',
-          imageUrl: '/Library/govind-krishnan-oVFRll_Kp6Q-unsplash.jpg',
-          clipPath: 'clip-shape-geo-hexagon',
-          styles: { objectFit: 'cover' }
-        },
-        {
-          type: 'shape',
-          name: 'لوحة محتوى الورشة',
-          x: 40,
-          y: 140,
-          width: 380,
-          height: 330,
-          styles: { backgroundColor: col.card, borderRadius: 24, glowIntensity: 26, glowColor: 'rgba(48,209,88,0.2)', glowPosition: 'bottom', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }
-        },
-        {
-          type: 'badge',
-          name: 'شارة الصيانة الفورية',
-          x: 70,
-          y: 170,
-          width: 240,
-          height: 30,
-          content: 'صيانة وإصلاح فوري',
-          styles: { fontSize: 12, backgroundColor: col.bgShape, color: col.accent, borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
-        },
-        {
           type: 'heading',
-          name: 'عنوان الورشة',
-          x: 70,
-          y: 215,
-          width: 320,
-          height: 100,
-          content: 'ورشة الدقة — صيانة ميكانيكية موثوقة بخبرة الأبطال',
-          styles: { fontSize: 30, color: '#ffffff', fontWeight: 'bold', fontFamily: 'Jomhuria', textAlign: 'right', lineHeight: 1.2 }
+          name: 'عنوان الشيما السادسة',
+          x: 100,
+          y: 55,
+          width: 600,
+          height: 50,
+          content: 'البساطة في صميم كل ما نقدمه',
+          styles: { fontSize: 25, color: col.text, fontWeight: 'bold', textAlign: 'center' }
         },
         {
           type: 'paragraph',
-          name: 'نص الورشة',
-          x: 70,
-          y: 330,
-          width: 320,
-          height: 100,
-          content: 'فحص شامل وصيانة دورية لجميع أنواع السيارات بأحدث أجهزة الفحص الكمبيوتري وفنيين معتمدين، مع ضمان حقيقي على كل قطعة غيار.',
-          styles: { fontSize: 12, color: '#a1a1a6', textAlign: 'right', lineHeight: 1.6 }
+          name: 'نص الشيما السادسة',
+          x: 160,
+          y: 110,
+          width: 480,
+          height: 36,
+          content: 'حلول واضحة بلا تعقيد، تركز على ما يهمك فقط.',
+          styles: { fontSize: 13, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center' }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الصف 1',
+          x: 100,
+          y: 190,
+          width: 600,
+          height: 28,
+          content: 'وضوح تام في كل خطوة',
+          styles: { fontSize: 15, color: col.text, fontWeight: 'bold', textAlign: 'right' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الصف 1',
+          x: 100,
+          y: 222,
+          width: 600,
+          height: 28,
+          content: 'تعرف بالضبط إلى أين تتجه فكرتك من اليوم الأول.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right' }
+        },
+        {
+          type: 'shape',
+          name: 'فاصل 1',
+          x: 100,
+          y: 262,
+          width: 600,
+          height: 1,
+          styles: { backgroundColor: col.text === '#ffffff' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)', borderRadius: 0 }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الصف 2',
+          x: 100,
+          y: 280,
+          width: 600,
+          height: 28,
+          content: 'لا تفاصيل زائدة تشتت انتباهك',
+          styles: { fontSize: 15, color: col.text, fontWeight: 'bold', textAlign: 'right' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الصف 2',
+          x: 100,
+          y: 312,
+          width: 600,
+          height: 28,
+          content: 'نقدّم فقط ما يخدم هدفك، دون حشو أو إلهاء.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right' }
+        },
+        {
+          type: 'shape',
+          name: 'فاصل 2',
+          x: 100,
+          y: 352,
+          width: 600,
+          height: 1,
+          styles: { backgroundColor: col.text === '#ffffff' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)', borderRadius: 0 }
+        },
+        {
+          type: 'heading',
+          name: 'عنوان الصف 3',
+          x: 100,
+          y: 370,
+          width: 600,
+          height: 28,
+          content: 'تواصل بسيط ومباشر معنا',
+          styles: { fontSize: 15, color: col.text, fontWeight: 'bold', textAlign: 'right' }
+        },
+        {
+          type: 'paragraph',
+          name: 'نص الصف 3',
+          x: 100,
+          y: 402,
+          width: 600,
+          height: 28,
+          content: 'خطوة واحدة تفصلك عن بدء التعامل معنا.',
+          styles: { fontSize: 12, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right' }
         },
         {
           type: 'button',
-          name: 'زر طلب فني الآن',
-          x: 70,
-          y: 440,
+          name: 'زر البساطة',
+          x: 300,
+          y: 460,
           width: 200,
-          height: 46,
-          content: 'اطلب فني الآن',
-          styles: { fontSize: 13, backgroundColor: col.accent, color: '#050505', borderRadius: 12, textAlign: 'center', fontWeight: 'bold', animation: 'pulse', animationTrigger: 'loop', animationDuration: 2 }
+          height: 44,
+          content: 'ابدأ الآن',
+          styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 999, textAlign: 'center', fontWeight: 'bold' }
         }
       ];
     } else if (index === 6) {
@@ -9139,7 +9345,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     title: 'صفحة الدكتور',
                     sub: 'بطاقة عيادة ومعلومات الطبيب',
                     subCategories: ['compound'],
-                    type: 'card',
+                    type: 'shape',
                     preview: (
                       <div className="w-full h-18 bg-linear-to-br from-blue-50 to-indigo-50/50 rounded-xl p-2 flex flex-col justify-between border border-blue-100/80 text-right">
                         <div className="flex items-center justify-between">
@@ -9155,12 +9361,18 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement(
-                        'card',
-                        'د. أحمد السعيد - استشاري طب وجراحة. احجز موعدك الطبي الآن واستمتع برعاية شاملة على أيدي أمهر الأطباء.',
-                        { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: '#0071e320', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
-                        { name: 'صفحة الدكتور', width: 340, height: 210 }
-                      );
+                      onAddGroup?.({
+                        name: 'صفحة الدكتور',
+                        width: 320,
+                        height: 220,
+                        styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: '#0071e320', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }
+                      }, [
+                        { type: 'shape', name: 'شارة دائرية', x: 20, y: 20, width: 40, height: 40, clipPath: 'clip-shape-geo-circle', styles: { backgroundColor: '#0071e3' } },
+                        { type: 'heading', name: 'اسم الطبيب', content: 'اسم الطبيب أو الأخصائي', x: 72, y: 24, width: 228, height: 32, styles: { fontSize: 15, fontWeight: 'bold', color: '#0f172a', textAlign: 'right' } },
+                        { type: 'paragraph', name: 'التخصص', content: 'التخصص الطبي والمؤهلات', x: 20, y: 74, width: 280, height: 26, styles: { fontSize: 12, fontWeight: '600', color: '#1d4ed8', textAlign: 'right' } },
+                        { type: 'paragraph', name: 'الوصف', content: 'نبذة قصيرة عن الخدمة الطبية المقدمة وأهم ما يميزها.', x: 20, y: 104, width: 280, height: 46, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } },
+                        { type: 'button', name: 'زر الحجز', content: 'احجز موعدك الآن', x: 20, y: 160, width: 280, height: 42, styles: { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 12, fontWeight: 'bold', textAlign: 'center' } }
+                      ]);
                     }
                   },
                   {
@@ -9168,21 +9380,24 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     title: 'اقتباس وشهادة عميل',
                     sub: 'عرض آراء العملاء وتجاربهم',
                     subCategories: ['compound'],
-                    type: 'card',
+                    type: 'shape',
                     preview: (
                       <div className="w-full h-18 bg-amber-50/50 rounded-xl p-2 flex flex-col justify-between border border-amber-200/60 text-right">
                         <span className="text-amber-500 text-xs font-serif">❝</span>
                         <p className="text-[9px] text-neutral-700 italic truncate">«تجربة لا مثيل لها، أنجزنا الموقع في دقائق»</p>
-                        <span className="text-[8px] text-amber-700 font-bold">محمد الحربي ★★★★★</span>
+                        <span className="text-[8px] text-amber-700 font-bold">محمد الحربي</span>
                       </div>
                     ),
                     action: () => {
-                      onAddElement(
-                        'card',
-                        '«منصة Weelink غيرت مفهوم بناء المواقع لدينا تماماً، سهولة فائقة ودعم عربي أصيل وفريد.»',
-                        { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: '#f59e0b30', glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
-                        { name: 'اقتباس وشهادة عميل', width: 320, height: 160 }
-                      );
+                      onAddGroup?.({
+                        name: 'اقتباس وشهادة عميل',
+                        width: 320,
+                        height: 150,
+                        styles: { backgroundColor: '#fffbeb', borderRadius: 20, borderWidth: 1, borderColor: '#f59e0b30' }
+                      }, [
+                        { type: 'paragraph', name: 'نص الاقتباس', content: 'نص اقتباس أو رأي عميل حقيقي يوضح تجربته مع الخدمة.', x: 20, y: 20, width: 280, height: 66, styles: { fontSize: 13, color: '#78350f', fontStyle: 'italic', textAlign: 'right' } },
+                        { type: 'heading', name: 'اسم العميل', content: 'اسم العميل', x: 20, y: 96, width: 280, height: 30, styles: { fontSize: 13, fontWeight: 'bold', color: '#92400e', textAlign: 'right' } }
+                      ]);
                     }
                   },
                   {
@@ -9260,7 +9475,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     title: 'معرض صور مصغر',
                     sub: 'شبكة 3 صور متناسقة',
                     subCategories: ['gallery'],
-                    type: 'card',
+                    type: 'shape',
                     preview: (
                       <div className="w-full h-18 bg-neutral-50 rounded-xl p-1 grid grid-cols-3 gap-1 border border-neutral-200">
                         <div className="bg-sky-200 rounded" />
@@ -9269,7 +9484,16 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       </div>
                     ),
                     action: () => {
-                      onAddElement('card', 'معرض صور متكامل يعرض لقطات من أعمالك ومشروعاتك.', { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: '#e5e7eb' }, { name: 'معرض صور', width: 440, height: 220 });
+                      onAddGroup?.({
+                        name: 'معرض صور',
+                        width: 440,
+                        height: 220,
+                        styles: { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: '#e5e7eb' }
+                      }, [
+                        { type: 'image', name: 'صورة المعرض 1', x: 16, y: 16, width: 125, height: 188, styles: { borderRadius: 12 } },
+                        { type: 'image', name: 'صورة المعرض 2', x: 157, y: 16, width: 125, height: 188, styles: { borderRadius: 12 } },
+                        { type: 'image', name: 'صورة المعرض 3', x: 298, y: 16, width: 126, height: 188, styles: { borderRadius: 12 } }
+                      ]);
                     }
                   },
                 ],
@@ -13981,7 +14205,15 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     {
                       title: 'بطاقات المميزات (Features)',
                       action: () => {
-                        onAddElement('card', 'سرعة متناهية وخوادم سحابية فائقة الثبات.');
+                        onAddGroup?.({
+                          name: 'بطاقة ميزة',
+                          width: 300,
+                          height: 150,
+                          styles: { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' }
+                        }, [
+                          { type: 'heading', name: 'عنوان الميزة', content: 'أداء فائق السرعة', x: 16, y: 16, width: 268, height: 28, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
+                          { type: 'paragraph', name: 'وصف الميزة', content: 'سرعة متناهية وخوادم سحابية فائقة الثبات.', x: 16, y: 50, width: 268, height: 84, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } }
+                        ]);
                       }
                     },
                   ].map((tmpl, idx) => (

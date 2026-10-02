@@ -1,12 +1,13 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { 
-  CanvasElement, 
-  Slide, 
-  NavbarConfig, 
+import {
+  CanvasElement,
+  Slide,
+  NavbarConfig,
   DevicePreviewMode,
   getGlowShadowStyle,
   getLightGradientStyle,
-  GalleryItem
+  GalleryItem,
+  Page
 } from '../types';
 import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
@@ -35,6 +36,9 @@ interface CanvasWorkspaceProps {
   onSelectSlide: (slideId: string) => void;
   onSelectPage?: (pageId: string) => void;
   activePageId?: string;
+  // The site's full page list — the navbar's page-name links are derived live from this, so a
+  // page added or removed anywhere in the app appears/disappears in the navbar automatically.
+  allPages?: Page[];
   onUpdateElementPosition: (id: string, x: number, y: number) => void;
   onUpdateElementSize: (id: string, width: number, height: number, x?: number, y?: number) => void;
   onUpdateElementRotation?: (id: string, rotation: number) => void;
@@ -672,6 +676,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onSelectSlide,
   onSelectPage,
   activePageId,
+  allPages,
   onUpdateElementPosition,
   onUpdateElementSize,
   onUpdateElementRotation,
@@ -696,12 +701,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const localScaleRef = useRef(1);
   const localSlidesRef = useRef(slides);
   const navbarRef = useRef<HTMLElement>(null);
-  const isNavbarStickyRef = useRef(navbar.isSticky);
   const navbarHeightRef = useRef(navbar.height ?? 60);
 
   // Synchronize slides ref on each render
   localSlidesRef.current = slides;
-  isNavbarStickyRef.current = navbar.isSticky;
   navbarHeightRef.current = navbar.height ?? 60;
 
   useEffect(() => {
@@ -732,19 +735,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           element.style.transform = `translate3d(0, ${offsetY}px, 0)`;
         });
       }
-
-      // Native CSS `position: sticky` breaks under the device-frame's `transform: scale(...)`
-      // ancestor (a well-known CSS limitation), so the navbar's "floating at top" effect is
-      // reproduced manually here with the same translate3d technique used for fixed backgrounds.
-      const navEl = navbarRef.current;
-      if (navEl) {
-        if (isNavbarStickyRef.current) {
-          const offsetY = Math.max(0, currentScroll / currentScale);
-          navEl.style.transform = `translate3d(0, ${offsetY}px, 0)`;
-        } else if (navEl.style.transform) {
-          navEl.style.transform = '';
-        }
-      }
+      // Note: the navbar no longer needs any JS-driven scroll handling here — it now lives outside
+      // the device frame's transformed ancestor and uses native CSS `position: sticky` directly
+      // (see the <nav> element below), which the browser's compositor handles with zero lag/jitter.
     };
 
     const scrollEl = workspaceRef.current;
@@ -1859,8 +1852,23 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     }
   };
 
+  // The navbar's page-name links are derived live from the site's actual page list (not the
+  // possibly-stale navbar.items stored on the page), so adding/renaming/deleting a page updates
+  // the navbar automatically. Any manually-added non-page links (external URLs, etc.) are kept.
+  const navPageLinkItems = (allPages || []).map((p) => ({
+    id: `page-link-${p.id}`,
+    label: p.name,
+    href: '#',
+    linkType: 'page' as const,
+    linkTargetId: p.id,
+  }));
+  const navCustomItems = (navbar.items || []).filter((it) => it.linkType !== 'page');
+  const effectiveNavItems = allPages && allPages.length > 0 ? [...navPageLinkItems, ...navCustomItems] : navbar.items;
+
   const totalUnscaledHeight = (navbar.height ?? 60) + slides.reduce((sum, s) => sum + s.height, 0);
   const totalScaledHeight = totalUnscaledHeight * scaleFactor;
+  // Height (in on-screen/scaled px) of the mobile device notch, which sits above the navbar.
+  const notchHeightScaled = (previewMode === 'mobile' ? 24 : 0) * scaleFactor;
 
   return (
     <div 
@@ -1887,22 +1895,21 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           height: `${totalScaledHeight}px`,
         }}
       >
-        {/* Device Mode Wrapper Frame */}
-        <div 
-          className={`bg-white transition-all duration-300 relative flex flex-col select-none ${getContainerWidthClass()}`}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            width: `${baseWidth}px`,
-            transformOrigin: 'top center',
-            position: 'absolute',
-            top: 0,
-            left: '50%',
-            transform: `translate3d(-50%, 0, 0) scale(${scaleFactor})`,
-          }}
-        >
-        {/* Mobile Device Top Notch/Speaker Bar (if mobile) */}
+        {/* Mobile Device Top Notch/Speaker Bar (if mobile). Rendered here, before the navbar, as a flow
+            sibling — both now live OUTSIDE the "Device Mode Wrapper Frame" below, specifically so the
+            navbar can use native CSS `position: sticky`: a `transform` on ANY ancestor between a
+            sticky element and its scrolling container breaks native sticky in every browser (confirmed
+            empirically) — which is exactly what the Frame's own `transform: scale(...)` did when the
+            navbar was a descendant of it. Giving the notch/navbar their own scale transform directly
+            (no transformed ancestor in between) lets the browser's compositor handle sticky natively —
+            smooth, with none of the one-frame-behind lag ("jitter") that came from simulating it in JS
+            on every scroll event. The Frame below starts right after these two, offset by their scaled
+            (on-screen) height. */}
         {previewMode === 'mobile' && (
-          <div className="w-full bg-[#1d1d1f] h-6 flex items-center justify-center relative">
+          <div
+            className="w-full bg-[#1d1d1f] h-6 flex items-center justify-center relative shrink-0"
+            style={{ width: `${baseWidth}px`, transformOrigin: 'top center', transform: `scale(${scaleFactor})` }}
+          >
             <div className="w-20 h-3.5 bg-black rounded-b-xl flex items-center justify-center">
               <div className="w-3 h-3 rounded-full bg-[#111] mr-1.5" />
               <div className="w-8 h-1 bg-[#333] rounded-full" />
@@ -1919,18 +1926,21 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             onSelectElement(null);
             onSelectNavbar?.();
           }}
-          className={`relative w-full overflow-hidden ${
+          className={`shrink-0 w-full overflow-hidden ${
             navbar.borderStyle && navbar.borderStyle !== 'none' ? '' : 'border-b border-black/[0.06]'
-          } ${
-            navbar.isSticky ? 'navbar-sticky-js' : ''
           } ${isNavbarSelected && !isPreviewActive ? 'ring-2 ring-[#0071e3]/50' : ''} ${isPreviewActive ? '' : 'cursor-pointer'}`}
           style={{
+            position: navbar.isSticky ? 'sticky' : 'relative',
+            top: `${notchHeightScaled}px`,
+            width: `${baseWidth}px`,
+            transformOrigin: 'top center',
+            transform: `scale(${scaleFactor})`,
             // Z-index kept far above any slide element's (which can reach ~50+) so nothing ever floats over the navbar.
             zIndex: 100000,
             minHeight: `${navbar.height ?? 60}px`,
-            // Only colors/shadow/border transition — `transform` is driven imperatively every scroll
-            // frame (see handleScroll above), and animating it via CSS at the same time causes the
-            // lag/"jitter" effect where the navbar visibly catches up a beat behind the scroll.
+            // Only colors/shadow/border transition — position is handled natively by the browser's
+            // compositor via `position: sticky` above, so `transform`/`top` are intentionally excluded
+            // here to avoid any CSS-animated lag behind the scroll.
             transition: 'background-color 150ms, border-color 150ms, box-shadow 150ms',
             willChange: navbar.isSticky ? 'transform' : undefined,
             borderStyle: navbar.borderStyle && navbar.borderStyle !== 'none' ? navbar.borderStyle : undefined,
@@ -1996,7 +2006,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               }`}
               style={{ color: navbar.textColor }}
             >
-              {navbar.items.map((item) => {
+              {effectiveNavItems.map((item) => {
                 const isPageLink = item.linkType === 'page' && !!item.linkTargetId;
                 const hasFrame = Boolean(
                   navbar.itemsFrameBgColor ||
@@ -2042,8 +2052,24 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           </div>
         </nav>
 
-        {/* 2. Webpage Slides Container (الشرائح مساحات عمل حرة freegrid) */}
-        <div className="flex flex-col w-full divide-y divide-black/[0.06]">
+        {/* Device Mode Wrapper Frame: the device-mockup chrome (border/rounded corners/shadow) around
+            the slides. Positioned absolutely and scaled exactly like before, now starting right below
+            the notch+navbar (which live above it in the flow, outside this transformed container,
+            instead of as descendants of it) so the navbar above can use native `position: sticky`. */}
+        <div
+          className={`bg-white transition-all duration-300 relative flex flex-col select-none ${getContainerWidthClass()}`}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: `${baseWidth}px`,
+            transformOrigin: 'top center',
+            position: 'absolute',
+            top: `${notchHeightScaled + (navbar.height ?? 60) * scaleFactor}px`,
+            left: '50%',
+            transform: `translate3d(-50%, 0, 0) scale(${scaleFactor})`,
+          }}
+        >
+          {/* 2. Webpage Slides Container (الشرائح مساحات عمل حرة freegrid) */}
+          <div className="flex flex-col w-full divide-y divide-black/[0.06]">
           {slides.map((slide, slideIndex) => {
             const slideElements = elements.filter(el => el.slideId === slide.id);
             const isSlideActive = slide.id === activeSlideId;
@@ -4057,6 +4083,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           <strong className="text-neutral-700 font-semibold">Weelink</strong>
           <span> • صُمم خصيصاً للمنطقة العربية</span>
         </footer>
+        </div>
       </div>
     </div>
 

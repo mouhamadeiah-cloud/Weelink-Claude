@@ -1867,8 +1867,17 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   const totalUnscaledHeight = (navbar.height ?? 60) + slides.reduce((sum, s) => sum + s.height, 0);
   const totalScaledHeight = totalUnscaledHeight * scaleFactor;
-  // Height (in on-screen/scaled px) of the mobile device notch, which sits above the navbar.
-  const notchHeightScaled = (previewMode === 'mobile' ? 24 : 0) * scaleFactor;
+  // Height of the mobile device notch, which sits above the navbar as a flow sibling.
+  // IMPORTANT: `position: sticky`'s `top` offset must be given in the element's own UNSCALED
+  // layout space — it is measured against the scroll container's layout geometry, which `transform`
+  // never affects. The notch's reserved flow space is always its unscaled height (24px), regardless
+  // of scaleFactor, because `transform: scale(...)` only changes how it's painted, not how much
+  // room it takes up in the flow. Using the *scaled* height here (as a previous version did) made
+  // the sticky `top` threshold smaller than the navbar's real static offset, so the moment the
+  // navbar became "stuck" it visibly snapped a few pixels — looking exactly like "sticky doesn't
+  // work" whenever scaleFactor < 1 (i.e. whenever the canvas isn't shown at 100%, which is most of
+  // the time).
+  const notchHeightUnscaled = previewMode === 'mobile' ? 24 : 0;
   // Navbar strip width (unscaled, before its own scale transform below) — a percentage of the page's
   // own width (navbar.width, default 100 = full-bleed). Centered automatically by the Scaling
   // Wrapper's `items-center`, so narrowing it just insets it evenly from both edges.
@@ -1935,7 +1944,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           } ${isNavbarSelected && !isPreviewActive ? 'ring-2 ring-[#0071e3]/50' : ''} ${isPreviewActive ? '' : 'cursor-pointer'}`}
           style={{
             position: navbar.isSticky ? 'sticky' : 'relative',
-            top: `${notchHeightScaled}px`,
+            // Unscaled on purpose — see notchHeightUnscaled's comment above.
+            top: `${notchHeightUnscaled}px`,
             width: `${navWidthPx}px`,
             transformOrigin: 'top center',
             transform: `scale(${scaleFactor})`,
@@ -2065,18 +2075,22 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               })}
             </div>
 
-            {/* Action CTA Button */}
-            <button
-              onClick={(e) => {
-                if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
-                  e.stopPropagation();
-                  onSelectPage?.(navbar.ctaLinkTargetId);
-                }
-              }}
-              className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
-            >
-              {navbar.ctaText || 'ابدأ الآن'}
-            </button>
+            {/* Action CTA Button — only rendered when the user has actually typed a label for it.
+                Never fall back to a default label like "ابدأ الآن"; an empty ctaText means the
+                user doesn't want a button here at all. */}
+            {navbar.ctaText && navbar.ctaText.trim() !== '' && (
+              <button
+                onClick={(e) => {
+                  if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
+                    e.stopPropagation();
+                    onSelectPage?.(navbar.ctaLinkTargetId);
+                  }
+                }}
+                className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
+              >
+                {navbar.ctaText}
+              </button>
+            )}
           </div>
         </nav>
 

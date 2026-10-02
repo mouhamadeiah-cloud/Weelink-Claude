@@ -99,7 +99,9 @@ const initialPage: Page = {
     items: [
       { id: '1', label: 'الرئيسية', href: '#' },
     ],
-    ctaText: 'ابدأ مجاناً',
+    // Never default this to a fallback CTA label — the button should only appear once the
+    // user types one themselves in the navbar settings.
+    ctaText: '',
     ctaHref: '#start',
     bgColor: '#ffffff',
     textColor: '#1d1d1f',
@@ -114,6 +116,34 @@ const initialPage: Page = {
       dividerShape: 'straight',
     },
   ],
+};
+
+// Old hardcoded platform-name/CTA defaults that used to be baked into every new page before this
+// was fixed. Any already-saved page (in localStorage or Firestore) from before the fix still has
+// these literal values persisted, so loading it must strip them back out — otherwise the user's
+// navbar keeps showing the platform's own name/CTA instead of staying empty until they type their
+// own. This only clears an EXACT match against the old defaults; anything the user typed themselves
+// (including a brand name that happens to also be "wee" by coincidence) is left completely alone.
+const LEGACY_DEFAULT_BRAND_NAMES = new Set(['weelink', 'wee', 'Wee', 'Weelink', 'WEE', 'WEELINK']);
+const LEGACY_DEFAULT_CTA_TEXTS = new Set(['ابدأ مجاناً', 'ابدأ الآن']);
+
+const normalizeLegacyNavbarDefaults = (pagesToFix: Page[]): Page[] => {
+  return pagesToFix.map((page) => {
+    if (!page.navbar) return page;
+    const brandName = page.navbar.brandName;
+    const ctaText = page.navbar.ctaText;
+    const brandIsLegacy = typeof brandName === 'string' && LEGACY_DEFAULT_BRAND_NAMES.has(brandName);
+    const ctaIsLegacy = typeof ctaText === 'string' && LEGACY_DEFAULT_CTA_TEXTS.has(ctaText);
+    if (!brandIsLegacy && !ctaIsLegacy) return page;
+    return {
+      ...page,
+      navbar: {
+        ...page.navbar,
+        ...(brandIsLegacy ? { brandName: '' } : {}),
+        ...(ctaIsLegacy ? { ctaText: '' } : {}),
+      },
+    };
+  });
 };
 
 const getInitialPages = (): Page[] => {
@@ -190,7 +220,7 @@ export default function App() {
       let loadedElements: CanvasElement[] = [];
       
       if (storedPages) {
-        loadedPages = JSON.parse(storedPages);
+        loadedPages = normalizeLegacyNavbarDefaults(JSON.parse(storedPages));
       }
       if (storedElements) {
         loadedElements = deserializeElements(JSON.parse(storedElements));
@@ -258,7 +288,7 @@ export default function App() {
       const designSnap = await getDoc(doc(db, 'designs', userId));
       if (designSnap.exists()) {
         const data: any = designSnap.data();
-        const cloudPages: Page[] = Array.isArray(data.pages) ? data.pages : [];
+        const cloudPages: Page[] = normalizeLegacyNavbarDefaults(Array.isArray(data.pages) ? data.pages : []);
         if (cloudPages.length > 0) {
           const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
           setPages(cloudPages);
@@ -2181,7 +2211,9 @@ export default function App() {
         الواجهة الأساسية للعمل هي شريط تحكم اساسي وتحته شريط تعديل 
         مهم جدا الشريطين ثابتين وعائمين يظهران دائما في اعلى الصفحة مهما نزل المستخدم بشريط السحب الى اسفل
       */}
-      <div className="sticky top-0 z-40 w-full shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+      {/* z-index kept above the page's own navbar (which can be set sticky with z-index 100000 by
+          the user inside the canvas) so the app's own control bar/edit bar always stays on top of it. */}
+      <div className="sticky top-0 z-[999999] w-full shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
         {/* 1. Primary Control Bar */}
         <ControlBar
           currentPage={currentPage}

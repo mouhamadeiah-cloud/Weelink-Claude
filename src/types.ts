@@ -71,6 +71,17 @@ export interface ElementStyles {
 export type LinkType = 'page' | 'slide' | 'url' | 'contact';
 export type ContactType = 'whatsapp' | 'phone' | 'email' | 'facebook' | 'instagram' | 'x' | 'tiktok';
 
+// Position/size of an element in the phone layout, written by the "تنسيق الموبايل" auto-arrange.
+// The desktop layout (x/y/width/height on the element itself) is never touched by it.
+export interface MobileLayout {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  // Multiplier applied to styles.fontSize on phones (1 = unchanged).
+  fontScale?: number;
+}
+
 export interface CanvasElement {
   id: string;
   name: string;
@@ -80,6 +91,8 @@ export interface CanvasElement {
   width: number;
   height: number;
   rotation?: number; // Rotation in degrees around center (0 - 360)
+  // Phone layout; when absent the element shows at its desktop position in mobile view.
+  mobile?: MobileLayout;
   content: string;
   slideId: string;
   styles: ElementStyles;
@@ -168,6 +181,8 @@ export interface Slide {
   id: string;
   name: string; // e.g. "شريحة ١"
   height: number; // default e.g. 540
+  // Slide height in the phone layout, used once its elements have a mobile layout.
+  mobileHeight?: number;
   backgroundColor?: string;
   backgroundImage?: string;
   backgroundSize?: 'cover' | 'contain' | 'auto';

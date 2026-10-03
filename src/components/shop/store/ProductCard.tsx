@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ImageOff, ShoppingBag, Check } from 'lucide-react';
 import { ShopProduct } from '../shopTypes';
-import { badgeText, totalStock } from '../productModel';
+import { badgeColor, badgeText, isSoldOut } from '../productModel';
 import { addToCart, formatPrice } from '../../../utils/cartStore';
 
 interface ProductCardProps {
@@ -19,7 +19,7 @@ export const needsChoice = (p: ShopProduct) =>
 export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen }) => {
   const [added, setAdded] = useState(false);
   const badge = badgeText(product);
-  const soldOut = totalStock(product) <= 0;
+  const soldOut = isSoldOut(product);
 
   const add = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -55,7 +55,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4
         {badge && (
           <span
             className="absolute top-3 right-3 px-3 py-1 rounded-full text-[11px] font-bold text-white shadow"
-            style={{ backgroundColor: soldOut ? '#6e6e73' : product.badge === 'discount' ? '#ff3b30' : '#2A1F1A' }}
+            style={{ backgroundColor: badgeColor(product) }}
           >
             {badge}
           </span>

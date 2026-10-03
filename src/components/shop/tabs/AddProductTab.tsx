@@ -6,7 +6,7 @@ import { ShopProduct } from '../shopTypes';
 import { Card, inputClass, EmptyState, formatMoney } from '../adminUi';
 import { AdminTabProps } from './tabProps';
 import { ProductEditor } from '../editor/ProductEditor';
-import { totalStock } from '../productModel';
+import { totalStock, tracksStock } from '../productModel';
 
 export const AddProductTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const [mode, setMode] = useState<'manual' | 'warehouse'>('manual');
@@ -83,12 +83,12 @@ export const AddProductTab: React.FC<AdminTabProps> = ({ data, update }) => {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-[#1d1d1f] truncate">{p.name}</div>
                     <div className="text-[10px] text-neutral-400 truncate">
-                      {formatMoney(p.price, p.currency)} · المخزون {totalStock(p)}
+                      {formatMoney(p.price, p.currency)} · {tracksStock(p) ? `المخزون ${totalStock(p)}` : 'بدون مخزون'}
                       {p.variants.length > 0 && ` · ${p.variants.filter((v) => v.stock > 0).length} تركيبة متوفرة`}
                     </div>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 ${p.published ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-500'}`}>
-                    {p.published ? 'في المتجر' : 'في المستودع'}
+                    {p.published && tracksStock(p) ? 'المتجر والمستودع' : p.published ? 'المتجر فقط' : 'المستودع فقط'}
                   </span>
                 </button>
               ))}

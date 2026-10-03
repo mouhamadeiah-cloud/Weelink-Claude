@@ -1,7 +1,7 @@
 // Five image slots (front, back, side, top, bottom). Drag a slot onto another, or use the arrows,
 // to change the order; the first image is the product's main image.
 import React, { useRef, useState } from 'react';
-import { ImagePlus, Loader2, X, ChevronRight, ChevronLeft, Star } from 'lucide-react';
+import { ImagePlus, Loader2, X, ChevronRight, ChevronLeft, Star, GripVertical } from 'lucide-react';
 import { MAX_IMAGES } from '../shopTypes';
 import { uploadImageFile, inputClass, GhostButton } from '../adminUi';
 
@@ -54,6 +54,10 @@ export const ImageSlots: React.FC<ImageSlotsProps> = ({ slots, onChange }) => {
 
   return (
     <div className="space-y-2">
+      <p className="text-[11px] text-neutral-500 leading-relaxed flex items-center gap-1">
+        <GripVertical size={13} className="text-neutral-400 shrink-0" />
+        رتّب ظهور الصور بسحب الصورة إلى خانة أخرى، أو بالأسهم تحتها. الصورة الأولى هي الرئيسية في المتجر.
+      </p>
       <div className="grid grid-cols-5 gap-2">
         {slots.map((src, i) => (
           <div
@@ -71,6 +75,7 @@ export const ImageSlots: React.FC<ImageSlotsProps> = ({ slots, onChange }) => {
               {src ? (
                 <>
                   <img src={src} alt="" className="w-full h-full object-cover pointer-events-none" />
+                  <span className="absolute top-1 right-1 w-5 h-5 rounded-md bg-white/85 text-neutral-500 flex items-center justify-center pointer-events-none"><GripVertical size={12} /></span>
                   <button type="button" onClick={() => set(i, '')} className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center cursor-pointer" aria-label="حذف الصورة">
                     <X size={11} />
                   </button>
@@ -85,9 +90,9 @@ export const ImageSlots: React.FC<ImageSlotsProps> = ({ slots, onChange }) => {
               )}
             </div>
             <div className="flex items-center justify-between text-[10px] font-bold text-neutral-500">
-              <button type="button" onClick={() => swap(i, i - 1)} disabled={i === 0 || !src} className="w-4 text-neutral-400 disabled:opacity-0 cursor-pointer" aria-label="تقديم"><ChevronRight size={12} /></button>
+              <button type="button" onClick={() => swap(i, i - 1)} disabled={i === 0 || !src} className="w-5 h-5 rounded-md bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center disabled:opacity-0 cursor-pointer" aria-label="تقديم الصورة"><ChevronRight size={12} /></button>
               <span className="truncate">{SLOT_LABELS[i]}</span>
-              <button type="button" onClick={() => swap(i, i + 1)} disabled={i === slots.length - 1 || !src} className="w-4 text-neutral-400 disabled:opacity-0 cursor-pointer" aria-label="تأخير"><ChevronLeft size={12} /></button>
+              <button type="button" onClick={() => swap(i, i + 1)} disabled={i === slots.length - 1 || !src} className="w-5 h-5 rounded-md bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center disabled:opacity-0 cursor-pointer" aria-label="تأخير الصورة"><ChevronLeft size={12} /></button>
             </div>
           </div>
         ))}

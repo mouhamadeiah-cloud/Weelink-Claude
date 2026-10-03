@@ -1,7 +1,7 @@
 // The 'shopProducts' canvas element: the store page's product grid, filled from the products the
 // owner exported to the store (لوحة الإدارة ← إضافة منتج ← تصدير إلى المتجر). Clicking a product
 // in preview / on the live site opens its full card floating over the page.
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { PackageOpen } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useShopData } from './ShopDataContext';
@@ -18,6 +18,7 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
   const [catalog, setCatalog] = useState<string>('all');
   const [openId, setOpenId] = useState<string | null>(null);
   const accent = elem.styles.color || '#B4532A';
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const products = useMemo(() => (admin?.products || []).filter((p) => p.published), [admin]);
   // Main catalogs that hold at least one shown product (directly or through a sub catalog).
@@ -33,6 +34,16 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
   const list = active ? products.filter((p) => p.catalogIds.some((id) => active.ids.includes(id))) : products;
   const open = products.find((p) => p.id === openId);
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+  const related = open ? open.relatedIds.map((id) => products.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p) : [];
+
+  // A related product: scroll the store to its card behind the overlay and open its card.
+  const openRelated = (id: string) => {
+    setCatalog('all');
+    setOpenId(id);
+    window.requestAnimationFrame(() => {
+      gridRef.current?.querySelector(`[data-product-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
 
   return (
     <div
@@ -66,17 +77,27 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
           </span>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto pb-2" onWheel={isPreviewActive ? stop : undefined}>
+        <div ref={gridRef} className="flex-1 min-h-0 overflow-y-auto pb-2" onWheel={isPreviewActive ? stop : undefined}>
           <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))' }}>
             {list.map((p) => (
-              <ProductCard key={p.id} product={p} accent={accent} onOpen={() => setOpenId(p.id)} />
+              <div key={p.id} data-product-id={p.id} className="flex">
+                <ProductCard product={p} accent={accent} onOpen={() => setOpenId(p.id)} />
+              </div>
             ))}
           </div>
         </div>
       )}
 
       {open && admin && isPreviewActive && (
-        <ProductDetailModal product={open} settings={admin.settings} accent={accent} onClose={() => setOpenId(null)} />
+        <ProductDetailModal
+          key={open.id}
+          product={open}
+          settings={admin.settings}
+          accent={accent}
+          related={related}
+          onOpenRelated={openRelated}
+          onClose={() => setOpenId(null)}
+        />
       )}
     </div>
   );

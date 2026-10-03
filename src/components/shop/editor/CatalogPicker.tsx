@@ -1,38 +1,44 @@
-// Picks where a product belongs from artikel.json: main catalog → sub catalog → product name,
-// with a keyword search across all three. Every step also accepts "غير ذلك" with a typed name.
+// Picks where a product belongs: main catalog → sub catalog → product name, from artikel.json plus
+// the catalogs this store added itself, with a keyword search over artikel.json. Choosing
+// "غير ذلك" and typing a name shows a green button that adds the catalog to this store only
+// (artikel.json and other users are not affected).
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Loader2, ChevronLeft } from 'lucide-react';
-import { ArtikelCatalog, loadArtikel, searchArtikel } from '../artikel';
+import { Search, Loader2, ChevronLeft, Plus } from 'lucide-react';
+import { ShopCatalog } from '../shopTypes';
+import { ArtikelCatalog, loadArtikel, normalizeSearch, searchArtikel } from '../artikel';
 import { Field, inputClass } from '../adminUi';
 
-// id: null = not chosen, 0 = "غير ذلك" (typed name), otherwise the artikel.json id.
+// key: '' = not chosen, 'a:<id>' = from artikel.json, 'c:<name>' = the store's own catalog,
+// 'other' = typing a new name.
 export interface PickerPath {
-  mainId: number | null;
+  mainKey: string;
   mainName: string;
   mainSlug: string;
-  subId: number | null;
+  subKey: string;
   subName: string;
   subSlug: string;
   itemId: number | null;
 }
 
 export const emptyPickerPath: PickerPath = {
-  mainId: null, mainName: '', mainSlug: '', subId: null, subName: '', subSlug: '', itemId: null,
+  mainKey: '', mainName: '', mainSlug: '', subKey: '', subName: '', subSlug: '', itemId: null,
 };
 
-const OTHER = '__other__';
+const OTHER = 'other';
+const same = (a: string, b: string) => normalizeSearch(a) === normalizeSearch(b);
 
 interface CatalogPickerProps {
   path: PickerPath;
   onChange: (path: PickerPath) => void;
   productName: string;
   onProductName: (name: string) => void;
+  storeCatalogs: ShopCatalog[];
+  onAddCatalog: (name: string, parentName: string | null) => void;
 }
 
-export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, productName, onProductName }) => {
+export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, productName, onProductName, storeCatalogs, onAddCatalog }) => {
   const [catalogs, setCatalogs] = useState<ArtikelCatalog[] | null>(null);
   const [query, setQuery] = useState('');
-  const [typingName, setTypingName] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -40,51 +46,94 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
     return () => { alive = false; };
   }, []);
 
-  const main = catalogs?.find((c) => c.id === path.mainId);
-  const sub = main?.subcategories.find((s) => s.id === path.subId);
+  const main = catalogs?.find((c) => `a:${c.id}` === path.mainKey);
+  const sub = main?.subcategories.find((s) => `a:${s.id}` === path.subKey);
   const hits = useMemo(() => (catalogs ? searchArtikel(catalogs, query) : []), [catalogs, query]);
+
+  // The store's own catalogs: those whose names are not in artikel.json.
+  const customMains = useMemo(
+    () => storeCatalogs.filter((c) => !c.parentId && !(catalogs || []).some((a) => same(a.name_ar, c.name))),
+    [storeCatalogs, catalogs]
+  );
+  const storeMain = storeCatalogs.find((c) => !c.parentId && same(c.name, path.mainName));
+  const customSubs = useMemo(
+    () => (storeMain ? storeCatalogs.filter((c) => c.parentId === storeMain.id && !(main?.subcategories || []).some((s) => same(s.name_ar, c.name))) : []),
+    [storeCatalogs, storeMain, main]
+  );
+
+  // A path set by name only (editing a saved product): resolve its keys once artikel.json is here.
+  useEffect(() => {
+    if (!catalogs || path.mainKey || !path.mainName) return;
+    const a = catalogs.find((c) => same(c.name_ar, path.mainName));
+    const s = a?.subcategories.find((x) => same(x.name_ar, path.subName));
+    onChange({
+      ...path,
+      mainKey: a ? `a:${a.id}` : `c:${path.mainName}`,
+      mainSlug: a?.slug || '',
+      subKey: !path.subName ? '' : s ? `a:${s.id}` : `c:${path.subName}`,
+      subSlug: s?.slug || '',
+    });
+  }, [catalogs, path, onChange]);
 
   if (!catalogs) {
     return <div className="flex items-center gap-2 text-xs text-neutral-400"><Loader2 size={14} className="animate-spin" /> جاري تحميل الكاتالوكات…</div>;
   }
 
   const pickMain = (value: string) => {
-    if (value === OTHER) return onChange({ ...emptyPickerPath, mainId: 0 });
-    const c = catalogs.find((x) => String(x.id) === value);
-    onChange(c ? { ...emptyPickerPath, mainId: c.id, mainName: c.name_ar, mainSlug: c.slug } : emptyPickerPath);
+    if (value === OTHER) return onChange({ ...emptyPickerPath, mainKey: OTHER });
+    if (value.startsWith('c:')) return onChange({ ...emptyPickerPath, mainKey: value, mainName: value.slice(2) });
+    const c = catalogs.find((x) => `a:${x.id}` === value);
+    onChange(c ? { ...emptyPickerPath, mainKey: value, mainName: c.name_ar, mainSlug: c.slug } : emptyPickerPath);
   };
 
   const pickSub = (value: string) => {
-    const base = { ...path, subId: null, subName: '', subSlug: '', itemId: null };
-    if (value === OTHER) return onChange({ ...base, subId: 0 });
-    const s = main?.subcategories.find((x) => String(x.id) === value);
-    onChange(s ? { ...base, subId: s.id, subName: s.name_ar, subSlug: s.slug } : base);
+    const base = { ...path, subKey: '', subName: '', subSlug: '', itemId: null };
+    if (value === OTHER) return onChange({ ...base, subKey: OTHER });
+    if (value.startsWith('c:')) return onChange({ ...base, subKey: value, subName: value.slice(2) });
+    const s = main?.subcategories.find((x) => `a:${x.id}` === value);
+    onChange(s ? { ...base, subKey: value, subName: s.name_ar, subSlug: s.slug } : base);
   };
 
   const pickItem = (value: string) => {
-    if (value === OTHER) {
-      setTypingName(true);
-      onChange({ ...path, itemId: 0 });
-      return;
-    }
     const item = sub?.items.find((x) => String(x.id) === value);
-    setTypingName(false);
-    onChange({ ...path, itemId: item ? item.id : null });
+    onChange({ ...path, itemId: item ? item.id : value === OTHER ? 0 : null });
     if (item) onProductName(item.name_ar);
   };
 
   const pickHit = (i: number) => {
     const h = hits[i];
     onChange({
-      mainId: h.catalog.id, mainName: h.catalog.name_ar, mainSlug: h.catalog.slug,
-      subId: h.sub.id, subName: h.sub.name_ar, subSlug: h.sub.slug,
+      mainKey: `a:${h.catalog.id}`, mainName: h.catalog.name_ar, mainSlug: h.catalog.slug,
+      subKey: `a:${h.sub.id}`, subName: h.sub.name_ar, subSlug: h.sub.slug,
       itemId: h.item ? h.item.id : null,
     });
     if (h.item) onProductName(h.item.name_ar);
     setQuery('');
   };
 
-  const selectValue = (id: number | null) => (id === null ? '' : id === 0 ? OTHER : String(id));
+  const addMain = () => {
+    const name = path.mainName.trim();
+    if (!name) return;
+    onAddCatalog(name, null);
+    onChange({ ...emptyPickerPath, mainKey: `c:${name}`, mainName: name });
+  };
+  const addSub = () => {
+    const name = path.subName.trim();
+    if (!name || !path.mainName.trim()) return;
+    onAddCatalog(name, path.mainName.trim());
+    onChange({ ...path, subKey: `c:${name}`, subName: name, subSlug: '', itemId: null });
+  };
+
+  const GreenAdd: React.FC<{ onClick: () => void; disabled: boolean }> = ({ onClick, disabled }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full h-9 rounded-xl bg-[#34c759] hover:bg-[#2fb350] disabled:opacity-40 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+    >
+      <Plus size={14} /> إضافة الكاتالوك إلى متجري
+    </button>
+  );
 
   return (
     <div className="space-y-3">
@@ -120,37 +169,53 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
         )}
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-3 gap-3 items-start">
         <Field label="الكاتالوك الرئيسي">
-          <select className={inputClass} value={selectValue(path.mainId)} onChange={(e) => pickMain(e.target.value)}>
+          <select className={inputClass} value={path.mainKey} onChange={(e) => pickMain(e.target.value)}>
             <option value="">— اختر —</option>
-            {catalogs.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
+            {customMains.length > 0 && (
+              <optgroup label="كاتالوكات متجري">
+                {customMains.map((c) => <option key={c.id} value={`c:${c.name}`}>{c.name}</option>)}
+              </optgroup>
+            )}
+            {catalogs.map((c) => <option key={c.id} value={`a:${c.id}`}>{c.name_ar}</option>)}
             <option value={OTHER}>غير ذلك…</option>
           </select>
-          {path.mainId === 0 && (
-            <input className={inputClass} placeholder="اسم الكاتالوك" value={path.mainName} onChange={(e) => onChange({ ...path, mainName: e.target.value })} autoFocus />
+          {path.mainKey === OTHER && (
+            <>
+              <input className={inputClass} placeholder="اسم الكاتالوك الجديد" value={path.mainName} onChange={(e) => onChange({ ...path, mainName: e.target.value })} autoFocus />
+              <GreenAdd onClick={addMain} disabled={!path.mainName.trim()} />
+            </>
           )}
         </Field>
         <Field label="الكاتالوك الفرعي">
-          <select className={inputClass} value={selectValue(path.subId)} onChange={(e) => pickSub(e.target.value)} disabled={path.mainId === null}>
+          <select className={inputClass} value={path.subKey} onChange={(e) => pickSub(e.target.value)} disabled={!path.mainKey || path.mainKey === OTHER}>
             <option value="">— اختر —</option>
-            {main?.subcategories.map((s) => <option key={s.id} value={s.id}>{s.name_ar}</option>)}
+            {customSubs.length > 0 && (
+              <optgroup label="كاتالوكات متجري">
+                {customSubs.map((c) => <option key={c.id} value={`c:${c.name}`}>{c.name}</option>)}
+              </optgroup>
+            )}
+            {main?.subcategories.map((s) => <option key={s.id} value={`a:${s.id}`}>{s.name_ar}</option>)}
             <option value={OTHER}>غير ذلك…</option>
           </select>
-          {path.subId === 0 && (
-            <input className={inputClass} placeholder="اسم الكاتالوك الفرعي" value={path.subName} onChange={(e) => onChange({ ...path, subName: e.target.value })} />
+          {path.subKey === OTHER && (
+            <>
+              <input className={inputClass} placeholder="اسم الكاتالوك الفرعي الجديد" value={path.subName} onChange={(e) => onChange({ ...path, subName: e.target.value })} autoFocus />
+              <GreenAdd onClick={addSub} disabled={!path.subName.trim()} />
+            </>
           )}
         </Field>
         <Field label="المنتج">
-          <select className={inputClass} value={selectValue(path.itemId)} onChange={(e) => pickItem(e.target.value)} disabled={path.subId === null}>
+          <select className={inputClass} value={path.itemId === null ? '' : path.itemId === 0 ? OTHER : String(path.itemId)} onChange={(e) => pickItem(e.target.value)} disabled={!sub}>
             <option value="">— اختر —</option>
             {sub?.items.map((it) => <option key={it.id} value={it.id}>{it.name_ar}</option>)}
-            <option value={OTHER}>غير ذلك…</option>
+            <option value={OTHER}>غير ذلك (اكتب الاسم بالأسفل)</option>
           </select>
         </Field>
       </div>
 
-      <Field label="اسم المنتج كما يظهر في المتجر" hint={typingName || path.itemId === 0 ? undefined : 'يُملأ تلقائياً عند اختيار منتج، ويمكنك تعديله، مثلاً بإضافة الماركة أو الموديل.'}>
+      <Field label="اسم المنتج كما يظهر في المتجر" hint="يُملأ تلقائياً عند اختيار منتج، ويمكنك تعديله، مثلاً بإضافة الماركة أو الموديل.">
         <input className={inputClass} value={productName} onChange={(e) => onProductName(e.target.value)} placeholder="مثال: آيفون 15 برو 256GB" />
       </Field>
     </div>

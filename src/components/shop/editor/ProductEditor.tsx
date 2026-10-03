@@ -10,13 +10,14 @@ import {
   ShopAdminData, ShopProduct, ShopCatalog, ShopMovement, PRODUCT_BADGES, ProductBadge, CURRENCIES,
   MAX_PRICE_TIERS, newId,
 } from '../shopTypes';
-import { buildVariants, discountPercent, sanitizeHtml, totalStock, variantLabel } from '../productModel';
+import { buildVariants, discountPercent, nextSku, sanitizeHtml, totalStock, variantLabel } from '../productModel';
 import { suggestedPresets } from '../artikel';
 import { Card, Field, inputClass, inputFitClass, PrimaryButton, GhostButton, Toggle } from '../adminUi';
 import { CatalogPicker, PickerPath, emptyPickerPath } from './CatalogPicker';
 import { ImageSlots, toSlots } from './ImageSlots';
 import { OptionsEditor } from './OptionsEditor';
 import { RichTextEditor } from './RichTextEditor';
+import { RelatedProductsPicker } from './RelatedProductsPicker';
 import { ProductCard } from '../store/ProductCard';
 import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 
@@ -41,8 +42,21 @@ export const newProductDraft = (currency: string): ShopProduct => ({
   variants: [],
   catalogIds: [],
   published: true,
+  inWarehouse: true,
+  relatedIds: [],
   createdAt: '',
 });
+
+// The catalog path of a saved product, by name (the picker resolves the keys).
+const pathOf = (product: ShopProduct | undefined, catalogs: ShopCatalog[]): PickerPath => {
+  if (!product) return emptyPickerPath;
+  const own = catalogs.filter((c) => product.catalogIds.includes(c.id));
+  const sub = own.find((c) => c.parentId && own.some((m) => m.id === c.parentId));
+  const main = sub ? catalogs.find((c) => c.id === sub.parentId) : own.find((c) => !c.parentId);
+  return main ? { ...emptyPickerPath, mainName: main.name, subName: sub?.name || '' } : emptyPickerPath;
+};
+
+type ExportTarget = 'store' | 'warehouse' | 'both';
 
 const num = (v: string) => {
   const n = parseFloat(v);
@@ -59,28 +73,6 @@ const ensureCatalog = (catalogs: ShopCatalog[], name: string, parentId: string |
   return [[...catalogs, created], created.id];
 };
 
-// Store catalogs as chips, for adding the product to more of the store's own catalogs.
-const StoreCatalogChips: React.FC<{ catalogs: ShopCatalog[]; selected: string[]; onChange: (ids: string[]) => void }> = ({ catalogs, selected, onChange }) => {
-  const ordered = catalogs.filter((c) => !c.parentId).flatMap((c) => [c, ...catalogs.filter((s) => s.parentId === c.id)]);
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {ordered.map((c) => {
-        const on = selected.includes(c.id);
-        return (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => onChange(on ? selected.filter((id) => id !== c.id) : [...selected, c.id])}
-            className={`px-3 h-8 rounded-full text-[11px] font-bold border transition cursor-pointer ${on ? 'bg-[#0071e3] border-[#0071e3] text-white' : 'bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300'}`}
-          >
-            {c.parentId ? '↳ ' : ''}{c.name}
-          </button>
-        );
-      })}
-    </div>
-  );
-};
-
 interface ProductEditorProps {
   data: ShopAdminData;
   update: (fn: (d: ShopAdminData) => ShopAdminData) => void;
@@ -90,9 +82,11 @@ interface ProductEditorProps {
 }
 
 export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, initial, onDone, onCancel }) => {
-  const [p, setP] = useState<ShopProduct>(() => initial ? { ...initial } : newProductDraft(data.settings.currency));
+  const [p, setP] = useState<ShopProduct>(() =>
+    initial ? { ...initial } : { ...newProductDraft(data.settings.currency), sku: nextSku(data.products) }
+  );
   const [slots, setSlots] = useState<string[]>(() => toSlots(initial?.images || []));
-  const [path, setPath] = useState<PickerPath>(emptyPickerPath);
+  const [path, setPath] = useState<PickerPath>(() => pathOf(initial, data.catalogs));
   const [step, setStep] = useState<1 | 2>(1);
   const [error, setError] = useState('');
   const set = (patch: Partial<ShopProduct>) => setP((prev) => ({ ...prev, ...patch }));
@@ -107,7 +101,19 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
   const suggested = useMemo(() => suggestedPresets(path.mainSlug, path.subSlug), [path.mainSlug, path.subSlug]);
   const pct = discountPercent(p);
 
-  const save = (published: boolean) => {
+  // "غير ذلك" + the green button: a catalog for this store only.
+  const addCatalog = (name: string, parentName: string | null) =>
+    update((d) => {
+      let catalogs = d.catalogs;
+      let parentId: string | null = null;
+      if (parentName) [catalogs, parentId] = ensureCatalog(catalogs, parentName, null);
+      [catalogs] = ensureCatalog(catalogs, name, parentId);
+      return { ...d, catalogs };
+    });
+
+  const save = (target: ExportTarget) => {
+    const published = target !== 'warehouse';
+    const inWarehouse = target !== 'store';
     const name = p.name.trim();
     if (!name) {
       setStep(1);
@@ -129,18 +135,21 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
       variants,
       stock: totalStock({ stock: p.stock, variants }),
       published,
+      inWarehouse,
+      relatedIds: p.relatedIds.slice(0, 5),
       createdAt: p.createdAt || now,
     };
 
     update((d) => {
       // Catalogs picked from artikel.json are created in the store when missing.
       let catalogs = d.catalogs;
-      const catalogIds = new Set(product.catalogIds);
-      if (path.mainName.trim()) {
+      const pathChosen = path.mainName.trim() && path.mainKey !== 'other';
+      const catalogIds = new Set(pathChosen ? [] : product.catalogIds);
+      if (pathChosen) {
         let mainId: string;
         [catalogs, mainId] = ensureCatalog(catalogs, path.mainName, null);
         catalogIds.add(mainId);
-        if (path.subName.trim()) {
+        if (path.subName.trim() && path.subKey !== 'other') {
           let subId: string;
           [catalogs, subId] = ensureCatalog(catalogs, path.subName, mainId);
           catalogIds.add(subId);
@@ -151,7 +160,9 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
       // New stock is recorded as a purchase, per combination, for the accounts page.
       const before = d.products.find((x) => x.id === saved.id);
       const added: { qty: number; variant?: string }[] = [];
-      if (saved.variants.length) {
+      if (!saved.inWarehouse) {
+        // Sold from the store only: no stock, nothing to record.
+      } else if (saved.variants.length) {
         for (const v of saved.variants) {
           const label = variantLabel(v.values);
           const old = before?.variants.find((x) => variantLabel(x.values) === label)?.stock ?? 0;
@@ -174,7 +185,11 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
         movements: [...movements, ...d.movements],
       };
     });
-    onDone(published ? `تم تصدير "${name}" إلى المتجر.` : `تم حفظ "${name}" في المستودع.`);
+    onDone(
+      target === 'store' ? `تم تصدير "${name}" إلى المتجر.`
+        : target === 'warehouse' ? `تم حفظ "${name}" في المستودع.`
+          : `تم تصدير "${name}" إلى المتجر والمستودع.`
+    );
   };
 
   const setTier = (i: number, patch: Partial<{ minQty: number; price: number }>) =>
@@ -205,12 +220,14 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
         {step === 1 ? (
           <>
             <Card title="المنتج">
-              <CatalogPicker path={path} onChange={setPath} productName={p.name} onProductName={(name) => set({ name })} />
-              {data.catalogs.length > 0 && (
-                <Field label="كاتالوكات متجرك" hint="الكاتالوك الذي تختاره في الأعلى يُضاف إلى متجرك تلقائياً عند الحفظ.">
-                  <StoreCatalogChips catalogs={data.catalogs} selected={p.catalogIds} onChange={(catalogIds) => set({ catalogIds })} />
-                </Field>
-              )}
+              <CatalogPicker
+                path={path}
+                onChange={setPath}
+                productName={p.name}
+                onProductName={(name) => set({ name })}
+                storeCatalogs={data.catalogs}
+                onAddCatalog={addCatalog}
+              />
             </Card>
 
             <Card title="الصور">
@@ -304,7 +321,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
                 currency={p.currency}
                 onChange={(patch) => set(patch)}
               />
-              <Field label="رمز المنتج (اختياري)">
+              <Field label="رقم المنتج" hint="يُعطى تلقائياً بالتسلسل بدءاً من 0، ويمكنك تغييره. يُستعمل لربط المنتجات المرتبطة.">
                 <input className={`${inputFitClass} w-48`} value={p.sku} onChange={(e) => set({ sku: e.target.value })} dir="ltr" />
               </Field>
             </Card>
@@ -323,17 +340,32 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
               <Toggle checked={p.showShortDescription} onChange={(showShortDescription) => set({ showShortDescription })} label="إظهار الشرح القصير في صفحة المتجر" />
             </Card>
 
+            <Card title="منتجات مرتبطة" actions={<span className="text-[10px] text-neutral-400">تظهر أسفل البطاقة العائمة، حتى 5</span>}>
+              <RelatedProductsPicker
+                productId={p.id}
+                selected={p.relatedIds}
+                products={data.products}
+                catalogs={data.catalogs}
+                onChange={(relatedIds) => set({ relatedIds })}
+              />
+            </Card>
+
             <div className="grid sm:grid-cols-2 gap-2">
-              <PrimaryButton onClick={() => save(true)} className="h-12 flex items-center justify-center gap-1.5 text-sm">
-                <Store size={16} /> تصدير إلى المتجر
+              <PrimaryButton onClick={() => save('both')} className="sm:col-span-2 h-12 flex items-center justify-center gap-1.5 text-sm">
+                <Store size={16} /> <Warehouse size={16} /> تصدير إلى المتجر والمستودع معاً
               </PrimaryButton>
-              <GhostButton onClick={() => save(false)} className="h-12 flex items-center justify-center gap-1.5 text-sm">
-                <Warehouse size={16} /> تصدير إلى المستودع
+              <GhostButton onClick={() => save('store')} className="h-11 flex items-center justify-center gap-1.5 text-sm">
+                <Store size={16} /> المتجر فقط
+              </GhostButton>
+              <GhostButton onClick={() => save('warehouse')} className="h-11 flex items-center justify-center gap-1.5 text-sm">
+                <Warehouse size={16} /> المستودع فقط
               </GhostButton>
             </div>
-            <p className="text-[11px] text-neutral-400 leading-relaxed">
-              «تصدير إلى المتجر» يحفظ المنتج في المستودع ويعرضه في صفحة المتجر. «تصدير إلى المستودع» يحفظه دون عرضه، ويمكنك عرضه لاحقاً من المستودع.
-            </p>
+            <ul className="text-[11px] text-neutral-400 leading-relaxed list-disc pr-4 space-y-0.5">
+              <li><b>معاً:</b> يظهر في صفحة المتجر وتُحسب كميته في المستودع، ويُخصم منها عند كل طلب.</li>
+              <li><b>المتجر فقط:</b> يظهر في المتجر دون حساب كمية، مناسب لما يُصنع حسب الطلب.</li>
+              <li><b>المستودع فقط:</b> يُحفظ دون أن يظهر للزبائن، ويمكنك عرضه لاحقاً من المستودع.</li>
+            </ul>
             <GhostButton onClick={() => setStep(1)} className="flex items-center gap-1"><ArrowRight size={13} /> رجوع</GhostButton>
           </>
         )}

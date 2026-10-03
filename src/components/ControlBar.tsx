@@ -36,6 +36,10 @@ interface ControlBarProps {
   isSaving: boolean;
   onOpenWorkspaceHub?: () => void;
   onManualSave?: () => void;
+  // Shown after the weelink logo, e.g. "Shops" for an Online Shop project.
+  projectLabel?: string;
+  // Opens the project chooser (clicking the logo).
+  onOpenProjects?: () => void;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = ({
@@ -59,6 +63,8 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   isSaving,
   onOpenWorkspaceHub,
   onManualSave,
+  projectLabel,
+  onOpenProjects,
 }) => {
   const [isPagesDropdownOpen, setIsPagesDropdownOpen] = useState(false);
   const [newPageName, setNewPageName] = useState('');
@@ -337,17 +343,27 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2 group cursor-pointer">
+        <button
+          type="button"
+          onClick={onOpenProjects}
+          className="flex items-center gap-2 group cursor-pointer"
+          title="المشاريع: التبديل بين الصفحة المجانية والمتجر"
+        >
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center shadow-[0_2px_8px_rgba(0,113,227,0.3)] transition-transform group-hover:scale-105">
             <span className="text-sm font-bold tracking-tighter">W</span>
           </div>
-          <div className="flex items-baseline gap-1">
+          <div className="flex items-baseline gap-1" dir="ltr">
             <span className="text-lg font-bold tracking-tight text-[#1d1d1f]">
               weelink
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3] inline-block mb-1" />
+            {projectLabel && (
+              <span className="text-lg font-bold tracking-tight text-neutral-400">
+                / <span className="text-[#1d1d1f]">{projectLabel}</span>
+              </span>
+            )}
           </div>
-        </div>
+        </button>
       </div>
     </header>
   );

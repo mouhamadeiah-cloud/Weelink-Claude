@@ -1,14 +1,13 @@
-// تنزيل المنتج: the two-step product editor.
-// Step 1 (تنزيل المنتج): catalog and name from artikel.json, five image slots, gallery layout,
-// badge, prices, quantity tiers, delivery price, specs and stock.
-// Step 2 (شرح المنتج): rich description and short description, then export the product either
-// to the store (shown on the store page) or to the warehouse (saved, not shown).
-// A live preview of the store card stays beside both steps.
+// تنزيل المنتج: the product editor, one section after the other: the product (catalog and name
+// from artikel.json), images (slots, gallery layout, badge), price (prices, quantity tiers,
+// delivery), specs and stock, description, related products; the last step shows the three export
+// buttons (store and warehouse, store only, warehouse only).
+// A live preview of the store card, or slide, stays beside every step.
 import React, { useMemo, useState } from 'react';
-import { Store, Warehouse, ArrowLeft, ArrowRight, Plus, Trash2, Percent } from 'lucide-react';
+import { Store, Warehouse, ArrowLeft, ArrowRight, Plus, Trash2, Percent, LayoutGrid, GalleryHorizontal } from 'lucide-react';
 import {
   ShopAdminData, ShopProduct, ShopCatalog, ShopMovement, PRODUCT_BADGES, ProductBadge, CURRENCIES,
-  MAX_PRICE_TIERS, newId,
+  MAX_PRICE_TIERS, ProductDisplay, newId,
 } from '../shopTypes';
 import { buildVariants, discountPercent, nextSku, sanitizeHtml, totalStock, variantLabel } from '../productModel';
 import { suggestedPresets } from '../artikel';
@@ -18,7 +17,7 @@ import { ImageSlots, toSlots } from './ImageSlots';
 import { OptionsEditor } from './OptionsEditor';
 import { RichTextEditor } from './RichTextEditor';
 import { RelatedProductsPicker } from './RelatedProductsPicker';
-import { ProductCard } from '../store/ProductCard';
+import { ProductCard, ProductSlide } from '../store/ProductCard';
 import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 
 export const newProductDraft = (currency: string): ShopProduct => ({
@@ -35,6 +34,7 @@ export const newProductDraft = (currency: string): ShopProduct => ({
   sku: '',
   images: [],
   galleryLayout: 'top-main',
+  display: 'card',
   badge: '',
   tiers: [],
   deliveryPrice: null,
@@ -57,6 +57,14 @@ const pathOf = (product: ShopProduct | undefined, catalogs: ShopCatalog[]): Pick
 };
 
 type ExportTarget = 'store' | 'warehouse' | 'both';
+
+const STEPS = ['المنتج', 'الصور', 'السعر', 'المواصفات والمخزون', 'الشرح', 'منتجات مرتبطة'];
+const LAST_STEP = STEPS.length;
+
+const DISPLAYS: { id: ProductDisplay; label: string; icon: React.ElementType }[] = [
+  { id: 'card', label: 'بطاقة', icon: LayoutGrid },
+  { id: 'slide', label: 'شريحة', icon: GalleryHorizontal },
+];
 
 const num = (v: string) => {
   const n = parseFloat(v);
@@ -87,7 +95,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
   );
   const [slots, setSlots] = useState<string[]>(() => toSlots(initial?.images || []));
   const [path, setPath] = useState<PickerPath>(() => pathOf(initial, data.catalogs));
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const set = (patch: Partial<ShopProduct>) => setP((prev) => ({ ...prev, ...patch }));
   const isEdit = !!initial;
@@ -195,151 +203,178 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
   const setTier = (i: number, patch: Partial<{ minQty: number; price: number }>) =>
     set({ tiers: p.tiers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) });
 
-  const stepButton = (n: 1 | 2, label: string) => (
-    <button
-      type="button"
-      onClick={() => setStep(n)}
-      className={`flex items-center gap-2 h-10 px-4 rounded-xl text-xs font-bold transition cursor-pointer ${step === n ? 'bg-[#1d1d1f] text-white' : 'bg-white text-neutral-500 border border-neutral-200'}`}
-    >
-      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === n ? 'bg-white text-[#1d1d1f]' : 'bg-neutral-100'}`}>{n}</span>
-      {label}
-    </button>
+  // The product needs a name before moving on from the first step.
+  const goTo = (n: number) => {
+    if (n > 1 && !p.name.trim()) {
+      setStep(1);
+      setError('اكتب اسم المنتج أولاً.');
+      return;
+    }
+    setError('');
+    setStep(n);
+  };
+
+  const nav = (
+    <div className="flex items-center gap-2">
+      {step > 1 && (
+        <GhostButton onClick={() => goTo(step - 1)} className="h-11 flex items-center gap-1"><ArrowRight size={13} /> رجوع</GhostButton>
+      )}
+      {step < LAST_STEP && (
+        <PrimaryButton onClick={() => goTo(step + 1)} className="flex-1 h-11 flex items-center justify-center gap-1.5">
+          التالي: {STEPS[step]} <ArrowLeft size={14} />
+        </PrimaryButton>
+      )}
+    </div>
   );
 
   return (
     <div className="grid lg:grid-cols-[minmax(0,1fr)_250px] gap-4 items-start">
       <div className="space-y-4 min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          {stepButton(1, 'تنزيل المنتج')}
-          <ArrowLeft size={14} className="text-neutral-300" />
-          {stepButton(2, 'شرح المنتج')}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {STEPS.map((label, i) => (
+            <React.Fragment key={label}>
+              {i > 0 && <ArrowLeft size={12} className="text-neutral-300" />}
+              <button
+                type="button"
+                onClick={() => goTo(i + 1)}
+                className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-[11px] font-bold transition cursor-pointer ${step === i + 1 ? 'bg-[#1d1d1f] text-white' : step > i + 1 ? 'bg-white text-[#1d1d1f] border border-neutral-200' : 'bg-white text-neutral-400 border border-neutral-200'}`}
+              >
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === i + 1 ? 'bg-white text-[#1d1d1f]' : 'bg-neutral-100'}`}>{i + 1}</span>
+                {label}
+              </button>
+            </React.Fragment>
+          ))}
           {onCancel && <GhostButton onClick={onCancel} className="mr-auto">إلغاء</GhostButton>}
         </div>
         {error && <div className="p-3 rounded-xl bg-red-50 text-red-600 text-xs font-bold">{error}</div>}
 
-        {step === 1 ? (
-          <>
-            <Card title="المنتج">
-              <CatalogPicker
-                path={path}
-                onChange={setPath}
-                productName={p.name}
-                onProductName={(name) => set({ name })}
-                storeCatalogs={data.catalogs}
-                onAddCatalog={addCatalog}
-              />
-            </Card>
+        {step === 1 && (
+          <Card title="المنتج">
+            <CatalogPicker
+              path={path}
+              onChange={setPath}
+              productName={p.name}
+              onProductName={(name) => set({ name })}
+              storeCatalogs={data.catalogs}
+              onAddCatalog={addCatalog}
+            />
+          </Card>
+        )}
 
-            <Card title="الصور">
-              <ImageSlots slots={slots} onChange={setSlots} />
-              <Field label="طريقة عرض الصور">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {GALLERY_LAYOUTS.map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => set({ galleryLayout: g.id })}
-                      className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition cursor-pointer ${p.galleryLayout === g.id ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'}`}
-                    >
-                      <GalleryLayoutIcon layout={g.id} />
-                      <span className="text-[10px] font-bold text-center leading-tight">{g.label}</span>
-                    </button>
-                  ))}
-                </div>
+        {step === 2 && (
+          <Card title="الصور">
+            <ImageSlots slots={slots} onChange={setSlots} />
+            <Field label="طريقة عرض الصور">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {GALLERY_LAYOUTS.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => set({ galleryLayout: g.id })}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition cursor-pointer ${p.galleryLayout === g.id ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'}`}
+                  >
+                    <GalleryLayoutIcon layout={g.id} />
+                    <span className="text-[10px] font-bold text-center leading-tight">{g.label}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="وسم على الصورة">
+              <select className={inputClass} value={p.badge} onChange={(e) => set({ badge: e.target.value as ProductBadge })}>
+                {PRODUCT_BADGES.map((b) => <option key={b.id || 'none'} value={b.id}>{b.label}</option>)}
+              </select>
+            </Field>
+          </Card>
+        )}
+
+        {step === 3 && (
+          <Card title="السعر">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Field label="السعر">
+                <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.price || ''} onChange={(e) => set({ price: num(e.target.value) })} />
               </Field>
-              <Field label="وسم على الصورة">
-                <select className={inputClass} value={p.badge} onChange={(e) => set({ badge: e.target.value as ProductBadge })}>
-                  {PRODUCT_BADGES.map((b) => <option key={b.id || 'none'} value={b.id}>{b.label}</option>)}
+              <Field label="السعر الأصلي (مشطوب)">
+                <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.oldPrice || ''} onChange={(e) => set({ oldPrice: num(e.target.value) })} />
+              </Field>
+              <Field label="العملة">
+                <select className={inputClass} value={p.currency} onChange={(e) => set({ currency: e.target.value })}>
+                  {Array.from(new Set([p.currency, ...CURRENCIES])).map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </Field>
-            </Card>
+              <Field label="سعر الشراء" hint="لحساب الأرباح، لا يظهر للزبون.">
+                <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.cost || ''} onChange={(e) => set({ cost: num(e.target.value) })} />
+              </Field>
+            </div>
+            {pct > 0 && (
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#ff3b30]"><Percent size={12} /> خصم {pct}% عن السعر الأصلي</div>
+            )}
 
-            <Card title="السعر">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <Field label="السعر">
-                  <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.price || ''} onChange={(e) => set({ price: num(e.target.value) })} />
-                </Field>
-                <Field label="السعر الأصلي (مشطوب)">
-                  <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.oldPrice || ''} onChange={(e) => set({ oldPrice: num(e.target.value) })} />
-                </Field>
-                <Field label="العملة">
-                  <select className={inputClass} value={p.currency} onChange={(e) => set({ currency: e.target.value })}>
-                    {Array.from(new Set([p.currency, ...CURRENCIES])).map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </Field>
-                <Field label="سعر الشراء" hint="لحساب الأرباح، لا يظهر للزبون.">
-                  <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.cost || ''} onChange={(e) => set({ cost: num(e.target.value) })} />
-                </Field>
+            <Field label="سعر خاص عند شراء كمية أكبر">
+              <div className="space-y-2">
+                {p.tiers.map((t, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2 text-xs font-bold text-neutral-600">
+                    <span>عند شراء</span>
+                    <input className={`${inputFitClass} h-9 w-20`} type="number" min="2" value={t.minQty || ''} onChange={(e) => setTier(i, { minQty: Math.floor(num(e.target.value)) })} aria-label="الكمية" />
+                    <span>أو أكثر: سعر القطعة</span>
+                    <input className={`${inputFitClass} h-9 w-28`} type="number" min="0" value={t.price || ''} onChange={(e) => setTier(i, { price: num(e.target.value) })} aria-label="سعر القطعة" />
+                    <span>{p.currency}</span>
+                    <button type="button" onClick={() => set({ tiers: p.tiers.filter((_, idx) => idx !== i) })} className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer" aria-label="حذف المستوى">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+                {p.tiers.length < MAX_PRICE_TIERS && (
+                  <GhostButton
+                    onClick={() => set({ tiers: [...p.tiers, { minQty: (p.tiers[p.tiers.length - 1]?.minQty || 1) + 1, price: 0 }] })}
+                    className="flex items-center gap-1"
+                  >
+                    <Plus size={13} /> إضافة مستوى ({p.tiers.length}/{MAX_PRICE_TIERS})
+                  </GhostButton>
+                )}
               </div>
-              {pct > 0 && (
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#ff3b30]"><Percent size={12} /> خصم {pct}% عن السعر الأصلي</div>
-              )}
+            </Field>
 
-              <Field label="سعر خاص عند شراء كمية أكبر">
-                <div className="space-y-2">
-                  {p.tiers.map((t, i) => (
-                    <div key={i} className="flex flex-wrap items-center gap-2 text-xs font-bold text-neutral-600">
-                      <span>عند شراء</span>
-                      <input className={`${inputFitClass} h-9 w-20`} type="number" min="2" value={t.minQty || ''} onChange={(e) => setTier(i, { minQty: Math.floor(num(e.target.value)) })} aria-label="الكمية" />
-                      <span>أو أكثر: سعر القطعة</span>
-                      <input className={`${inputFitClass} h-9 w-28`} type="number" min="0" value={t.price || ''} onChange={(e) => setTier(i, { price: num(e.target.value) })} aria-label="سعر القطعة" />
-                      <span>{p.currency}</span>
-                      <button type="button" onClick={() => set({ tiers: p.tiers.filter((_, idx) => idx !== i) })} className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer" aria-label="حذف المستوى">
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  ))}
-                  {p.tiers.length < MAX_PRICE_TIERS && (
-                    <GhostButton
-                      onClick={() => set({ tiers: [...p.tiers, { minQty: (p.tiers[p.tiers.length - 1]?.minQty || 1) + 1, price: 0 }] })}
-                      className="flex items-center gap-1"
-                    >
-                      <Plus size={13} /> إضافة مستوى ({p.tiers.length}/{MAX_PRICE_TIERS})
-                    </GhostButton>
-                  )}
-                </div>
-              </Field>
-
-              <Field label="سعر التوصيل لهذا المنتج" hint={`اتركه فارغاً لاستعمال رسم التوصيل العام للمتجر (${data.settings.delivery.deliveryFee || 0} ${data.settings.currency}).`}>
-                <input
-                  className={`${inputFitClass} w-40`}
-                  type="number"
-                  min="0"
-                  value={p.deliveryPrice ?? ''}
-                  onChange={(e) => set({ deliveryPrice: e.target.value === '' ? null : Math.max(0, parseFloat(e.target.value) || 0) })}
-                />
-              </Field>
-            </Card>
-
-            <Card title="المواصفات والمخزون" actions={isEdit ? <span className="text-[10px] text-neutral-400">مرتبط بالمستودع</span> : undefined}>
-              <OptionsEditor
-                options={p.options}
-                variants={p.variants}
-                stock={p.stock}
-                suggested={suggested}
-                linkedToWarehouse={isEdit}
-                currency={p.currency}
-                onChange={(patch) => set(patch)}
+            <Field label="سعر التوصيل لهذا المنتج" hint={`اتركه فارغاً لاستعمال رسم التوصيل العام للمتجر (${data.settings.delivery.deliveryFee || 0} ${data.settings.currency}).`}>
+              <input
+                className={`${inputFitClass} w-40`}
+                type="number"
+                min="0"
+                value={p.deliveryPrice ?? ''}
+                onChange={(e) => set({ deliveryPrice: e.target.value === '' ? null : Math.max(0, parseFloat(e.target.value) || 0) })}
               />
-              <Field label="رقم المنتج" hint="يُعطى تلقائياً بالتسلسل بدءاً من 0، ويمكنك تغييره. يُستعمل لربط المنتجات المرتبطة.">
-                <input className={`${inputFitClass} w-48`} value={p.sku} onChange={(e) => set({ sku: e.target.value })} dir="ltr" />
-              </Field>
-            </Card>
+            </Field>
+          </Card>
+        )}
 
-            <PrimaryButton onClick={() => setStep(2)} className="w-full flex items-center justify-center gap-1.5">
-              التالي: شرح المنتج <ArrowLeft size={14} />
-            </PrimaryButton>
-          </>
-        ) : (
+        {step === 4 && (
+          <Card title="المواصفات والمخزون" actions={isEdit ? <span className="text-[10px] text-neutral-400">مرتبط بالمستودع</span> : undefined}>
+            <OptionsEditor
+              options={p.options}
+              variants={p.variants}
+              stock={p.stock}
+              suggested={suggested}
+              linkedToWarehouse={isEdit}
+              currency={p.currency}
+              onChange={(patch) => set(patch)}
+            />
+            <Field label="رقم المنتج" hint="يُعطى تلقائياً بالتسلسل بدءاً من 0، ويمكنك تغييره. يُستعمل لربط المنتجات المرتبطة.">
+              <input className={`${inputFitClass} w-48`} value={p.sku} onChange={(e) => set({ sku: e.target.value })} dir="ltr" />
+            </Field>
+          </Card>
+        )}
+
+        {step === 5 && (
+          <Card title="شرح المنتج">
+            <RichTextEditor value={p.description} onChange={(description) => set({ description })} placeholder="اكتب وصفاً كاملاً للمنتج: المزايا، طريقة الاستعمال، المحتويات…" />
+            <Field label="شرح قصير تحت الاسم">
+              <input className={inputClass} value={p.shortDescription} maxLength={120} onChange={(e) => set({ shortDescription: e.target.value })} placeholder="مثال: قطن 100%، مريح للاستعمال اليومي" />
+            </Field>
+            <Toggle checked={p.showShortDescription} onChange={(showShortDescription) => set({ showShortDescription })} label="إظهار الشرح القصير في صفحة المتجر" />
+          </Card>
+        )}
+
+        {step === 6 && (
           <>
-            <Card title="شرح المنتج">
-              <RichTextEditor value={p.description} onChange={(description) => set({ description })} placeholder="اكتب وصفاً كاملاً للمنتج: المزايا، طريقة الاستعمال، المحتويات…" />
-              <Field label="شرح قصير تحت الاسم">
-                <input className={inputClass} value={p.shortDescription} maxLength={120} onChange={(e) => set({ shortDescription: e.target.value })} placeholder="مثال: قطن 100%، مريح للاستعمال اليومي" />
-              </Field>
-              <Toggle checked={p.showShortDescription} onChange={(showShortDescription) => set({ showShortDescription })} label="إظهار الشرح القصير في صفحة المتجر" />
-            </Card>
-
             <Card title="منتجات مرتبطة" actions={<span className="text-[10px] text-neutral-400">تظهر أسفل البطاقة العائمة، حتى 5</span>}>
               <RelatedProductsPicker
                 productId={p.id}
@@ -366,14 +401,33 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
               <li><b>المتجر فقط:</b> يظهر في المتجر دون حساب كمية، مناسب لما يُصنع حسب الطلب.</li>
               <li><b>المستودع فقط:</b> يُحفظ دون أن يظهر للزبائن، ويمكنك عرضه لاحقاً من المستودع.</li>
             </ul>
-            <GhostButton onClick={() => setStep(1)} className="flex items-center gap-1"><ArrowRight size={13} /> رجوع</GhostButton>
           </>
         )}
+
+        {nav}
       </div>
 
       <aside className="lg:sticky lg:top-0 space-y-2">
         <div className="text-[11px] font-bold text-neutral-400">هكذا يظهر في المتجر</div>
-        <ProductCard product={preview} />
+        {p.display === 'slide' ? <ProductSlide product={preview} /> : <ProductCard product={preview} />}
+        <div>
+          <div className="text-[11px] font-bold text-neutral-500 mb-1">طريقة الإدراج في المتجر</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {DISPLAYS.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => set({ display: d.id })}
+                className={`h-9 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${p.display === d.id ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
+              >
+                <d.icon size={14} /> {d.label}
+              </button>
+            ))}
+          </div>
+          {p.display === 'slide' && (
+            <p className="mt-1 text-[10px] text-neutral-400 leading-relaxed">يظهر المنتج بعرض الصف كاملاً: الصورة الأساسية خلفية، والاسم والسعر والزر في شريط أسفلها.</p>
+          )}
+        </div>
         {preview.options.some((o) => o.values.length) && (
           <div className="text-[10px] text-neutral-400 leading-relaxed">
             {preview.options.filter((o) => o.values.length).map((o) => `${o.name}: ${o.values.map((v) => v.label).join('، ')}`).join(' · ')}

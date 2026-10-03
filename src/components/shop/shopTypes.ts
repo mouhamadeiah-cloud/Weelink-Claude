@@ -57,6 +57,10 @@ export const MAX_STOCK_OPTIONS = 3;
 export const MAX_PRICE_TIERS = 3;
 export const MAX_RELATED = 5;
 
+// 'card' = a card in the store grid; 'slide' = a full-width row: the main image as a fixed
+// background, with the name, price and button in a narrow strip along its bottom.
+export type ProductDisplay = 'card' | 'slide';
+
 export interface ShopProduct {
   id: string;
   name: string;
@@ -71,6 +75,7 @@ export interface ShopProduct {
   sku: string;
   images: string[]; // up to MAX_IMAGES; the first one is the main image
   galleryLayout: GalleryLayout;
+  display: ProductDisplay; // how it sits on the store page: a grid card or a full-width slide
   badge: ProductBadge;
   tiers: PriceTier[];
   deliveryPrice: number | null; // null = the store's delivery fee
@@ -233,6 +238,7 @@ export const normalizeProduct = (p: any, currency: string): ShopProduct => ({
   sku: p.sku || '',
   images: Array.isArray(p.images) ? p.images : [],
   galleryLayout: p.galleryLayout || 'top-main',
+  display: p.display === 'slide' ? 'slide' : 'card',
   badge: p.badge || '',
   tiers: Array.isArray(p.tiers) ? p.tiers : [],
   deliveryPrice: typeof p.deliveryPrice === 'number' ? p.deliveryPrice : null,

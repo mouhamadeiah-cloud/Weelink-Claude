@@ -1,9 +1,14 @@
 // الإعدادات: sender email and message templates, WhatsApp, payment methods and delivery.
 import React from 'react';
 import { Mail, MessageCircle, CreditCard, Truck, Store } from 'lucide-react';
-import { ShopSettings } from '../shopTypes';
+import { ShopSettings, DeliveryFeeMode } from '../shopTypes';
 import { Card, Field, inputClass, textareaClass, Toggle } from '../adminUi';
 import { AdminTabProps } from './tabProps';
+
+const FEE_MODES: { id: DeliveryFeeMode; label: string; hint: string }[] = [
+  { id: 'highest', label: 'أعلى أجرة توصيل', hint: 'طلب الزبون الواحد يدفع أجرة توصيل واحدة: الأعلى بين منتجاته.' },
+  { id: 'sum', label: 'مجموع أجور التوصيل', hint: 'تُجمع أجرة توصيل كل منتج في الطلب.' },
+];
 
 export const SettingsTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const s = data.settings;
@@ -76,6 +81,32 @@ export const SettingsTab: React.FC<AdminTabProps> = ({ data, update }) => {
               <input className={inputClass} type="number" min="0" value={s.delivery.deliveryFee || ''} onChange={(e) => setDelivery({ deliveryFee: Math.max(0, parseFloat(e.target.value) || 0) })} />
             </Field>
             <Field label="مناطق التوصيل"><input className={inputClass} value={s.delivery.deliveryAreas} onChange={(e) => setDelivery({ deliveryAreas: e.target.value })} placeholder="مثال: دمشق وريفها" /></Field>
+          </div>
+        )}
+        {s.delivery.delivery && (
+          <div className="space-y-3 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+            <div className="text-xs font-bold text-neutral-600">حساب أجرة التوصيل في السلة</div>
+            <div className="grid sm:grid-cols-2 gap-2" role="radiogroup" aria-label="حساب أجرة التوصيل">
+              {FEE_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={s.delivery.feeMode === m.id}
+                  onClick={() => setDelivery({ feeMode: m.id })}
+                  className={`text-right p-2.5 rounded-xl border transition cursor-pointer ${s.delivery.feeMode === m.id ? 'border-[#0071e3] bg-blue-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
+                >
+                  <div className={`text-xs font-bold ${s.delivery.feeMode === m.id ? 'text-[#0071e3]' : 'text-[#1d1d1f]'}`}>{m.label}</div>
+                  <div className="text-[10px] text-neutral-500 leading-relaxed mt-0.5">{m.hint}</div>
+                </button>
+              ))}
+            </div>
+            <Toggle label="توصيل مجاني عند الوصول لمبلغ معيّن" checked={s.delivery.freeEnabled} onChange={(freeEnabled) => setDelivery({ freeEnabled })} />
+            {s.delivery.freeEnabled && (
+              <Field label={`التوصيل مجاني عندما يبلغ مجموع المشتريات (${s.currency})`} hint="تُظهر السلة للزبون كم بقي له حتى يحصل على التوصيل المجاني.">
+                <input className={`${inputClass} max-w-[200px]`} type="number" min="0" value={s.delivery.freeFrom || ''} onChange={(e) => setDelivery({ freeFrom: Math.max(0, parseFloat(e.target.value) || 0) })} />
+              </Field>
+            )}
           </div>
         )}
         <div className="border-t border-neutral-100" />

@@ -169,11 +169,18 @@ export interface ShopSettings {
   delivery: {
     delivery: boolean;
     deliveryFee: number;
+    // An order with products of different delivery prices: 'highest' charges the highest one
+    // once, 'sum' adds the delivery price of every product in the order.
+    feeMode: DeliveryFeeMode;
+    freeEnabled: boolean;
+    freeFrom: number; // free delivery when the products total reaches this amount
     deliveryAreas: string;
     pickup: boolean;
     storeAddress: string;
   };
 }
+
+export type DeliveryFeeMode = 'highest' | 'sum';
 
 export interface ShopAdminData {
   catalogs: ShopCatalog[];
@@ -208,6 +215,9 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   delivery: {
     delivery: true,
     deliveryFee: 0,
+    feeMode: 'highest',
+    freeEnabled: false,
+    freeFrom: 0,
     deliveryAreas: '',
     pickup: false,
     storeAddress: '',

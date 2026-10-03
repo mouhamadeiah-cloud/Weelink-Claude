@@ -7,7 +7,7 @@ import {
 } from '../shopTypes';
 import { Card, Field, inputClass, inputFitClass, textareaClass, PrimaryButton, GhostButton, EmptyState, formatMoney, formatDate } from '../adminUi';
 import { AdminTabProps } from './tabProps';
-import { changeStock, totalStock, tracksStock, unitPriceFor, variantLabel } from '../productModel';
+import { changeStock, deliveryQuote, totalStock, tracksStock, unitPriceFor, variantLabel } from '../productModel';
 
 export const enabledPaymentMethods = (d: ShopAdminData): PaymentMethodId[] => {
   const p = d.settings.payments;
@@ -91,8 +91,9 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
 
   const pickedProduct = data.products.find((p) => p.id === draft.pickProduct);
 
-  const total = draft.items.reduce((s, i) => s + i.price * i.qty, 0)
-    + (draft.deliveryMethod === 'delivery' ? data.settings.delivery.deliveryFee : 0);
+  const quote = deliveryQuote(draft.items, data.products, data.settings);
+  const deliveryFee = draft.deliveryMethod === 'delivery' ? quote.fee : 0;
+  const total = quote.subtotal + deliveryFee;
   const hasCustomer = draft.customerId || draft.newCustomerName.trim();
 
   const createOrder = () => {
@@ -191,7 +192,9 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
           <Field label="ملاحظة"><textarea className={textareaClass} value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} /></Field>
 
           <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-100">
-            <span className="text-xs font-bold text-neutral-500">المجموع{draft.deliveryMethod === 'delivery' && data.settings.delivery.deliveryFee ? ' مع التوصيل' : ''}</span>
+            <span className="text-xs font-bold text-neutral-500">
+              المجموع{deliveryFee > 0 ? ` مع التوصيل (${formatMoney(deliveryFee, currency)})` : draft.deliveryMethod === 'delivery' && quote.free ? ' (توصيل مجاني)' : ''}
+            </span>
             <span className="text-base font-black">{formatMoney(total, currency)}</span>
           </div>
           <div className="flex gap-2">

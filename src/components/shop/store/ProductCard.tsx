@@ -29,7 +29,7 @@ const useAddButton = (product: ShopProduct, onOpen?: () => void, onAdded?: (name
       onOpen();
       return;
     }
-    addToCart({ name: product.name, price: product.price, currency: product.currency, image: product.images[0] });
+    addToCart({ name: product.name, price: product.price, currency: product.currency, image: product.images[0], productId: product.id });
     onAdded?.(product.name);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);

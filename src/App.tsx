@@ -16,6 +16,7 @@ import { StandardAuth } from './components/StandardAuth';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
+import { arrangeForMobile } from './utils/mobileLayout';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
@@ -946,6 +947,13 @@ export default function App() {
     const target = elements.find(el => el.id === id);
     if (!target) return;
 
+    // In mobile view an element with a phone layout is moved within that layout only;
+    // its desktop position stays as it is.
+    if (previewMode === 'mobile' && target.mobile) {
+      setElements(elements.map(el => el.id === id && el.mobile ? { ...el, mobile: { ...el.mobile, x, y } } : el));
+      return;
+    }
+
     const dx = x - target.x;
     const dy = y - target.y;
 
@@ -1148,6 +1156,21 @@ export default function App() {
   };
 
   const handleUpdateElementSize = (id: string, width: number, height: number, x?: number, y?: number) => {
+    const target = elements.find(el => el.id === id);
+    if (previewMode === 'mobile' && target?.mobile) {
+      setElements(elements.map(el => el.id === id && el.mobile ? {
+        ...el,
+        mobile: {
+          ...el.mobile,
+          width,
+          height,
+          ...(x !== undefined ? { x } : {}),
+          ...(y !== undefined ? { y } : {}),
+        }
+      } : el));
+      return;
+    }
+
     const updated = elements.map(el => {
       if (el.id === id) {
         if (el.type === 'table' && el.tableConfig) {
@@ -1787,10 +1810,27 @@ export default function App() {
   };
 
   const handleUpdateSlideHeight = (slideId: string, height: number) => {
+    const slide = currentPage.slides.find(s => s.id === slideId);
+    // In mobile view a slide that has a phone layout is resized in that layout only.
+    const isMobileLayout = previewMode === 'mobile' && !!slide?.mobileHeight && elements.some(el => el.slideId === slideId && el.mobile);
     const updatedSlides = currentPage.slides.map(s => 
-      s.id === slideId ? { ...s, height } : s
+      s.id === slideId ? (isMobileLayout ? { ...s, mobileHeight: height } : { ...s, height }) : s
     );
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, slides: updatedSlides } : p));
+  };
+
+  // "تنسيق الموبايل": arranges the current page's elements for phones (desktop layout untouched)
+  // and switches to mobile view so the result is visible right away. Undo reverts the elements.
+  const handleArrangeForMobile = () => {
+    const pageSlideIds = new Set(currentPage.slides.map(s => s.id));
+    const { elements: pageElements, slides: arrangedSlides } = arrangeForMobile(
+      currentPage.slides,
+      elements.filter(el => pageSlideIds.has(el.slideId))
+    );
+    const arrangedById = new Map(pageElements.map(el => [el.id, el]));
+    pushToHistory(elements.map(el => arrangedById.get(el.id) || el));
+    setPages(pages.map(p => p.id === currentPage.id ? { ...p, slides: arrangedSlides } : p));
+    setPreviewMode('mobile');
   };
 
   // Pages management
@@ -2226,6 +2266,7 @@ export default function App() {
           canRedo={historyIndex < history.length - 1}
           onUndo={handleUndo}
           onRedo={handleRedo}
+          onArrangeForMobile={handleArrangeForMobile}
           onOpenPageSettings={() => handleSelectTool('page-settings')}
           onTogglePreview={() => {
             const nextPreviewState = !isPreviewActive;

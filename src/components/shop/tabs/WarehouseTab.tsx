@@ -1,14 +1,57 @@
 // المستودع: every product with its stock (per combination for products with stock options);
-// edit, restock (recorded as a purchase), show on / hide from the store, or delete.
+// edit, restock (recorded as a purchase), show on / hide from the store, or delete. The list can
+// be searched, filtered by catalog, store status, stock and badge, and sorted.
 import React, { useState } from 'react';
-import { Search, Pencil, Trash2, PackagePlus, AlertTriangle, Eye, EyeOff } from 'lucide-react';
-import { ShopProduct, newId } from '../shopTypes';
+import { Search, Pencil, Trash2, PackagePlus, AlertTriangle, Eye, EyeOff, X } from 'lucide-react';
+import { ShopProduct, PRODUCT_BADGES, newId } from '../shopTypes';
 import { Card, inputClass, inputFitClass, PrimaryButton, GhostButton, EmptyState, formatMoney } from '../adminUi';
 import { AdminTabProps } from './tabProps';
 import { ProductEditor } from '../editor/ProductEditor';
-import { changeStock, tracksStock, variantLabel } from '../productModel';
+import { changeStock, tracksStock, unitPriceFor, variantLabel } from '../productModel';
 
 const LOW_STOCK = 3;
+
+type StatusFilter = '' | 'published' | 'hidden' | 'store-only';
+type StockFilter = '' | 'available' | 'low' | 'out';
+type SortBy = 'newest' | 'oldest' | 'name' | 'price-asc' | 'price-desc' | 'stock-asc' | 'stock-desc' | 'sku';
+
+interface Filters {
+  catalog: string;
+  status: StatusFilter;
+  stock: StockFilter;
+  badge: string;
+  sort: SortBy;
+}
+
+const NO_FILTERS: Filters = { catalog: '', status: '', stock: '', badge: '', sort: 'newest' };
+
+const SORTS: { id: SortBy; label: string }[] = [
+  { id: 'newest', label: 'الأحدث' },
+  { id: 'oldest', label: 'الأقدم' },
+  { id: 'name', label: 'الاسم' },
+  { id: 'sku', label: 'رقم المنتج' },
+  { id: 'price-asc', label: 'الأرخص' },
+  { id: 'price-desc', label: 'الأغلى' },
+  { id: 'stock-asc', label: 'الأقل كمية' },
+  { id: 'stock-desc', label: 'الأكثر كمية' },
+];
+
+// Store-only products have no stock: they sort after every counted product.
+const stockKey = (p: ShopProduct) => (tracksStock(p) ? p.stock : Infinity);
+const skuKey = (p: ShopProduct) => (/^\d+$/.test(p.sku) ? Number(p.sku) : Infinity);
+
+const compare = (sort: SortBy) => (a: ShopProduct, b: ShopProduct): number => {
+  switch (sort) {
+    case 'oldest': return a.createdAt.localeCompare(b.createdAt);
+    case 'name': return a.name.localeCompare(b.name, 'ar');
+    case 'sku': return skuKey(a) - skuKey(b) || a.sku.localeCompare(b.sku);
+    case 'price-asc': return unitPriceFor(a, 1) - unitPriceFor(b, 1);
+    case 'price-desc': return unitPriceFor(b, 1) - unitPriceFor(a, 1);
+    case 'stock-asc': return stockKey(a) - stockKey(b);
+    case 'stock-desc': return (tracksStock(b) ? b.stock : -1) - (tracksStock(a) ? a.stock : -1);
+    default: return b.createdAt.localeCompare(a.createdAt);
+  }
+};
 
 const toNumber = (v: string) => {
   const n = parseFloat(v);
@@ -17,13 +60,36 @@ const toNumber = (v: string) => {
 
 export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [editing, setEditing] = useState<ShopProduct | null>(null);
   const [restock, setRestock] = useState<{ id: string; qty: string; cost: string; variant: string } | null>(null);
   const currency = data.settings.currency;
 
   const catalogName = (id: string) => data.catalogs.find((c) => c.id === id)?.name;
   const q = query.trim().toLowerCase();
-  const list = data.products.filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+  const setFilter = (patch: Partial<Filters>) => setFilters((f) => ({ ...f, ...patch }));
+  const mains = data.catalogs.filter((c) => !c.parentId);
+  // A main catalog also matches the products in its sub catalogs.
+  const catalogIds = filters.catalog
+    ? [filters.catalog, ...data.catalogs.filter((c) => c.parentId === filters.catalog).map((c) => c.id)]
+    : [];
+  const filtering = q !== '' || filters.catalog !== '' || filters.status !== '' || filters.stock !== '' || filters.badge !== '';
+  const list = data.products
+    .filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+    .filter((p) => !catalogIds.length || p.catalogIds.some((id) => catalogIds.includes(id)))
+    .filter((p) =>
+      filters.status === 'published' ? p.published
+        : filters.status === 'hidden' ? !p.published
+          : filters.status === 'store-only' ? !tracksStock(p)
+            : true)
+    .filter((p) =>
+      !filters.stock ? true
+        : !tracksStock(p) ? false
+          : filters.stock === 'out' ? p.stock <= 0
+            : filters.stock === 'low' ? p.stock > 0 && p.stock <= LOW_STOCK
+              : p.stock > 0)
+    .filter((p) => !filters.badge || p.badge === filters.badge)
+    .sort(compare(filters.sort));
   const stockValue = data.products.filter(tracksStock).reduce((s, p) => s + p.stock * p.cost, 0);
 
   const saveRestock = () => {
@@ -82,8 +148,54 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
           </div>
         }
       >
+        {data.products.length > 0 && (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <select className={`${inputClass} h-9 text-xs`} value={filters.catalog} onChange={(e) => setFilter({ catalog: e.target.value })} aria-label="فلترة بالكاتالوك">
+                <option value="">كل الكاتالوكات</option>
+                {mains.map((m) => (
+                  <React.Fragment key={m.id}>
+                    <option value={m.id}>{m.name}</option>
+                    {data.catalogs.filter((c) => c.parentId === m.id).map((c) => <option key={c.id} value={c.id}>— {c.name}</option>)}
+                  </React.Fragment>
+                ))}
+              </select>
+              <select className={`${inputClass} h-9 text-xs`} value={filters.status} onChange={(e) => setFilter({ status: e.target.value as StatusFilter })} aria-label="فلترة بالحالة">
+                <option value="">كل الحالات</option>
+                <option value="published">معروض في المتجر</option>
+                <option value="hidden">مخفي (المستودع فقط)</option>
+                <option value="store-only">بدون مخزون (المتجر فقط)</option>
+              </select>
+              <select className={`${inputClass} h-9 text-xs`} value={filters.stock} onChange={(e) => setFilter({ stock: e.target.value as StockFilter })} aria-label="فلترة بالمخزون">
+                <option value="">كل الكميات</option>
+                <option value="available">متوفر</option>
+                <option value="low">كمية قليلة ({LOW_STOCK} أو أقل)</option>
+                <option value="out">نفد</option>
+              </select>
+              <select className={`${inputClass} h-9 text-xs`} value={filters.badge} onChange={(e) => setFilter({ badge: e.target.value })} aria-label="فلترة بالوسم">
+                <option value="">كل الوسوم</option>
+                {PRODUCT_BADGES.filter((b) => b.id).map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
+              </select>
+              <select className={`${inputClass} h-9 text-xs col-span-2 sm:col-span-1`} value={filters.sort} onChange={(e) => setFilter({ sort: e.target.value as SortBy })} aria-label="الترتيب">
+                {SORTS.map((s) => <option key={s.id} value={s.id}>ترتيب: {s.label}</option>)}
+              </select>
+            </div>
+            {filtering && (
+              <div className="flex items-center gap-2 text-[11px] text-neutral-500">
+                <span>{list.length} من {data.products.length} منتج</span>
+                <button
+                  type="button"
+                  onClick={() => { setFilters((f) => ({ ...NO_FILTERS, sort: f.sort })); setQuery(''); }}
+                  className="h-7 px-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <X size={11} /> مسح الفلاتر
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {list.length === 0 ? (
-          <EmptyState text={data.products.length ? 'لا نتائج لهذا البحث.' : 'المستودع فارغ. أضف منتجات من "إضافة منتج".'} />
+          <EmptyState text={data.products.length ? 'لا منتجات تطابق البحث أو الفلاتر.' : 'المستودع فارغ. أضف منتجات من "إضافة منتج".'} />
         ) : (
           <div className="space-y-2">
             {list.map((p) => (

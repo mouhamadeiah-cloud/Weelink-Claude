@@ -13,6 +13,9 @@ import { CanvasWorkspace } from './components/CanvasWorkspace';
 import { RightDrawer, DrawerSection } from './components/RightDrawer';
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
+import { ProjectChooser } from './components/ProjectChooser';
+import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
+import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
@@ -169,6 +172,13 @@ const getInitialElements = (): CanvasElement[] => {
   return [];
 };
 
+// Where each project is stored: the free page keeps the original fields/keys,
+// the Online Shop project uses its own fields in the same design document.
+const PROJECT_STORAGE: Record<ProjectType, { pagesField: string; elementsField: string; localPrefix: string }> = {
+  page: { pagesField: 'pages', elementsField: 'elements', localPrefix: 'weelink_' },
+  shop: { pagesField: 'shopPages', elementsField: 'shopElements', localPrefix: 'weelink_shop_' },
+};
+
 export default function App() {
   // Pages state
   const [pages, setPages] = useState<Page[]>(getInitialPages);
@@ -196,6 +206,18 @@ export default function App() {
   const [activeUserUid, setActiveUserUid] = useState<string>(() => {
     return localStorage.getItem('weelink_simulated_user_uid') || 'mouhamadeiah';
   });
+  // Open project: the free page or the Online Shop (Weelink / Shops). The user
+  // picks one on the project chooser after logging in.
+  const [project, setProject] = useState<ProjectType>('page');
+  const [isProjectChosen, setIsProjectChosen] = useState<boolean>(false);
+  const [projectLoading, setProjectLoading] = useState<ProjectType | null>(null);
+  const [hasShop, setHasShop] = useState<boolean>(false);
+  const [shopAdmin, setShopAdmin] = useState<ShopAdminData>(createEmptyShopAdmin);
+  // Bumped by every workspace load so a slower, older load can't overwrite a newer one.
+  const loadSeqRef = useRef(0);
+  // True once the open project's data has actually been loaded, so switching
+  // projects never saves a half-loaded placeholder over the real design.
+  const projectReadyRef = useRef(false);
   const [authErrorModal, setAuthErrorModal] = useState<{
     title: string;
     message: string;
@@ -257,6 +279,7 @@ export default function App() {
         loadedElements = [];
       }
       
+      setProject('page');
       setPages(loadedPages);
       setElements(loadedElements);
       setHistory([loadedElements]);
@@ -285,14 +308,25 @@ export default function App() {
   // Loads the user's workspace: Firebase first (source of truth, synced across devices),
   // falling back to the local cache when offline or before the first cloud sync.
   const loadUserWorkspace = async (userId: string) => {
+    const seq = ++loadSeqRef.current;
+    projectReadyRef.current = false;
     let loadedDesignFromCloud = false;
+    let shopExists = false;
+    try {
+      shopExists = !!localStorage.getItem(`${PROJECT_STORAGE.shop.localPrefix}pages_${userId}`);
+    } catch {
+      // storage unavailable
+    }
     try {
       const designSnap = await getDoc(doc(db, 'designs', userId));
+      if (seq !== loadSeqRef.current) return;
       if (designSnap.exists()) {
         const data: any = designSnap.data();
+        if (Array.isArray(data.shopPages) && data.shopPages.length > 0) shopExists = true;
         const cloudPages: Page[] = normalizeLegacyNavbarDefaults(Array.isArray(data.pages) ? data.pages : []);
         if (cloudPages.length > 0) {
           const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
+          setProject('page');
           setPages(cloudPages);
           setElements(cloudElements);
           setHistory([cloudElements]);
@@ -303,13 +337,18 @@ export default function App() {
     } catch (e) {
       console.warn("Could not load design from Firebase, falling back to local cache:", e);
     }
+    if (seq !== loadSeqRef.current) return;
     if (!loadedDesignFromCloud) {
       loadLocalDesign(userId);
     }
+    setHasShop(shopExists);
+    setActivePageId('page-home');
+    projectReadyRef.current = true;
 
     let loadedChatStatusFromCloud = false;
     try {
       const progressSnap = await getDoc(doc(db, 'platform_directory', userId));
+      if (seq !== loadSeqRef.current) return;
       if (progressSnap.exists()) {
         const chatData: any = progressSnap.data();
         setIsChatActive(chatData.currentStep !== 13);
@@ -318,9 +357,65 @@ export default function App() {
     } catch (e) {
       console.warn("Could not load onboarding progress from Firebase, falling back to local cache:", e);
     }
+    if (seq !== loadSeqRef.current) return;
     if (!loadedChatStatusFromCloud) {
       loadLocalChatStatus(userId);
     }
+  };
+
+  // Loads the Online Shop project. A first visit starts from the online shop template.
+  const loadShopWorkspace = async (userId: string) => {
+    const seq = ++loadSeqRef.current;
+    projectReadyRef.current = false;
+    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE.shop;
+    let shopPages: Page[] = [];
+    let shopElements: CanvasElement[] = [];
+    let admin: ShopAdminData | null = null;
+    try {
+      const designSnap = await getDoc(doc(db, 'designs', userId));
+      if (designSnap.exists()) {
+        const data: any = designSnap.data();
+        if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
+          shopPages = normalizeLegacyNavbarDefaults(data[pagesField]);
+          shopElements = deserializeElements(data[elementsField] || []);
+        }
+        if (data.shopAdmin) admin = normalizeShopAdmin(data.shopAdmin);
+      }
+    } catch (e) {
+      console.warn("Could not load the shop from Firebase, falling back to local cache:", e);
+    }
+    if (seq !== loadSeqRef.current) return;
+    try {
+      if (shopPages.length === 0) {
+        const storedPages = localStorage.getItem(`${localPrefix}pages_${userId}`);
+        const storedElements = localStorage.getItem(`${localPrefix}elements_${userId}`);
+        if (storedPages) shopPages = normalizeLegacyNavbarDefaults(JSON.parse(storedPages));
+        if (storedElements) shopElements = deserializeElements(JSON.parse(storedElements));
+      }
+      if (!admin) {
+        const storedAdmin = localStorage.getItem(`${localPrefix}admin_${userId}`);
+        if (storedAdmin) admin = normalizeShopAdmin(JSON.parse(storedAdmin));
+      }
+    } catch (e) {
+      console.warn("Could not read the local shop cache:", e);
+    }
+    if (shopPages.length === 0) {
+      const template = getOnlineShopTemplate();
+      shopPages = template.pages;
+      shopElements = template.elements;
+    }
+    setProject('shop');
+    setPages(shopPages);
+    setElements(shopElements);
+    setHistory([shopElements]);
+    setHistoryIndex(0);
+    setShopAdmin(admin || createEmptyShopAdmin());
+    setActivePageId(shopPages[0].id);
+    setActiveSlideId(shopPages[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    setIsChatActive(false);
+    setHasShop(true);
+    projectReadyRef.current = true;
   };
 
   useEffect(() => {
@@ -364,8 +459,9 @@ export default function App() {
     const delayDebounceFn = setTimeout(() => {
       try {
         const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
-        localStorage.setItem(`weelink_pages_${targetUserId}`, JSON.stringify(pages));
-        localStorage.setItem(`weelink_elements_${targetUserId}`, JSON.stringify(elements));
+        const { localPrefix } = PROJECT_STORAGE[project];
+        localStorage.setItem(`${localPrefix}pages_${targetUserId}`, JSON.stringify(pages));
+        localStorage.setItem(`${localPrefix}elements_${targetUserId}`, JSON.stringify(elements));
         // NOTE: deliberately no longer writing the old non-namespaced 'weelink_pages'/
         // 'weelink_elements' keys — they were the source of a cross-account data leak.
       } catch (e) {
@@ -374,7 +470,7 @@ export default function App() {
     }, 1200); // 1.2s debounce to avoid spamming writes
 
     return () => clearTimeout(delayDebounceFn);
-  }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid]);
+  }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid, project]);
 
   // 3. Debounced live auto-save to Firebase whenever pages or elements change
   useEffect(() => {
@@ -387,9 +483,10 @@ export default function App() {
     const delayDebounceFn = setTimeout(async () => {
       try {
         setIsSavingCloud(true);
+        const { pagesField, elementsField } = PROJECT_STORAGE[project];
         await setDoc(doc(db, 'designs', targetUserId), {
-          pages: sanitizeData(pages),
-          elements: serializeElements(elements),
+          [pagesField]: sanitizeData(pages),
+          [elementsField]: serializeElements(elements),
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
@@ -400,7 +497,76 @@ export default function App() {
     }, 1200); // 1.2s debounce to avoid spamming writes
 
     return () => clearTimeout(delayDebounceFn);
-  }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid]);
+  }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid, project]);
+
+  // 4. Debounced save of the shop's admin data (catalogs, warehouse, orders...).
+  useEffect(() => {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'shop') {
+      return;
+    }
+    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        localStorage.setItem(`${PROJECT_STORAGE.shop.localPrefix}admin_${targetUserId}`, JSON.stringify(shopAdmin));
+      } catch (e) {
+        console.warn("Could not save shop admin data locally:", e);
+      }
+      try {
+        await setDoc(doc(db, 'designs', targetUserId), {
+          shopAdmin: sanitizeData(shopAdmin),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Cloud save of shop admin data failed:", e);
+      }
+    }, 800);
+    return () => clearTimeout(delayDebounceFn);
+  }, [shopAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
+
+  // Saves the open project right away (the debounced saves above would be
+  // cancelled when another project's data replaces it).
+  const flushProjectSave = () => {
+    if (!projectReadyRef.current) return;
+    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE[project];
+    try {
+      localStorage.setItem(`${localPrefix}pages_${targetUserId}`, JSON.stringify(pages));
+      localStorage.setItem(`${localPrefix}elements_${targetUserId}`, JSON.stringify(elements));
+      if (project === 'shop') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(shopAdmin));
+    } catch (e) {
+      console.warn("Could not save to LocalStorage:", e);
+    }
+    // Not awaited: Firestore queues the write locally, and waiting for the server
+    // would freeze the switch while offline.
+    setDoc(doc(db, 'designs', targetUserId), {
+      [pagesField]: sanitizeData(pages),
+      [elementsField]: serializeElements(elements),
+      ...(project === 'shop' ? { shopAdmin: sanitizeData(shopAdmin) } : {}),
+      updatedAt: serverTimestamp(),
+    }, { merge: true }).catch((e) => console.warn("Cloud save failed while switching projects:", e));
+  };
+
+  const handleChooseProject = async (type: ProjectType) => {
+    if (projectLoading) return;
+    setProjectLoading(type);
+    try {
+      const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+      if (type !== project) {
+        flushProjectSave();
+        if (type === 'shop') await loadShopWorkspace(targetUserId);
+        else await loadUserWorkspace(targetUserId);
+      }
+      setIsProjectChosen(true);
+    } finally {
+      setProjectLoading(null);
+    }
+  };
+
+  const handleOpenProjects = () => {
+    flushProjectSave();
+    setIsPreviewActive(false);
+    setIsProjectChosen(false);
+  };
 
   // Auth Action Handlers
   const handleLogin = async () => {
@@ -474,6 +640,10 @@ export default function App() {
       const finalPages: Page[] = [blankPage];
       const finalElements: CanvasElement[] = [];
 
+      loadSeqRef.current++;
+      projectReadyRef.current = true;
+      setProject('page');
+      setHasShop(false);
       setPages(finalPages);
       setElements(finalElements);
       setHistory([finalElements]);
@@ -573,6 +743,12 @@ export default function App() {
         setHistory([[]]);
         setHistoryIndex(0);
         setActiveUserUid('mouhamadeiah');
+        loadSeqRef.current++;
+        projectReadyRef.current = false;
+        setProject('page');
+        setIsProjectChosen(false);
+        setHasShop(false);
+        setShopAdmin(createEmptyShopAdmin());
         setIsAuthActive(true);
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
@@ -2194,6 +2370,16 @@ export default function App() {
     );
   }
 
+  if (!isProjectChosen) {
+    return (
+      <ProjectChooser
+        onChoose={handleChooseProject}
+        hasShop={hasShop}
+        loadingType={projectLoading}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col antialiased selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
       {/* Modal for Firebase Domain Authorization Guidance */}
@@ -2310,6 +2496,8 @@ export default function App() {
           isSaving={isSavingCloud}
           onOpenWorkspaceHub={() => setIsWorkspaceHubOpen(true)}
           onManualSave={handleManualSave}
+          projectLabel={project === 'shop' ? 'Shops' : undefined}
+          onOpenProjects={handleOpenProjects}
         />
 
         {/* 2. Secondary Edit Bar directly beneath */}
@@ -2440,6 +2628,11 @@ export default function App() {
         isWeeAiChatCollapsed={!isChatActive}
         onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
       />
+
+      {/* Online Shop admin: floating gear + admin window */}
+      {project === 'shop' && (
+        <ShopAdminPanel data={shopAdmin} onChange={(fn) => setShopAdmin((prev) => fn(prev))} />
+      )}
 
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />

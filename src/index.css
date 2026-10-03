@@ -176,3 +176,21 @@
   animation-iteration-count: infinite !important;
   animation-timing-function: var(--anim-timing, ease-out) !important;
 }
+
+/* "Fixed" slide/element backgrounds (see syncFixedBackgrounds in CanvasWorkspace.tsx).
+   The layer is translated linearly against the workspace's scroll position on the compositor,
+   so it stays pinned without lagging a frame behind the scroll. --fbg-* are measured in JS. */
+@keyframes weelink-fixed-bg {
+  from { transform: translate3d(var(--fbg-x, 0px), var(--fbg-from, 0px), 0); }
+  to { transform: translate3d(var(--fbg-x, 0px), var(--fbg-to, 0px), 0); }
+}
+@supports (animation-timeline: scroll()) {
+  .bg-fixed-layer {
+    animation-name: weelink-fixed-bg;
+    animation-duration: auto;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-timeline: scroll(nearest block);
+    will-change: transform;
+  }
+}

@@ -12,6 +12,7 @@ import {
 import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
+import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
 import { Icon } from '@iconify/react';
 import { 
   Trash2, 
@@ -668,9 +669,9 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
 
 export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   previewMode,
-  slides,
+  slides: rawSlides,
   activeSlideId,
-  elements,
+  elements: rawElements,
   selectedElementId,
   onSelectElement,
   onSelectSlide,
@@ -694,6 +695,21 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   isNavbarSelected = false,
   onSelectNavbar,
 }) => {
+  // In mobile view, elements and slides render with their phone layout ("تنسيق الموبايل") when
+  // they have one. Everything below works on these resolved values, so dragging/resizing in mobile
+  // view reports phone coordinates (App routes those into `element.mobile`).
+  const elements = useMemo(
+    () => (previewMode === 'mobile' ? rawElements.map(resolveMobileElement) : rawElements),
+    [previewMode, rawElements]
+  );
+  const slides = useMemo(
+    () =>
+      previewMode === 'mobile'
+        ? rawSlides.map(s => ({ ...s, height: resolveMobileSlideHeight(s, rawElements) }))
+        : rawSlides,
+    [previewMode, rawSlides, rawElements]
+  );
+
   // Workspace width observer & Scaling calculation
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(1280);

@@ -165,6 +165,7 @@ interface RightDrawerProps {
   onAddSlideTemplate?: (template: any) => void;
   onAddPageTemplate?: (template: any) => void;
   onApplyFreeStarterTemplate?: () => void;
+  onApplyOnlineShopTemplate?: () => void;
   onDeleteSlide: (slideId: string) => void;
   onUpdateSlideHeight: (slideId: string, height: number) => void;
   onAddElement: (type: ElementType, customContent?: string, customStyles?: any, extraData?: Partial<CanvasElement>) => void;
@@ -3789,6 +3790,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onAddSlideTemplate,
   onAddPageTemplate,
   onApplyFreeStarterTemplate,
+  onApplyOnlineShopTemplate,
   onDeleteSlide,
   onAddElement,
   onAddGroup,
@@ -13240,6 +13242,23 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             </div>
                             <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
                               مدخل، من نحن، أعمالنا، الأسعار، واتصل بنا — كل صفحة مرتبطة بالأخرى عبر شريط التنقل العلوي. سيستبدل هذا كل صفحات موقعك الحالية.
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onApplyOnlineShopTemplate && onApplyOnlineShopTemplate()}
+                            className="w-full bg-gradient-to-br from-[#B4532A]/5 to-[#B4532A]/[0.02] hover:from-[#B4532A]/10 hover:to-[#B4532A]/5 border border-[#B4532A]/20 hover:border-[#B4532A] rounded-2xl p-3.5 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-bold text-neutral-800 group-hover:text-[#B4532A] transition-colors">
+                                متجر إلكتروني: منتجات وطلب عبر واتساب
+                              </span>
+                              <span className="text-[10px] text-[#B4532A] font-semibold bg-[#B4532A]/10 border border-[#B4532A]/15 px-1.5 py-0.5 rounded-md">
+                                4 صفحات
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
+                              الرئيسية، المنتجات، طريقة الطلب، وتواصل معنا — بطاقات منتجات بالسعر وزر طلب عبر واتساب. سيستبدل هذا كل صفحات موقعك الحالية.
                             </span>
                           </button>
                         </div>

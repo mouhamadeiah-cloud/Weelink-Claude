@@ -1,78 +1,41 @@
-// إضافة منتج: add a product to catalogs, either picked from the warehouse or entered by hand.
+// إضافة منتج: a new product entered by hand, or a warehouse product completed and exported to
+// the store. Both use the two-step product editor.
 import React, { useState } from 'react';
-import { PackagePlus, Warehouse, PenLine, CheckCircle2 } from 'lucide-react';
-import { ShopProduct, ShopMovement, newId } from '../shopTypes';
-import { Card, Field, inputClass, PrimaryButton, EmptyState, formatMoney } from '../adminUi';
+import { Warehouse, PenLine, CheckCircle2, Search } from 'lucide-react';
+import { ShopProduct } from '../shopTypes';
+import { Card, inputClass, EmptyState, formatMoney } from '../adminUi';
 import { AdminTabProps } from './tabProps';
-import { ProductForm, ProductDraft, emptyProductDraft, CatalogChecklist, toNumber } from './ProductForm';
+import { ProductEditor } from '../editor/ProductEditor';
+import { totalStock } from '../productModel';
 
 export const AddProductTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const [mode, setMode] = useState<'manual' | 'warehouse'>('manual');
-  const [draft, setDraft] = useState<ProductDraft>(emptyProductDraft);
-  const [pickedId, setPickedId] = useState('');
-  const [pickedCatalogs, setPickedCatalogs] = useState<string[]>([]);
+  const [picked, setPicked] = useState<ShopProduct | null>(null);
+  const [query, setQuery] = useState('');
   const [done, setDone] = useState<string | null>(null);
-  const currency = data.settings.currency;
+  const [editorKey, setEditorKey] = useState(0);
 
-  const flash = (msg: string) => {
+  const finish = (msg: string) => {
     setDone(msg);
-    window.setTimeout(() => setDone(null), 2500);
+    setPicked(null);
+    setEditorKey((k) => k + 1); // fresh, empty editor for the next product
+    window.setTimeout(() => setDone(null), 3000);
   };
 
-  const addManual = () => {
-    const name = draft.name.trim();
-    if (!name) return;
-    const now = new Date().toISOString();
-    const product: ShopProduct = {
-      id: newId('prd'),
-      name,
-      description: draft.description.trim(),
-      price: toNumber(draft.price),
-      cost: toNumber(draft.cost),
-      stock: Math.floor(toNumber(draft.stock)),
-      sku: draft.sku.trim(),
-      images: draft.images,
-      catalogIds: draft.catalogIds,
-      createdAt: now,
-    };
-    const movement: ShopMovement | null = product.stock > 0
-      ? { id: newId('mov'), type: 'purchase', productId: product.id, name, qty: product.stock, unitAmount: product.cost, createdAt: now }
-      : null;
-    update((d) => ({
-      ...d,
-      products: [product, ...d.products],
-      movements: movement ? [movement, ...d.movements] : d.movements,
-    }));
-    setDraft(emptyProductDraft);
-    flash(`تمت إضافة "${name}" إلى المستودع.`);
-  };
-
-  const picked = data.products.find((p) => p.id === pickedId);
-
-  const assignFromWarehouse = () => {
-    if (!picked) return;
-    update((d) => ({
-      ...d,
-      products: d.products.map((p) =>
-        p.id === picked.id ? { ...p, catalogIds: Array.from(new Set([...p.catalogIds, ...pickedCatalogs])) } : p
-      ),
-    }));
-    flash(`تمت إضافة "${picked.name}" إلى الكاتالوكات المختارة.`);
-    setPickedId('');
-    setPickedCatalogs([]);
-  };
+  const q = query.trim().toLowerCase();
+  const list = data.products.filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
 
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="space-y-4">
       <div className="flex gap-2 p-1 bg-neutral-100 rounded-2xl w-full sm:w-fit">
         {([
-          { id: 'manual', label: 'إضافة يدوية', icon: PenLine },
+          { id: 'manual', label: 'إدخال يدوي', icon: PenLine },
           { id: 'warehouse', label: 'من المستودع', icon: Warehouse },
         ] as const).map((m) => (
           <button
             key={m.id}
             type="button"
-            onClick={() => setMode(m.id)}
+            onClick={() => { setMode(m.id); setPicked(null); }}
             className={`flex-1 sm:flex-none h-9 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
               mode === m.id ? 'bg-white text-[#0071e3] shadow-sm' : 'text-neutral-500'
             }`}
@@ -90,44 +53,46 @@ export const AddProductTab: React.FC<AdminTabProps> = ({ data, update }) => {
       )}
 
       {mode === 'manual' ? (
-        <Card title="منتج جديد" actions={<span className="text-[10px] text-neutral-400">يُحفظ في المستودع تلقائياً</span>}>
-          <ProductForm draft={draft} onChange={setDraft} catalogs={data.catalogs} currency={currency} stockLabel="الكمية الأولية" />
-          <PrimaryButton onClick={addManual} disabled={!draft.name.trim()} className="w-full flex items-center justify-center gap-1.5">
-            <PackagePlus size={15} /> إضافة المنتج
-          </PrimaryButton>
-        </Card>
+        <ProductEditor key={`new-${editorKey}`} data={data} update={update} onDone={finish} />
+      ) : picked ? (
+        <ProductEditor key={picked.id} data={data} update={update} initial={picked} onDone={finish} onCancel={() => setPicked(null)} />
       ) : (
-        <Card title="اختيار منتج من المستودع">
-          {data.products.length === 0 ? (
-            <EmptyState text="المستودع فارغ. أضف منتجاً يدوياً أولاً." />
+        <Card
+          title="اختر منتجاً من المستودع"
+          actions={
+            <div className="relative w-48 sm:w-64">
+              <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input className={`${inputClass} h-9 pr-8`} placeholder="بحث بالاسم أو الرمز" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
+          }
+        >
+          {list.length === 0 ? (
+            <EmptyState text={data.products.length ? 'لا نتائج لهذا البحث.' : 'المستودع فارغ. أدخل منتجاً يدوياً أولاً.'} />
           ) : (
-            <>
-              <Field label="المنتج">
-                <select
-                  className={inputClass}
-                  value={pickedId}
-                  onChange={(e) => {
-                    setPickedId(e.target.value);
-                    setPickedCatalogs(data.products.find((p) => p.id === e.target.value)?.catalogIds || []);
-                  }}
+            <div className="grid sm:grid-cols-2 gap-2">
+              {list.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPicked(p)}
+                  className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-[#fbfbfd] hover:border-[#0071e3] text-right cursor-pointer transition"
                 >
-                  <option value="">— اختر منتجاً —</option>
-                  {data.products.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name} · {formatMoney(p.price, currency)} · المخزون {p.stock}</option>
-                  ))}
-                </select>
-              </Field>
-              {picked && (
-                <>
-                  <Field label="أضفه إلى الكاتالوكات">
-                    <CatalogChecklist catalogs={data.catalogs} selected={pickedCatalogs} onChange={setPickedCatalogs} />
-                  </Field>
-                  <PrimaryButton onClick={assignFromWarehouse} disabled={pickedCatalogs.length === 0} className="w-full">
-                    حفظ
-                  </PrimaryButton>
-                </>
-              )}
-            </>
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-neutral-200 shrink-0">
+                    {p.images[0] && <img src={p.images[0]} alt="" className="w-full h-full object-cover" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-[#1d1d1f] truncate">{p.name}</div>
+                    <div className="text-[10px] text-neutral-400 truncate">
+                      {formatMoney(p.price, p.currency)} · المخزون {totalStock(p)}
+                      {p.variants.length > 0 && ` · ${p.variants.filter((v) => v.stock > 0).length} تركيبة متوفرة`}
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 ${p.published ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-500'}`}>
+                    {p.published ? 'في المتجر' : 'في المستودع'}
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
         </Card>
       )}

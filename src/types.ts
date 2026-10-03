@@ -19,7 +19,8 @@ export type ElementType =
   | 'html'
   | 'gallery'
   | 'mask'
-  | 'cart';
+  | 'cart'
+  | 'shopProducts';
 
 export type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
 

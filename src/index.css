@@ -194,3 +194,10 @@
     will-change: transform;
   }
 }
+
+/* Shop product descriptions (rich text from the product editor) */
+.product-rich-text h3 { font-size: 1.12em; font-weight: 800; margin: 0.5em 0 0.25em; }
+.product-rich-text h4 { font-size: 1em; font-weight: 700; margin: 0.4em 0 0.2em; }
+.product-rich-text ul { list-style: disc; padding-inline-start: 1.4em; margin: 0.3em 0; }
+.product-rich-text ol { list-style: decimal; padding-inline-start: 1.4em; margin: 0.3em 0; }
+.product-rich-text p { margin: 0.3em 0; }

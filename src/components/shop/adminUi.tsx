@@ -41,6 +41,9 @@ export const Field: React.FC<{ label: string; hint?: string; children: React.Rea
 export const inputClass =
   'w-full h-10 px-3 rounded-xl border border-neutral-200 bg-white text-sm text-[#1d1d1f] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/15 transition';
 
+// The same field without full width, for fields given their own width (w-28, w-40…).
+export const inputFitClass = inputClass.replace('w-full ', '');
+
 export const textareaClass =
   'w-full min-h-[84px] p-3 rounded-xl border border-neutral-200 bg-white text-sm text-[#1d1d1f] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/15 transition leading-relaxed';
 
@@ -79,6 +82,24 @@ export const EmptyState: React.FC<{ text: string }> = ({ text }) => (
   <div className="py-10 text-center text-xs text-neutral-400 font-bold border border-dashed border-neutral-200 rounded-2xl">{text}</div>
 );
 
+// Uploads an image to storage, or returns it as a compressed data URL when the upload is not
+// possible. Returns null when the file could not be read at all.
+export const uploadImageFile = async (file: File): Promise<string | null> => {
+  try {
+    return await uploadGalleryImageToStorage(file);
+  } catch {
+    try {
+      const local = URL.createObjectURL(file);
+      const result = await compressImageToTargetSize(local, 120 * 1024);
+      URL.revokeObjectURL(local);
+      return result.url;
+    } catch (err) {
+      console.warn('Could not add image:', err);
+      return null;
+    }
+  }
+};
+
 // Picks up to MAX_IMAGES images: uploaded to storage, or kept as a compressed
 // data URL when the upload is not possible.
 export const ImagesPicker: React.FC<{ images: string[]; onChange: (images: string[]) => void }> = ({ images, onChange }) => {
@@ -92,18 +113,8 @@ export const ImagesPicker: React.FC<{ images: string[]; onChange: (images: strin
     setBusy(true);
     const added: string[] = [];
     for (const file of Array.from(files).slice(0, remaining)) {
-      try {
-        added.push(await uploadGalleryImageToStorage(file));
-      } catch {
-        try {
-          const local = URL.createObjectURL(file);
-          const result = await compressImageToTargetSize(local, 120 * 1024);
-          added.push(result.url);
-          URL.revokeObjectURL(local);
-        } catch (err) {
-          console.warn('Could not add product image:', err);
-        }
-      }
+      const url = await uploadImageFile(file);
+      if (url) added.push(url);
     }
     onChange([...images, ...added].slice(0, MAX_IMAGES));
     setBusy(false);

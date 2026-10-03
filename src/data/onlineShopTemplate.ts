@@ -30,7 +30,7 @@ const BODY_FONT = 'IBM Plex Sans Arabic';
 const unsplash = (id: string, w = 700) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=85`;
 
-function buildNavbar(): NavbarConfig {
+function buildShopNavbar(productsLabel: string): NavbarConfig {
   const link = (id: string, label: string, target: string) => ({
     id,
     label,
@@ -43,7 +43,7 @@ function buildNavbar(): NavbarConfig {
     brandSubtext: '',
     items: [
       link('nav-shop-home', 'الرئيسية', 'shop-page-home'),
-      link('nav-shop-products', 'المنتجات', 'shop-page-products'),
+      link('nav-shop-products', productsLabel, 'shop-page-products'),
       link('nav-shop-cart', 'السلة', 'shop-page-cart'),
       link('nav-shop-order', 'طريقة الطلب', 'shop-page-order'),
       link('nav-shop-contact', 'تواصل معنا', 'shop-page-contact'),
@@ -177,7 +177,33 @@ function productGrid(prefix: string, slideId: string, products: Product[], top: 
   });
 }
 
-export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElement[] } {
+// The live product grid of an Online Shop project: lists the products exported from the admin
+// panel instead of the fixed demo cards.
+const liveGrid = (id: string, slideId: string, box: Box): CanvasElement =>
+  el(id, 'shopProducts', slideId, box, '', { color: C.accent }, { name: 'منتجات المتجر' });
+
+const LIVE_GRIDS = [
+  { demoPrefix: /^shop-products-\d+-/, slideId: 'shop-products-slide', id: 'shop-products-live', box: { x: 90, y: 170, width: 1100, height: 900 } },
+  { demoPrefix: /^shop-featured-\d+-/, slideId: 'shop-home-featured', id: 'shop-featured-live', box: { x: 90, y: 170, width: 1100, height: 430 } },
+];
+
+// Shops created before the live grid existed: swap their demo product cards for it.
+export function withLiveProductGrid(elements: CanvasElement[]): CanvasElement[] {
+  if (elements.some((e) => e.type === 'shopProducts')) return elements;
+  let next = elements;
+  for (const g of LIVE_GRIDS) {
+    if (!next.some((e) => g.demoPrefix.test(e.id))) continue;
+    next = [...next.filter((e) => !g.demoPrefix.test(e.id)), liveGrid(g.id, g.slideId, g.box)];
+  }
+  return next;
+}
+
+// liveProducts: the Online Shop project's version, whose product pages list the products from
+// the admin panel. Without it (the free page's shop template) the pages keep demo cards.
+export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { pages: Page[]; elements: CanvasElement[] } {
+  const live = !!opts.liveProducts;
+  const productsLabel = live ? 'المتجر' : 'المنتجات';
+  const buildNavbar = () => buildShopNavbar(productsLabel);
   const pages: Page[] = [
     {
       id: 'shop-page-home',
@@ -192,7 +218,7 @@ export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElemen
     },
     {
       id: 'shop-page-products',
-      name: 'المنتجات',
+      name: productsLabel,
       slug: '/products',
       navbar: buildNavbar(),
       slides: [
@@ -255,7 +281,7 @@ export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElemen
     { icon: 'iconify:mdi:clock-outline', text: 'يوميًا من 10 صباحًا حتى 10 مساءً', link: {} },
   ];
 
-  const elements: CanvasElement[] = [
+  const elements: CanvasElement[] = withLive(live, [
     // ---------- Home: hero ----------
     el('shop-hero-overlay', 'shape', hero, { x: 0, y: 0, width: 1280, height: 620 }, '', {
       backgroundColor: 'rgba(28,20,16,0.55)',
@@ -317,7 +343,7 @@ export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElemen
 
     // ---------- Products page ----------
     heading('shop-products-heading', products, { x: 0, y: 50, width: 1280, height: 50 }, 'كل المنتجات', 34, C.ink, 'center'),
-    paragraph('shop-products-sub', products, { x: 0, y: 104, width: 1280, height: 32 }, 'اضغط "أضف إلى السلة" تحت أي منتج، ثم أرسل طلبك من صفحة السلة', 15, C.muted, 'center'),
+    paragraph('shop-products-sub', products, { x: 0, y: 104, width: 1280, height: 32 }, live ? 'اضغط على أي منتج لرؤية تفاصيله وإضافته إلى السلة، ثم أرسل طلبك من صفحة السلة' : 'اضغط "أضف إلى السلة" تحت أي منتج، ثم أرسل طلبك من صفحة السلة', 15, C.muted, 'center'),
     ...productGrid('shop-products', products, PRODUCTS, 170),
 
     // ---------- Cart ----------
@@ -396,7 +422,9 @@ export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElemen
     el('shop-contact-map', 'map', contact, { x: 140, y: 60, width: 500, height: 440 }, 'دمشق، سوريا', {
       borderRadius: 24,
     }, { mapLocation: 'دمشق، سوريا' }),
-  ];
+  ]);
 
   return { pages, elements };
 }
+
+const withLive = (live: boolean, elements: CanvasElement[]) => (live ? withLiveProductGrid(elements) : elements);

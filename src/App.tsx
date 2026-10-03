@@ -1827,17 +1827,19 @@ export default function App() {
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, slides: updatedSlides } : p));
   };
 
-  // "تنسيق الموبايل": arranges the current page's elements for phones (desktop layout untouched)
-  // and switches to mobile view so the result is visible right away. Undo reverts the elements.
+  // "تنسيق الموبايل": arranges every page's elements for phones (desktop layout untouched),
+  // collapses the navbar's page names into a hamburger menu on phones, and switches to mobile
+  // view so the result is visible right away. Undo reverts the elements.
   const handleArrangeForMobile = () => {
-    const pageSlideIds = new Set(currentPage.slides.map(s => s.id));
-    const { elements: pageElements, slides: arrangedSlides } = arrangeForMobile(
-      currentPage.slides,
-      elements.filter(el => pageSlideIds.has(el.slideId))
-    );
-    const arrangedById = new Map(pageElements.map(el => [el.id, el]));
-    pushToHistory(elements.map(el => arrangedById.get(el.id) || el));
-    setPages(pages.map(p => p.id === currentPage.id ? { ...p, slides: arrangedSlides } : p));
+    const allSlides = pages.flatMap(p => p.slides);
+    const { elements: arrangedElements, slides: arrangedSlides } = arrangeForMobile(allSlides, elements);
+    const arrangedSlideById = new Map(arrangedSlides.map(s => [s.id, s]));
+    pushToHistory(arrangedElements);
+    setPages(pages.map(p => ({
+      ...p,
+      slides: p.slides.map(s => arrangedSlideById.get(s.id) || s),
+      navbar: { ...p.navbar, mobileMenu: true },
+    })));
     setPreviewMode('mobile');
   };
 

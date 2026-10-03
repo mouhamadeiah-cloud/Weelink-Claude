@@ -18,7 +18,8 @@ export type ElementType =
   | 'calendar'
   | 'html'
   | 'gallery'
-  | 'mask';
+  | 'mask'
+  | 'cart';
 
 export type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
 
@@ -82,6 +83,14 @@ export interface MobileLayout {
   fontScale?: number;
 }
 
+// A product an "أضف إلى السلة" button puts in the visitor's shopping cart (see utils/cartStore).
+export interface CartProduct {
+  name: string;
+  price: number;
+  currency: string;
+  image?: string;
+}
+
 export interface CanvasElement {
   id: string;
   name: string;
@@ -103,6 +112,10 @@ export interface CanvasElement {
   groupName?: string;
   linkUrl?: string;
   linkType?: LinkType;
+  // When set, clicking this element (in preview / on the live site) adds the product to the cart.
+  cartProduct?: CartProduct;
+  // 'cart' element only: WhatsApp number the finished order is sent to.
+  cartWhatsapp?: string;
   linkTargetId?: string;
   contactType?: ContactType;
   contactValue?: string;

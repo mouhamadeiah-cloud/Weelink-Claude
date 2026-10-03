@@ -1,14 +1,17 @@
-// Online shop template: a fixed 4-page store site (Home, Products, How to order, Contact),
-// each page reachable from the shared navbar. Every product card is built from existing
-// element types only (shape + image + heading + paragraph + badge + button), so the user can
-// edit names, prices and photos like any other element. The "اطلب عبر واتساب" button on each
-// card opens WhatsApp with a ready message naming the product — there is no cart/payment
-// backend; orders arrive as WhatsApp messages and payment is cash on delivery.
+// Online shop template: a fixed 5-page store site (Home, Products, Cart, How to order, Contact),
+// each page reachable from the shared navbar. Every product card is built from regular elements
+// (shape + image + heading + paragraph + badge + button), so the user can edit names, prices and
+// photos like any other element. Each card's "أضف إلى السلة" button carries the product
+// (cartProduct) and adds it to the visitor's cart; the Cart page holds a 'cart' element that lists
+// the chosen products and sends the whole order to the shop's WhatsApp. There is no online
+// payment: payment is cash on delivery.
 // See handleApplyOnlineShopTemplate() in App.tsx.
 
 import type { Page, CanvasElement, NavbarConfig, ElementStyles } from '../types';
+import { formatPrice } from '../utils/cartStore';
 
 const WHATSAPP_NUMBER = '963991234567';
+const CURRENCY = 'ر.س';
 
 const C = {
   ink: '#2A1F1A',
@@ -27,9 +30,6 @@ const BODY_FONT = 'IBM Plex Sans Arabic';
 const unsplash = (id: string, w = 700) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=85`;
 
-const whatsappOrderUrl = (productName: string) =>
-  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`مرحبًا، أريد طلب: ${productName}`)}`;
-
 function buildNavbar(): NavbarConfig {
   const link = (id: string, label: string, target: string) => ({
     id,
@@ -44,6 +44,7 @@ function buildNavbar(): NavbarConfig {
     items: [
       link('nav-shop-home', 'الرئيسية', 'shop-page-home'),
       link('nav-shop-products', 'المنتجات', 'shop-page-products'),
+      link('nav-shop-cart', 'السلة', 'shop-page-cart'),
       link('nav-shop-order', 'طريقة الطلب', 'shop-page-order'),
       link('nav-shop-contact', 'تواصل معنا', 'shop-page-contact'),
     ],
@@ -90,25 +91,25 @@ const paragraph = (id: string, slideId: string, box: Box, text: string, size = 1
 
 interface Product {
   name: string;
-  price: string;
-  oldPrice?: string;
+  price: number;
+  oldPrice?: number;
   image: string;
   tag?: string;
 }
 
 const PRODUCTS: Product[] = [
-  { name: 'ساعة يد كلاسيكية', price: '250 ر.س', oldPrice: '320 ر.س', image: '1523275335684-37898b6baf30', tag: 'خصم' },
-  { name: 'سماعات لاسلكية', price: '180 ر.س', image: '1505740420928-5e560c06d30e', tag: 'الأكثر طلبًا' },
-  { name: 'حذاء رياضي أحمر', price: '210 ر.س', image: '1542291026-7eec264c27ff' },
-  { name: 'نظارة شمسية', price: '120 ر.س', image: '1572635196237-14b3f281503f', tag: 'جديد' },
-  { name: 'عطر فاخر', price: '290 ر.س', image: '1541643600914-78b084683601' },
-  { name: 'كاميرا فورية', price: '340 ر.س', oldPrice: '390 ر.س', image: '1526170375885-4d8ecf77b99f', tag: 'خصم' },
-  { name: 'حقيبة جلدية', price: '260 ر.س', image: '1548036328-c9fa89d128fa' },
-  { name: 'حذاء كاجوال', price: '195 ر.س', image: '1491553895911-0055eca6402d', tag: 'جديد' },
+  { name: 'ساعة يد كلاسيكية', price: 250, oldPrice: 320, image: '1523275335684-37898b6baf30', tag: 'خصم' },
+  { name: 'سماعات لاسلكية', price: 180, image: '1505740420928-5e560c06d30e', tag: 'الأكثر طلبًا' },
+  { name: 'حذاء رياضي أحمر', price: 210, image: '1542291026-7eec264c27ff' },
+  { name: 'نظارة شمسية', price: 120, image: '1572635196237-14b3f281503f', tag: 'جديد' },
+  { name: 'عطر فاخر', price: 290, image: '1541643600914-78b084683601' },
+  { name: 'كاميرا فورية', price: 340, oldPrice: 390, image: '1526170375885-4d8ecf77b99f', tag: 'خصم' },
+  { name: 'حقيبة جلدية', price: 260, image: '1548036328-c9fa89d128fa' },
+  { name: 'حذاء كاجوال', price: 195, image: '1491553895911-0055eca6402d', tag: 'جديد' },
 ];
 
 // One product card: white rounded card, photo, optional tag badge, name, price (+ the old price
-// when discounted) and a WhatsApp order button carrying the product name in the pre-filled message.
+// when discounted) and an add-to-cart button carrying the product.
 function productCard(prefix: string, slideId: string, p: Product, x: number, y: number): CanvasElement[] {
   const W = 260;
   const out: CanvasElement[] = [
@@ -126,14 +127,14 @@ function productCard(prefix: string, slideId: string, p: Product, x: number, y: 
       objectFit: 'cover',
     }, { imageUrl: unsplash(p.image) }),
     heading(`${prefix}-name`, slideId, { x: x + 18, y: y + 246, width: W - 36, height: 32 }, p.name, 18),
-    el(`${prefix}-price`, 'paragraph', slideId, { x: x + 18, y: y + 284, width: W - 36, height: 30 }, p.price, {
+    el(`${prefix}-price`, 'paragraph', slideId, { x: x + 18, y: y + 284, width: W - 36, height: 30 }, formatPrice(p.price, CURRENCY), {
       fontSize: 18,
       fontWeight: 'bold',
       color: C.accent,
       fontFamily: BODY_FONT,
       textAlign: 'right',
     }),
-    el(`${prefix}-btn`, 'button', slideId, { x: x + 18, y: y + 336, width: W - 36, height: 50 }, 'اطلب عبر واتساب', {
+    el(`${prefix}-btn`, 'button', slideId, { x: x + 18, y: y + 336, width: W - 36, height: 50 }, 'أضف إلى السلة', {
       backgroundColor: C.accent,
       color: '#FFFFFF',
       fontSize: 15,
@@ -141,14 +142,11 @@ function productCard(prefix: string, slideId: string, p: Product, x: number, y: 
       borderRadius: 9999,
       textAlign: 'center',
     }, {
-      linkType: 'contact',
-      contactType: 'whatsapp',
-      contactValue: WHATSAPP_NUMBER,
-      linkUrl: whatsappOrderUrl(p.name),
+      cartProduct: { name: p.name, price: p.price, currency: CURRENCY, image: unsplash(p.image, 300) },
     }),
   ];
   if (p.oldPrice) {
-    out.push(el(`${prefix}-old`, 'paragraph', slideId, { x: x + 18, y: y + 288, width: 120, height: 26 }, `بدل ${p.oldPrice}`, {
+    out.push(el(`${prefix}-old`, 'paragraph', slideId, { x: x + 18, y: y + 288, width: 120, height: 26 }, `بدل ${formatPrice(p.oldPrice, CURRENCY)}`, {
       fontSize: 14,
       color: C.muted,
       fontFamily: BODY_FONT,
@@ -202,6 +200,15 @@ export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElemen
       ],
     },
     {
+      id: 'shop-page-cart',
+      name: 'السلة',
+      slug: '/cart',
+      navbar: buildNavbar(),
+      slides: [
+        { id: 'shop-cart-slide', name: 'السلة', height: 760, backgroundColor: C.cream, dividerShape: 'straight' },
+      ],
+    },
+    {
       id: 'shop-page-order',
       name: 'طريقة الطلب',
       slug: '/how-to-order',
@@ -225,6 +232,7 @@ export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElemen
   const featured = 'shop-home-featured';
   const perks = 'shop-home-perks';
   const products = 'shop-products-slide';
+  const cart = 'shop-cart-slide';
   const order = 'shop-order-slide';
   const contact = 'shop-contact-slide';
 
@@ -235,8 +243,8 @@ export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElemen
   ];
 
   const steps = [
-    { n: '1', title: 'اختر المنتج', text: 'تصفح صفحة المنتجات واختر ما يعجبك.' },
-    { n: '2', title: 'اطلب عبر واتساب', text: 'اضغط زر "اطلب عبر واتساب" وأرسل لنا العنوان والكمية.' },
+    { n: '1', title: 'أضف إلى السلة', text: 'تصفح المنتجات واضغط "أضف إلى السلة" تحت ما يعجبك.' },
+    { n: '2', title: 'أرسل طلبك', text: 'من صفحة السلة اضغط "إرسال الطلب عبر واتساب" وأخبرنا بعنوانك.' },
     { n: '3', title: 'استلم وادفع', text: 'نؤكد طلبك ونوصله إليك، وتدفع عند الاستلام.' },
   ];
 
@@ -269,7 +277,7 @@ export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElemen
       animationTrigger: 'once',
       animationDuration: 1.1,
     }),
-    paragraph('shop-hero-text', hero, { x: 600, y: 344, width: 540, height: 70 }, 'منتجات مختارة بعناية، أسعار واضحة، وطلب سهل عبر واتساب مع توصيل حتى باب بيتك.', 17, 'rgba(255,255,255,0.88)'),
+    paragraph('shop-hero-text', hero, { x: 600, y: 344, width: 540, height: 70 }, 'منتجات مختارة بعناية، أسعار واضحة، أضف ما يعجبك إلى السلة واطلب بسهولة مع توصيل حتى باب بيتك.', 17, 'rgba(255,255,255,0.88)'),
     el('shop-hero-cta', 'button', hero, { x: 940, y: 440, width: 200, height: 54 }, 'تسوّق الآن', {
       backgroundColor: C.accent,
       color: '#FFFFFF',
@@ -309,8 +317,25 @@ export function getOnlineShopTemplate(): { pages: Page[]; elements: CanvasElemen
 
     // ---------- Products page ----------
     heading('shop-products-heading', products, { x: 0, y: 50, width: 1280, height: 50 }, 'كل المنتجات', 34, C.ink, 'center'),
-    paragraph('shop-products-sub', products, { x: 0, y: 104, width: 1280, height: 32 }, 'اضغط "اطلب عبر واتساب" تحت أي منتج وسنرد عليك فورًا', 15, C.muted, 'center'),
+    paragraph('shop-products-sub', products, { x: 0, y: 104, width: 1280, height: 32 }, 'اضغط "أضف إلى السلة" تحت أي منتج، ثم أرسل طلبك من صفحة السلة', 15, C.muted, 'center'),
     ...productGrid('shop-products', products, PRODUCTS, 170),
+
+    // ---------- Cart ----------
+    heading('shop-cart-heading', cart, { x: 0, y: 50, width: 1280, height: 50 }, 'سلة المشتريات', 34, C.ink, 'center'),
+    paragraph('shop-cart-sub', cart, { x: 0, y: 104, width: 1280, height: 32 }, 'راجع طلبك ثم أرسله عبر واتساب. الدفع عند الاستلام.', 15, C.muted, 'center'),
+    el('shop-cart', 'cart', cart, { x: 190, y: 160, width: 900, height: 480 }, '', {
+      color: C.accent,
+    }, { cartWhatsapp: WHATSAPP_NUMBER }),
+    el('shop-cart-continue', 'button', cart, { x: 520, y: 670, width: 240, height: 50 }, 'متابعة التسوّق', {
+      backgroundColor: 'transparent',
+      color: C.accent,
+      borderColor: C.accent,
+      borderWidth: 1,
+      fontSize: 15,
+      fontWeight: '600',
+      borderRadius: 9999,
+      textAlign: 'center',
+    }, { linkType: 'page', linkTargetId: 'shop-page-products', linkUrl: '#page-shop-page-products' }),
 
     // ---------- How to order ----------
     heading('shop-order-heading', order, { x: 0, y: 60, width: 1280, height: 50 }, 'كيف تطلب؟', 34, C.ink, 'center'),

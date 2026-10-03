@@ -80,6 +80,7 @@ import {
   RICH_MULTI_GRADIENTS 
 } from '../data/backgroundPresets';
 import { WeeAIChat } from './WeeAIChat';
+import { ShopElementSettings } from './ShopElementSettings';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
   const arr = dataurl.split(',');
@@ -13251,14 +13252,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           >
                             <div className="flex items-center justify-between w-full">
                               <span className="text-xs font-bold text-neutral-800 group-hover:text-[#B4532A] transition-colors">
-                                متجر إلكتروني: منتجات وطلب عبر واتساب
+                                متجر إلكتروني: منتجات وسلة مشتريات
                               </span>
                               <span className="text-[10px] text-[#B4532A] font-semibold bg-[#B4532A]/10 border border-[#B4532A]/15 px-1.5 py-0.5 rounded-md">
-                                4 صفحات
+                                5 صفحات
                               </span>
                             </div>
                             <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
-                              الرئيسية، المنتجات، طريقة الطلب، وتواصل معنا — بطاقات منتجات بالسعر وزر طلب عبر واتساب. سيستبدل هذا كل صفحات موقعك الحالية.
+                              الرئيسية، المنتجات، السلة، طريقة الطلب، وتواصل معنا — بطاقات منتجات بزر «أضف إلى السلة»، وصفحة سلة ترسل الطلب كاملًا عبر واتساب. سيستبدل هذا كل صفحات موقعك الحالية.
                             </span>
                           </button>
                         </div>
@@ -14853,6 +14854,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
               return (
                 <div className="space-y-4">
+                  {selectedElement && (
+                    <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+                  )}
+
                   {/* Top Capsule / Oval Bar: ( صفحة | شريحة | URL | تواصل ) - كما في الرسم اليدوي */}
                   <div className="w-full p-1 bg-neutral-100 rounded-full border border-neutral-300 shadow-2xs flex items-center justify-between px-1 gap-1 select-none">
                     {[

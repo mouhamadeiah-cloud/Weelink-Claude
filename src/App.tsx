@@ -1627,6 +1627,13 @@ export default function App() {
         content: customContent || 'circle',
         styles: { backgroundColor: '#ffffff', ...(customStyles || {}) },
       },
+      cart: {
+        name: 'سلة المشتريات',
+        width: 900,
+        height: 480,
+        content: '',
+        styles: { color: '#B4532A', ...(customStyles || {}) },
+      },
     };
 
     const cfg = defaultConfigs[type] || defaultConfigs.card;
@@ -1992,7 +1999,7 @@ export default function App() {
 
   const handleApplyOnlineShopTemplate = () => applySiteTemplate(
     getOnlineShopTemplate(),
-    'سيتم استبدال كل صفحات موقعك الحالية بقالب متجر إلكتروني من أربع صفحات (الرئيسية، المنتجات، طريقة الطلب، تواصل معنا). هل تريد المتابعة؟'
+    'سيتم استبدال كل صفحات موقعك الحالية بقالب متجر إلكتروني من خمس صفحات (الرئيسية، المنتجات، السلة، طريقة الطلب، تواصل معنا). هل تريد المتابعة؟'
   );
 
   const handleUpdatePage = (updates: Partial<Page>) => {

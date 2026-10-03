@@ -1,0 +1,353 @@
+// تنزيل المنتج: the two-step product editor.
+// Step 1 (تنزيل المنتج): catalog and name from artikel.json, five image slots, gallery layout,
+// badge, prices, quantity tiers, delivery price, specs and stock.
+// Step 2 (شرح المنتج): rich description and short description, then export the product either
+// to the store (shown on the store page) or to the warehouse (saved, not shown).
+// A live preview of the store card stays beside both steps.
+import React, { useMemo, useState } from 'react';
+import { Store, Warehouse, ArrowLeft, ArrowRight, Plus, Trash2, Percent } from 'lucide-react';
+import {
+  ShopAdminData, ShopProduct, ShopCatalog, ShopMovement, PRODUCT_BADGES, ProductBadge, CURRENCIES,
+  MAX_PRICE_TIERS, newId,
+} from '../shopTypes';
+import { buildVariants, discountPercent, sanitizeHtml, totalStock, variantLabel } from '../productModel';
+import { suggestedPresets } from '../artikel';
+import { Card, Field, inputClass, inputFitClass, PrimaryButton, GhostButton, Toggle } from '../adminUi';
+import { CatalogPicker, PickerPath, emptyPickerPath } from './CatalogPicker';
+import { ImageSlots, toSlots } from './ImageSlots';
+import { OptionsEditor } from './OptionsEditor';
+import { RichTextEditor } from './RichTextEditor';
+import { ProductCard } from '../store/ProductCard';
+import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
+
+export const newProductDraft = (currency: string): ShopProduct => ({
+  id: '',
+  name: '',
+  description: '',
+  shortDescription: '',
+  showShortDescription: true,
+  price: 0,
+  oldPrice: 0,
+  currency,
+  cost: 0,
+  stock: 0,
+  sku: '',
+  images: [],
+  galleryLayout: 'top-main',
+  badge: '',
+  tiers: [],
+  deliveryPrice: null,
+  options: [],
+  variants: [],
+  catalogIds: [],
+  published: true,
+  createdAt: '',
+});
+
+const num = (v: string) => {
+  const n = parseFloat(v);
+  return isFinite(n) && n > 0 ? n : 0;
+};
+
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+// Finds the store catalog with this name under parentId, or creates it.
+const ensureCatalog = (catalogs: ShopCatalog[], name: string, parentId: string | null): [ShopCatalog[], string] => {
+  const found = catalogs.find((c) => (c.parentId || null) === parentId && sameName(c.name, name));
+  if (found) return [catalogs, found.id];
+  const created: ShopCatalog = { id: newId('cat'), name: name.trim(), parentId, images: [], createdAt: new Date().toISOString() };
+  return [[...catalogs, created], created.id];
+};
+
+// Store catalogs as chips, for adding the product to more of the store's own catalogs.
+const StoreCatalogChips: React.FC<{ catalogs: ShopCatalog[]; selected: string[]; onChange: (ids: string[]) => void }> = ({ catalogs, selected, onChange }) => {
+  const ordered = catalogs.filter((c) => !c.parentId).flatMap((c) => [c, ...catalogs.filter((s) => s.parentId === c.id)]);
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {ordered.map((c) => {
+        const on = selected.includes(c.id);
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onChange(on ? selected.filter((id) => id !== c.id) : [...selected, c.id])}
+            className={`px-3 h-8 rounded-full text-[11px] font-bold border transition cursor-pointer ${on ? 'bg-[#0071e3] border-[#0071e3] text-white' : 'bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300'}`}
+          >
+            {c.parentId ? '↳ ' : ''}{c.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+interface ProductEditorProps {
+  data: ShopAdminData;
+  update: (fn: (d: ShopAdminData) => ShopAdminData) => void;
+  initial?: ShopProduct; // editing a product that is already in the warehouse
+  onDone: (message: string) => void;
+  onCancel?: () => void;
+}
+
+export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, initial, onDone, onCancel }) => {
+  const [p, setP] = useState<ShopProduct>(() => initial ? { ...initial } : newProductDraft(data.settings.currency));
+  const [slots, setSlots] = useState<string[]>(() => toSlots(initial?.images || []));
+  const [path, setPath] = useState<PickerPath>(emptyPickerPath);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [error, setError] = useState('');
+  const set = (patch: Partial<ShopProduct>) => setP((prev) => ({ ...prev, ...patch }));
+  const isEdit = !!initial;
+
+  const preview: ShopProduct = useMemo(() => ({
+    ...p,
+    images: slots.filter(Boolean),
+    stock: p.variants.length ? p.variants.reduce((s, v) => s + v.stock, 0) : p.stock,
+  }), [p, slots]);
+
+  const suggested = useMemo(() => suggestedPresets(path.mainSlug, path.subSlug), [path.mainSlug, path.subSlug]);
+  const pct = discountPercent(p);
+
+  const save = (published: boolean) => {
+    const name = p.name.trim();
+    if (!name) {
+      setStep(1);
+      setError('اكتب اسم المنتج أولاً.');
+      return;
+    }
+    setError('');
+    const now = new Date().toISOString();
+    const variants = buildVariants(p.options, p.variants);
+    const product: ShopProduct = {
+      ...p,
+      id: p.id || newId('prd'),
+      name,
+      description: sanitizeHtml(p.description),
+      shortDescription: p.shortDescription.trim(),
+      images: slots.filter(Boolean),
+      tiers: p.tiers.filter((t) => t.minQty > 1 && t.price > 0).sort((a, b) => a.minQty - b.minQty),
+      options: p.options.filter((o) => o.name.trim()).map((o) => ({ ...o, name: o.name.trim() })),
+      variants,
+      stock: totalStock({ stock: p.stock, variants }),
+      published,
+      createdAt: p.createdAt || now,
+    };
+
+    update((d) => {
+      // Catalogs picked from artikel.json are created in the store when missing.
+      let catalogs = d.catalogs;
+      const catalogIds = new Set(product.catalogIds);
+      if (path.mainName.trim()) {
+        let mainId: string;
+        [catalogs, mainId] = ensureCatalog(catalogs, path.mainName, null);
+        catalogIds.add(mainId);
+        if (path.subName.trim()) {
+          let subId: string;
+          [catalogs, subId] = ensureCatalog(catalogs, path.subName, mainId);
+          catalogIds.add(subId);
+        }
+      }
+      const saved = { ...product, catalogIds: Array.from(catalogIds) };
+
+      // New stock is recorded as a purchase, per combination, for the accounts page.
+      const before = d.products.find((x) => x.id === saved.id);
+      const added: { qty: number; variant?: string }[] = [];
+      if (saved.variants.length) {
+        for (const v of saved.variants) {
+          const label = variantLabel(v.values);
+          const old = before?.variants.find((x) => variantLabel(x.values) === label)?.stock ?? 0;
+          if (v.stock > old) added.push({ qty: v.stock - old, variant: label });
+        }
+      } else {
+        const old = before && !before.variants.length ? before.stock : 0;
+        if (saved.stock > old) added.push({ qty: saved.stock - old });
+      }
+      const movements: ShopMovement[] = added.map((a) => ({
+        id: newId('mov'), type: 'purchase', productId: saved.id,
+        name: a.variant ? `${saved.name} (${a.variant})` : saved.name,
+        qty: a.qty, unitAmount: saved.cost, createdAt: now,
+      }));
+
+      return {
+        ...d,
+        catalogs,
+        products: before ? d.products.map((x) => (x.id === saved.id ? saved : x)) : [saved, ...d.products],
+        movements: [...movements, ...d.movements],
+      };
+    });
+    onDone(published ? `تم تصدير "${name}" إلى المتجر.` : `تم حفظ "${name}" في المستودع.`);
+  };
+
+  const setTier = (i: number, patch: Partial<{ minQty: number; price: number }>) =>
+    set({ tiers: p.tiers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)) });
+
+  const stepButton = (n: 1 | 2, label: string) => (
+    <button
+      type="button"
+      onClick={() => setStep(n)}
+      className={`flex items-center gap-2 h-10 px-4 rounded-xl text-xs font-bold transition cursor-pointer ${step === n ? 'bg-[#1d1d1f] text-white' : 'bg-white text-neutral-500 border border-neutral-200'}`}
+    >
+      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === n ? 'bg-white text-[#1d1d1f]' : 'bg-neutral-100'}`}>{n}</span>
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="grid lg:grid-cols-[minmax(0,1fr)_250px] gap-4 items-start">
+      <div className="space-y-4 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          {stepButton(1, 'تنزيل المنتج')}
+          <ArrowLeft size={14} className="text-neutral-300" />
+          {stepButton(2, 'شرح المنتج')}
+          {onCancel && <GhostButton onClick={onCancel} className="mr-auto">إلغاء</GhostButton>}
+        </div>
+        {error && <div className="p-3 rounded-xl bg-red-50 text-red-600 text-xs font-bold">{error}</div>}
+
+        {step === 1 ? (
+          <>
+            <Card title="المنتج">
+              <CatalogPicker path={path} onChange={setPath} productName={p.name} onProductName={(name) => set({ name })} />
+              {data.catalogs.length > 0 && (
+                <Field label="كاتالوكات متجرك" hint="الكاتالوك الذي تختاره في الأعلى يُضاف إلى متجرك تلقائياً عند الحفظ.">
+                  <StoreCatalogChips catalogs={data.catalogs} selected={p.catalogIds} onChange={(catalogIds) => set({ catalogIds })} />
+                </Field>
+              )}
+            </Card>
+
+            <Card title="الصور">
+              <ImageSlots slots={slots} onChange={setSlots} />
+              <Field label="طريقة عرض الصور">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {GALLERY_LAYOUTS.map((g) => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => set({ galleryLayout: g.id })}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition cursor-pointer ${p.galleryLayout === g.id ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'}`}
+                    >
+                      <GalleryLayoutIcon layout={g.id} />
+                      <span className="text-[10px] font-bold text-center leading-tight">{g.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="وسم على الصورة">
+                <select className={inputClass} value={p.badge} onChange={(e) => set({ badge: e.target.value as ProductBadge })}>
+                  {PRODUCT_BADGES.map((b) => <option key={b.id || 'none'} value={b.id}>{b.label}</option>)}
+                </select>
+              </Field>
+            </Card>
+
+            <Card title="السعر">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Field label="السعر">
+                  <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.price || ''} onChange={(e) => set({ price: num(e.target.value) })} />
+                </Field>
+                <Field label="السعر الأصلي (مشطوب)">
+                  <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.oldPrice || ''} onChange={(e) => set({ oldPrice: num(e.target.value) })} />
+                </Field>
+                <Field label="العملة">
+                  <select className={inputClass} value={p.currency} onChange={(e) => set({ currency: e.target.value })}>
+                    {Array.from(new Set([p.currency, ...CURRENCIES])).map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </Field>
+                <Field label="سعر الشراء" hint="لحساب الأرباح، لا يظهر للزبون.">
+                  <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.cost || ''} onChange={(e) => set({ cost: num(e.target.value) })} />
+                </Field>
+              </div>
+              {pct > 0 && (
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#ff3b30]"><Percent size={12} /> خصم {pct}% عن السعر الأصلي</div>
+              )}
+
+              <Field label="سعر خاص عند شراء كمية أكبر">
+                <div className="space-y-2">
+                  {p.tiers.map((t, i) => (
+                    <div key={i} className="flex flex-wrap items-center gap-2 text-xs font-bold text-neutral-600">
+                      <span>عند شراء</span>
+                      <input className={`${inputFitClass} h-9 w-20`} type="number" min="2" value={t.minQty || ''} onChange={(e) => setTier(i, { minQty: Math.floor(num(e.target.value)) })} aria-label="الكمية" />
+                      <span>أو أكثر: سعر القطعة</span>
+                      <input className={`${inputFitClass} h-9 w-28`} type="number" min="0" value={t.price || ''} onChange={(e) => setTier(i, { price: num(e.target.value) })} aria-label="سعر القطعة" />
+                      <span>{p.currency}</span>
+                      <button type="button" onClick={() => set({ tiers: p.tiers.filter((_, idx) => idx !== i) })} className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer" aria-label="حذف المستوى">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                  {p.tiers.length < MAX_PRICE_TIERS && (
+                    <GhostButton
+                      onClick={() => set({ tiers: [...p.tiers, { minQty: (p.tiers[p.tiers.length - 1]?.minQty || 1) + 1, price: 0 }] })}
+                      className="flex items-center gap-1"
+                    >
+                      <Plus size={13} /> إضافة مستوى ({p.tiers.length}/{MAX_PRICE_TIERS})
+                    </GhostButton>
+                  )}
+                </div>
+              </Field>
+
+              <Field label="سعر التوصيل لهذا المنتج" hint={`اتركه فارغاً لاستعمال رسم التوصيل العام للمتجر (${data.settings.delivery.deliveryFee || 0} ${data.settings.currency}).`}>
+                <input
+                  className={`${inputFitClass} w-40`}
+                  type="number"
+                  min="0"
+                  value={p.deliveryPrice ?? ''}
+                  onChange={(e) => set({ deliveryPrice: e.target.value === '' ? null : Math.max(0, parseFloat(e.target.value) || 0) })}
+                />
+              </Field>
+            </Card>
+
+            <Card title="المواصفات والمخزون" actions={isEdit ? <span className="text-[10px] text-neutral-400">مرتبط بالمستودع</span> : undefined}>
+              <OptionsEditor
+                options={p.options}
+                variants={p.variants}
+                stock={p.stock}
+                suggested={suggested}
+                linkedToWarehouse={isEdit}
+                currency={p.currency}
+                onChange={(patch) => set(patch)}
+              />
+              <Field label="رمز المنتج (اختياري)">
+                <input className={`${inputFitClass} w-48`} value={p.sku} onChange={(e) => set({ sku: e.target.value })} dir="ltr" />
+              </Field>
+            </Card>
+
+            <PrimaryButton onClick={() => setStep(2)} className="w-full flex items-center justify-center gap-1.5">
+              التالي: شرح المنتج <ArrowLeft size={14} />
+            </PrimaryButton>
+          </>
+        ) : (
+          <>
+            <Card title="شرح المنتج">
+              <RichTextEditor value={p.description} onChange={(description) => set({ description })} placeholder="اكتب وصفاً كاملاً للمنتج: المزايا، طريقة الاستعمال، المحتويات…" />
+              <Field label="شرح قصير تحت الاسم">
+                <input className={inputClass} value={p.shortDescription} maxLength={120} onChange={(e) => set({ shortDescription: e.target.value })} placeholder="مثال: قطن 100%، مريح للاستعمال اليومي" />
+              </Field>
+              <Toggle checked={p.showShortDescription} onChange={(showShortDescription) => set({ showShortDescription })} label="إظهار الشرح القصير في صفحة المتجر" />
+            </Card>
+
+            <div className="grid sm:grid-cols-2 gap-2">
+              <PrimaryButton onClick={() => save(true)} className="h-12 flex items-center justify-center gap-1.5 text-sm">
+                <Store size={16} /> تصدير إلى المتجر
+              </PrimaryButton>
+              <GhostButton onClick={() => save(false)} className="h-12 flex items-center justify-center gap-1.5 text-sm">
+                <Warehouse size={16} /> تصدير إلى المستودع
+              </GhostButton>
+            </div>
+            <p className="text-[11px] text-neutral-400 leading-relaxed">
+              «تصدير إلى المتجر» يحفظ المنتج في المستودع ويعرضه في صفحة المتجر. «تصدير إلى المستودع» يحفظه دون عرضه، ويمكنك عرضه لاحقاً من المستودع.
+            </p>
+            <GhostButton onClick={() => setStep(1)} className="flex items-center gap-1"><ArrowRight size={13} /> رجوع</GhostButton>
+          </>
+        )}
+      </div>
+
+      <aside className="lg:sticky lg:top-0 space-y-2">
+        <div className="text-[11px] font-bold text-neutral-400">هكذا يظهر في المتجر</div>
+        <ProductCard product={preview} />
+        {preview.options.some((o) => o.values.length) && (
+          <div className="text-[10px] text-neutral-400 leading-relaxed">
+            {preview.options.filter((o) => o.values.length).map((o) => `${o.name}: ${o.values.map((v) => v.label).join('، ')}`).join(' · ')}
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+};

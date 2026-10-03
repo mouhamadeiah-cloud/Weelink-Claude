@@ -5,8 +5,9 @@ import { Plus, X, ClipboardList } from 'lucide-react';
 import {
   ShopAdminData, ShopOrder, ShopOrderItem, OrderStatus, ORDER_STATUSES, PAYMENT_METHODS, PaymentMethodId, newId,
 } from '../shopTypes';
-import { Card, Field, inputClass, textareaClass, PrimaryButton, GhostButton, EmptyState, formatMoney, formatDate } from '../adminUi';
+import { Card, Field, inputClass, inputFitClass, textareaClass, PrimaryButton, GhostButton, EmptyState, formatMoney, formatDate } from '../adminUi';
 import { AdminTabProps } from './tabProps';
+import { changeStock, totalStock, unitPriceFor, variantLabel } from '../productModel';
 
 export const enabledPaymentMethods = (d: ShopAdminData): PaymentMethodId[] => {
   const p = d.settings.payments;
@@ -18,18 +19,19 @@ export const enabledPaymentMethods = (d: ShopAdminData): PaymentMethodId[] => {
   return ids.length ? ids : ['cash'];
 };
 
+const itemName = (i: ShopOrderItem) => (i.variant ? `${i.name} (${i.variant})` : i.name);
+
 // Applies the stock and sales-ledger effect of an order (sign 1 = take out, -1 = put back).
 const applyStock = (d: ShopAdminData, order: ShopOrder, sign: 1 | -1): ShopAdminData => ({
   ...d,
-  products: d.products.map((p) => {
-    const qty = order.items.filter((i) => i.productId === p.id).reduce((s, i) => s + i.qty, 0);
-    return qty ? { ...p, stock: Math.max(0, p.stock - sign * qty) } : p;
-  }),
+  products: d.products.map((p) =>
+    order.items.filter((i) => i.productId === p.id).reduce((acc, i) => changeStock(acc, -sign * i.qty, i.variant), p)
+  ),
   movements:
     sign === 1
       ? [
           ...order.items.map((i) => ({
-            id: newId('mov'), type: 'sale' as const, productId: i.productId, name: i.name, qty: i.qty,
+            id: newId('mov'), type: 'sale' as const, productId: i.productId, name: itemName(i), qty: i.qty,
             unitAmount: i.price, orderId: order.id, createdAt: order.createdAt,
           })),
           ...d.movements,
@@ -43,6 +45,7 @@ const emptyDraft = {
   newCustomerPhone: '',
   items: [] as ShopOrderItem[],
   pickProduct: '',
+  pickVariant: '',
   pickQty: '1',
   paymentMethod: 'cash' as PaymentMethodId,
   deliveryMethod: 'delivery' as 'delivery' | 'pickup',
@@ -73,12 +76,20 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
     const product = data.products.find((p) => p.id === draft.pickProduct);
     const qty = Math.max(1, Math.floor(parseFloat(draft.pickQty) || 1));
     if (!product) return;
-    const existing = draft.items.find((i) => i.productId === product.id);
+    const variant = product.variants.length ? product.variants.find((v) => variantLabel(v.values) === draft.pickVariant) : undefined;
+    if (product.variants.length && !variant) return;
+    const label = variant ? variantLabel(variant.values) : undefined;
+    const same = (i: ShopOrderItem) => i.productId === product.id && i.variant === label;
+    const existing = draft.items.find(same);
+    const newQty = (existing?.qty || 0) + qty;
+    const price = unitPriceFor(product, newQty, variant);
     const items = existing
-      ? draft.items.map((i) => (i.productId === product.id ? { ...i, qty: i.qty + qty } : i))
-      : [...draft.items, { productId: product.id, name: product.name, price: product.price, qty }];
-    setDraft({ ...draft, items, pickProduct: '', pickQty: '1' });
+      ? draft.items.map((i) => (same(i) ? { ...i, qty: newQty, price } : i))
+      : [...draft.items, { productId: product.id, name: product.name, variant: label, price, qty }];
+    setDraft({ ...draft, items, pickProduct: '', pickVariant: '', pickQty: '1' });
   };
+
+  const pickedProduct = data.products.find((p) => p.id === draft.pickProduct);
 
   const total = draft.items.reduce((s, i) => s + i.price * i.qty, 0)
     + (draft.deliveryMethod === 'delivery' ? data.settings.delivery.deliveryFee : 0);
@@ -132,22 +143,32 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
 
           <Field label="المنتجات">
             <div className="flex gap-2">
-              <select className={inputClass} value={draft.pickProduct} onChange={(e) => setDraft({ ...draft, pickProduct: e.target.value })}>
+              <select className={inputClass} value={draft.pickProduct} onChange={(e) => setDraft({ ...draft, pickProduct: e.target.value, pickVariant: '' })}>
                 <option value="">— اختر منتجاً من المستودع —</option>
-                {data.products.map((p) => <option key={p.id} value={p.id}>{p.name} · {formatMoney(p.price, currency)} · متوفر {p.stock}</option>)}
+                {data.products.map((p) => <option key={p.id} value={p.id}>{p.name} · {formatMoney(p.price, currency)} · متوفر {totalStock(p)}</option>)}
               </select>
-              <input className={`${inputClass} w-20 shrink-0`} type="number" min="1" value={draft.pickQty} onChange={(e) => setDraft({ ...draft, pickQty: e.target.value })} />
-              <GhostButton onClick={addItem} className="h-10 shrink-0" disabled={!draft.pickProduct}><Plus size={14} /></GhostButton>
+              {pickedProduct && pickedProduct.variants.length > 0 && (
+                <select className={`${inputFitClass} w-40 shrink-0`} value={draft.pickVariant} onChange={(e) => setDraft({ ...draft, pickVariant: e.target.value })} aria-label="التركيبة">
+                  <option value="">— التركيبة —</option>
+                  {pickedProduct.variants.map((v) => (
+                    <option key={variantLabel(v.values)} value={variantLabel(v.values)} disabled={v.stock <= 0}>
+                      {variantLabel(v.values)} ({v.stock > 0 ? `متوفر ${v.stock}` : 'غير متوفر'})
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input className={`${inputFitClass} w-20 shrink-0`} type="number" min="1" value={draft.pickQty} onChange={(e) => setDraft({ ...draft, pickQty: e.target.value })} />
+              <GhostButton onClick={addItem} className="h-10 shrink-0" disabled={!draft.pickProduct || (!!pickedProduct?.variants.length && !draft.pickVariant)}><Plus size={14} /></GhostButton>
             </div>
           </Field>
           {draft.items.length > 0 && (
             <div className="space-y-1.5">
               {draft.items.map((i) => (
-                <div key={i.productId} className="flex items-center justify-between text-xs bg-[#fbfbfd] border border-neutral-100 rounded-lg p-2">
-                  <span className="font-bold">{i.name} × {i.qty}</span>
+                <div key={i.productId + (i.variant || '')} className="flex items-center justify-between text-xs bg-[#fbfbfd] border border-neutral-100 rounded-lg p-2">
+                  <span className="font-bold">{itemName(i)} × {i.qty}</span>
                   <span className="flex items-center gap-2">
                     {formatMoney(i.price * i.qty, currency)}
-                    <button type="button" onClick={() => setDraft({ ...draft, items: draft.items.filter((x) => x.productId !== i.productId) })} className="text-neutral-400 hover:text-red-500 cursor-pointer" aria-label="إزالة"><X size={13} /></button>
+                    <button type="button" onClick={() => setDraft({ ...draft, items: draft.items.filter((x) => x !== i) })} className="text-neutral-400 hover:text-red-500 cursor-pointer" aria-label="إزالة"><X size={13} /></button>
                   </span>
                 </div>
               ))}
@@ -214,7 +235,7 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
                   <div className="flex-1 min-w-[160px]">
                     <div className="text-sm font-bold text-[#1d1d1f]">#{o.number} · {customerName(o.customerId)}</div>
                     <div className="text-[10px] text-neutral-400 truncate">
-                      {formatDate(o.createdAt)} · {o.items.map((i) => `${i.name} × ${i.qty}`).join('، ')}
+                      {formatDate(o.createdAt)} · {o.items.map((i) => `${itemName(i)} × ${i.qty}`).join('، ')}
                       {' · '}{PAYMENT_METHODS.find((m) => m.id === o.paymentMethod)?.label} · {o.deliveryMethod === 'delivery' ? 'توصيل' : 'استلام'}
                     </div>
                   </div>

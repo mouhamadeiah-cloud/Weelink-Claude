@@ -85,7 +85,7 @@ export const CustomersTab: React.FC<AdminTabProps> = ({ data, update }) => {
                           return (
                             <div key={o.id} className="flex items-center justify-between text-[11px] bg-white rounded-lg p-2 border border-neutral-100">
                               <span className="font-bold">طلب #{o.number} · {formatDate(o.createdAt)}</span>
-                              <span className="text-neutral-500 truncate mx-2">{o.items.map((i) => `${i.name} × ${i.qty}`).join('، ')}</span>
+                              <span className="text-neutral-500 truncate mx-2">{o.items.map((i) => `${i.name}${i.variant ? ` (${i.variant})` : ''} × ${i.qty}`).join('، ')}</span>
                               <span className="font-black shrink-0" style={{ color: st?.color }}>{formatMoney(o.total, currency)}</span>
                             </div>
                           );

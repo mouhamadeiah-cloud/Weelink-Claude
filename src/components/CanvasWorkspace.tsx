@@ -15,6 +15,7 @@ import { MASK_SHAPES } from '../utils/maskShapes';
 import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
 import { addToCart } from '../utils/cartStore';
 import { CartView } from './CartView';
+import { ShopProductsView } from './shop/store/ShopProductsView';
 import { Icon } from '@iconify/react';
 import { 
   Trash2, 
@@ -4022,6 +4023,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {elem.type === 'cart' && (
                           <CartView elem={elem} isPreviewActive={isPreviewActive} />
+                        )}
+
+                        {elem.type === 'shopProducts' && (
+                          <ShopProductsView elem={elem} isPreviewActive={isPreviewActive} />
                         )}
 
                         {elem.type === 'html' && (

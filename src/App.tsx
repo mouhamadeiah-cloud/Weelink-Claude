@@ -15,11 +15,12 @@ import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
 import { ProjectChooser } from './components/ProjectChooser';
 import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
+import { ShopDataContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
-import { getOnlineShopTemplate } from './data/onlineShopTemplate';
+import { getOnlineShopTemplate, withLiveProductGrid } from './data/onlineShopTemplate';
 import { arrangeForMobile } from './utils/mobileLayout';
 
 // Firebase Imports
@@ -400,9 +401,11 @@ export default function App() {
       console.warn("Could not read the local shop cache:", e);
     }
     if (shopPages.length === 0) {
-      const template = getOnlineShopTemplate();
+      const template = getOnlineShopTemplate({ liveProducts: true });
       shopPages = template.pages;
       shopElements = template.elements;
+    } else {
+      shopElements = withLiveProductGrid(shopElements);
     }
     setProject('shop');
     setPages(shopPages);
@@ -417,6 +420,28 @@ export default function App() {
     setHasShop(true);
     projectReadyRef.current = true;
   };
+
+  // The shop's products page carries the store's name (page title and navbar link).
+  useEffect(() => {
+    if (project !== 'shop' || !projectReadyRef.current) return;
+    const label = shopAdmin.settings.storeName.trim() || 'المتجر';
+    setPages((prev) => {
+      let changed = false;
+      const next = prev.map((pg) => {
+        let page = pg;
+        if (pg.id === 'shop-page-products' && pg.name !== label) {
+          changed = true;
+          page = { ...page, name: label };
+        }
+        if (pg.navbar?.items?.some((i) => i.linkTargetId === 'shop-page-products' && i.label !== label)) {
+          changed = true;
+          page = { ...page, navbar: { ...page.navbar, items: page.navbar.items.map((i) => (i.linkTargetId === 'shop-page-products' ? { ...i, label } : i)) } };
+        }
+        return page;
+      });
+      return changed ? next : prev;
+    });
+  }, [project, shopAdmin.settings.storeName, pages.length]);
 
   useEffect(() => {
     pagesRef.current = pages;
@@ -1810,6 +1835,13 @@ export default function App() {
         content: '',
         styles: { color: '#B4532A', ...(customStyles || {}) },
       },
+      shopProducts: {
+        name: 'منتجات المتجر',
+        width: 1100,
+        height: 900,
+        content: '',
+        styles: { color: '#B4532A', ...(customStyles || {}) },
+      },
     };
 
     const cfg = defaultConfigs[type] || defaultConfigs.card;
@@ -2528,6 +2560,7 @@ export default function App() {
 
       {/* Main Operations Area (ساحة العمليات) */}
       <div className="flex-1 flex relative overflow-hidden">
+        <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : null}>
         <CanvasWorkspace
           previewMode={previewMode}
           slides={currentPage.slides}
@@ -2556,6 +2589,7 @@ export default function App() {
           isPreviewActive={isPreviewActive}
           activePageId={activePageId}
         />
+        </ShopDataContext.Provider>
         {isCanvasLoading && (
           <div className="absolute inset-0 bg-white/75 backdrop-blur-xs z-50 flex flex-col items-center justify-center select-none text-right font-sans">
             <Loader2 className="w-9 h-9 text-[#0071e3] animate-spin mb-3" />

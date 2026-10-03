@@ -39,14 +39,14 @@ function write(items: CartItem[]) {
 // Same name + price = same product, so duplicated cards merge into one cart line.
 const productKey = (p: CartProduct) => `${p.name}|${p.price}|${p.currency}`;
 
-export function addToCart(product: CartProduct) {
+export function addToCart(product: CartProduct, qty = 1) {
   const key = productKey(product);
   const items = read();
   const existing = items.find((i) => i.key === key);
   write(
     existing
-      ? items.map((i) => (i.key === key ? { ...i, qty: i.qty + 1 } : i))
-      : [...items, { ...product, key, qty: 1 }]
+      ? items.map((i) => (i.key === key ? { ...i, qty: i.qty + qty } : i))
+      : [...items, { ...product, key, qty }]
   );
 }
 

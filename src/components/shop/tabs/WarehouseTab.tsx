@@ -1,28 +1,24 @@
-// المستودع: every product with its stock; edit, restock (recorded as a purchase) or delete.
+// المستودع: every product with its stock (per combination for products with stock options);
+// edit, restock (recorded as a purchase), show on / hide from the store, or delete.
 import React, { useState } from 'react';
-import { Search, Pencil, Trash2, PackagePlus, AlertTriangle } from 'lucide-react';
+import { Search, Pencil, Trash2, PackagePlus, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { ShopProduct, newId } from '../shopTypes';
-import { Card, inputClass, PrimaryButton, GhostButton, EmptyState, formatMoney } from '../adminUi';
+import { Card, inputClass, inputFitClass, PrimaryButton, GhostButton, EmptyState, formatMoney } from '../adminUi';
 import { AdminTabProps } from './tabProps';
-import { ProductForm, ProductDraft, toNumber } from './ProductForm';
+import { ProductEditor } from '../editor/ProductEditor';
+import { changeStock, variantLabel } from '../productModel';
 
 const LOW_STOCK = 3;
 
-const toDraft = (p: ShopProduct): ProductDraft => ({
-  name: p.name,
-  description: p.description,
-  price: String(p.price || ''),
-  cost: String(p.cost || ''),
-  stock: String(p.stock),
-  sku: p.sku,
-  images: p.images,
-  catalogIds: p.catalogIds,
-});
+const toNumber = (v: string) => {
+  const n = parseFloat(v);
+  return isFinite(n) && n > 0 ? n : 0;
+};
 
 export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const [query, setQuery] = useState('');
-  const [editing, setEditing] = useState<{ id: string; draft: ProductDraft } | null>(null);
-  const [restock, setRestock] = useState<{ id: string; qty: string; cost: string } | null>(null);
+  const [editing, setEditing] = useState<ShopProduct | null>(null);
+  const [restock, setRestock] = useState<{ id: string; qty: string; cost: string; variant: string } | null>(null);
   const currency = data.settings.currency;
 
   const catalogName = (id: string) => data.catalogs.find((c) => c.id === id)?.name;
@@ -30,42 +26,20 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const list = data.products.filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
   const stockValue = data.products.reduce((s, p) => s + p.stock * p.cost, 0);
 
-  const saveEdit = () => {
-    if (!editing || !editing.draft.name.trim()) return;
-    const d0 = editing.draft;
-    update((d) => ({
-      ...d,
-      products: d.products.map((p) =>
-        p.id === editing.id
-          ? {
-              ...p,
-              name: d0.name.trim(),
-              description: d0.description.trim(),
-              price: toNumber(d0.price),
-              cost: toNumber(d0.cost),
-              stock: Math.floor(toNumber(d0.stock)),
-              sku: d0.sku.trim(),
-              images: d0.images,
-              catalogIds: d0.catalogIds,
-            }
-          : p
-      ),
-    }));
-    setEditing(null);
-  };
-
   const saveRestock = () => {
     if (!restock) return;
     const qty = Math.floor(toNumber(restock.qty));
     if (qty <= 0) return;
     const product = data.products.find((p) => p.id === restock.id);
     if (!product) return;
+    if (product.variants.length && !restock.variant) return;
     const unitCost = restock.cost.trim() ? toNumber(restock.cost) : product.cost;
+    const name = restock.variant ? `${product.name} (${restock.variant})` : product.name;
     update((d) => ({
       ...d,
-      products: d.products.map((p) => (p.id === product.id ? { ...p, stock: p.stock + qty, cost: unitCost } : p)),
+      products: d.products.map((p) => (p.id === product.id ? { ...changeStock(p, qty, restock.variant || undefined), cost: unitCost } : p)),
       movements: [
-        { id: newId('mov'), type: 'purchase', productId: product.id, name: product.name, qty, unitAmount: unitCost, createdAt: new Date().toISOString() },
+        { id: newId('mov'), type: 'purchase', productId: product.id, name, qty, unitAmount: unitCost, createdAt: new Date().toISOString() },
         ...d.movements,
       ],
     }));
@@ -77,18 +51,11 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
     update((d) => ({ ...d, products: d.products.filter((x) => x.id !== p.id) }));
   };
 
+  const togglePublished = (p: ShopProduct) =>
+    update((d) => ({ ...d, products: d.products.map((x) => (x.id === p.id ? { ...x, published: !x.published } : x)) }));
+
   if (editing) {
-    return (
-      <div className="max-w-2xl">
-        <Card title="تعديل منتج">
-          <ProductForm draft={editing.draft} onChange={(draft) => setEditing({ ...editing, draft })} catalogs={data.catalogs} currency={currency} />
-          <div className="flex gap-2">
-            <PrimaryButton onClick={saveEdit} className="flex-1">حفظ التعديل</PrimaryButton>
-            <GhostButton onClick={() => setEditing(null)} className="h-10">إلغاء</GhostButton>
-          </div>
-        </Card>
-      </div>
-    );
+    return <ProductEditor key={editing.id} data={data} update={update} initial={editing} onDone={() => setEditing(null)} onCancel={() => setEditing(null)} />;
   }
 
   return (
@@ -128,7 +95,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-[#1d1d1f] truncate">{p.name}</div>
                     <div className="text-[10px] text-neutral-400 truncate">
-                      {formatMoney(p.price, currency)}
+                      {formatMoney(p.price, p.currency || currency)}
                       {p.catalogIds.length > 0 && ` · ${p.catalogIds.map(catalogName).filter(Boolean).join('، ')}`}
                     </div>
                   </div>
@@ -136,20 +103,44 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
                     {p.stock <= LOW_STOCK && <AlertTriangle size={12} />}
                     {p.stock}
                   </div>
-                  <button type="button" onClick={() => setRestock({ id: p.id, qty: '', cost: '' })} className="w-8 h-8 rounded-lg text-[#0071e3] hover:bg-blue-50 flex items-center justify-center cursor-pointer" aria-label="إضافة كمية" title="إضافة كمية للمخزون">
+                  <button
+                    type="button"
+                    onClick={() => togglePublished(p)}
+                    className={`h-8 px-2 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer ${p.published ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-500'}`}
+                    title={p.published ? 'معروض في صفحة المتجر. اضغط للإخفاء' : 'محفوظ في المستودع فقط. اضغط للعرض في المتجر'}
+                  >
+                    {p.published ? <Eye size={12} /> : <EyeOff size={12} />}
+                    <span className="hidden sm:inline">{p.published ? 'في المتجر' : 'مخفي'}</span>
+                  </button>
+                  <button type="button" onClick={() => setRestock({ id: p.id, qty: '', cost: '', variant: '' })} className="w-8 h-8 rounded-lg text-[#0071e3] hover:bg-blue-50 flex items-center justify-center cursor-pointer" aria-label="إضافة كمية" title="إضافة كمية للمخزون">
                     <PackagePlus size={15} />
                   </button>
-                  <button type="button" onClick={() => setEditing({ id: p.id, draft: toDraft(p) })} className="w-8 h-8 rounded-lg text-neutral-500 hover:bg-neutral-100 flex items-center justify-center cursor-pointer" aria-label="تعديل">
+                  <button type="button" onClick={() => setEditing(p)} className="w-8 h-8 rounded-lg text-neutral-500 hover:bg-neutral-100 flex items-center justify-center cursor-pointer" aria-label="تعديل">
                     <Pencil size={14} />
                   </button>
                   <button type="button" onClick={() => remove(p)} className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer" aria-label="حذف">
                     <Trash2 size={14} />
                   </button>
                 </div>
+                {p.variants.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {p.variants.map((v) => (
+                      <span key={variantLabel(v.values)} className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${v.stock <= 0 ? 'bg-neutral-100 text-neutral-400 line-through' : v.stock <= LOW_STOCK ? 'bg-amber-50 text-amber-600' : 'bg-white border border-neutral-100 text-neutral-600'}`}>
+                        {variantLabel(v.values)}: {v.stock}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 {restock?.id === p.id && (
                   <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <input className={`${inputClass} h-9 w-28`} type="number" min="1" placeholder="الكمية" value={restock.qty} onChange={(e) => setRestock({ ...restock, qty: e.target.value })} autoFocus />
-                    <input className={`${inputClass} h-9 w-36`} type="number" min="0" placeholder={`سعر الشراء (${p.cost})`} value={restock.cost} onChange={(e) => setRestock({ ...restock, cost: e.target.value })} />
+                    {p.variants.length > 0 && (
+                      <select className={`${inputFitClass} h-9 w-44`} value={restock.variant} onChange={(e) => setRestock({ ...restock, variant: e.target.value })} aria-label="التركيبة">
+                        <option value="">— التركيبة —</option>
+                        {p.variants.map((v) => <option key={variantLabel(v.values)} value={variantLabel(v.values)}>{variantLabel(v.values)} ({v.stock})</option>)}
+                      </select>
+                    )}
+                    <input className={`${inputFitClass} h-9 w-28`} type="number" min="1" placeholder="الكمية" value={restock.qty} onChange={(e) => setRestock({ ...restock, qty: e.target.value })} autoFocus />
+                    <input className={`${inputFitClass} h-9 w-36`} type="number" min="0" placeholder={`سعر الشراء (${p.cost})`} value={restock.cost} onChange={(e) => setRestock({ ...restock, cost: e.target.value })} />
                     <PrimaryButton onClick={saveRestock} className="h-9">إضافة للمخزون</PrimaryButton>
                     <GhostButton onClick={() => setRestock(null)}>إلغاء</GhostButton>
                   </div>

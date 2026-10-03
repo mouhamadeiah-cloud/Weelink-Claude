@@ -1,11 +1,12 @@
 // The full product card that floats over the store page when a product is clicked: gallery in
 // the chosen layout, prices and quantity tiers, option pickers that only offer combinations in
-// stock, quantity and add to cart, delivery price, specs and the description.
+// stock, quantity and add to cart, delivery price, specs, the description and related products.
+// After adding to the cart, the related products take the card's place, larger.
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Minus, Plus, ShoppingBag, Truck, Check } from 'lucide-react';
 import { ShopProduct, ShopSettings } from '../shopTypes';
-import { badgeText, descriptionHtml, discountPercent, findVariant, stockOptions, totalStock, unitPriceFor } from '../productModel';
+import { badgeColor, badgeText, descriptionHtml, discountPercent, findVariant, isSoldOut, stockOptions, totalStock, tracksStock, unitPriceFor, UNLIMITED } from '../productModel';
 import { addToCart, formatPrice } from '../../../utils/cartStore';
 import { ProductGallery } from './ProductGallery';
 
@@ -13,13 +14,33 @@ interface ProductDetailModalProps {
   product: ShopProduct;
   settings: ShopSettings;
   accent: string;
+  related: ShopProduct[]; // already filtered to products shown in the store
+  onOpenRelated: (id: string) => void;
   onClose: () => void;
 }
 
-export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product: p, settings, accent, onClose }) => {
+const RelatedTile: React.FC<{ product: ShopProduct; accent: string; large?: boolean; onClick: () => void }> = ({ product, accent, large, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`group text-right bg-white rounded-2xl border border-black/[0.06] overflow-hidden hover:shadow-md transition cursor-pointer ${large ? '' : 'w-28 shrink-0'}`}
+  >
+    <div className="aspect-square bg-neutral-100 overflow-hidden">
+      {product.images[0] && <img src={product.images[0]} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
+    </div>
+    <div className={large ? 'p-3' : 'p-2'}>
+      <div className={`${large ? 'text-sm' : 'text-[11px]'} font-bold text-[#2A1F1A] line-clamp-2 leading-snug`}>{product.name}</div>
+      <div className={`${large ? 'text-sm' : 'text-[11px]'} font-black mt-0.5`} style={{ color: accent }}>{formatPrice(product.price, product.currency)}</div>
+    </div>
+  </button>
+);
+
+export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product: p, settings, accent, related, onOpenRelated, onClose }) => {
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [afterAdd, setAfterAdd] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -35,7 +56,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
   // A stock value is available when some in-stock combination has it and matches the other picks.
   const isAvailable = (optionId: string, label: string) => {
     const k = stockOpts.findIndex((o) => o.id === optionId);
-    if (k < 0) return true;
+    if (k < 0 || !tracksStock(p)) return true;
     return p.variants.some((v) =>
       v.stock > 0 && v.values[k] === label && stockOpts.every((o, j) => j === k || !picked[o.id] || v.values[j] === picked[o.id])
     );
@@ -44,9 +65,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
   const variant = stockOpts.length && stockOpts.every((o) => picked[o.id])
     ? findVariant(p, stockOpts.map((o) => picked[o.id]))
     : undefined;
-  const available = stockOpts.length ? (variant?.stock ?? 0) : totalStock(p);
+  const available = !tracksStock(p) ? UNLIMITED : stockOpts.length ? (variant?.stock ?? 0) : totalStock(p);
   const allPicked = choosable.every((o) => picked[o.id]);
-  const soldOut = totalStock(p) <= 0;
+  const soldOut = isSoldOut(p);
   const unit = unitPriceFor(p, qty, variant);
   const pct = discountPercent(p);
   const badge = badgeText(p);
@@ -57,9 +78,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
   const html = useMemo(() => descriptionHtml(p.description), [p.description]);
 
   const add = () => {
-    if (!allPicked || available <= 0 || qty > available) return;
+    if (soldOut) return;
+    if (!allPicked) {
+      setShowMissing(true);
+      return;
+    }
+    if (available <= 0 || qty > available) return;
     const chosen = choosable.map((o) => picked[o.id]).join(' / ');
     addToCart({ name: chosen ? `${p.name} (${chosen})` : p.name, price: unit, currency: p.currency, image: p.images[0] }, qty);
+    if (related.length) {
+      setAfterAdd(true);
+      return;
+    }
     setAdded(true);
     window.setTimeout(() => setAdded(false), 2000);
   };
@@ -74,12 +104,32 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
         <button type="button" onClick={onClose} className="absolute top-3 left-3 z-10 w-9 h-9 rounded-full bg-white/90 shadow text-neutral-600 hover:text-black flex items-center justify-center cursor-pointer" aria-label="إغلاق">
           <X size={18} />
         </button>
+        {afterAdd ? (
+          <div className="p-5 sm:p-8 space-y-5">
+            <div className="flex items-center gap-3">
+              <span className="w-11 h-11 rounded-full bg-[#34c759] text-white flex items-center justify-center shrink-0"><Check size={22} /></span>
+              <div className="min-w-0">
+                <div className="text-lg font-bold text-[#2A1F1A] truncate">تمت إضافة «{p.name}» إلى السلة</div>
+                <div className="text-sm text-[#8A7B70]">منتجات قد تعجبك أيضاً</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {related.map((r) => <RelatedTile key={r.id} product={r} accent={accent} large onClick={() => onOpenRelated(r.id)} />)}
+            </div>
+            <div className="flex justify-center">
+              <button type="button" onClick={onClose} className="h-11 px-6 rounded-full border text-sm font-bold cursor-pointer" style={{ borderColor: accent, color: accent }}>
+                متابعة التسوّق
+              </button>
+            </div>
+          </div>
+        ) : (
+        <>
         <div className="grid md:grid-cols-2 gap-5 p-4 sm:p-6">
           <ProductGallery
             images={p.images}
             layout={p.galleryLayout}
             badge={badge ? (
-              <span dir="rtl" className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-white shadow" style={{ backgroundColor: soldOut ? '#6e6e73' : p.badge === 'discount' ? '#ff3b30' : '#2A1F1A' }}>{badge}</span>
+              <span dir="rtl" className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-white shadow" style={{ backgroundColor: badgeColor(p) }}>{badge}</span>
             ) : undefined}
           />
 
@@ -108,7 +158,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
 
             {choosable.map((o) => (
               <div key={o.id} className="space-y-1.5">
-                <div className="text-xs font-bold text-[#5A4C42]">{o.name}{picked[o.id] ? `: ${picked[o.id]}` : ''}</div>
+                <div className={`text-xs font-bold ${showMissing && !picked[o.id] ? 'text-[#ff3b30]' : 'text-[#5A4C42]'}`}>
+                  {o.name}{picked[o.id] ? `: ${picked[o.id]}` : showMissing ? ` (اختر ${o.name})` : ''}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {o.values.map((v) => {
                     const ok = isAvailable(o.id, v.label);
@@ -153,14 +205,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
               <button
                 type="button"
                 onClick={add}
-                disabled={soldOut || !allPicked || available <= 0}
+                disabled={soldOut || (allPicked && available <= 0)}
                 className="flex-1 h-12 rounded-full text-white font-bold flex items-center justify-center gap-2 transition active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 style={{ backgroundColor: accent }}
               >
-                {added ? <><Check size={18} /> تمت الإضافة إلى السلة</> : <><ShoppingBag size={18} /> {soldOut ? 'نفد من المخزون' : !allPicked ? 'اختر المواصفات أولاً' : available <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}</>}
+                {added ? <><Check size={18} /> تمت الإضافة إلى السلة</> : <><ShoppingBag size={18} /> {soldOut ? 'نفد من المخزون' : allPicked && available <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}</>}
               </button>
             </div>
-            {allPicked && available > 0 && available <= 3 && <div className="text-xs font-bold text-[#ff9500]">بقي {available} فقط</div>}
+            {tracksStock(p) && allPicked && available > 0 && available <= 3 && <div className="text-xs font-bold text-[#ff9500]">بقي {available} فقط</div>}
 
             {settings.delivery.delivery && (
               <div className="flex items-center gap-2 text-xs text-[#5A4C42]">
@@ -188,6 +240,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
               <div className="product-rich-text text-sm text-[#5A4C42] leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
             </div>
           </div>
+        )}
+
+        {related.length > 0 && (
+          <div className="px-4 sm:px-6 pb-6">
+            <div className="border-t border-black/[0.06] pt-4">
+              <div className="text-sm font-bold text-[#2A1F1A] mb-2">منتجات مرتبطة</div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {related.map((r) => <RelatedTile key={r.id} product={r} accent={accent} onClick={() => onOpenRelated(r.id)} />)}
+              </div>
+            </div>
+          </div>
+        )}
+        </>
         )}
       </div>
     </div>,

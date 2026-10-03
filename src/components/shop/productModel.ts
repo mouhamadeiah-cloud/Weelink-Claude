@@ -25,6 +25,17 @@ export const buildVariants = (options: ProductOption[], previous: ProductVariant
 export const totalStock = (p: Pick<ShopProduct, 'stock' | 'variants'>) =>
   p.variants.length ? p.variants.reduce((s, v) => s + v.stock, 0) : p.stock;
 
+// Products sold from the store only (not in the warehouse) have no stock limit.
+export const UNLIMITED = 999;
+export const tracksStock = (p: Pick<ShopProduct, 'inWarehouse'>) => p.inWarehouse !== false;
+export const isSoldOut = (p: ShopProduct) => tracksStock(p) && totalStock(p) <= 0;
+
+// Next automatic product number: one more than the highest numeric one, starting at 0.
+export const nextSku = (products: ShopProduct[]) => {
+  const nums = products.map((p) => (/^\d+$/.test(p.sku) ? parseInt(p.sku, 10) : -1));
+  return String(nums.length ? Math.max(-1, ...nums) + 1 : 0);
+};
+
 // Unit price for a quantity: the best quantity tier that applies, else the normal price.
 export const unitPriceFor = (p: ShopProduct, qty: number, variant?: ProductVariant) => {
   const tier = [...p.tiers]
@@ -38,7 +49,7 @@ export const discountPercent = (p: Pick<ShopProduct, 'price' | 'oldPrice'>) =>
 
 // The badge shown on the image corner. Out of stock always wins.
 export const badgeText = (p: ShopProduct): string => {
-  if (totalStock(p) <= 0) return 'نفد من المخزون';
+  if (isSoldOut(p)) return 'نفد من المخزون';
   if (p.badge === 'discount') {
     const pct = discountPercent(p);
     return pct ? `خصم ${pct}%` : '';
@@ -46,11 +57,22 @@ export const badgeText = (p: ShopProduct): string => {
   return PRODUCT_BADGES.find((b) => b.id === p.badge && b.id)?.label || '';
 };
 
+const BADGE_COLORS: Record<string, string> = {
+  offer: '#ff9500',
+  limited: '#af52de',
+  new: '#34c759',
+  bestseller: '#0071e3',
+  discount: '#ff3b30',
+};
+
+export const badgeColor = (p: ShopProduct) => (isSoldOut(p) ? '#6e6e73' : BADGE_COLORS[p.badge] || '#2A1F1A');
+
 export const findVariant = (p: ShopProduct, values: string[]) =>
   p.variants.find((v) => variantLabel(v.values) === variantLabel(values));
 
 // Applies a stock change to one variant (or to the product when it has none) and keeps the total.
 export const changeStock = (p: ShopProduct, delta: number, variant?: string): ShopProduct => {
+  if (!tracksStock(p)) return p;
   if (p.variants.length && variant) {
     const variants = p.variants.map((v) =>
       variantLabel(v.values) === variant ? { ...v, stock: Math.max(0, v.stock + delta) } : v

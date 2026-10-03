@@ -7,7 +7,7 @@ import {
 } from '../shopTypes';
 import { Card, Field, inputClass, inputFitClass, textareaClass, PrimaryButton, GhostButton, EmptyState, formatMoney, formatDate } from '../adminUi';
 import { AdminTabProps } from './tabProps';
-import { changeStock, totalStock, unitPriceFor, variantLabel } from '../productModel';
+import { changeStock, totalStock, tracksStock, unitPriceFor, variantLabel } from '../productModel';
 
 export const enabledPaymentMethods = (d: ShopAdminData): PaymentMethodId[] => {
   const p = d.settings.payments;
@@ -145,14 +145,14 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
             <div className="flex gap-2">
               <select className={inputClass} value={draft.pickProduct} onChange={(e) => setDraft({ ...draft, pickProduct: e.target.value, pickVariant: '' })}>
                 <option value="">— اختر منتجاً من المستودع —</option>
-                {data.products.map((p) => <option key={p.id} value={p.id}>{p.name} · {formatMoney(p.price, currency)} · متوفر {totalStock(p)}</option>)}
+                {data.products.map((p) => <option key={p.id} value={p.id}>{p.name} · {formatMoney(p.price, currency)} · {tracksStock(p) ? `متوفر ${totalStock(p)}` : 'بدون مخزون'}</option>)}
               </select>
               {pickedProduct && pickedProduct.variants.length > 0 && (
                 <select className={`${inputFitClass} w-40 shrink-0`} value={draft.pickVariant} onChange={(e) => setDraft({ ...draft, pickVariant: e.target.value })} aria-label="التركيبة">
                   <option value="">— التركيبة —</option>
                   {pickedProduct.variants.map((v) => (
-                    <option key={variantLabel(v.values)} value={variantLabel(v.values)} disabled={v.stock <= 0}>
-                      {variantLabel(v.values)} ({v.stock > 0 ? `متوفر ${v.stock}` : 'غير متوفر'})
+                    <option key={variantLabel(v.values)} value={variantLabel(v.values)} disabled={tracksStock(pickedProduct) && v.stock <= 0}>
+                      {variantLabel(v.values)} ({!tracksStock(pickedProduct) ? 'بدون مخزون' : v.stock > 0 ? `متوفر ${v.stock}` : 'غير متوفر'})
                     </option>
                   ))}
                 </select>

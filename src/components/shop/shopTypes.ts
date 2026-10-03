@@ -55,6 +55,7 @@ export const PRODUCT_BADGES: { id: ProductBadge; label: string }[] = [
 
 export const MAX_STOCK_OPTIONS = 3;
 export const MAX_PRICE_TIERS = 3;
+export const MAX_RELATED = 5;
 
 export interface ShopProduct {
   id: string;
@@ -76,7 +77,9 @@ export interface ShopProduct {
   options: ProductOption[];
   variants: ProductVariant[];
   catalogIds: string[];
-  published: boolean; // true = shown on the store page, false = kept in the warehouse only
+  published: boolean; // true = shown on the store page
+  inWarehouse: boolean; // true = stock is counted; false = sold from the store without stock
+  relatedIds: string[]; // up to MAX_RELATED products shown at the bottom of the floating card
   createdAt: string;
 }
 
@@ -237,6 +240,8 @@ export const normalizeProduct = (p: any, currency: string): ShopProduct => ({
   variants: Array.isArray(p.variants) ? p.variants : [],
   catalogIds: Array.isArray(p.catalogIds) ? p.catalogIds : [],
   published: p.published ?? true,
+  inWarehouse: p.inWarehouse ?? true,
+  relatedIds: Array.isArray(p.relatedIds) ? p.relatedIds : [],
   createdAt: p.createdAt || new Date().toISOString(),
 });
 

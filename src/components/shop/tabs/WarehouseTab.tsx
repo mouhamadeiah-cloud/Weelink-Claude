@@ -6,7 +6,7 @@ import { ShopProduct, newId } from '../shopTypes';
 import { Card, inputClass, inputFitClass, PrimaryButton, GhostButton, EmptyState, formatMoney } from '../adminUi';
 import { AdminTabProps } from './tabProps';
 import { ProductEditor } from '../editor/ProductEditor';
-import { changeStock, variantLabel } from '../productModel';
+import { changeStock, tracksStock, variantLabel } from '../productModel';
 
 const LOW_STOCK = 3;
 
@@ -24,7 +24,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const catalogName = (id: string) => data.catalogs.find((c) => c.id === id)?.name;
   const q = query.trim().toLowerCase();
   const list = data.products.filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
-  const stockValue = data.products.reduce((s, p) => s + p.stock * p.cost, 0);
+  const stockValue = data.products.filter(tracksStock).reduce((s, p) => s + p.stock * p.cost, 0);
 
   const saveRestock = () => {
     if (!restock) return;
@@ -63,7 +63,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'عدد المنتجات', value: String(data.products.length) },
-          { label: 'إجمالي القطع', value: String(data.products.reduce((s, p) => s + p.stock, 0)) },
+          { label: 'إجمالي القطع', value: String(data.products.filter(tracksStock).reduce((s, p) => s + p.stock, 0)) },
           { label: 'قيمة المخزون', value: formatMoney(stockValue, currency) },
         ].map((s) => (
           <div key={s.label} className="bg-white border border-neutral-200 rounded-2xl p-3">
@@ -99,10 +99,14 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
                       {p.catalogIds.length > 0 && ` · ${p.catalogIds.map(catalogName).filter(Boolean).join('، ')}`}
                     </div>
                   </div>
-                  <div className={`text-xs font-black px-2.5 py-1 rounded-lg flex items-center gap-1 ${p.stock <= LOW_STOCK ? 'bg-amber-50 text-amber-600' : 'bg-neutral-100 text-neutral-700'}`}>
-                    {p.stock <= LOW_STOCK && <AlertTriangle size={12} />}
-                    {p.stock}
-                  </div>
+                  {tracksStock(p) ? (
+                    <div className={`text-xs font-black px-2.5 py-1 rounded-lg flex items-center gap-1 ${p.stock <= LOW_STOCK ? 'bg-amber-50 text-amber-600' : 'bg-neutral-100 text-neutral-700'}`}>
+                      {p.stock <= LOW_STOCK && <AlertTriangle size={12} />}
+                      {p.stock}
+                    </div>
+                  ) : (
+                    <div className="text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-50 text-[#0071e3]" title="يُباع من المتجر دون حساب كمية">بدون مخزون</div>
+                  )}
                   <button
                     type="button"
                     onClick={() => togglePublished(p)}
@@ -112,7 +116,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
                     {p.published ? <Eye size={12} /> : <EyeOff size={12} />}
                     <span className="hidden sm:inline">{p.published ? 'في المتجر' : 'مخفي'}</span>
                   </button>
-                  <button type="button" onClick={() => setRestock({ id: p.id, qty: '', cost: '', variant: '' })} className="w-8 h-8 rounded-lg text-[#0071e3] hover:bg-blue-50 flex items-center justify-center cursor-pointer" aria-label="إضافة كمية" title="إضافة كمية للمخزون">
+                  <button type="button" disabled={!tracksStock(p)} onClick={() => setRestock({ id: p.id, qty: '', cost: '', variant: '' })} className="disabled:opacity-25 disabled:pointer-events-none w-8 h-8 rounded-lg text-[#0071e3] hover:bg-blue-50 flex items-center justify-center cursor-pointer" aria-label="إضافة كمية" title="إضافة كمية للمخزون">
                     <PackagePlus size={15} />
                   </button>
                   <button type="button" onClick={() => setEditing(p)} className="w-8 h-8 rounded-lg text-neutral-500 hover:bg-neutral-100 flex items-center justify-center cursor-pointer" aria-label="تعديل">
@@ -122,7 +126,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
                     <Trash2 size={14} />
                   </button>
                 </div>
-                {p.variants.length > 0 && (
+                {p.variants.length > 0 && tracksStock(p) && (
                   <div className="flex flex-wrap gap-1">
                     {p.variants.map((v) => (
                       <span key={variantLabel(v.values)} className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${v.stock <= 0 ? 'bg-neutral-100 text-neutral-400 line-through' : v.stock <= LOW_STOCK ? 'bg-amber-50 text-amber-600' : 'bg-white border border-neutral-100 text-neutral-600'}`}>

@@ -1,7 +1,8 @@
 // The 'shopProducts' canvas element: the store page's product grid, filled from the products the
 // owner exported to the store (لوحة الإدارة ← إضافة منتج ← تصدير إلى المتجر). Clicking a product
 // in preview / on the live site opens its full card floating over the page.
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { PackageOpen } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useShopData } from './ShopDataContext';
@@ -19,6 +20,15 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
   const [openId, setOpenId] = useState<string | null>(null);
   const accent = elem.styles.color || '#B4532A';
   const gridRef = useRef<HTMLDivElement>(null);
+  // Adding to the cart keeps the customer in the store: a short confirmation instead.
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
+  const showAdded = (name: string) => {
+    setToast(name);
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2000);
+  };
+  useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
   const products = useMemo(() => (admin?.products || []).filter((p) => p.published), [admin]);
   // Main catalogs that hold at least one shown product (directly or through a sub catalog).
@@ -82,11 +92,11 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
             {list.map((p) => (
               p.display === 'slide' ? (
                 <div key={p.id} data-product-id={p.id} className="col-span-full">
-                  <ProductSlide product={p} accent={accent} onOpen={() => setOpenId(p.id)} />
+                  <ProductSlide product={p} accent={accent} onOpen={() => setOpenId(p.id)} onAdded={showAdded} />
                 </div>
               ) : (
                 <div key={p.id} data-product-id={p.id} className="flex">
-                  <ProductCard product={p} accent={accent} onOpen={() => setOpenId(p.id)} />
+                  <ProductCard product={p} accent={accent} onOpen={() => setOpenId(p.id)} onAdded={showAdded} />
                 </div>
               )
             ))}
@@ -103,7 +113,15 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
           related={related}
           onOpenRelated={openRelated}
           onClose={() => setOpenId(null)}
+          onAdded={showAdded}
         />
+      )}
+
+      {toast && isPreviewActive && createPortal(
+        <div dir="rtl" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000001] bg-[#2A1F1A] text-white text-sm font-semibold px-5 py-3 rounded-full shadow-lg pointer-events-none">
+          ✓ أُضيف «{toast}» إلى السلة
+        </div>,
+        document.body
       )}
     </div>
   );

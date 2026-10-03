@@ -11,6 +11,7 @@ interface ProductCardProps {
   product: ShopProduct;
   accent?: string;
   onOpen?: () => void; // set on the store page; the editor preview leaves it out
+  onAdded?: (name: string) => void;
 }
 
 // A product the customer must pick options for (size, colour…) is added from its full card.
@@ -18,7 +19,7 @@ export const needsChoice = (p: ShopProduct) =>
   p.options.some((o) => o.values.length > 1 || (o.affectsStock && o.values.length > 0));
 
 // The add-to-cart button: adds directly, or opens the full card when options must be chosen.
-const useAddButton = (product: ShopProduct, onOpen?: () => void) => {
+const useAddButton = (product: ShopProduct, onOpen?: () => void, onAdded?: (name: string) => void) => {
   const [added, setAdded] = useState(false);
   const soldOut = isSoldOut(product);
   const add = (e: React.MouseEvent) => {
@@ -29,6 +30,7 @@ const useAddButton = (product: ShopProduct, onOpen?: () => void) => {
       return;
     }
     addToCart({ name: product.name, price: product.price, currency: product.currency, image: product.images[0] });
+    onAdded?.(product.name);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
   };
@@ -53,8 +55,8 @@ const Badge: React.FC<{ product: ShopProduct }> = ({ product }) => {
 
 // شريحة: the main image fills the row as a fixed background; name, price and the button sit in a
 // narrow strip along its bottom.
-export const ProductSlide: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen }) => {
-  const { added, soldOut, add } = useAddButton(product, onOpen);
+export const ProductSlide: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen, onAdded }) => {
+  const { added, soldOut, add } = useAddButton(product, onOpen, onAdded);
   return (
     <div
       onClick={onOpen}
@@ -91,8 +93,8 @@ export const ProductSlide: React.FC<ProductCardProps> = ({ product, accent = '#B
   );
 };
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen }) => {
-  const { added, soldOut, add } = useAddButton(product, onOpen);
+export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen, onAdded }) => {
+  const { added, soldOut, add } = useAddButton(product, onOpen, onAdded);
 
   return (
     <div

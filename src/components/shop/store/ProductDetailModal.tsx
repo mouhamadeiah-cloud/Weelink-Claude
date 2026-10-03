@@ -17,6 +17,7 @@ interface ProductDetailModalProps {
   related: ShopProduct[]; // already filtered to products shown in the store
   onOpenRelated: (id: string) => void;
   onClose: () => void;
+  onAdded?: (name: string) => void; // the store page shows a short confirmation
 }
 
 const RelatedTile: React.FC<{ product: ShopProduct; accent: string; large?: boolean; onClick: () => void }> = ({ product, accent, large, onClick }) => (
@@ -35,10 +36,9 @@ const RelatedTile: React.FC<{ product: ShopProduct; accent: string; large?: bool
   </button>
 );
 
-export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product: p, settings, accent, related, onOpenRelated, onClose }) => {
+export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product: p, settings, accent, related, onOpenRelated, onClose, onAdded }) => {
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
-  const [added, setAdded] = useState(false);
   const [afterAdd, setAfterAdd] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
 
@@ -86,12 +86,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
     if (available <= 0 || qty > available) return;
     const chosen = choosable.map((o) => picked[o.id]).join(' / ');
     addToCart({ name: chosen ? `${p.name} (${chosen})` : p.name, price: unit, currency: p.currency, image: p.images[0] }, qty);
+    // With related products the card turns into them; otherwise it closes and the customer is
+    // back in the store.
     if (related.length) {
       setAfterAdd(true);
       return;
     }
-    setAdded(true);
-    window.setTimeout(() => setAdded(false), 2000);
+    onAdded?.(p.name);
+    onClose();
   };
 
   return createPortal(
@@ -209,7 +211,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
                 className="flex-1 h-12 rounded-full text-white font-bold flex items-center justify-center gap-2 transition active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 style={{ backgroundColor: accent }}
               >
-                {added ? <><Check size={18} /> تمت الإضافة إلى السلة</> : <><ShoppingBag size={18} /> {soldOut ? 'نفد من المخزون' : allPicked && available <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}</>}
+                <ShoppingBag size={18} /> {soldOut ? 'نفد من المخزون' : allPicked && available <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}
               </button>
             </div>
             {tracksStock(p) && allPicked && available > 0 && available <= 3 && <div className="text-xs font-bold text-[#ff9500]">بقي {available} فقط</div>}

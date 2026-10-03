@@ -10,7 +10,6 @@ import {
   ChevronDown, 
   Plus,
   LogOut,
-  Cloud,
   Loader2,
   Wand2
 } from 'lucide-react';
@@ -281,37 +280,8 @@ export const ControlBar: React.FC<ControlBarProps> = ({
 
       {/* Left side: Logo Weelink & User Auth / Cloud Sync Status */}
       <div className="flex items-center gap-3.5 flex-shrink-0">
-        {/* Google Workspace Integrations button inside Header */}
-        {!isPreviewActive && onOpenWorkspaceHub && (
-          <button
-            type="button"
-            onClick={onOpenWorkspaceHub}
-            className="h-9 px-3.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 hover:border-neutral-300 text-neutral-700 font-bold text-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-2xs select-none"
-            title="تكاملات Google Workspace (التقويم، جداول البيانات، جيميل، جهات الاتصال)"
-          >
-            <span>Workspace</span>
-            <span className="text-sm">🌐</span>
-          </button>
-        )}
-
         {/* Firebase Cloud Sync Status & Auth Controls */}
         <div className="flex items-center gap-2">
-          {onManualSave && (
-            <button
-              type="button"
-              onClick={onManualSave}
-              className="h-8 px-2.5 text-[11px] font-bold bg-[#34c759] text-white hover:bg-[#30b351] rounded-xl flex items-center gap-1.5 shadow-[0_2px_8px_rgba(52,199,89,0.25)] transition-all cursor-pointer active:scale-95 shrink-0"
-              title="حفظ الصفحة يدوياً للتجربة"
-            >
-              {isSaving ? (
-                <Loader2 size={11} className="animate-spin" />
-              ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse" />
-              )}
-              <span>test</span>
-            </button>
-          )}
-
           {user ? (
             <div className="flex items-center gap-2 bg-neutral-100 border border-neutral-200/60 rounded-xl p-1 pr-2.5">
               <div className="flex flex-col text-right">
@@ -364,17 +334,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
                 </button>
               )}
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={onLogin}
-              className="h-9 px-3 text-xs font-bold bg-[#0071e3] text-white hover:bg-[#0077ed] rounded-xl flex items-center gap-1.5 shadow-[0_2px_8px_rgba(0,113,227,0.25)] hover:shadow-[0_4px_12px_rgba(0,113,227,0.35)] transition-all cursor-pointer active:scale-95"
-              title="تسجيل الدخول بحساب Google لحفظ وتزامن جميع تعديلاتك سحابياً"
-            >
-              <Cloud size={14} className="animate-pulse" />
-              <span>حفظ سحابي تلقائي ☁️</span>
-            </button>
-          )}
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2 group cursor-pointer">

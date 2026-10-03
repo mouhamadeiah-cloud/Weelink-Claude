@@ -5,7 +5,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { PackageOpen } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useShopData } from './ShopDataContext';
-import { ProductCard } from './ProductCard';
+import { ProductCard, ProductSlide } from './ProductCard';
 import { ProductDetailModal } from './ProductDetailModal';
 
 interface ShopProductsViewProps {
@@ -80,9 +80,15 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
         <div ref={gridRef} className="flex-1 min-h-0 overflow-y-auto pb-2" onWheel={isPreviewActive ? stop : undefined}>
           <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))' }}>
             {list.map((p) => (
-              <div key={p.id} data-product-id={p.id} className="flex">
-                <ProductCard product={p} accent={accent} onOpen={() => setOpenId(p.id)} />
-              </div>
+              p.display === 'slide' ? (
+                <div key={p.id} data-product-id={p.id} className="col-span-full">
+                  <ProductSlide product={p} accent={accent} onOpen={() => setOpenId(p.id)} />
+                </div>
+              ) : (
+                <div key={p.id} data-product-id={p.id} className="flex">
+                  <ProductCard product={p} accent={accent} onOpen={() => setOpenId(p.id)} />
+                </div>
+              )
             ))}
           </div>
         </div>

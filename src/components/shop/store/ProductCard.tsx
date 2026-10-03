@@ -1,24 +1,40 @@
-// How a product looks on the store page: main image, badge, name, short description and price.
-// Also used as the live preview in the admin's product editor.
-import React from 'react';
-import { ImageOff } from 'lucide-react';
+// How a product looks on the store page: main image, badge, name, short description, price and
+// an add-to-cart button. Also used as the live preview in the admin's product editor.
+import React, { useState } from 'react';
+import { ImageOff, ShoppingBag, Check } from 'lucide-react';
 import { ShopProduct } from '../shopTypes';
 import { badgeText, totalStock } from '../productModel';
-import { formatPrice } from '../../../utils/cartStore';
+import { addToCart, formatPrice } from '../../../utils/cartStore';
 
 interface ProductCardProps {
   product: ShopProduct;
   accent?: string;
-  onOpen?: () => void;
+  onOpen?: () => void; // set on the store page; the editor preview leaves it out
 }
 
+// A product the customer must pick options for (size, colour…) is added from its full card.
+export const needsChoice = (p: ShopProduct) =>
+  p.options.some((o) => o.values.length > 1 || (o.affectsStock && o.values.length > 0));
+
 export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen }) => {
+  const [added, setAdded] = useState(false);
   const badge = badgeText(product);
   const soldOut = totalStock(product) <= 0;
-  const Tag = onOpen ? 'button' : 'div';
+
+  const add = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onOpen || soldOut) return;
+    if (needsChoice(product)) {
+      onOpen();
+      return;
+    }
+    addToCart({ name: product.name, price: product.price, currency: product.currency, image: product.images[0] });
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1800);
+  };
+
   return (
-    <Tag
-      type={onOpen ? 'button' : undefined}
+    <div
       onClick={onOpen}
       dir="rtl"
       className={`group w-full text-right bg-white rounded-3xl border border-black/[0.06] overflow-hidden flex flex-col transition ${
@@ -56,7 +72,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4
             <span className="text-xs text-[#8A7B70] line-through">{formatPrice(product.oldPrice, product.currency)}</span>
           )}
         </div>
+        <button
+          type="button"
+          onClick={add}
+          disabled={soldOut}
+          className="mt-2 w-full h-10 rounded-full text-white text-sm font-bold flex items-center justify-center gap-1.5 transition active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          style={{ backgroundColor: accent }}
+        >
+          {added ? <><Check size={16} /> تمت الإضافة</> : <><ShoppingBag size={16} /> {soldOut ? 'نفد من المخزون' : 'أضف إلى السلة'}</>}
+        </button>
       </div>
-    </Tag>
+    </div>
   );
 };

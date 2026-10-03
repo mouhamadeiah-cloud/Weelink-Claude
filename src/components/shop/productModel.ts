@@ -1,5 +1,5 @@
 // Product helpers shared by the admin panel and the store page: variants, stock and prices.
-import { ShopProduct, ProductOption, ProductVariant, PRODUCT_BADGES } from './shopTypes';
+import { ShopProduct, ShopSettings, ProductOption, ProductVariant, PRODUCT_BADGES } from './shopTypes';
 
 export const stockOptions = (options: ProductOption[]) =>
   options.filter((o) => o.affectsStock && o.values.length > 0);
@@ -122,3 +122,34 @@ export const descriptionHtml = (description: string) =>
         .split('\n')
         .map((line) => line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
         .join('<br>');
+
+// Delivery for an order (the store cart or an order entered in the admin). Each product's delivery
+// price is its own, or the store's fee when it has none. 'highest' charges the highest one once,
+// 'sum' adds them up per product. Free once the products total reaches freeFrom.
+export interface DeliveryQuote {
+  fee: number;
+  subtotal: number;
+  free: boolean; // free because of the free-delivery amount
+  remaining: number; // still to buy before delivery is free; 0 when it does not apply
+  freeFrom: number; // 0 when there is no free-delivery amount
+}
+
+export const deliveryQuote = (
+  lines: { productId?: string; price: number; qty: number }[],
+  products: ShopProduct[],
+  settings: ShopSettings
+): DeliveryQuote => {
+  const d = settings.delivery;
+  const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
+  const freeFrom = d.freeEnabled && d.freeFrom > 0 ? d.freeFrom : 0;
+  const fees = lines.map((l) => products.find((p) => p.id === l.productId)?.deliveryPrice ?? d.deliveryFee);
+  const fee = !lines.length ? 0 : d.feeMode === 'sum' ? fees.reduce((s, f) => s + f, 0) : Math.max(...fees);
+  const free = freeFrom > 0 && subtotal >= freeFrom;
+  return {
+    fee: free ? 0 : fee,
+    subtotal,
+    free: free && fee > 0,
+    remaining: freeFrom > 0 && !free ? freeFrom - subtotal : 0,
+    freeFrom,
+  };
+};

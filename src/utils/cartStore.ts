@@ -84,10 +84,17 @@ export function cartTotal(items: CartItem[]) {
   return items.reduce((sum, i) => sum + i.price * i.qty, 0);
 }
 
-// WhatsApp link carrying the whole order as a ready-to-send message.
-export function buildWhatsappOrderUrl(items: CartItem[], phone: string) {
+// WhatsApp link carrying the whole order as a ready-to-send message. `delivery` is set for
+// online-shop carts (null = the shop has no delivery).
+export function buildWhatsappOrderUrl(items: CartItem[], phone: string, delivery: number | null = null) {
   const currency = items[0]?.currency || '';
   const lines = items.map((i) => `- ${i.name} × ${i.qty} = ${formatPrice(i.price * i.qty, i.currency)}`);
-  const text = ['مرحبًا، أريد طلب:', ...lines, `المجموع: ${formatPrice(cartTotal(items), currency)}`].join('\n');
+  const totals = delivery === null
+    ? [`المجموع: ${formatPrice(cartTotal(items), currency)}`]
+    : [
+      `التوصيل: ${delivery > 0 ? formatPrice(delivery, currency) : 'مجاني'}`,
+      `المجموع مع التوصيل: ${formatPrice(cartTotal(items) + delivery, currency)}`,
+    ];
+  const text = ['مرحبًا، أريد طلب:', ...lines, ...totals].join('\n');
   return `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(text)}`;
 }

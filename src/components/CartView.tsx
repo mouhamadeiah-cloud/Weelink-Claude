@@ -1,11 +1,15 @@
 // The 'cart' canvas element: lists what the visitor added with "أضف إلى السلة" buttons, lets
-// them change quantities, and sends the whole order to the shop's WhatsApp in one message.
+// them change quantities, and sends the whole order to the shop's WhatsApp in one message. In an
+// online shop it also adds the delivery fee (store settings) and shows how much is left to buy
+// for free delivery.
 // Controls only respond in preview / on the live site; in the editor the element stays draggable.
 
 import React from 'react';
-import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, Trash2, Truck } from 'lucide-react';
 import type { CanvasElement } from '../types';
 import { useCart, setCartQty, clearCart, cartTotal, formatPrice, buildWhatsappOrderUrl } from '../utils/cartStore';
+import { useShopData } from './shop/store/ShopDataContext';
+import { deliveryQuote } from './shop/productModel';
 
 interface CartViewProps {
   elem: CanvasElement;
@@ -17,6 +21,11 @@ export const CartView: React.FC<CartViewProps> = ({ elem, isPreviewActive }) => 
   const accent = elem.styles.color || '#B4532A';
   const currency = items[0]?.currency || '';
   const phone = elem.cartWhatsapp || '';
+  const shop = useShopData();
+  // Delivery only applies in an online shop that delivers.
+  const quote = shop?.settings.delivery.delivery && items.length ? deliveryQuote(items, shop.products, shop.settings) : null;
+  const total = cartTotal(items) + (quote?.fee || 0);
+  const freeProgress = quote && quote.freeFrom > 0 ? Math.min(1, quote.subtotal / quote.freeFrom) : 0;
 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
@@ -82,15 +91,40 @@ export const CartView: React.FC<CartViewProps> = ({ elem, isPreviewActive }) => 
         </div>
       )}
 
+      {quote && (
+        <div className="px-6 py-3 border-t border-black/[0.06] space-y-2 text-sm">
+          <div className="flex items-center justify-between text-neutral-600">
+            <span>المنتجات</span>
+            <span className="font-semibold">{formatPrice(quote.subtotal, currency)}</span>
+          </div>
+          <div className="flex items-center justify-between text-neutral-600">
+            <span className="flex items-center gap-1.5"><Truck size={15} /> التوصيل</span>
+            <span className={`font-semibold ${quote.fee === 0 ? 'text-[#34a853]' : ''}`}>{quote.fee > 0 ? formatPrice(quote.fee, currency) : 'مجاني'}</span>
+          </div>
+          {quote.freeFrom > 0 && (
+            <div className="space-y-1">
+              <div className={`text-xs font-semibold ${quote.remaining > 0 ? 'text-[#5A4C42]' : 'text-[#34a853]'}`}>
+                {quote.remaining > 0
+                  ? `أضف ${formatPrice(quote.remaining, currency)} إلى مشترياتك لتحصل على توصيل مجاني`
+                  : '🎉 حصلت على توصيل مجاني'}
+              </div>
+              <div className="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${freeProgress * 100}%`, backgroundColor: quote.remaining > 0 ? accent : '#34a853' }} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="px-6 py-4 border-t border-black/[0.06] bg-[#FBF6EF] flex items-center justify-between gap-4">
         <div>
-          <div className="text-xs text-neutral-500">المجموع</div>
-          <div className="text-xl font-bold text-[#2A1F1A]">{formatPrice(cartTotal(items), currency)}</div>
+          <div className="text-xs text-neutral-500">{quote ? 'المجموع مع التوصيل' : 'المجموع'}</div>
+          <div className="text-xl font-bold text-[#2A1F1A]">{formatPrice(total, currency)}</div>
         </div>
         <button
           type="button"
           disabled={items.length === 0 || !phone}
-          onClick={() => window.open(buildWhatsappOrderUrl(items, phone), '_blank', 'noopener,noreferrer')}
+          onClick={() => window.open(buildWhatsappOrderUrl(items, phone, quote ? quote.fee : null), '_blank', 'noopener,noreferrer')}
           className="px-6 py-3 rounded-full text-white font-semibold text-sm disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           style={{ backgroundColor: accent }}
         >

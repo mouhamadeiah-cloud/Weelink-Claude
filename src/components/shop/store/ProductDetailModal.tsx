@@ -85,7 +85,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
     }
     if (available <= 0 || qty > available) return;
     const chosen = choosable.map((o) => picked[o.id]).join(' / ');
-    addToCart({ name: chosen ? `${p.name} (${chosen})` : p.name, price: unit, currency: p.currency, image: p.images[0] }, qty);
+    addToCart({ name: chosen ? `${p.name} (${chosen})` : p.name, price: unit, currency: p.currency, image: p.images[0], productId: p.id }, qty);
     // With related products the card turns into them; otherwise it closes and the customer is
     // back in the store.
     if (related.length) {
@@ -219,6 +219,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
             {settings.delivery.delivery && (
               <div className="flex items-center gap-2 text-xs text-[#5A4C42]">
                 <Truck size={15} /> التوصيل: {delivery > 0 ? formatPrice(delivery, p.currency) : 'مجاني'}
+                {delivery > 0 && settings.delivery.freeEnabled && settings.delivery.freeFrom > 0 && (
+                  <span className="text-[#34a853] font-bold">· مجاني للطلبات من {formatPrice(settings.delivery.freeFrom, p.currency)}</span>
+                )}
               </div>
             )}
 

@@ -90,6 +90,7 @@ export interface CartProduct {
   price: number;
   currency: string;
   image?: string;
+  productId?: string; // set for online-shop products, to look up their delivery price
 }
 
 export interface CanvasElement {

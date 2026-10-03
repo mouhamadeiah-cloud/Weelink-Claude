@@ -2,6 +2,16 @@ import React, { useState } from 'react';
 import { loginWithEmail, registerWithEmail, db } from '../services/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
+// TEMPORARY: used by the "دخول مباشر" testing shortcut below.
+const LAST_ACCOUNT_KEY = 'weelink_last_login_account';
+const rememberLastAccount = (uid: string, email: string) => {
+  try {
+    localStorage.setItem(LAST_ACCOUNT_KEY, JSON.stringify({ uid, email }));
+  } catch {
+    // storage unavailable: the shortcut simply won't find an account
+  }
+};
+
 interface StandardAuthProps {
   onLoginWithGoogle: () => Promise<void>;
   onAuthSuccess: (userUid: string, isNewUser: boolean) => void;
@@ -26,6 +36,24 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
+  // TEMPORARY (testing shortcut, to be removed): "دخول مباشر" signs straight
+  // into the last account that logged in with email on this browser. Logout
+  // clears weelink_simulated_user_*, so the account is kept in its own key.
+  const handleDirectLogin = () => {
+    try {
+      const last = JSON.parse(localStorage.getItem(LAST_ACCOUNT_KEY) || 'null');
+      if (last && last.uid) {
+        localStorage.setItem('weelink_simulated_user_uid', last.uid);
+        localStorage.setItem('weelink_simulated_user_email', last.email || '');
+        onAuthSuccess(last.uid, false);
+        return;
+      }
+    } catch {
+      // fall through to the message below
+    }
+    setError('لا يوجد حساب سابق على هذا المتصفح. سجّل الدخول مرة واحدة بالبريد وكلمة المرور، وبعدها يعمل الدخول المباشر.');
+  };
+
   // Handle Log In (الصورة الأولى)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +76,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
         if (simUserData.password === password) {
           localStorage.setItem('weelink_simulated_user_uid', simUserData.uid);
           localStorage.setItem('weelink_simulated_user_email', targetEmail);
+          rememberLastAccount(simUserData.uid, targetEmail);
           onAuthSuccess(simUserData.uid, false);
           setLoading(false);
           return;
@@ -137,6 +166,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
       // 4. Set local session credentials
       localStorage.setItem('weelink_simulated_user_uid', activeUid);
       localStorage.setItem('weelink_simulated_user_email', targetEmail);
+      rememberLastAccount(activeUid, targetEmail);
 
       // 5. Complete Onboarding with fresh blank page layout
       onAuthSuccess(activeUid, true);
@@ -169,6 +199,16 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
                   className="w-4 h-4 rounded-full"
                 />
                 <span>سجل بحساب Google</span>
+              </button>
+
+              {/* TEMPORARY testing shortcut: enter the last account used on this browser. */}
+              <button
+                type="button"
+                onClick={handleDirectLogin}
+                className="flex-1 py-3 px-4 border border-[#0071e3] text-[#0071e3] rounded-lg text-xs font-bold hover:bg-[#0071e3]/5 transition-all cursor-pointer text-center"
+                title="دخول سريع لآخر حساب سُجّل الدخول به على هذا المتصفح (للتجربة فقط)"
+              >
+                دخول مباشر
               </button>
               
               <button

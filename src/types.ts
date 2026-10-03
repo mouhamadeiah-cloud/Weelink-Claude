@@ -18,7 +18,8 @@ export type ElementType =
   | 'calendar'
   | 'html'
   | 'gallery'
-  | 'mask';
+  | 'mask'
+  | 'cart';
 
 export type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
 
@@ -71,6 +72,25 @@ export interface ElementStyles {
 export type LinkType = 'page' | 'slide' | 'url' | 'contact';
 export type ContactType = 'whatsapp' | 'phone' | 'email' | 'facebook' | 'instagram' | 'x' | 'tiktok';
 
+// Position/size of an element in the phone layout, written by the "تنسيق الموبايل" auto-arrange.
+// The desktop layout (x/y/width/height on the element itself) is never touched by it.
+export interface MobileLayout {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  // Multiplier applied to styles.fontSize on phones (1 = unchanged).
+  fontScale?: number;
+}
+
+// A product an "أضف إلى السلة" button puts in the visitor's shopping cart (see utils/cartStore).
+export interface CartProduct {
+  name: string;
+  price: number;
+  currency: string;
+  image?: string;
+}
+
 export interface CanvasElement {
   id: string;
   name: string;
@@ -80,6 +100,8 @@ export interface CanvasElement {
   width: number;
   height: number;
   rotation?: number; // Rotation in degrees around center (0 - 360)
+  // Phone layout; when absent the element shows at its desktop position in mobile view.
+  mobile?: MobileLayout;
   content: string;
   slideId: string;
   styles: ElementStyles;
@@ -90,6 +112,10 @@ export interface CanvasElement {
   groupName?: string;
   linkUrl?: string;
   linkType?: LinkType;
+  // When set, clicking this element (in preview / on the live site) adds the product to the cart.
+  cartProduct?: CartProduct;
+  // 'cart' element only: WhatsApp number the finished order is sent to.
+  cartWhatsapp?: string;
   linkTargetId?: string;
   contactType?: ContactType;
   contactValue?: string;
@@ -168,6 +194,8 @@ export interface Slide {
   id: string;
   name: string; // e.g. "شريحة ١"
   height: number; // default e.g. 540
+  // Slide height in the phone layout, used once its elements have a mobile layout.
+  mobileHeight?: number;
   backgroundColor?: string;
   backgroundImage?: string;
   backgroundSize?: 'cover' | 'contain' | 'auto';
@@ -208,6 +236,8 @@ export interface NavbarConfig {
   bgColor: string;
   textColor: string;
   isSticky: boolean;
+  // On phones, collapse the page names into a dropdown opened by a hamburger icon (set by "تنسيق الموبايل").
+  mobileMenu?: boolean;
   // Navbar strip height/length in px (default 60 when unset)
   height?: number;
   // Navbar strip width, as a percentage of the page width (default 100 when unset = full-bleed).

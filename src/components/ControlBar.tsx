@@ -11,7 +11,8 @@ import {
   Plus,
   LogOut,
   Cloud,
-  Loader2
+  Loader2,
+  Wand2
 } from 'lucide-react';
 import { DevicePreviewMode, Page } from '../types';
 
@@ -26,6 +27,7 @@ interface ControlBarProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  onArrangeForMobile?: () => void;
   onTogglePreview?: () => void;
   isPreviewActive?: boolean;
   onOpenPageSettings?: () => void;
@@ -48,6 +50,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   canRedo,
   onUndo,
   onRedo,
+  onArrangeForMobile,
   onTogglePreview,
   isPreviewActive,
   onOpenPageSettings,
@@ -247,6 +250,17 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           >
             <Redo2 size={16} strokeWidth={2.1} />
           </button>
+          {onArrangeForMobile && !isPreviewActive && (
+            <button
+              onClick={onArrangeForMobile}
+              className="h-8 px-2 rounded-lg flex items-center justify-center gap-1 text-neutral-700 hover:text-[#0071e3] hover:bg-white active:scale-95 transition-all"
+              title="تنسيق الموبايل: ترتيب العناصر تلقائياً لشاشات الهاتف دون تغيير تصميم الكمبيوتر"
+              aria-label="تنسيق الموبايل"
+            >
+              <Smartphone size={15} strokeWidth={2.1} />
+              <Wand2 size={13} strokeWidth={2.1} />
+            </button>
+          )}
         </div>
 
         {/* 4. Eye icon for Fullscreen Preview (voll screen) */}

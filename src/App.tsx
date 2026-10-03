@@ -16,6 +16,8 @@ import { StandardAuth } from './components/StandardAuth';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
+import { getOnlineShopTemplate } from './data/onlineShopTemplate';
+import { arrangeForMobile } from './utils/mobileLayout';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
@@ -946,6 +948,13 @@ export default function App() {
     const target = elements.find(el => el.id === id);
     if (!target) return;
 
+    // In mobile view an element with a phone layout is moved within that layout only;
+    // its desktop position stays as it is.
+    if (previewMode === 'mobile' && target.mobile) {
+      setElements(elements.map(el => el.id === id && el.mobile ? { ...el, mobile: { ...el.mobile, x, y } } : el));
+      return;
+    }
+
     const dx = x - target.x;
     const dy = y - target.y;
 
@@ -1148,6 +1157,21 @@ export default function App() {
   };
 
   const handleUpdateElementSize = (id: string, width: number, height: number, x?: number, y?: number) => {
+    const target = elements.find(el => el.id === id);
+    if (previewMode === 'mobile' && target?.mobile) {
+      setElements(elements.map(el => el.id === id && el.mobile ? {
+        ...el,
+        mobile: {
+          ...el.mobile,
+          width,
+          height,
+          ...(x !== undefined ? { x } : {}),
+          ...(y !== undefined ? { y } : {}),
+        }
+      } : el));
+      return;
+    }
+
     const updated = elements.map(el => {
       if (el.id === id) {
         if (el.type === 'table' && el.tableConfig) {
@@ -1603,6 +1627,13 @@ export default function App() {
         content: customContent || 'circle',
         styles: { backgroundColor: '#ffffff', ...(customStyles || {}) },
       },
+      cart: {
+        name: 'سلة المشتريات',
+        width: 900,
+        height: 480,
+        content: '',
+        styles: { color: '#B4532A', ...(customStyles || {}) },
+      },
     };
 
     const cfg = defaultConfigs[type] || defaultConfigs.card;
@@ -1787,10 +1818,29 @@ export default function App() {
   };
 
   const handleUpdateSlideHeight = (slideId: string, height: number) => {
+    const slide = currentPage.slides.find(s => s.id === slideId);
+    // In mobile view a slide that has a phone layout is resized in that layout only.
+    const isMobileLayout = previewMode === 'mobile' && !!slide?.mobileHeight && elements.some(el => el.slideId === slideId && el.mobile);
     const updatedSlides = currentPage.slides.map(s => 
-      s.id === slideId ? { ...s, height } : s
+      s.id === slideId ? (isMobileLayout ? { ...s, mobileHeight: height } : { ...s, height }) : s
     );
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, slides: updatedSlides } : p));
+  };
+
+  // "تنسيق الموبايل": arranges every page's elements for phones (desktop layout untouched),
+  // collapses the navbar's page names into a hamburger menu on phones, and switches to mobile
+  // view so the result is visible right away. Undo reverts the elements.
+  const handleArrangeForMobile = () => {
+    const allSlides = pages.flatMap(p => p.slides);
+    const { elements: arrangedElements, slides: arrangedSlides } = arrangeForMobile(allSlides, elements);
+    const arrangedSlideById = new Map(arrangedSlides.map(s => [s.id, s]));
+    pushToHistory(arrangedElements);
+    setPages(pages.map(p => ({
+      ...p,
+      slides: p.slides.map(s => arrangedSlideById.get(s.id) || s),
+      navbar: { ...p.navbar, mobileMenu: true },
+    })));
+    setPreviewMode('mobile');
   };
 
   // Pages management
@@ -1893,16 +1943,17 @@ export default function App() {
     setActiveSlideId(duplicatedSlides[0].id);
   };
 
-  // Applies the free-tier starter template: a fixed 5-page site (Home, About, Our Work,
-  // Pricing, Contact) linked through one shared navbar. This REPLACES the whole site
-  // (all current pages/elements) rather than appending, since it is a full starter-site action.
-  const handleApplyFreeStarterTemplate = () => {
-    const confirmed = window.confirm(
-      'سيتم استبدال كل صفحات موقعك الحالية بقالب جاهز من خمس صفحات (مدخل، من نحن، أعمالنا، الأسعار، اتصال). هل تريد المتابعة؟'
-    );
-    if (!confirmed) return;
+  // Applies a ready-made multi-page site template (pages linked through one shared navbar).
+  // This REPLACES the whole site (all current pages/elements) rather than appending, since it
+  // is a full starter-site action. Template ids get a unique suffix, and every page/slide
+  // reference (navbar items, navbar CTA, element links) is remapped to the new ids.
+  const applySiteTemplate = (
+    template: { pages: Page[]; elements: CanvasElement[] },
+    confirmMessage: string
+  ) => {
+    if (!window.confirm(confirmMessage)) return;
 
-    const { pages: templatePages, elements: templateElements } = getFreeStarterTemplate();
+    const { pages: templatePages, elements: templateElements } = template;
     const suffix = Date.now();
 
     const idMap: Record<string, string> = {};
@@ -1925,17 +1976,33 @@ export default function App() {
       },
     }));
 
-    const newElements: CanvasElement[] = templateElements.map((el) => ({
-      ...el,
-      id: `${el.id}-${suffix}`,
-      slideId: idMap[el.slideId] || el.slideId,
-    }));
+    const newElements: CanvasElement[] = templateElements.map((el) => {
+      const linkTargetId = el.linkTargetId ? (idMap[el.linkTargetId] || el.linkTargetId) : el.linkTargetId;
+      const isInternalLink = el.linkType === 'page' || el.linkType === 'slide';
+      return {
+        ...el,
+        id: `${el.id}-${suffix}`,
+        slideId: idMap[el.slideId] || el.slideId,
+        linkTargetId,
+        linkUrl: isInternalLink && linkTargetId ? `#${el.linkType}-${linkTargetId}` : el.linkUrl,
+      };
+    });
 
     setPages(newPages);
     setElements(newElements);
     setActivePageId(newPages[0].id);
     setActiveSlideId(newPages[0].slides[0].id);
   };
+
+  const handleApplyFreeStarterTemplate = () => applySiteTemplate(
+    getFreeStarterTemplate(),
+    'سيتم استبدال كل صفحات موقعك الحالية بقالب جاهز من خمس صفحات (مدخل، من نحن، أعمالنا، الأسعار، اتصال). هل تريد المتابعة؟'
+  );
+
+  const handleApplyOnlineShopTemplate = () => applySiteTemplate(
+    getOnlineShopTemplate(),
+    'سيتم استبدال كل صفحات موقعك الحالية بقالب متجر إلكتروني من خمس صفحات (الرئيسية، المنتجات، السلة، طريقة الطلب، تواصل معنا). هل تريد المتابعة؟'
+  );
 
   const handleUpdatePage = (updates: Partial<Page>) => {
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, ...updates } : p));
@@ -2226,6 +2293,7 @@ export default function App() {
           canRedo={historyIndex < history.length - 1}
           onUndo={handleUndo}
           onRedo={handleRedo}
+          onArrangeForMobile={handleArrangeForMobile}
           onOpenPageSettings={() => handleSelectTool('page-settings')}
           onTogglePreview={() => {
             const nextPreviewState = !isPreviewActive;
@@ -2332,6 +2400,7 @@ export default function App() {
         onAddSlideTemplate={handleAddSlideTemplate}
         onAddPageTemplate={handleAddPageTemplate}
         onApplyFreeStarterTemplate={handleApplyFreeStarterTemplate}
+        onApplyOnlineShopTemplate={handleApplyOnlineShopTemplate}
         onDeleteSlide={handleDeleteSlide}
         onUpdateSlideHeight={handleUpdateSlideHeight}
         onAddElement={(type, customContent, customStyles, extraData) => {

@@ -51,6 +51,7 @@ export interface RightDrawerProps {
   onAddSlideTemplate?: (template: any) => void;
   onAddPageTemplate?: (template: any) => void;
   onApplyFreeStarterTemplate?: () => void;
+  onApplyOnlineShopTemplate?: () => void;
   onDeleteSlide: (slideId: string) => void;
   onUpdateSlideHeight: (slideId: string, height: number) => void;
   onAddElement: (type: ElementType, customContent?: string, customStyles?: any, extraData?: Partial<CanvasElement>) => void;

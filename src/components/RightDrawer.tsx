@@ -78,6 +78,7 @@ import {
   RICH_MULTI_GRADIENTS 
 } from '../data/backgroundPresets';
 import { WeeAIChat } from './WeeAIChat';
+import { ShopElementSettings } from './ShopElementSettings';
 
 import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload } from '../data/slideTemplates';
@@ -110,6 +111,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onAddSlideTemplate,
   onAddPageTemplate,
   onApplyFreeStarterTemplate,
+  onApplyOnlineShopTemplate,
   onDeleteSlide,
   onAddElement,
   onAddGroup,
@@ -9563,6 +9565,23 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               مدخل، من نحن، أعمالنا، الأسعار، واتصل بنا — كل صفحة مرتبطة بالأخرى عبر شريط التنقل العلوي. سيستبدل هذا كل صفحات موقعك الحالية.
                             </span>
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => onApplyOnlineShopTemplate && onApplyOnlineShopTemplate()}
+                            className="w-full bg-gradient-to-br from-[#B4532A]/5 to-[#B4532A]/[0.02] hover:from-[#B4532A]/10 hover:to-[#B4532A]/5 border border-[#B4532A]/20 hover:border-[#B4532A] rounded-2xl p-3.5 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-bold text-neutral-800 group-hover:text-[#B4532A] transition-colors">
+                                متجر إلكتروني: منتجات وسلة مشتريات
+                              </span>
+                              <span className="text-[10px] text-[#B4532A] font-semibold bg-[#B4532A]/10 border border-[#B4532A]/15 px-1.5 py-0.5 rounded-md">
+                                5 صفحات
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
+                              الرئيسية، المنتجات، السلة، طريقة الطلب، وتواصل معنا — بطاقات منتجات بزر «أضف إلى السلة»، وصفحة سلة ترسل الطلب كاملًا عبر واتساب. سيستبدل هذا كل صفحات موقعك الحالية.
+                            </span>
+                          </button>
                         </div>
                       </div>
                     )}
@@ -11155,6 +11174,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
               return (
                 <div className="space-y-4">
+                  {selectedElement && (
+                    <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+                  )}
+
                   {/* Top Capsule / Oval Bar: ( صفحة | شريحة | URL | تواصل ) - كما في الرسم اليدوي */}
                   <div className="w-full p-1 bg-neutral-100 rounded-full border border-neutral-300 shadow-2xs flex items-center justify-between px-1 gap-1 select-none">
                     {[

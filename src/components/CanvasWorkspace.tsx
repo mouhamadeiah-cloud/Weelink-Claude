@@ -12,6 +12,9 @@ import {
 import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
+import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
+import { addToCart } from '../utils/cartStore';
+import { CartView } from './CartView';
 import { Icon } from '@iconify/react';
 import { 
   Trash2, 
@@ -23,6 +26,7 @@ import {
   ChevronRight,
   ChevronLeft,
   X,
+  Menu,
   Download
 } from 'lucide-react';
 
@@ -668,9 +672,9 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
 
 export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   previewMode,
-  slides,
+  slides: rawSlides,
   activeSlideId,
-  elements,
+  elements: rawElements,
   selectedElementId,
   onSelectElement,
   onSelectSlide,
@@ -694,6 +698,28 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   isNavbarSelected = false,
   onSelectNavbar,
 }) => {
+  // In mobile view, elements and slides render with their phone layout ("تنسيق الموبايل") when
+  // they have one. Everything below works on these resolved values, so dragging/resizing in mobile
+  // view reports phone coordinates (App routes those into `element.mobile`).
+  const elements = useMemo(
+    () => (previewMode === 'mobile' ? rawElements.map(resolveMobileElement) : rawElements),
+    [previewMode, rawElements]
+  );
+  const slides = useMemo(
+    () =>
+      previewMode === 'mobile'
+        ? rawSlides.map(s => ({ ...s, height: resolveMobileSlideHeight(s, rawElements) }))
+        : rawSlides,
+    [previewMode, rawSlides, rawElements]
+  );
+
+  // Hamburger menu of the navbar on phones (navbar.mobileMenu).
+  const isNavHamburger = previewMode === 'mobile' && !!navbar.mobileMenu;
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!isNavHamburger) setIsNavMenuOpen(false);
+  }, [isNavHamburger]);
+
   // Workspace width observer & Scaling calculation
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(1280);
@@ -1831,8 +1857,19 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     }
   };
 
+  // Short "added to cart" confirmation shown after an add-to-cart button is clicked.
+  const [cartToast, setCartToast] = useState<string | null>(null);
+  const cartToastTimer = useRef<number | undefined>(undefined);
+
   const handleOpenLink = (elem: CanvasElement, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (elem.cartProduct) {
+      addToCart(elem.cartProduct);
+      setCartToast(elem.cartProduct.name);
+      window.clearTimeout(cartToastTimer.current);
+      cartToastTimer.current = window.setTimeout(() => setCartToast(null), 2000);
+      return;
+    }
     if (!elem.linkUrl) return;
 
     if (elem.linkType === 'page' || elem.linkUrl.startsWith('#page-')) {
@@ -1884,6 +1921,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const navWidthPx = baseWidth * ((navbar.width ?? 100) / 100);
 
   return (
+    <>
+    {cartToast && (
+      <div dir="rtl" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999999] bg-[#2A1F1A] text-white text-sm font-semibold px-5 py-3 rounded-full shadow-lg pointer-events-none">
+        ✓ أُضيف «{cartToast}» إلى السلة
+      </div>
+    )}
     <div 
       ref={workspaceRef}
       // IMPORTANT: this must be a capped `h-[...]`, never `min-h-[...]`. A min-height is only a
@@ -1953,7 +1996,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             onSelectElement(null);
             onSelectNavbar?.();
           }}
-          className={`shrink-0 w-full overflow-hidden ${
+          className={`shrink-0 w-full ${isNavHamburger ? 'overflow-visible' : 'overflow-hidden'} ${
             navbar.borderStyle && navbar.borderStyle !== 'none' ? '' : 'border-b border-black/[0.06]'
           } ${isNavbarSelected && !isPreviewActive ? 'ring-2 ring-[#0071e3]/50' : ''} ${isPreviewActive ? '' : 'cursor-pointer'}`}
           style={{
@@ -2052,6 +2095,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 simulate mobile/tablet/desktop regardless of the real browser window width, so hiding
                 by a viewport media query was hiding the page names any time the actual editor window
                 was narrower than 768px, independent of the chosen device-preview mode. */}
+            {!isNavHamburger && (
             <div
               className={`flex flex-1 items-center gap-2.5 text-xs font-medium px-4 flex-wrap ${
                 navbar.itemsAlign === 'left' ? 'justify-end' : navbar.itemsAlign === 'center' ? 'justify-center' : 'justify-start'
@@ -2088,6 +2132,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 );
               })}
             </div>
+            )}
+            {isNavHamburger && <span className="flex-1" />}
 
             {/* Action CTA Button — only rendered when the user has actually typed a label for it.
                 Never fall back to a default label like "ابدأ الآن"; an empty ctaText means the
@@ -2105,7 +2151,50 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 {navbar.ctaText}
               </button>
             )}
+
+            {/* Phones: page names live in a dropdown opened by this hamburger icon. */}
+            {isNavHamburger && effectiveNavItems.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsNavMenuOpen(open => !open);
+                }}
+                className="shrink-0 w-9 h-9 -me-2 ms-2 rounded-lg flex items-center justify-center hover:bg-black/[0.05] active:scale-95 transition-all"
+                style={{ color: navbar.textColor }}
+                aria-label="قائمة الصفحات"
+                aria-expanded={isNavMenuOpen}
+              >
+                {isNavMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            )}
           </div>
+
+          {isNavHamburger && isNavMenuOpen && (
+            <div
+              className="absolute top-full inset-x-0 flex flex-col py-2 shadow-[0_12px_24px_rgba(0,0,0,0.12)] border-t border-black/[0.06]"
+              style={{ backgroundColor: navbar.bgColor || '#ffffff', color: navbar.textColor }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {effectiveNavItems.map((item) => {
+                const isPageLink = item.linkType === 'page' && !!item.linkTargetId;
+                const isCurrent = isPageLink && item.linkTargetId === activePageId;
+                return (
+                  <span
+                    key={item.id}
+                    onClick={() => {
+                      if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                      setIsNavMenuOpen(false);
+                    }}
+                    className={`px-6 py-3 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
+                    style={{ fontFamily: navbar.itemsFontFamily || undefined }}
+                  >
+                    {item.label}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </nav>
 
         {/* Device Mode Wrapper Frame: the device-mockup chrome (border/rounded corners/shadow) around
@@ -2409,7 +2498,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       onTouchCancel={handleElementTouchEnd}
                       onClick={(e) => {
                         if (isPreviewActive) {
-                          if (elem.linkUrl) {
+                          if (elem.linkUrl || elem.cartProduct) {
                             handleOpenLink(elem, e);
                           }
                           return;
@@ -2446,7 +2535,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           elem.clipPath ? 'drop-shadow(0px 8px 20px rgba(0,0,0,0.14)) drop-shadow(0px 2px 5px rgba(0,0,0,0.06))' : ''
                         ].filter(Boolean).join(' ') || undefined,
                         cursor: isPreviewActive
-                          ? (elem.linkUrl ? 'pointer' : 'default')
+                          ? (elem.linkUrl || elem.cartProduct ? 'pointer' : 'default')
                           : (elem.isLocked ? 'default' : (isDragging ? 'grabbing' : 'grab')),
                         transform: elem.rotation ? `rotate(${elem.rotation}deg)` : undefined,
                         transformOrigin: 'center center',
@@ -3887,6 +3976,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           <InteractiveCalendarWidget elem={elem} />
                         )}
 
+                        {elem.type === 'cart' && (
+                          <CartView elem={elem} isPreviewActive={isPreviewActive} />
+                        )}
+
                         {elem.type === 'html' && (
                           <div className="w-full h-full bg-white rounded-xl border border-black/[0.08] overflow-hidden flex flex-col">
                             <div className="bg-neutral-100 px-3 py-1 border-b border-black/[0.06] flex items-center justify-between text-[10px] font-mono text-neutral-500">
@@ -4468,5 +4561,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       </div>
     )}
   </div>
+    </>
   );
 };

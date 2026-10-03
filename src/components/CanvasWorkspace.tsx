@@ -1886,10 +1886,24 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   return (
     <div 
       ref={workspaceRef}
+      // IMPORTANT: this must be a capped `h-[...]`, never `min-h-[...]`. A min-height is only a
+      // floor — once the slides' combined content is taller than one viewport (true almost always,
+      // the moment there's more than a couple of slides), the div simply grows to fit everything
+      // instead of clipping. That means it never actually overflows ITSELF, so `overflow-y-auto`
+      // never kicks in, and the whole outer page scrolls instead of this div. Since the navbar's
+      // `position: sticky` is anchored to THIS div as its scrolling ancestor, a sticky navbar does
+      // nothing at all when this div never scrolls — it just flows away with the rest of the page,
+      // which is the real cause of "sticky doesn't work" (confirmed by direct reproduction: with
+      // min-height, scrolling moved window.scrollY while this div's own scrollTop stayed frozen at
+      // 0 and the navbar drifted off-screen with everything else; with a capped height, this div
+      // alone scrolls, window.scrollY stays 0, and the navbar's top stays pinned). A capped height
+      // still fills the viewport exactly the same way min-height did when content is short, so
+      // nothing about the empty/short-content layout changes — only tall content now scrolls where
+      // it was always meant to.
       className={`flex-1 w-full overflow-y-auto transition-colors duration-200 ${
         previewMode === 'desktop'
-          ? (isPreviewActive ? 'bg-white p-0 m-0 min-h-[calc(100vh-56px)] flex flex-col items-center justify-start' : 'bg-[#ececf0] p-4 sm:p-8 min-h-[calc(100vh-104px)] flex flex-col items-center justify-start')
-          : 'bg-[#ececf0] min-h-[calc(100vh-104px)] p-4 sm:p-8 flex flex-col items-center justify-start'
+          ? (isPreviewActive ? 'bg-white p-0 m-0 h-[calc(100vh-56px)] flex flex-col items-center justify-start' : 'bg-[#ececf0] p-4 sm:p-8 h-[calc(100vh-104px)] flex flex-col items-center justify-start')
+          : 'bg-[#ececf0] h-[calc(100vh-104px)] p-4 sm:p-8 flex flex-col items-center justify-start'
       }`}
       onClick={() => {
         onSelectElement(null);

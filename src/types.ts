@@ -236,6 +236,8 @@ export interface NavbarConfig {
   bgColor: string;
   textColor: string;
   isSticky: boolean;
+  // On phones, collapse the page names into a dropdown opened by a hamburger icon (set by "تنسيق الموبايل").
+  mobileMenu?: boolean;
   // Navbar strip height/length in px (default 60 when unset)
   height?: number;
   // Navbar strip width, as a percentage of the page width (default 100 when unset = full-bleed).

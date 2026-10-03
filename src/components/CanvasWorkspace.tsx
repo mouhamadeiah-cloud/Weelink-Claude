@@ -26,6 +26,7 @@ import {
   ChevronRight,
   ChevronLeft,
   X,
+  Menu,
   Download
 } from 'lucide-react';
 
@@ -711,6 +712,13 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         : rawSlides,
     [previewMode, rawSlides, rawElements]
   );
+
+  // Hamburger menu of the navbar on phones (navbar.mobileMenu).
+  const isNavHamburger = previewMode === 'mobile' && !!navbar.mobileMenu;
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!isNavHamburger) setIsNavMenuOpen(false);
+  }, [isNavHamburger]);
 
   // Workspace width observer & Scaling calculation
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -1988,7 +1996,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             onSelectElement(null);
             onSelectNavbar?.();
           }}
-          className={`shrink-0 w-full overflow-hidden ${
+          className={`shrink-0 w-full ${isNavHamburger ? 'overflow-visible' : 'overflow-hidden'} ${
             navbar.borderStyle && navbar.borderStyle !== 'none' ? '' : 'border-b border-black/[0.06]'
           } ${isNavbarSelected && !isPreviewActive ? 'ring-2 ring-[#0071e3]/50' : ''} ${isPreviewActive ? '' : 'cursor-pointer'}`}
           style={{
@@ -2087,6 +2095,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 simulate mobile/tablet/desktop regardless of the real browser window width, so hiding
                 by a viewport media query was hiding the page names any time the actual editor window
                 was narrower than 768px, independent of the chosen device-preview mode. */}
+            {!isNavHamburger && (
             <div
               className={`flex flex-1 items-center gap-2.5 text-xs font-medium px-4 flex-wrap ${
                 navbar.itemsAlign === 'left' ? 'justify-end' : navbar.itemsAlign === 'center' ? 'justify-center' : 'justify-start'
@@ -2123,6 +2132,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 );
               })}
             </div>
+            )}
+            {isNavHamburger && <span className="flex-1" />}
 
             {/* Action CTA Button — only rendered when the user has actually typed a label for it.
                 Never fall back to a default label like "ابدأ الآن"; an empty ctaText means the
@@ -2140,7 +2151,50 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 {navbar.ctaText}
               </button>
             )}
+
+            {/* Phones: page names live in a dropdown opened by this hamburger icon. */}
+            {isNavHamburger && effectiveNavItems.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsNavMenuOpen(open => !open);
+                }}
+                className="shrink-0 w-9 h-9 -me-2 ms-2 rounded-lg flex items-center justify-center hover:bg-black/[0.05] active:scale-95 transition-all"
+                style={{ color: navbar.textColor }}
+                aria-label="قائمة الصفحات"
+                aria-expanded={isNavMenuOpen}
+              >
+                {isNavMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            )}
           </div>
+
+          {isNavHamburger && isNavMenuOpen && (
+            <div
+              className="absolute top-full inset-x-0 flex flex-col py-2 shadow-[0_12px_24px_rgba(0,0,0,0.12)] border-t border-black/[0.06]"
+              style={{ backgroundColor: navbar.bgColor || '#ffffff', color: navbar.textColor }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {effectiveNavItems.map((item) => {
+                const isPageLink = item.linkType === 'page' && !!item.linkTargetId;
+                const isCurrent = isPageLink && item.linkTargetId === activePageId;
+                return (
+                  <span
+                    key={item.id}
+                    onClick={() => {
+                      if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                      setIsNavMenuOpen(false);
+                    }}
+                    className={`px-6 py-3 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
+                    style={{ fontFamily: navbar.itemsFontFamily || undefined }}
+                  >
+                    {item.label}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </nav>
 
         {/* Device Mode Wrapper Frame: the device-mockup chrome (border/rounded corners/shadow) around

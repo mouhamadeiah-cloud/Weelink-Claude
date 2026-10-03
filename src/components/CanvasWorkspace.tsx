@@ -725,53 +725,51 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const [workspaceWidth, setWorkspaceWidth] = useState(1280);
 
   const localScaleRef = useRef(1);
-  const localSlidesRef = useRef(slides);
   const navbarRef = useRef<HTMLElement>(null);
-  const navbarHeightRef = useRef(navbar.height ?? 60);
 
-  // Synchronize slides ref on each render
-  localSlidesRef.current = slides;
-  navbarHeightRef.current = navbar.height ?? 60;
+  // Keeps every "fixed" background layer (slide or element) pinned to the visible top-left of the
+  // scrolling workspace. Native `background-attachment: fixed` cannot be used here because the
+  // canvas lives inside a CSS-transformed (scaled) wrapper, which breaks fixed backgrounds.
+  // Positions are read from the DOM, so canvas padding, the navbar and device frames are all
+  // accounted for automatically. Runs on scroll, on resize and after every render.
+  const syncFixedBackgrounds = () => {
+    const scrollEl = workspaceRef.current;
+    if (!scrollEl) return;
+    const viewRect = scrollEl.getBoundingClientRect();
+    const currentScale = localScaleRef.current || 1;
+
+    scrollEl.querySelectorAll<HTMLElement>('.bg-fixed-layer').forEach((layer) => {
+      const host = layer.parentElement;
+      if (!host) return;
+      const hostRect = host.getBoundingClientRect();
+      const offsetY = (viewRect.top - hostRect.top) / currentScale;
+      layer.style.height = `${scrollEl.clientHeight / currentScale}px`;
+      if (layer.dataset.fixedAxis === 'xy') {
+        const offsetX = (viewRect.left - hostRect.left) / currentScale;
+        layer.style.width = `${scrollEl.clientWidth / currentScale}px`;
+        layer.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
+      } else {
+        layer.style.transform = `translate3d(0, ${offsetY}px, 0)`;
+      }
+    });
+  };
+  const syncFixedBackgroundsRef = useRef(syncFixedBackgrounds);
+  syncFixedBackgroundsRef.current = syncFixedBackgrounds;
 
   useEffect(() => {
-    const handleScroll = () => {
-      const workspaceScroll = workspaceRef.current ? workspaceRef.current.scrollTop : 0;
-      const windowScroll = typeof window !== 'undefined' ? (window.pageYOffset || document.documentElement.scrollTop) : 0;
-      const currentScroll = Math.max(workspaceScroll, windowScroll);
-      const currentScale = localScaleRef.current || 1;
-
-      // Directly update the CSS transform style of fixed backgrounds (smooth 60fps/120fps, no React re-renders!)
-      const bgElements = workspaceRef.current?.querySelectorAll('.slide-bg-fixed');
-      if (bgElements) {
-        bgElements.forEach((el) => {
-          const element = el as HTMLElement;
-          const slideId = element.getAttribute('data-slide-id');
-          if (!slideId) return;
-
-          // Calculate unscaled slide top relative to the workspace container
-          let unscaledTop = navbarHeightRef.current;
-          for (const s of localSlidesRef.current) {
-            if (s.id === slideId) {
-              break;
-            }
-            unscaledTop += s.height;
-          }
-
-          const offsetY = (currentScroll / currentScale) - unscaledTop;
-          element.style.transform = `translate3d(0, ${offsetY}px, 0)`;
-        });
-      }
-      // Note: the navbar no longer needs any JS-driven scroll handling here — it now lives outside
-      // the device frame's transformed ancestor and uses native CSS `position: sticky` directly
-      // (see the <nav> element below), which the browser's compositor handles with zero lag/jitter.
-    };
+    const handleScroll = () => syncFixedBackgroundsRef.current();
+    // Note: the navbar does not need any JS-driven scroll handling — it lives outside the device
+    // frame's transformed ancestor and uses native CSS `position: sticky` directly.
 
     const scrollEl = workspaceRef.current;
     if (scrollEl) {
       scrollEl.addEventListener('scroll', handleScroll, { passive: true });
+      // Zoom / device-frame changes animate; re-pin once they settle.
+      scrollEl.addEventListener('transitionend', handleScroll);
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('scroll', handleScroll, { passive: true });
+      window.addEventListener('resize', handleScroll);
     }
 
     // Direct initialization
@@ -781,12 +779,20 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       clearTimeout(timer);
       if (scrollEl) {
         scrollEl.removeEventListener('scroll', handleScroll);
+        scrollEl.removeEventListener('transitionend', handleScroll);
       }
       if (typeof window !== 'undefined') {
         window.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('resize', handleScroll);
       }
     };
   }, []);
+
+  // Re-pin after every render: a slide/element just switched to "fixed", heights changed, or the
+  // zoom (scale) changed — without waiting for the next scroll event.
+  useEffect(() => {
+    syncFixedBackgroundsRef.current();
+  });
 
   const getSlideUnscaledTop = (targetSlideId: string) => {
     let top = navbar.height ?? 60; // navbar height (configurable)
@@ -2365,12 +2371,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   if (isFixed) {
                     return (
                       <div
-                        className="slide-bg-fixed absolute inset-x-0 pointer-events-none transition-opacity duration-150"
+                        key="bg-fixed"
+                        className="bg-fixed-layer absolute inset-x-0 pointer-events-none transition-opacity duration-150"
                         data-slide-id={slide.id}
                         style={{
                           top: 0,
                           height: `calc(100vh / ${scaleFactor || 1})`,
-                          transform: 'translate3d(0, 0px, 0)',
                           backgroundColor: slide.backgroundColor?.includes('gradient') ? undefined : (slide.backgroundColor || '#ffffff'),
                           backgroundImage: slide.backgroundImage 
                             ? `url("${slide.backgroundImage}")` 
@@ -2386,6 +2392,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   } else {
                     return (
                       <div
+                        key="bg"
                         className="absolute inset-0 pointer-events-none transition-opacity duration-150"
                         style={{
                           backgroundColor: slide.backgroundColor?.includes('gradient') ? undefined : (slide.backgroundColor || '#ffffff'),
@@ -2573,7 +2580,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                         {/* Element Background Layer (if element has background) with backgroundOpacity */}
                         {elementHasBg && (
                           <div 
-                            className="absolute inset-0 pointer-events-none transition-opacity duration-150"
+                            /* Distinct keys so toggling fixed/scroll remounts the layer and drops the
+                               inline size/transform that syncFixedBackgrounds wrote directly to the DOM. */
+                            key={elem.styles.backgroundAttachment === 'fixed' ? 'bg-fixed' : 'bg'}
+                            className={`${elem.styles.backgroundAttachment === 'fixed' ? 'bg-fixed-layer absolute top-0 left-0' : 'absolute inset-0'} pointer-events-none transition-opacity duration-150`}
+                            data-fixed-axis={elem.styles.backgroundAttachment === 'fixed' ? 'xy' : undefined}
                             style={{
                               backgroundColor: elem.styles.backgroundColor?.includes('gradient') ? undefined : (elem.styles.backgroundColor || 'transparent'),
                               backgroundImage: elem.styles.backgroundImage 
@@ -2582,7 +2593,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                               backgroundSize: elem.styles.backgroundSize || 'cover',
                               backgroundPosition: 'center',
                               opacity: effectiveBgOpacity,
-                              borderRadius: 'inherit',
+                              borderRadius: elem.styles.backgroundAttachment === 'fixed' ? undefined : 'inherit',
                             }}
                           />
                         )}

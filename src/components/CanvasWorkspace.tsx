@@ -13,6 +13,8 @@ import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
 import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
+import { addToCart } from '../utils/cartStore';
+import { CartView } from './CartView';
 import { Icon } from '@iconify/react';
 import { 
   Trash2, 
@@ -1847,8 +1849,19 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     }
   };
 
+  // Short "added to cart" confirmation shown after an add-to-cart button is clicked.
+  const [cartToast, setCartToast] = useState<string | null>(null);
+  const cartToastTimer = useRef<number | undefined>(undefined);
+
   const handleOpenLink = (elem: CanvasElement, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (elem.cartProduct) {
+      addToCart(elem.cartProduct);
+      setCartToast(elem.cartProduct.name);
+      window.clearTimeout(cartToastTimer.current);
+      cartToastTimer.current = window.setTimeout(() => setCartToast(null), 2000);
+      return;
+    }
     if (!elem.linkUrl) return;
 
     if (elem.linkType === 'page' || elem.linkUrl.startsWith('#page-')) {
@@ -1900,6 +1913,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const navWidthPx = baseWidth * ((navbar.width ?? 100) / 100);
 
   return (
+    <>
+    {cartToast && (
+      <div dir="rtl" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999999] bg-[#2A1F1A] text-white text-sm font-semibold px-5 py-3 rounded-full shadow-lg pointer-events-none">
+        ✓ أُضيف «{cartToast}» إلى السلة
+      </div>
+    )}
     <div 
       ref={workspaceRef}
       // IMPORTANT: this must be a capped `h-[...]`, never `min-h-[...]`. A min-height is only a
@@ -2425,7 +2444,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       onTouchCancel={handleElementTouchEnd}
                       onClick={(e) => {
                         if (isPreviewActive) {
-                          if (elem.linkUrl) {
+                          if (elem.linkUrl || elem.cartProduct) {
                             handleOpenLink(elem, e);
                           }
                           return;
@@ -2462,7 +2481,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           elem.clipPath ? 'drop-shadow(0px 8px 20px rgba(0,0,0,0.14)) drop-shadow(0px 2px 5px rgba(0,0,0,0.06))' : ''
                         ].filter(Boolean).join(' ') || undefined,
                         cursor: isPreviewActive
-                          ? (elem.linkUrl ? 'pointer' : 'default')
+                          ? (elem.linkUrl || elem.cartProduct ? 'pointer' : 'default')
                           : (elem.isLocked ? 'default' : (isDragging ? 'grabbing' : 'grab')),
                         transform: elem.rotation ? `rotate(${elem.rotation}deg)` : undefined,
                         transformOrigin: 'center center',
@@ -3903,6 +3922,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           <InteractiveCalendarWidget elem={elem} />
                         )}
 
+                        {elem.type === 'cart' && (
+                          <CartView elem={elem} isPreviewActive={isPreviewActive} />
+                        )}
+
                         {elem.type === 'html' && (
                           <div className="w-full h-full bg-white rounded-xl border border-black/[0.08] overflow-hidden flex flex-col">
                             <div className="bg-neutral-100 px-3 py-1 border-b border-black/[0.06] flex items-center justify-between text-[10px] font-mono text-neutral-500">
@@ -4484,5 +4507,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       </div>
     )}
   </div>
+    </>
   );
 };

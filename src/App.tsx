@@ -16,6 +16,7 @@ import { StandardAuth } from './components/StandardAuth';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
+import { getOnlineShopTemplate } from './data/onlineShopTemplate';
 import { arrangeForMobile } from './utils/mobileLayout';
 
 // Firebase Imports
@@ -1626,6 +1627,13 @@ export default function App() {
         content: customContent || 'circle',
         styles: { backgroundColor: '#ffffff', ...(customStyles || {}) },
       },
+      cart: {
+        name: 'سلة المشتريات',
+        width: 900,
+        height: 480,
+        content: '',
+        styles: { color: '#B4532A', ...(customStyles || {}) },
+      },
     };
 
     const cfg = defaultConfigs[type] || defaultConfigs.card;
@@ -1933,16 +1941,17 @@ export default function App() {
     setActiveSlideId(duplicatedSlides[0].id);
   };
 
-  // Applies the free-tier starter template: a fixed 5-page site (Home, About, Our Work,
-  // Pricing, Contact) linked through one shared navbar. This REPLACES the whole site
-  // (all current pages/elements) rather than appending, since it is a full starter-site action.
-  const handleApplyFreeStarterTemplate = () => {
-    const confirmed = window.confirm(
-      'سيتم استبدال كل صفحات موقعك الحالية بقالب جاهز من خمس صفحات (مدخل، من نحن، أعمالنا، الأسعار، اتصال). هل تريد المتابعة؟'
-    );
-    if (!confirmed) return;
+  // Applies a ready-made multi-page site template (pages linked through one shared navbar).
+  // This REPLACES the whole site (all current pages/elements) rather than appending, since it
+  // is a full starter-site action. Template ids get a unique suffix, and every page/slide
+  // reference (navbar items, navbar CTA, element links) is remapped to the new ids.
+  const applySiteTemplate = (
+    template: { pages: Page[]; elements: CanvasElement[] },
+    confirmMessage: string
+  ) => {
+    if (!window.confirm(confirmMessage)) return;
 
-    const { pages: templatePages, elements: templateElements } = getFreeStarterTemplate();
+    const { pages: templatePages, elements: templateElements } = template;
     const suffix = Date.now();
 
     const idMap: Record<string, string> = {};
@@ -1965,17 +1974,33 @@ export default function App() {
       },
     }));
 
-    const newElements: CanvasElement[] = templateElements.map((el) => ({
-      ...el,
-      id: `${el.id}-${suffix}`,
-      slideId: idMap[el.slideId] || el.slideId,
-    }));
+    const newElements: CanvasElement[] = templateElements.map((el) => {
+      const linkTargetId = el.linkTargetId ? (idMap[el.linkTargetId] || el.linkTargetId) : el.linkTargetId;
+      const isInternalLink = el.linkType === 'page' || el.linkType === 'slide';
+      return {
+        ...el,
+        id: `${el.id}-${suffix}`,
+        slideId: idMap[el.slideId] || el.slideId,
+        linkTargetId,
+        linkUrl: isInternalLink && linkTargetId ? `#${el.linkType}-${linkTargetId}` : el.linkUrl,
+      };
+    });
 
     setPages(newPages);
     setElements(newElements);
     setActivePageId(newPages[0].id);
     setActiveSlideId(newPages[0].slides[0].id);
   };
+
+  const handleApplyFreeStarterTemplate = () => applySiteTemplate(
+    getFreeStarterTemplate(),
+    'سيتم استبدال كل صفحات موقعك الحالية بقالب جاهز من خمس صفحات (مدخل، من نحن، أعمالنا، الأسعار، اتصال). هل تريد المتابعة؟'
+  );
+
+  const handleApplyOnlineShopTemplate = () => applySiteTemplate(
+    getOnlineShopTemplate(),
+    'سيتم استبدال كل صفحات موقعك الحالية بقالب متجر إلكتروني من خمس صفحات (الرئيسية، المنتجات، السلة، طريقة الطلب، تواصل معنا). هل تريد المتابعة؟'
+  );
 
   const handleUpdatePage = (updates: Partial<Page>) => {
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, ...updates } : p));
@@ -2373,6 +2398,7 @@ export default function App() {
         onAddSlideTemplate={handleAddSlideTemplate}
         onAddPageTemplate={handleAddPageTemplate}
         onApplyFreeStarterTemplate={handleApplyFreeStarterTemplate}
+        onApplyOnlineShopTemplate={handleApplyOnlineShopTemplate}
         onDeleteSlide={handleDeleteSlide}
         onUpdateSlideHeight={handleUpdateSlideHeight}
         onAddElement={(type, customContent, customStyles, extraData) => {

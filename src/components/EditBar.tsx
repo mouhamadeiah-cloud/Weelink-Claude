@@ -160,6 +160,20 @@ export const EditBar: React.FC<EditBarProps> = ({
           </div>
         </div>
 
+        {/* ترس إعدادات العرض - أول زر عند تحديد عرض السيارات أو بحثها أو سلة/طلب المتجر، ليبقى ظاهرًا على الهاتف أيضًا */}
+        {(selectedElement?.type === 'carListings' || selectedElement?.type === 'carSearch' || selectedElement?.type === 'cart' || selectedElement?.type === 'checkout') && (
+          <button
+            type="button"
+            onClick={() => onSelectTool('format')}
+            className="h-7 sm:h-8 px-2 rounded-lg flex items-center gap-1 text-[11px] font-bold text-[#0071e3] bg-[#0071e3]/12 hover:bg-[#0071e3]/20 active:scale-95 transition-all cursor-pointer ring-1 ring-[#0071e3]/30"
+            title={selectedElement.type === 'carListings' ? 'إعدادات العرض: البطاقات أو الصفوف أو الشريط المتحرك، كل السيارات أو المميزة فقط' : 'إعدادات العنصر'}
+            aria-label="إعدادات العرض"
+          >
+            <Settings size={14} strokeWidth={2} />
+            <span>{selectedElement.type === 'carListings' ? 'إعدادات العرض' : 'الإعدادات'}</span>
+          </button>
+        )}
+
         {/* 1. أيقونة اللون */}
         {(!isSlideSelected || isNavbarSelected) && (
           <button

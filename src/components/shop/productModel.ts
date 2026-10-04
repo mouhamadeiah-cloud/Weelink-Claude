@@ -70,27 +70,6 @@ export const badgeColor = (p: ShopProduct) => (isSoldOut(p) ? '#6e6e73' : BADGE_
 export const findVariant = (p: ShopProduct, values: string[]) =>
   p.variants.find((v) => variantLabel(v.values) === variantLabel(values));
 
-// The choice made for a quick add from the store card: the first in-stock combination for the
-// stock options, and the first value of every other option the customer could pick. Labels are
-// in the same order as the floating card's choices. null when nothing is available.
-export const defaultChoice = (p: ShopProduct): { label: string; variant?: ProductVariant } | null => {
-  const choosable = p.options.filter((o) => o.values.length > 1 || (o.affectsStock && o.values.length > 0));
-  const stockOpts = stockOptions(p.options);
-  let variant: ProductVariant | undefined;
-  if (stockOpts.length) {
-    variant = tracksStock(p) ? p.variants.find((v) => v.stock > 0) : p.variants[0];
-    if (!variant && tracksStock(p)) return null;
-  }
-  const label = choosable
-    .map((o) => {
-      const k = stockOpts.findIndex((s) => s.id === o.id);
-      return k >= 0 && variant ? variant.values[k] : o.values[0]?.label;
-    })
-    .filter(Boolean)
-    .join(' / ');
-  return { label, variant };
-};
-
 // Applies a stock change to one variant (or to the product when it has none) and keeps the total.
 export const changeStock = (p: ShopProduct, delta: number, variant?: string): ShopProduct => {
   if (!tracksStock(p)) return p;

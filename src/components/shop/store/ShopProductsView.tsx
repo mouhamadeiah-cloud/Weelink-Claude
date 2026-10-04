@@ -92,11 +92,11 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
             {list.map((p) => (
               p.display === 'slide' ? (
                 <div key={p.id} data-product-id={p.id} className="col-span-full">
-                  <ProductSlide product={p} accent={accent} onOpen={() => setOpenId(p.id)} onAdded={showAdded} />
+                  <ProductSlide product={p} accent={accent} onOpen={() => setOpenId(p.id)} />
                 </div>
               ) : (
                 <div key={p.id} data-product-id={p.id} className="flex">
-                  <ProductCard product={p} accent={accent} onOpen={() => setOpenId(p.id)} onAdded={showAdded} />
+                  <ProductCard product={p} accent={accent} onOpen={() => setOpenId(p.id)} />
                 </div>
               )
             ))}

@@ -402,7 +402,7 @@ export const normalizeCar = (raw: any, currency: string): Car => {
     accidents: oneOf(raw?.accidents, ['none', 'minor', 'major'] as const, 'none'),
     status: oneOf(raw?.status, ['available', 'reserved', 'preparing', 'sold'] as const, 'available'),
     features: Array.isArray(raw?.features) ? raw.features.filter((f: unknown) => typeof f === 'string') : [],
-    images: Array.isArray(raw?.images) ? raw.images.filter((f: unknown) => typeof f === 'string' && f).slice(0, MAX_CAR_IMAGES) : [],
+    images: Array.isArray(raw?.images) ? raw.images.filter((f: unknown) => typeof f === 'string' && f).slice(0, MAX_CAR_IMAGES).map((f: string) => f.replace(WRONG_EXAMPLE_PHOTO, AUDI_PHOTO)) : [],
     currency: str(raw?.currency) || currency,
     showPrice: raw?.showPrice !== false,
     negotiable: !!raw?.negotiable,
@@ -541,6 +541,9 @@ export const nextStockNumber = (cars: Car[]) => {
   return `A-${String(max + 1).padStart(4, '0')}`;
 };
 
+// The first example Audi pointed at a photo of a piano; saved showrooms get the car photo instead.
+const AUDI_PHOTO = '1617814076367-b759c7d7e738';
+const WRONG_EXAMPLE_PHOTO = '1603584173870-7f23fdae1b7a';
 const unsplash = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=80`;
 
 // A new showroom starts with four example cars so its pages are not empty; the owner edits or
@@ -575,7 +578,7 @@ export const exampleCars = (): Car[] => {
       engineCc: 2000, horsepower: 252, mileage: 91000, color: 'رمادي', interiorColor: 'أسود', specs: 'أوروبي', owners: 2, paint: 'partial',
       features: ['مكيف أوتوماتيك', 'سقف بانورامي', 'مقاعد جلد', 'تدفئة مقاعد', 'نظام ملاحة', 'حساسات ركن', 'مثبت سرعة'],
       description: 'أودي A6 دفع رباعي، رش جزئي على الباب الخلفي، محرك وجير بحالة ممتازة.',
-      images: [unsplash('1603584173870-7f23fdae1b7a')], price: 21000, negotiable: true, purchasePrice: 18500,
+      images: [unsplash(AUDI_PHOTO)], price: 21000, negotiable: true, purchasePrice: 18500,
     }),
     make(4, {
       brand: 'فولكس فاغن', model: 'غولف', trim: 'GTI', year: 2020, bodyType: 'هاتشباك', fuel: 'بنزين', transmission: 'أوتوماتيك', drive: 'دفع أمامي',

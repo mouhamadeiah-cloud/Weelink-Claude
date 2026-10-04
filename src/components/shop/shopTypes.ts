@@ -95,6 +95,7 @@ export interface ShopCustomer {
   email: string;
   address: string;
   registered?: boolean; // signed up from the checkout page
+  province?: string;
   createdAt: string;
 }
 
@@ -120,6 +121,7 @@ export interface ShopOrderItem {
 // The visitor's details from the checkout page, kept on the order even without an account.
 export interface OrderContact {
   name: string;
+  province?: string;
   address: string;
   email: string;
   whatsapp: string;
@@ -162,6 +164,20 @@ export interface ShopMovement {
   orderId?: string;
   createdAt: string;
 }
+
+// Profit or expense the merchant enters by hand, from outside the store page (الحسابات الجانبية).
+export interface ShopEntry {
+  id: string;
+  type: 'income' | 'expense';
+  amount: number;
+  reason: string;
+  date: string; // YYYY-MM-DD
+  createdAt: string;
+}
+
+export const SYRIAN_GOVERNORATES = [
+  'دمشق', 'ريف دمشق', 'حلب', 'حمص', 'حماة', 'اللاذقية', 'طرطوس', 'إدلب', 'درعا', 'السويداء', 'القنيطرة', 'دير الزور', 'الحسكة', 'الرقة',
+];
 
 export type PaymentMethodId = 'cash' | 'syriatel-cash' | 'sham-cash' | 'mtn-cash' | 'gateway';
 
@@ -249,6 +265,8 @@ export interface ShopAdminData {
   customers: ShopCustomer[];
   orders: ShopOrder[];
   movements: ShopMovement[];
+  entries: ShopEntry[];
+  visits: Record<string, number>; // store page visits per day (YYYY-MM-DD)
   settings: ShopSettings;
 }
 
@@ -300,6 +318,8 @@ export const createEmptyShopAdmin = (): ShopAdminData => ({
   customers: [],
   orders: [],
   movements: [],
+  entries: [],
+  visits: {},
   settings: DEFAULT_SHOP_SETTINGS,
 });
 
@@ -362,6 +382,8 @@ export const normalizeShopAdmin = (raw: any): ShopAdminData => {
     customers: Array.isArray(raw.customers) ? raw.customers : [],
     orders: Array.isArray(raw.orders) ? raw.orders : [],
     movements: Array.isArray(raw.movements) ? raw.movements : [],
+    entries: Array.isArray(raw.entries) ? raw.entries : [],
+    visits: raw.visits && typeof raw.visits === 'object' ? raw.visits : {},
     settings: {
       ...base.settings,
       ...(raw.settings || {}),

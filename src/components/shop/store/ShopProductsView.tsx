@@ -5,7 +5,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PackageOpen } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
-import { useShopData } from './ShopDataContext';
+import { useShopData, useShopUpdate } from './ShopDataContext';
+import { recordVisit } from '../orderModel';
 import { ProductCard, ProductSlide } from './ProductCard';
 import { ProductDetailModal } from './ProductDetailModal';
 
@@ -29,6 +30,12 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
     toastTimer.current = window.setTimeout(() => setToast(null), 2000);
   };
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
+
+  // Counts one store visit per browser session (shown in الحسابات ← الإحصائيات).
+  const updateShop = useShopUpdate();
+  useEffect(() => {
+    if (isPreviewActive && updateShop) recordVisit(updateShop);
+  }, [isPreviewActive, updateShop]);
 
   const products = useMemo(() => (admin?.products || []).filter((p) => p.published), [admin]);
   // Main catalogs that hold at least one shown product (directly or through a sub catalog).

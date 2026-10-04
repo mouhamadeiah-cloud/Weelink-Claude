@@ -63,3 +63,18 @@ export const orderConfirmationText = (d: ShopAdminData, order: ShopOrder) =>
 // wa.me link to a phone number (digits only, international format) with a message.
 export const whatsappLink = (phone: string, text: string) =>
   `https://wa.me/${phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent(text)}`;
+
+export const dayKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Adds one visit for today, at most once per browser session.
+export const recordVisit = (update: (fn: (d: ShopAdminData) => ShopAdminData) => void) => {
+  const key = dayKey(new Date());
+  try {
+    if (sessionStorage.getItem(`weelink_visit_${key}`)) return;
+    sessionStorage.setItem(`weelink_visit_${key}`, '1');
+  } catch {
+    // Session storage unavailable: count the visit anyway.
+  }
+  update((d) => ({ ...d, visits: { ...d.visits, [key]: (d.visits[key] || 0) + 1 } }));
+};

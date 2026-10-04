@@ -10,7 +10,7 @@ import { useCart, setCartQty, clearCart, formatPrice } from '../../../utils/cart
 import { useShopData, useShopUpdate } from './ShopDataContext';
 import { deliveryQuote } from '../productModel';
 import { addOrder, enabledWallets, nextOrderNumber, walletFee, whatsappLink } from '../orderModel';
-import { newId, ShopAdminData, ShopOrder, ShopCustomer, WalletId } from '../shopTypes';
+import { newId, ShopAdminData, ShopOrder, ShopCustomer, WalletId, SYRIAN_GOVERNORATES } from '../shopTypes';
 import { uploadImageFile } from '../adminUi';
 
 interface CheckoutViewProps {
@@ -50,7 +50,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ accent, isPreviewAct
   const s = shop.settings;
   const currency = items[0]?.currency || s.currency;
 
-  const [form, setForm] = useState({ name: '', address: '', email: '', whatsapp: '', note: '' });
+  const [form, setForm] = useState({ name: '', province: '', address: '', email: '', whatsapp: '', note: '' });
   const [register, setRegister] = useState(false);
   const canDeliver = s.delivery.delivery;
   const canPickup = s.delivery.pickup;
@@ -79,7 +79,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ accent, isPreviewAct
   const steps = useMemo(() => (wallet?.instructions || '').split('\n').map((l) => l.trim()).filter(Boolean), [wallet?.instructions]);
 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
-  const setField = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value });
+  const setField = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value });
 
   const copyAccount = async () => {
     if (!wallet) return;
@@ -102,6 +102,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ accent, isPreviewAct
 
   const validate = () => {
     if (!form.name.trim()) return 'اكتب اسمك.';
+    if (!form.province) return 'اختر محافظتك.';
     if (delivering && !form.address.trim()) return 'اكتب عنوان التوصيل.';
     if (!form.whatsapp.trim()) return 'اكتب رقم واتساب للتواصل معك.';
     if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim())) return 'البريد الإلكتروني غير صحيح.';
@@ -116,7 +117,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ accent, isPreviewAct
     const problem = validate();
     setError(problem);
     if (problem || !updateShop || !items.length) return;
-    const contact = { name: form.name.trim(), address: delivering ? form.address.trim() : '', email: form.email.trim(), whatsapp: form.whatsapp.trim() };
+    const contact = { name: form.name.trim(), province: form.province, address: delivering ? form.address.trim() : '', email: form.email.trim(), whatsapp: form.whatsapp.trim() };
     const now = new Date().toISOString();
     const customerId = register ? findCustomer(shop, contact.whatsapp, contact.email)?.id || newId('cus') : '';
     const order: ShopOrder = {
@@ -143,7 +144,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ accent, isPreviewAct
     };
     updateShop((d) => {
       const next = register
-        ? registerCustomer(d, customerId, { name: contact.name, phone: contact.whatsapp, email: contact.email, address: contact.address, registered: true })
+        ? registerCustomer(d, customerId, { name: contact.name, phone: contact.whatsapp, email: contact.email, address: contact.address, province: contact.province, registered: true })
         : d;
       return addOrder(next, { ...order, number: nextOrderNumber(next) });
     });
@@ -274,7 +275,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({ accent, isPreviewAct
             <div className="grid @lg:grid-cols-2 gap-2.5">
               <input className={fieldClass} placeholder="الاسم الكامل *" value={form.name} onChange={setField('name')} aria-label="الاسم" />
               <input className={fieldClass} placeholder="رقم واتساب *" value={form.whatsapp} onChange={setField('whatsapp')} dir="ltr" inputMode="tel" aria-label="رقم واتساب" style={{ textAlign: 'right' }} />
-              <input className={`${fieldClass} @lg:col-span-2`} placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={setField('email')} dir="ltr" aria-label="البريد الإلكتروني" style={{ textAlign: 'right' }} />
+              <select className={fieldClass} value={form.province} onChange={setField('province')} aria-label="المحافظة" style={{ color: form.province ? undefined : '#a3a3a3' }}>
+                <option value="">المحافظة *</option>
+                {SYRIAN_GOVERNORATES.map((g) => <option key={g} value={g} style={{ color: '#2A1F1A' }}>{g}</option>)}
+              </select>
+              <input className={fieldClass} placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={setField('email')} dir="ltr" aria-label="البريد الإلكتروني" style={{ textAlign: 'right' }} />
               {delivering && (
                 <input className={`${fieldClass} @lg:col-span-2`} placeholder="العنوان (المدينة، الحي، الشارع) *" value={form.address} onChange={setField('address')} aria-label="العنوان" />
               )}

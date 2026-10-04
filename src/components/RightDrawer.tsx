@@ -1776,6 +1776,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               <div className="space-y-4">
                 {selectedElement ? (
                   <>
+                    {/* The shop cart / order card: accent colour and texts */}
+                    {(selectedElement.type === 'cart' || selectedElement.type === 'checkout') && (
+                      <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+                    )}
                     {/* إعدادات معرض الصور (Gallery Settings) */}
                     {selectedElement.type === 'gallery' && (() => {
                       const config = selectedElement.galleryConfig || {
@@ -5694,6 +5698,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             <div key={elIdx} style={{ ...elStyle, padding: 0, gap: tiny ? 16 : 28, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap' }}>
                               {Array.from({ length: tiny ? 8 : el.shopLayout === 'small' ? 6 : el.shopLayout === 'large' ? 3 : 4 }).map((__, k) => (
                                 <div key={k} style={{ flex: tiny ? '0 0 150px' : '1 1 0', minWidth: tiny ? 150 : 150, maxHeight: tiny ? undefined : 400, borderRadius: tiny ? 9999 : 24, background: tiny ? 'rgba(255,255,255,0.9)' : '#FFFFFF', border: '2px solid rgba(42,31,26,0.08)', boxShadow: '0 8px 24px rgba(42,31,26,0.08)' }} />
+                              ))}
+                            </div>
+                          );
+                        }
+                        if (el.type === 'cart' || el.type === 'checkout') {
+                          const rows = el.type === 'cart' ? 4 : 6;
+                          return (
+                            <div key={elIdx} style={{ ...elStyle, background: el.styles?.backgroundColor || '#FFFFFF', borderRadius: 24, flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', gap: 18, padding: 28 }}>
+                              <div style={{ height: 26, width: '45%', borderRadius: 8, background: el.shopAccent || '#B4532A', opacity: 0.85 }} />
+                              {Array.from({ length: rows }).map((__, k) => (
+                                <div key={k} style={{ height: el.type === 'cart' ? 70 : 52, borderRadius: 12, background: 'rgba(128,128,128,0.18)' }} />
                               ))}
                             </div>
                           );

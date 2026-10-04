@@ -1,6 +1,7 @@
 // Ready slides of the "عناصر online Shop" category, offered only in Online Shop projects: two start
 // slides, product slides in several layouts (live 'shopProducts' elements reading the store's
-// products), two search bars, a running product strip, animated cards and a running text strip.
+// products), two search bars, a running product strip, animated cards, a running text strip and
+// two cart pages (the cart summary beside the order card).
 // Texts are the shop template's own and images come from the platform library (public/Library).
 // Coordinates are already on the 1280-wide canvas.
 
@@ -35,6 +36,13 @@ const paragraph = (box: Box, text: string, size = 15, color = C.muted, align = '
 
 const products = (box: Box, extra: Record<string, unknown>) =>
   el('shopProducts', 'منتجات المتجر', box, '', { color: C.accent }, extra);
+
+// The cart summary and, beside it, the order card (the visitor's details and payment).
+const cartSummary = (box: Box, styles: Record<string, unknown>, accent: string) =>
+  el('cart', 'ملخص السلة', box, '', { ...styles, fontFamily: BODY_FONT }, { cartSplit: true, shopAccent: accent });
+
+const orderCard = (box: Box, styles: Record<string, unknown>, accent: string) =>
+  el('checkout', 'بطاقة الطلب', box, '', { ...styles, fontFamily: BODY_FONT }, { shopAccent: accent });
 
 const shopButton = (box: Box) =>
   el('button', 'زر', box, 'تسوّق الآن', {
@@ -253,6 +261,47 @@ const SLIDES: (() => ShopSlide)[] = [
         animationTrigger: 'loop',
         animationDuration: 18,
       }),
+    ],
+  }),
+
+  // 13. Cart: the cart summary on the right and the order card in the space on its left.
+  () => ({
+    name: 'سلة - بطاقتان',
+    height: 940,
+    backgroundColor: C.cream,
+    elements: [
+      heading({ x: 0, y: 44, width: 1280, height: 50 }, 'سلة المشتريات', 34),
+      paragraph({ x: 0, y: 98, width: 1280, height: 32 }, 'راجع طلبك، أدخل بياناتك واختر طريقة الدفع.'),
+      cartSummary({ x: 690, y: 150, width: 500, height: 740 }, { color: C.ink, backgroundColor: '#FFFFFF', borderRadius: 24, borderColor: 'rgba(42,31,26,0.08)', borderWidth: 1 }, C.accent),
+      orderCard({ x: 90, y: 150, width: 570, height: 740 }, { color: C.ink, backgroundColor: '#FFFFFF', borderRadius: 24, borderColor: 'rgba(42,31,26,0.08)', borderWidth: 1 }, C.accent),
+    ],
+  }),
+
+  // 14. Cart on a dark page: a dark see-through cart beside a light order card with a gold frame.
+  () => ({
+    name: 'سلة - داكنة',
+    height: 960,
+    backgroundColor: C.ink,
+    elements: [
+      el('heading', 'عنوان', { x: 690, y: 60, width: 500, height: 56 }, 'سلتك جاهزة', {
+        fontSize: 38,
+        fontWeight: 'bold',
+        color: '#FFFFFF',
+        fontFamily: HEADING_FONT,
+        textAlign: 'right',
+        animation: 'slide-up',
+        animationTrigger: 'once',
+        animationDuration: 1,
+      }),
+      paragraph({ x: 690, y: 120, width: 500, height: 32 }, 'أكمل بياناتك على اليسار وأرسل طلبك.', 15, 'rgba(255,255,255,0.7)', 'right'),
+      cartSummary({ x: 690, y: 176, width: 500, height: 720 }, { color: C.cream, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 32, borderColor: 'rgba(255,255,255,0.14)', borderWidth: 1 }, '#E0A458'),
+      orderCard({ x: 90, y: 60, width: 570, height: 836 }, {
+        color: C.ink,
+        backgroundColor: C.cream,
+        borderRadius: 32,
+        borderColor: '#E0A458',
+        borderWidth: 2,
+      }, C.accent),
     ],
   }),
 ];

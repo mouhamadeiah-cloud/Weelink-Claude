@@ -6,6 +6,7 @@
 import React from 'react';
 import { ShoppingBag } from 'lucide-react';
 import type { CanvasElement, ShopLayout, ShopCardAnimation, ShopSearchStyle } from '../types';
+import { CHECKOUT_TEXTS, CheckoutTextKey } from './shop/store/checkoutStore';
 
 interface ShopElementSettingsProps {
   element: CanvasElement;
@@ -63,8 +64,69 @@ const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="text-[11px] font-bold text-neutral-600 pt-1">{children}</div>
 );
 
+const CART_TEXT_KEYS: { key: CheckoutTextKey; label: string }[] = [
+  { key: 'summaryTitle', label: 'عنوان السلة' },
+  { key: 'empty', label: 'نص السلة الفارغة' },
+  { key: 'totalLabel', label: 'نص الإجمالي' },
+];
+const FORM_TEXT_KEYS: { key: CheckoutTextKey; label: string }[] = [
+  { key: 'formTitle', label: 'عنوان البطاقة' },
+  { key: 'details', label: 'عنوان البيانات' },
+  { key: 'receive', label: 'عنوان الاستلام' },
+  { key: 'payment', label: 'عنوان الدفع' },
+  { key: 'submit', label: 'زر تأكيد الطلب' },
+  { key: 'thanks', label: 'كلمة الشكر بعد الطلب' },
+];
+
+// The look and texts of the Online Shop's cart summary and order card. Background, border,
+// corners, font and text colour are the element's own (format, colour and font panels).
+const CheckoutLookSettings: React.FC<ShopElementSettingsProps & { keys: typeof CART_TEXT_KEYS; title: string }> = ({ element, onUpdateElement, keys, title }) => {
+  const accent = element.shopAccent || element.styles.color || '#B4532A';
+  const setText = (key: CheckoutTextKey, value: string) => {
+    const next = { ...(element.shopTexts || {}), [key]: value };
+    if (!value) delete next[key];
+    onUpdateElement({ shopTexts: next });
+  };
+  return (
+    <div className="space-y-2 p-3 rounded-2xl border border-[#B4532A]/20 bg-[#B4532A]/[0.04]" dir="rtl">
+      <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800">
+        <ShoppingBag size={14} className="text-[#B4532A]" />
+        <span>{title}</span>
+      </div>
+      <label className="flex items-center justify-between gap-2 text-[11px] font-bold text-neutral-600">
+        <span>لون الأزرار والأسعار</span>
+        <input
+          type="color"
+          value={accent}
+          // The first accent change moves a pre-accent cart's colour out of its text colour.
+          onChange={(e) => onUpdateElement(element.shopAccent ? { shopAccent: e.target.value } : { shopAccent: e.target.value, styles: { ...element.styles, color: '#2A1F1A' } })}
+          className="w-8 h-7 rounded-md border border-neutral-200 cursor-pointer bg-white"
+          aria-label="لون الأزرار والأسعار"
+        />
+      </label>
+      {keys.map(({ key, label }) => (
+        <div key={key}>
+          <Label>{label}</Label>
+          <input className={inputClass} placeholder={CHECKOUT_TEXTS[key]} value={element.shopTexts?.[key] || ''} onChange={(e) => setText(key, e.target.value)} />
+        </div>
+      ))}
+      <p className="text-[10px] text-neutral-500 leading-relaxed">
+        الخلفية والإطار والزوايا ونوع الخط ولون النص تتغير من أدوات التنسيق مثل أي عنصر.
+      </p>
+    </div>
+  );
+};
+
 export const ShopElementSettings: React.FC<ShopElementSettingsProps> = ({ element, onUpdateElement }) => {
   const product = element.cartProduct;
+
+  if (element.type === 'checkout') {
+    return <CheckoutLookSettings element={element} onUpdateElement={onUpdateElement} keys={FORM_TEXT_KEYS} title="بطاقة الطلب" />;
+  }
+
+  if (element.type === 'cart' && element.cartSplit) {
+    return <CheckoutLookSettings element={element} onUpdateElement={onUpdateElement} keys={CART_TEXT_KEYS} title="ملخص السلة" />;
+  }
 
   if (element.type === 'cart') {
     return (

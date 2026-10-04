@@ -1851,6 +1851,14 @@ export default function App() {
         content: 'ابحث عن منتج...',
         styles: { color: '#B4532A', ...(customStyles || {}) },
       },
+      checkout: {
+        name: 'بطاقة الطلب',
+        width: 560,
+        height: 740,
+        content: '',
+        shopAccent: '#B4532A',
+        styles: { color: '#2A1F1A', backgroundColor: '#FFFFFF', borderRadius: 24, ...(customStyles || {}) },
+      },
     };
 
     const cfg = defaultConfigs[type] || defaultConfigs.card;

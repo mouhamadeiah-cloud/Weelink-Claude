@@ -190,31 +190,54 @@ const LIVE_GRIDS = [
   { demoPrefix: /^shop-featured-\d+-/, slideId: 'shop-home-featured', id: 'shop-featured-live', box: { x: 90, y: 170, width: 1100, height: 430 }, extra: { shopLimit: FEATURED_LIMIT } },
 ];
 
-// An Online Shop's cart page is its checkout page: the cart beside the visitor's details and
-// payment, so the cart element is wider and taller than the free page's.
+// An Online Shop's cart page is its checkout page: the cart summary on the right and, in the
+// empty space on its left, the order card (the visitor's details and payment) as its own element.
+// Both are styled like any element (background, border, font, text colour) plus an accent.
 const CHECKOUT = {
   slideHeight: 1000,
+  // The single element of shops made before the order card had its own element.
   cart: { x: 90, y: 160, width: 1100, height: 740 },
+  summary: { x: 690, y: 160, width: 500, height: 740 },
+  form: { x: 90, y: 160, width: 570, height: 740 },
   continueY: 925,
   subtitle: 'راجع طلبك، أدخل بياناتك واختر طريقة الدفع.',
 };
 
+const checkoutCardStyles = { color: C.ink, backgroundColor: '#FFFFFF', borderRadius: 24, borderColor: 'rgba(42,31,26,0.08)', borderWidth: 1 };
+
+const checkoutForm = (slideId: string): CanvasElement =>
+  el('shop-checkout', 'checkout', slideId, CHECKOUT.form, '', checkoutCardStyles, { name: 'بطاقة الطلب', shopAccent: C.accent });
+
 // Shops created before the checkout page: enlarge their cart page if it is still as created.
+// Then split a one-piece checkout into the cart summary and the order card on its left, and
+// move the accent out of the text colour.
 export function withCheckoutLayout(pages: Page[], elements: CanvasElement[]): { pages: Page[]; elements: CanvasElement[] } {
   const cart = elements.find((e) => e.id === 'shop-cart');
-  if (!cart || cart.x !== 190 || cart.y !== 160 || cart.width !== 900 || cart.height !== 480) return { pages, elements };
-  return {
-    pages: pages.map((p) => ({
+  if (!cart) return { pages, elements };
+  const old = cart.x === 190 && cart.y === 160 && cart.width === 900 && cart.height === 480;
+  if (old) {
+    pages = pages.map((p) => ({
       ...p,
       slides: p.slides.map((sl) => (sl.id === 'shop-cart-slide' && (sl.height || 0) < CHECKOUT.slideHeight ? { ...sl, height: CHECKOUT.slideHeight } : sl)),
-    })),
-    elements: elements.map((e) => {
-      if (e.id === 'shop-cart') return { ...e, ...CHECKOUT.cart };
-      if (e.id === 'shop-cart-continue' && e.y === 670) return { ...e, y: CHECKOUT.continueY };
-      if (e.id === 'shop-cart-sub' && e.content === 'راجع طلبك ثم أرسله عبر واتساب. الدفع عند الاستلام.') return { ...e, content: CHECKOUT.subtitle };
-      return e;
-    }),
-  };
+    }));
+  }
+  const whole = old || (cart.x === CHECKOUT.cart.x && cart.y === CHECKOUT.cart.y && cart.width === CHECKOUT.cart.width && cart.height === CHECKOUT.cart.height);
+  const split = whole && !cart.cartSplit && !elements.some((e) => e.type === 'checkout');
+  const recolor = !cart.shopAccent;
+  if (!old && !split && !recolor) return { pages, elements };
+  const next = elements.map((e) => {
+    if (e.id === 'shop-cart') {
+      return {
+        ...e,
+        ...(split ? { ...CHECKOUT.summary, cartSplit: true } : old ? CHECKOUT.cart : {}),
+        ...(recolor ? { shopAccent: e.styles.color || C.accent, styles: { ...e.styles, ...(split ? checkoutCardStyles : { color: C.ink }) } } : {}),
+      };
+    }
+    if (old && e.id === 'shop-cart-continue' && e.y === 670) return { ...e, y: CHECKOUT.continueY };
+    if (old && e.id === 'shop-cart-sub' && e.content === 'راجع طلبك ثم أرسله عبر واتساب. الدفع عند الاستلام.') return { ...e, content: CHECKOUT.subtitle };
+    return e;
+  });
+  return { pages, elements: split ? [...next, checkoutForm(cart.slideId)] : next };
 }
 
 // «عروض مميزة»: the products marked as featured in the product editor, as a running strip on the
@@ -397,9 +420,12 @@ export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { 
     // ---------- Cart ----------
     heading('shop-cart-heading', cart, { x: 0, y: 50, width: 1280, height: 50 }, 'سلة المشتريات', 34, C.ink, 'center'),
     paragraph('shop-cart-sub', cart, { x: 0, y: 104, width: 1280, height: 32 }, live ? CHECKOUT.subtitle : 'راجع طلبك ثم أرسله عبر واتساب. الدفع عند الاستلام.', 15, C.muted, 'center'),
-    el('shop-cart', 'cart', cart, live ? CHECKOUT.cart : { x: 190, y: 160, width: 900, height: 480 }, '', {
-      color: C.accent,
-    }, { cartWhatsapp: WHATSAPP_NUMBER }),
+    ...(live
+      ? [
+          el('shop-cart', 'cart', cart, CHECKOUT.summary, '', checkoutCardStyles, { cartWhatsapp: WHATSAPP_NUMBER, cartSplit: true, shopAccent: C.accent }),
+          checkoutForm(cart),
+        ]
+      : [el('shop-cart', 'cart', cart, { x: 190, y: 160, width: 900, height: 480 }, '', { color: C.accent }, { cartWhatsapp: WHATSAPP_NUMBER })]),
     el('shop-cart-continue', 'button', cart, { x: 520, y: live ? CHECKOUT.continueY : 670, width: 240, height: 50 }, 'متابعة التسوّق', {
       backgroundColor: 'transparent',
       color: C.accent,

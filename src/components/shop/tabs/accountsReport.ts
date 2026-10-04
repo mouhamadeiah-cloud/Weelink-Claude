@@ -16,7 +16,7 @@ interface ReportInput {
     payments: CountRow[];
     deliveries: CountRow[];
   } | null;
-  ledger: LedgerRow[];
+  ledger: LedgerRow[] | null; // null: a dashboard report
   money: (n: number) => string;
   pdf: boolean;
 }
@@ -58,9 +58,8 @@ const buildHtml = (r: ReportInput, title: string) => {
   <div><h1>${esc(r.storeName)}</h1><p class="muted">تقرير الحسابات · ${esc(r.viewLabel)}</p></div>
   <div class="muted">الفترة: ${esc(r.periodLabel)}<br>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-SY-u-nu-latn')}</div>
 </header>
-<div class="stats">${r.stats.map((s) => `<div class="stat"><span class="muted">${esc(s.label)}</span><b>${esc(s.value)}</b></div>`).join('')}</div>
+${r.stats.length ? `<div class="stats">${r.stats.map((s) => `<div class="stat"><span class="muted">${esc(s.label)}</span><b>${esc(s.value)}</b></div>`).join('')}</div>` : ''}
 ${d ? `
-<h2>الإحصائيات</h2>
 <div class="stats" style="grid-template-columns: 1fr 1fr; margin-bottom: 10px;">
   <div class="stat"><span class="muted">عدد الزوار</span><b>${d.visits}</b></div>
   <div class="stat"><span class="muted">عدد المشترين</span><b>${d.buyers}</b></div>
@@ -71,13 +70,13 @@ ${d ? `
   ${countTable('طرق الدفع الأكثر استعمالاً', d.payments, 'طلب')}
   ${countTable('طرق التوصيل الأكثر استعمالاً', d.deliveries, 'طلب')}
 </div>` : ''}
-<h2>السجل</h2>
+${!r.ledger ? '' : `<h2>السجل</h2>
 ${r.ledger.length ? `<table><thead><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th class="num">المبلغ</th></tr></thead><tbody>
 ${r.ledger.map((l) => {
   const date = l.date.length === 10 ? l.date : l.date.slice(0, 10);
   return `<tr><td>${date}</td><td>${KIND_LABELS[l.kind]}</td><td>${esc(l.label)}</td><td class="num">${esc(r.money(l.amount))}</td></tr>`;
 }).join('')}
-</tbody></table>` : '<p class="muted">لا توجد حركة في هذه الفترة.</p>'}
+</tbody></table>` : '<p class="muted">لا توجد حركة في هذه الفترة.</p>'}`}
 </body></html>`;
 };
 

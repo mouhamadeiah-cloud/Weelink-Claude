@@ -78,6 +78,7 @@ const countBy = <T,>(items: T[], key: (x: T) => string, weight: (x: T) => number
 };
 
 export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
+  const [section, setSection] = useState<'accounts' | 'dashboard'>('accounts');
   const [view, setView] = useState<AccountsView>('page');
   const [range, setRange] = useState<Range>('30d');
   const [from, setFrom] = useState('');
@@ -85,7 +86,8 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const [entry, setEntry] = useState({ type: 'income' as ShopEntry['type'], amount: '', reason: '', date: today() });
   const [entryError, setEntryError] = useState('');
   const currency = data.settings.currency;
-  const money = (n: number) => formatMoney(n, currency);
+  // A negative amount keeps its minus sign before the digits in right-to-left text.
+  const money = (n: number) => (n < 0 ? `\u2066-${formatMoney(-n, '').trim()}\u2069 ${currency}` : formatMoney(n, currency));
 
   const [start, end] = useMemo(() => {
     const now = new Date();
@@ -145,7 +147,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const maxBar = Math.max(1, ...days.map((d) => Math.max(d.inflow, d.outflow)));
 
   // Dashboard (store page only).
-  const topProducts = countBy(movements.filter((m) => m.type === 'sale'), (m) => m.name, (m) => m.qty).slice(0, 5);
+  const topProducts = countBy(data.movements.filter((m) => m.type === 'sale' && isoIn(m.createdAt)), (m) => m.name, (m) => m.qty).slice(0, 5);
   const visits = Object.entries(data.visits).filter(([k]) => inRange(entryTime(k))).reduce((s, [, n]) => s + n, 0);
   const buyerKey = (o: (typeof orders)[number]) => o.customerId || o.contact?.whatsapp || o.contact?.name || o.id;
   const provinceOf = (o: (typeof orders)[number]) =>
@@ -194,26 +196,35 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const print = (pdf: boolean) =>
     printReport({
       storeName: data.settings.storeName || 'المتجر',
-      viewLabel: VIEWS.find((v) => v.id === view)!.label,
+      viewLabel: section === 'dashboard' ? 'Dashboard والإحصائيات' : VIEWS.find((v) => v.id === view)!.label,
       periodLabel,
-      stats,
-      dashboard: showPage ? { visits, buyers, topProducts, buyersByProvince, payments, deliveries } : null,
-      ledger,
+      dashboard: section === 'dashboard' ? { visits, buyers, topProducts, buyersByProvince, payments, deliveries } : null,
+      stats: section === 'dashboard' ? [] : stats,
+      ledger: section === 'dashboard' ? null : ledger,
       money,
       pdf,
     });
 
   return (
     <div className="space-y-4">
+      <div className="flex border-b border-neutral-200" role="tablist" aria-label="أقسام الحسابات">
+        {([['accounts', 'الحسابات'], ['dashboard', 'Dashboard والإحصائيات']] as const).map(([id, label]) => (
+          <button key={id} type="button" role="tab" aria-selected={section === id} onClick={() => setSection(id)}
+            className={`h-10 px-4 -mb-px border-b-2 text-xs font-black transition cursor-pointer ${section === id ? 'border-[#0071e3] text-[#0071e3]' : 'border-transparent text-neutral-500 hover:text-[#1d1d1f]'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex p-1 rounded-xl bg-neutral-100" role="tablist" aria-label="نوع الحسابات">
+        {section === 'accounts' && <div className="flex p-1 rounded-xl bg-neutral-100" role="tablist" aria-label="نوع الحسابات">
           {VIEWS.map((v) => (
             <button key={v.id} type="button" role="tab" aria-selected={view === v.id} onClick={() => setView(v.id)}
               className={`h-8 px-3 rounded-lg text-[11px] font-bold transition cursor-pointer ${view === v.id ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-neutral-500'}`}>
               {v.label}
             </button>
           ))}
-        </div>
+        </div>}
         <div className="flex items-center gap-1.5 mr-auto">
           <button type="button" onClick={() => print(false)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"><Printer size={13} /> طباعة A4</button>
           <button type="button" onClick={() => print(true)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"><FileDown size={13} /> تصدير PDF</button>
@@ -240,11 +251,12 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {section === 'accounts' && (<>
+      <div className="flex gap-2 overflow-x-auto">
         {stats.map((s) => (
-          <div key={s.label} className="bg-white border border-neutral-200 rounded-2xl p-3">
-            <div className="text-[10px] font-bold text-neutral-400">{s.label}</div>
-            <div className="text-base sm:text-lg font-black mt-1 truncate" style={{ color: s.color }}>{s.value}</div>
+          <div key={s.label} className="flex-1 min-w-[96px] bg-white border border-neutral-200 rounded-xl px-2.5 py-1.5">
+            <div className="text-[10px] font-bold text-neutral-400 truncate">{s.label}</div>
+            <div className="text-[13px] font-black truncate" style={{ color: s.color }}>{s.value}</div>
           </div>
         ))}
       </div>
@@ -268,18 +280,22 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
         </div>
       </Card>
 
-      {showPage && (
+      </>)}
+
+      {section === 'dashboard' && (
         <>
-          <h3 className="text-sm font-black text-[#1d1d1f] pt-1">Dashboard والإحصائيات</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white border border-neutral-200 rounded-2xl p-3">
-              <div className="text-[10px] font-bold text-neutral-400">عدد الزوار</div>
-              <div className="text-lg font-black mt-1 text-[#5e5ce6]">{visits}</div>
-            </div>
-            <div className="bg-white border border-neutral-200 rounded-2xl p-3">
-              <div className="text-[10px] font-bold text-neutral-400">عدد المشترين</div>
-              <div className="text-lg font-black mt-1 text-[#34c759]">{buyers}</div>
-            </div>
+          <div className="flex gap-2 overflow-x-auto">
+            {[
+              { label: 'عدد الزوار', value: String(visits), color: '#5e5ce6' },
+              { label: 'عدد المشترين', value: String(buyers), color: '#34c759' },
+              { label: 'الطلبات', value: String(orders.length), color: '#1d1d1f' },
+              { label: 'المبيعات', value: money(data.movements.filter((m) => m.type === 'sale' && isoIn(m.createdAt)).reduce((t, m) => t + m.qty * m.unitAmount, 0)), color: '#34c759' },
+            ].map((s) => (
+              <div key={s.label} className="flex-1 min-w-[96px] bg-white border border-neutral-200 rounded-xl px-2.5 py-1.5">
+                <div className="text-[10px] font-bold text-neutral-400 truncate">{s.label}</div>
+                <div className="text-[13px] font-black truncate" style={{ color: s.color }}>{s.value}</div>
+              </div>
+            ))}
           </div>
           <div className="grid md:grid-cols-2 gap-4 items-start">
             <Card title="الأكثر مبيعاً">
@@ -298,7 +314,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
         </>
       )}
 
-      {showSide && (
+      {section === 'accounts' && showSide && (
         <Card title="إدخال يدوي (ربح أو مصروف من خارج الصفحة)">
           <div className="flex flex-wrap items-end gap-2">
             <div className="flex p-1 rounded-xl bg-neutral-100 h-10" role="radiogroup" aria-label="نوع القيد">
@@ -326,7 +342,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
         </Card>
       )}
 
-      <Card title="السجل">
+      {section === 'accounts' && <Card title="السجل">
         {ledger.length === 0 ? (
           <EmptyState text="لا توجد حركة في هذه الفترة." />
         ) : (
@@ -349,7 +365,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
             })}
           </div>
         )}
-      </Card>
+      </Card>}
     </div>
   );
 };

@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Minus, Plus, ShoppingBag, Truck, Check } from 'lucide-react';
 import { ShopProduct, ShopSettings } from '../shopTypes';
-import { badgeColor, badgeText, descriptionHtml, discountPercent, findVariant, isSoldOut, stockOptions, totalStock, tracksStock, unitPriceFor, UNLIMITED } from '../productModel';
+import { badgeColor, badgeText, descriptionHtml, discountPercent, findVariant, isSoldOut, stockOptions, totalStock, tracksStock, unitPriceFor, UNLIMITED, variantLabel } from '../productModel';
 import { addToCart, formatPrice } from '../../../utils/cartStore';
 import { ProductGallery } from './ProductGallery';
 
@@ -85,7 +85,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
     }
     if (available <= 0 || qty > available) return;
     const chosen = choosable.map((o) => picked[o.id]).join(' / ');
-    addToCart({ name: chosen ? `${p.name} (${chosen})` : p.name, price: unit, currency: p.currency, image: p.images[0], productId: p.id }, qty);
+    addToCart({ name: chosen ? `${p.name} (${chosen})` : p.name, price: unit, currency: p.currency, image: p.images[0], productId: p.id, ...(variant ? { variant: variantLabel(variant.values) } : {}) }, qty);
     // With related products the card turns into them; otherwise it closes and the customer is
     // back in the store.
     if (related.length) {

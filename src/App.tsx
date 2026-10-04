@@ -15,12 +15,12 @@ import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
 import { ProjectChooser } from './components/ProjectChooser';
 import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
-import { ShopDataContext } from './components/shop/store/ShopDataContext';
+import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
-import { getOnlineShopTemplate, withLiveProductGrid } from './data/onlineShopTemplate';
+import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
 import { arrangeForMobile } from './utils/mobileLayout';
 
 // Firebase Imports
@@ -214,6 +214,7 @@ export default function App() {
   const [projectLoading, setProjectLoading] = useState<ProjectType | null>(null);
   const [hasShop, setHasShop] = useState<boolean>(false);
   const [shopAdmin, setShopAdmin] = useState<ShopAdminData>(createEmptyShopAdmin);
+  const updateShopAdmin = useCallback((fn: (d: ShopAdminData) => ShopAdminData) => setShopAdmin((prev) => fn(prev)), []);
   // Bumped by every workspace load so a slower, older load can't overwrite a newer one.
   const loadSeqRef = useRef(0);
   // True once the open project's data has actually been loaded, so switching
@@ -406,6 +407,7 @@ export default function App() {
       shopElements = template.elements;
     } else {
       shopElements = withLiveProductGrid(shopElements);
+      ({ pages: shopPages, elements: shopElements } = withCheckoutLayout(shopPages, shopElements));
     }
     setProject('shop');
     setPages(shopPages);
@@ -2561,6 +2563,7 @@ export default function App() {
       {/* Main Operations Area (ساحة العمليات) */}
       <div className="flex-1 flex relative overflow-hidden">
         <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : null}>
+        <ShopUpdateContext.Provider value={project === 'shop' ? updateShopAdmin : null}>
         <CanvasWorkspace
           previewMode={previewMode}
           slides={currentPage.slides}
@@ -2589,6 +2592,7 @@ export default function App() {
           isPreviewActive={isPreviewActive}
           activePageId={activePageId}
         />
+        </ShopUpdateContext.Provider>
         </ShopDataContext.Provider>
         {isCanvasLoading && (
           <div className="absolute inset-0 bg-white/75 backdrop-blur-xs z-50 flex flex-col items-center justify-center select-none text-right font-sans">
@@ -2665,7 +2669,7 @@ export default function App() {
 
       {/* Online Shop admin: floating gear + admin window */}
       {project === 'shop' && (
-        <ShopAdminPanel data={shopAdmin} onChange={(fn) => setShopAdmin((prev) => fn(prev))} />
+        <ShopAdminPanel data={shopAdmin} onChange={updateShopAdmin} />
       )}
 
       {/* Workspace Hub Drawer Panel */}

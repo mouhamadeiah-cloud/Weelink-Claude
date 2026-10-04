@@ -6,3 +6,11 @@ import type { ShopAdminData } from '../shopTypes';
 export const ShopDataContext = createContext<ShopAdminData | null>(null);
 
 export const useShopData = () => useContext(ShopDataContext);
+
+// Lets the store page write to the shop data: the checkout page adds the visitor's order (and
+// their customer account). null outside an Online Shop project.
+export type ShopDataUpdate = (fn: (d: ShopAdminData) => ShopAdminData) => void;
+
+export const ShopUpdateContext = createContext<ShopDataUpdate | null>(null);
+
+export const useShopUpdate = () => useContext(ShopUpdateContext);

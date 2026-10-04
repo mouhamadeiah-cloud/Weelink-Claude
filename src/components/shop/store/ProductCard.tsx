@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { ImageOff, ShoppingBag, Check } from 'lucide-react';
 import { ShopProduct } from '../shopTypes';
-import { badgeColor, badgeText, isSoldOut } from '../productModel';
+import { badgeColor, badgeText, defaultChoice, isSoldOut, unitPriceFor } from '../productModel';
 import { addToCart, formatPrice } from '../../../utils/cartStore';
 
 interface ProductCardProps {
@@ -18,19 +18,23 @@ interface ProductCardProps {
 export const needsChoice = (p: ShopProduct) =>
   p.options.some((o) => o.values.length > 1 || (o.affectsStock && o.values.length > 0));
 
-// The add-to-cart button: adds directly, or opens the full card when options must be chosen.
+// The add-to-cart button: adds straight to the cart and the customer stays in the store. A product
+// with options (size, colour…) goes in with its first available choice, shown in the cart line;
+// the floating card is where the customer picks another one.
 const useAddButton = (product: ShopProduct, onOpen?: () => void, onAdded?: (name: string) => void) => {
   const [added, setAdded] = useState(false);
   const soldOut = isSoldOut(product);
   const add = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onOpen || soldOut) return;
-    if (needsChoice(product)) {
+    const choice = needsChoice(product) ? defaultChoice(product) : null;
+    if (needsChoice(product) && !choice) {
       onOpen();
       return;
     }
-    addToCart({ name: product.name, price: product.price, currency: product.currency, image: product.images[0], productId: product.id });
-    onAdded?.(product.name);
+    const name = choice?.label ? `${product.name} (${choice.label})` : product.name;
+    addToCart({ name, price: unitPriceFor(product, 1, choice?.variant), currency: product.currency, image: product.images[0], productId: product.id });
+    onAdded?.(name);
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);
   };

@@ -2,20 +2,25 @@
 // as in the Online Shop. All entries and management live here; the showroom's pages are edited in
 // the editor like any other page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, CarFront, Warehouse, SlidersHorizontal, Users, Wallet } from 'lucide-react';
+import { Settings, X, CarFront, Warehouse, SlidersHorizontal, Users, Wallet, FileText, Inbox } from 'lucide-react';
 import { CarAdminData } from './carTypes';
 import { CarEditor, CarTabProps } from './tabs/CarEditor';
 import { InventoryTab } from './tabs/InventoryTab';
 import { CarSettingsTab } from './tabs/CarSettingsTab';
 import { CarCustomersTab } from './tabs/CarCustomersTab';
 import { CarAccountsTab } from './tabs/CarAccountsTab';
+import { CarDocumentsTab } from './tabs/CarDocumentsTab';
+import { CarRequestsTab } from './tabs/CarRequestsTab';
+import { CarDocEditor, DocEditorTarget } from './tabs/CarDocEditor';
 
-type TabId = 'add' | 'inventory' | 'customers' | 'accounts' | 'settings';
+type TabId = 'add' | 'inventory' | 'requests' | 'customers' | 'documents' | 'accounts' | 'settings';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<CarTabProps> }[] = [
   { id: 'add', label: 'إضافة سيارة', icon: CarFront, Component: CarEditor },
   { id: 'inventory', label: 'المخزون', icon: Warehouse, Component: InventoryTab },
+  { id: 'requests', label: 'طلبات الزوار', icon: Inbox, Component: CarRequestsTab },
   { id: 'customers', label: 'الزبائن', icon: Users, Component: CarCustomersTab },
+  { id: 'documents', label: 'الأوراق والعقود', icon: FileText, Component: CarDocumentsTab },
   { id: 'accounts', label: 'الحسابات', icon: Wallet, Component: CarAccountsTab },
   { id: 'settings', label: 'إعدادات المعرض', icon: SlidersHorizontal, Component: CarSettingsTab },
 ];
@@ -29,10 +34,12 @@ export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange }) 
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<TabId>('inventory');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [docTarget, setDocTarget] = useState<DocEditorTarget | null>(null);
+  const newRequests = data.requests.filter((r) => r.status === 'new').length;
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('[data-car-doc-editor]')) setOpen(false); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
@@ -81,6 +88,9 @@ export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange }) 
                   >
                     <t.icon size={16} />
                     <span>{t.label}</span>
+                    {t.id === 'requests' && newRequests > 0 && (
+                      <span className="mr-auto min-w-[20px] h-5 px-1 rounded-full text-[10px] flex items-center justify-center bg-[#ff3b30] text-white">{newRequests}</span>
+                    )}
                     {t.id === 'inventory' && data.cars.length > 0 && (
                       <span className={`mr-auto min-w-[20px] h-5 px-1 rounded-full text-[10px] flex items-center justify-center ${tab === t.id ? 'bg-white text-[#0071e3]' : 'bg-neutral-100 text-neutral-500'}`}>{data.cars.length}</span>
                     )}
@@ -95,12 +105,18 @@ export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange }) 
                   editingId={editingId}
                   onEdit={(id) => { setEditingId(id || null); setTab('add'); }}
                   onSaved={() => setTab('inventory')}
+                  onNewDocument={(type, carId, customerId) => setDocTarget({ type, carId, customerId })}
+                  onOpenDocument={(docId) => {
+                    const doc = data.documents.find((d) => d.id === docId);
+                    if (doc) setDocTarget({ type: doc.type, carId: doc.carId, customerId: doc.customerId, docId });
+                  }}
                 />
               </main>
             </div>
           </div>
         </div>
       )}
+      {open && docTarget && <CarDocEditor key={docTarget.docId || `${docTarget.type}-${docTarget.carId}`} data={data} update={onChange} target={docTarget} onClose={() => setDocTarget(null)} />}
     </>
   );
 };

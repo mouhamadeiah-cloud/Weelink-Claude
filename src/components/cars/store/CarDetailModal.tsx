@@ -1,10 +1,12 @@
 // The car's full page that floats over the showroom when a visitor opens a car: its photos, price,
 // main facts, the specification table, features, condition and description, with WhatsApp and
-// call buttons that tell the showroom which car the visitor means.
+// call buttons that tell the showroom which car the visitor means, and «احجز تجربة قيادة» /
+// «اطلب السيارة» forms whose requests land in the showroom's «طلبات الزوار».
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, ImageOff, Calendar, Gauge, Settings2, Fuel, Phone, MessageCircle, Check, ShieldCheck } from 'lucide-react';
-import { Car, CarSettings } from '../carTypes';
+import { X, ChevronLeft, ChevronRight, ImageOff, Calendar, Gauge, Settings2, Fuel, Phone, MessageCircle, Check, ShieldCheck, KeyRound, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import { Car, CarRequestType, CarSettings } from '../carTypes';
+import { useCarRequest } from './CarDataContext';
 import { carPriceLabel, carSpecRows, carSubtitle, carTitle, formatKm, statusMeta, whatsappHref, accidentsLabel, paintLabel } from '../carModel';
 import { formatMoney } from '../../shop/adminUi';
 
@@ -47,7 +49,73 @@ const Gallery: React.FC<{ images: string[]; title: string }> = ({ images, title 
   );
 };
 
+const REQUEST_TEXT: Record<CarRequestType, { title: string; button: string; dateLabel: string }> = {
+  testDrive: { title: 'احجز تجربة قيادة', button: 'أرسل طلب التجربة', dateLabel: 'الموعد المناسب لك' },
+  buy: { title: 'اطلب السيارة', button: 'أرسل الطلب', dateLabel: 'متى تود زيارة المعرض؟' },
+};
+
+const RequestForm: React.FC<{ car: Car; type: CarRequestType; settings: CarSettings; accent: string; onDone: () => void }> = ({ car, type, settings, accent, onDone }) => {
+  const submit = useCarRequest();
+  const [f, setF] = useState({ name: '', phone: '', preferredDate: '', message: '' });
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
+  const t = REQUEST_TEXT[type];
+  const label = `${carTitle(car)}${car.year ? ` ${car.year}` : ''}${car.stockNumber ? ` (رقم ${car.stockNumber})` : ''}`;
+  const field = 'w-full h-11 px-3 rounded-xl border border-neutral-200 bg-white text-sm outline-none focus:border-neutral-400';
+
+  const send = () => {
+    if (!f.name.trim()) return setError('اكتب اسمك.');
+    if (f.phone.replace(/\D/g, '').length < 7) return setError('اكتب رقم هاتف صحيحًا.');
+    setError('');
+    const r = { type, carId: car.id, carLabel: label, name: f.name.trim(), phone: f.phone.trim(), preferredDate: f.preferredDate, message: f.message.trim() };
+    submit?.(r);
+    if (settings.whatsappNumber) {
+      const text = [
+        `مرحبًا، ${type === 'testDrive' ? 'أود حجز تجربة قيادة' : 'أود طلب'} السيارة ${label}`,
+        `الاسم: ${r.name}`,
+        `الهاتف: ${r.phone}`,
+        r.preferredDate ? `الموعد: ${r.preferredDate}` : '',
+        r.message,
+      ].filter(Boolean).join('\n');
+      window.open(whatsappHref(settings.whatsappNumber, text), '_blank', 'noopener,noreferrer');
+    }
+    setSent(true);
+  };
+
+  if (sent) {
+    return (
+      <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-4 text-center space-y-2">
+        <CheckCircle2 size={30} style={{ color: accent }} className="mx-auto" />
+        <div className="text-sm font-black">وصل طلبك، شكرًا لك</div>
+        <p className="text-xs text-neutral-500">سيتواصل معك المعرض على الرقم الذي كتبته.</p>
+        <button type="button" onClick={onDone} className="text-xs font-bold underline cursor-pointer">إغلاق</button>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-4 space-y-2.5" role="form" aria-label={t.title}>
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-black">{t.title}</h3>
+        <button type="button" onClick={onDone} aria-label="إغلاق النموذج" className="w-7 h-7 rounded-full hover:bg-white flex items-center justify-center text-neutral-500 cursor-pointer"><X size={15} /></button>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-2">
+        <input className={field} placeholder="الاسم" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+        <input className={field} placeholder="رقم الهاتف" dir="ltr" inputMode="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+        <label className="sm:col-span-2 text-[11px] font-bold text-neutral-500 space-y-1 block">
+          <span>{t.dateLabel}</span>
+          <input type={type === 'testDrive' ? 'datetime-local' : 'date'} className={field} value={f.preferredDate} onChange={(e) => setF({ ...f, preferredDate: e.target.value })} />
+        </label>
+        <textarea className={`${field} sm:col-span-2 h-20 py-2 resize-none`} placeholder="ملاحظة (اختياري)" value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} />
+      </div>
+      {error && <div className="text-xs font-bold text-red-600">{error}</div>}
+      <button type="button" onClick={send} className="w-full h-11 rounded-full text-white text-sm font-bold cursor-pointer" style={{ backgroundColor: accent }}>{t.button}</button>
+    </div>
+  );
+};
+
 export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, accent, font, onClose }) => {
+  const [asking, setAsking] = useState<CarRequestType | null>(null);
+  const canAsk = settings.acceptRequests && car.status !== 'sold';
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -132,7 +200,18 @@ export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, a
               {!settings.whatsappNumber && !settings.phone && (
                 <p className="sm:col-span-2 text-xs text-neutral-400">أضف رقم واتساب أو هاتف المعرض من إعدادات المعرض لتظهر أزرار التواصل هنا.</p>
               )}
+              {canAsk && !asking && (
+                <>
+                  <button type="button" onClick={() => setAsking('testDrive')} className="h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ borderColor: accent, color: accent }}>
+                    <KeyRound size={18} /> احجز تجربة قيادة
+                  </button>
+                  <button type="button" onClick={() => setAsking('buy')} className="h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ borderColor: accent, color: accent }}>
+                    <ShoppingBag size={18} /> اطلب السيارة
+                  </button>
+                </>
+              )}
             </div>
+            {canAsk && asking && <RequestForm key={asking} car={car} type={asking} settings={settings} accent={accent} onDone={() => setAsking(null)} />}
           </div>
         </div>
 

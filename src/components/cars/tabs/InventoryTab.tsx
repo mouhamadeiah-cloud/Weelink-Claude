@@ -17,10 +17,11 @@ const Stat: React.FC<{ label: string; value: string; color?: string }> = ({ labe
   </div>
 );
 
-export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) => {
+export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNewDocument, onOpenDocument }) => {
   const [filter, setFilter] = useState<CarStatus | 'all'>('all');
   const [query, setQuery] = useState('');
-  const [moneyFor, setMoneyFor] = useState<string | null>(null);
+  const [moneyFor, setMoneyFor] = useState<{ id: string; initial: 'sale' | 'reserve' } | null>(null);
+  const openMoney = (id: string, initial: 'sale' | 'reserve' = 'sale') => setMoneyFor({ id, initial });
   const currency = data.settings.currency;
 
   const setCar = (id: string, changes: Partial<Car>) =>
@@ -28,7 +29,10 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) =>
   // «مباعة» goes through the sale window (price, buyer, payment); leaving «مباعة» undoes the sale.
   const setStatus = (car: Car, status: CarStatus) => {
     if (status === car.status) return;
-    if (status === 'sold' && !car.sale) return setMoneyFor(car.id);
+    if (status === 'sold' && !car.sale) return openMoney(car.id);
+    // A reservation is made (customer and deposit) and ended (refund or keep) in the money file.
+    if (status === 'reserved' && !car.sale && !car.reservation) return openMoney(car.id, 'reserve');
+    if (car.reservation && !car.sale) return openMoney(car.id);
     if (car.sale && status !== 'sold') {
       if (!window.confirm('إلغاء بيع هذه السيارة؟ تُحذف دفعات بيعها من الحسابات.')) return;
       return update((d) => {
@@ -107,14 +111,19 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) =>
                         {c.sale ? <>بيعت بـ {formatMoney(c.sale.price, c.currency)}</> : c.price > 0 ? formatMoney(c.price, c.currency) : <span className="text-neutral-400">بدون سعر</span>}
                         {margin !== 0 && <span className={`mr-2 text-[11px] ${margin > 0 ? 'text-green-600' : 'text-red-500'}`}>{c.sale ? 'ربح' : 'ربح متوقع'} {formatMoney(margin, c.currency)}</span>}
                         {owed > 0 && <span className="mr-2 text-[11px] text-[#f29900]">متبقٍ على المشتري {formatMoney(owed, c.currency)}</span>}
+                        {c.reservation && (
+                          <span className="mr-2 text-[11px] text-[#f29900]">
+                            محجوزة{data.customers.find((x) => x.id === c.reservation!.customerId)?.name ? ` لـ ${data.customers.find((x) => x.id === c.reservation!.customerId)!.name}` : ''}{c.reservation.deposit > 0 ? ` · عربون ${formatMoney(c.reservation.deposit, c.currency)}` : ''}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {!c.sale && (
-                      <button type="button" onClick={() => setMoneyFor(c.id)} className="h-9 px-3 rounded-xl bg-[#34a853] hover:bg-[#2d9047] text-white text-xs font-bold flex items-center gap-1 cursor-pointer"><BadgeCheck size={14} /> تم البيع</button>
+                      <button type="button" onClick={() => openMoney(c.id)} className="h-9 px-3 rounded-xl bg-[#34a853] hover:bg-[#2d9047] text-white text-xs font-bold flex items-center gap-1 cursor-pointer"><BadgeCheck size={14} /> تم البيع</button>
                     )}
-                    <button type="button" onClick={() => setMoneyFor(c.id)} title="الملف المالي: المصاريف والبيع والدفعات" aria-label="الملف المالي" className="w-9 h-9 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 flex items-center justify-center cursor-pointer"><Wallet size={15} /></button>
+                    <button type="button" onClick={() => openMoney(c.id)} title="الملف المالي: المصاريف والبيع والدفعات" aria-label="الملف المالي" className="w-9 h-9 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 flex items-center justify-center cursor-pointer"><Wallet size={15} /></button>
                     <select
                       value={c.status}
                       onChange={(e) => setStatus(c, e.target.value as CarStatus)}
@@ -139,7 +148,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) =>
           </div>
         )}
       </Card>
-      {moneyFor && <CarMoneyDialog data={data} update={update} carId={moneyFor} onClose={() => setMoneyFor(null)} />}
+      {moneyFor && <CarMoneyDialog data={data} update={update} carId={moneyFor.id} initial={moneyFor.initial} onClose={() => setMoneyFor(null)} onNewDocument={onNewDocument} onOpenDocument={onOpenDocument} />}
     </div>
   );
 };

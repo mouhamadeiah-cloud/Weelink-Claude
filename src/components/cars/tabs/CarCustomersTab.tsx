@@ -1,8 +1,8 @@
 // الزبائن: the showroom's buyers, sellers and interested people. Each card shows the cars a customer
 // bought and what is still owed on them; buyers added in «تم البيع» appear here on their own.
 import React, { useMemo, useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Phone, MessageCircle, X } from 'lucide-react';
-import { CarCustomer, CUSTOMER_ROLES, CustomerRole } from '../carTypes';
+import { Plus, Search, Pencil, Trash2, Phone, MessageCircle, X, FileText } from 'lucide-react';
+import { CarCustomer, CUSTOMER_ROLES, CustomerRole, CAR_DOC_TYPES } from '../carTypes';
 import { carTitle } from '../carModel';
 import { CustomerDraft, emptyCustomer, saleRemaining, saveCustomer } from '../carMoney';
 import { Card, EmptyState, inputClass, PrimaryButton, GhostButton, formatMoney } from '../../shop/adminUi';
@@ -10,7 +10,7 @@ import { matchesSearch } from '../../shop/store/shopSearchStore';
 import { CarTabProps } from './CarEditor';
 import { CustomerFields, customerWhatsapp } from './moneyUi';
 
-export const CarCustomersTab: React.FC<CarTabProps> = ({ data, update }) => {
+export const CarCustomersTab: React.FC<CarTabProps> = ({ data, update, onOpenDocument }) => {
   const [query, setQuery] = useState('');
   const [role, setRole] = useState<CustomerRole | 'all' | 'owing'>('all');
   const [editing, setEditing] = useState<{ id?: string; draft: CustomerDraft } | null>(null);
@@ -126,6 +126,15 @@ export const CarCustomersTab: React.FC<CarTabProps> = ({ data, update }) => {
                   {Object.keys(owed).length > 0 && (
                     <div className="rounded-lg bg-amber-50 text-[#b06f00] px-2 py-1 text-[11px] font-bold">
                       متبقٍ عليه: {Object.entries(owed).map(([cur, n]) => formatMoney(n, cur)).join(' + ')}
+                    </div>
+                  )}
+                  {data.documents.some((x) => x.customerId === c.id) && (
+                    <div className="flex flex-wrap gap-1">
+                      {data.documents.filter((x) => x.customerId === c.id).map((x) => (
+                        <button key={x.id} type="button" onClick={() => onOpenDocument?.(x.id)} className="h-7 px-2 rounded-lg bg-blue-50 text-[#0071e3] text-[10px] font-bold flex items-center gap-1 cursor-pointer">
+                          <FileText size={11} /> {CAR_DOC_TYPES.find((t) => t.id === x.type)!.label} <span dir="ltr">{x.number}</span>
+                        </button>
+                      ))}
                     </div>
                   )}
                   {c.notes && <p className="text-[11px] text-neutral-500 leading-relaxed">{c.notes}</p>}

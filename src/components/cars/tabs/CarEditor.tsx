@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, Store, Archive, Plus, X } from 'lucide-react';
 import {
-  Car, CarAdminData, emptyCar, nextStockNumber, CAR_BRANDS, CAR_BODY_TYPES, CAR_FUELS, CAR_TRANSMISSIONS, CAR_DRIVES,
+  Car, CarAdminData, CarDocType, emptyCar, nextStockNumber, CAR_BRANDS, CAR_BODY_TYPES, CAR_FUELS, CAR_TRANSMISSIONS, CAR_DRIVES,
   CAR_SPECS, CAR_COLORS, CAR_INTERIOR_COLORS, CAR_FEATURE_GROUPS, CAR_PAINT, CAR_ACCIDENTS, CAR_BADGES, CAR_STATUSES, CAR_CURRENCIES,
 } from '../carTypes';
 import { newId } from '../../shop/shopTypes';
@@ -21,6 +21,9 @@ export interface CarTabProps {
   editingId: string | null;
   onEdit: (id: string | null) => void;
   onSaved: () => void;
+  // Opens a new document (contract, test drive, handover) for a car, optionally for a customer.
+  onNewDocument?: (type: CarDocType, carId: string, customerId?: string) => void;
+  onOpenDocument?: (docId: string) => void;
 }
 
 const STEPS = ['السيارة', 'المواصفات', 'التجهيزات والحالة', 'الصور', 'السعر والشراء', 'العرض في المعرض'];
@@ -109,7 +112,15 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
       const current = d.cars.find((c) => c.id === car.id);
       const saved: Car = {
         ...car,
-        ...(current ? { expenses: current.expenses, sale: current.sale, purchaseTxId: current.purchaseTxId, status: current.sale ? 'sold' : car.status === 'sold' ? 'available' : car.status } : { status: car.status === 'sold' ? 'available' : car.status }),
+        ...(current
+          ? {
+              expenses: current.expenses,
+              sale: current.sale,
+              reservation: current.reservation,
+              purchaseTxId: current.purchaseTxId,
+              status: current.sale ? 'sold' : current.reservation ? 'reserved' : car.status === 'sold' || car.status === 'reserved' ? 'available' : car.status,
+            }
+          : { status: car.status === 'sold' || car.status === 'reserved' ? 'available' : car.status }),
         brand: car.brand.trim(),
         model: car.model.trim(),
         id: car.id || newId('car'),
@@ -273,6 +284,8 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
                 <Field label="تاريخ الشراء"><input type="date" className={inputClass} value={car.purchaseDate} onChange={(e) => set({ purchaseDate: e.target.value })} /></Field>
                 <Field label="اشتُريت من"><input className={inputClass} value={car.purchaseFrom} onChange={(e) => set({ purchaseFrom: e.target.value })} /></Field>
                 <Field label="رقم الهيكل (الشاصي)"><input className={inputClass} value={car.vin} onChange={(e) => set({ vin: e.target.value.toUpperCase() })} dir="ltr" /></Field>
+                <Field label="رقم المحرك"><input className={inputClass} value={car.engineNumber} onChange={(e) => set({ engineNumber: e.target.value.toUpperCase() })} dir="ltr" /></Field>
+                <Field label="رقم اللوحة"><input className={inputClass} value={car.plateNumber} placeholder="مثال: دمشق 123456" onChange={(e) => set({ plateNumber: e.target.value })} /></Field>
               </div>
               <Field label="دُفع ثمن الشراء من" hint="الصندوق أو البنك: يُسجَّل سعر الشراء في «الحسابات» ويتعدل معه. بدون تسجيل: يُحسب في كلفة السيارة فقط.">
                 <Segmented
@@ -303,10 +316,13 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
                 </div>
               </Field>
               <Field label="حالة السيارة">
-                {car.sale ? (
-                  <p className="text-xs font-bold text-[#34a853]">مباعة. يُلغى البيع من الملف المالي في «المخزون».</p>
+                {car.sale || car.reservation ? (
+                  <p className="text-xs font-bold text-[#34a853]">{car.sale ? 'مباعة' : 'محجوزة'}. يتغير ذلك من الملف المالي في «المخزون».</p>
                 ) : (
-                  <Chips options={CAR_STATUSES.filter((s) => s.id !== 'sold').map((s) => ({ id: s.id, label: s.label }))} value={car.status} onChange={(status) => set({ status })} />
+                  <>
+                    <Chips options={CAR_STATUSES.filter((s) => s.id === 'available' || s.id === 'preparing').map((s) => ({ id: s.id, label: s.label }))} value={car.status} onChange={(status) => set({ status })} />
+                    <p className="text-[10px] text-neutral-400">الحجز بعربون والبيع من «المخزون» ← «تم البيع».</p>
+                  </>
                 )}
               </Field>
               <div className="rounded-xl border border-neutral-200 px-3 py-1.5">

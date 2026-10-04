@@ -55,6 +55,9 @@ export interface Car {
   purchaseTxId: string; // the accounts entry of the purchase, when booked
   expenses: CarExpense[]; // repairs, cleaning, transport... added to the car's cost
   sale: CarSale | null; // set by «تم البيع»
+  reservation: CarReservation | null; // set by «حجز بعربون»; becomes the first payment of the sale
+  engineNumber: string; // رقم المحرك, for the sale contract
+  plateNumber: string; // رقم اللوحة
   status: CarStatus;
   published: boolean; // shown in the showroom
   featured: boolean; // shown in the «سيارات مميزة» slides
@@ -70,6 +73,13 @@ export interface CarSettings {
   address: string;
   workingHours: string;
   showSold: boolean; // sold cars stay in the showroom with a «مباعة» ribbon
+  // For the documents (sale contract, test drive, handover).
+  ownerName: string; // the person who signs for the showroom
+  commercialRecord: string; // السجل التجاري (optional)
+  contractTerms: string; // the sale contract's clauses, one per line
+  testDriveTerms: string;
+  handoverTerms: string;
+  acceptRequests: boolean; // «احجز تجربة قيادة» / «اطلب السيارة» buttons on each car's page
 }
 
 // Money: two accounts (the cash box and the bank), each holding any of the showroom's currencies.
@@ -81,7 +91,7 @@ export const MONEY_ACCOUNTS: { id: MoneyAccount; label: string }[] = [
 
 // What made an accounts entry: the owner by hand, or a car (its purchase, an expense, the sale or a
 // later payment of its price). A car's entries are changed from that car's money file.
-export type TxSource = 'manual' | 'purchase' | 'expense' | 'sale' | 'payment';
+export type TxSource = 'manual' | 'purchase' | 'expense' | 'sale' | 'payment' | 'deposit';
 
 export interface CarTransaction {
   id: string;
@@ -116,6 +126,19 @@ export interface CarSalePayment {
   account: MoneyAccount;
   note: string;
   txId: string;
+  fromDeposit?: boolean; // the reservation's deposit, counted as the first payment
+}
+
+// «حجز بعربون»: a customer holds the car with a deposit (it may be 0). The deposit is income at once;
+// on the sale it is counted from the price, and on a cancelled reservation it is either refunded or
+// kept by the showroom.
+export interface CarReservation {
+  date: string;
+  customerId: string;
+  deposit: number; // in the car's currency
+  account: MoneyAccount;
+  note: string;
+  txId: string; // '' when the deposit is 0
 }
 
 export interface CarSale {
@@ -149,10 +172,55 @@ export const EXPENSE_CATEGORIES = ['تنظيف وتلميع', 'إصلاح ميك
 export const MANUAL_IN_CATEGORIES = ['رصيد افتتاحي', 'دفعة من زبون', 'عمولة', 'إيداع', 'أخرى'];
 export const MANUAL_OUT_CATEGORIES = ['إيجار', 'رواتب', 'كهرباء وماء', 'إعلانات', 'سحب شخصي', 'أخرى'];
 
+// Documents: the sale contract, the test drive form and the handover record. Each keeps a copy of
+// its filled fields (so later edits to the car or customer don't change a signed paper) and the two
+// signatures as images.
+export type CarDocType = 'contract' | 'testDrive' | 'handover';
+export const CAR_DOC_TYPES: { id: CarDocType; label: string; prefix: string }[] = [
+  { id: 'contract', label: 'عقد بيع سيارة', prefix: 'SC' },
+  { id: 'testDrive', label: 'نموذج تجربة قيادة', prefix: 'TD' },
+  { id: 'handover', label: 'محضر تسليم سيارة', prefix: 'HO' },
+];
+
+export interface CarDocument {
+  id: string;
+  type: CarDocType;
+  number: string; // SC-0001, TD-0001, HO-0001
+  date: string; // yyyy-mm-dd
+  carId: string;
+  customerId: string;
+  fields: Record<string, string>;
+  checks: Record<string, boolean>; // handover checklist
+  terms: string; // the clauses as printed, one per line
+  showroomSignature: string; // image URL ('' = not signed)
+  customerSignature: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// A visitor's request from a car's page: a test drive or the car itself.
+export type CarRequestType = 'testDrive' | 'buy';
+export type CarRequestStatus = 'new' | 'contacted' | 'done';
+export interface CarRequest {
+  id: string;
+  type: CarRequestType;
+  carId: string;
+  carLabel: string; // kept for when the car is later deleted
+  name: string;
+  phone: string;
+  preferredDate: string;
+  message: string;
+  status: CarRequestStatus;
+  customerId: string; // set once added to the customers
+  createdAt: string;
+}
+
 export interface CarAdminData {
   cars: Car[];
   customers: CarCustomer[];
   transactions: CarTransaction[];
+  documents: CarDocument[];
+  requests: CarRequest[];
   settings: CarSettings;
 }
 
@@ -233,6 +301,27 @@ export const DEFAULT_CAR_SETTINGS: CarSettings = {
   address: '',
   workingHours: '',
   showSold: false,
+  ownerName: '',
+  commercialRecord: '',
+  contractTerms: [
+    'يقر الطرف الأول (البائع) بأن السيارة الموصوفة أعلاه ملكه، وأنها خالية من أي حجز أو رهن أو دين أو مخالفة حتى تاريخ هذا العقد.',
+    'يقر الطرف الثاني (المشتري) بأنه عاين السيارة معاينة تامة نافية للجهالة، وقبلها بحالتها الراهنة.',
+    'يلتزم الطرفان بمراجعة مديرية النقل لإتمام نقل الملكية خلال خمسة عشر يومًا من تاريخ هذا العقد، وتكون رسوم النقل على المشتري ما لم يُتفق على غير ذلك.',
+    'يُدفع المبلغ المتبقي من الثمن، إن وجد، في الموعد المذكور في هذا العقد، ولا تنتقل الملكية في مديرية النقل قبل سداده كاملًا.',
+    'تنتقل مسؤولية السيارة ومخالفاتها إلى المشتري من تاريخ تسليمها له.',
+    'حُرر هذا العقد من نسختين بيد كل طرف نسخة للعمل بموجبها.',
+  ].join('\n'),
+  testDriveTerms: [
+    'يقر السائق بأنه يحمل شهادة سوق سارية المفعول تسمح له بقيادة هذه السيارة.',
+    'يلتزم السائق بقواعد السير، ويتحمل كل المخالفات المرورية خلال مدة التجربة.',
+    'يتحمل السائق أي ضرر يلحق بالسيارة أو بالغير بسبب خطئه خلال مدة التجربة.',
+    'لا يجوز للسائق تسليم السيارة لغيره، ويلتزم بالمسار والوقت المتفق عليهما وإعادة السيارة في موعدها.',
+  ].join('\n'),
+  handoverTerms: [
+    'يقر المستلم بأنه استلم السيارة الموصوفة أعلاه بالحالة والملحقات المذكورة في هذا المحضر.',
+    'تنتقل مسؤولية السيارة ومخالفاتها إلى المستلم من تاريخ ووقت هذا المحضر.',
+  ].join('\n'),
+  acceptRequests: true,
 };
 
 export const emptyCar = (currency: string): Car => ({
@@ -278,6 +367,9 @@ export const emptyCar = (currency: string): Car => ({
   purchaseTxId: '',
   expenses: [],
   sale: null,
+  reservation: null,
+  engineNumber: '',
+  plateNumber: '',
   status: 'available',
   published: true,
   featured: false,
@@ -343,12 +435,60 @@ export const normalizeCar = (raw: any, currency: string): Car => {
                 account: oneOf(p?.account, ['cash', 'bank'] as const, 'cash'),
                 note: str(p?.note),
                 txId: str(p?.txId),
+                ...(p?.fromDeposit ? { fromDeposit: true } : {}),
               }))
             : [],
         }
       : null,
+    reservation: raw?.reservation && typeof raw.reservation === 'object'
+      ? {
+          date: str(raw.reservation.date),
+          customerId: str(raw.reservation.customerId),
+          deposit: num(raw.reservation.deposit),
+          account: oneOf(raw.reservation.account, ['cash', 'bank'] as const, 'cash'),
+          note: str(raw.reservation.note),
+          txId: str(raw.reservation.txId),
+        }
+      : null,
+    engineNumber: str(raw?.engineNumber),
+    plateNumber: str(raw?.plateNumber),
   };
 };
+
+const strMap = (v: unknown): Record<string, string> =>
+  v && typeof v === 'object' ? Object.fromEntries(Object.entries(v as object).filter(([, x]) => typeof x === 'string')) : {};
+const boolMap = (v: unknown): Record<string, boolean> =>
+  v && typeof v === 'object' ? Object.fromEntries(Object.entries(v as object).map(([k, x]) => [k, !!x])) : {};
+
+const normalizeDocument = (raw: any): CarDocument => ({
+  id: str(raw?.id) || newId('doc'),
+  type: oneOf(raw?.type, ['contract', 'testDrive', 'handover'] as const, 'contract'),
+  number: str(raw?.number),
+  date: str(raw?.date),
+  carId: str(raw?.carId),
+  customerId: str(raw?.customerId),
+  fields: strMap(raw?.fields),
+  checks: boolMap(raw?.checks),
+  terms: str(raw?.terms),
+  showroomSignature: str(raw?.showroomSignature),
+  customerSignature: str(raw?.customerSignature),
+  createdAt: str(raw?.createdAt) || new Date().toISOString(),
+  updatedAt: str(raw?.updatedAt) || new Date().toISOString(),
+});
+
+const normalizeRequest = (raw: any): CarRequest => ({
+  id: str(raw?.id) || newId('req'),
+  type: oneOf(raw?.type, ['testDrive', 'buy'] as const, 'buy'),
+  carId: str(raw?.carId),
+  carLabel: str(raw?.carLabel),
+  name: str(raw?.name),
+  phone: str(raw?.phone),
+  preferredDate: str(raw?.preferredDate),
+  message: str(raw?.message),
+  status: oneOf(raw?.status, ['new', 'contacted', 'done'] as const, 'new'),
+  customerId: str(raw?.customerId),
+  createdAt: str(raw?.createdAt) || new Date().toISOString(),
+});
 
 const normalizeCustomer = (raw: any): CarCustomer => ({
   id: str(raw?.id) || newId('cus'),
@@ -372,13 +512,13 @@ const normalizeTx = (raw: any, currency: string): CarTransaction => ({
   currency: str(raw?.currency) || currency,
   category: str(raw?.category),
   description: str(raw?.description),
-  source: oneOf(raw?.source, ['manual', 'purchase', 'expense', 'sale', 'payment'] as const, 'manual'),
+  source: oneOf(raw?.source, ['manual', 'purchase', 'expense', 'sale', 'payment', 'deposit'] as const, 'manual'),
   ...(typeof raw?.carId === 'string' && raw.carId ? { carId: raw.carId } : {}),
   ...(typeof raw?.customerId === 'string' && raw.customerId ? { customerId: raw.customerId } : {}),
   createdAt: str(raw?.createdAt) || new Date().toISOString(),
 });
 
-export const createEmptyCarAdmin = (): CarAdminData => ({ cars: [], customers: [], transactions: [], settings: { ...DEFAULT_CAR_SETTINGS } });
+export const createEmptyCarAdmin = (): CarAdminData => ({ cars: [], customers: [], transactions: [], documents: [], requests: [], settings: { ...DEFAULT_CAR_SETTINGS } });
 
 export const normalizeCarAdmin = (raw: any): CarAdminData => {
   const settings: CarSettings = { ...DEFAULT_CAR_SETTINGS, ...(raw?.settings || {}) };
@@ -387,6 +527,8 @@ export const normalizeCarAdmin = (raw: any): CarAdminData => {
     cars: Array.isArray(raw?.cars) ? raw.cars.map((c: unknown) => normalizeCar(c, settings.currency)) : [],
     customers: Array.isArray(raw?.customers) ? raw.customers.map(normalizeCustomer) : [],
     transactions: Array.isArray(raw?.transactions) ? raw.transactions.map((t: unknown) => normalizeTx(t, settings.currency)) : [],
+    documents: Array.isArray(raw?.documents) ? raw.documents.map(normalizeDocument) : [],
+    requests: Array.isArray(raw?.requests) ? raw.requests.map(normalizeRequest) : [],
   };
 };
 

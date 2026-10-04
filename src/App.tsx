@@ -18,7 +18,8 @@ import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
 import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
 import { CarAdminPanel } from './components/cars/CarAdminPanel';
-import { CarDataContext } from './components/cars/store/CarDataContext';
+import { CarDataContext, CarRequestContext } from './components/cars/store/CarDataContext';
+import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
@@ -223,6 +224,7 @@ export default function App() {
   const [hasCars, setHasCars] = useState<boolean>(false);
   const [carAdmin, setCarAdmin] = useState<CarAdminData>(createEmptyCarAdmin);
   const updateCarAdmin = useCallback((fn: (d: CarAdminData) => CarAdminData) => setCarAdmin((prev) => fn(prev)), []);
+  const submitCarRequest = useCallback((r: RequestInput) => setCarAdmin((prev) => submitRequest(prev, r)), []);
   // Bumped by every workspace load so a slower, older load can't overwrite a newer one.
   const loadSeqRef = useRef(0);
   // True once the open project's data has actually been loaded, so switching
@@ -2694,6 +2696,7 @@ export default function App() {
       {/* Main Operations Area (ساحة العمليات) */}
       <div className="flex-1 flex relative overflow-hidden">
         <CarDataContext.Provider value={project === 'cars' ? carAdmin : null}>
+        <CarRequestContext.Provider value={project === 'cars' ? submitCarRequest : null}>
         <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : null}>
         <ShopUpdateContext.Provider value={project === 'shop' ? updateShopAdmin : null}>
         <CanvasWorkspace
@@ -2726,6 +2729,7 @@ export default function App() {
         />
         </ShopUpdateContext.Provider>
         </ShopDataContext.Provider>
+        </CarRequestContext.Provider>
         </CarDataContext.Provider>
         {isCanvasLoading && (
           <div className="absolute inset-0 bg-white/75 backdrop-blur-xs z-50 flex flex-col items-center justify-center select-none text-right font-sans">

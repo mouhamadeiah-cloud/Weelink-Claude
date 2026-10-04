@@ -30,6 +30,7 @@ const CARD_ANIMATIONS: { id: ShopCardAnimation; label: string }[] = [
   { id: 'float', label: 'طفو' },
   { id: 'pulse', label: 'نبض' },
   { id: 'swing', label: 'تأرجح' },
+  { id: 'shake', label: 'اهتزاز' },
   { id: 'shine', label: 'لمعة' },
 ];
 
@@ -119,16 +120,17 @@ export const ShopElementSettings: React.FC<ShopElementSettingsProps> = ({ elemen
             />
           </>
         )}
-        <Label>عدد المنتجات المعروضة</Label>
+        <Label>عدد المنتجات في الصفحة الواحدة (حتى 30)</Label>
         <input
           className={inputClass}
           type="number"
           min={0}
-          placeholder="الكل"
+          placeholder="20"
+          max={30}
           value={element.shopLimit || ''}
-          onChange={(e) => onUpdateElement({ shopLimit: Math.max(0, parseInt(e.target.value, 10) || 0) || undefined })}
+          onChange={(e) => onUpdateElement({ shopLimit: Math.min(30, Math.max(0, parseInt(e.target.value, 10) || 0)) || undefined })}
         />
-        <p className="text-[10px] text-neutral-500 leading-relaxed">اتركه فارغًا لعرض كل المنتجات المصدّرة إلى المتجر.</p>
+        <p className="text-[10px] text-neutral-500 leading-relaxed">إذا زادت المنتجات عن هذا العدد تظهر أسهم «التالي» و«السابق» تحت البطاقات، ويستطيع الزبون اختيار عرض 20 أو 30 منتجًا. في الصفحة المنشورة تتمدد الشريحة لتتسع لكل البطاقات.</p>
       </div>
     );
   }

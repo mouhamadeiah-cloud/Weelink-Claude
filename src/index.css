@@ -227,6 +227,17 @@
   0% { transform: translateX(-160%) skewX(-20deg); }
   60%, 100% { transform: translateX(260%) skewX(-20deg); }
 }
+/* A short shake every few seconds, then still: catches the eye without tiring it. */
+@keyframes shop-shake {
+  0%, 30%, 100% { transform: translateX(0) rotate(0deg); }
+  4% { transform: translateX(-4px) rotate(-2.5deg); }
+  8% { transform: translateX(4px) rotate(2.5deg); }
+  12% { transform: translateX(-4px) rotate(-2deg); }
+  16% { transform: translateX(3px) rotate(1.5deg); }
+  20% { transform: translateX(-2px) rotate(-1deg); }
+  24% { transform: translateX(1px) rotate(0.5deg); }
+}
+.shop-anim-shake { animation: shop-shake 3s ease-in-out infinite; }
 .shop-anim-float { animation: shop-float 3.2s ease-in-out infinite; }
 .shop-anim-pulse { animation: shop-pulse 2.4s ease-in-out infinite; }
 .shop-anim-swing { animation: shop-swing 2.8s ease-in-out infinite; transform-origin: top center; }
@@ -241,4 +252,4 @@
   animation: shop-shine 3.2s ease-in-out infinite;
   animation-delay: inherit;
 }
-.shop-anim-float:hover, .shop-anim-pulse:hover, .shop-anim-swing:hover { animation-play-state: paused; }
+.shop-anim-float:hover, .shop-anim-pulse:hover, .shop-anim-swing:hover, .shop-anim-shake:hover { animation-play-state: paused; }

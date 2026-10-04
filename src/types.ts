@@ -96,7 +96,7 @@ export interface CartProduct {
 }
 
 export type ShopLayout = 'grid' | 'zigzag' | 'wide' | 'small' | 'large' | 'marquee' | 'spotlight';
-export type ShopCardAnimation = 'none' | 'float' | 'pulse' | 'swing' | 'shine';
+export type ShopCardAnimation = 'none' | 'float' | 'pulse' | 'swing' | 'shake' | 'shine';
 export type ShopSearchStyle = 'minimal' | 'pill' | 'glass';
 
 export interface CanvasElement {

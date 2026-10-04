@@ -179,12 +179,15 @@ function productGrid(prefix: string, slideId: string, products: Product[], top: 
 
 // The live product grid of an Online Shop project: lists the products exported from the admin
 // panel instead of the fixed demo cards.
-const liveGrid = (id: string, slideId: string, box: Box): CanvasElement =>
-  el(id, 'shopProducts', slideId, box, '', { color: C.accent }, { name: 'منتجات المتجر' });
+const liveGrid = (id: string, slideId: string, box: Box, extra: Partial<CanvasElement> = {}): CanvasElement =>
+  el(id, 'shopProducts', slideId, box, '', { color: C.accent }, { name: 'منتجات المتجر', ...extra });
+
+// The home page's featured grid shows one row; the store page lists everything, page by page.
+const FEATURED_LIMIT = 4;
 
 const LIVE_GRIDS = [
   { demoPrefix: /^shop-products-\d+-/, slideId: 'shop-products-slide', id: 'shop-products-live', box: { x: 90, y: 170, width: 1100, height: 900 } },
-  { demoPrefix: /^shop-featured-\d+-/, slideId: 'shop-home-featured', id: 'shop-featured-live', box: { x: 90, y: 170, width: 1100, height: 430 } },
+  { demoPrefix: /^shop-featured-\d+-/, slideId: 'shop-home-featured', id: 'shop-featured-live', box: { x: 90, y: 170, width: 1100, height: 430 }, extra: { shopLimit: FEATURED_LIMIT } },
 ];
 
 // An Online Shop's cart page is its checkout page: the cart beside the visitor's details and
@@ -215,12 +218,15 @@ export function withCheckoutLayout(pages: Page[], elements: CanvasElement[]): { 
 }
 
 // Shops created before the live grid existed: swap their demo product cards for it.
+// Featured grids made before product slides had pages show one row.
 export function withLiveProductGrid(elements: CanvasElement[]): CanvasElement[] {
-  if (elements.some((e) => e.type === 'shopProducts')) return elements;
+  if (elements.some((e) => e.type === 'shopProducts')) {
+    return elements.map((e) => (e.id === 'shop-featured-live' && e.shopLimit === undefined ? { ...e, shopLimit: FEATURED_LIMIT } : e));
+  }
   let next = elements;
   for (const g of LIVE_GRIDS) {
     if (!next.some((e) => g.demoPrefix.test(e.id))) continue;
-    next = [...next.filter((e) => !g.demoPrefix.test(e.id)), liveGrid(g.id, g.slideId, g.box)];
+    next = [...next.filter((e) => !g.demoPrefix.test(e.id)), liveGrid(g.id, g.slideId, g.box, g.extra)];
   }
   return next;
 }

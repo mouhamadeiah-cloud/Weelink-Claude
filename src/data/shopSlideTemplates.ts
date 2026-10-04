@@ -225,7 +225,19 @@ const SLIDES: (() => ShopSlide)[] = [
     ],
   }),
 
-  // 11. A narrow strip of text running left to right.
+  // 11. Cards that shake every few seconds.
+  () => ({
+    name: 'منتجات بحركة اهتزاز',
+    height: 640,
+    backgroundColor: '#FFFFFF',
+    elements: [
+      heading({ x: 0, y: 50, width: 1280, height: 50 }, 'منتجات مختارة', 32),
+      paragraph({ x: 0, y: 104, width: 1280, height: 32 }, 'الأكثر طلبًا من عملائنا هذا الأسبوع'),
+      products({ x: 90, y: 160, width: 1100, height: 440 }, { shopLayout: 'grid', shopLimit: 4, shopCardAnimation: 'shake' }),
+    ],
+  }),
+
+  // 12. A narrow strip of text running left to right.
   () => ({
     name: 'شريط نص متحرك',
     height: 60,

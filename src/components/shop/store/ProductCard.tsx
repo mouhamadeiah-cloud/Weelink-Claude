@@ -179,7 +179,7 @@ export const ProductChip: React.FC<ProductCardProps> = ({ product, accent = '#B4
   <div
     onClick={onOpen}
     dir="rtl"
-    className="h-full shrink-0 flex items-center gap-2.5 pl-4 pr-1.5 bg-white rounded-full cursor-pointer shadow-sm max-w-[260px]"
+    className="w-full h-full flex items-center gap-2.5 pl-4 pr-1.5 bg-white rounded-full cursor-pointer shadow-sm"
   >
     <div className="h-[calc(100%-12px)] aspect-square rounded-full overflow-hidden bg-neutral-100 shrink-0">
       {product.images[0] && <img src={product.images[0]} alt={product.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />}

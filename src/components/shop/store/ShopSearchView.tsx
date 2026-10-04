@@ -1,6 +1,7 @@
 // The 'shopSearch' canvas element: a search bar over the store's published products. Typing lists
-// the matching products under the bar; picking one opens its floating card, as on the products
-// page. The element's text is the bar's placeholder and shopSearchStyle its look.
+// the first matches under the bar (picking one opens its floating card); pressing Enter or «بحث»
+// shows every match in the store's product slide, opening the store page when this page has none.
+// The element's text is the bar's placeholder and shopSearchStyle its look.
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, ImageOff } from 'lucide-react';
@@ -8,15 +9,15 @@ import type { CanvasElement } from '../../../types';
 import { useShopData } from './ShopDataContext';
 import { ProductDetailModal } from './ProductDetailModal';
 import { formatPrice } from '../../../utils/cartStore';
+import { matchesSearch, setShopSearch } from './shopSearchStore';
 
 interface ShopSearchViewProps {
   elem: CanvasElement;
   isPreviewActive: boolean;
+  onOpenStore?: () => void; // opens the page holding the store's product slide
 }
 
-const normalize = (s: string) => s.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim();
-
-export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewActive }) => {
+export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewActive, onOpenStore }) => {
   const admin = useShopData();
   const accent = elem.styles.color || '#B4532A';
   const look = elem.shopSearchStyle || 'pill';
@@ -29,11 +30,18 @@ export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewA
   const [rect, setRect] = useState<DOMRect | null>(null);
 
   const products = useMemo(() => (admin?.products || []).filter((p) => p.published), [admin]);
-  const q = normalize(query);
-  const matches = q
-    ? products.filter((p) => [p.name, p.shortDescription, p.sku].some((f) => f && normalize(f).includes(q))).slice(0, 8)
-    : [];
+  const q = query.trim();
+  const allMatches = q ? products.filter((p) => matchesSearch([p.name, p.shortDescription, p.sku], q)) : [];
+  const matches = allMatches.slice(0, 6);
   const showList = isPreviewActive && focused && q.length > 0;
+
+  // Shows every match in the store's main product slide, opening its page when it is elsewhere.
+  const submit = () => {
+    if (!q || !isPreviewActive) return;
+    setShopSearch(q);
+    setFocused(false);
+    if (!document.querySelector('[data-shop-products="search"]')) onOpenStore?.();
+  };
 
   // The result list floats over the page under the bar, so it follows the bar while open.
   useLayoutEffect(() => {
@@ -77,14 +85,15 @@ export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewA
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => window.setTimeout(() => setFocused(false), 150)}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
         placeholder={elem.content || 'ابحث عن منتج...'}
         className={`flex-1 min-w-0 h-full bg-transparent outline-none text-base ${look === 'glass' ? 'placeholder:text-white/80' : 'placeholder:text-[#8A7B70]'}`}
         style={{ color: bar.text }}
       />
       {look === 'pill' && (
-        <span className="shrink-0 h-[calc(100%-12px)] px-6 rounded-full text-white text-sm font-bold flex items-center" style={{ backgroundColor: accent }}>
+        <button type="button" onClick={submit} className="shrink-0 h-[calc(100%-12px)] px-6 rounded-full text-white text-sm font-bold flex items-center cursor-pointer" style={{ backgroundColor: accent }}>
           بحث
-        </span>
+        </button>
       )}
 
       {showList && rect && createPortal(
@@ -111,6 +120,16 @@ export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewA
                 <span className="text-sm font-black shrink-0" style={{ color: accent }}>{formatPrice(p.price, p.currency)}</span>
               </button>
             ))
+          )}
+          {allMatches.length > 0 && (
+            <button
+              type="button"
+              onClick={submit}
+              className="w-full px-4 py-2.5 text-sm font-bold text-center border-t border-black/[0.06] hover:bg-black/[0.04] cursor-pointer"
+              style={{ color: accent }}
+            >
+              عرض كل النتائج في المتجر ({allMatches.length})
+            </button>
           )}
         </div>,
         document.body

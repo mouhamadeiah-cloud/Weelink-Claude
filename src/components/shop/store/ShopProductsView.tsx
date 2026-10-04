@@ -17,7 +17,8 @@ import { ProductDetailModal } from './ProductDetailModal';
 import { useShopSearch, clearShopSearch, matchesSearch, takeReveal } from './shopSearchStore';
 
 // Card width of each layout for a product at the default size (50%); a product's card size
-// (25 / 50 / 100%) scales it. Cards wrap in rows centred in the slide.
+// (25 / 50 / 100%) scales it. Cards wrap in rows centred in the slide, and the cards of a row
+// share one height whatever their text.
 const BASE_WIDTH: Record<string, number> = { grid: 130, spotlight: 135, large: 200, small: 85, wide: 270 };
 
 export const MAX_PAGE_SIZE = 30;
@@ -277,7 +278,7 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
           ref={gridRef}
           className={grows ? 'pb-2 pt-3' : 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-2 pt-3'}
         >
-          <div className={layout === 'zigzag' ? 'flex flex-col gap-8 max-w-[560px] mx-auto' : 'flex flex-wrap justify-center items-start gap-4'}>
+          <div className={layout === 'zigzag' ? 'flex flex-col gap-8 max-w-[560px] mx-auto' : 'flex flex-wrap justify-center items-stretch gap-4'}>
             {list.map((p, i) => {
               const show = () => setOpenId(p.id);
               const full = layout === 'grid' && p.display === 'slide';

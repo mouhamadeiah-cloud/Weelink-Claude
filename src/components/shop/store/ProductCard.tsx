@@ -202,11 +202,11 @@ export const ProductMini: React.FC<ProductCardProps> = ({ product, accent = '#B4
     <div
       onClick={onOpen}
       dir="rtl"
-      className="group w-full overflow-hidden cursor-pointer text-right transition hover:shadow-[0_10px_24px_rgba(42,31,26,0.12)]"
+      className="group w-full overflow-hidden cursor-pointer text-right transition flex flex-col hover:shadow-[0_10px_24px_rgba(42,31,26,0.12)]"
       style={{ borderRadius: look.radius, border: look.border, backgroundColor: look.textBg }}
     >
       <Photo product={product} className="w-full aspect-square" hover />
-      <div className="px-2 py-1.5">
+      <div className="px-2 py-1.5 flex-1 flex flex-col justify-between">
         <div className="text-[11px] font-bold truncate" style={{ color: look.textColor || '#2A1F1A' }}>{product.name || 'اسم المنتج'}</div>
         <Price product={product} accent={accent} className="text-[11px]" />
       </div>

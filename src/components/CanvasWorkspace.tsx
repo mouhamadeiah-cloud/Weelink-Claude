@@ -13,7 +13,7 @@ import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
 import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
-import { addToCart } from '../utils/cartStore';
+import { addToCart, useCart } from '../utils/cartStore';
 import { CartView } from './CartView';
 import { ShopProductsView } from './shop/store/ShopProductsView';
 import { Icon } from '@iconify/react';
@@ -1936,6 +1936,23 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     linkTargetId: p.id,
   }));
   const navCustomItems = (navbar.items || []).filter((it) => it.linkType !== 'page');
+  // The cart page's navbar link shows how many items the visitor has in the cart.
+  const cartItems = useCart();
+  const cartCount = cartItems.reduce((n, i) => n + i.qty, 0);
+  const cartPageIds = new Set(
+    (allPages || [])
+      .filter((p) => p.slides.some((sl) => rawElements.some((e) => e.type === 'cart' && e.slideId === sl.id)))
+      .map((p) => p.id)
+  );
+  const cartBadge = (item: { linkType?: string; linkTargetId?: string }) =>
+    cartCount > 0 && item.linkType === 'page' && item.linkTargetId && cartPageIds.has(item.linkTargetId) ? (
+      <span
+        className="ms-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#ff3b30] text-white text-[10px] font-bold leading-none align-middle"
+        aria-label={`${cartCount} في السلة`}
+      >
+        {cartCount > 99 ? '99+' : cartCount}
+      </span>
+    ) : null;
   const effectiveNavItems = allPages && allPages.length > 0 ? [...navPageLinkItems, ...navCustomItems] : navbar.items;
 
   const totalUnscaledHeight = (navbar.height ?? 60) + slides.reduce((sum, s) => sum + s.height, 0);
@@ -2163,7 +2180,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       borderRadius: navbar.itemsFrameBorderRadius ? `${navbar.itemsFrameBorderRadius}px` : undefined,
                     }}
                   >
-                    {item.label}
+                    {item.label}{cartBadge(item)}
                   </span>
                 );
               })}
@@ -2225,7 +2242,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     className={`px-6 py-3 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
                     style={{ fontFamily: navbar.itemsFontFamily || undefined }}
                   >
-                    {item.label}
+                    {item.label}{cartBadge(item)}
                   </span>
                 );
               })}

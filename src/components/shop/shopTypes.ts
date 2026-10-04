@@ -61,6 +61,22 @@ export const MAX_RELATED = 5;
 // background, with the name, price and button in a narrow strip along its bottom.
 export type ProductDisplay = 'card' | 'slide';
 
+// A card's width on the store page: 100 = the original width, 50 (default) = half of it.
+export type CardSize = 25 | 50 | 100;
+export const CARD_SIZES: CardSize[] = [25, 50, 100];
+export type CardCorners = 'rounded' | 'soft' | 'square' | 'leaf';
+
+// The look of a product's card: optional frame, the text area's colours and the corners.
+export interface CardStyle {
+  border: boolean;
+  borderColor: string;
+  textColor: string; // '' = the store's colours
+  textBg: string; // '' = white
+  corners: CardCorners;
+}
+
+export const DEFAULT_CARD_STYLE: CardStyle = { border: false, borderColor: '#B4532A', textColor: '', textBg: '', corners: 'rounded' };
+
 export interface ShopProduct {
   id: string;
   name: string;
@@ -76,6 +92,9 @@ export interface ShopProduct {
   images: string[]; // up to MAX_IMAGES; the first one is the main image
   galleryLayout: GalleryLayout;
   display: ProductDisplay; // how it sits on the store page: a grid card or a full-width slide
+  cardSize: CardSize; // card width (display 'card')
+  cardStyle: CardStyle;
+  featured: boolean; // also shown in the store's «عروض مميزة» slides
   badge: ProductBadge;
   tiers: PriceTier[];
   deliveryPrice: number | null; // null = the store's delivery fee
@@ -339,6 +358,9 @@ export const normalizeProduct = (p: any, currency: string): ShopProduct => ({
   images: Array.isArray(p.images) ? p.images : [],
   galleryLayout: p.galleryLayout || 'top-main',
   display: p.display === 'slide' ? 'slide' : 'card',
+  cardSize: CARD_SIZES.includes(p.cardSize) ? p.cardSize : 50,
+  cardStyle: { ...DEFAULT_CARD_STYLE, ...(p.cardStyle || {}) },
+  featured: !!p.featured,
   badge: p.badge || '',
   tiers: Array.isArray(p.tiers) ? p.tiers : [],
   deliveryPrice: typeof p.deliveryPrice === 'number' ? p.deliveryPrice : null,

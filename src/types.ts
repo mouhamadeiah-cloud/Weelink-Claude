@@ -20,7 +20,9 @@ export type ElementType =
   | 'gallery'
   | 'mask'
   | 'cart'
-  | 'shopProducts';
+  | 'shopProducts'
+  | 'shopSearch'
+  | 'checkout';
 
 export type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
 
@@ -94,6 +96,10 @@ export interface CartProduct {
   variant?: string; // online-shop products with stock options: the chosen combination, e.g. "أحمر / L"
 }
 
+export type ShopLayout = 'grid' | 'zigzag' | 'wide' | 'small' | 'large' | 'marquee' | 'spotlight';
+export type ShopCardAnimation = 'none' | 'float' | 'pulse' | 'swing' | 'shake' | 'shine';
+export type ShopSearchStyle = 'minimal' | 'pill' | 'glass';
+
 export interface CanvasElement {
   id: string;
   name: string;
@@ -119,6 +125,21 @@ export interface CanvasElement {
   cartProduct?: CartProduct;
   // 'cart' element only: WhatsApp number the finished order is sent to.
   cartWhatsapp?: string;
+  // Online Shop 'cart' element: show only the cart summary, the order form being its own 'checkout'
+  // element (the order card) beside it. Unset = both halves in one element.
+  cartSplit?: boolean;
+  // Online Shop 'cart' / 'checkout' elements: accent colour (buttons, prices) and replaced texts
+  // (keys in shop/store/checkoutStore CHECKOUT_TEXTS); styles.color is their text colour.
+  shopAccent?: string;
+  shopTexts?: Record<string, string>;
+  // 'shopProducts' element only: how the store's products are shown.
+  shopLayout?: ShopLayout;
+  shopLimit?: number; // at most this many products (0 or unset = all)
+  shopCardAnimation?: ShopCardAnimation; // a looping animation on each card
+  shopSpeed?: number; // 'marquee' layout: seconds for one full pass
+  // 'shopSearch' element only: the look of the search bar (its placeholder is the content).
+  shopSearchStyle?: ShopSearchStyle;
+  shopSource?: 'all' | 'featured'; // shopProducts: every product, or only the «عروض مميزة» ones
   linkTargetId?: string;
   contactType?: ContactType;
   contactValue?: string;

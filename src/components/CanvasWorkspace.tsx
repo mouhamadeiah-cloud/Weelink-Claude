@@ -16,6 +16,8 @@ import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileL
 import { addToCart, useCart } from '../utils/cartStore';
 import { CartView } from './CartView';
 import { ShopProductsView } from './shop/store/ShopProductsView';
+import { ShopSearchView } from './shop/store/ShopSearchView';
+import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { 
   Trash2, 
@@ -702,17 +704,51 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // In mobile view, elements and slides render with their phone layout ("تنسيق الموبايل") when
   // they have one. Everything below works on these resolved values, so dragging/resizing in mobile
   // view reports phone coordinates (App routes those into `element.mobile`).
-  const elements = useMemo(
+  const layoutElements = useMemo(
     () => (previewMode === 'mobile' ? rawElements.map(resolveMobileElement) : rawElements),
     [previewMode, rawElements]
   );
-  const slides = useMemo(
+  const layoutSlides = useMemo(
     () =>
       previewMode === 'mobile'
         ? rawSlides.map(s => ({ ...s, height: resolveMobileSlideHeight(s, rawElements) }))
         : rawSlides,
     [previewMode, rawSlides, rawElements]
   );
+
+  // On the live page a store products element grows to fit its cards: it reports how much taller
+  // than its box they are, and its slide grows by that much, pushing the elements below it down.
+  const [shopGrow, setShopGrow] = useState<Record<string, number>>({});
+  const shopGrowHandlers = useRef(new Map<string, (extra: number) => void>());
+  const shopGrowHandler = (id: string) => {
+    let handler = shopGrowHandlers.current.get(id);
+    if (!handler) {
+      handler = (extra: number) =>
+        setShopGrow((g) => ((g[id] || 0) === extra ? g : { ...g, [id]: extra }));
+      shopGrowHandlers.current.set(id, handler);
+    }
+    return handler;
+  };
+  const growing = isPreviewActive ? layoutElements.filter((e) => (shopGrow[e.id] || 0) > 0) : [];
+  const elements = useMemo(() => {
+    if (!growing.length) return layoutElements;
+    return layoutElements.map((e) => {
+      const own = shopGrow[e.id] || 0;
+      const shift = growing
+        .filter((g) => g.id !== e.id && g.slideId === e.slideId && e.y >= g.y + g.height - 2)
+        .reduce((sum, g) => sum + (shopGrow[g.id] || 0), 0);
+      return own || shift ? { ...e, y: e.y + shift, height: e.height + own } : e;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutElements, shopGrow, isPreviewActive]);
+  const slides = useMemo(() => {
+    if (!growing.length) return layoutSlides;
+    return layoutSlides.map((sl) => {
+      const extra = growing.filter((g) => g.slideId === sl.id).reduce((sum, g) => sum + (shopGrow[g.id] || 0), 0);
+      return extra ? { ...sl, height: sl.height + extra } : sl;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutSlides, shopGrow, isPreviewActive]);
 
   // Hamburger menu of the navbar on phones (navbar.mobileMenu).
   const isNavHamburger = previewMode === 'mobile' && !!navbar.mobileMenu;
@@ -1944,6 +1980,15 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       .filter((p) => p.slides.some((sl) => rawElements.some((e) => e.type === 'cart' && e.slideId === sl.id)))
       .map((p) => p.id)
   );
+  // The store's main product slide (the tallest one: the full store rather than a featured row)
+  // shows the results of a store search; a search from another page opens its page.
+  const storeList = rawElements
+    .filter((e) => e.type === 'shopProducts' && e.shopLayout !== 'marquee' && e.shopSource !== 'featured')
+    .sort((a, b) => b.height - a.height)[0];
+  const storePageId = storeList && (allPages || []).find((p) => p.slides.some((sl) => sl.id === storeList.slideId))?.id;
+  const openStorePage = () => {
+    if (storePageId) onSelectPage?.(storePageId);
+  };
   const cartBadge = (item: { linkType?: string; linkTargetId?: string }) =>
     cartCount > 0 && item.linkType === 'page' && item.linkTargetId && cartPageIds.has(item.linkTargetId) ? (
       <span
@@ -4043,7 +4088,15 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                         )}
 
                         {elem.type === 'shopProducts' && (
-                          <ShopProductsView elem={elem} isPreviewActive={isPreviewActive} />
+                          <ShopProductsView elem={elem} isPreviewActive={isPreviewActive} showsSearch={elem.id === storeList?.id} onGrow={shopGrowHandler(elem.id)} boxHeight={elem.height - (isPreviewActive ? shopGrow[elem.id] || 0 : 0)} />
+                        )}
+
+                        {elem.type === 'checkout' && (
+                          <CheckoutFormCard elem={elem} isPreviewActive={isPreviewActive} />
+                        )}
+
+                        {elem.type === 'shopSearch' && (
+                          <ShopSearchView elem={elem} isPreviewActive={isPreviewActive} onOpenStore={openStorePage} />
                         )}
 
                         {elem.type === 'html' && (

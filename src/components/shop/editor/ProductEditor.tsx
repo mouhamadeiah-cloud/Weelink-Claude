@@ -7,7 +7,7 @@ import React, { useMemo, useState } from 'react';
 import { Store, Warehouse, ArrowLeft, ArrowRight, Plus, Trash2, Percent, LayoutGrid, GalleryHorizontal } from 'lucide-react';
 import {
   ShopAdminData, ShopProduct, ShopCatalog, ShopMovement, PRODUCT_BADGES, ProductBadge, CURRENCIES,
-  MAX_PRICE_TIERS, ProductDisplay, newId,
+  MAX_PRICE_TIERS, ProductDisplay, newId, DEFAULT_CARD_STYLE, CARD_SIZES,
 } from '../shopTypes';
 import { buildVariants, discountPercent, nextSku, sanitizeHtml, totalStock, variantLabel } from '../productModel';
 import { suggestedPresets } from '../artikel';
@@ -18,6 +18,7 @@ import { OptionsEditor } from './OptionsEditor';
 import { RichTextEditor } from './RichTextEditor';
 import { RelatedProductsPicker } from './RelatedProductsPicker';
 import { ProductCard, ProductSlide } from '../store/ProductCard';
+import { CardStyleSettings } from './CardStyleSettings';
 import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 
 export const newProductDraft = (currency: string): ShopProduct => ({
@@ -35,6 +36,9 @@ export const newProductDraft = (currency: string): ShopProduct => ({
   images: [],
   galleryLayout: 'top-main',
   display: 'card',
+  cardSize: 50,
+  cardStyle: DEFAULT_CARD_STYLE,
+  featured: false,
   badge: '',
   tiers: [],
   deliveryPrice: null,
@@ -409,7 +413,15 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
 
       <aside className="lg:sticky lg:top-0 space-y-2">
         <div className="text-[11px] font-bold text-neutral-400">هكذا يظهر في المتجر</div>
-        {p.display === 'slide' ? <ProductSlide product={preview} /> : <ProductCard product={preview} />}
+        {p.display === 'slide' ? (
+          <ProductSlide product={preview} />
+        ) : (
+          <div className="flex justify-center">
+            <div style={{ width: `${p.cardSize}%` }}>
+              <ProductCard product={preview} width={(260 * p.cardSize) / 100} />
+            </div>
+          </div>
+        )}
         <div>
           <div className="text-[11px] font-bold text-neutral-500 mb-1">طريقة الإدراج في المتجر</div>
           <div className="grid grid-cols-2 gap-1.5">
@@ -428,6 +440,27 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
             <p className="mt-1 text-[10px] text-neutral-400 leading-relaxed">يظهر المنتج بعرض الصف كاملاً: الصورة الأساسية خلفية، والاسم والسعر والزر في شريط أسفلها.</p>
           )}
         </div>
+        {p.display === 'card' && (
+          <div>
+            <div className="text-[11px] font-bold text-neutral-500 mb-1">حجم البطاقة</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {CARD_SIZES.map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => set({ cardSize: size })}
+                  className={`h-8 rounded-xl border text-xs font-bold transition cursor-pointer ${p.cardSize === size ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
+                >
+                  {size}%
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="rounded-xl border border-neutral-200 px-3 py-1.5">
+          <Toggle checked={p.featured} onChange={(v) => set({ featured: v })} label="إضافة إلى شريحة عروض مميزة" />
+        </div>
+        <CardStyleSettings value={p.cardStyle} onChange={(cardStyle) => set({ cardStyle })} />
         {preview.options.some((o) => o.values.length) && (
           <div className="text-[10px] text-neutral-400 leading-relaxed">
             {preview.options.filter((o) => o.values.length).map((o) => `${o.name}: ${o.values.map((v) => v.label).join('، ')}`).join(' · ')}

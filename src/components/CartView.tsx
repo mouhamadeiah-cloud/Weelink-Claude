@@ -8,7 +8,8 @@ import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import type { CanvasElement } from '../types';
 import { useCart, setCartQty, clearCart, cartTotal, formatPrice, buildWhatsappOrderUrl } from '../utils/cartStore';
 import { useShopData } from './shop/store/ShopDataContext';
-import { CheckoutView } from './shop/store/CheckoutView';
+import { CartSummary, CheckoutForm, CheckoutView } from './shop/store/CheckoutView';
+import { checkoutLook } from './shop/store/checkoutStore';
 
 interface CartViewProps {
   elem: CanvasElement;
@@ -25,8 +26,12 @@ export const CartView: React.FC<CartViewProps> = ({ elem, isPreviewActive }) => 
 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
-  // In an Online Shop the cart page is the checkout page.
-  if (shop) return <CheckoutView accent={accent} isPreviewActive={isPreviewActive} />;
+  // In an Online Shop the cart page is the checkout page: the cart summary beside the order card
+  // (a 'checkout' element), or both in this element for carts made before the order card.
+  if (shop) {
+    const look = checkoutLook(elem);
+    return elem.cartSplit ? <CartSummary look={look} isPreviewActive={isPreviewActive} /> : <CheckoutView look={look} isPreviewActive={isPreviewActive} />;
+  }
 
   return (
     <div
@@ -107,4 +112,17 @@ export const CartView: React.FC<CartViewProps> = ({ elem, isPreviewActive }) => 
       </div>
     </div>
   );
+};
+
+// The 'checkout' element: the Online Shop's order card (the visitor's details and payment).
+export const CheckoutFormCard: React.FC<CartViewProps> = ({ elem, isPreviewActive }) => {
+  const shop = useShopData();
+  if (!shop) {
+    return (
+      <div dir="rtl" className="w-full h-full rounded-3xl border border-dashed border-black/[0.15] flex items-center justify-center p-6 text-center text-sm text-neutral-500">
+        بطاقة الطلب تعمل في مشروع المتجر الإلكتروني فقط.
+      </div>
+    );
+  }
+  return <CheckoutForm look={checkoutLook(elem)} isPreviewActive={isPreviewActive} />;
 };

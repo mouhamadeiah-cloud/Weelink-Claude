@@ -179,48 +179,90 @@ function productGrid(prefix: string, slideId: string, products: Product[], top: 
 
 // The live product grid of an Online Shop project: lists the products exported from the admin
 // panel instead of the fixed demo cards.
-const liveGrid = (id: string, slideId: string, box: Box): CanvasElement =>
-  el(id, 'shopProducts', slideId, box, '', { color: C.accent }, { name: 'منتجات المتجر' });
+const liveGrid = (id: string, slideId: string, box: Box, extra: Partial<CanvasElement> = {}): CanvasElement =>
+  el(id, 'shopProducts', slideId, box, '', { color: C.accent }, { name: 'منتجات المتجر', ...extra });
+
+// The home page's featured grid shows one row; the store page lists everything, page by page.
+const FEATURED_LIMIT = 4;
 
 const LIVE_GRIDS = [
   { demoPrefix: /^shop-products-\d+-/, slideId: 'shop-products-slide', id: 'shop-products-live', box: { x: 90, y: 170, width: 1100, height: 900 } },
-  { demoPrefix: /^shop-featured-\d+-/, slideId: 'shop-home-featured', id: 'shop-featured-live', box: { x: 90, y: 170, width: 1100, height: 430 } },
+  { demoPrefix: /^shop-featured-\d+-/, slideId: 'shop-home-featured', id: 'shop-featured-live', box: { x: 90, y: 170, width: 1100, height: 430 }, extra: { shopLimit: FEATURED_LIMIT } },
 ];
 
-// An Online Shop's cart page is its checkout page: the cart beside the visitor's details and
-// payment, so the cart element is wider and taller than the free page's.
+// An Online Shop's cart page is its checkout page: the cart summary on the right and, in the
+// empty space on its left, the order card (the visitor's details and payment) as its own element.
+// Both are styled like any element (background, border, font, text colour) plus an accent.
 const CHECKOUT = {
   slideHeight: 1000,
+  // The single element of shops made before the order card had its own element.
   cart: { x: 90, y: 160, width: 1100, height: 740 },
+  summary: { x: 690, y: 160, width: 500, height: 740 },
+  form: { x: 90, y: 160, width: 570, height: 740 },
   continueY: 925,
   subtitle: 'راجع طلبك، أدخل بياناتك واختر طريقة الدفع.',
 };
 
+const checkoutCardStyles = { color: C.ink, backgroundColor: '#FFFFFF', borderRadius: 24, borderColor: 'rgba(42,31,26,0.08)', borderWidth: 1 };
+
+const checkoutForm = (slideId: string): CanvasElement =>
+  el('shop-checkout', 'checkout', slideId, CHECKOUT.form, '', checkoutCardStyles, { name: 'بطاقة الطلب', shopAccent: C.accent });
+
 // Shops created before the checkout page: enlarge their cart page if it is still as created.
+// Then split a one-piece checkout into the cart summary and the order card on its left, and
+// move the accent out of the text colour.
 export function withCheckoutLayout(pages: Page[], elements: CanvasElement[]): { pages: Page[]; elements: CanvasElement[] } {
   const cart = elements.find((e) => e.id === 'shop-cart');
-  if (!cart || cart.x !== 190 || cart.y !== 160 || cart.width !== 900 || cart.height !== 480) return { pages, elements };
-  return {
-    pages: pages.map((p) => ({
+  if (!cart) return { pages, elements };
+  const old = cart.x === 190 && cart.y === 160 && cart.width === 900 && cart.height === 480;
+  if (old) {
+    pages = pages.map((p) => ({
       ...p,
       slides: p.slides.map((sl) => (sl.id === 'shop-cart-slide' && (sl.height || 0) < CHECKOUT.slideHeight ? { ...sl, height: CHECKOUT.slideHeight } : sl)),
-    })),
-    elements: elements.map((e) => {
-      if (e.id === 'shop-cart') return { ...e, ...CHECKOUT.cart };
-      if (e.id === 'shop-cart-continue' && e.y === 670) return { ...e, y: CHECKOUT.continueY };
-      if (e.id === 'shop-cart-sub' && e.content === 'راجع طلبك ثم أرسله عبر واتساب. الدفع عند الاستلام.') return { ...e, content: CHECKOUT.subtitle };
-      return e;
-    }),
-  };
+    }));
+  }
+  const whole = old || (cart.x === CHECKOUT.cart.x && cart.y === CHECKOUT.cart.y && cart.width === CHECKOUT.cart.width && cart.height === CHECKOUT.cart.height);
+  const split = whole && !cart.cartSplit && !elements.some((e) => e.type === 'checkout');
+  const recolor = !cart.shopAccent;
+  if (!old && !split && !recolor) return { pages, elements };
+  const next = elements.map((e) => {
+    if (e.id === 'shop-cart') {
+      return {
+        ...e,
+        ...(split ? { ...CHECKOUT.summary, cartSplit: true } : old ? CHECKOUT.cart : {}),
+        ...(recolor ? { shopAccent: e.styles.color || C.accent, styles: { ...e.styles, ...(split ? checkoutCardStyles : { color: C.ink }) } } : {}),
+      };
+    }
+    if (old && e.id === 'shop-cart-continue' && e.y === 670) return { ...e, y: CHECKOUT.continueY };
+    if (old && e.id === 'shop-cart-sub' && e.content === 'راجع طلبك ثم أرسله عبر واتساب. الدفع عند الاستلام.') return { ...e, content: CHECKOUT.subtitle };
+    return e;
+  });
+  return { pages, elements: split ? [...next, checkoutForm(cart.slideId)] : next };
 }
 
+// «عروض مميزة»: the products marked as featured in the product editor, as a running strip on the
+// home page and as shaking cards above the full list on the store page (new shops only).
+const OFFERS = { homeSlide: 'shop-home-offers', storeSlide: 'shop-products-offers' };
+const offersElements = (): CanvasElement[] => [
+  liveGrid('shop-offers-strip', OFFERS.homeSlide, { x: 0, y: 15, width: 1280, height: 80 }, {
+    name: 'عروض مميزة', shopLayout: 'marquee', shopSource: 'featured', shopSpeed: 30,
+  }),
+  heading('shop-offers-heading', OFFERS.storeSlide, { x: 0, y: 44, width: 1280, height: 50 }, 'عروض مميزة', 32, C.ink, 'center'),
+  liveGrid('shop-offers-cards', OFFERS.storeSlide, { x: 90, y: 120, width: 1100, height: 340 }, {
+    name: 'عروض مميزة', shopLayout: 'grid', shopSource: 'featured', shopCardAnimation: 'shake', shopLimit: 8,
+  }),
+];
+
 // Shops created before the live grid existed: swap their demo product cards for it.
+// Featured grids made before product slides had pages show one row.
 export function withLiveProductGrid(elements: CanvasElement[]): CanvasElement[] {
-  if (elements.some((e) => e.type === 'shopProducts')) return elements;
+  if (elements.some((e) => e.type === 'shopProducts')) {
+    return elements.map((e) => (e.id === 'shop-featured-live' && e.shopLimit === undefined ? { ...e, shopLimit: FEATURED_LIMIT } : e));
+  }
   let next = elements;
   for (const g of LIVE_GRIDS) {
     if (!next.some((e) => g.demoPrefix.test(e.id))) continue;
-    next = [...next.filter((e) => !g.demoPrefix.test(e.id)), liveGrid(g.id, g.slideId, g.box)];
+    next = [...next.filter((e) => !g.demoPrefix.test(e.id)), liveGrid(g.id, g.slideId, g.box, g.extra)];
   }
   return next;
 }
@@ -239,6 +281,7 @@ export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { 
       navbar: buildNavbar(),
       slides: [
         { id: 'shop-home-hero', name: 'الواجهة', height: 620, backgroundColor: '#2A1F1A', backgroundImage: unsplash('1441986300917-64674bd600d8', 1800), backgroundSize: 'cover', backgroundPosition: 'center', dividerShape: 'straight' },
+        ...(live ? [{ id: OFFERS.homeSlide, name: 'عروض مميزة', height: 110, backgroundColor: C.ink, dividerShape: 'straight' as const }] : []),
         { id: 'shop-home-featured', name: 'منتجات مختارة', height: 640, backgroundColor: C.cream, dividerShape: 'straight' },
         { id: 'shop-home-perks', name: 'لماذا نحن', height: 300, backgroundColor: '#FFFFFF', dividerShape: 'straight' },
       ],
@@ -249,6 +292,7 @@ export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { 
       slug: '/products',
       navbar: buildNavbar(),
       slides: [
+        ...(live ? [{ id: OFFERS.storeSlide, name: 'عروض مميزة', height: 500, backgroundColor: '#FFFFFF', dividerShape: 'straight' as const }] : []),
         { id: 'shop-products-slide', name: 'كل المنتجات', height: 1120, backgroundColor: C.cream, dividerShape: 'straight' },
       ],
     },
@@ -376,9 +420,12 @@ export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { 
     // ---------- Cart ----------
     heading('shop-cart-heading', cart, { x: 0, y: 50, width: 1280, height: 50 }, 'سلة المشتريات', 34, C.ink, 'center'),
     paragraph('shop-cart-sub', cart, { x: 0, y: 104, width: 1280, height: 32 }, live ? CHECKOUT.subtitle : 'راجع طلبك ثم أرسله عبر واتساب. الدفع عند الاستلام.', 15, C.muted, 'center'),
-    el('shop-cart', 'cart', cart, live ? CHECKOUT.cart : { x: 190, y: 160, width: 900, height: 480 }, '', {
-      color: C.accent,
-    }, { cartWhatsapp: WHATSAPP_NUMBER }),
+    ...(live
+      ? [
+          el('shop-cart', 'cart', cart, CHECKOUT.summary, '', checkoutCardStyles, { cartWhatsapp: WHATSAPP_NUMBER, cartSplit: true, shopAccent: C.accent }),
+          checkoutForm(cart),
+        ]
+      : [el('shop-cart', 'cart', cart, { x: 190, y: 160, width: 900, height: 480 }, '', { color: C.accent }, { cartWhatsapp: WHATSAPP_NUMBER })]),
     el('shop-cart-continue', 'button', cart, { x: 520, y: live ? CHECKOUT.continueY : 670, width: 240, height: 50 }, 'متابعة التسوّق', {
       backgroundColor: 'transparent',
       color: C.accent,
@@ -451,7 +498,7 @@ export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { 
     }, { mapLocation: 'دمشق، سوريا' }),
   ]);
 
-  return { pages, elements };
+  return { pages, elements: live ? [...elements, ...offersElements()] : elements };
 }
 
 const withLive = (live: boolean, elements: CanvasElement[]) => (live ? withLiveProductGrid(elements) : elements);

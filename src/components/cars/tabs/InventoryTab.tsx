@@ -1,9 +1,11 @@
 // المخزون: every car of the showroom with its state. From here the owner changes a car's status,
 // shows it in or hides it from the showroom, marks it as featured, opens it to edit, or deletes it.
 import React, { useMemo, useState } from 'react';
-import { Pencil, Trash2, Eye, EyeOff, Star, Search, ImageOff, Plus } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff, Star, Search, ImageOff, Plus, BadgeCheck, Wallet } from 'lucide-react';
 import { Car, CarStatus, CAR_STATUSES } from '../carTypes';
-import { carTitle, carSubtitle, expectedMargin, formatKm, statusMeta } from '../carModel';
+import { carTitle, carSubtitle, formatKm, statusMeta } from '../carModel';
+import { carCost, carProfit, expectedProfit, saleRemaining, undoSale } from '../carMoney';
+import { CarMoneyDialog } from './CarMoneyDialog';
 import { Card, EmptyState, inputClass, PrimaryButton, formatMoney } from '../../shop/adminUi';
 import { matchesSearch } from '../../shop/store/shopSearchStore';
 import { CarTabProps } from './CarEditor';
@@ -18,12 +20,26 @@ const Stat: React.FC<{ label: string; value: string; color?: string }> = ({ labe
 export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) => {
   const [filter, setFilter] = useState<CarStatus | 'all'>('all');
   const [query, setQuery] = useState('');
+  const [moneyFor, setMoneyFor] = useState<string | null>(null);
   const currency = data.settings.currency;
 
   const setCar = (id: string, changes: Partial<Car>) =>
     update((d) => ({ ...d, cars: d.cars.map((c) => (c.id === id ? { ...c, ...changes, updatedAt: new Date().toISOString() } : c)) }));
+  // «مباعة» goes through the sale window (price, buyer, payment); leaving «مباعة» undoes the sale.
+  const setStatus = (car: Car, status: CarStatus) => {
+    if (status === car.status) return;
+    if (status === 'sold' && !car.sale) return setMoneyFor(car.id);
+    if (car.sale && status !== 'sold') {
+      if (!window.confirm('إلغاء بيع هذه السيارة؟ تُحذف دفعات بيعها من الحسابات.')) return;
+      return update((d) => {
+        const next = undoSale(d, car.id);
+        return { ...next, cars: next.cars.map((c) => (c.id === car.id ? { ...c, status } : c)) };
+      });
+    }
+    setCar(car.id, { status });
+  };
   const remove = (car: Car) => {
-    if (!window.confirm(`حذف ${carTitle(car)} ${car.year || ''} نهائيًا من المعرض والمخزون؟`)) return;
+    if (!window.confirm(`حذف ${carTitle(car)} ${car.year || ''} نهائيًا من المعرض والمخزون؟ تبقى قيوده في الحسابات ويمكن حذفها من هناك.`)) return;
     update((d) => ({ ...d, cars: d.cars.filter((c) => c.id !== car.id) }));
   };
 
@@ -32,8 +48,8 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) =>
     [data.cars, filter, query]
   );
   const inStock = data.cars.filter((c) => c.status !== 'sold');
-  const stockValue = inStock.reduce((s, c) => s + c.purchasePrice, 0);
-  const expected = inStock.reduce((s, c) => s + expectedMargin(c), 0);
+  const stockValue = inStock.reduce((s, c) => s + carCost(c), 0);
+  const expected = inStock.reduce((s, c) => s + expectedProfit(c), 0);
   const count = (s: CarStatus) => data.cars.filter((c) => c.status === s).length;
 
   return (
@@ -41,7 +57,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) =>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Stat label="في المعرض الآن" value={String(inStock.length)} />
         <Stat label="محجوزة" value={String(count('reserved'))} color="#f29900" />
-        <Stat label="قيمة المخزون (سعر الشراء)" value={formatMoney(stockValue, currency)} />
+        <Stat label="قيمة المخزون (الكلفة)" value={formatMoney(stockValue, currency)} />
         <Stat label="الربح المتوقع" value={formatMoney(expected, currency)} color="#34a853" />
       </div>
 
@@ -74,7 +90,8 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) =>
           <div className="divide-y divide-neutral-100">
             {shown.map((c) => {
               const st = statusMeta(c.status);
-              const margin = expectedMargin(c);
+              const margin = c.sale ? carProfit(c) : expectedProfit(c);
+              const owed = saleRemaining(c);
               return (
                 <div key={c.id} className="flex flex-col sm:flex-row sm:items-center gap-3 py-3">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -87,15 +104,20 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) =>
                         {[c.stockNumber, c.condition === 'new' ? 'جديدة' : formatKm(c.mileage), c.color].filter(Boolean).join(' · ')}
                       </div>
                       <div className="text-xs font-bold mt-0.5">
-                        {c.price > 0 ? formatMoney(c.price, c.currency) : <span className="text-neutral-400">بدون سعر</span>}
-                        {margin !== 0 && <span className={`mr-2 text-[11px] ${margin > 0 ? 'text-green-600' : 'text-red-500'}`}>ربح {formatMoney(margin, c.currency)}</span>}
+                        {c.sale ? <>بيعت بـ {formatMoney(c.sale.price, c.currency)}</> : c.price > 0 ? formatMoney(c.price, c.currency) : <span className="text-neutral-400">بدون سعر</span>}
+                        {margin !== 0 && <span className={`mr-2 text-[11px] ${margin > 0 ? 'text-green-600' : 'text-red-500'}`}>{c.sale ? 'ربح' : 'ربح متوقع'} {formatMoney(margin, c.currency)}</span>}
+                        {owed > 0 && <span className="mr-2 text-[11px] text-[#f29900]">متبقٍ على المشتري {formatMoney(owed, c.currency)}</span>}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {!c.sale && (
+                      <button type="button" onClick={() => setMoneyFor(c.id)} className="h-9 px-3 rounded-xl bg-[#34a853] hover:bg-[#2d9047] text-white text-xs font-bold flex items-center gap-1 cursor-pointer"><BadgeCheck size={14} /> تم البيع</button>
+                    )}
+                    <button type="button" onClick={() => setMoneyFor(c.id)} title="الملف المالي: المصاريف والبيع والدفعات" aria-label="الملف المالي" className="w-9 h-9 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 flex items-center justify-center cursor-pointer"><Wallet size={15} /></button>
                     <select
                       value={c.status}
-                      onChange={(e) => setCar(c.id, { status: e.target.value as CarStatus })}
+                      onChange={(e) => setStatus(c, e.target.value as CarStatus)}
                       className="h-9 px-2 rounded-xl border text-xs font-bold cursor-pointer outline-none"
                       style={{ color: st.color, borderColor: `${st.color}55`, backgroundColor: `${st.color}12` }}
                       aria-label="حالة السيارة"
@@ -117,6 +139,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit }) =>
           </div>
         )}
       </Card>
+      {moneyFor && <CarMoneyDialog data={data} update={update} carId={moneyFor} onClose={() => setMoneyFor(null)} />}
     </div>
   );
 };

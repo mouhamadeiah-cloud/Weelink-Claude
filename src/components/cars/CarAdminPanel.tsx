@@ -2,17 +2,21 @@
 // as in the Online Shop. All entries and management live here; the showroom's pages are edited in
 // the editor like any other page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, CarFront, Warehouse, SlidersHorizontal } from 'lucide-react';
+import { Settings, X, CarFront, Warehouse, SlidersHorizontal, Users, Wallet } from 'lucide-react';
 import { CarAdminData } from './carTypes';
 import { CarEditor, CarTabProps } from './tabs/CarEditor';
 import { InventoryTab } from './tabs/InventoryTab';
 import { CarSettingsTab } from './tabs/CarSettingsTab';
+import { CarCustomersTab } from './tabs/CarCustomersTab';
+import { CarAccountsTab } from './tabs/CarAccountsTab';
 
-type TabId = 'add' | 'inventory' | 'settings';
+type TabId = 'add' | 'inventory' | 'customers' | 'accounts' | 'settings';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<CarTabProps> }[] = [
   { id: 'add', label: 'إضافة سيارة', icon: CarFront, Component: CarEditor },
   { id: 'inventory', label: 'المخزون', icon: Warehouse, Component: InventoryTab },
+  { id: 'customers', label: 'الزبائن', icon: Users, Component: CarCustomersTab },
+  { id: 'accounts', label: 'الحسابات', icon: Wallet, Component: CarAccountsTab },
   { id: 'settings', label: 'إعدادات المعرض', icon: SlidersHorizontal, Component: CarSettingsTab },
 ];
 

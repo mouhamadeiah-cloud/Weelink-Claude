@@ -50,7 +50,5 @@ export const carSpecRows = (c: Car): { label: string; value: string }[] =>
   ].filter((r) => r.value);
 
 // Profit expected from a car's price over what was paid for it.
-export const expectedMargin = (c: Car) => (c.price > 0 && c.purchasePrice > 0 ? c.price - c.purchasePrice : 0);
-
 export const whatsappHref = (number: string, text: string) =>
   `https://wa.me/${number.replace(/[^\d]/g, '')}?text=${encodeURIComponent(text)}`;

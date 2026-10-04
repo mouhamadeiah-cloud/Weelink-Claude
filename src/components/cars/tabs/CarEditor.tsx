@@ -12,6 +12,8 @@ import { Card, Field, inputClass, textareaClass, PrimaryButton, GhostButton, Tog
 import { CarCard } from '../store/CarCard';
 import { CarImages } from './CarImages';
 import { carTitle } from '../carModel';
+import { carCost, syncPurchaseTx } from '../carMoney';
+import { Segmented } from './moneyUi';
 
 export interface CarTabProps {
   data: CarAdminData;
@@ -102,8 +104,12 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
     }
     const now = new Date().toISOString();
     update((d) => {
+      // The car's money (expenses, sale, its purchase entry) is changed from its money file, so the
+      // saved car keeps the current one rather than the copy this form opened with.
+      const current = d.cars.find((c) => c.id === car.id);
       const saved: Car = {
         ...car,
+        ...(current ? { expenses: current.expenses, sale: current.sale, purchaseTxId: current.purchaseTxId, status: current.sale ? 'sold' : car.status === 'sold' ? 'available' : car.status } : { status: car.status === 'sold' ? 'available' : car.status }),
         brand: car.brand.trim(),
         model: car.model.trim(),
         id: car.id || newId('car'),
@@ -112,9 +118,10 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
         createdAt: car.createdAt || now,
         updatedAt: now,
       };
-      return d.cars.some((c) => c.id === saved.id)
+      const next = d.cars.some((c) => c.id === saved.id)
         ? { ...d, cars: d.cars.map((c) => (c.id === saved.id ? saved : c)) }
         : { ...d, cars: [saved, ...d.cars] };
+      return syncPurchaseTx(next, saved);
     });
     onEdit(null);
     setCar(emptyCar(data.settings.currency));
@@ -122,7 +129,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
     onSaved();
   };
 
-  const margin = car.price > 0 && car.purchasePrice > 0 ? car.price - car.purchasePrice : 0;
+  const margin = car.price > 0 && car.purchasePrice > 0 ? car.price - carCost(car) : 0;
   const preview: Car = { ...car, stockNumber: car.stockNumber || nextStockNumber(data.cars) };
 
   return (
@@ -267,6 +274,14 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
                 <Field label="اشتُريت من"><input className={inputClass} value={car.purchaseFrom} onChange={(e) => set({ purchaseFrom: e.target.value })} /></Field>
                 <Field label="رقم الهيكل (الشاصي)"><input className={inputClass} value={car.vin} onChange={(e) => set({ vin: e.target.value.toUpperCase() })} dir="ltr" /></Field>
               </div>
+              <Field label="دُفع ثمن الشراء من" hint="الصندوق أو البنك: يُسجَّل سعر الشراء في «الحسابات» ويتعدل معه. بدون تسجيل: يُحسب في كلفة السيارة فقط.">
+                <Segmented
+                  label="دُفع ثمن الشراء من"
+                  options={[{ id: 'none' as const, label: 'بدون تسجيل' }, { id: 'cash' as const, label: 'الصندوق' }, { id: 'bank' as const, label: 'البنك' }]}
+                  value={car.purchaseAccount}
+                  onChange={(purchaseAccount) => set({ purchaseAccount })}
+                />
+              </Field>
               <Field label="ملاحظات داخلية"><textarea className={textareaClass} value={car.internalNotes} onChange={(e) => set({ internalNotes: e.target.value })} /></Field>
               {margin !== 0 && (
                 <div className={`rounded-xl px-3 py-2 text-xs font-bold ${margin > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
@@ -288,7 +303,11 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
                 </div>
               </Field>
               <Field label="حالة السيارة">
-                <Chips options={CAR_STATUSES.map((s) => ({ id: s.id, label: s.label }))} value={car.status} onChange={(status) => set({ status })} />
+                {car.sale ? (
+                  <p className="text-xs font-bold text-[#34a853]">مباعة. يُلغى البيع من الملف المالي في «المخزون».</p>
+                ) : (
+                  <Chips options={CAR_STATUSES.filter((s) => s.id !== 'sold').map((s) => ({ id: s.id, label: s.label }))} value={car.status} onChange={(status) => set({ status })} />
+                )}
               </Field>
               <div className="rounded-xl border border-neutral-200 px-3 py-1.5">
                 <Toggle checked={car.featured} onChange={(featured) => set({ featured })} label="سيارة مميزة (تظهر في شرائح السيارات المميزة)" />

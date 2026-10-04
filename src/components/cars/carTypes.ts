@@ -51,6 +51,10 @@ export interface Car {
   purchaseFrom: string;
   vin: string;
   internalNotes: string;
+  purchaseAccount: MoneyAccount | 'none'; // where the purchase price was paid from (booked in the accounts)
+  purchaseTxId: string; // the accounts entry of the purchase, when booked
+  expenses: CarExpense[]; // repairs, cleaning, transport... added to the car's cost
+  sale: CarSale | null; // set by «تم البيع»
   status: CarStatus;
   published: boolean; // shown in the showroom
   featured: boolean; // shown in the «سيارات مميزة» slides
@@ -68,8 +72,87 @@ export interface CarSettings {
   showSold: boolean; // sold cars stay in the showroom with a «مباعة» ribbon
 }
 
+// Money: two accounts (the cash box and the bank), each holding any of the showroom's currencies.
+export type MoneyAccount = 'cash' | 'bank';
+export const MONEY_ACCOUNTS: { id: MoneyAccount; label: string }[] = [
+  { id: 'cash', label: 'الصندوق' },
+  { id: 'bank', label: 'البنك' },
+];
+
+// What made an accounts entry: the owner by hand, or a car (its purchase, an expense, the sale or a
+// later payment of its price). A car's entries are changed from that car's money file.
+export type TxSource = 'manual' | 'purchase' | 'expense' | 'sale' | 'payment';
+
+export interface CarTransaction {
+  id: string;
+  date: string; // yyyy-mm-dd
+  kind: 'in' | 'out' | 'transfer';
+  account: MoneyAccount;
+  toAccount?: MoneyAccount; // 'transfer' only
+  amount: number;
+  currency: string;
+  category: string;
+  description: string;
+  source: TxSource;
+  carId?: string;
+  customerId?: string;
+  createdAt: string;
+}
+
+export interface CarExpense {
+  id: string;
+  date: string;
+  amount: number; // in the car's currency
+  category: string;
+  note: string;
+  account: MoneyAccount | 'none'; // 'none': counted in the car's cost, not booked in the accounts
+  txId: string;
+}
+
+export interface CarSalePayment {
+  id: string;
+  date: string;
+  amount: number;
+  account: MoneyAccount;
+  note: string;
+  txId: string;
+}
+
+export interface CarSale {
+  date: string;
+  price: number; // in the car's currency
+  customerId: string;
+  note: string;
+  payments: CarSalePayment[]; // the first is the payment on the day of the sale
+}
+
+export type CustomerRole = 'buyer' | 'seller' | 'interested';
+export const CUSTOMER_ROLES: { id: CustomerRole; label: string }[] = [
+  { id: 'buyer', label: 'مشترٍ' },
+  { id: 'seller', label: 'بائع' },
+  { id: 'interested', label: 'مهتم' },
+];
+
+export interface CarCustomer {
+  id: string;
+  name: string;
+  phone: string; // also used for WhatsApp
+  city: string;
+  address: string;
+  idNumber: string; // الرقم الوطني
+  roles: CustomerRole[];
+  notes: string;
+  createdAt: string;
+}
+
+export const EXPENSE_CATEGORIES = ['تنظيف وتلميع', 'إصلاح ميكانيك', 'دهان وسمكرة', 'قطع غيار', 'إطارات', 'نقل', 'أوراق ونقل ملكية', 'أخرى'];
+export const MANUAL_IN_CATEGORIES = ['رصيد افتتاحي', 'دفعة من زبون', 'عمولة', 'إيداع', 'أخرى'];
+export const MANUAL_OUT_CATEGORIES = ['إيجار', 'رواتب', 'كهرباء وماء', 'إعلانات', 'سحب شخصي', 'أخرى'];
+
 export interface CarAdminData {
   cars: Car[];
+  customers: CarCustomer[];
+  transactions: CarTransaction[];
   settings: CarSettings;
 }
 
@@ -191,6 +274,10 @@ export const emptyCar = (currency: string): Car => ({
   purchaseFrom: '',
   vin: '',
   internalNotes: '',
+  purchaseAccount: 'none',
+  purchaseTxId: '',
+  expenses: [],
+  sale: null,
   status: 'available',
   published: true,
   featured: false,
@@ -229,16 +316,77 @@ export const normalizeCar = (raw: any, currency: string): Car => {
     negotiable: !!raw?.negotiable,
     published: raw?.published !== false,
     featured: !!raw?.featured,
+    purchaseAccount: oneOf(raw?.purchaseAccount, ['none', 'cash', 'bank'] as const, 'none'),
+    purchaseTxId: str(raw?.purchaseTxId),
+    expenses: Array.isArray(raw?.expenses)
+      ? raw.expenses.map((e: any) => ({
+          id: str(e?.id) || newId('exp'),
+          date: str(e?.date),
+          amount: num(e?.amount),
+          category: str(e?.category, 'أخرى'),
+          note: str(e?.note),
+          account: oneOf(e?.account, ['none', 'cash', 'bank'] as const, 'none'),
+          txId: str(e?.txId),
+        }))
+      : [],
+    sale: raw?.sale && typeof raw.sale === 'object'
+      ? {
+          date: str(raw.sale.date),
+          price: num(raw.sale.price),
+          customerId: str(raw.sale.customerId),
+          note: str(raw.sale.note),
+          payments: Array.isArray(raw.sale.payments)
+            ? raw.sale.payments.map((p: any) => ({
+                id: str(p?.id) || newId('pay'),
+                date: str(p?.date),
+                amount: num(p?.amount),
+                account: oneOf(p?.account, ['cash', 'bank'] as const, 'cash'),
+                note: str(p?.note),
+                txId: str(p?.txId),
+              }))
+            : [],
+        }
+      : null,
   };
 };
 
-export const createEmptyCarAdmin = (): CarAdminData => ({ cars: [], settings: { ...DEFAULT_CAR_SETTINGS } });
+const normalizeCustomer = (raw: any): CarCustomer => ({
+  id: str(raw?.id) || newId('cus'),
+  name: str(raw?.name),
+  phone: str(raw?.phone),
+  city: str(raw?.city),
+  address: str(raw?.address),
+  idNumber: str(raw?.idNumber),
+  roles: Array.isArray(raw?.roles) ? raw.roles.filter((r: unknown) => r === 'buyer' || r === 'seller' || r === 'interested') : [],
+  notes: str(raw?.notes),
+  createdAt: str(raw?.createdAt) || new Date().toISOString(),
+});
+
+const normalizeTx = (raw: any, currency: string): CarTransaction => ({
+  id: str(raw?.id) || newId('tx'),
+  date: str(raw?.date) || new Date().toISOString().slice(0, 10),
+  kind: oneOf(raw?.kind, ['in', 'out', 'transfer'] as const, 'in'),
+  account: oneOf(raw?.account, ['cash', 'bank'] as const, 'cash'),
+  ...(raw?.toAccount === 'cash' || raw?.toAccount === 'bank' ? { toAccount: raw.toAccount } : {}),
+  amount: num(raw?.amount),
+  currency: str(raw?.currency) || currency,
+  category: str(raw?.category),
+  description: str(raw?.description),
+  source: oneOf(raw?.source, ['manual', 'purchase', 'expense', 'sale', 'payment'] as const, 'manual'),
+  ...(typeof raw?.carId === 'string' && raw.carId ? { carId: raw.carId } : {}),
+  ...(typeof raw?.customerId === 'string' && raw.customerId ? { customerId: raw.customerId } : {}),
+  createdAt: str(raw?.createdAt) || new Date().toISOString(),
+});
+
+export const createEmptyCarAdmin = (): CarAdminData => ({ cars: [], customers: [], transactions: [], settings: { ...DEFAULT_CAR_SETTINGS } });
 
 export const normalizeCarAdmin = (raw: any): CarAdminData => {
   const settings: CarSettings = { ...DEFAULT_CAR_SETTINGS, ...(raw?.settings || {}) };
   return {
     settings,
     cars: Array.isArray(raw?.cars) ? raw.cars.map((c: unknown) => normalizeCar(c, settings.currency)) : [],
+    customers: Array.isArray(raw?.customers) ? raw.customers.map(normalizeCustomer) : [],
+    transactions: Array.isArray(raw?.transactions) ? raw.transactions.map((t: unknown) => normalizeTx(t, settings.currency)) : [],
   };
 };
 

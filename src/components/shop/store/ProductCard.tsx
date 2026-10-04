@@ -1,44 +1,18 @@
-// How a product looks on the store page: main image, badge, name, short description, price and
-// an add-to-cart button, as a grid card or as a full-width slide. Also used as the live preview in
-// the admin's product editor.
-import React, { useState } from 'react';
-import { ImageOff, ShoppingBag, Check } from 'lucide-react';
+// How a product looks on the store page: main image, badge, name, short description and price, as
+// a grid card or as a full-width slide. Clicking it opens the floating card, which is where the
+// customer picks options and adds to the cart. Also used as the live preview in the admin's
+// product editor.
+import React from 'react';
+import { ImageOff } from 'lucide-react';
 import { ShopProduct } from '../shopTypes';
 import { badgeColor, badgeText, isSoldOut } from '../productModel';
-import { addToCart, formatPrice } from '../../../utils/cartStore';
+import { formatPrice } from '../../../utils/cartStore';
 
 interface ProductCardProps {
   product: ShopProduct;
   accent?: string;
   onOpen?: () => void; // set on the store page; the editor preview leaves it out
-  onAdded?: (name: string) => void;
 }
-
-// A product the customer must pick options for (size, colour…) is added from its full card.
-export const needsChoice = (p: ShopProduct) =>
-  p.options.some((o) => o.values.length > 1 || (o.affectsStock && o.values.length > 0));
-
-// The add-to-cart button: adds directly, or opens the full card when options must be chosen.
-const useAddButton = (product: ShopProduct, onOpen?: () => void, onAdded?: (name: string) => void) => {
-  const [added, setAdded] = useState(false);
-  const soldOut = isSoldOut(product);
-  const add = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!onOpen || soldOut) return;
-    if (needsChoice(product)) {
-      onOpen();
-      return;
-    }
-    addToCart({ name: product.name, price: product.price, currency: product.currency, image: product.images[0], productId: product.id });
-    onAdded?.(product.name);
-    setAdded(true);
-    window.setTimeout(() => setAdded(false), 1800);
-  };
-  return { added, soldOut, add };
-};
-
-const AddLabel: React.FC<{ added: boolean; soldOut: boolean }> = ({ added, soldOut }) =>
-  added ? <><Check size={16} /> تمت الإضافة</> : <><ShoppingBag size={16} /> {soldOut ? 'نفد من المخزون' : 'أضف إلى السلة'}</>;
 
 const Badge: React.FC<{ product: ShopProduct }> = ({ product }) => {
   const badge = badgeText(product);
@@ -53,10 +27,10 @@ const Badge: React.FC<{ product: ShopProduct }> = ({ product }) => {
   );
 };
 
-// شريحة: the main image fills the row as a fixed background; name, price and the button sit in a
-// narrow strip along its bottom.
-export const ProductSlide: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen, onAdded }) => {
-  const { added, soldOut, add } = useAddButton(product, onOpen, onAdded);
+// شريحة: the main image fills the row as a fixed background; name and price sit in a narrow strip
+// along its bottom.
+export const ProductSlide: React.FC<ProductCardProps> = ({ product, onOpen }) => {
+  const soldOut = isSoldOut(product);
   return (
     <div
       onClick={onOpen}
@@ -79,22 +53,13 @@ export const ProductSlide: React.FC<ProductCardProps> = ({ product, accent = '#B
             <span className="text-[10px] text-white/60 line-through">{formatPrice(product.oldPrice, product.currency)}</span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={add}
-          disabled={soldOut}
-          className="shrink-0 h-9 px-4 rounded-full text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          style={{ backgroundColor: accent }}
-        >
-          <AddLabel added={added} soldOut={soldOut} />
-        </button>
       </div>
     </div>
   );
 };
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen, onAdded }) => {
-  const { added, soldOut, add } = useAddButton(product, onOpen, onAdded);
+export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen }) => {
+  const soldOut = isSoldOut(product);
 
   return (
     <div
@@ -128,15 +93,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4
             <span className="text-xs text-[#8A7B70] line-through">{formatPrice(product.oldPrice, product.currency)}</span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={add}
-          disabled={soldOut}
-          className="mt-2 w-full h-10 rounded-full text-white text-sm font-bold flex items-center justify-center gap-1.5 transition active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          style={{ backgroundColor: accent }}
-        >
-          <AddLabel added={added} soldOut={soldOut} />
-        </button>
       </div>
     </div>
   );

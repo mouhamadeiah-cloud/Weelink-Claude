@@ -28,6 +28,7 @@ import { getFreeStarterTemplate } from './data/freeStarterTemplate';
 import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
 import { arrangeForMobile } from './utils/mobileLayout';
 import { withTemplateGroups } from './utils/templateGroups';
+import { withLocalGraphics } from './utils/localGraphics';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
@@ -74,7 +75,7 @@ const serializeElements = (elements: CanvasElement[]): any[] => {
 
 const deserializeElements = (dataElements: any[]): CanvasElement[] => {
   if (!dataElements) return [];
-  return dataElements.map(el => {
+  return dataElements.map(withLocalGraphics).map(el => {
     if (el.tableConfig) {
       const { cells, ...rest } = el.tableConfig;
       let restoredCells: string[][] = [];

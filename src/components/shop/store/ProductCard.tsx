@@ -97,3 +97,96 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, accent = '#B4
     </div>
   );
 };
+
+const Price: React.FC<{ product: ShopProduct; accent: string; className?: string }> = ({ product, accent, className = 'text-base' }) => (
+  <div className="flex items-baseline gap-2 flex-wrap">
+    <span className={`${className} font-black`} style={{ color: accent }}>{formatPrice(product.price, product.currency)}</span>
+    {product.oldPrice > product.price && (
+      <span className="text-xs text-[#8A7B70] line-through">{formatPrice(product.oldPrice, product.currency)}</span>
+    )}
+  </div>
+);
+
+const Photo: React.FC<{ product: ShopProduct; className: string; hover?: boolean }> = ({ product, className, hover }) => (
+  <div className={`relative bg-neutral-100 overflow-hidden ${className}`}>
+    {product.images[0] ? (
+      <img
+        src={product.images[0]}
+        alt={product.name}
+        referrerPolicy="no-referrer"
+        className={`w-full h-full object-cover transition duration-500 ${hover ? 'group-hover:scale-105' : ''} ${isSoldOut(product) ? 'grayscale opacity-70' : ''}`}
+      />
+    ) : (
+      <div className="w-full h-full flex items-center justify-center text-neutral-300"><ImageOff size={28} /></div>
+    )}
+    <Badge product={product} />
+  </div>
+);
+
+const Description: React.FC<{ product: ShopProduct; lines?: string }> = ({ product, lines = 'line-clamp-2' }) =>
+  product.showShortDescription && product.shortDescription ? (
+    <div className={`text-sm text-[#8A7B70] leading-relaxed ${lines}`}>{product.shortDescription}</div>
+  ) : null;
+
+// زجزاج: one product per row, the photo on alternating sides.
+export const ProductZigzag: React.FC<ProductCardProps & { flip: boolean }> = ({ product, accent = '#B4532A', onOpen, flip }) => (
+  <div onClick={onOpen} dir="rtl" className={`group w-full flex items-center gap-8 cursor-pointer ${flip ? 'flex-row-reverse' : ''}`}>
+    <Photo product={product} className="w-[46%] aspect-[4/3] rounded-3xl shrink-0" hover />
+    <div className="flex-1 flex flex-col gap-3 text-right">
+      <div className="text-2xl font-bold text-[#2A1F1A] leading-snug font-['El_Messiri',serif]">{product.name || 'اسم المنتج'}</div>
+      <Description product={product} lines="line-clamp-3" />
+      <Price product={product} accent={accent} className="text-xl" />
+      <span className="self-start mt-1 h-10 px-6 rounded-full text-sm font-bold text-white inline-flex items-center" style={{ backgroundColor: accent }}>
+        عرض المنتج
+      </span>
+    </div>
+  </div>
+);
+
+// بطاقة عرضية: photo on the right, details beside it.
+export const ProductWide: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen }) => (
+  <div
+    onClick={onOpen}
+    dir="rtl"
+    className="group w-full h-full flex bg-white rounded-3xl border border-black/[0.06] overflow-hidden cursor-pointer transition hover:shadow-[0_16px_40px_rgba(42,31,26,0.14)] hover:-translate-y-0.5"
+  >
+    <Photo product={product} className="w-[42%] aspect-[4/3] shrink-0" hover />
+    <div className="flex-1 p-4 flex flex-col gap-1.5 text-right min-w-0">
+      <div className="text-base font-bold text-[#2A1F1A] leading-snug line-clamp-2">{product.name || 'اسم المنتج'}</div>
+      <Description product={product} />
+      <div className="mt-auto pt-1"><Price product={product} accent={accent} /></div>
+    </div>
+  </div>
+);
+
+// بطاقة صغيرة: square photo, name and price only.
+export const ProductMini: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen }) => (
+  <div
+    onClick={onOpen}
+    dir="rtl"
+    className="group w-full bg-white rounded-2xl border border-black/[0.06] overflow-hidden cursor-pointer text-right transition hover:shadow-[0_10px_24px_rgba(42,31,26,0.12)]"
+  >
+    <Photo product={product} className="w-full aspect-square" hover />
+    <div className="px-2.5 py-2">
+      <div className="text-xs font-bold text-[#2A1F1A] truncate">{product.name || 'اسم المنتج'}</div>
+      <Price product={product} accent={accent} className="text-xs" />
+    </div>
+  </div>
+);
+
+// Tiny chip of the running strip: round photo, name and price.
+export const ProductChip: React.FC<ProductCardProps> = ({ product, accent = '#B4532A', onOpen }) => (
+  <div
+    onClick={onOpen}
+    dir="rtl"
+    className="h-full shrink-0 flex items-center gap-2.5 pl-4 pr-1.5 bg-white rounded-full cursor-pointer shadow-sm max-w-[260px]"
+  >
+    <div className="h-[calc(100%-12px)] aspect-square rounded-full overflow-hidden bg-neutral-100 shrink-0">
+      {product.images[0] && <img src={product.images[0]} alt={product.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
+    </div>
+    <div className="min-w-0 leading-tight text-right">
+      <div className="text-xs font-bold text-[#2A1F1A] truncate">{product.name || 'اسم المنتج'}</div>
+      <div className="text-[11px] font-black" style={{ color: accent }}>{formatPrice(product.price, product.currency)}</div>
+    </div>
+  </div>
+);

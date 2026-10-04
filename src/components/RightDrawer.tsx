@@ -81,7 +81,7 @@ import { WeeAIChat } from './WeeAIChat';
 import { ShopElementSettings } from './ShopElementSettings';
 
 import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
-import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload } from '../data/slideTemplates';
+import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
 import { uploadGalleryImageToStorage } from '../utils/galleryUpload';
 import { buildAddMenuData } from './rightDrawer/addMenuTemplates';
 import { AnimationSection } from './rightDrawer/sections/AnimationSection';
@@ -123,6 +123,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onCopyCurrentSlide,
   onCopyCurrentPage,
   onAddSlideTemplate,
+  isShopProject = false,
   onAddPageTemplate,
   onApplyFreeStarterTemplate,
   onApplyOnlineShopTemplate,
@@ -3658,6 +3659,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             })()}
 
             {/* TOOL: Animation */}
+            {activeSection === 'animation' && selectedElement && (selectedElement.type === 'shopProducts' || selectedElement.type === 'shopSearch') && (
+              <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+            )}
             {activeSection === 'animation' && <AnimationSection styles={styles} onUpdateElementStyles={onUpdateElementStyles} />}
 
             {/* TOOL: Add Elements (+) - Step 1: Squares Grid (الصورة رقم ١) | Step 2: Detail with Subcategories Bar (الصورة رقم ٢) */}
@@ -3795,7 +3799,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             اختر فئة لتصفح الشرائح المصممة مسبقاً:
                           </h4>
                           <div className="grid grid-cols-2 gap-2">
-                            {READY_SLIDE_CATEGORIES.map((cat) => (
+                            {READY_SLIDE_CATEGORIES.filter((cat) => cat.id !== 'shop' || isShopProject).map((cat) => (
                               <button
                                 key={cat.id}
                                 type="button"
@@ -5549,7 +5553,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 {READY_SLIDE_CATEGORIES.find(c => c.id === activeTemplateCategory)?.name || 'الشرائح الجاهزة'}
               </span>
               <span className="text-[10px] text-[#0071e3] font-bold bg-[#0071e3]/5 border border-[#0071e3]/10 px-1.5 py-0.5 rounded-full">
-                10 تصاميم
+                {activeTemplateCategory ? slideTemplateCount(activeTemplateCategory) : 10} تصاميم
               </span>
             </div>
             
@@ -5565,7 +5569,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
           {/* Scrollable list of 10 Miniature Slides */}
           <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
-            {activeTemplateCategory && Array.from({ length: 10 }).map((_, idx) => {
+            {activeTemplateCategory && Array.from({ length: slideTemplateCount(activeTemplateCategory) }).map((_, idx) => {
               const cat = READY_SLIDE_CATEGORIES.find(c => c.id === activeTemplateCategory);
               const catName = cat ? cat.name : 'شريحة';
               const templatePayload = getSlideTemplatePayload(activeTemplateCategory, idx, catName);
@@ -5680,6 +5684,25 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             >
                               <span className="w-full truncate">{el.content || 'زر الإجراء'}</span>
                             </button>
+                          );
+                        }
+
+                        // Live shop elements: a row of card outlines / a search bar.
+                        if (el.type === 'shopProducts') {
+                          const tiny = el.shopLayout === 'marquee';
+                          return (
+                            <div key={elIdx} style={{ ...elStyle, padding: 0, gap: tiny ? 16 : 28, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap' }}>
+                              {Array.from({ length: tiny ? 8 : el.shopLayout === 'small' ? 6 : el.shopLayout === 'large' ? 3 : 4 }).map((__, k) => (
+                                <div key={k} style={{ flex: tiny ? '0 0 150px' : '1 1 0', minWidth: tiny ? 150 : 150, maxHeight: tiny ? undefined : 400, borderRadius: tiny ? 9999 : 24, background: tiny ? 'rgba(255,255,255,0.9)' : '#FFFFFF', border: '2px solid rgba(42,31,26,0.08)', boxShadow: '0 8px 24px rgba(42,31,26,0.08)' }} />
+                              ))}
+                            </div>
+                          );
+                        }
+                        if (el.type === 'shopSearch') {
+                          return (
+                            <div key={elIdx} style={{ ...elStyle, background: el.shopSearchStyle === 'minimal' ? 'transparent' : '#FFFFFF', borderRadius: el.shopSearchStyle === 'minimal' ? 0 : 9999, borderBottom: `3px solid ${el.styles?.color || '#B4532A'}`, color: '#8A7B70', fontSize: '22px', padding: '0 24px' }}>
+                              <span className="w-full truncate">🔍 {el.content}</span>
+                            </div>
                           );
                         }
 

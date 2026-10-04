@@ -1844,6 +1844,13 @@ export default function App() {
         content: '',
         styles: { color: '#B4532A', ...(customStyles || {}) },
       },
+      shopSearch: {
+        name: 'بحث في المتجر',
+        width: 640,
+        height: 56,
+        content: 'ابحث عن منتج...',
+        styles: { color: '#B4532A', ...(customStyles || {}) },
+      },
     };
 
     const cfg = defaultConfigs[type] || defaultConfigs.card;
@@ -2604,6 +2611,7 @@ export default function App() {
 
       {/* Floating Right Control Drawer on right edge (~20% of page) */}
       <RightDrawer
+        isShopProject={project === 'shop'}
         isOpen={isRightDrawerOpen}
         onToggle={() => setIsRightDrawerOpen(!isRightDrawerOpen)}
         onClose={() => setIsRightDrawerOpen(false)}

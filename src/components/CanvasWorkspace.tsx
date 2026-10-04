@@ -16,6 +16,7 @@ import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileL
 import { addToCart, useCart } from '../utils/cartStore';
 import { CartView } from './CartView';
 import { ShopProductsView } from './shop/store/ShopProductsView';
+import { ShopSearchView } from './shop/store/ShopSearchView';
 import { Icon } from '@iconify/react';
 import { 
   Trash2, 
@@ -4044,6 +4045,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {elem.type === 'shopProducts' && (
                           <ShopProductsView elem={elem} isPreviewActive={isPreviewActive} />
+                        )}
+
+                        {elem.type === 'shopSearch' && (
+                          <ShopSearchView elem={elem} isPreviewActive={isPreviewActive} />
                         )}
 
                         {elem.type === 'html' && (

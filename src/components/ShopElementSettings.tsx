@@ -1,10 +1,11 @@
 // Settings for shop elements, shown at the top of the link panel: the product an
 // "أضف إلى السلة" button adds (name, price, currency, photo), or the WhatsApp number a cart
-// element sends finished orders to. Renders nothing for any other element.
+// element sends finished orders to, or how a store products element lays out its products and a
+// store search bar looks. Renders nothing for any other element.
 
 import React from 'react';
 import { ShoppingBag } from 'lucide-react';
-import type { CanvasElement } from '../types';
+import type { CanvasElement, ShopLayout, ShopCardAnimation, ShopSearchStyle } from '../types';
 
 interface ShopElementSettingsProps {
   element: CanvasElement;
@@ -13,6 +14,53 @@ interface ShopElementSettingsProps {
 
 const inputClass =
   'w-full px-3 py-2 text-xs bg-white border border-neutral-200 rounded-xl focus:outline-none focus:border-[#B4532A] text-right';
+
+const LAYOUTS: { id: ShopLayout; label: string }[] = [
+  { id: 'grid', label: 'شبكة' },
+  { id: 'zigzag', label: 'زجزاج' },
+  { id: 'wide', label: 'بطاقة عرضية' },
+  { id: 'small', label: 'بطاقات صغيرة' },
+  { id: 'large', label: 'بطاقات كبيرة' },
+  { id: 'marquee', label: 'شريط متحرك' },
+  { id: 'spotlight', label: 'بطاقات بحركة' },
+];
+
+const CARD_ANIMATIONS: { id: ShopCardAnimation; label: string }[] = [
+  { id: 'none', label: 'بدون' },
+  { id: 'float', label: 'طفو' },
+  { id: 'pulse', label: 'نبض' },
+  { id: 'swing', label: 'تأرجح' },
+  { id: 'shine', label: 'لمعة' },
+];
+
+const SEARCH_STYLES: { id: ShopSearchStyle; label: string }[] = [
+  { id: 'minimal', label: 'بسيط' },
+  { id: 'pill', label: 'بارز' },
+  { id: 'glass', label: 'زجاجي' },
+];
+
+function Choices<T extends string>({ options, value, onChange }: { options: { id: T; label: string }[]; value: T; onChange: (id: T) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          onClick={() => onChange(o.id)}
+          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer transition ${
+            value === o.id ? 'bg-[#B4532A] border-[#B4532A] text-white' : 'bg-white border-neutral-200 text-neutral-700 hover:border-neutral-300'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="text-[11px] font-bold text-neutral-600 pt-1">{children}</div>
+);
 
 export const ShopElementSettings: React.FC<ShopElementSettingsProps> = ({ element, onUpdateElement }) => {
   const product = element.cartProduct;
@@ -34,6 +82,68 @@ export const ShopElementSettings: React.FC<ShopElementSettingsProps> = ({ elemen
         <p className="text-[10px] text-neutral-500 leading-relaxed">
           اكتب الرقم مع رمز الدولة بدون + أو أصفار في البداية. زر «إرسال الطلب» يرسل كل محتوى السلة إلى هذا الرقم.
         </p>
+      </div>
+    );
+  }
+
+  if (element.type === 'shopProducts') {
+    const layout = element.shopLayout || 'grid';
+    return (
+      <div className="space-y-2 p-3 rounded-2xl border border-[#B4532A]/20 bg-[#B4532A]/[0.04]" dir="rtl">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800">
+          <ShoppingBag size={14} className="text-[#B4532A]" />
+          <span>عرض منتجات المتجر</span>
+        </div>
+        <Label>طريقة العرض</Label>
+        <Choices options={LAYOUTS} value={layout} onChange={(id) => onUpdateElement({ shopLayout: id })} />
+        {layout === 'marquee' ? (
+          <>
+            <Label>سرعة الشريط: دورة كل {element.shopSpeed || 30} ثانية</Label>
+            <input
+              type="range"
+              min={8}
+              max={90}
+              value={element.shopSpeed || 30}
+              onChange={(e) => onUpdateElement({ shopSpeed: Number(e.target.value) })}
+              className="w-full accent-[#B4532A]"
+              dir="ltr"
+            />
+          </>
+        ) : (
+          <>
+            <Label>حركة البطاقات</Label>
+            <Choices
+              options={CARD_ANIMATIONS}
+              value={element.shopCardAnimation || (layout === 'spotlight' ? 'float' : 'none')}
+              onChange={(id) => onUpdateElement({ shopCardAnimation: id })}
+            />
+          </>
+        )}
+        <Label>عدد المنتجات المعروضة</Label>
+        <input
+          className={inputClass}
+          type="number"
+          min={0}
+          placeholder="الكل"
+          value={element.shopLimit || ''}
+          onChange={(e) => onUpdateElement({ shopLimit: Math.max(0, parseInt(e.target.value, 10) || 0) || undefined })}
+        />
+        <p className="text-[10px] text-neutral-500 leading-relaxed">اتركه فارغًا لعرض كل المنتجات المصدّرة إلى المتجر.</p>
+      </div>
+    );
+  }
+
+  if (element.type === 'shopSearch') {
+    return (
+      <div className="space-y-2 p-3 rounded-2xl border border-[#B4532A]/20 bg-[#B4532A]/[0.04]" dir="rtl">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800">
+          <ShoppingBag size={14} className="text-[#B4532A]" />
+          <span>شريط البحث في المتجر</span>
+        </div>
+        <Label>الشكل</Label>
+        <Choices options={SEARCH_STYLES} value={element.shopSearchStyle || 'pill'} onChange={(id) => onUpdateElement({ shopSearchStyle: id })} />
+        <Label>النص داخل الشريط</Label>
+        <input className={inputClass} value={element.content} onChange={(e) => onUpdateElement({ content: e.target.value })} />
       </div>
     );
   }

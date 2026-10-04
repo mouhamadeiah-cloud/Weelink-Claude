@@ -201,3 +201,44 @@
 .product-rich-text ul { list-style: disc; padding-inline-start: 1.4em; margin: 0.3em 0; }
 .product-rich-text ol { list-style: decimal; padding-inline-start: 1.4em; margin: 0.3em 0; }
 .product-rich-text p { margin: 0.3em 0; }
+
+/* Online Shop product cards (ShopProductsView): running strip and card animations. */
+@keyframes shop-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.shop-marquee-track { animation: shop-marquee var(--shop-speed, 30s) linear infinite; }
+.shop-marquee:hover .shop-marquee-track { animation-play-state: paused; }
+
+@keyframes shop-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes shop-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+@keyframes shop-swing {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(1.6deg); }
+  75% { transform: rotate(-1.6deg); }
+}
+@keyframes shop-shine {
+  0% { transform: translateX(-160%) skewX(-20deg); }
+  60%, 100% { transform: translateX(260%) skewX(-20deg); }
+}
+.shop-anim-float { animation: shop-float 3.2s ease-in-out infinite; }
+.shop-anim-pulse { animation: shop-pulse 2.4s ease-in-out infinite; }
+.shop-anim-swing { animation: shop-swing 2.8s ease-in-out infinite; transform-origin: top center; }
+.shop-anim-shine { position: relative; overflow: hidden; border-radius: 1.5rem; }
+.shop-anim-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+  animation: shop-shine 3.2s ease-in-out infinite;
+  animation-delay: inherit;
+}
+.shop-anim-float:hover, .shop-anim-pulse:hover, .shop-anim-swing:hover { animation-play-state: paused; }

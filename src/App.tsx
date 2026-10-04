@@ -17,6 +17,10 @@ import { ProjectChooser } from './components/ProjectChooser';
 import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
 import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
+import { CarAdminPanel } from './components/cars/CarAdminPanel';
+import { CarDataContext } from './components/cars/store/CarDataContext';
+import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
+import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
@@ -178,6 +182,7 @@ const getInitialElements = (): CanvasElement[] => {
 const PROJECT_STORAGE: Record<ProjectType, { pagesField: string; elementsField: string; localPrefix: string }> = {
   page: { pagesField: 'pages', elementsField: 'elements', localPrefix: 'weelink_' },
   shop: { pagesField: 'shopPages', elementsField: 'shopElements', localPrefix: 'weelink_shop_' },
+  cars: { pagesField: 'carPages', elementsField: 'carElements', localPrefix: 'weelink_cars_' },
 };
 
 export default function App() {
@@ -215,6 +220,9 @@ export default function App() {
   const [hasShop, setHasShop] = useState<boolean>(false);
   const [shopAdmin, setShopAdmin] = useState<ShopAdminData>(createEmptyShopAdmin);
   const updateShopAdmin = useCallback((fn: (d: ShopAdminData) => ShopAdminData) => setShopAdmin((prev) => fn(prev)), []);
+  const [hasCars, setHasCars] = useState<boolean>(false);
+  const [carAdmin, setCarAdmin] = useState<CarAdminData>(createEmptyCarAdmin);
+  const updateCarAdmin = useCallback((fn: (d: CarAdminData) => CarAdminData) => setCarAdmin((prev) => fn(prev)), []);
   // Bumped by every workspace load so a slower, older load can't overwrite a newer one.
   const loadSeqRef = useRef(0);
   // True once the open project's data has actually been loaded, so switching
@@ -314,8 +322,10 @@ export default function App() {
     projectReadyRef.current = false;
     let loadedDesignFromCloud = false;
     let shopExists = false;
+    let carsExist = false;
     try {
       shopExists = !!localStorage.getItem(`${PROJECT_STORAGE.shop.localPrefix}pages_${userId}`);
+      carsExist = !!localStorage.getItem(`${PROJECT_STORAGE.cars.localPrefix}pages_${userId}`);
     } catch {
       // storage unavailable
     }
@@ -325,6 +335,7 @@ export default function App() {
       if (designSnap.exists()) {
         const data: any = designSnap.data();
         if (Array.isArray(data.shopPages) && data.shopPages.length > 0) shopExists = true;
+        if (Array.isArray(data.carPages) && data.carPages.length > 0) carsExist = true;
         const cloudPages: Page[] = normalizeLegacyNavbarDefaults(Array.isArray(data.pages) ? data.pages : []);
         if (cloudPages.length > 0) {
           const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
@@ -344,6 +355,7 @@ export default function App() {
       loadLocalDesign(userId);
     }
     setHasShop(shopExists);
+    setHasCars(carsExist);
     setActivePageId('page-home');
     projectReadyRef.current = true;
 
@@ -420,6 +432,63 @@ export default function App() {
     setSelectedElementId(null);
     setIsChatActive(false);
     setHasShop(true);
+    projectReadyRef.current = true;
+  };
+
+  // Loads the car showroom project. A first visit starts from the showroom template, with four
+  // example cars in the admin window so its pages are not empty.
+  const loadCarsWorkspace = async (userId: string) => {
+    const seq = ++loadSeqRef.current;
+    projectReadyRef.current = false;
+    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE.cars;
+    let carPages: Page[] = [];
+    let carElements: CanvasElement[] = [];
+    let admin: CarAdminData | null = null;
+    try {
+      const designSnap = await getDoc(doc(db, 'designs', userId));
+      if (designSnap.exists()) {
+        const data: any = designSnap.data();
+        if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
+          carPages = normalizeLegacyNavbarDefaults(data[pagesField]);
+          carElements = deserializeElements(data[elementsField] || []);
+        }
+        if (data.carAdmin) admin = normalizeCarAdmin(data.carAdmin);
+      }
+    } catch (e) {
+      console.warn("Could not load the car showroom from Firebase, falling back to local cache:", e);
+    }
+    if (seq !== loadSeqRef.current) return;
+    try {
+      if (carPages.length === 0) {
+        const storedPages = localStorage.getItem(`${localPrefix}pages_${userId}`);
+        const storedElements = localStorage.getItem(`${localPrefix}elements_${userId}`);
+        if (storedPages) carPages = normalizeLegacyNavbarDefaults(JSON.parse(storedPages));
+        if (storedElements) carElements = deserializeElements(JSON.parse(storedElements));
+      }
+      if (!admin) {
+        const storedAdmin = localStorage.getItem(`${localPrefix}admin_${userId}`);
+        if (storedAdmin) admin = normalizeCarAdmin(JSON.parse(storedAdmin));
+      }
+    } catch (e) {
+      console.warn("Could not read the local car showroom cache:", e);
+    }
+    if (carPages.length === 0) {
+      const template = getCarShowroomTemplate();
+      carPages = template.pages;
+      carElements = template.elements;
+      if (!admin) admin = { ...createEmptyCarAdmin(), cars: exampleCars() };
+    }
+    setProject('cars');
+    setPages(carPages);
+    setElements(carElements);
+    setHistory([carElements]);
+    setHistoryIndex(0);
+    setCarAdmin(admin || createEmptyCarAdmin());
+    setActivePageId(carPages[0].id);
+    setActiveSlideId(carPages[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    setIsChatActive(false);
+    setHasCars(true);
     projectReadyRef.current = true;
   };
 
@@ -550,6 +619,30 @@ export default function App() {
     return () => clearTimeout(delayDebounceFn);
   }, [shopAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
 
+  // 5. Debounced save of the car showroom's admin data (cars, settings).
+  useEffect(() => {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'cars') {
+      return;
+    }
+    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        localStorage.setItem(`${PROJECT_STORAGE.cars.localPrefix}admin_${targetUserId}`, JSON.stringify(carAdmin));
+      } catch (e) {
+        console.warn("Could not save car showroom data locally:", e);
+      }
+      try {
+        await setDoc(doc(db, 'designs', targetUserId), {
+          carAdmin: sanitizeData(carAdmin),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Cloud save of car showroom data failed:", e);
+      }
+    }, 800);
+    return () => clearTimeout(delayDebounceFn);
+  }, [carAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
+
   // Saves the open project right away (the debounced saves above would be
   // cancelled when another project's data replaces it).
   const flushProjectSave = () => {
@@ -560,6 +653,7 @@ export default function App() {
       localStorage.setItem(`${localPrefix}pages_${targetUserId}`, JSON.stringify(pages));
       localStorage.setItem(`${localPrefix}elements_${targetUserId}`, JSON.stringify(elements));
       if (project === 'shop') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(shopAdmin));
+      if (project === 'cars') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(carAdmin));
     } catch (e) {
       console.warn("Could not save to LocalStorage:", e);
     }
@@ -569,6 +663,7 @@ export default function App() {
       [pagesField]: sanitizeData(pages),
       [elementsField]: serializeElements(elements),
       ...(project === 'shop' ? { shopAdmin: sanitizeData(shopAdmin) } : {}),
+      ...(project === 'cars' ? { carAdmin: sanitizeData(carAdmin) } : {}),
       updatedAt: serverTimestamp(),
     }, { merge: true }).catch((e) => console.warn("Cloud save failed while switching projects:", e));
   };
@@ -581,6 +676,7 @@ export default function App() {
       if (type !== project) {
         flushProjectSave();
         if (type === 'shop') await loadShopWorkspace(targetUserId);
+        else if (type === 'cars') await loadCarsWorkspace(targetUserId);
         else await loadUserWorkspace(targetUserId);
       }
       setIsProjectChosen(true);
@@ -776,6 +872,8 @@ export default function App() {
         setIsProjectChosen(false);
         setHasShop(false);
         setShopAdmin(createEmptyShopAdmin());
+        setHasCars(false);
+        setCarAdmin(createEmptyCarAdmin());
         setIsAuthActive(true);
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
@@ -1851,6 +1949,23 @@ export default function App() {
         content: 'ابحث عن منتج...',
         styles: { color: '#B4532A', ...(customStyles || {}) },
       },
+      carListings: {
+        name: 'سيارات المعرض',
+        width: 1100,
+        height: 900,
+        content: '',
+        carLayout: 'grid',
+        carLimit: 9,
+        styles: { color: '#C8102E', ...(customStyles || {}) },
+      },
+      carSearch: {
+        name: 'بحث عن سيارة',
+        width: 700,
+        height: 60,
+        content: 'ابحث بالماركة أو الموديل أو السنة...',
+        shopSearchStyle: 'pill',
+        styles: { color: '#C8102E', ...(customStyles || {}) },
+      },
       checkout: {
         name: 'بطاقة الطلب',
         width: 560,
@@ -2424,6 +2539,7 @@ export default function App() {
       <ProjectChooser
         onChoose={handleChooseProject}
         hasShop={hasShop}
+        hasCars={hasCars}
         loadingType={projectLoading}
       />
     );
@@ -2545,7 +2661,7 @@ export default function App() {
           isSaving={isSavingCloud}
           onOpenWorkspaceHub={() => setIsWorkspaceHubOpen(true)}
           onManualSave={handleManualSave}
-          projectLabel={project === 'shop' ? 'Shops' : undefined}
+          projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : undefined}
           onOpenProjects={handleOpenProjects}
         />
 
@@ -2577,6 +2693,7 @@ export default function App() {
 
       {/* Main Operations Area (ساحة العمليات) */}
       <div className="flex-1 flex relative overflow-hidden">
+        <CarDataContext.Provider value={project === 'cars' ? carAdmin : null}>
         <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : null}>
         <ShopUpdateContext.Provider value={project === 'shop' ? updateShopAdmin : null}>
         <CanvasWorkspace
@@ -2609,6 +2726,7 @@ export default function App() {
         />
         </ShopUpdateContext.Provider>
         </ShopDataContext.Provider>
+        </CarDataContext.Provider>
         {isCanvasLoading && (
           <div className="absolute inset-0 bg-white/75 backdrop-blur-xs z-50 flex flex-col items-center justify-center select-none text-right font-sans">
             <Loader2 className="w-9 h-9 text-[#0071e3] animate-spin mb-3" />
@@ -2620,6 +2738,7 @@ export default function App() {
       {/* Floating Right Control Drawer on right edge (~20% of page) */}
       <RightDrawer
         isShopProject={project === 'shop'}
+        isCarProject={project === 'cars'}
         isOpen={isRightDrawerOpen}
         onToggle={() => setIsRightDrawerOpen(!isRightDrawerOpen)}
         onClose={() => setIsRightDrawerOpen(false)}
@@ -2686,6 +2805,9 @@ export default function App() {
       {/* Online Shop admin: floating gear + admin window */}
       {project === 'shop' && (
         <ShopAdminPanel data={shopAdmin} onChange={updateShopAdmin} />
+      )}
+      {project === 'cars' && (
+        <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} />
       )}
 
       {/* Workspace Hub Drawer Panel */}

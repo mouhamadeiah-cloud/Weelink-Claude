@@ -17,6 +17,8 @@ import { addToCart, useCart } from '../utils/cartStore';
 import { CartView } from './CartView';
 import { ShopProductsView } from './shop/store/ShopProductsView';
 import { ShopSearchView } from './shop/store/ShopSearchView';
+import { CarListingsView } from './cars/store/CarListingsView';
+import { CarSearchView } from './cars/store/CarSearchView';
 import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { 
@@ -1988,6 +1990,15 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const storePageId = storeList && (allPages || []).find((p) => p.slides.some((sl) => sl.id === storeList.slideId))?.id;
   const openStorePage = () => {
     if (storePageId) onSelectPage?.(storePageId);
+  };
+  // The showroom's main car list (the tallest non-featured one) shows car search results; a search
+  // from another page opens the page that holds it.
+  const showroomList = rawElements
+    .filter((e) => e.type === 'carListings' && e.carLayout !== 'marquee' && e.carSource !== 'featured')
+    .sort((a, b) => b.height - a.height)[0];
+  const showroomPageId = showroomList && (allPages || []).find((p) => p.slides.some((sl) => sl.id === showroomList.slideId))?.id;
+  const openShowroomPage = () => {
+    if (showroomPageId) onSelectPage?.(showroomPageId);
   };
   const cartBadge = (item: { linkType?: string; linkTargetId?: string }) =>
     cartCount > 0 && item.linkType === 'page' && item.linkTargetId && cartPageIds.has(item.linkTargetId) ? (
@@ -4097,6 +4108,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {elem.type === 'shopSearch' && (
                           <ShopSearchView elem={elem} isPreviewActive={isPreviewActive} onOpenStore={openStorePage} />
+                        )}
+
+                        {elem.type === 'carListings' && (
+                          <CarListingsView elem={elem} isPreviewActive={isPreviewActive} showsSearch={elem.id === showroomList?.id} onGrow={shopGrowHandler(elem.id)} boxHeight={elem.height - (isPreviewActive ? shopGrow[elem.id] || 0 : 0)} />
+                        )}
+
+                        {elem.type === 'carSearch' && (
+                          <CarSearchView elem={elem} isPreviewActive={isPreviewActive} onOpenShowroom={openShowroomPage} />
                         )}
 
                         {elem.type === 'html' && (

@@ -2114,14 +2114,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_team_collaboration_re_ow69.svg" 
+              src="/graphics/undraw/team-collaboration.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_team_collaboration_re_ow69.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تعاون الفريق', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_team_collaboration_re_ow69.svg' });
+          onAddElement('image', '/graphics/undraw/team-collaboration.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تعاون الفريق', width: 280, height: 210, imageUrl: '/graphics/undraw/team-collaboration.svg' });
         }
       },
       {
@@ -2133,14 +2133,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_web_development_w29c.svg" 
+              src="/graphics/undraw/web-development.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_web_development_w29c.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تطوير الويب', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_web_development_w29c.svg' });
+          onAddElement('image', '/graphics/undraw/web-development.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تطوير الويب', width: 280, height: 210, imageUrl: '/graphics/undraw/web-development.svg' });
         }
       },
       {
@@ -2152,14 +2152,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_brainstorming_re_135g.svg" 
+              src="/graphics/undraw/brainstorming.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_brainstorming_re_135g.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: العصف الذهني', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_brainstorming_re_135g.svg' });
+          onAddElement('image', '/graphics/undraw/brainstorming.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: العصف الذهني', width: 280, height: 210, imageUrl: '/graphics/undraw/brainstorming.svg' });
         }
       },
       {
@@ -2171,14 +2171,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_analytics_re_ywgo.svg" 
+              src="/graphics/undraw/analytics.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_analytics_re_ywgo.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تحليل البيانات', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_analytics_re_ywgo.svg' });
+          onAddElement('image', '/graphics/undraw/analytics.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تحليل البيانات', width: 280, height: 210, imageUrl: '/graphics/undraw/analytics.svg' });
         }
       },
       {
@@ -2190,14 +2190,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_business_decisions_re_849n.svg" 
+              src="/graphics/undraw/business-decisions.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_business_decisions_re_849n.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: قرارات الأعمال', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_business_decisions_re_849n.svg' });
+          onAddElement('image', '/graphics/undraw/business-decisions.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: قرارات الأعمال', width: 280, height: 210, imageUrl: '/graphics/undraw/business-decisions.svg' });
         }
       },
       {
@@ -2209,14 +2209,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_feeling_proud_qne1.svg" 
+              src="/graphics/undraw/feeling-proud.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_feeling_proud_qne1.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: فخر الإنجاز', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_feeling_proud_qne1.svg' });
+          onAddElement('image', '/graphics/undraw/feeling-proud.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: فخر الإنجاز', width: 280, height: 210, imageUrl: '/graphics/undraw/feeling-proud.svg' });
         }
       },
       {
@@ -2228,14 +2228,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_programmer_re_g6ob.svg" 
+              src="/graphics/undraw/programmer.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_programmer_re_g6ob.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: مبرمج', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_programmer_re_g6ob.svg' });
+          onAddElement('image', '/graphics/undraw/programmer.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: مبرمج', width: 280, height: 210, imageUrl: '/graphics/undraw/programmer.svg' });
         }
       },
       {
@@ -2247,14 +2247,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_investing_re_b7kn.svg" 
+              src="/graphics/undraw/investing.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_investing_re_b7kn.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: استثمار مالي', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_investing_re_b7kn.svg' });
+          onAddElement('image', '/graphics/undraw/investing.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: استثمار مالي', width: 280, height: 210, imageUrl: '/graphics/undraw/investing.svg' });
         }
       },
       {
@@ -2266,14 +2266,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_education_f8ru.svg" 
+              src="/graphics/undraw/education.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_education_f8ru.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تعليم ومعرفة', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_education_f8ru.svg' });
+          onAddElement('image', '/graphics/undraw/education.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تعليم ومعرفة', width: 280, height: 210, imageUrl: '/graphics/undraw/education.svg' });
         }
       },
       {
@@ -2285,14 +2285,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_marketing_re_7060.svg" 
+              src="/graphics/undraw/marketing.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_marketing_re_7060.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: حملة تسويقية', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_marketing_re_7060.svg' });
+          onAddElement('image', '/graphics/undraw/marketing.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: حملة تسويقية', width: 280, height: 210, imageUrl: '/graphics/undraw/marketing.svg' });
         }
       },
       {
@@ -2304,14 +2304,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_innovative_re_asrj.svg" 
+              src="/graphics/undraw/innovative.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_innovative_re_asrj.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: ابتكار إبداعي', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_innovative_re_asrj.svg' });
+          onAddElement('image', '/graphics/undraw/innovative.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: ابتكار إبداعي', width: 280, height: 210, imageUrl: '/graphics/undraw/innovative.svg' });
         }
       },
       {
@@ -2323,14 +2323,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_project_completed_w0sq.svg" 
+              src="/graphics/undraw/project-completed.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_project_completed_w0sq.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: إنجاز المشروع', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_project_completed_w0sq.svg' });
+          onAddElement('image', '/graphics/undraw/project-completed.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: إنجاز المشروع', width: 280, height: 210, imageUrl: '/graphics/undraw/project-completed.svg' });
         }
       },
       {
@@ -2342,14 +2342,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_searching_p59q.svg" 
+              src="/graphics/undraw/searching.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_searching_p59q.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: بحث سريع', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_searching_p59q.svg' });
+          onAddElement('image', '/graphics/undraw/searching.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: بحث سريع', width: 280, height: 210, imageUrl: '/graphics/undraw/searching.svg' });
         }
       },
       {
@@ -2361,14 +2361,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_chating_re_9980.svg" 
+              src="/graphics/undraw/chatting.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_chating_re_9980.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: محادثة وتواصل', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_chating_re_9980.svg' });
+          onAddElement('image', '/graphics/undraw/chatting.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: محادثة وتواصل', width: 280, height: 210, imageUrl: '/graphics/undraw/chatting.svg' });
         }
       },
       {
@@ -2380,14 +2380,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_conference_call_re_u0ba.svg" 
+              src="/graphics/undraw/conference-call.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_conference_call_re_u0ba.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: مكالمة مؤتمر', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_conference_call_re_u0ba.svg' });
+          onAddElement('image', '/graphics/undraw/conference-call.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: مكالمة مؤتمر', width: 280, height: 210, imageUrl: '/graphics/undraw/conference-call.svg' });
         }
       },
       {
@@ -2399,14 +2399,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_science_re_87m4.svg" 
+              src="/graphics/undraw/science.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_science_re_87m4.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تحليل وبحوث علمية', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_science_re_87m4.svg' });
+          onAddElement('image', '/graphics/undraw/science.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تحليل وبحوث علمية', width: 280, height: 210, imageUrl: '/graphics/undraw/science.svg' });
         }
       },
       {
@@ -2418,14 +2418,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_launch_day_re_453a.svg" 
+              src="/graphics/undraw/launch-day.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_launch_day_re_453a.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: يوم الإطلاق السعيد', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_launch_day_re_453a.svg' });
+          onAddElement('image', '/graphics/undraw/launch-day.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: يوم الإطلاق السعيد', width: 280, height: 210, imageUrl: '/graphics/undraw/launch-day.svg' });
         }
       },
       {
@@ -2437,14 +2437,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_goals_re_g1tz.svg" 
+              src="/graphics/undraw/goals.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_goals_re_g1tz.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: أهداف منجزة', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_goals_re_g1tz.svg' });
+          onAddElement('image', '/graphics/undraw/goals.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: أهداف منجزة', width: 280, height: 210, imageUrl: '/graphics/undraw/goals.svg' });
         }
       },
       {
@@ -2456,14 +2456,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_developer_activity_re_3e78.svg" 
+              src="/graphics/undraw/developer-activity.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_developer_activity_re_3e78.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تطوير برمجي مكثف', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_developer_activity_re_3e78.svg' });
+          onAddElement('image', '/graphics/undraw/developer-activity.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: تطوير برمجي مكثف', width: 280, height: 210, imageUrl: '/graphics/undraw/developer-activity.svg' });
         }
       },
       {
@@ -2475,14 +2475,14 @@ export const buildAddMenuData = ({
         preview: (
           <div className="w-full h-18 bg-neutral-50 rounded-xl flex items-center justify-center p-2 border border-neutral-200">
             <img 
-              src="https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_startup_life_re_809q.svg" 
+              src="/graphics/undraw/startup-life.svg" 
               className="w-14 h-14 object-contain"
               alt="undraw-preview" 
             />
           </div>
         ),
         action: () => {
-          onAddElement('image', 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_startup_life_re_809q.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: حياة الشركات الناشئة', width: 280, height: 210, imageUrl: 'https://raw.githubusercontent.com/balazser/undraw-svg-collection/master/svg/undraw_startup_life_re_809q.svg' });
+          onAddElement('image', '/graphics/undraw/startup-life.svg', { borderRadius: 0 }, { name: 'رسمة unDraw: حياة الشركات الناشئة', width: 280, height: 210, imageUrl: '/graphics/undraw/startup-life.svg' });
         }
       },
     ],

@@ -94,12 +94,14 @@ export interface ShopCustomer {
   phone: string;
   email: string;
   address: string;
+  registered?: boolean; // signed up from the checkout page
   createdAt: string;
 }
 
-export type OrderStatus = 'new' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'awaiting-payment' | 'new' | 'preparing' | 'shipped' | 'delivered' | 'cancelled';
 
 export const ORDER_STATUSES: { id: OrderStatus; label: string; color: string }[] = [
+  { id: 'awaiting-payment', label: 'بانتظار تأكيد الدفع', color: '#bf5af2' },
   { id: 'new', label: 'جديد', color: '#0071e3' },
   { id: 'preparing', label: 'قيد التحضير', color: '#ff9f0a' },
   { id: 'shipped', label: 'تم الشحن', color: '#5e5ce6' },
@@ -115,16 +117,37 @@ export interface ShopOrderItem {
   qty: number;
 }
 
+// The visitor's details from the checkout page, kept on the order even without an account.
+export interface OrderContact {
+  name: string;
+  address: string;
+  email: string;
+  whatsapp: string;
+}
+
+// What the visitor sent after paying with an e-wallet.
+export interface OrderPayment {
+  fee: number; // the wallet's extra fee, included in the order total
+  transactionId: string;
+  screenshot: string; // image URL
+  paidAt: string;
+  rejectReason?: string;
+}
+
 export interface ShopOrder {
   id: string;
   number: number;
-  customerId: string;
+  customerId: string; // '' for a visitor who ordered without an account
+  contact?: OrderContact;
   items: ShopOrderItem[];
   total: number;
+  deliveryFee?: number;
   status: OrderStatus;
   paymentMethod: PaymentMethodId;
+  payment?: OrderPayment;
   deliveryMethod: 'delivery' | 'pickup';
   note: string;
+  source?: 'admin' | 'checkout';
   createdAt: string;
 }
 
@@ -140,14 +163,40 @@ export interface ShopMovement {
   createdAt: string;
 }
 
-export type PaymentMethodId = 'cash' | 'sham-cash' | 'syriatel-cash' | 'gateway';
+export type PaymentMethodId = 'cash' | 'syriatel-cash' | 'sham-cash' | 'mtn-cash' | 'gateway';
 
 export const PAYMENT_METHODS: { id: PaymentMethodId; label: string }[] = [
-  { id: 'cash', label: 'الدفع نقداً (كاش)' },
-  { id: 'sham-cash', label: 'شام كاش' },
+  { id: 'cash', label: 'الدفع عند الاستلام' },
   { id: 'syriatel-cash', label: 'سيريتل كاش' },
+  { id: 'sham-cash', label: 'شام كاش' },
+  { id: 'mtn-cash', label: 'MTN كاش' },
   { id: 'gateway', label: 'مخدّم دفع إلكتروني' },
 ];
+
+export type WalletId = 'syriatel' | 'sham' | 'mtn';
+
+// An e-wallet the visitor can pay with: they transfer the amount to the merchant's account,
+// then send the transaction number and a screenshot; the merchant confirms the payment.
+export interface WalletSettings {
+  enabled: boolean;
+  account: string; // phone number (Syriatel, MTN) or account code / address (Sham Cash)
+  holderName: string;
+  qrImage: string;
+  feeType: 'percent' | 'fixed';
+  feeValue: number; // 0 = no extra fee
+  minOrder: number; // 0 = no minimum
+  instructions: string;
+}
+
+export const WALLETS: { id: WalletId; method: PaymentMethodId; label: string; accountLabel: string; phone: boolean }[] = [
+  { id: 'syriatel', method: 'syriatel-cash', label: 'سيريتل كاش', accountLabel: 'رقم الهاتف', phone: true },
+  { id: 'sham', method: 'sham-cash', label: 'شام كاش', accountLabel: 'رمز الحساب / Address', phone: false },
+  { id: 'mtn', method: 'mtn-cash', label: 'MTN كاش', accountLabel: 'رقم الهاتف', phone: true },
+];
+
+const emptyWallet = (): WalletSettings => ({
+  enabled: false, account: '', holderName: '', qrImage: '', feeType: 'fixed', feeValue: 0, minOrder: 0, instructions: '',
+});
 
 export interface ShopSettings {
   storeName: string;
@@ -157,7 +206,10 @@ export interface ShopSettings {
   offersMessage: string;
   whatsappNumber: string;
   payments: {
-    cash: boolean;
+    cash: boolean; // cash on delivery
+    walletsEnabled: boolean;
+    wallets: Record<WalletId, WalletSettings>;
+    // Older single-field wallet settings, read once into `wallets` by normalizeShopAdmin.
     shamCash: boolean;
     shamCashAccount: string;
     syriatelCash: boolean;
@@ -165,6 +217,15 @@ export interface ShopSettings {
     gateway: boolean;
     gatewayProvider: string;
     gatewayMerchantId: string;
+  };
+  notifications: {
+    emailConfirmation: boolean; // template: orderConfirmationMessage
+    whatsappNotify: boolean; // lets the merchant send the visitor a WhatsApp message per order
+  };
+  // Sham Cash API link. The API key itself never goes here (this document is readable by the
+  // store page); it will live on the server when the link is built.
+  api: {
+    webhookUrl: string;
   };
   delivery: {
     delivery: boolean;
@@ -204,6 +265,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   whatsappNumber: '',
   payments: {
     cash: true,
+    walletsEnabled: false,
+    wallets: { syriatel: emptyWallet(), sham: emptyWallet(), mtn: emptyWallet() },
     shamCash: false,
     shamCashAccount: '',
     syriatelCash: false,
@@ -211,6 +274,13 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
     gateway: false,
     gatewayProvider: '',
     gatewayMerchantId: '',
+  },
+  notifications: {
+    emailConfirmation: true,
+    whatsappNotify: false,
+  },
+  api: {
+    webhookUrl: '',
   },
   delivery: {
     delivery: true,
@@ -262,6 +332,27 @@ export const normalizeProduct = (p: any, currency: string): ShopProduct => ({
 });
 
 // Fills in anything missing from data saved by an older version of the panel.
+// Wallet settings, filling in fields and carrying over the older Sham Cash / Syriatel Cash fields.
+const normalizePayments = (raw: any): ShopSettings['payments'] => {
+  const base = DEFAULT_SHOP_SETTINGS.payments;
+  const p = { ...base, ...(raw || {}) };
+  const saved = raw?.wallets || {};
+  const wallet = (id: WalletId, legacyOn: boolean, legacyAccount: string): WalletSettings => ({
+    ...emptyWallet(),
+    ...(saved[id] || { enabled: !!legacyOn, account: legacyAccount || '' }),
+  });
+  const wallets = {
+    syriatel: wallet('syriatel', p.syriatelCash, p.syriatelCashNumber),
+    sham: wallet('sham', p.shamCash, p.shamCashAccount),
+    mtn: wallet('mtn', false, ''),
+  };
+  return {
+    ...p,
+    wallets,
+    walletsEnabled: typeof raw?.walletsEnabled === 'boolean' ? raw.walletsEnabled : !!(p.shamCash || p.syriatelCash),
+  };
+};
+
 export const normalizeShopAdmin = (raw: any): ShopAdminData => {
   const base = createEmptyShopAdmin();
   if (!raw || typeof raw !== 'object') return base;
@@ -274,7 +365,9 @@ export const normalizeShopAdmin = (raw: any): ShopAdminData => {
     settings: {
       ...base.settings,
       ...(raw.settings || {}),
-      payments: { ...base.settings.payments, ...(raw.settings?.payments || {}) },
+      payments: normalizePayments(raw.settings?.payments),
+      notifications: { ...base.settings.notifications, ...(raw.settings?.notifications || {}) },
+      api: { ...base.settings.api, ...(raw.settings?.api || {}) },
       delivery: { ...base.settings.delivery, ...(raw.settings?.delivery || {}) },
     },
   };

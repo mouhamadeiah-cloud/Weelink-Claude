@@ -91,6 +91,7 @@ export interface CartProduct {
   currency: string;
   image?: string;
   productId?: string; // set for online-shop products, to look up their delivery price
+  variant?: string; // online-shop products with stock options: the chosen combination, e.g. "أحمر / L"
 }
 
 export interface CanvasElement {

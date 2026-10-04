@@ -131,6 +131,7 @@ export interface CanvasElement {
   shopSpeed?: number; // 'marquee' layout: seconds for one full pass
   // 'shopSearch' element only: the look of the search bar (its placeholder is the content).
   shopSearchStyle?: ShopSearchStyle;
+  shopSource?: 'all' | 'featured'; // shopProducts: every product, or only the «عروض مميزة» ones
   linkTargetId?: string;
   contactType?: ContactType;
   contactValue?: string;

@@ -12,19 +12,13 @@ import { PackageOpen, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useShopData, useShopUpdate } from './ShopDataContext';
 import { recordVisit } from '../orderModel';
-import { ProductCard, ProductSlide, ProductZigzag, ProductWide, ProductMini, ProductChip } from './ProductCard';
+import { ProductCard, ProductSlide, ProductZigzag, ProductWide, ProductMini, ProductChip, cardWidth } from './ProductCard';
 import { ProductDetailModal } from './ProductDetailModal';
 import { useShopSearch, clearShopSearch, matchesSearch, takeReveal } from './shopSearchStore';
 
-// Column width range of each grid layout: cards keep their size and gather in the middle of the
-// slide when there are only a few.
-const COLUMN: Record<string, [number, number]> = {
-  grid: [210, 260], wide: [420, 540], small: [130, 170], large: [320, 400], spotlight: [220, 270],
-};
-const columns = (layout: string) => {
-  const [min, max] = COLUMN[layout] || COLUMN.grid;
-  return `repeat(auto-fit, minmax(${min}px, ${max}px))`;
-};
+// Card width of each layout for a product at the default size (50%); a product's card size
+// (25 / 50 / 100%) scales it. Cards wrap in rows centred in the slide.
+const BASE_WIDTH: Record<string, number> = { grid: 130, spotlight: 135, large: 200, small: 85, wide: 270 };
 
 export const MAX_PAGE_SIZE = 30;
 const PAGE_SIZES = [20, 30];
@@ -61,7 +55,12 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
     if (isPreviewActive && updateShop) recordVisit(updateShop);
   }, [isPreviewActive, updateShop]);
 
-  const products = useMemo(() => (admin?.products || []).filter((p) => p.published), [admin]);
+  // The «عروض مميزة» slides list only the products marked as featured in the product editor.
+  const featuredOnly = elem.shopSource === 'featured';
+  const products = useMemo(
+    () => (admin?.products || []).filter((p) => p.published && (!featuredOnly || p.featured)),
+    [admin, featuredOnly]
+  );
   // Main catalogs that hold at least one shown product (directly or through a sub catalog).
   const tabs = useMemo(() => {
     const cats = admin?.catalogs || [];
@@ -93,9 +92,10 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
 
   // Catalog tabs only where there is room for them.
   const showTabs = tabs.length > 1 && !marquee && elem.height >= 300;
-  const open = products.find((p) => p.id === openId);
+  const open = (admin?.products || []).find((p) => p.id === openId && p.published);
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
-  const related = open ? open.relatedIds.map((id) => products.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p) : [];
+  const published = (admin?.products || []).filter((p) => p.published);
+  const related = open ? open.relatedIds.map((id) => published.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p) : [];
 
   // A related product: scroll the store to its card behind the overlay and open its card.
   const openRelated = (id: string) => {
@@ -234,6 +234,11 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
             <span className="text-base font-bold text-[#5A4C42]">لا توجد منتجات مطابقة لبحثك</span>
             <span className="text-sm text-[#8A7B70]">جرّب كلمة أخرى أو امسح البحث لعرض كل المنتجات.</span>
           </div>
+        ) : featuredOnly ? (
+          <div className="flex-1 flex items-center justify-center gap-2 text-center rounded-2xl border-2 border-dashed border-current/20 text-sm font-bold opacity-70 px-4" style={{ color: marquee ? '#fff' : '#5A4C42' }}>
+            <PackageOpen size={20} className="shrink-0" />
+            لا توجد عروض مميزة بعد: فعّل «عروض مميزة» عند إدخال المنتج.
+          </div>
         ) : elem.height < 200 ? (
           <div className="flex-1 flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-current/20 text-sm font-bold opacity-70" style={{ color: marquee ? '#fff' : '#5A4C42' }}>
             <PackageOpen size={20} />
@@ -272,22 +277,26 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
           ref={gridRef}
           className={grows ? 'pb-2 pt-3' : 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-2 pt-3'}
         >
-          <div className={layout === 'zigzag' ? 'flex flex-col gap-10' : 'grid gap-5'} style={layout === 'zigzag' ? undefined : { gridTemplateColumns: columns(layout), justifyContent: 'center' }}>
+          <div className={layout === 'zigzag' ? 'flex flex-col gap-8 max-w-[560px] mx-auto' : 'flex flex-wrap justify-center items-start gap-4'}>
             {list.map((p, i) => {
               const show = () => setOpenId(p.id);
+              const full = layout === 'grid' && p.display === 'slide';
+              const width = cardWidth(p, BASE_WIDTH[layout] || BASE_WIDTH.grid);
               const card =
                 layout === 'zigzag' ? <ProductZigzag product={p} accent={accent} onOpen={show} flip={i % 2 === 1} />
                 : layout === 'wide' ? <ProductWide product={p} accent={accent} onOpen={show} />
                 : layout === 'small' ? <ProductMini product={p} accent={accent} onOpen={show} />
-                : layout === 'grid' && p.display === 'slide' ? <ProductSlide product={p} accent={accent} onOpen={show} />
-                : <ProductCard product={p} accent={accent} onOpen={show} />;
-              const wide = layout === 'grid' && p.display === 'slide';
+                : full ? <ProductSlide product={p} accent={accent} onOpen={show} />
+                : <ProductCard product={p} accent={accent} onOpen={show} width={width} />;
               return (
                 <div
                   key={p.id}
                   data-product-id={p.id}
-                  className={`${wide ? 'col-span-full' : 'flex'} ${cardAnim !== 'none' ? `shop-anim-${cardAnim}` : ''}`}
-                  style={cardAnim !== 'none' ? { animationDelay: `${(i % 4) * 0.35}s` } : undefined}
+                  className={`flex ${cardAnim !== 'none' ? `shop-anim-${cardAnim}` : ''}`}
+                  style={{
+                    ...(layout === 'zigzag' ? {} : full ? { flexBasis: '100%' } : { width, maxWidth: '100%' }),
+                    ...(cardAnim !== 'none' ? { animationDelay: `${(i % 4) * 0.35}s` } : {}),
+                  }}
                 >
                   {card}
                 </div>

@@ -217,6 +217,19 @@ export function withCheckoutLayout(pages: Page[], elements: CanvasElement[]): { 
   };
 }
 
+// «عروض مميزة»: the products marked as featured in the product editor, as a running strip on the
+// home page and as shaking cards above the full list on the store page (new shops only).
+const OFFERS = { homeSlide: 'shop-home-offers', storeSlide: 'shop-products-offers' };
+const offersElements = (): CanvasElement[] => [
+  liveGrid('shop-offers-strip', OFFERS.homeSlide, { x: 0, y: 15, width: 1280, height: 80 }, {
+    name: 'عروض مميزة', shopLayout: 'marquee', shopSource: 'featured', shopSpeed: 30,
+  }),
+  heading('shop-offers-heading', OFFERS.storeSlide, { x: 0, y: 44, width: 1280, height: 50 }, 'عروض مميزة', 32, C.ink, 'center'),
+  liveGrid('shop-offers-cards', OFFERS.storeSlide, { x: 90, y: 120, width: 1100, height: 340 }, {
+    name: 'عروض مميزة', shopLayout: 'grid', shopSource: 'featured', shopCardAnimation: 'shake', shopLimit: 8,
+  }),
+];
+
 // Shops created before the live grid existed: swap their demo product cards for it.
 // Featured grids made before product slides had pages show one row.
 export function withLiveProductGrid(elements: CanvasElement[]): CanvasElement[] {
@@ -245,6 +258,7 @@ export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { 
       navbar: buildNavbar(),
       slides: [
         { id: 'shop-home-hero', name: 'الواجهة', height: 620, backgroundColor: '#2A1F1A', backgroundImage: unsplash('1441986300917-64674bd600d8', 1800), backgroundSize: 'cover', backgroundPosition: 'center', dividerShape: 'straight' },
+        ...(live ? [{ id: OFFERS.homeSlide, name: 'عروض مميزة', height: 110, backgroundColor: C.ink, dividerShape: 'straight' as const }] : []),
         { id: 'shop-home-featured', name: 'منتجات مختارة', height: 640, backgroundColor: C.cream, dividerShape: 'straight' },
         { id: 'shop-home-perks', name: 'لماذا نحن', height: 300, backgroundColor: '#FFFFFF', dividerShape: 'straight' },
       ],
@@ -255,6 +269,7 @@ export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { 
       slug: '/products',
       navbar: buildNavbar(),
       slides: [
+        ...(live ? [{ id: OFFERS.storeSlide, name: 'عروض مميزة', height: 500, backgroundColor: '#FFFFFF', dividerShape: 'straight' as const }] : []),
         { id: 'shop-products-slide', name: 'كل المنتجات', height: 1120, backgroundColor: C.cream, dividerShape: 'straight' },
       ],
     },
@@ -457,7 +472,7 @@ export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { 
     }, { mapLocation: 'دمشق، سوريا' }),
   ]);
 
-  return { pages, elements };
+  return { pages, elements: live ? [...elements, ...offersElements()] : elements };
 }
 
 const withLive = (live: boolean, elements: CanvasElement[]) => (live ? withLiveProductGrid(elements) : elements);

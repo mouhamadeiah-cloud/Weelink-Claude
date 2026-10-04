@@ -1982,7 +1982,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // The store's main product slide (the tallest one: the full store rather than a featured row)
   // shows the results of a store search; a search from another page opens its page.
   const storeList = rawElements
-    .filter((e) => e.type === 'shopProducts' && e.shopLayout !== 'marquee')
+    .filter((e) => e.type === 'shopProducts' && e.shopLayout !== 'marquee' && e.shopSource !== 'featured')
     .sort((a, b) => b.height - a.height)[0];
   const storePageId = storeList && (allPages || []).find((p) => p.slides.some((sl) => sl.id === storeList.slideId))?.id;
   const openStorePage = () => {

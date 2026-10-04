@@ -95,6 +95,12 @@ export const ShopElementSettings: React.FC<ShopElementSettingsProps> = ({ elemen
           <ShoppingBag size={14} className="text-[#B4532A]" />
           <span>عرض منتجات المتجر</span>
         </div>
+        <Label>المنتجات المعروضة</Label>
+        <Choices
+          options={[{ id: 'all', label: 'كل المنتجات' }, { id: 'featured', label: 'العروض المميزة فقط' }]}
+          value={element.shopSource || 'all'}
+          onChange={(id) => onUpdateElement({ shopSource: id as 'all' | 'featured' })}
+        />
         <Label>طريقة العرض</Label>
         <Choices options={LAYOUTS} value={layout} onChange={(id) => onUpdateElement({ shopLayout: id })} />
         {layout === 'marquee' ? (

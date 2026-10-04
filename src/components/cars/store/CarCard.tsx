@@ -152,6 +152,27 @@ export const CarLarge: React.FC<CardProps> = ({ car, look, onOpen }) => (
   </button>
 );
 
+// A card for a tall running strip: photo on top, name and price below.
+export const CarStripCard: React.FC<CardProps> = ({ car, look, onOpen }) => (
+  <button
+    type="button"
+    onClick={onOpen}
+    className="w-full text-right overflow-hidden border border-black/[0.06] shadow-[0_8px_24px_rgba(0,0,0,0.08)] flex flex-col cursor-pointer"
+    style={shell(look)}
+    dir="rtl"
+  >
+    <div className="relative aspect-[4/3] overflow-hidden shrink-0">
+      <Photo car={car} />
+      <Marks car={car} look={look} />
+    </div>
+    <div className="p-3.5 space-y-1">
+      <div className="text-[15px] font-black leading-snug truncate">{carTitle(car)}</div>
+      {carSubtitle(car) && <div className="text-xs opacity-60 truncate">{carSubtitle(car)}</div>}
+      <Price car={car} look={look} size="text-base" />
+    </div>
+  </button>
+);
+
 export const CarChip: React.FC<CardProps> = ({ car, look, onOpen }) => (
   <button
     type="button"

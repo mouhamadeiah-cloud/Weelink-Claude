@@ -134,7 +134,7 @@ export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, a
   const specs = carSpecRows(car);
 
   return createPortal(
-    <div className="fixed inset-0 z-[2000000] bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-3 sm:p-6" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-[2000000] bg-black/55 flex items-center justify-center p-3 sm:p-6" onMouseDown={onClose}>
       <div
         dir="rtl"
         className="relative w-full max-w-5xl max-h-full overflow-y-auto bg-white rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.35)] text-right text-[#1d1d1f]"

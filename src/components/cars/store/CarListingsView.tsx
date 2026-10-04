@@ -8,7 +8,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { CarFront, ChevronLeft, ChevronRight, X, SlidersHorizontal } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useCarData } from './CarDataContext';
-import { CarCard, CarWide, CarLarge, CarChip, CarLook } from './CarCard';
+import { CarCard, CarWide, CarLarge, CarChip, CarStripCard, CarLook } from './CarCard';
 import { CarDetailModal } from './CarDetailModal';
 import { carTitle } from '../carModel';
 import { useShopSearch, clearShopSearch, matchesSearch, takeReveal, bumpShopReveal } from '../../shop/store/shopSearchStore';
@@ -17,8 +17,11 @@ import { carFilterChips, carMatchesFilters, clearCarFilters, CarFilters, setCarF
 
 export const MAX_CARS_PER_PAGE = 30;
 const CARD_WIDTH: Record<string, number> = { grid: 290, large: 400 };
-const CHIP_MIN = 240;
+const CHIP_WIDTH = 260;
+const CHIP_MAX_HEIGHT = 96;
 const CHIP_GAP = 16;
+// From this strip height on, the strip shows photo cards instead of small chips.
+const STRIP_CARD_MIN_HEIGHT = 200;
 
 type Sort = 'new' | 'price-asc' | 'price-desc' | 'year';
 const SORTS: { id: Sort; label: string }[] = [
@@ -125,19 +128,27 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
     return () => window.clearTimeout(t);
   }, [reveal, searching, isPreviewActive]);
 
-  // Running strip: few cars widen so one round covers the strip and the loop never shows a gap.
+  // Running strip: small chips in a low strip, photo cards in a tall one, always at a fixed size.
+  // The cars repeat until one round is wider than the strip, so the loop never shows a gap, and
+  // the duration grows with the round so the speed stays the same.
   const stripRef = useRef<HTMLDivElement>(null);
-  const [stripWidth, setStripWidth] = useState(0);
+  const [strip, setStrip] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
     const node = stripRef.current;
     if (!marquee || !node) return;
-    const measure = () => setStripWidth(node.clientWidth);
+    const measure = () => setStrip((s) => (s.width === node.clientWidth && s.height === node.clientHeight ? s : { width: node.clientWidth, height: node.clientHeight }));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(node);
     return () => ro.disconnect();
   }, [marquee, list.length]);
-  const chipWidth = list.length ? Math.max(CHIP_MIN, stripWidth / list.length - CHIP_GAP) : CHIP_MIN;
+  const cardMode = strip.height >= STRIP_CARD_MIN_HEIGHT;
+  // A card is about 4:3 photo plus ~92px of text; it fits the strip's height and stays 220-320 wide.
+  const cardWidth = Math.round(Math.max(220, Math.min(320, ((strip.height - 16) - 92) * (4 / 3))));
+  const itemWidth = (cardMode ? cardWidth : CHIP_WIDTH) + CHIP_GAP;
+  const reps = list.length ? Math.max(1, Math.ceil(strip.width / (list.length * itemWidth))) : 1;
+  const round = Array.from({ length: reps }, () => list).flat();
+  const stripSeconds = (elem.carSpeed || 35) * reps;
 
   const goTo = (n: number) => {
     setPage(n);
@@ -222,12 +233,17 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
           </div>
         ) : marquee ? (
           <div ref={stripRef} className="shop-marquee flex-1 min-h-0 overflow-hidden" dir="ltr">
-            <div className="shop-marquee-track h-full flex w-max" style={{ '--shop-speed': `${elem.carSpeed || 35}s` } as React.CSSProperties}>
+            <div
+              className="shop-marquee-track h-full flex w-max"
+              style={{ '--shop-speed': `${stripSeconds}s`, animationPlayState: openId ? 'paused' : undefined, willChange: 'transform' } as React.CSSProperties}
+            >
               {[0, 1].map((copy) => (
-                <div key={copy} className="h-full flex" aria-hidden={copy === 1}>
-                  {list.map((c) => (
-                    <div key={c.id} className="h-full shrink-0" style={{ width: chipWidth + CHIP_GAP, paddingInline: CHIP_GAP / 2 }}>
-                      <CarChip car={c} look={look} onOpen={() => setOpenId(c.id)} />
+                <div key={copy} className={`h-full flex ${cardMode ? 'items-start pt-2' : 'items-center'}`} aria-hidden={copy === 1}>
+                  {round.map((c, i) => (
+                    <div key={`${c.id}-${i}`} className="shrink-0" style={{ width: itemWidth, paddingInline: CHIP_GAP / 2, height: cardMode ? undefined : Math.min(strip.height, CHIP_MAX_HEIGHT) }}>
+                      {cardMode
+                        ? <CarStripCard car={c} look={look} onOpen={() => setOpenId(c.id)} />
+                        : <CarChip car={c} look={look} onOpen={() => setOpenId(c.id)} />}
                     </div>
                   ))}
                 </div>

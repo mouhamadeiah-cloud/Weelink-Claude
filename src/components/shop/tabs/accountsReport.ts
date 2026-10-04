@@ -74,7 +74,7 @@ ${!r.ledger ? '' : `<h2>السجل</h2>
 ${r.ledger.length ? `<table><thead><tr><th>التاريخ</th><th>النوع</th><th>البيان</th><th class="num">المبلغ</th></tr></thead><tbody>
 ${r.ledger.map((l) => {
   const date = l.date.length === 10 ? l.date : l.date.slice(0, 10);
-  return `<tr><td>${date}</td><td>${KIND_LABELS[l.kind]}</td><td>${esc(l.label)}</td><td class="num">${esc(r.money(l.amount))}</td></tr>`;
+  return `<tr><td>${date}</td><td>${esc(l.kindLabel || KIND_LABELS[l.kind])}</td><td>${esc(l.label)}</td><td class="num">${esc(r.money(l.amount))}</td></tr>`;
 }).join('')}
 </tbody></table>` : '<p class="muted">لا توجد حركة في هذه الفترة.</p>'}`}
 </body></html>`;

@@ -79,6 +79,7 @@ import {
 } from '../data/backgroundPresets';
 import { WeeAIChat } from './WeeAIChat';
 import { ShopElementSettings } from './ShopElementSettings';
+import { CarElementSettings } from './cars/CarElementSettings';
 
 import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
@@ -124,6 +125,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onCopyCurrentPage,
   onAddSlideTemplate,
   isShopProject = false,
+  isCarProject = false,
   onAddPageTemplate,
   onApplyFreeStarterTemplate,
   onApplyOnlineShopTemplate,
@@ -1779,6 +1781,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     {/* The shop cart / order card: accent colour and texts */}
                     {(selectedElement.type === 'cart' || selectedElement.type === 'checkout') && (
                       <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+                    )}
+                    {/* The car showroom's live car list / search bar */}
+                    {(selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
+                      <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
                     )}
                     {/* إعدادات معرض الصور (Gallery Settings) */}
                     {selectedElement.type === 'gallery' && (() => {
@@ -3666,6 +3672,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {activeSection === 'animation' && selectedElement && (selectedElement.type === 'shopProducts' || selectedElement.type === 'shopSearch') && (
               <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
             )}
+            {activeSection === 'animation' && selectedElement && (selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
+              <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+            )}
             {activeSection === 'animation' && <AnimationSection styles={styles} onUpdateElementStyles={onUpdateElementStyles} />}
 
             {/* TOOL: Add Elements (+) - Step 1: Squares Grid (الصورة رقم ١) | Step 2: Detail with Subcategories Bar (الصورة رقم ٢) */}
@@ -3803,7 +3812,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             اختر فئة لتصفح الشرائح المصممة مسبقاً:
                           </h4>
                           <div className="grid grid-cols-2 gap-2">
-                            {READY_SLIDE_CATEGORIES.filter((cat) => cat.id !== 'shop' || isShopProject).map((cat) => (
+                            {READY_SLIDE_CATEGORIES.filter((cat) => (cat.id !== 'shop' || isShopProject) && (cat.id !== 'cars' || isCarProject)).map((cat) => (
                               <button
                                 key={cat.id}
                                 type="button"
@@ -5710,6 +5719,27 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               {Array.from({ length: rows }).map((__, k) => (
                                 <div key={k} style={{ height: el.type === 'cart' ? 70 : 52, borderRadius: 12, background: 'rgba(128,128,128,0.18)' }} />
                               ))}
+                            </div>
+                          );
+                        }
+                        if (el.type === 'carListings') {
+                          const strip = el.carLayout === 'marquee';
+                          const n = strip ? 6 : el.carLayout === 'wide' ? 2 : el.carLayout === 'large' ? 2 : 3;
+                          return (
+                            <div key={elIdx} style={{ ...elStyle, padding: 0, gap: 24, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap', flexDirection: el.carLayout === 'wide' ? 'column' : 'row' }}>
+                              {Array.from({ length: n }).map((__, k) => (
+                                <div key={k} style={{ flex: strip ? '0 0 220px' : '1 1 0', minWidth: 150, maxHeight: strip ? undefined : 420, borderRadius: el.carCardRadius ?? 22, background: el.carCardBg || '#FFFFFF', border: '2px solid rgba(18,19,22,0.08)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                  <div style={{ flex: '0 0 55%', background: 'linear-gradient(135deg,#d9dbe0,#b9bcc4)' }} />
+                                  <div style={{ margin: 16, height: 18, width: '40%', borderRadius: 6, background: el.styles?.color || '#C8102E', opacity: 0.85 }} />
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        if (el.type === 'carSearch') {
+                          return (
+                            <div key={elIdx} style={{ ...elStyle, background: el.shopSearchStyle === 'glass' ? 'rgba(255,255,255,0.18)' : el.shopSearchStyle === 'minimal' ? 'transparent' : '#FFFFFF', borderRadius: el.shopSearchStyle === 'minimal' ? 0 : 9999, borderBottom: `3px solid ${el.styles?.color || '#C8102E'}`, color: el.shopSearchStyle === 'glass' ? '#FFFFFF' : '#6b6e76', fontSize: '22px', padding: '0 24px' }}>
+                              <span className="w-full truncate">🔍 {el.content}</span>
                             </div>
                           );
                         }

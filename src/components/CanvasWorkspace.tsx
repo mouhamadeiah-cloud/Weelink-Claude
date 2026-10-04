@@ -17,6 +17,8 @@ import { addToCart, useCart } from '../utils/cartStore';
 import { CartView } from './CartView';
 import { ShopProductsView } from './shop/store/ShopProductsView';
 import { ShopSearchView } from './shop/store/ShopSearchView';
+import { CarListingsView } from './cars/store/CarListingsView';
+import { CarSearchView } from './cars/store/CarSearchView';
 import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { 
@@ -1989,6 +1991,15 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const openStorePage = () => {
     if (storePageId) onSelectPage?.(storePageId);
   };
+  // The showroom's main car list (the tallest non-featured one) shows car search results; a search
+  // from another page opens the page that holds it.
+  const showroomList = rawElements
+    .filter((e) => e.type === 'carListings' && e.carLayout !== 'marquee' && e.carSource !== 'featured')
+    .sort((a, b) => b.height - a.height)[0];
+  const showroomPageId = showroomList && (allPages || []).find((p) => p.slides.some((sl) => sl.id === showroomList.slideId))?.id;
+  const openShowroomPage = () => {
+    if (showroomPageId) onSelectPage?.(showroomPageId);
+  };
   const cartBadge = (item: { linkType?: string; linkTargetId?: string }) =>
     cartCount > 0 && item.linkType === 'page' && item.linkTargetId && cartPageIds.has(item.linkTargetId) ? (
       <span
@@ -3722,7 +3733,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {!elem.compoundType && elem.type === 'shape' && (
                           <div className="w-full h-full flex items-center justify-center text-center p-2 leading-none relative">
-                            {elem.isGroupContainer && !isPreviewActive && (
+                            {elem.isGroupContainer && !isPreviewActive && isSelected && (
                               <div className="absolute top-1.5 right-2 bg-[#0071e3] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-xs pointer-events-none select-none z-30">
                                 <span>📁</span>
                                 <span>مجموعة نشطة</span>
@@ -4097,6 +4108,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {elem.type === 'shopSearch' && (
                           <ShopSearchView elem={elem} isPreviewActive={isPreviewActive} onOpenStore={openStorePage} />
+                        )}
+
+                        {elem.type === 'carListings' && (
+                          <CarListingsView elem={elem} isPreviewActive={isPreviewActive} showsSearch={elem.id === showroomList?.id} onGrow={shopGrowHandler(elem.id)} boxHeight={elem.height - (isPreviewActive ? shopGrow[elem.id] || 0 : 0)} />
+                        )}
+
+                        {elem.type === 'carSearch' && (
+                          <CarSearchView elem={elem} isPreviewActive={isPreviewActive} onOpenShowroom={openShowroomPage} />
                         )}
 
                         {elem.type === 'html' && (

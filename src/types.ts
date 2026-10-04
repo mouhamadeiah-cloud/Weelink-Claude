@@ -22,7 +22,9 @@ export type ElementType =
   | 'cart'
   | 'shopProducts'
   | 'shopSearch'
-  | 'checkout';
+  | 'checkout'
+  | 'carListings'
+  | 'carSearch';
 
 export type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
 
@@ -140,6 +142,15 @@ export interface CanvasElement {
   // 'shopSearch' element only: the look of the search bar (its placeholder is the content).
   shopSearchStyle?: ShopSearchStyle;
   shopSource?: 'all' | 'featured'; // shopProducts: every product, or only the «عروض مميزة» ones
+  // Car showroom 'carListings' element: how the showroom's cars are shown (see cars/store).
+  carLayout?: 'grid' | 'wide' | 'large' | 'marquee';
+  carSource?: 'all' | 'featured'; // every published car, or only the featured ones
+  carLimit?: number; // cars per page (0 or unset = 9, at most 30)
+  carFilters?: boolean; // a bar with brand / body type / sort above the cars
+  carSpeed?: number; // 'marquee' layout: seconds for one full pass
+  carCardBg?: string;
+  carCardText?: string;
+  carCardRadius?: number;
   linkTargetId?: string;
   contactType?: ContactType;
   contactValue?: string;

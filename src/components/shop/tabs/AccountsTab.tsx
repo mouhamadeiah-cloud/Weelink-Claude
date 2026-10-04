@@ -38,6 +38,7 @@ export interface LedgerRow {
   date: string; // ISO or YYYY-MM-DD
   amount: number;
   entryId?: string; // set for manual entries, which can be deleted
+  kindLabel?: string; // replaces KIND_LABELS[kind] in the printed report
 }
 
 export interface CountRow { label: string; value: number }

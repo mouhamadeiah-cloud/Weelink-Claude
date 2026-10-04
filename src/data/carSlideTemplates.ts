@@ -3,6 +3,7 @@
 // published cars), two search bars, a running car strip, why-us, about, numbers and contact slides.
 // Colours and fonts are the showroom template's own. Coordinates are on the 1280-wide canvas.
 import { CAR_PAGE_IDS, CAR_PHOTOS, CAR_HEADING_FONT, CAR_BODY_FONT, carPhoto } from './carShowroomTemplate';
+import { groupFrame, INVISIBLE_GROUP_STYLES } from '../utils/templateGroups';
 
 const C = {
   ink: '#121316',
@@ -239,6 +240,8 @@ const SLIDES: (() => CarSlide)[] = [
       elements: stats.flatMap((s, i) => {
         const x = 140 + (2 - i) * 340;
         return [
+          // An invisible group keeps each number with its label (moved, copied and phone-arranged together).
+          el('shape', 'مجموعة', groupFrame({ x, y: 90, width: 320, height: 110 }), '', { ...INVISIBLE_GROUP_STYLES }, { isGroupContainer: true, groupName: 'رقم' }),
           heading({ x, y: 90, width: 320, height: 70 }, s.n, 52, '#FFFFFF'),
           paragraph({ x, y: 168, width: 320, height: 32 }, s.t, 17, 'rgba(255,255,255,0.7)'),
         ];

@@ -3733,7 +3733,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {!elem.compoundType && elem.type === 'shape' && (
                           <div className="w-full h-full flex items-center justify-center text-center p-2 leading-none relative">
-                            {elem.isGroupContainer && !isPreviewActive && (
+                            {elem.isGroupContainer && !isPreviewActive && isSelected && (
                               <div className="absolute top-1.5 right-2 bg-[#0071e3] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-xs pointer-events-none select-none z-30">
                                 <span>📁</span>
                                 <span>مجموعة نشطة</span>

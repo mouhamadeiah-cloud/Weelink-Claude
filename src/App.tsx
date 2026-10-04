@@ -27,6 +27,7 @@ import { Loader2 } from 'lucide-react';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
 import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
 import { arrangeForMobile } from './utils/mobileLayout';
+import { withTemplateGroups } from './utils/templateGroups';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
@@ -422,6 +423,7 @@ export default function App() {
     } else {
       shopElements = withLiveProductGrid(shopElements);
       ({ pages: shopPages, elements: shopElements } = withCheckoutLayout(shopPages, shopElements));
+      ({ pages: shopPages, elements: shopElements } = withTemplateGroups(shopPages, shopElements));
     }
     setProject('shop');
     setPages(shopPages);
@@ -479,6 +481,8 @@ export default function App() {
       carPages = template.pages;
       carElements = template.elements;
       if (!admin) admin = { ...createEmptyCarAdmin(), cars: exampleCars() };
+    } else {
+      ({ pages: carPages, elements: carElements } = withTemplateGroups(carPages, carElements));
     }
     setProject('cars');
     setPages(carPages);

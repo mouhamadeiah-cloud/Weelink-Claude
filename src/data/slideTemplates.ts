@@ -68,6 +68,7 @@ export const SIXTY_FONTS = [
 ];
 
 import { SHOP_SLIDE_COUNT, getShopSlidePayload } from './shopSlideTemplates';
+import { groupTemplateCards } from '../utils/templateGroups';
 import { CAR_SLIDE_COUNT, getCarSlidePayload } from './carSlideTemplates';
 
 export const READY_SLIDE_CATEGORIES = [
@@ -251,8 +252,11 @@ export const customizeElementsForIndex = (elements: any[], categoryId: string, i
 export const slideTemplateCount = (categoryId: string) => (categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : 10);
 
 export const getSlideTemplatePayload = (categoryId: string, index: number, catName: string) => {
-  if (categoryId === 'shop') return getShopSlidePayload(index);
-  if (categoryId === 'cars') return getCarSlidePayload(index);
+  // Cards in the shop and showroom slides arrive as groups (moved, copied and phone-arranged together).
+  if (categoryId === 'shop' || categoryId === 'cars') {
+    const payload = categoryId === 'shop' ? getShopSlidePayload(index) : getCarSlidePayload(index);
+    return { ...payload, elements: groupTemplateCards(payload.elements as any[]) };
+  }
   const title = `${catName} - نموذج ${index + 1}`;
   const height = 580; // slightly taller to accommodate gorgeous overlapping layouts!
   

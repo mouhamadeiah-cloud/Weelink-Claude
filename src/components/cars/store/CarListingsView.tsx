@@ -3,15 +3,17 @@
 // full page floating over the showroom. carLayout picks the cards (grid, wide rows, large photos or
 // a running strip), carLimit how many fit on one page, carFilters adds a brand / body / sort bar,
 // and the card colours and corners are the element's own. The showroom's main list also shows the
-// results of the search bar. On the live page the slide grows to fit its cards (onGrow).
+// results of the search bar and of the advanced search. On the live page the slide grows to fit its cards (onGrow).
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { CarFront, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { CarFront, ChevronLeft, ChevronRight, X, SlidersHorizontal } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useCarData } from './CarDataContext';
 import { CarCard, CarWide, CarLarge, CarChip, CarLook } from './CarCard';
 import { CarDetailModal } from './CarDetailModal';
 import { carTitle } from '../carModel';
-import { useShopSearch, clearShopSearch, matchesSearch, takeReveal } from '../../shop/store/shopSearchStore';
+import { useShopSearch, clearShopSearch, matchesSearch, takeReveal, bumpShopReveal } from '../../shop/store/shopSearchStore';
+import { CarAdvancedSearch } from './CarAdvancedSearch';
+import { carFilterChips, carMatchesFilters, clearCarFilters, CarFilters, setCarFilters, useCarFilters, withoutChip } from './carFilterStore';
 
 export const MAX_CARS_PER_PAGE = 30;
 const CARD_WIDTH: Record<string, number> = { grid: 290, large: 400 };
@@ -64,10 +66,15 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
   const bodies = useMemo(() => [...new Set(cars.map((c) => c.bodyType).filter(Boolean))], [cars]);
 
   const { query, reveal } = useShopSearch();
-  const searching = !!showsSearch && !marquee && !!query;
+  const advFilters = useCarFilters();
+  const chips = showsSearch && !marquee ? carFilterChips(advFilters) : [];
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const textSearch = !!showsSearch && !marquee && !!query;
+  const searching = textSearch || chips.length > 0;
   const filtered = useMemo(() => {
     let list = cars.filter((c) => (!brand || c.brand === brand) && (!body || c.bodyType === body));
-    if (searching) list = list.filter((c) => matchesSearch([c.brand, c.model, c.trim, String(c.year), c.bodyType, c.color, c.stockNumber], query));
+    if (textSearch) list = list.filter((c) => matchesSearch([c.brand, c.model, c.trim, String(c.year), c.bodyType, c.color, c.stockNumber], query));
+    if (chips.length) list = list.filter((c) => carMatchesFilters(c, advFilters));
     const sorted = [...list];
     if (sort === 'price-asc') sorted.sort((a, b) => (a.price || Infinity) - (b.price || Infinity));
     else if (sort === 'price-desc') sorted.sort((a, b) => b.price - a.price);
@@ -75,14 +82,15 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
     else sorted.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     // Sold cars, when shown, come last.
     return sorted.sort((a, b) => Number(a.status === 'sold') - Number(b.status === 'sold'));
-  }, [cars, brand, body, sort, searching, query]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cars, brand, body, sort, textSearch, query, advFilters, chips.length]);
 
   const pageSize = Math.min(MAX_CARS_PER_PAGE, elem.carLimit && elem.carLimit > 0 ? elem.carLimit : 9);
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const current = Math.min(page, pageCount - 1);
   const list = marquee ? cars.slice(0, MAX_CARS_PER_PAGE) : filtered.slice(current * pageSize, current * pageSize + pageSize);
-  useEffect(() => setPage(0), [brand, body, sort, query]);
+  useEffect(() => setPage(0), [brand, body, sort, query, advFilters]);
 
   const showFilters = !!elem.carFilters && !marquee && cars.length > 0;
   const open = (admin?.cars || []).find((c) => c.id === openId && c.published);
@@ -154,6 +162,10 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
         className="w-full flex flex-col gap-4"
         style={grows ? { minHeight: box } : { height: '100%' }}
       >
+        {advancedOpen && (
+          <CarAdvancedSearch cars={cars} initial={advFilters} accent={look.accent} font={look.font}
+            onApply={(f: CarFilters) => { setCarFilters(f); setAdvancedOpen(false); bumpShopReveal(); }} onClose={() => setAdvancedOpen(false)} />
+        )}
         {showFilters && (
           <div className="flex flex-wrap items-center justify-center gap-2 shrink-0">
             <select className={selectClass} value={brand} onChange={(e) => setBrand(e.target.value)} aria-label="الماركة">
@@ -169,14 +181,25 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
             <select className={selectClass} value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="الترتيب">
               {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
+            {showsSearch && (
+              <button type="button" onClick={() => setAdvancedOpen(true)} className={`${selectClass} inline-flex items-center gap-1.5`} style={chips.length ? { borderColor: look.accent, color: look.accent } : undefined}>
+                <SlidersHorizontal size={15} /> بحث متقدم{chips.length ? ` (${chips.length})` : ''}
+              </button>
+            )}
             <span className="text-sm font-bold opacity-60 px-2">{filtered.length} سيارة</span>
           </div>
         )}
 
         {searching && (
-          <div className="flex items-center justify-center gap-2 shrink-0 text-sm">
-            <span className="font-bold">نتائج البحث عن «{query}»: {filtered.length} سيارة</span>
-            <button type="button" onClick={clearShopSearch} className="h-8 px-3 rounded-full border border-black/10 bg-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer text-[#1d1d1f]">
+          <div className="flex flex-wrap items-center justify-center gap-2 shrink-0 text-sm">
+            <span className="font-bold">{textSearch ? `نتائج البحث عن «${query}»` : 'نتائج البحث'}: {filtered.length} سيارة</span>
+            {chips.map((c) => (
+              <button key={c.key} type="button" onClick={() => setCarFilters(withoutChip(advFilters, c.key))} aria-label={`إزالة ${c.label}`}
+                className="h-8 px-3 rounded-full text-xs font-bold inline-flex items-center gap-1 cursor-pointer text-white" style={{ backgroundColor: look.accent }}>
+                {c.label} <X size={12} />
+              </button>
+            ))}
+            <button type="button" onClick={() => { clearShopSearch(); clearCarFilters(); }} className="h-8 px-3 rounded-full border border-black/10 bg-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer text-[#1d1d1f]">
               <X size={13} /> مسح البحث
             </button>
           </div>

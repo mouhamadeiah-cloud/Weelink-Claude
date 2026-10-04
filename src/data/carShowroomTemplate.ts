@@ -3,6 +3,7 @@
 // themselves come live from the admin window through 'carListings' elements, and 'carSearch' bars
 // search them. More pages are added like in any project.
 import type { Page, CanvasElement, NavbarConfig, ElementStyles } from '../types';
+import { withTemplateGroups } from '../utils/templateGroups';
 
 export const CAR_PAGE_IDS = { home: 'car-page-home', showroom: 'car-page-showroom', about: 'car-page-about', contact: 'car-page-contact' };
 
@@ -216,5 +217,5 @@ export function getCarShowroomTemplate(): { pages: Page[]; elements: CanvasEleme
     el('car-contact-map', 'map', S.contact, { x: 140, y: 60, width: 500, height: 440 }, 'دمشق، سوريا', { borderRadius: 24 }, { mapLocation: 'دمشق، سوريا' }),
   ];
 
-  return { pages, elements };
+  return withTemplateGroups(pages, elements);
 }

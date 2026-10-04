@@ -21,6 +21,12 @@ export const setShopSearch = (query: string) => {
 
 export const clearShopSearch = () => setShopSearch('');
 
+// Asks the results slide to scroll into view again (a search made with filters instead of text).
+export const bumpShopReveal = () => {
+  state = { ...state, reveal: state.reveal + 1 };
+  emit();
+};
+
 export const useShopSearch = () =>
   useSyncExternalStore(
     (l) => {

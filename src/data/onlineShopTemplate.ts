@@ -8,6 +8,7 @@
 // See handleApplyOnlineShopTemplate() in App.tsx.
 
 import type { Page, CanvasElement, NavbarConfig, ElementStyles } from '../types';
+import { withTemplateGroups } from '../utils/templateGroups';
 import { formatPrice } from '../utils/cartStore';
 
 const WHATSAPP_NUMBER = '963991234567';
@@ -498,7 +499,7 @@ export function getOnlineShopTemplate(opts: { liveProducts?: boolean } = {}): { 
     }, { mapLocation: 'دمشق، سوريا' }),
   ]);
 
-  return { pages, elements: live ? [...elements, ...offersElements()] : elements };
+  return withTemplateGroups(pages, live ? [...elements, ...offersElements()] : elements);
 }
 
 const withLive = (live: boolean, elements: CanvasElement[]) => (live ? withLiveProductGrid(elements) : elements);

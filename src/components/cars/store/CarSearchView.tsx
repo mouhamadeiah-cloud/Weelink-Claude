@@ -2,15 +2,18 @@
 // year, body type, colour). Typing lists the first matches under the bar (picking one opens its
 // page); pressing Enter or «بحث» shows every match in the showroom's car list, opening the
 // showroom page when this page has none. The element's text is the placeholder and
-// shopSearchStyle its look, as with the store's search bar.
+// shopSearchStyle its look, as with the store's search bar. «بحث متقدم» beside it opens the
+// advanced search (brand, model, year, price, km, fuel, gearbox, colour...).
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, ImageOff } from 'lucide-react';
+import { Search, ImageOff, SlidersHorizontal } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useCarData } from './CarDataContext';
 import { CarDetailModal } from './CarDetailModal';
 import { carPriceLabel, carSubtitle, carTitle } from '../carModel';
-import { matchesSearch, setShopSearch } from '../../shop/store/shopSearchStore';
+import { matchesSearch, setShopSearch, bumpShopReveal } from '../../shop/store/shopSearchStore';
+import { CarAdvancedSearch } from './CarAdvancedSearch';
+import { carFilterChips, CarFilters, setCarFilters, useCarFilters } from './carFilterStore';
 
 interface CarSearchViewProps {
   elem: CanvasElement;
@@ -26,6 +29,9 @@ export const CarSearchView: React.FC<CarSearchViewProps> = ({ elem, isPreviewAct
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [advanced, setAdvanced] = useState(false);
+  const filters = useCarFilters();
+  const filterCount = carFilterChips(filters).length;
   const barRef = useRef<HTMLDivElement>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
@@ -39,6 +45,14 @@ export const CarSearchView: React.FC<CarSearchViewProps> = ({ elem, isPreviewAct
     if (!q || !isPreviewActive) return;
     setShopSearch(q);
     setFocused(false);
+    if (!document.querySelector('[data-car-listings="search"]')) onOpenShowroom?.();
+  };
+
+  const applyAdvanced = (f: CarFilters) => {
+    setCarFilters(f);
+    setAdvanced(false);
+    setShopSearch(q);
+    bumpShopReveal();
     if (!document.querySelector('[data-car-listings="search"]')) onOpenShowroom?.();
   };
 
@@ -85,6 +99,17 @@ export const CarSearchView: React.FC<CarSearchViewProps> = ({ elem, isPreviewAct
         className={`flex-1 min-w-0 h-full bg-transparent outline-none text-base ${look === 'glass' ? 'placeholder:text-white/80' : 'placeholder:text-neutral-400'}`}
         style={{ color: bar.text }}
       />
+      <button
+        type="button"
+        onClick={() => isPreviewActive && setAdvanced(true)}
+        aria-label="بحث متقدم"
+        title="بحث متقدم"
+        className={`relative shrink-0 h-[calc(100%-12px)] aspect-square max-h-11 rounded-full flex items-center justify-center cursor-pointer ${look === 'glass' ? 'bg-white/20 text-white' : 'bg-black/[0.05]'}`}
+        style={look === 'glass' ? undefined : { color: accent }}
+      >
+        <SlidersHorizontal size={18} />
+        {filterCount > 0 && <span className="absolute -top-1 -left-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center" style={{ backgroundColor: accent }}>{filterCount}</span>}
+      </button>
       {look === 'pill' && (
         <button type="button" onClick={submit} className="shrink-0 h-[calc(100%-12px)] px-6 rounded-full text-white text-sm font-bold flex items-center cursor-pointer" style={{ backgroundColor: accent }}>
           بحث
@@ -121,6 +146,10 @@ export const CarSearchView: React.FC<CarSearchViewProps> = ({ elem, isPreviewAct
           )}
         </div>,
         document.body
+      )}
+
+      {advanced && isPreviewActive && (
+        <CarAdvancedSearch cars={cars} initial={filters} accent={accent} font={font} onApply={applyAdvanced} onClose={() => setAdvanced(false)} />
       )}
 
       {open && admin && isPreviewActive && (

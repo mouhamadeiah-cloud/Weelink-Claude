@@ -12,8 +12,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // The owner of a workspace: its own Firebase user, or the Firebase user that claimed an old
+    // 'sim_' account (accounts/{id}, see src/services/accounts.ts).
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return isSignedIn() && (request.auth.uid == userId
+        || get(/databases/$(database)/documents/accounts/$(userId)).data.owner == request.auth.uid);
     }
 
     function isValidId(id) {
@@ -28,8 +31,9 @@ service cloud.firestore {
       return resource.data;
     }
 
-    function isSimulatedOrPublic(userId) {
-      return userId == 'mouhamadeiah' || userId.matches('^sim_[a-zA-Z0-9_\\-]+$');
+    // The shared workspace shown while nobody is signed in.
+    function isDemo(userId) {
+      return userId == 'mouhamadeiah';
     }
 
     // Design document schema validation helper (allows partial/merge updates)
@@ -42,24 +46,39 @@ service cloud.firestore {
 
     // Match statement for the designs collection
     match /designs/{userId} {
-      allow get: if isOwner(userId) || isSimulatedOrPublic(userId);
+      allow get: if isOwner(userId) || isDemo(userId);
       allow list: if false; // Users can only fetch their own design document directly by UID, no list queries
       
-      allow create, update: if (isOwner(userId) || isSimulatedOrPublic(userId))
+      allow create, update: if (isOwner(userId) || isDemo(userId))
         && isValidId(userId)
         && isValidDesign(incoming(), userId)
         && (!('createdAt' in incoming()) || incoming().createdAt == request.time || incoming().createdAt is string);
         
-      allow delete: if isOwner(userId) || isSimulatedOrPublic(userId);
+      allow delete: if isOwner(userId) || isDemo(userId);
     }
 
     // Restaurant projects (see src/components/restaurant/restaurantCloud.ts).
-    // The published site is public; orders can only be added by guests; accounts are owner-only.
+    // The published site is public; guests can only add orders; the bills, the orders and the accounts
+    // belong to the owner and to the restaurant's devices (a tablet linked with a working device code).
     match /restaurants/{userId} {
       allow get: if true;
       allow list: if false;
-      allow create, update: if (isOwner(userId) || isSimulatedOrPublic(userId)) && isValidId(userId);
-      allow delete: if isOwner(userId) || isSimulatedOrPublic(userId);
+      allow create, update: if isOwner(userId) && isValidId(userId);
+      allow delete: if isOwner(userId);
+
+      function staffCodes() {
+        return get(/databases/$(database)/documents/restaurants/$(userId)/private/staff).data.codes;
+      }
+
+      // This browser's sign-in was linked with the code of a device that still works.
+      function isDevice() {
+        return isSignedIn()
+          && get(/databases/$(database)/documents/restaurants/$(userId)/deviceLinks/$(request.auth.uid)).data.code in staffCodes();
+      }
+
+      function isStaff() {
+        return isOwner(userId) || isDevice();
+      }
 
       function acceptsOrders() {
         let r = get(/databases/$(database)/documents/restaurants/$(userId));
@@ -84,42 +103,97 @@ service cloud.firestore {
           && data.total >= 0 && data.total < 1000000000;
       }
 
+      // The devices (with their codes) and the workers (with their PINs), written by the owner's
+      // editor; the devices read them to sign the workers in.
+      match /private/{docId} {
+        allow get: if docId == 'staff' && isStaff();
+        allow create, update, delete: if docId == 'staff' && isOwner(userId);
+      }
+
+      // A tablet links its sign-in with its code; only the code of a working device is accepted.
+      match /deviceLinks/{authUid} {
+        allow get: if isSignedIn() && request.auth.uid == authUid;
+        allow create, update: if isSignedIn() && request.auth.uid == authUid
+          && request.resource.data.keys().hasOnly(['code', 'at'])
+          && request.resource.data.code is string
+          && request.resource.data.code in staffCodes();
+        allow delete: if isOwner(userId) || (isSignedIn() && request.auth.uid == authUid);
+      }
+
       match /orders/{orderId} {
-        // Guests add new orders only; the staff (cashier, waiters) add theirs with the owner's access.
+        // Guests add new orders only; the staff (cashier, waiters) add theirs from their devices.
         allow create: if isValidId(orderId) && (
           (isValidNewOrder(request.resource.data, orderId) && acceptsOrders())
-          || isOwner(userId) || isSimulatedOrPublic(userId));
-        allow get, list, update, delete: if isOwner(userId) || isSimulatedOrPublic(userId);
+          || isStaff());
+        allow get, list, update: if isStaff();
+        allow delete: if isOwner(userId);
       }
 
       // The day's order count (1, 2, 3...). A guest's order takes the next number in its transaction:
       // a guest may only start the day at 1 or add exactly 1.
       match /counters/{day} {
         allow get: if isValidId(day);
-        allow create: if isValidId(day) && ((request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1) || isOwner(userId) || isSimulatedOrPublic(userId));
-        allow update: if isValidId(day) && ((request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1) || isOwner(userId) || isSimulatedOrPublic(userId));
+        allow create: if isValidId(day) && ((request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1) || isStaff());
+        allow update: if isValidId(day) && ((request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1) || isStaff());
       }
 
       // The cashier and the waiters: bills, tills, the customer screens, the log of sensitive actions and the workers' sessions.
       match /{staffCollection}/{docId} {
-        allow read: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions'] && (isOwner(userId) || isSimulatedOrPublic(userId));
-        allow write: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions'] && (isOwner(userId) || isSimulatedOrPublic(userId)) && isValidId(docId);
+        allow read: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions'] && isStaff();
+        allow write: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions'] && isStaff() && isValidId(docId);
       }
 
+      // The accounts: only the owner reads them; the devices book their payments.
       match /ledger/{entryId} {
-        allow read: if isOwner(userId) || isSimulatedOrPublic(userId);
-        allow write: if (isOwner(userId) || isSimulatedOrPublic(userId)) && isValidId(entryId);
+        allow read: if isOwner(userId);
+        allow write: if isStaff() && isValidId(entryId);
       }
     }
 
-    // Match statement for simulated_users login/registration
+    // The old accounts (before Firebase sign-in) and their move to Firebase users, see
+    // src/services/accounts.ts. Nobody can list them, read someone else's or make new ones; the only
+    // change allowed is deleting the plain-text password.
     match /simulated_users/{email} {
-      allow get, create, update: if true;
+      allow get: if isSignedIn() && (resource.data.uid == request.auth.uid
+        || get(/databases/$(database)/documents/legacyClaims/$(email)).data.authUid == request.auth.uid);
+      allow update: if isSignedIn() && (resource.data.uid == request.auth.uid || isOwner(resource.data.uid))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password', 'migratedTo'])
+        && !('password' in request.resource.data)
+        && request.resource.data.migratedTo == request.auth.uid;
+    }
+
+    // Proof that a Firebase user (with the same email) knows an old account's password.
+    match /legacyClaims/{email} {
+      allow create, update: if isSignedIn()
+        && request.auth.token.email == email
+        && request.resource.data.keys().hasOnly(['authUid', 'password'])
+        && request.resource.data.authUid == request.auth.uid
+        && request.resource.data.password == get(/databases/$(database)/documents/simulated_users/$(email)).data.password;
+      allow delete: if isSignedIn() && resource.data.authUid == request.auth.uid;
+    }
+
+    // Which Firebase user owns an old account. Made once, by the user that proved its password.
+    match /accounts/{accountId} {
+      allow get: if isSignedIn() && resource.data.owner == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(accountId)
+        && request.resource.data.keys().hasOnly(['owner', 'email', 'createdAt'])
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.email is string
+        && get(/databases/$(database)/documents/legacyClaims/$(request.resource.data.email)).data.authUid == request.auth.uid
+        && get(/databases/$(database)/documents/simulated_users/$(request.resource.data.email)).data.uid == accountId;
+    }
+
+    // Where a Firebase user's workspace is (an old account it claimed).
+    match /userAccounts/{authUid} {
+      allow get: if isSignedIn() && request.auth.uid == authUid;
+      allow create: if isSignedIn() && request.auth.uid == authUid
+        && request.resource.data.keys().hasOnly(['accountId'])
+        && get(/databases/$(database)/documents/accounts/$(request.resource.data.accountId)).data.owner == authUid;
     }
 
     // Match statement for platform_directory onboarding steps
     match /platform_directory/{userId} {
-      allow get, write: if isOwner(userId) || isSimulatedOrPublic(userId);
+      allow get, write: if isOwner(userId) || isDemo(userId);
     }
   }
 }

@@ -25,7 +25,7 @@ import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
-import { placeOrder, publishRestaurant } from './components/restaurant/restaurantCloud';
+import { placeOrder, publishRestaurant, saveStaff } from './components/restaurant/restaurantCloud';
 import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
@@ -37,6 +37,7 @@ import { withLocalGraphics } from './utils/localGraphics';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
+import { isSigningIn, resolveAccountId } from './services/accounts';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -218,9 +219,8 @@ export default function App() {
   const [isAuthActive, setIsAuthActive] = useState<boolean>(true);
   const [isChatActive, setIsChatActive] = useState<boolean>(true);
   const [isCanvasLoading, setIsCanvasLoading] = useState<boolean>(false);
-  const [activeUserUid, setActiveUserUid] = useState<string>(() => {
-    return localStorage.getItem('weelink_simulated_user_uid') || 'mouhamadeiah';
-  });
+  // The account whose workspace is open (see services/accounts.ts); 'mouhamadeiah' while signed out.
+  const [activeUserUid, setActiveUserUid] = useState<string>('mouhamadeiah');
   // Open project: the free page or the Online Shop (Weelink / Shops). The user
   // picks one on the project chooser after logging in.
   const [project, setProject] = useState<ProjectType>('page');
@@ -236,7 +236,7 @@ export default function App() {
   const [hasRestaurant, setHasRestaurant] = useState<boolean>(false);
   const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
   const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
-  const ownerUid = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+  const ownerUid = activeUserUid;
   // An order placed in the preview goes to the live orders like a guest's; when they cannot be
   // reached it is kept in the admin data instead.
   const submitRestaurantOrder = useCallback(async (o: MenuOrder) => {
@@ -264,6 +264,8 @@ export default function App() {
   const pagesRef = useRef<Page[]>(pages);
   const elementsRef = useRef<CanvasElement[]>(elements);
   const isInitialLoadComplete = useRef<boolean>(false);
+  // The Firebase user whose workspace was last loaded (undefined until the first auth answer).
+  const handledAuthUid = useRef<string | null | undefined>(undefined);
 
   // Loads pages/elements from LocalStorage only (offline fallback / pre-cloud-sync bootstrap)
   const loadLocalDesign = (userId: string) => {
@@ -613,21 +615,24 @@ export default function App() {
 
   // 1. Listen for Auth changes & Load workspace from LocalStorage
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
+    const unsubscribe = onAuthStateChanged(auth, async (signedIn: User | null) => {
+      // An anonymous user is a restaurant device in another tab, not an owner.
+      const user = signedIn && !signedIn.isAnonymous ? signedIn : null;
+      setCurrentUser(user);
+      // The sign-in screen opens the account itself; a token refresh changes nothing.
+      const uid = user ? user.uid : null;
+      if (isSigningIn() || uid === handledAuthUid.current) return;
+      const first = handledAuthUid.current === undefined;
+      handledAuthUid.current = uid;
       setIsFirebaseLoading(true);
-      if (user) {
-        setCurrentUser(user);
-        setActiveUserUid(user.uid);
-        localStorage.removeItem('weelink_simulated_user_uid');
-        localStorage.removeItem('weelink_simulated_user_email');
-        await loadUserWorkspace(user.uid);
-      } else {
-        setCurrentUser(null);
-        const simUid = localStorage.getItem('weelink_simulated_user_uid') || 'mouhamadeiah';
-        setActiveUserUid(simUid);
-        await loadUserWorkspace(simUid);
-      }
-      setIsAuthActive(true);
+      // Left over from the old sign-in, which trusted these.
+      localStorage.removeItem('weelink_simulated_user_uid');
+      localStorage.removeItem('weelink_simulated_user_email');
+      localStorage.removeItem('weelink_last_login_account');
+      const accountId = user ? await resolveAccountId(user) : 'mouhamadeiah';
+      setActiveUserUid(accountId);
+      await loadUserWorkspace(accountId);
+      if (first || !user) setIsAuthActive(true);
       setIsFirebaseLoading(false);
       isInitialLoadComplete.current = true;
     });
@@ -643,7 +648,7 @@ export default function App() {
 
     const delayDebounceFn = setTimeout(() => {
       try {
-        const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+        const targetUserId = activeUserUid;
         const { localPrefix } = PROJECT_STORAGE[project];
         localStorage.setItem(`${localPrefix}pages_${targetUserId}`, JSON.stringify(pages));
         localStorage.setItem(`${localPrefix}elements_${targetUserId}`, JSON.stringify(elements));
@@ -664,7 +669,7 @@ export default function App() {
       return;
     }
 
-    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
       try {
         setIsSavingCloud(true);
@@ -689,7 +694,7 @@ export default function App() {
     if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'shop') {
       return;
     }
-    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
       try {
         localStorage.setItem(`${PROJECT_STORAGE.shop.localPrefix}admin_${targetUserId}`, JSON.stringify(shopAdmin));
@@ -713,7 +718,7 @@ export default function App() {
     if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'cars') {
       return;
     }
-    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
       try {
         localStorage.setItem(`${PROJECT_STORAGE.cars.localPrefix}admin_${targetUserId}`, JSON.stringify(carAdmin));
@@ -737,7 +742,7 @@ export default function App() {
     if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant') {
       return;
     }
-    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
       try {
         localStorage.setItem(`${PROJECT_STORAGE.restaurant.localPrefix}admin_${targetUserId}`, JSON.stringify(restaurantAdmin));
@@ -758,10 +763,12 @@ export default function App() {
 
   // 7. The restaurant's public site (restaurants/{uid}): pages, elements, menu and settings, published
   // a moment after each change so the guests' link and the tables' QR codes always show the latest.
+  // The devices and the workers go to the private doc the restaurant's tablets read.
   useEffect(() => {
     if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant' || !projectReadyRef.current) return;
     const t = setTimeout(() => {
       publishRestaurant(ownerUid, pages, elements, restaurantAdmin).catch((e) => console.warn('Could not publish the restaurant site:', e));
+      saveStaff(ownerUid, restaurantAdmin).catch((e) => console.warn('Could not save the devices for the restaurant tablets:', e));
     }, 1500);
     return () => clearTimeout(t);
   }, [pages, elements, restaurantAdmin, isFirebaseLoading, project, ownerUid]);
@@ -770,7 +777,7 @@ export default function App() {
   // cancelled when another project's data replaces it).
   const flushProjectSave = () => {
     if (!projectReadyRef.current) return;
-    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const targetUserId = activeUserUid;
     const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE[project];
     try {
       localStorage.setItem(`${localPrefix}pages_${targetUserId}`, JSON.stringify(pages));
@@ -797,7 +804,7 @@ export default function App() {
     if (projectLoading) return;
     setProjectLoading(type);
     try {
-      const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+      const targetUserId = activeUserUid;
       if (type !== project) {
         flushProjectSave();
         if (type === 'shop') await loadShopWorkspace(targetUserId);
@@ -820,7 +827,8 @@ export default function App() {
   // Auth Action Handlers
   const handleLogin = async () => {
     try {
-      await loginWithGoogle();
+      const user = await loginWithGoogle();
+      if (user) handleAuthSuccess(await resolveAccountId(user), false);
     } catch (e: any) {
       console.warn("Google Login caught info:", e);
       const errorCode = e?.code || '';
@@ -853,6 +861,7 @@ export default function App() {
   };
 
   const handleAuthSuccess = (userUid: string, isNewUser: boolean) => {
+    handledAuthUid.current = auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser.uid : null;
     setActiveUserUid(userUid);
     if (isNewUser) {
       // ALWAYS start a brand-new account with a blank page. The editor screen
@@ -904,7 +913,7 @@ export default function App() {
         localStorage.setItem(`weelink_pages_${userUid}`, JSON.stringify(finalPages));
         localStorage.setItem(`weelink_elements_${userUid}`, JSON.stringify(finalElements));
         
-        const emailVal = currentUser ? (currentUser.email || '') : (localStorage.getItem('weelink_simulated_user_email') || '');
+        const emailVal = auth.currentUser?.email || '';
         const initialProgress = {
           currentStep: 1,
           personalInfo: { title: 'سيد', fullName: '', birthDate: '', logoUrl: '' },
@@ -954,7 +963,7 @@ export default function App() {
   };
 
   const handleManualSave = () => {
-    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const targetUserId = activeUserUid;
     try {
       localStorage.setItem(`weelink_pages_${targetUserId}`, JSON.stringify(pages));
       localStorage.setItem(`weelink_elements_${targetUserId}`, JSON.stringify(elements));
@@ -977,8 +986,6 @@ export default function App() {
     if (confirm('هل أنت متأكد من رغبتك في تسجيل الخروج من الحساب السحابي؟')) {
       try {
         await logoutUser();
-        localStorage.removeItem('weelink_simulated_user_uid');
-        localStorage.removeItem('weelink_simulated_user_email');
         // Critical: clear the in-memory design when logging out. Without this,
         // the previous account's pages/elements stay in React state, and if a
         // DIFFERENT person then signs up as a new user on this same browser
@@ -2947,7 +2954,7 @@ export default function App() {
         onMoveLayerToBack={handleMoveLayerToBack}
         isPreviewActive={isPreviewActive}
         userId={activeUserUid}
-        userEmail={currentUser ? (currentUser.email || '') : (localStorage.getItem('weelink_simulated_user_email') || '')}
+        userEmail={currentUser?.email || ''}
         onCompleteChat={handleCompleteChat}
         onStepChange={handleStepChange}
         isWeeAiChatCollapsed={!isChatActive}

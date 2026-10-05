@@ -1,6 +1,8 @@
 // A restaurant device (?device=<uid>&id=<device>): a tablet or screen types its six-digit code once and from then
-// on opens straight on its own screen. The code is checked against the owner's devices on every
-// start, so a device that was stopped, deleted or given a new code drops back to the code pad.
+// on opens straight on its own screen. The browser signs in anonymously and links that sign-in to the
+// restaurant with the code; the database rules accept only the code of a working device and check it
+// again on every read and write, so a device that was stopped, deleted or given a new code is cut off
+// and drops back to the code pad.
 // Kitchen devices show the kitchen screen (their section only, if they have one); the cashier and the
 // waiters' tablets the cashier program (each worker signs in with his PIN); the customer's screen
 // follows the cashier device it is tied to; the waiting screen shows the guests which orders are ready.
@@ -8,10 +10,10 @@
 import React, { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { MonitorSmartphone, X } from 'lucide-react';
-import { auth } from '../../services/firebase';
+import { auth, loginAnonymously } from '../../services/firebase';
 import { DEVICE_ROLES, DeviceRole, StaffDevice } from './restaurantTypes';
 import type { Worker } from './staffTypes';
-import { loadStaff, useLiveOrders } from './restaurantCloud';
+import { linkDevice, loadStaff, useLiveOrders } from './restaurantCloud';
 import { KitchenBoard, usePublishedMenu } from './KitchenScreen';
 import { NumberPad } from './pos/NumberPad';
 import { PosScreen } from './pos/PosScreen';
@@ -166,7 +168,21 @@ export const DevicePage: React.FC<{ uid: string }> = ({ uid }) => {
   const [known, setKnown] = useState<[string, Remembered][]>([]);
   const [picking, setPicking] = useState(false);
 
-  useEffect(() => onAuthStateChanged(auth, () => setAuthReady(true)), []);
+  // An owner signed in on this browser works with the owner's access; anyone else gets an anonymous sign-in.
+  useEffect(
+    () =>
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          setAuthReady(true);
+          return;
+        }
+        loginAnonymously().catch(() => {
+          setError('تسجيل الأجهزة غير مفعّل بعد في Firebase (Authentication ← Anonymous).');
+          setBusy(false);
+        });
+      }),
+    []
+  );
 
   const refreshKnown = () => {
     const list = Object.entries(readAll(uid));
@@ -180,7 +196,14 @@ export const DevicePage: React.FC<{ uid: string }> = ({ uid }) => {
     setError('');
     setPicking(false);
     try {
-      const staff = await loadStaff(uid);
+      let linked = true;
+      try {
+        await linkDevice(uid, code);
+      } catch (e: any) {
+        if (e?.code !== 'permission-denied') throw e;
+        linked = false;
+      }
+      const staff = linked ? await loadStaff(uid) : { devices: [], workers: [] };
       const found = staff.devices.find((d) => d.code === code);
       if (found && found.active) {
         if (rememberedId && rememberedId !== found.id) forget(uid, rememberedId);
@@ -245,8 +268,16 @@ export const DevicePage: React.FC<{ uid: string }> = ({ uid }) => {
           remember(uid, now);
           setDevice(now);
         }
-      } catch {
-        // offline: keep working with what we have
+      } catch (e: any) {
+        // The rules no longer accept this device's code (stopped, deleted or a new code).
+        if (e?.code === 'permission-denied') {
+          forget(uid, device.id);
+          setUrlDeviceId('');
+          refreshKnown();
+          setDevice(null);
+          setError('تم إيقاف هذا الجهاز أو تغيير كوده. أدخل الكود الجديد.');
+        }
+        // otherwise offline: keep working with what we have
       }
     }, 60000);
     return () => window.clearInterval(t);

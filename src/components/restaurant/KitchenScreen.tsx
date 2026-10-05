@@ -2,7 +2,8 @@
 // kitchen tablet or TV. A screen shows every kitchen section or one (المشاوي، البار...): a section's
 // screen lists only the dishes it prepares and «قسمي جاهز» marks just those. A tap on a dish ticks it
 // off; when every dish of an order is ticked off the order is ready. Each ticket shows the order's
-// number, its table and hall or delivery/pickup, how long it has waited (green, then orange, then red),
+// number of the day, its table and hall or delivery/pickup, the time it came in and how long it has
+// waited (green, then orange; past the «late» minutes of the settings the ticket flashes red),
 // what was taken out or added and the notes. «ملخص الأصناف» counts what is still to prepare, and
 // «السجل» lists the delivered and cancelled orders to bring one back. A chime plays for each new order
 // once the sound is turned on (browsers only allow sound after a tap). Opened from the admin window,
@@ -13,6 +14,7 @@ import { X, Maximize2, Volume2, VolumeX, Armchair, Bike, Store, ChefHat, Check, 
 import { MenuOrder, OrderStatus, RestaurantAdminData, ORDER_STATUSES, hallOfTable, stationOfDish } from './restaurantTypes';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../services/firebase';
+import { ScrollRail } from './ScrollRail';
 import { setOrderStatus, setOrderDoneLines, useLiveOrders, loadPublishedRestaurant, LiveState, cloudErrorText } from './restaurantCloud';
 
 type Column = 'new' | 'preparing' | 'ready';
@@ -24,11 +26,24 @@ const COLUMNS: { id: Column; title: string; color: string }[] = [
 ];
 
 // The menu bits the screen needs: which section prepares each dish, and the halls of the tables.
-export type KitchenMenu = Pick<RestaurantAdminData, 'stations' | 'halls' | 'dishes' | 'categories'>;
+export type KitchenMenu = Pick<RestaurantAdminData, 'stations' | 'halls' | 'dishes' | 'categories'> & { settings?: Pick<RestaurantAdminData['settings'], 'kitchenLateMinutes'> };
 
 const minutesSince = (iso: string, now: number) => Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60000));
 
-const waitColor = (mins: number) => (mins >= 20 ? '#FF6B6B' : mins >= 10 ? '#FFA94D' : '#69DB7C');
+const waitColor = (mins: number, late: number) => (mins >= late ? '#FF6B6B' : mins >= late * 0.6 ? '#FFA94D' : '#69DB7C');
+
+const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('ar-SY-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
+
+// Wider scroll bars on the dark screen (the order columns have their own ScrollRail), and the red
+// flash of a late ticket.
+const KITCHEN_STYLE = `
+.kitchen-scroll::-webkit-scrollbar { width: 16px; height: 16px; }
+.kitchen-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,.06); border-radius: 9999px; }
+.kitchen-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.45); border-radius: 9999px; border: 3px solid #1f2023; min-height: 48px; }
+.kitchen-scroll::-webkit-scrollbar-thumb:hover, .kitchen-scroll::-webkit-scrollbar-thumb:active { background: rgba(255,255,255,.7); }
+@keyframes kLate { 0%, 100% { background-color: #26272b; border-color: #FA5252; } 50% { background-color: #8a1c1c; border-color: #FF8787; } }
+.kitchen-late { animation: kLate 1s ease-in-out infinite; }
+`;
 
 // A short two-note chime, made in the browser (no sound file to load).
 const chime = (ctx: AudioContext) => {
@@ -61,6 +76,7 @@ const Place: React.FC<{ o: MenuOrder; menu: KitchenMenu | null }> = ({ o, menu }
 
 interface TicketProps {
   o: MenuOrder;
+  late: number; // minutes after which a ticket not ready yet flashes red
   lines: number[]; // the indexes of the lines this screen shows
   now: number;
   color: string;
@@ -71,15 +87,19 @@ interface TicketProps {
   onBack?: () => void;
 }
 
-const OrderTicket: React.FC<TicketProps> = ({ o, lines, now, color, menu, stationColor, onToggleLine, action, onBack }) => {
+const OrderTicket: React.FC<TicketProps> = ({ o, late, lines, now, color, menu, stationColor, onToggleLine, action, onBack }) => {
   const mins = minutesSince(o.createdAt, now);
   const done = new Set(o.doneLines || []);
+  const isLate = o.status !== 'ready' && mins >= late;
   return (
-    <div className="rounded-2xl bg-[#26272b] border-2 overflow-hidden flex flex-col" style={{ borderColor: color }}>
-      <div className="flex items-center gap-2 px-4 py-3" style={{ backgroundColor: `${color}26` }}>
-        <span className="text-2xl font-black">#{o.number}</span>
+    <div className={`rounded-2xl bg-[#26272b] border-2 overflow-hidden flex flex-col ${isLate ? 'kitchen-late' : ''}`} style={isLate ? undefined : { borderColor: color }}>
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ backgroundColor: isLate ? 'rgba(250,82,82,.25)' : `${color}26` }}>
+        <span className="text-3xl font-black tabular-nums">#{o.number}</span>
         <Place o={o} menu={menu} />
-        <span className={`mr-auto text-lg font-black shrink-0 ${mins >= 20 ? 'animate-pulse' : ''}`} style={{ color: waitColor(mins) }}>{mins} د</span>
+        <span className="mr-auto flex items-center gap-2 shrink-0">
+          <span className="text-base font-bold text-white/60 tabular-nums" dir="ltr">{timeOf(o.createdAt)}</span>
+          <span className="h-8 px-2.5 rounded-full text-lg font-black inline-flex items-center" style={{ color: isLate ? '#fff' : waitColor(mins, late), background: isLate ? '#E03131' : 'rgba(255,255,255,.08)' }}>{isLate ? `متأخر ${mins} د` : `${mins} د`}</span>
+        </span>
       </div>
       <div className="px-2 py-2 space-y-1 flex-1">
         {lines.map((i) => {
@@ -140,10 +160,11 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
   const seen = useRef<Set<string> | null>(null);
 
   useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 30000);
+    const t = window.setInterval(() => setNow(Date.now()), 10000);
     return () => window.clearInterval(t);
   }, []);
 
+  const late = menu?.settings?.kitchenLateMinutes || 5;
   const stations = menu?.stations || [];
   const activeStation = stations.some((s) => s.id === station) ? station : '';
   const stationById = (id: string) => stations.find((s) => s.id === id);
@@ -256,6 +277,7 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
 
   return (
     <div dir="rtl" className="fixed inset-0 z-[3000000] bg-[#18191c] text-white flex flex-col font-sans">
+      <style>{KITCHEN_STYLE}</style>
       <header className="shrink-0 flex flex-wrap items-center gap-2 px-4 py-3 border-b border-white/10">
         <ChefHat size={26} className="text-[#FF922B]" />
         <div className="text-xl font-black">{title || 'شاشة المطبخ'}</div>
@@ -298,7 +320,7 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
       {live.error ? (
         <div className="flex-1 flex items-center justify-center p-8 text-center text-lg font-bold text-[#FFA94D]">{cloudErrorText(live.error)}</div>
       ) : view === 'history' ? (
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+        <div className="kitchen-scroll flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
           {history.length === 0 && <div className="py-16 text-center text-white/30 font-bold">لا طلبات منتهية بعد</div>}
           {history.map((o) => {
             const st = ORDER_STATUSES.find((s) => s.id === o.status)!;
@@ -306,7 +328,7 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
               <div key={o.id} className="flex flex-wrap items-center gap-3 p-3 rounded-2xl bg-white/[0.04]">
                 <span className="text-xl font-black">#{o.number}</span>
                 <Place o={o} menu={menu} />
-                <span className="text-sm font-bold text-white/50">{new Date(o.createdAt).toLocaleTimeString('ar-SY-u-nu-latn', { hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="text-sm font-bold text-white/50" dir="ltr">{timeOf(o.createdAt)}</span>
                 <span className="flex-1 min-w-[160px] text-base font-bold text-white/80 truncate">{linesFor(o).map((i) => `${o.lines[i].qty}× ${o.lines[i].name}`).join('، ')}</span>
                 <span className="h-7 px-3 rounded-full text-xs font-black inline-flex items-center" style={{ background: st.color }}>{st.label}</span>
                 <button type="button" onClick={() => reopen(o)} className="h-10 px-3 rounded-xl bg-white/10 text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer"><RotateCcw size={16} /> أعد للتحضير</button>
@@ -315,7 +337,7 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
           })}
         </div>
       ) : (
-        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-3 p-3 overflow-y-auto md:overflow-hidden">
+        <div className="kitchen-scroll flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-3 p-3 overflow-y-auto md:overflow-hidden">
           {COLUMNS.map((c) => {
             const orders = open.filter((o) => linesFor(o).length > 0 && columnOf(o) === c.id);
             return (
@@ -324,23 +346,26 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
                   {c.title}
                   <span className="min-w-[28px] h-7 px-2 rounded-full text-white text-sm flex items-center justify-center" style={{ backgroundColor: c.color }}>{orders.length}</span>
                 </h2>
-                <div className="flex-1 overflow-y-auto p-2 space-y-3">
-                  {orders.length === 0 && <div className="py-10 text-center text-white/30 font-bold">لا طلبات</div>}
-                  {orders.map((o) => (
-                    <OrderTicket
-                      key={o.id}
-                      o={o}
-                      lines={linesFor(o)}
-                      now={now}
-                      color={c.color}
-                      menu={menu}
-                      stationColor={stationColor}
-                      onToggleLine={(i) => toggleLine(o, i)}
-                      action={actionFor(o, c.id)}
-                      onBack={backFor(o, c.id)}
-                    />
-                  ))}
-                </div>
+                <ScrollRail className="flex-1">
+                  <div className="p-2 space-y-3">
+                    {orders.length === 0 && <div className="py-10 text-center text-white/30 font-bold">لا طلبات</div>}
+                    {orders.map((o) => (
+                      <OrderTicket
+                        key={o.id}
+                        o={o}
+                        late={late}
+                        lines={linesFor(o)}
+                        now={now}
+                        color={c.color}
+                        menu={menu}
+                        stationColor={stationColor}
+                        onToggleLine={(i) => toggleLine(o, i)}
+                        action={actionFor(o, c.id)}
+                        onBack={backFor(o, c.id)}
+                      />
+                    ))}
+                  </div>
+                </ScrollRail>
               </section>
             );
           })}

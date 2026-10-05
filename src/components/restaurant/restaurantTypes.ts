@@ -81,6 +81,7 @@ export interface RestaurantSettings {
   payAnyWorker: boolean; // a table's bill can be paid at any worker (false = only at the one who opened it)
   autoLockMinutes: number; // the cashier/waiter screen asks for a PIN again after this idle time (0 = never)
   boardShows: 'takeaway' | 'all'; // the waiting screen: only orders the guest collects, or every order
+  kitchenLateMinutes: number; // an order not ready after this long flashes red in the kitchen
 }
 
 // ---------- Kitchen sections, halls, tables and devices (the staff side) ----------
@@ -238,6 +239,7 @@ export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   payAnyWorker: true,
   autoLockMinutes: 0,
   boardShows: 'takeaway',
+  kitchenLateMinutes: 5,
 };
 
 export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({

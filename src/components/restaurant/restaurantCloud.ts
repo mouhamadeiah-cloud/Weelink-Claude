@@ -8,11 +8,12 @@
 //   restaurants/{uid}/tabs|shifts|screens|log   the cashier and the waiters (see staffCloud.ts).
 // See firestore.rules. Nothing private (orders, accounts, customers) is ever in the public doc.
 import { useEffect, useState } from 'react';
-import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import type { CanvasElement, Page } from '../../types';
 import { LedgerEntry, MenuOrder, StaffDevice, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry } from './restaurantTypes';
 import { newId } from '../shop/shopTypes';
+import { readNextNumber } from './orderNumbers';
 import type { Worker } from './staffTypes';
 
 const restaurantDoc = (uid: string) => doc(db, 'restaurants', uid);
@@ -82,9 +83,16 @@ export const setOrderDoneLines = (uid: string, orderId: string, doneLines: numbe
 // ---------- Orders ----------
 
 // Gives up after a while on a bad connection, so the guest is offered WhatsApp instead of waiting.
+// Writes a guest's order with the day's next number and returns that number.
 export const placeOrder = (uid: string, order: MenuOrder, timeoutMs = 15000) =>
   Promise.race([
-    setDoc(doc(ordersCol(uid), order.id), clean(order)),
+    runTransaction(db, async (tx) => {
+      const next = await readNextNumber(tx, uid);
+      next?.take();
+      const number = next?.n ?? order.number;
+      tx.set(doc(ordersCol(uid), order.id), clean({ ...order, number }));
+      return number;
+    }),
     new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('timeout')), timeoutMs)),
   ]);
 

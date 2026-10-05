@@ -66,8 +66,16 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
       deliveryFee: fee,
       total,
     });
+    // WhatsApp opens right away, while the click still counts as the guest's own (later it would be
+    // blocked); its text follows once the order has its number of the day.
+    const wantsWhatsapp = !!settings.whatsapp && settings.whatsappCopy && activeType !== 'table';
+    const waWindow = wantsWhatsapp ? window.open('about:blank', '_blank') : null;
+    setBusy(true);
+    const placed = submit ? await submit(order).catch(() => null) : null;
+    const number = placed ?? order.number;
+    setBusy(false);
     const text = [
-      `طلب جديد #${order.number}${settings.name ? ` · ${settings.name}` : ''}`,
+      `طلب جديد #${number}${settings.name ? ` · ${settings.name}` : ''}`,
       activeType === 'table' ? `طاولة ${table}` : activeType === 'delivery' ? 'توصيل' : 'استلام من المطعم',
       '',
       ...lines.map((l) => {
@@ -84,14 +92,13 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
       f.notes.trim() ? `ملاحظات: ${f.notes.trim()}` : null,
     ].filter((x) => x !== null).join('\n');
     const whatsapp = settings.whatsapp ? whatsappHref(settings.whatsapp, text) : '';
-    // Opened right away, while the click still counts as the guest's own (later it would be blocked).
-    if (whatsapp && settings.whatsappCopy && activeType !== 'table') window.open(whatsapp, '_blank', 'noopener,noreferrer');
-    setBusy(true);
-    const live = submit ? await submit(order).catch(() => false) : false;
-    setBusy(false);
+    if (waWindow) {
+      waWindow.opener = null;
+      waWindow.location.href = whatsapp;
+    }
     clearMenuCart();
     setF({ name: '', phone: '', address: '', notes: '' });
-    setSent({ number: order.number, live, whatsapp });
+    setSent({ number, live: placed !== null, whatsapp });
   };
 
   const input = 'w-full h-11 px-4 rounded-2xl border border-black/10 bg-white text-sm outline-none focus:border-black/30';

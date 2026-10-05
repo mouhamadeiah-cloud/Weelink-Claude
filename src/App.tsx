@@ -241,12 +241,11 @@ export default function App() {
   // reached it is kept in the admin data instead.
   const submitRestaurantOrder = useCallback(async (o: MenuOrder) => {
     try {
-      await placeOrder(ownerUid, o);
-      return true;
+      return await placeOrder(ownerUid, o);
     } catch (e) {
       console.warn('Could not send the order to the live orders:', e);
       setRestaurantAdmin((prev) => submitOrder(prev, o));
-      return false;
+      return null;
     }
   }, [ownerUid]);
   // Bumped by every workspace load so a slower, older load can't overwrite a newer one.

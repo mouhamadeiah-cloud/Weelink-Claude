@@ -28,6 +28,13 @@ export const RestaurantSettingsTab: React.FC<RestaurantTabProps> = ({ data, upda
           </select>
         </Field>
       </Card>
+      <Card title="شاشة المطبخ">
+        <Field label="الطلب المتأخر" hint="إذا لم يجهز الطلب بعد هذه المدة من وصوله يصبح أحمر وامضًا على شاشة المطبخ.">
+          <select className="h-10 px-3 rounded-xl border border-neutral-200 bg-white text-sm font-bold" value={s.kitchenLateMinutes} onChange={(e) => set({ kitchenLateMinutes: Number(e.target.value) })}>
+            {[3, 5, 7, 10, 15, 20, 30].map((m) => <option key={m} value={m}>بعد {m} {m <= 10 ? 'دقائق' : 'دقيقة'}</option>)}
+          </select>
+        </Field>
+      </Card>
       <Card title="شاشة الانتظار">
         <Field label="الطلبات التي تظهر على شاشة الانتظار" hint="تعرض أرقام الطلبات قيد التحضير، وتنقلها إلى «جاهز للاستلام» عندما يجهّزها المطبخ.">
           <select className="h-10 px-3 rounded-xl border border-neutral-200 bg-white text-sm font-bold" value={s.boardShows} onChange={(e) => set({ boardShows: e.target.value === 'all' ? 'all' : 'takeaway' })}>

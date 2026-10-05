@@ -3,7 +3,7 @@
 // the settings are managed here; the restaurant's pages are edited in the editor like any page.
 import React, { useEffect, useState } from 'react';
 import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users } from 'lucide-react';
-import { RestaurantAdminData } from './restaurantTypes';
+import { RestaurantAdminData, setDayStartHour } from './restaurantTypes';
 import { RestaurantTabProps, RestaurantTabId } from './tabs/shared';
 import { TablesTab } from './tabs/TablesTab';
 import { HallsTab } from './tabs/HallsTab';
@@ -39,6 +39,8 @@ interface RestaurantAdminPanelProps {
 }
 
 export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid }) => {
+  // Before anything below reads «today»: the owner's business day.
+  setDayStartHour(data.settings.dayStartHour);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<TabId>('dishes');
   const liveOrders = useLiveOrders(ownerUid);

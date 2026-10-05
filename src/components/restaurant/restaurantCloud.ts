@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import type { CanvasElement, Page } from '../../types';
-import { LedgerEntry, MenuOrder, StaffDevice, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry } from './restaurantTypes';
+import { LedgerEntry, MenuOrder, StaffDevice, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry, setDayStartHour } from './restaurantTypes';
 import { newId } from '../shop/shopTypes';
 import { readNextNumber } from './orderNumbers';
 import type { Worker } from './staffTypes';
@@ -51,10 +51,12 @@ export const loadPublishedRestaurant = async (uid: string): Promise<PublishedRes
   const snap = await getDoc(restaurantDoc(uid));
   if (!snap.exists()) return null;
   const data: any = snap.data();
+  const admin = normalizeRestaurantAdmin({ ...(data.menu || {}), settings: data.settings, orders: [] });
+  setDayStartHour(admin.settings.dayStartHour);
   return {
     pages: Array.isArray(data.pages) ? data.pages : [],
     elements: Array.isArray(data.elements) ? data.elements : [],
-    admin: normalizeRestaurantAdmin({ ...(data.menu || {}), settings: data.settings, orders: [] }),
+    admin,
   };
 };
 

@@ -82,6 +82,7 @@ export interface RestaurantSettings {
   autoLockMinutes: number; // the cashier/waiter screen asks for a PIN again after this idle time (0 = never)
   boardShows: 'takeaway' | 'all'; // the waiting screen: only orders the guest collects, or every order
   kitchenLateMinutes: number; // an order not ready after this long flashes red in the kitchen
+  dayStartHour: number; // يوم العمل: the hour (0-8) a new day starts; the hours after midnight before it belong to the day before
 }
 
 // ---------- Kitchen sections, halls, tables and devices (the staff side) ----------
@@ -241,6 +242,7 @@ export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   autoLockMinutes: 0,
   boardShows: 'takeaway',
   kitchenLateMinutes: 5,
+  dayStartHour: 4,
 };
 
 export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
@@ -429,9 +431,30 @@ export const INCOME_CATEGORIES = ['مبيعات الموقع', 'مبيعات ا�
 export const EXPENSE_CATEGORIES = ['مواد غذائية', 'خضار ولحوم', 'مشروبات', 'رواتب', 'إيجار', 'كهرباء وماء', 'غاز ومحروقات', 'صيانة', 'تغليف', 'تسويق', 'مصاريف أخرى'];
 export const PAYMENT_METHODS = ['نقدي', 'شام كاش', 'سيريتل كاش', 'MTN كاش', 'تحويل بنكي', 'بطاقة'];
 
-export const todayKey = (d = new Date()) => {
+// يوم العمل: a restaurant open past midnight keeps the hours after midnight in the day before, until
+// the hour the owner sets. The daily order numbers, the kitchen's and the waiting screen's «today»,
+// the workers' days and the accounts' dates all follow it. Set as soon as the settings are loaded.
+let dayStartHour = 4;
+export const setDayStartHour = (h: unknown) => {
+  const n = Math.floor(Number(h));
+  dayStartHour = isFinite(n) && n >= 0 && n <= 8 ? n : 4;
+};
+// The calendar date a moment belongs to in business days.
+const businessDate = (d: Date) => new Date(d.getTime() - dayStartHour * 3600000);
+
+export const todayKey = (at = new Date()) => {
+  const d = businessDate(at);
   const z = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+};
+
+// When the business day `back` days ago began (0 = the current one).
+export const businessDayStart = (back = 0) => {
+  const d = businessDate(new Date());
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - back);
+  d.setHours(dayStartHour);
+  return d;
 };
 
 export const normalizeLedgerEntry = (id: string, raw: any): LedgerEntry => ({

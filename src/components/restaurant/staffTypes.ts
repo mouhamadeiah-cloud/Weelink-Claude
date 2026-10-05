@@ -5,7 +5,7 @@
 // Every payment carries the worker, the device and the method, so the manager sees the money each
 // worker took and the money of every device together.
 import { newId } from '../shop/shopTypes';
-import type { OrderLine } from './restaurantTypes';
+import { businessDayStart, type OrderLine } from './restaurantTypes';
 
 export type WorkerRole = 'waiter' | 'cashier' | 'manager';
 
@@ -315,18 +315,11 @@ export const normalizeScreen = (raw: any): ScreenState => ({
   paid: raw?.paid && typeof raw.paid === 'object' ? { amount: num(raw.paid.amount), method: str(raw.paid.method), note: str(raw.paid.note), change: num(raw.paid.change), left: num(raw.paid.left), at: str(raw.paid.at) } : null,
 });
 
-export const startOfToday = () => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-};
+// The start of the current business day (يوم العمل, see restaurantTypes).
+export const startOfToday = () => businessDayStart(0).toISOString();
 
-// The start of the day `back` days ago (0 = today) and of the day after it.
+// The start of the business day `back` days ago (0 = today) and of the day after it.
 export const dayRange = (back: number) => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - back);
-  const end = new Date(d);
-  end.setDate(end.getDate() + 1);
-  return { start: d.toISOString(), end: end.toISOString(), date: d };
+  const d = businessDayStart(back);
+  return { start: d.toISOString(), end: businessDayStart(back - 1).toISOString(), date: d };
 };

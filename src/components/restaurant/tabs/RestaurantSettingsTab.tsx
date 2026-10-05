@@ -20,6 +20,13 @@ export const RestaurantSettingsTab: React.FC<RestaurantTabProps> = ({ data, upda
           <Field label="أوقات العمل"><input className={inputClass} value={s.hours} onChange={(e) => set({ hours: e.target.value })} /></Field>
         </div>
       </Card>
+      <Card title="يوم العمل">
+        <Field label="يبدأ يوم العمل الجديد" hint="للمطعم الذي يعمل بعد منتصف الليل: ما يحصل بعد الساعة 12 ليلًا يُحسب لليوم السابق حتى هذه الساعة. فيها تبدأ أرقام الطلبات من 1، وعليها تُبنى حركة العمال والحسابات وشاشة الانتظار.">
+          <select className="h-10 px-3 rounded-xl border border-neutral-200 bg-white text-sm font-bold" value={s.dayStartHour} onChange={(e) => set({ dayStartHour: Number(e.target.value) })}>
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((h) => <option key={h} value={h}>{h ? `الساعة ${h} صباحًا` : 'منتصف الليل (الساعة 12)'}</option>)}
+          </select>
+        </Field>
+      </Card>
       <Card title="الكاشير والنادل">
         <Toggle label="الزبون يدفع عند أي عامل (إذا أوقفته: فقط عند من فتح الطاولة، أو المدير)" checked={s.payAnyWorker} onChange={(payAnyWorker) => set({ payAnyWorker })} />
         <Field label="قفل شاشة الكاشير والتابلت تلقائيًا" hint="بعد هذه المدة بدون استعمال يُطلب الرقم السري من جديد، مفيد إذا تشارك عدة عمال جهازًا واحدًا.">

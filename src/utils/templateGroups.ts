@@ -84,7 +84,7 @@ export const withTemplateGroups = (pages: Page[], elements: CanvasElement[]): { 
     }
     next.push(el);
   }
-  next = groupTemplateCards(next, (el) => /^(car|shop)-/.test(el.id));
+  next = groupTemplateCards(next, (el) => /^(car|shop|rest)-/.test(el.id));
 
   if (!changedSlides.size) return { pages, elements: next };
   const layouts = new Map<string, NonNullable<CanvasElement['mobile']>>();

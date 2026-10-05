@@ -50,7 +50,8 @@ export interface RightDrawerProps {
   onCopyCurrentPage?: (pageId: string) => void;
   onAddSlideTemplate?: (template: any) => void;
   isShopProject?: boolean;
-  isCarProject?: boolean; // Online Shop project: the online-shop slide category is offered
+  isCarProject?: boolean;
+  isRestaurantProject?: boolean; // restaurant project: the restaurant slide category is offered // Online Shop project: the online-shop slide category is offered
   onAddPageTemplate?: (template: any) => void;
   onApplyFreeStarterTemplate?: () => void;
   onApplyOnlineShopTemplate?: () => void;

@@ -22,6 +22,10 @@ import { CarDataContext, CarRequestContext } from './components/cars/store/CarDa
 import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { getCarShowroomTemplate } from './data/carShowroomTemplate';
+import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
+import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
+import { RestaurantAdminData, OrderInput, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
+import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
@@ -186,6 +190,7 @@ const PROJECT_STORAGE: Record<ProjectType, { pagesField: string; elementsField: 
   page: { pagesField: 'pages', elementsField: 'elements', localPrefix: 'weelink_' },
   shop: { pagesField: 'shopPages', elementsField: 'shopElements', localPrefix: 'weelink_shop_' },
   cars: { pagesField: 'carPages', elementsField: 'carElements', localPrefix: 'weelink_cars_' },
+  restaurant: { pagesField: 'restaurantPages', elementsField: 'restaurantElements', localPrefix: 'weelink_restaurant_' },
 };
 
 export default function App() {
@@ -227,6 +232,10 @@ export default function App() {
   const [carAdmin, setCarAdmin] = useState<CarAdminData>(createEmptyCarAdmin);
   const updateCarAdmin = useCallback((fn: (d: CarAdminData) => CarAdminData) => setCarAdmin((prev) => fn(prev)), []);
   const submitCarRequest = useCallback((r: RequestInput) => setCarAdmin((prev) => submitRequest(prev, r)), []);
+  const [hasRestaurant, setHasRestaurant] = useState<boolean>(false);
+  const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
+  const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
+  const submitRestaurantOrder = useCallback((o: OrderInput) => setRestaurantAdmin((prev) => submitOrder(prev, o)), []);
   // Bumped by every workspace load so a slower, older load can't overwrite a newer one.
   const loadSeqRef = useRef(0);
   // True once the open project's data has actually been loaded, so switching
@@ -327,9 +336,11 @@ export default function App() {
     let loadedDesignFromCloud = false;
     let shopExists = false;
     let carsExist = false;
+    let restaurantExists = false;
     try {
       shopExists = !!localStorage.getItem(`${PROJECT_STORAGE.shop.localPrefix}pages_${userId}`);
       carsExist = !!localStorage.getItem(`${PROJECT_STORAGE.cars.localPrefix}pages_${userId}`);
+      restaurantExists = !!localStorage.getItem(`${PROJECT_STORAGE.restaurant.localPrefix}pages_${userId}`);
     } catch {
       // storage unavailable
     }
@@ -340,6 +351,7 @@ export default function App() {
         const data: any = designSnap.data();
         if (Array.isArray(data.shopPages) && data.shopPages.length > 0) shopExists = true;
         if (Array.isArray(data.carPages) && data.carPages.length > 0) carsExist = true;
+        if (Array.isArray(data.restaurantPages) && data.restaurantPages.length > 0) restaurantExists = true;
         const cloudPages: Page[] = normalizeLegacyNavbarDefaults(Array.isArray(data.pages) ? data.pages : []);
         if (cloudPages.length > 0) {
           const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
@@ -360,6 +372,7 @@ export default function App() {
     }
     setHasShop(shopExists);
     setHasCars(carsExist);
+    setHasRestaurant(restaurantExists);
     setActivePageId('page-home');
     projectReadyRef.current = true;
 
@@ -496,6 +509,63 @@ export default function App() {
     setSelectedElementId(null);
     setIsChatActive(false);
     setHasCars(true);
+    projectReadyRef.current = true;
+  };
+
+  // Loads the restaurant project. A first visit starts from the restaurant template, with an example
+  // menu in the admin window so its pages are not empty.
+  const loadRestaurantWorkspace = async (userId: string) => {
+    const seq = ++loadSeqRef.current;
+    projectReadyRef.current = false;
+    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE.restaurant;
+    let restPages: Page[] = [];
+    let restElements: CanvasElement[] = [];
+    let admin: RestaurantAdminData | null = null;
+    try {
+      const designSnap = await getDoc(doc(db, 'designs', userId));
+      if (designSnap.exists()) {
+        const data: any = designSnap.data();
+        if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
+          restPages = normalizeLegacyNavbarDefaults(data[pagesField]);
+          restElements = deserializeElements(data[elementsField] || []);
+        }
+        if (data.restaurantAdmin) admin = normalizeRestaurantAdmin(data.restaurantAdmin);
+      }
+    } catch (e) {
+      console.warn("Could not load the restaurant from Firebase, falling back to local cache:", e);
+    }
+    if (seq !== loadSeqRef.current) return;
+    try {
+      if (restPages.length === 0) {
+        const storedPages = localStorage.getItem(`${localPrefix}pages_${userId}`);
+        const storedElements = localStorage.getItem(`${localPrefix}elements_${userId}`);
+        if (storedPages) restPages = normalizeLegacyNavbarDefaults(JSON.parse(storedPages));
+        if (storedElements) restElements = deserializeElements(JSON.parse(storedElements));
+      }
+      if (!admin) {
+        const storedAdmin = localStorage.getItem(`${localPrefix}admin_${userId}`);
+        if (storedAdmin) admin = normalizeRestaurantAdmin(JSON.parse(storedAdmin));
+      }
+    } catch (e) {
+      console.warn("Could not read the local restaurant cache:", e);
+    }
+    if (restPages.length === 0) {
+      const template = getRestaurantTemplate();
+      restPages = template.pages;
+      restElements = template.elements;
+      if (!admin) admin = exampleRestaurantAdmin();
+    }
+    setProject('restaurant');
+    setPages(restPages);
+    setElements(restElements);
+    setHistory([restElements]);
+    setHistoryIndex(0);
+    setRestaurantAdmin(admin || createEmptyRestaurantAdmin());
+    setActivePageId(restPages[0].id);
+    setActiveSlideId(restPages[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    setIsChatActive(false);
+    setHasRestaurant(true);
     projectReadyRef.current = true;
   };
 
@@ -650,6 +720,30 @@ export default function App() {
     return () => clearTimeout(delayDebounceFn);
   }, [carAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
 
+  // 6. Debounced save of the restaurant's admin data (menu, orders, settings).
+  useEffect(() => {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant') {
+      return;
+    }
+    const targetUserId = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        localStorage.setItem(`${PROJECT_STORAGE.restaurant.localPrefix}admin_${targetUserId}`, JSON.stringify(restaurantAdmin));
+      } catch (e) {
+        console.warn("Could not save restaurant data locally:", e);
+      }
+      try {
+        await setDoc(doc(db, 'designs', targetUserId), {
+          restaurantAdmin: sanitizeData(restaurantAdmin),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Cloud save of restaurant data failed:", e);
+      }
+    }, 800);
+    return () => clearTimeout(delayDebounceFn);
+  }, [restaurantAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
+
   // Saves the open project right away (the debounced saves above would be
   // cancelled when another project's data replaces it).
   const flushProjectSave = () => {
@@ -661,6 +755,7 @@ export default function App() {
       localStorage.setItem(`${localPrefix}elements_${targetUserId}`, JSON.stringify(elements));
       if (project === 'shop') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(shopAdmin));
       if (project === 'cars') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(carAdmin));
+      if (project === 'restaurant') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(restaurantAdmin));
     } catch (e) {
       console.warn("Could not save to LocalStorage:", e);
     }
@@ -671,6 +766,7 @@ export default function App() {
       [elementsField]: serializeElements(elements),
       ...(project === 'shop' ? { shopAdmin: sanitizeData(shopAdmin) } : {}),
       ...(project === 'cars' ? { carAdmin: sanitizeData(carAdmin) } : {}),
+      ...(project === 'restaurant' ? { restaurantAdmin: sanitizeData(restaurantAdmin) } : {}),
       updatedAt: serverTimestamp(),
     }, { merge: true }).catch((e) => console.warn("Cloud save failed while switching projects:", e));
   };
@@ -684,6 +780,7 @@ export default function App() {
         flushProjectSave();
         if (type === 'shop') await loadShopWorkspace(targetUserId);
         else if (type === 'cars') await loadCarsWorkspace(targetUserId);
+        else if (type === 'restaurant') await loadRestaurantWorkspace(targetUserId);
         else await loadUserWorkspace(targetUserId);
       }
       setIsProjectChosen(true);
@@ -881,6 +978,8 @@ export default function App() {
         setShopAdmin(createEmptyShopAdmin());
         setHasCars(false);
         setCarAdmin(createEmptyCarAdmin());
+        setHasRestaurant(false);
+        setRestaurantAdmin(createEmptyRestaurantAdmin());
         setIsAuthActive(true);
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
@@ -1973,6 +2072,21 @@ export default function App() {
         shopSearchStyle: 'pill',
         styles: { color: '#C8102E', ...(customStyles || {}) },
       },
+      menuList: {
+        name: 'منيو المطعم',
+        width: 1100,
+        height: 900,
+        content: '',
+        menuLayout: 'grid',
+        styles: { color: '#B5562B', ...(customStyles || {}) },
+      },
+      menuCart: {
+        name: 'سلة الطلب',
+        width: 1100,
+        height: 600,
+        content: '',
+        styles: { color: '#B5562B', ...(customStyles || {}) },
+      },
       checkout: {
         name: 'بطاقة الطلب',
         width: 560,
@@ -2547,6 +2661,7 @@ export default function App() {
         onChoose={handleChooseProject}
         hasShop={hasShop}
         hasCars={hasCars}
+        hasRestaurant={hasRestaurant}
         loadingType={projectLoading}
       />
     );
@@ -2668,7 +2783,7 @@ export default function App() {
           isSaving={isSavingCloud}
           onOpenWorkspaceHub={() => setIsWorkspaceHubOpen(true)}
           onManualSave={handleManualSave}
-          projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : undefined}
+          projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'restaurant' ? 'Restaurant' : undefined}
           onOpenProjects={handleOpenProjects}
         />
 
@@ -2700,6 +2815,8 @@ export default function App() {
 
       {/* Main Operations Area (ساحة العمليات) */}
       <div className="flex-1 flex relative overflow-hidden">
+        <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
+        <RestaurantOrderContext.Provider value={project === 'restaurant' ? submitRestaurantOrder : null}>
         <CarDataContext.Provider value={project === 'cars' ? carAdmin : null}>
         <CarRequestContext.Provider value={project === 'cars' ? submitCarRequest : null}>
         <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : null}>
@@ -2736,6 +2853,8 @@ export default function App() {
         </ShopDataContext.Provider>
         </CarRequestContext.Provider>
         </CarDataContext.Provider>
+        </RestaurantOrderContext.Provider>
+        </RestaurantDataContext.Provider>
         {isCanvasLoading && (
           <div className="absolute inset-0 bg-white/75 backdrop-blur-xs z-50 flex flex-col items-center justify-center select-none text-right font-sans">
             <Loader2 className="w-9 h-9 text-[#0071e3] animate-spin mb-3" />
@@ -2745,9 +2864,11 @@ export default function App() {
       </div>
 
       {/* Floating Right Control Drawer on right edge (~20% of page) */}
+      <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
       <RightDrawer
         isShopProject={project === 'shop'}
         isCarProject={project === 'cars'}
+        isRestaurantProject={project === 'restaurant'}
         isOpen={isRightDrawerOpen}
         onToggle={() => setIsRightDrawerOpen(!isRightDrawerOpen)}
         onClose={() => setIsRightDrawerOpen(false)}
@@ -2810,6 +2931,7 @@ export default function App() {
         isWeeAiChatCollapsed={!isChatActive}
         onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
       />
+      </RestaurantDataContext.Provider>
 
       {/* Online Shop admin: floating gear + admin window */}
       {project === 'shop' && (
@@ -2817,6 +2939,9 @@ export default function App() {
       )}
       {project === 'cars' && (
         <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} />
+      )}
+      {project === 'restaurant' && (
+        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} />
       )}
 
       {/* Workspace Hub Drawer Panel */}

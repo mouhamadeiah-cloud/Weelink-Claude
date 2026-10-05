@@ -70,6 +70,7 @@ export const SIXTY_FONTS = [
 import { SHOP_SLIDE_COUNT, getShopSlidePayload } from './shopSlideTemplates';
 import { groupTemplateCards } from '../utils/templateGroups';
 import { CAR_SLIDE_COUNT, getCarSlidePayload } from './carSlideTemplates';
+import { REST_SLIDE_COUNT, getRestaurantSlidePayload } from './restaurantSlideTemplates';
 
 export const READY_SLIDE_CATEGORIES = [
   { id: 'intro', name: 'شريحة مدخل', desc: 'الترحيب بالزوار وجذب الانتباه', icon: '🚀' },
@@ -86,6 +87,7 @@ export const READY_SLIDE_CATEGORIES = [
   { id: 'bio', name: 'شريحة بطاقة تعريفية', desc: 'بطاقة سيرة ذاتية وبروفايل سريع', icon: '👤' },
   { id: 'shop', name: 'شريحة عناصر online Shop', desc: 'واجهات، عرض منتجات، بحث وأشرطة متحركة لمتجرك', icon: '🛍️' },
   { id: 'cars', name: 'شريحة عناصر معرض السيارات', desc: 'واجهات، عرض السيارات، بحث وأشرطة متحركة لمعرضك', icon: '🚗' },
+  { id: 'restaurant', name: 'شريحة عناصر المطعم', desc: 'واجهات، المنيو بعدة أشكال وسلة الطلب لمطعمك', icon: '🍽️' },
   { id: 'services', name: 'شريحة خدماتنا', desc: 'تفاصيل الخدمات والحلول المتاحة', icon: '🛠️' },
   { id: 'projects', name: 'شريحة آخر مشاريعنا', desc: 'ألبوم وصور من إنجازاتك السابقة', icon: '🏗️' },
   { id: 'partners', name: 'شريحة صفحات صديقة', desc: 'شعارات الشركاء ومواقع صديقة', icon: '🌐' },
@@ -249,12 +251,13 @@ export const customizeElementsForIndex = (elements: any[], categoryId: string, i
 };
 
 // How many ready slides a category offers.
-export const slideTemplateCount = (categoryId: string) => (categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : 10);
+export const slideTemplateCount = (categoryId: string) =>
+  categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : categoryId === 'restaurant' ? REST_SLIDE_COUNT : 10;
 
 export const getSlideTemplatePayload = (categoryId: string, index: number, catName: string) => {
   // Cards in the shop and showroom slides arrive as groups (moved, copied and phone-arranged together).
-  if (categoryId === 'shop' || categoryId === 'cars') {
-    const payload = categoryId === 'shop' ? getShopSlidePayload(index) : getCarSlidePayload(index);
+  if (categoryId === 'shop' || categoryId === 'cars' || categoryId === 'restaurant') {
+    const payload = categoryId === 'shop' ? getShopSlidePayload(index) : categoryId === 'cars' ? getCarSlidePayload(index) : getRestaurantSlidePayload(index);
     return { ...payload, elements: groupTemplateCards(payload.elements as any[]) };
   }
   const title = `${catName} - نموذج ${index + 1}`;

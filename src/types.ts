@@ -24,7 +24,9 @@ export type ElementType =
   | 'shopSearch'
   | 'checkout'
   | 'carListings'
-  | 'carSearch';
+  | 'carSearch'
+  | 'menuList'
+  | 'menuCart';
 
 export type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
 
@@ -151,6 +153,15 @@ export interface CanvasElement {
   carCardBg?: string;
   carCardText?: string;
   carCardRadius?: number;
+  // Restaurant 'menuList' element: how the menu's dishes are shown (see restaurant/store).
+  menuLayout?: 'grid' | 'list' | 'large';
+  menuSource?: 'all' | 'featured' | 'category'; // every dish, the featured ones or one catalog
+  menuCategoryId?: string; // menuSource 'category': the catalog shown
+  menuTabs?: boolean; // the catalogs as tabs above the dishes (unset = on)
+  menuLimit?: number; // at most this many dishes (0 or unset = all)
+  menuCardBg?: string;
+  menuCardText?: string;
+  menuCardRadius?: number;
   linkTargetId?: string;
   contactType?: ContactType;
   contactValue?: string;

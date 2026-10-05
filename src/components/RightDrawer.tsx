@@ -80,6 +80,7 @@ import {
 import { WeeAIChat } from './WeeAIChat';
 import { ShopElementSettings } from './ShopElementSettings';
 import { CarElementSettings } from './cars/CarElementSettings';
+import { RestaurantElementSettings } from './restaurant/RestaurantElementSettings';
 
 import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
@@ -126,6 +127,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onAddSlideTemplate,
   isShopProject = false,
   isCarProject = false,
+  isRestaurantProject = false,
   onAddPageTemplate,
   onApplyFreeStarterTemplate,
   onApplyOnlineShopTemplate,
@@ -1785,6 +1787,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     {/* The car showroom's live car list / search bar */}
                     {(selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
                       <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+                    )}
+                    {/* The restaurant's live menu / order cart */}
+                    {(selectedElement.type === 'menuList' || selectedElement.type === 'menuCart') && (
+                      <RestaurantElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
                     )}
                     {/* إعدادات معرض الصور (Gallery Settings) */}
                     {selectedElement.type === 'gallery' && (() => {
@@ -3675,6 +3681,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {activeSection === 'animation' && selectedElement && (selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
               <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
             )}
+            {activeSection === 'animation' && selectedElement && (selectedElement.type === 'menuList' || selectedElement.type === 'menuCart') && (
+              <RestaurantElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+            )}
             {activeSection === 'animation' && <AnimationSection styles={styles} onUpdateElementStyles={onUpdateElementStyles} />}
 
             {/* TOOL: Add Elements (+) - Step 1: Squares Grid (الصورة رقم ١) | Step 2: Detail with Subcategories Bar (الصورة رقم ٢) */}
@@ -3812,7 +3821,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             اختر فئة لتصفح الشرائح المصممة مسبقاً:
                           </h4>
                           <div className="grid grid-cols-2 gap-2">
-                            {READY_SLIDE_CATEGORIES.filter((cat) => (cat.id !== 'shop' || isShopProject) && (cat.id !== 'cars' || isCarProject)).map((cat) => (
+                            {READY_SLIDE_CATEGORIES.filter((cat) => (cat.id !== 'shop' || isShopProject) && (cat.id !== 'cars' || isCarProject) && (cat.id !== 'restaurant' || isRestaurantProject)).map((cat) => (
                               <button
                                 key={cat.id}
                                 type="button"
@@ -5731,6 +5740,32 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 <div key={k} style={{ flex: strip ? '0 0 220px' : '1 1 0', minWidth: 150, maxHeight: strip ? undefined : 420, borderRadius: el.carCardRadius ?? 22, background: el.carCardBg || '#FFFFFF', border: '2px solid rgba(18,19,22,0.08)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                                   <div style={{ flex: '0 0 55%', background: 'linear-gradient(135deg,#d9dbe0,#b9bcc4)' }} />
                                   <div style={{ margin: 16, height: 18, width: '40%', borderRadius: 6, background: el.styles?.color || '#C8102E', opacity: 0.85 }} />
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        if (el.type === 'menuList') {
+                          const rows = el.menuLayout === 'list';
+                          const n = rows ? 4 : el.menuLayout === 'large' ? 2 : 3;
+                          return (
+                            <div key={elIdx} style={{ ...elStyle, padding: 0, gap: 24, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap', flexDirection: rows ? 'column' : 'row' }}>
+                              {Array.from({ length: n }).map((__, k) => (
+                                <div key={k} style={{ flex: '1 1 0', minWidth: 150, maxHeight: rows ? undefined : 420, borderRadius: el.menuCardRadius ?? 20, background: el.menuCardBg || '#FFFFFF', border: '2px solid rgba(43,33,24,0.08)', overflow: 'hidden', display: 'flex', flexDirection: rows ? 'row-reverse' : 'column' }}>
+                                  <div style={{ flex: rows ? '0 0 22%' : '0 0 55%', background: 'linear-gradient(135deg,#e9d8c4,#c99a74)' }} />
+                                  <div style={{ margin: 16, height: 18, width: '40%', borderRadius: 6, background: el.styles?.color || '#B5562B', opacity: 0.85 }} />
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        if (el.type === 'menuCart') {
+                          return (
+                            <div key={elIdx} style={{ ...elStyle, padding: 0, gap: 20, alignItems: 'stretch' }}>
+                              {[2, 1].map((f, k) => (
+                                <div key={k} style={{ flex: `${f} 1 0`, background: '#FFFFFF', borderRadius: 24, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                                  <div style={{ height: 24, width: '45%', borderRadius: 8, background: el.styles?.color || '#B5562B', opacity: 0.85 }} />
+                                  {Array.from({ length: 3 }).map((___, j) => <div key={j} style={{ height: 56, borderRadius: 12, background: 'rgba(128,128,128,0.18)' }} />)}
                                 </div>
                               ))}
                             </div>

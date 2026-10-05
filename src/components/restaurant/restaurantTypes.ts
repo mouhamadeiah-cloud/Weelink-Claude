@@ -1,0 +1,329 @@
+// Restaurant project (Weelink / Restaurant): the menu is the one source every channel reads. Phase 1
+// is the website: main catalogs (أقسام المنيو), sub-catalogs (removable ingredients or paid extras)
+// linked to one or more main catalogs, dishes, the orders the website hands in, and the settings.
+// Built after the owner's GastroPOS app: a dish shows the sub-catalogs linked to its catalog, unless
+// the dish picks its own.
+import { newId } from '../shop/shopTypes';
+
+// A main catalog of the menu: مشاوي، سندويش، مشروبات...
+export interface MenuCategory {
+  id: string;
+  name: string;
+  icon: string; // an emoji shown on the menu's tabs
+  image: string;
+  hidden: boolean;
+}
+
+export interface SubCatalogItem {
+  id: string;
+  name: string;
+  price: number; // extras only: added to the dish's price when picked
+}
+
+// A sub-catalog: a group of ingredients the guest may remove (picked by default, free) or of paid
+// extras the guest may add. It shows on every dish of the main catalogs it is linked to.
+export type SubCatalogType = 'ingredients' | 'extras';
+
+export interface SubCatalog {
+  id: string;
+  name: string;
+  type: SubCatalogType;
+  items: SubCatalogItem[];
+  categoryIds: string[];
+}
+
+export type DishBadge = '' | 'new' | 'popular' | 'spicy' | 'offer' | 'vegetarian';
+
+export const DISH_BADGES: { id: DishBadge; label: string; color: string }[] = [
+  { id: '', label: 'بدون', color: '' },
+  { id: 'popular', label: 'الأكثر طلبًا', color: '#E8590C' },
+  { id: 'new', label: 'جديد', color: '#1971C2' },
+  { id: 'offer', label: 'عرض', color: '#C2255C' },
+  { id: 'spicy', label: 'حار', color: '#E03131' },
+  { id: 'vegetarian', label: 'نباتي', color: '#2F9E44' },
+];
+
+export interface Dish {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  oldPrice: number; // shown struck through when higher than the price
+  categoryId: string;
+  image: string;
+  badge: DishBadge;
+  featured: boolean;
+  available: boolean; // false = shown as «نفد اليوم», cannot be ordered
+  published: boolean; // false = hidden from the website
+  // null = the sub-catalogs linked to the dish's catalog; a list = only these sub-catalogs.
+  subCatalogIds: string[] | null;
+  hiddenItemIds: string[]; // items of its sub-catalogs this dish does not offer
+  createdAt: string;
+}
+
+export interface RestaurantSettings {
+  name: string;
+  currency: string;
+  whatsapp: string;
+  phone: string;
+  address: string;
+  hours: string;
+  acceptOrders: boolean;
+  delivery: boolean;
+  pickup: boolean;
+  deliveryFee: number;
+  minOrder: number;
+  orderNote: string; // shown above the order form, e.g. delivery areas
+}
+
+export type OrderStatus = 'new' | 'preparing' | 'ready' | 'done' | 'cancelled';
+
+export const ORDER_STATUSES: { id: OrderStatus; label: string; color: string }[] = [
+  { id: 'new', label: 'جديد', color: '#E03131' },
+  { id: 'preparing', label: 'قيد التحضير', color: '#E8590C' },
+  { id: 'ready', label: 'جاهز', color: '#1971C2' },
+  { id: 'done', label: 'تم التسليم', color: '#2F9E44' },
+  { id: 'cancelled', label: 'ملغى', color: '#868E96' },
+];
+
+export interface OrderLine {
+  dishId: string;
+  name: string;
+  unitPrice: number; // dish price plus the picked extras
+  qty: number;
+  removed: string[]; // names of the ingredients taken out
+  extras: { name: string; price: number }[];
+  notes: string;
+}
+
+export type OrderType = 'delivery' | 'pickup';
+
+export interface MenuOrder {
+  id: string;
+  number: number;
+  createdAt: string;
+  status: OrderStatus;
+  type: OrderType;
+  source: 'website';
+  name: string;
+  phone: string;
+  address: string;
+  notes: string;
+  lines: OrderLine[];
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+}
+
+export interface RestaurantAdminData {
+  categories: MenuCategory[];
+  subCatalogs: SubCatalog[];
+  dishes: Dish[];
+  orders: MenuOrder[];
+  settings: RestaurantSettings;
+}
+
+export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
+  name: '',
+  currency: 'ل.س',
+  whatsapp: '',
+  phone: '',
+  address: '',
+  hours: '',
+  acceptOrders: true,
+  delivery: true,
+  pickup: true,
+  deliveryFee: 0,
+  minOrder: 0,
+  orderNote: '',
+};
+
+export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
+  categories: [],
+  subCatalogs: [],
+  dishes: [],
+  orders: [],
+  settings: { ...DEFAULT_RESTAURANT_SETTINGS },
+});
+
+export const emptyDish = (categoryId = ''): Dish => ({
+  id: '',
+  name: '',
+  description: '',
+  price: 0,
+  oldPrice: 0,
+  categoryId,
+  image: '',
+  badge: '',
+  featured: false,
+  available: true,
+  published: true,
+  subCatalogIds: null,
+  hiddenItemIds: [],
+  createdAt: '',
+});
+
+const str = (v: unknown, fallback = '') => (typeof v === 'string' ? v : fallback);
+const num = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : Number(v) || 0);
+const strList = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+
+const normalizeCategory = (raw: any): MenuCategory => ({
+  id: str(raw?.id) || newId('cat'),
+  name: str(raw?.name),
+  icon: str(raw?.icon),
+  image: str(raw?.image),
+  hidden: !!raw?.hidden,
+});
+
+const normalizeSubCatalog = (raw: any): SubCatalog => ({
+  id: str(raw?.id) || newId('sub'),
+  name: str(raw?.name),
+  type: raw?.type === 'extras' ? 'extras' : 'ingredients',
+  items: Array.isArray(raw?.items)
+    ? raw.items.map((i: any) => ({ id: str(i?.id) || newId('itm'), name: str(i?.name), price: Math.max(0, num(i?.price)) }))
+    : [],
+  categoryIds: strList(raw?.categoryIds),
+});
+
+const normalizeDish = (raw: any): Dish => ({
+  ...emptyDish(),
+  id: str(raw?.id) || newId('dish'),
+  name: str(raw?.name),
+  description: str(raw?.description),
+  price: Math.max(0, num(raw?.price)),
+  oldPrice: Math.max(0, num(raw?.oldPrice)),
+  categoryId: str(raw?.categoryId),
+  image: str(raw?.image),
+  badge: DISH_BADGES.some((b) => b.id === raw?.badge) ? raw.badge : '',
+  featured: !!raw?.featured,
+  available: raw?.available !== false,
+  published: raw?.published !== false,
+  subCatalogIds: Array.isArray(raw?.subCatalogIds) ? strList(raw.subCatalogIds) : null,
+  hiddenItemIds: strList(raw?.hiddenItemIds),
+  createdAt: str(raw?.createdAt) || new Date().toISOString(),
+});
+
+const normalizeOrder = (raw: any): MenuOrder => ({
+  id: str(raw?.id) || newId('ord'),
+  number: num(raw?.number),
+  createdAt: str(raw?.createdAt) || new Date().toISOString(),
+  status: ORDER_STATUSES.some((s) => s.id === raw?.status) ? raw.status : 'new',
+  type: raw?.type === 'pickup' ? 'pickup' : 'delivery',
+  source: 'website',
+  name: str(raw?.name),
+  phone: str(raw?.phone),
+  address: str(raw?.address),
+  notes: str(raw?.notes),
+  lines: Array.isArray(raw?.lines)
+    ? raw.lines.map((l: any) => ({
+        dishId: str(l?.dishId),
+        name: str(l?.name),
+        unitPrice: num(l?.unitPrice),
+        qty: Math.max(1, num(l?.qty)),
+        removed: strList(l?.removed),
+        extras: Array.isArray(l?.extras) ? l.extras.map((e: any) => ({ name: str(e?.name), price: num(e?.price) })) : [],
+        notes: str(l?.notes),
+      }))
+    : [],
+  subtotal: num(raw?.subtotal),
+  deliveryFee: num(raw?.deliveryFee),
+  total: num(raw?.total),
+});
+
+export const normalizeRestaurantAdmin = (raw: any): RestaurantAdminData => ({
+  settings: { ...DEFAULT_RESTAURANT_SETTINGS, ...(raw?.settings || {}) },
+  categories: Array.isArray(raw?.categories) ? raw.categories.map(normalizeCategory) : [],
+  subCatalogs: Array.isArray(raw?.subCatalogs) ? raw.subCatalogs.map(normalizeSubCatalog) : [],
+  dishes: Array.isArray(raw?.dishes) ? raw.dishes.map(normalizeDish) : [],
+  orders: Array.isArray(raw?.orders) ? raw.orders.map(normalizeOrder) : [],
+});
+
+// The sub-catalogs a dish offers, each with only the items this dish keeps.
+export const dishSubCatalogs = (dish: Dish, subCatalogs: SubCatalog[]): SubCatalog[] => {
+  const picked = dish.subCatalogIds
+    ? dish.subCatalogIds.map((id) => subCatalogs.find((s) => s.id === id)).filter((s): s is SubCatalog => !!s)
+    : subCatalogs.filter((s) => s.categoryIds.includes(dish.categoryId));
+  return picked
+    .map((s) => ({ ...s, items: s.items.filter((i) => i.name.trim() && !dish.hiddenItemIds.includes(i.id)) }))
+    .filter((s) => s.items.length > 0);
+};
+
+// What a visitor's order needs to be recorded in the admin window.
+export type OrderInput = Omit<MenuOrder, 'id' | 'number' | 'createdAt' | 'status' | 'source'>;
+
+export const submitOrder = (d: RestaurantAdminData, o: OrderInput): RestaurantAdminData => {
+  const number = d.orders.reduce((m, x) => Math.max(m, x.number), 0) + 1;
+  const order: MenuOrder = { ...o, id: newId('ord'), number, createdAt: new Date().toISOString(), status: 'new', source: 'website' };
+  return { ...d, orders: [order, ...d.orders] };
+};
+
+// ---------- Example menu (a first restaurant is not empty) ----------
+
+export const foodPhoto = (id: string, w = 900) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80`;
+
+export const FOOD_PHOTOS = {
+  grill: '1555939594-58d7cb561ad1',
+  mezze: '1541518763669-27fef04b14ea',
+  plates: '1490645935967-10de6ba17061',
+  burger: '1568901346375-23c9450c58cd',
+  pizza: '1565299624946-b28f40a0ae38',
+  shawarma: '1662116765994-1e4200c43589',
+  falafel: '1593001869807-9b07543c8688',
+  baklava: '1598110750624-207050c4f28c',
+  drinks: '1544145945-f90425340c7e',
+  coffee: '1509042239860-f550ce710b93',
+  juice: '1513558161293-cdaf765ed2fd',
+  pastries: '1555507036-ab1f4038808a',
+};
+
+export const exampleRestaurantAdmin = (): RestaurantAdminData => {
+  const now = Date.now();
+  const at = (i: number) => new Date(now - i * 60000).toISOString();
+  const cats: MenuCategory[] = [
+    { id: 'cat-grill', name: 'مشاوي', icon: '🔥', image: '', hidden: false },
+    { id: 'cat-sandwich', name: 'سندويش وبرغر', icon: '🍔', image: '', hidden: false },
+    { id: 'cat-salad', name: 'سلطات ومقبلات', icon: '🥗', image: '', hidden: false },
+    { id: 'cat-sweets', name: 'حلويات', icon: '🍰', image: '', hidden: false },
+    { id: 'cat-drinks', name: 'مشروبات', icon: '🥤', image: '', hidden: false },
+  ];
+  const item = (id: string, name: string, price = 0): SubCatalogItem => ({ id, name, price });
+  const subs: SubCatalog[] = [
+    {
+      id: 'sub-sandwich-ing', name: 'مكونات السندويش', type: 'ingredients', categoryIds: ['cat-sandwich'],
+      items: [item('itm-garlic', 'ثوم'), item('itm-pickles', 'مخلل'), item('itm-tomato', 'بندورة'), item('itm-lettuce', 'خس'), item('itm-onion', 'بصل')],
+    },
+    {
+      id: 'sub-sandwich-ext', name: 'إضافات', type: 'extras', categoryIds: ['cat-sandwich', 'cat-grill'],
+      items: [item('itm-cheese', 'جبنة إضافية', 5000), item('itm-fries', 'بطاطا مقلية', 8000), item('itm-hummus', 'صحن حمص', 10000)],
+    },
+    {
+      id: 'sub-grill-ing', name: 'مع الصحن', type: 'ingredients', categoryIds: ['cat-grill'],
+      items: [item('itm-bread', 'خبز'), item('itm-grill-onion', 'بصل مشوي'), item('itm-grill-tomato', 'بندورة مشوية'), item('itm-toum', 'ثومية')],
+    },
+    {
+      id: 'sub-drinks-ext', name: 'إضافات المشروب', type: 'extras', categoryIds: ['cat-drinks'],
+      items: [item('itm-ice', 'ثلج إضافي', 0), item('itm-honey', 'عسل', 3000)],
+    },
+  ];
+  const dish = (i: number, d: Partial<Dish>): Dish => ({ ...emptyDish(), id: `dish-ex-${i}`, createdAt: at(i), ...d });
+  const dishes: Dish[] = [
+    dish(1, { name: 'شيش طاووق', description: 'قطع دجاج متبلة على الفحم مع خبز وثومية.', price: 65000, categoryId: 'cat-grill', image: foodPhoto(FOOD_PHOTOS.grill), badge: 'popular', featured: true }),
+    dish(2, { name: 'مشاوي مشكلة', description: 'كباب وشقف وطاووق لشخصين.', price: 140000, oldPrice: 160000, categoryId: 'cat-grill', image: foodPhoto(FOOD_PHOTOS.mezze), badge: 'offer', featured: true }),
+    dish(3, { name: 'برغر لحم', description: 'لحم بلدي مشوي مع جبنة وخضار.', price: 55000, categoryId: 'cat-sandwich', image: foodPhoto(FOOD_PHOTOS.burger), featured: true }),
+    dish(4, { name: 'سندويش شاورما', description: 'شاورما دجاج بخبز الصاج مع ثوم ومخلل.', price: 30000, categoryId: 'cat-sandwich', image: foodPhoto(FOOD_PHOTOS.shawarma), badge: 'popular' }),
+    dish(5, { name: 'بيتزا خضار', description: 'عجينة رقيقة مع خضار وجبنة موزاريلا.', price: 60000, categoryId: 'cat-sandwich', image: foodPhoto(FOOD_PHOTOS.pizza), badge: 'vegetarian' }),
+    dish(6, { name: 'فتوش', description: 'خضار طازجة مع خبز محمص ودبس رمان.', price: 25000, categoryId: 'cat-salad', image: foodPhoto(FOOD_PHOTOS.plates), badge: 'vegetarian' }),
+    dish(7, { name: 'فلافل', description: 'أقراص فلافل مقرمشة مع طحينة وخضار.', price: 18000, categoryId: 'cat-salad', image: foodPhoto(FOOD_PHOTOS.falafel), badge: 'vegetarian' }),
+    dish(8, { name: 'بقلاوة', description: 'بقلاوة بالفستق الحلبي.', price: 35000, categoryId: 'cat-sweets', image: foodPhoto(FOOD_PHOTOS.baklava), badge: 'new' }),
+    dish(11, { name: 'معجنات حلوة', description: 'تشكيلة معجنات طازجة.', price: 25000, categoryId: 'cat-sweets', image: foodPhoto(FOOD_PHOTOS.pastries) }),
+    dish(9, { name: 'عصير طبيعي', description: 'برتقال أو ليمون بالنعناع.', price: 20000, categoryId: 'cat-drinks', image: foodPhoto(FOOD_PHOTOS.juice) }),
+    dish(10, { name: 'قهوة', description: 'إسبريسو أو قهوة عربية.', price: 12000, categoryId: 'cat-drinks', image: foodPhoto(FOOD_PHOTOS.coffee) }),
+  ];
+  return {
+    ...createEmptyRestaurantAdmin(),
+    categories: cats,
+    subCatalogs: subs,
+    dishes,
+    settings: { ...DEFAULT_RESTAURANT_SETTINGS, name: 'مطعمك', whatsapp: '963991234567', deliveryFee: 10000, address: 'دمشق', hours: 'يوميًا من 11 صباحًا حتى 12 ليلًا' },
+  };
+};

@@ -1,21 +1,20 @@
 import React, { useState } from 'react';
-import { loginWithEmail, registerWithEmail, db } from '../services/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-
-// TEMPORARY: used by the "دخول مباشر" testing shortcut below.
-const LAST_ACCOUNT_KEY = 'weelink_last_login_account';
-const rememberLastAccount = (uid: string, email: string) => {
-  try {
-    localStorage.setItem(LAST_ACCOUNT_KEY, JSON.stringify({ uid, email }));
-  } catch {
-    // storage unavailable: the shortcut simply won't find an account
-  }
-};
+import { auth } from '../services/firebase';
+import { SignInError, registerOwner, resolveAccountId, signInOwner } from '../services/accounts';
 
 interface StandardAuthProps {
   onLoginWithGoogle: () => Promise<void>;
   onAuthSuccess: (userUid: string, isNewUser: boolean) => void;
 }
+
+const signInErrorText = (e: unknown, register = false) => {
+  const kind = e instanceof SignInError ? e.kind : 'network';
+  if (kind === 'credentials') return 'البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى مراجعة المدخلات.';
+  if (kind === 'exists') return 'البريد الإلكتروني المدخل مسجل مسبقاً بموجب حساب آخر! يرجى الدخول مباشرة.';
+  if (kind === 'weak') return 'يجب أن تكون كلمة المرور مكونة من 6 أحرف على الأقل لحماية حسابك.';
+  if (kind === 'disabled') return 'تسجيل الدخول بالبريد غير مفعّل بعد في Firebase (Authentication ← Email/Password).';
+  return register ? 'حدث خطأ أثناء إنشاء حسابك. يرجى المحاولة لاحقاً.' : 'تعذر تسجيل الدخول. يرجى التحقق من اتصالك بالإنترنت.';
+};
 
 export const StandardAuth: React.FC<StandardAuthProps> = ({
   onLoginWithGoogle,
@@ -36,22 +35,15 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // TEMPORARY (testing shortcut, to be removed): "دخول مباشر" signs straight
-  // into the last account that logged in with email on this browser. Logout
-  // clears weelink_simulated_user_*, so the account is kept in its own key.
-  const handleDirectLogin = () => {
-    try {
-      const last = JSON.parse(localStorage.getItem(LAST_ACCOUNT_KEY) || 'null');
-      if (last && last.uid) {
-        localStorage.setItem('weelink_simulated_user_uid', last.uid);
-        localStorage.setItem('weelink_simulated_user_email', last.email || '');
-        onAuthSuccess(last.uid, false);
-        return;
-      }
-    } catch {
-      // fall through to the message below
+  // "دخول مباشر": back into the account this browser is still signed in to (Firebase keeps the
+  // sign-in), without typing the password again.
+  const handleDirectLogin = async () => {
+    const user = auth.currentUser;
+    if (user && !user.isAnonymous) {
+      onAuthSuccess(await resolveAccountId(user), false);
+      return;
     }
-    setError('لا يوجد حساب سابق على هذا المتصفح. سجّل الدخول مرة واحدة بالبريد وكلمة المرور، وبعدها يعمل الدخول المباشر.');
+    setError('لا يوجد حساب مسجّل الدخول على هذا المتصفح. سجّل الدخول بالبريد وكلمة المرور.');
   };
 
   // Handle Log In (الصورة الأولى)
@@ -63,47 +55,11 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
     }
     setLoading(true);
     setError(null);
-
-    const targetEmail = email.trim().toLowerCase();
-
     try {
-      // 1. Try simulated fallback login in Firestore first (highly resilient)
-      const simUserRef = doc(db, 'simulated_users', targetEmail);
-      const simUserSnap = await getDoc(simUserRef);
-
-      if (simUserSnap.exists()) {
-        const simUserData = simUserSnap.data();
-        if (simUserData.password === password) {
-          localStorage.setItem('weelink_simulated_user_uid', simUserData.uid);
-          localStorage.setItem('weelink_simulated_user_email', targetEmail);
-          rememberLastAccount(simUserData.uid, targetEmail);
-          onAuthSuccess(simUserData.uid, false);
-          setLoading(false);
-          return;
-        } else {
-          setError('كلمة المرور المدخلة غير صحيحة. يرجى المحاولة مجدداً.');
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 2. Try standard Firebase Auth Login
-      const user = await loginWithEmail(targetEmail, password);
-      if (user) {
-        onAuthSuccess(user.uid, false);
-      }
-    } catch (err: any) {
+      onAuthSuccess(await signInOwner(email.trim().toLowerCase(), password), false);
+    } catch (err) {
       console.warn('Authentication login failure:', err);
-      if (
-        err.code === 'auth/wrong-password' || 
-        err.code === 'auth/user-not-found' || 
-        err.code === 'auth/invalid-credential' ||
-        err.message?.includes('invalid')
-      ) {
-        setError('البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى مراجعة المدخلات.');
-      } else {
-        setError('تعذر تسجيل الدخول. يرجى التحقق من اتصالك بالإنترنت.');
-      }
+      setError(signInErrorText(err));
     } finally {
       setLoading(false);
     }
@@ -126,54 +82,12 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
     }
     setLoading(true);
     setError(null);
-
-    const targetEmail = email.trim().toLowerCase();
-    const simUid = 'sim_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-
     try {
-      // 1. Check if email already registered in simulated users
-      const simUserRef = doc(db, 'simulated_users', targetEmail);
-      const simUserSnap = await getDoc(simUserRef);
-      if (simUserSnap.exists()) {
-        setError('البريد الإلكتروني المدخل مسجل مسبقاً بموجب حساب آخر! يرجى الدخول مباشرة.');
-        setLoading(false);
-        return;
-      }
-
-      // 2. Try Firebase Auth sign up first
-      let firebaseUser = null;
-      try {
-        firebaseUser = await registerWithEmail(targetEmail, password);
-      } catch (authErr: any) {
-        console.warn('Firebase registration fallback triggered:', authErr);
-        if (authErr.code === 'auth/email-already-in-use') {
-          setError('البريد الإلكتروني المدخل مسجل مسبقاً بموجب حساب آخر! يرجى الدخول مباشرة.');
-          setLoading(false);
-          return;
-        }
-      }
-
-      const activeUid = firebaseUser ? firebaseUser.uid : simUid;
-
-      // 3. Save user info to the simulated_users collection
-      await setDoc(simUserRef, {
-        email: targetEmail,
-        password: password,
-        uid: activeUid,
-        createdAt: new Date().toISOString()
-      });
-
-      // 4. Set local session credentials
-      localStorage.setItem('weelink_simulated_user_uid', activeUid);
-      localStorage.setItem('weelink_simulated_user_email', targetEmail);
-      rememberLastAccount(activeUid, targetEmail);
-
-      // 5. Complete Onboarding with fresh blank page layout
-      onAuthSuccess(activeUid, true);
-
-    } catch (err: any) {
+      const { accountId, isNew } = await registerOwner(email.trim().toLowerCase(), password);
+      onAuthSuccess(accountId, isNew);
+    } catch (err) {
       console.error('Registration flow error:', err);
-      setError('حدث خطأ أثناء إنشاء حسابك. يرجى المحاولة لاحقاً.');
+      setError(signInErrorText(err, true));
     } finally {
       setLoading(false);
     }
@@ -201,12 +115,11 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
                 <span>سجل بحساب Google</span>
               </button>
 
-              {/* TEMPORARY testing shortcut: enter the last account used on this browser. */}
               <button
                 type="button"
                 onClick={handleDirectLogin}
                 className="flex-1 py-3 px-4 border border-[#0071e3] text-[#0071e3] rounded-lg text-xs font-bold hover:bg-[#0071e3]/5 transition-all cursor-pointer text-center"
-                title="دخول سريع لآخر حساب سُجّل الدخول به على هذا المتصفح (للتجربة فقط)"
+                title="دخول سريع للحساب المسجّل الدخول على هذا المتصفح"
               >
                 دخول مباشر
               </button>

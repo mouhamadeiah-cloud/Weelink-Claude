@@ -2,14 +2,16 @@
 //   restaurants/{uid}                 the published site: pages, elements, the menu and the public
 //                                     settings. Anyone can read it (the guests' site and QR codes).
 //   restaurants/{uid}/orders/{id}     the guests' orders. A guest can only add a new order; only the
-//                                     owner reads and updates them (orders list, kitchen screen).
+//                                     owner and the restaurant's devices read and update them.
 //   restaurants/{uid}/ledger/{id}     the accounts (الحسابات). Owner only. The cashier writes
 //                                     each payment here too.
 //   restaurants/{uid}/tabs|shifts|screens|log   the cashier and the waiters (see staffCloud.ts).
+//   restaurants/{uid}/private/staff   the devices and the workers, for the tablets (see saveStaff).
+//   restaurants/{uid}/deviceLinks/{authUid}   which code each tablet signed in with.
 // See firestore.rules. Nothing private (orders, accounts, customers) is ever in the public doc.
 import { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../services/firebase';
+import { auth, db } from '../../services/firebase';
 import type { CanvasElement, Page } from '../../types';
 import { LedgerEntry, MenuOrder, StaffDevice, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry, setDayStartHour } from './restaurantTypes';
 import { newId } from '../shop/shopTypes';
@@ -71,13 +73,33 @@ export const kitchenScreenUrl = (uid: string) => `${window.location.origin}/?kit
 // The address every restaurant tablet opens once; its code then picks its screen.
 export const deviceUrl = (uid: string) => `${window.location.origin}/?device=${encodeURIComponent(uid)}`;
 
-// The devices and the workers (with their PINs) are kept in the owner's design document, which only
-// the owner (and, for now, the test accounts) can read. Real per-device sign-in comes with the
-// separate customer/owner levels.
+// The devices and the workers (with their PINs), for the restaurant's tablets:
+// restaurants/{uid}/private/staff, which only the owner and the linked devices can read. `codes` maps
+// each working device's code to its id; the rules check a device's code against it.
+const staffDoc = (uid: string) => doc(db, 'restaurants', uid, 'private', 'staff');
+
+export const saveStaff = (uid: string, admin: Pick<RestaurantAdminData, 'devices' | 'workers'>) =>
+  setDoc(staffDoc(uid), {
+    codes: Object.fromEntries(admin.devices.filter((d) => d.active && d.code).map((d) => [d.code, d.id])),
+    devices: clean(admin.devices),
+    workers: clean(admin.workers),
+    updatedAt: new Date().toISOString(),
+  });
+
 export const loadStaff = async (uid: string): Promise<{ devices: StaffDevice[]; workers: Worker[] }> => {
-  const snap = await getDoc(doc(db, 'designs', uid));
-  const admin = normalizeRestaurantAdmin(snap.exists() ? (snap.data() as any).restaurantAdmin || {} : {});
+  const snap = await getDoc(staffDoc(uid));
+  const data: any = snap.exists() ? snap.data() : {};
+  const admin = normalizeRestaurantAdmin({ devices: data.devices, workers: data.workers });
   return { devices: admin.devices, workers: admin.workers };
+};
+
+// A tablet links this browser's (anonymous) sign-in to the restaurant with its code. The rules accept
+// the link only with the code of a working device, and from then on let it work with the bills and
+// the orders; stopping the device or changing its code cuts it off.
+export const linkDevice = (uid: string, code: string) => {
+  const me = auth.currentUser;
+  if (!me) return Promise.reject(new Error('not-signed-in'));
+  return setDoc(doc(db, 'restaurants', uid, 'deviceLinks', me.uid), { code, at: new Date().toISOString() });
 };
 
 export const setOrderDoneLines = (uid: string, orderId: string, doneLines: number[]) => updateDoc(doc(ordersCol(uid), orderId), { doneLines });

@@ -80,6 +80,7 @@ export interface RestaurantSettings {
   tables: number; // how many tables get a QR code
   payAnyWorker: boolean; // a table's bill can be paid at any worker (false = only at the one who opened it)
   autoLockMinutes: number; // the cashier/waiter screen asks for a PIN again after this idle time (0 = never)
+  boardShows: 'takeaway' | 'all'; // the waiting screen: only orders the guest collects, or every order
 }
 
 // ---------- Kitchen sections, halls, tables and devices (the staff side) ----------
@@ -105,13 +106,14 @@ export interface Hall {
   tables: RestTable[];
 }
 
-export type DeviceRole = 'kitchen' | 'cashier' | 'waiter' | 'display';
+export type DeviceRole = 'kitchen' | 'cashier' | 'waiter' | 'display' | 'board';
 
 export const DEVICE_ROLES: { id: DeviceRole; label: string; hint: string }[] = [
   { id: 'kitchen', label: 'شاشة مطبخ', hint: 'تعرض الطلبات للتحضير، لكل الأقسام أو لقسم واحد.' },
   { id: 'cashier', label: 'كاشير', hint: 'الطاولات والطلبات والدفع.' },
   { id: 'waiter', label: 'تابلت نادل', hint: 'نفس برنامج الكاشير، يحمله النادل بين الطاولات.' },
   { id: 'display', label: 'شاشة الزبون', hint: 'تعرض للزبون طلبه والمبلغ عند الكاشير.' },
+  { id: 'board', label: 'شاشة الانتظار', hint: 'تعرض للزبائن أرقام الطلبات قيد التحضير والجاهزة للاستلام، حسب حالة المطبخ.' },
 ];
 
 // A tablet or screen of the restaurant. Its code opens only its own screen on that device.
@@ -235,6 +237,7 @@ export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   tables: 10,
   payAnyWorker: true,
   autoLockMinutes: 0,
+  boardShows: 'takeaway',
 };
 
 export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({

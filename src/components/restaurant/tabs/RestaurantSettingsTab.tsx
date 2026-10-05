@@ -28,6 +28,14 @@ export const RestaurantSettingsTab: React.FC<RestaurantTabProps> = ({ data, upda
           </select>
         </Field>
       </Card>
+      <Card title="شاشة الانتظار">
+        <Field label="الطلبات التي تظهر على شاشة الانتظار" hint="تعرض أرقام الطلبات قيد التحضير، وتنقلها إلى «جاهز للاستلام» عندما يجهّزها المطبخ.">
+          <select className="h-10 px-3 rounded-xl border border-neutral-200 bg-white text-sm font-bold" value={s.boardShows} onChange={(e) => set({ boardShows: e.target.value === 'all' ? 'all' : 'takeaway' })}>
+            <option value="takeaway">طلبات السفري والاستلام فقط</option>
+            <option value="all">كل الطلبات (مع الطاولات والتوصيل)</option>
+          </select>
+        </Field>
+      </Card>
       <Card title="الطلب أونلاين">
         <Toggle label="استقبال الطلبات من الموقع" checked={s.acceptOrders} onChange={(acceptOrders) => set({ acceptOrders })} />
         <Toggle label="إرسال نسخة من الطلب على واتساب أيضًا" checked={s.whatsappCopy} onChange={(whatsappCopy) => set({ whatsappCopy })} />

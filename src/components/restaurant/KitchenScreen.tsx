@@ -366,13 +366,19 @@ export const KitchenOverlay: React.FC<{ uid: string; live: LiveState<MenuOrder>;
 };
 
 // The published menu (dishes, sections, halls, settings) for a screen that runs on its own.
-export const usePublishedMenu = (uid: string) => {
+// refreshMs: load it again every so often, so a screen that stays on all day sees new settings.
+export const usePublishedMenu = (uid: string, refreshMs = 0) => {
   const [menu, setMenu] = useState<RestaurantAdminData | null>(null);
   useEffect(() => {
     let alive = true;
-    loadPublishedRestaurant(uid).then((r) => alive && r && setMenu(r.admin)).catch((e) => console.warn('Could not load the menu:', e));
-    return () => { alive = false; };
-  }, [uid]);
+    const load = () => loadPublishedRestaurant(uid).then((r) => alive && r && setMenu(r.admin)).catch((e) => console.warn('Could not load the menu:', e));
+    load();
+    const t = refreshMs ? window.setInterval(load, refreshMs) : 0;
+    return () => {
+      alive = false;
+      if (t) window.clearInterval(t);
+    };
+  }, [uid, refreshMs]);
   return menu;
 };
 

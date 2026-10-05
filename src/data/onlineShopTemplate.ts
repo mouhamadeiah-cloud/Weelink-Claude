@@ -90,7 +90,7 @@ const paragraph = (id: string, slideId: string, box: Box, text: string, size = 1
     textAlign: align,
   });
 
-interface Product {
+export interface Product {
   name: string;
   price: number;
   oldPrice?: number;
@@ -98,7 +98,7 @@ interface Product {
   tag?: string;
 }
 
-const PRODUCTS: Product[] = [
+export const PRODUCTS: Product[] = [
   { name: 'ساعة يد كلاسيكية', price: 250, oldPrice: 320, image: '1523275335684-37898b6baf30', tag: 'خصم' },
   { name: 'سماعات لاسلكية', price: 180, image: '1505740420928-5e560c06d30e', tag: 'الأكثر طلبًا' },
   { name: 'حذاء رياضي أحمر', price: 210, image: '1542291026-7eec264c27ff' },

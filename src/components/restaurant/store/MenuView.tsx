@@ -147,6 +147,7 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
   const limited = elem.menuLimit ? dishes.slice(0, elem.menuLimit) : dishes;
   const usedCats = categories.filter((c) => limited.some((d) => d.categoryId === c.id));
   const marquee = layout === 'marquee';
+  const cardAnim = elem.shopCardAnimation || 'none';
   const showTabs = !marquee && elem.menuTabs !== false && source === 'all' && usedCats.length > 1;
   useEffect(() => {
     if (tab !== 'all' && !usedCats.some((c) => c.id === tab)) setTab('all');
@@ -270,8 +271,10 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
                 </h3>
               )}
               <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${CARD_MIN[layout] || 250}px, 1fr))` }}>
-                {list.map((d) => (
-                  <Card key={d.id} dish={d} look={look} currency={currency} onOpen={() => isPreviewActive && setOpenId(d.id)} onAdd={() => quickAdd(d)} />
+                {list.map((d, i) => (
+                  <div key={d.id} className={`flex [&>*]:flex-1 ${cardAnim !== 'none' ? `shop-anim-${cardAnim}` : ''}`} style={cardAnim !== 'none' ? { animationDelay: `${(i % 4) * 0.35}s` } : undefined}>
+                    <Card dish={d} look={look} currency={currency} onOpen={() => isPreviewActive && setOpenId(d.id)} onAdd={() => quickAdd(d)} />
+                  </div>
                 ))}
               </div>
             </section>

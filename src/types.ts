@@ -139,7 +139,7 @@ export interface CanvasElement {
   // 'shopProducts' element only: how the store's products are shown.
   shopLayout?: ShopLayout;
   shopLimit?: number; // at most this many products (0 or unset = all)
-  shopCardAnimation?: ShopCardAnimation; // a looping animation on each card
+  shopCardAnimation?: ShopCardAnimation; // a looping animation on each card (shop, car and menu cards)
   shopSpeed?: number; // 'marquee' layout: seconds for one full pass
   // 'shopSearch' element only: the look of the search bar (its placeholder is the content).
   shopSearchStyle?: ShopSearchStyle;

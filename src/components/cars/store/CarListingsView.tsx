@@ -53,6 +53,7 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
   const layout = elem.carLayout || 'grid';
   const marquee = layout === 'marquee';
   const featuredOnly = elem.carSource === 'featured';
+  const cardAnim = elem.shopCardAnimation || 'none';
   const [openId, setOpenId] = useState<string | null>(null);
   const [brand, setBrand] = useState('');
   const [body, setBody] = useState('');
@@ -253,10 +254,19 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
         ) : (
           <div className={grows ? 'pb-2 pt-2' : 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-2 pt-2'}>
             <div className={layout === 'wide' ? 'flex flex-col gap-5 max-w-[980px] mx-auto' : 'flex flex-wrap justify-center items-stretch gap-5'}>
-              {list.map((c) => {
+              {list.map((c, i) => {
                 const show = () => setOpenId(c.id);
                 return (
-                  <div key={c.id} data-car-id={c.id} title={carTitle(c)} className="flex" style={layout === 'wide' ? undefined : { width: CARD_WIDTH[layout] || CARD_WIDTH.grid, maxWidth: '100%' }}>
+                  <div
+                    key={c.id}
+                    data-car-id={c.id}
+                    title={carTitle(c)}
+                    className={`flex ${cardAnim !== 'none' ? `shop-anim-${cardAnim}` : ''}`}
+                    style={{
+                      ...(layout === 'wide' ? {} : { width: CARD_WIDTH[layout] || CARD_WIDTH.grid, maxWidth: '100%' }),
+                      ...(cardAnim !== 'none' ? { animationDelay: `${(i % 4) * 0.35}s` } : {}),
+                    }}
+                  >
                     {layout === 'wide' ? <CarWide car={c} look={look} onOpen={show} /> : layout === 'large' ? <CarLarge car={c} look={look} onOpen={show} /> : <CarCard car={c} look={look} onOpen={show} />}
                   </div>
                 );

@@ -4,6 +4,7 @@
 import React from 'react';
 import { CarFront } from 'lucide-react';
 import type { CanvasElement, ShopSearchStyle } from '../../types';
+import { CARD_ANIMATIONS } from '../ShopElementSettings';
 
 interface CarElementSettingsProps {
   element: CanvasElement;
@@ -96,6 +97,8 @@ export const CarElementSettings: React.FC<CarElementSettingsProps> = ({ element,
         </>
       ) : (
         <>
+          <Label>حركة البطاقات</Label>
+          <Choices options={CARD_ANIMATIONS} value={element.shopCardAnimation || 'none'} onChange={(id) => onUpdateElement({ shopCardAnimation: id })} />
           <label className="flex items-center justify-between gap-2 text-[11px] font-bold text-neutral-600 pt-1 cursor-pointer">
             <span>شريط تصفية (الماركة، الهيكل، الترتيب)</span>
             <input type="checkbox" checked={!!element.carFilters} onChange={(e) => onUpdateElement({ carFilters: e.target.checked })} className="w-4 h-4 accent-[#C8102E]" />

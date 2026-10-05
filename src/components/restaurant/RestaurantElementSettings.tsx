@@ -5,6 +5,7 @@
 import React from 'react';
 import { UtensilsCrossed } from 'lucide-react';
 import type { CanvasElement } from '../../types';
+import { CARD_ANIMATIONS } from '../ShopElementSettings';
 import { useRestaurantData } from './store/RestaurantDataContext';
 
 interface RestaurantElementSettingsProps {
@@ -100,10 +101,15 @@ export const RestaurantElementSettings: React.FC<RestaurantElementSettingsProps>
       )}
       <Label>طريقة العرض</Label>
       <Choices options={LAYOUTS} value={element.menuLayout || 'grid'} onChange={(id) => onUpdateElement({ menuLayout: id })} />
-      {element.menuLayout === 'marquee' && (
+      {element.menuLayout === 'marquee' ? (
         <>
           <Label>سرعة الشريط: دورة كل {element.menuSpeed || 30} ثانية</Label>
           <input type="range" min={8} max={90} value={element.menuSpeed || 30} onChange={(e) => onUpdateElement({ menuSpeed: Number(e.target.value) })} className="w-full accent-[#B5562B]" dir="ltr" />
+        </>
+      ) : (
+        <>
+          <Label>حركة البطاقات</Label>
+          <Choices options={CARD_ANIMATIONS} value={element.shopCardAnimation || 'none'} onChange={(id) => onUpdateElement({ shopCardAnimation: id })} />
         </>
       )}
       <Label>أقصى عدد للأطباق (فارغ = الكل)</Label>

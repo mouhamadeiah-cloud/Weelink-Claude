@@ -253,7 +253,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    autoComplete="current-password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -318,7 +318,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    autoComplete="new-password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

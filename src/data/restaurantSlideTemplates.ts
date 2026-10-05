@@ -1,7 +1,8 @@
 // Ready slides of the «عناصر المطعم» category, offered only in restaurant projects: a front slide,
 // menus in several layouts (live 'menuList' elements reading the admin window's dishes), the order
-// cart, why-us and an order call. Colours and fonts are the restaurant template's own. Coordinates
-// are on the 1280-wide canvas.
+// cart, why-us and an order call, plus a running strip and shaking cards of the featured dishes and
+// a running text strip (the same three as the shop and the car showroom). Colours and fonts are the
+// restaurant template's own. Coordinates are on the 1280-wide canvas.
 import { REST_COLORS as C, REST_PAGE_IDS, REST_HEADING_FONT, REST_BODY_FONT } from './restaurantTemplate';
 import { FOOD_PHOTOS, foodPhoto } from '../components/restaurant/restaurantTypes';
 
@@ -80,19 +81,38 @@ const SLIDES: (() => RestSlide)[] = [
     ],
   }),
 
-  // 2b. Featured dishes running sideways, under a running strip of short lines.
+  // 2b. A running strip of the featured dishes.
   () => ({
-    name: 'أطباق مميزة متحركة',
-    height: 680,
+    name: 'شريط أطباق مميزة متحرك',
+    height: 520,
     backgroundColor: C.cream,
     elements: [
-      el('shape', 'شريط ملون', { x: 0, y: 0, width: 1280, height: 64 }, '', { backgroundColor: C.accent }),
-      el('paragraph', 'نص متحرك', { x: 0, y: 12, width: 1280, height: 40 }, '✦ مشاوي على الفحم  ✦  توصيل سريع إلى بابك  ✦  مكونات طازجة كل صباح  ✦  اطلب الآن من الموقع', {
-        fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', fontFamily: REST_BODY_FONT, textAlign: 'center', animation: 'marquee-rtl', animationTrigger: 'loop', animationDuration: 18,
+      heading({ x: 0, y: 40, width: 1280, height: 50 }, 'أطباقنا المميزة', 34),
+      menu({ x: 0, y: 110, width: 1280, height: 380 }, { menuLayout: 'marquee', menuSource: 'featured', menuSpeed: 35 }),
+    ],
+  }),
+
+  // 2c. The featured dishes' cards, shaking every few seconds.
+  () => ({
+    name: 'أطباق مميزة بحركة اهتزاز',
+    height: 700,
+    backgroundColor: '#FFFFFF',
+    elements: [
+      heading({ x: 0, y: 56, width: 1280, height: 56 }, 'أطباقنا المميزة', 38),
+      paragraph({ x: 0, y: 116, width: 1280, height: 32 }, 'الأكثر طلبًا عند زبائننا'),
+      menu({ x: 90, y: 176, width: 1100, height: 460 }, { menuSource: 'featured', menuLimit: 3, shopCardAnimation: 'shake' }),
+    ],
+  }),
+
+  // 2d. A narrow strip of text running left to right.
+  () => ({
+    name: 'شريط نص متحرك',
+    height: 60,
+    backgroundColor: C.accent,
+    elements: [
+      el('paragraph', 'نص متحرك', { x: 0, y: 14, width: 1280, height: 32 }, 'مشاوي على الفحم   •   توصيل سريع إلى بابك   •   مكونات طازجة كل صباح   •   اطلب الآن من الموقع   •   مشاوي على الفحم   •   توصيل سريع إلى بابك   •   مكونات طازجة كل صباح   •   اطلب الآن من الموقع', {
+        fontSize: 18, fontWeight: '600', color: '#FFFFFF', fontFamily: REST_BODY_FONT, textAlign: 'center', animation: 'marquee-ltr', animationTrigger: 'loop', animationDuration: 18,
       }),
-      heading({ x: 0, y: 110, width: 1280, height: 56 }, 'أطباقنا المميزة', 38),
-      paragraph({ x: 0, y: 170, width: 1280, height: 32 }, 'اختر طبقك المفضل واطلبه بضغطة'),
-      menu({ x: 0, y: 230, width: 1280, height: 400 }, { menuLayout: 'marquee', menuSource: 'featured', menuSpeed: 35 }),
     ],
   }),
 

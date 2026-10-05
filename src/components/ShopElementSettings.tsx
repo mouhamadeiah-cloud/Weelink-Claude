@@ -26,7 +26,8 @@ const LAYOUTS: { id: ShopLayout; label: string }[] = [
   { id: 'spotlight', label: 'بطاقات بحركة' },
 ];
 
-const CARD_ANIMATIONS: { id: ShopCardAnimation; label: string }[] = [
+// Shared by the shop, the car showroom and the restaurant menu elements (same card animations).
+export const CARD_ANIMATIONS: { id: ShopCardAnimation; label: string }[] = [
   { id: 'none', label: 'بدون' },
   { id: 'float', label: 'طفو' },
   { id: 'pulse', label: 'نبض' },

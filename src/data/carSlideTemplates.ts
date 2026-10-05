@@ -1,6 +1,7 @@
 // Ready slides of the «عناصر معرض السيارات» category, offered only in car showroom projects: two
 // front slides, car lists in several layouts (live 'carListings' elements reading the showroom's
-// published cars), two search bars, a running car strip, why-us, about, numbers and contact slides.
+// published cars), two search bars, a running strip and shaking cards of the featured cars, a running
+// text strip, why-us, about, numbers and contact slides.
 // Colours and fonts are the showroom template's own. Coordinates are on the 1280-wide canvas.
 import { CAR_PAGE_IDS, CAR_PHOTOS, CAR_HEADING_FONT, CAR_BODY_FONT, carPhoto } from './carShowroomTemplate';
 import { groupFrame, INVISIBLE_GROUP_STYLES } from '../utils/templateGroups';
@@ -166,14 +167,38 @@ const SLIDES: (() => CarSlide)[] = [
     ],
   }),
 
-  // 7. A running strip of cars.
+  // 7. A running strip of the featured cars.
   () => ({
-    name: 'شريط سيارات متحرك',
+    name: 'شريط سيارات مميزة متحرك',
     height: 260,
     backgroundColor: '#FFFFFF',
     elements: [
       heading({ x: 0, y: 30, width: 1280, height: 44 }, 'في المعرض الآن', 26),
-      cars({ x: 0, y: 96, width: 1280, height: 130 }, { carLayout: 'marquee', carSpeed: 35 }),
+      cars({ x: 0, y: 96, width: 1280, height: 130 }, { carLayout: 'marquee', carSpeed: 35, carSource: 'featured' }),
+    ],
+  }),
+
+  // 7b. The featured cars' cards, shaking every few seconds.
+  () => ({
+    name: 'سيارات مميزة بحركة اهتزاز',
+    height: 700,
+    backgroundColor: '#FFFFFF',
+    elements: [
+      heading({ x: 0, y: 56, width: 1280, height: 56 }, 'سيارات مميزة', 36),
+      paragraph({ x: 0, y: 114, width: 1280, height: 32 }, 'اخترناها لك من أفضل ما في المعرض'),
+      cars({ x: 90, y: 170, width: 1100, height: 470 }, { carSource: 'featured', carLimit: 3, shopCardAnimation: 'shake' }),
+    ],
+  }),
+
+  // 7c. A narrow strip of text running left to right.
+  () => ({
+    name: 'شريط نص متحرك',
+    height: 60,
+    backgroundColor: C.accent,
+    elements: [
+      el('paragraph', 'نص متحرك', { x: 0, y: 14, width: 1280, height: 32 }, 'فحص كامل لكل سيارة   •   تقسيط مريح   •   أوراق نظامية   •   تجربة قيادة مجانية   •   فحص كامل لكل سيارة   •   تقسيط مريح   •   أوراق نظامية   •   تجربة قيادة مجانية', {
+        fontSize: 18, fontWeight: '600', color: '#FFFFFF', fontFamily: CAR_BODY_FONT, textAlign: 'center', animation: 'marquee-ltr', animationTrigger: 'loop', animationDuration: 18,
+      }),
     ],
   }),
 

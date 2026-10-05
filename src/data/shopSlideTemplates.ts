@@ -202,13 +202,13 @@ const SLIDES: (() => ShopSlide)[] = [
     ],
   }),
 
-  // 9. A narrow strip of tiny products running right to left.
+  // 9. A narrow strip of the featured products running right to left.
   () => ({
-    name: 'شريط منتجات متحرك',
+    name: 'شريط منتجات مميزة متحرك',
     height: 100,
     backgroundColor: C.ink,
     elements: [
-      products({ x: 0, y: 14, width: 1280, height: 72 }, { shopLayout: 'marquee', shopSpeed: 30 }),
+      products({ x: 0, y: 14, width: 1280, height: 72 }, { shopLayout: 'marquee', shopSpeed: 30, shopSource: 'featured' }),
     ],
   }),
 
@@ -233,15 +233,15 @@ const SLIDES: (() => ShopSlide)[] = [
     ],
   }),
 
-  // 11. Cards that shake every few seconds.
+  // 11. The featured products' cards, shaking every few seconds.
   () => ({
-    name: 'منتجات بحركة اهتزاز',
+    name: 'منتجات مميزة بحركة اهتزاز',
     height: 640,
     backgroundColor: '#FFFFFF',
     elements: [
       heading({ x: 0, y: 50, width: 1280, height: 50 }, 'منتجات مختارة', 32),
       paragraph({ x: 0, y: 104, width: 1280, height: 32 }, 'الأكثر طلبًا من عملائنا هذا الأسبوع'),
-      products({ x: 90, y: 160, width: 1100, height: 440 }, { shopLayout: 'grid', shopLimit: 4, shopCardAnimation: 'shake' }),
+      products({ x: 90, y: 160, width: 1100, height: 440 }, { shopLayout: 'grid', shopLimit: 4, shopCardAnimation: 'shake', shopSource: 'featured' }),
     ],
   }),
 

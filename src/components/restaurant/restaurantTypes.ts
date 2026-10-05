@@ -74,6 +74,8 @@ export interface RestaurantSettings {
   deliveryFee: number;
   minOrder: number;
   orderNote: string; // shown above the order form, e.g. delivery areas
+  whatsappCopy: boolean; // also open WhatsApp with the order when a guest sends one
+  tables: number; // how many tables get a QR code
 }
 
 export type OrderStatus = 'new' | 'preparing' | 'ready' | 'done' | 'cancelled';
@@ -96,7 +98,10 @@ export interface OrderLine {
   notes: string;
 }
 
-export type OrderType = 'delivery' | 'pickup';
+export type OrderType = 'delivery' | 'pickup' | 'table';
+
+// Where an order came from: the website, or a table's QR code.
+export type OrderSource = 'website' | 'qr';
 
 export interface MenuOrder {
   id: string;
@@ -104,7 +109,8 @@ export interface MenuOrder {
   createdAt: string;
   status: OrderStatus;
   type: OrderType;
-  source: 'website';
+  source: OrderSource;
+  table: string; // type 'table': the table's number
   name: string;
   phone: string;
   address: string;
@@ -136,6 +142,8 @@ export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   deliveryFee: 0,
   minOrder: 0,
   orderNote: '',
+  whatsappCopy: true,
+  tables: 10,
 };
 
 export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
@@ -208,8 +216,9 @@ const normalizeOrder = (raw: any): MenuOrder => ({
   number: num(raw?.number),
   createdAt: str(raw?.createdAt) || new Date().toISOString(),
   status: ORDER_STATUSES.some((s) => s.id === raw?.status) ? raw.status : 'new',
-  type: raw?.type === 'pickup' ? 'pickup' : 'delivery',
-  source: 'website',
+  type: raw?.type === 'pickup' || raw?.type === 'table' ? raw.type : 'delivery',
+  source: raw?.source === 'qr' ? 'qr' : 'website',
+  table: str(raw?.table),
   name: str(raw?.name),
   phone: str(raw?.phone),
   address: str(raw?.address),
@@ -230,6 +239,8 @@ const normalizeOrder = (raw: any): MenuOrder => ({
   total: num(raw?.total),
 });
 
+export const normalizeOrderRecord = (raw: any): MenuOrder => normalizeOrder(raw);
+
 export const normalizeRestaurantAdmin = (raw: any): RestaurantAdminData => ({
   settings: { ...DEFAULT_RESTAURANT_SETTINGS, ...(raw?.settings || {}) },
   categories: Array.isArray(raw?.categories) ? raw.categories.map(normalizeCategory) : [],
@@ -249,13 +260,71 @@ export const dishSubCatalogs = (dish: Dish, subCatalogs: SubCatalog[]): SubCatal
 };
 
 // What a visitor's order needs to be recorded in the admin window.
-export type OrderInput = Omit<MenuOrder, 'id' | 'number' | 'createdAt' | 'status' | 'source'>;
+export type OrderInput = Omit<MenuOrder, 'id' | 'number' | 'createdAt' | 'status'>;
 
-export const submitOrder = (d: RestaurantAdminData, o: OrderInput): RestaurantAdminData => {
-  const number = d.orders.reduce((m, x) => Math.max(m, x.number), 0) + 1;
-  const order: MenuOrder = { ...o, id: newId('ord'), number, createdAt: new Date().toISOString(), status: 'new', source: 'website' };
-  return { ...d, orders: [order, ...d.orders] };
+// A short number the kitchen and the guest can say out loud. Orders come from many devices at once,
+// so it is taken from the clock (a sequence would need a server); it repeats only every 10000 seconds.
+export const orderNumberNow = () => Math.floor(Date.now() / 1000) % 10000;
+
+export const buildOrder = (o: OrderInput): MenuOrder => ({ ...o, id: newId('ord'), number: orderNumberNow(), createdAt: new Date().toISOString(), status: 'new' });
+
+// Records an order in the admin data itself (used when the live orders cannot be reached).
+export const submitOrder = (d: RestaurantAdminData, order: MenuOrder): RestaurantAdminData => ({ ...d, orders: [order, ...d.orders] });
+
+// ---------- Accounts (الحسابات) ----------
+// One line of the restaurant's books. The website's delivered orders add their sales here by
+// themselves (source 'order'); the cashier will add its sales the same way (source 'cashier').
+
+export type LedgerKind = 'income' | 'expense';
+export type LedgerSource = 'manual' | 'order' | 'cashier';
+
+export interface LedgerEntry {
+  id: string;
+  kind: LedgerKind;
+  date: string; // the day it counts for, YYYY-MM-DD
+  createdAt: string;
+  amount: number;
+  category: string;
+  method: string;
+  note: string;
+  source: LedgerSource;
+  orderId: string;
+}
+
+export const INCOME_CATEGORIES = ['مبيعات الموقع', 'مبيعات الصالة', 'مبيعات التوصيل', 'إيرادات أخرى'];
+export const EXPENSE_CATEGORIES = ['مواد غذائية', 'خضار ولحوم', 'مشروبات', 'رواتب', 'إيجار', 'كهرباء وماء', 'غاز ومحروقات', 'صيانة', 'تغليف', 'تسويق', 'مصاريف أخرى'];
+export const PAYMENT_METHODS = ['نقدي', 'شام كاش', 'سيريتل كاش', 'MTN كاش', 'تحويل بنكي', 'بطاقة'];
+
+export const todayKey = (d = new Date()) => {
+  const z = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
 };
+
+export const normalizeLedgerEntry = (id: string, raw: any): LedgerEntry => ({
+  id,
+  kind: raw?.kind === 'expense' ? 'expense' : 'income',
+  date: /^\d{4}-\d{2}-\d{2}$/.test(str(raw?.date)) ? raw.date : todayKey(),
+  createdAt: str(raw?.createdAt) || new Date().toISOString(),
+  amount: Math.max(0, num(raw?.amount)),
+  category: str(raw?.category),
+  method: str(raw?.method),
+  note: str(raw?.note),
+  source: raw?.source === 'order' || raw?.source === 'cashier' ? raw.source : 'manual',
+  orderId: str(raw?.orderId),
+});
+
+// The sales line a delivered order adds to the books.
+export const orderLedgerEntry = (o: MenuOrder): Omit<LedgerEntry, 'id'> => ({
+  kind: 'income',
+  date: todayKey(new Date(o.createdAt)),
+  createdAt: new Date().toISOString(),
+  amount: o.total,
+  category: o.type === 'delivery' ? 'مبيعات التوصيل' : o.type === 'table' ? 'مبيعات الصالة' : 'مبيعات الموقع',
+  method: 'نقدي',
+  note: `طلب #${o.number}${o.table ? ` · طاولة ${o.table}` : ''}${o.name ? ` · ${o.name}` : ''}`,
+  source: 'order',
+  orderId: o.id,
+});
 
 // ---------- Example menu (a first restaurant is not empty) ----------
 

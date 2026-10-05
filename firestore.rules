@@ -53,6 +53,48 @@ service cloud.firestore {
       allow delete: if isOwner(userId) || isSimulatedOrPublic(userId);
     }
 
+    // Restaurant projects (see src/components/restaurant/restaurantCloud.ts).
+    // The published site is public; orders can only be added by guests; accounts are owner-only.
+    match /restaurants/{userId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if (isOwner(userId) || isSimulatedOrPublic(userId)) && isValidId(userId);
+      allow delete: if isOwner(userId) || isSimulatedOrPublic(userId);
+
+      function acceptsOrders() {
+        let r = get(/databases/$(database)/documents/restaurants/$(userId));
+        return r.data.settings.acceptOrders == true;
+      }
+
+      function isValidNewOrder(data, orderId) {
+        return data.keys().hasOnly(['id', 'number', 'createdAt', 'status', 'type', 'source', 'table', 'name', 'phone', 'address', 'notes', 'lines', 'subtotal', 'deliveryFee', 'total'])
+          && data.id == orderId
+          && data.status == 'new'
+          && data.type in ['delivery', 'pickup', 'table']
+          && data.source in ['website', 'qr']
+          && data.number is int
+          && data.createdAt is string && data.createdAt.size() <= 40
+          && data.table is string && data.table.size() <= 20
+          && data.name is string && data.name.size() <= 100
+          && data.phone is string && data.phone.size() <= 40
+          && data.address is string && data.address.size() <= 300
+          && data.notes is string && data.notes.size() <= 500
+          && data.lines is list && data.lines.size() > 0 && data.lines.size() <= 60
+          && data.subtotal is number && data.deliveryFee is number && data.total is number
+          && data.total >= 0 && data.total < 1000000000;
+      }
+
+      match /orders/{orderId} {
+        allow create: if isValidId(orderId) && isValidNewOrder(request.resource.data, orderId) && acceptsOrders();
+        allow get, list, update, delete: if isOwner(userId) || isSimulatedOrPublic(userId);
+      }
+
+      match /ledger/{entryId} {
+        allow read: if isOwner(userId) || isSimulatedOrPublic(userId);
+        allow write: if (isOwner(userId) || isSimulatedOrPublic(userId)) && isValidId(entryId);
+      }
+    }
+
     // Match statement for simulated_users login/registration
     match /simulated_users/{email} {
       allow get, create, update: if true;

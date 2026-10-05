@@ -72,6 +72,9 @@ interface CanvasWorkspaceProps {
   onSelectTableCell?: (cell: { elementId: string; row: number; col: number } | null) => void;
   isNavbarSelected?: boolean;
   onSelectNavbar?: () => void;
+  // The guests' own view of a published site (no editor around it): fills the browser window
+  // edge to edge, with no device frame, in desktop or phone layout.
+  isPublicSite?: boolean;
 }
 
 interface InteractiveCalendarWidgetProps {
@@ -705,6 +708,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onSelectTableCell,
   isNavbarSelected = false,
   onSelectNavbar,
+  isPublicSite = false,
 }) => {
   // In mobile view, elements and slides render with their phone layout ("تنسيق الموبايل") when
   // they have one. Everything below works on these resolved values, so dragging/resizing in mobile
@@ -945,7 +949,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   // Calculate dynamic scaling factor to fit workspace
   let scaleFactor = 1;
-  if (previewMode === 'mobile') {
+  if (isPublicSite) {
+    scaleFactor = workspaceWidth / baseWidth;
+  } else if (previewMode === 'mobile') {
     if (workspaceWidth < 420) {
       scaleFactor = (workspaceWidth - 32) / 380;
     }
@@ -1920,6 +1926,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // Device frames use `overflow-clip`, not `overflow-hidden`: hidden would make the frame a scroll
   // container and break fixed backgrounds' scroll timeline (see syncFixedBackgrounds).
   const getContainerWidthClass = () => {
+    if (isPublicSite) return 'shadow-none rounded-none border-0';
     switch (previewMode) {
       case 'mobile':
         return 'w-[380px] shadow-[0_25px_60px_rgba(0,0,0,0.15)] rounded-[40px] border-[10px] border-[#1d1d1f] overflow-clip';
@@ -2027,7 +2034,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // navbar became "stuck" it visibly snapped a few pixels — looking exactly like "sticky doesn't
   // work" whenever scaleFactor < 1 (i.e. whenever the canvas isn't shown at 100%, which is most of
   // the time).
-  const notchHeightUnscaled = previewMode === 'mobile' ? 24 : 0;
+  const notchHeightUnscaled = previewMode === 'mobile' && !isPublicSite ? 24 : 0;
   // Navbar strip width (unscaled, before its own scale transform below) — a percentage of the page's
   // own width (navbar.width, default 100 = full-bleed). Centered automatically by the Scaling
   // Wrapper's `items-center`, so narrowing it just insets it evenly from both edges.
@@ -2057,7 +2064,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       // nothing about the empty/short-content layout changes — only tall content now scrolls where
       // it was always meant to.
       className={`flex-1 w-full overflow-y-auto transition-colors duration-200 ${
-        previewMode === 'desktop'
+        isPublicSite
+          ? 'bg-white p-0 m-0 h-[100dvh] flex flex-col items-center justify-start'
+          : previewMode === 'desktop'
           ? (isPreviewActive ? 'bg-white p-0 m-0 h-[calc(100vh-56px)] flex flex-col items-center justify-start' : 'bg-[#ececf0] p-4 sm:p-8 h-[calc(100vh-104px)] flex flex-col items-center justify-start')
           : 'bg-[#ececf0] h-[calc(100vh-104px)] p-4 sm:p-8 flex flex-col items-center justify-start'
       }`}
@@ -2074,7 +2083,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       <div 
         className="flex flex-col items-center justify-start relative transition-all duration-300 origin-top"
         style={{
-          width: isPreviewActive && previewMode === 'desktop' ? '100%' : `${baseWidth * scaleFactor}px`,
+          width: isPublicSite || (isPreviewActive && previewMode === 'desktop') ? '100%' : `${baseWidth * scaleFactor}px`,
           height: `${totalScaledHeight}px`,
         }}
       >
@@ -2088,7 +2097,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             smooth, with none of the one-frame-behind lag ("jitter") that came from simulating it in JS
             on every scroll event. The Frame below starts right after these two, offset by their scaled
             (on-screen) height. */}
-        {previewMode === 'mobile' && (
+        {previewMode === 'mobile' && !isPublicSite && (
           <div
             className="w-full bg-[#1d1d1f] h-6 flex items-center justify-center relative shrink-0"
             style={{ width: `${baseWidth}px`, transformOrigin: 'top center', transform: `scale(${scaleFactor})` }}

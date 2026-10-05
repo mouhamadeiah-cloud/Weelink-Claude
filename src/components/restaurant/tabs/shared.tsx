@@ -1,19 +1,35 @@
 // Shared bits of the restaurant admin window's tabs.
 import React, { useRef, useState } from 'react';
-import { ImagePlus, Loader2, X } from 'lucide-react';
-import type { RestaurantAdminData } from '../restaurantTypes';
+import { ImagePlus, Loader2, X, CloudOff } from 'lucide-react';
+import type { MenuOrder, RestaurantAdminData } from '../restaurantTypes';
+import type { LiveState } from '../restaurantCloud';
+import { cloudErrorText } from '../restaurantCloud';
 import { uploadImageFile, inputClass } from '../../shop/adminUi';
+
+export type RestaurantTabId = 'orders' | 'dishes' | 'categories' | 'subcatalogs' | 'tables' | 'accounts' | 'settings';
 
 export interface RestaurantTabProps {
   data: RestaurantAdminData;
   update: (fn: (d: RestaurantAdminData) => RestaurantAdminData) => void;
-  onGoTo: (tab: 'dishes' | 'categories' | 'subcatalogs' | 'orders' | 'settings') => void;
+  onGoTo: (tab: RestaurantTabId) => void;
+  ownerUid: string;
+  liveOrders: LiveState<MenuOrder>;
+  onOpenKitchen: () => void;
 }
 
 export const parseAmount = (v: string) => {
   const n = parseFloat(v.replace(/[,\s]/g, ''));
   return isFinite(n) && n > 0 ? n : 0;
 };
+
+// Shown when the live database refuses or cannot be reached.
+export const CloudNotice: React.FC<{ error: string }> = ({ error }) =>
+  error ? (
+    <div className="flex items-start gap-2 p-3 rounded-2xl bg-[#FFF4E6] border border-[#FFD8A8] text-[#A34A00] text-xs font-bold leading-relaxed">
+      <CloudOff size={16} className="shrink-0 mt-0.5" />
+      <span>{cloudErrorText(error)}</span>
+    </div>
+  ) : null;
 
 // One photo: upload from the device or paste a link.
 export const ImagePicker: React.FC<{ value: string; onChange: (url: string) => void }> = ({ value, onChange }) => {

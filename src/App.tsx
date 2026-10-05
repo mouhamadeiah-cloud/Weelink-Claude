@@ -24,7 +24,8 @@ import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } fro
 import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
-import { RestaurantAdminData, OrderInput, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
+import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
+import { placeOrder, publishRestaurant } from './components/restaurant/restaurantCloud';
 import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
@@ -235,7 +236,19 @@ export default function App() {
   const [hasRestaurant, setHasRestaurant] = useState<boolean>(false);
   const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
   const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
-  const submitRestaurantOrder = useCallback((o: OrderInput) => setRestaurantAdmin((prev) => submitOrder(prev, o)), []);
+  const ownerUid = currentUser ? currentUser.uid : (activeUserUid || 'mouhamadeiah');
+  // An order placed in the preview goes to the live orders like a guest's; when they cannot be
+  // reached it is kept in the admin data instead.
+  const submitRestaurantOrder = useCallback(async (o: MenuOrder) => {
+    try {
+      await placeOrder(ownerUid, o);
+      return true;
+    } catch (e) {
+      console.warn('Could not send the order to the live orders:', e);
+      setRestaurantAdmin((prev) => submitOrder(prev, o));
+      return false;
+    }
+  }, [ownerUid]);
   // Bumped by every workspace load so a slower, older load can't overwrite a newer one.
   const loadSeqRef = useRef(0);
   // True once the open project's data has actually been loaded, so switching
@@ -743,6 +756,16 @@ export default function App() {
     }, 800);
     return () => clearTimeout(delayDebounceFn);
   }, [restaurantAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
+
+  // 7. The restaurant's public site (restaurants/{uid}): pages, elements, menu and settings, published
+  // a moment after each change so the guests' link and the tables' QR codes always show the latest.
+  useEffect(() => {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant' || !projectReadyRef.current) return;
+    const t = setTimeout(() => {
+      publishRestaurant(ownerUid, pages, elements, restaurantAdmin).catch((e) => console.warn('Could not publish the restaurant site:', e));
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [pages, elements, restaurantAdmin, isFirebaseLoading, project, ownerUid]);
 
   // Saves the open project right away (the debounced saves above would be
   // cancelled when another project's data replaces it).
@@ -2941,7 +2964,7 @@ export default function App() {
         <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} />
       )}
       {project === 'restaurant' && (
-        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} />
+        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} />
       )}
 
       {/* Workspace Hub Drawer Panel */}

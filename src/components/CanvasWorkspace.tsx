@@ -948,8 +948,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const baseWidth = previewMode === 'mobile' ? 380 : (previewMode === 'tablet' ? 768 : 1280);
 
   // Calculate dynamic scaling factor to fit workspace
+  // The full preview and the published site (desktop) show the page at its real size, never
+  // blown up: on a window wider than the page the content stays 1280px wide and centered, while
+  // the slides' backgrounds, edge-to-edge elements and the navbar stretch to the window's edges.
+  const isFluidDesktop = (isPublicSite || isPreviewActive) && previewMode === 'desktop';
   let scaleFactor = 1;
-  if (isPublicSite) {
+  if (isFluidDesktop) {
+    scaleFactor = Math.min(1, workspaceWidth / baseWidth);
+  } else if (isPublicSite) {
     scaleFactor = workspaceWidth / baseWidth;
   } else if (previewMode === 'mobile') {
     if (workspaceWidth < 420) {
@@ -969,6 +975,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   }
   scaleFactor = Math.max(0.1, scaleFactor);
   localScaleRef.current = scaleFactor;
+  // Extra unscaled width on each side of the 1280px page when the window is wider than it.
+  const bleed = isFluidDesktop ? Math.max(0, Math.floor((workspaceWidth / scaleFactor - baseWidth) / 2)) : 0;
+  const frameWidth = baseWidth + bleed * 2;
 
   // Dragging state
   const [isDragging, setIsDragging] = useState(false);
@@ -2038,7 +2047,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // Navbar strip width (unscaled, before its own scale transform below) — a percentage of the page's
   // own width (navbar.width, default 100 = full-bleed). Centered automatically by the Scaling
   // Wrapper's `items-center`, so narrowing it just insets it evenly from both edges.
-  const navWidthPx = baseWidth * ((navbar.width ?? 100) / 100);
+  const navWidthPx = frameWidth * ((navbar.width ?? 100) / 100);
 
   return (
     <>
@@ -2135,7 +2144,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             // compositor via `position: sticky` above, so `transform`/`top` are intentionally excluded
             // here to avoid any CSS-animated lag behind the scroll.
             transition: 'background-color 150ms, border-color 150ms, box-shadow 150ms',
-            willChange: navbar.isSticky ? 'transform' : undefined,
+            // Only at 100% or below: a layer promoted while scaled up is painted blurry.
+            willChange: navbar.isSticky && scaleFactor <= 1 ? 'transform' : undefined,
             borderStyle: navbar.borderStyle && navbar.borderStyle !== 'none' ? navbar.borderStyle : undefined,
             borderWidth: navbar.borderStyle && navbar.borderStyle !== 'none' ? `${navbar.borderWidth ?? 0}px` : undefined,
             borderColor: navbar.borderStyle && navbar.borderStyle !== 'none' ? (navbar.borderColor || 'transparent') : undefined,
@@ -2332,7 +2342,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           className={`bg-white transition-all duration-300 relative flex flex-col select-none ${getContainerWidthClass()}`}
           onClick={(e) => e.stopPropagation()}
           style={{
-            width: `${baseWidth}px`,
+            width: `${frameWidth}px`,
             transformOrigin: 'top center',
             transform: `scale(${scaleFactor})`,
           }}
@@ -2565,8 +2575,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 )}
 
                 {/* Render Freegrid Elements inside this slide */}
-                <div className="relative w-full h-full">
+                <div className="relative h-full mx-auto" style={{ width: `${baseWidth}px` }}>
                   {slideElements.map((elem, idx) => {
+                  // Edge-to-edge elements (e.g. a photo overlay) keep reaching the window's edges.
+                  const spansPage = bleed > 0 && elem.x <= 0 && elem.x + elem.width >= baseWidth;
                   const isSelected = elem.id === selectedElementId;
                   const isColorGradient = elem.styles.color?.includes('gradient');
                   const textGradientStyles: React.CSSProperties = isColorGradient ? {
@@ -2651,9 +2663,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   : 'hover:ring-1 hover:ring-[#0071e3]/40'
                       } ${isAnimHover ? 'hover-animate' : ''}`}
                       style={{
-                        left: `${elem.x}px`,
+                        left: `${spansPage ? elem.x - bleed : elem.x}px`,
                         top: `${elem.y}px`,
-                        width: `${elem.width}px`,
+                        width: `${spansPage ? elem.width + bleed * 2 : elem.width}px`,
                         height: `${elem.height}px`,
                         zIndex: isSelected ? ((idx + 1) * 10 + 2) : ((idx + 1) * 10),
                         filter: [

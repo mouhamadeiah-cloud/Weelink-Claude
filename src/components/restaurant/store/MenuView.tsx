@@ -1,7 +1,7 @@
 // The 'menuList' canvas element: the restaurant's menu, filled live from the dishes in the admin
 // window (ترس الإدارة ← الأطباق). menuSource picks every dish, the featured ones or one catalog;
-// menuTabs adds the catalogs as tabs above the dishes; menuLayout picks the cards (grid, menu rows
-// or large photos); the card colours and corners are the element's own. In preview / on the live
+// menuTabs adds the catalogs as tabs above the dishes; menuLayout picks the cards (grid, menu rows,
+// large photos, or a running strip that loops the dishes sideways); the card colours and corners are the element's own. In preview / on the live
 // site a dish opens its window (ingredients, extras, note, quantity), and on the live page the
 // slide grows to fit all the dishes (onGrow).
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -124,6 +124,8 @@ const LargeCard: React.FC<CardProps> = ({ dish, look, currency, onOpen, onAdd })
 );
 
 const CARD_MIN: Record<string, number> = { grid: 250, list: 420, large: 420 };
+const STRIP_CARD = 260;
+const STRIP_GAP = 20;
 
 export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGrow, boxHeight }) => {
   const data = useRestaurantData();
@@ -144,7 +146,8 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
   }, [data, categories, source, elem.menuCategoryId]);
   const limited = elem.menuLimit ? dishes.slice(0, elem.menuLimit) : dishes;
   const usedCats = categories.filter((c) => limited.some((d) => d.categoryId === c.id));
-  const showTabs = elem.menuTabs !== false && source === 'all' && usedCats.length > 1;
+  const marquee = layout === 'marquee';
+  const showTabs = !marquee && elem.menuTabs !== false && source === 'all' && usedCats.length > 1;
   useEffect(() => {
     if (tab !== 'all' && !usedCats.some((c) => c.id === tab)) setTab('all');
   }, [tab, usedCats]);
@@ -156,8 +159,24 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
       : [{ cat: null, dishes: limited.filter((d) => d.categoryId === tab) }]
     : [{ cat: null, dishes: limited }];
 
-  const grows = isPreviewActive;
+  const grows = isPreviewActive && !marquee;
   const box = boxHeight ?? elem.height;
+
+  // Running strip: when the dishes are too few to fill it, they repeat until one round covers the
+  // strip's width; the round is shown twice and moved by half, so the loop has no gap.
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [stripWidth, setStripWidth] = useState(0);
+  useLayoutEffect(() => {
+    const node = stripRef.current;
+    if (!marquee || !node) return;
+    const measure = () => setStripWidth(node.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [marquee, limited.length]);
+  const repeats = limited.length ? Math.max(1, Math.ceil(stripWidth / (limited.length * (STRIP_CARD + STRIP_GAP)))) : 1;
+  const round = Array.from({ length: repeats }, (_, r) => limited.map((d) => ({ d, key: `${r}-${d.id}` }))).flat();
   const contentRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (!onGrow) return;
@@ -226,6 +245,20 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
             <UtensilsCrossed size={40} style={{ color: look.accent }} />
             <div className="font-black text-lg text-[#2B2118]">لا توجد أطباق هنا بعد</div>
             <p className="text-sm text-black/50 max-w-sm leading-relaxed">أضف أقسام المنيو والأطباق من ترس الإدارة أسفل الشاشة، وستظهر هنا مباشرة.</p>
+          </div>
+        ) : marquee ? (
+          <div ref={stripRef} className="shop-marquee flex-1 min-h-0 overflow-hidden" dir="ltr">
+            <div className="shop-marquee-track h-full flex w-max" style={{ '--shop-speed': `${elem.menuSpeed || 30}s` } as React.CSSProperties}>
+              {[0, 1].map((copy) => (
+                <div key={copy} className="h-full flex" aria-hidden={copy === 1}>
+                  {round.map(({ d, key }) => (
+                    <div key={key} dir="rtl" className="h-full shrink-0 py-2 [&>*]:h-full" style={{ width: STRIP_CARD + STRIP_GAP, paddingInline: STRIP_GAP / 2 }}>
+                      <GridCard dish={d} look={look} currency={currency} onOpen={() => isPreviewActive && setOpenId(d.id)} onAdd={() => quickAdd(d)} />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           sections.map(({ cat, dishes: list }) => (

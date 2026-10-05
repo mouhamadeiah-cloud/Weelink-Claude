@@ -21,6 +21,7 @@ const LAYOUTS: { id: NonNullable<CanvasElement['menuLayout']>; label: string }[]
   { id: 'grid', label: 'بطاقات' },
   { id: 'list', label: 'صفوف منيو' },
   { id: 'large', label: 'صور كبيرة' },
+  { id: 'marquee', label: 'شريط متحرك' },
 ];
 
 function Choices<T extends string>({ options, value, onChange }: { options: { id: T; label: string }[]; value: T; onChange: (id: T) => void }) {
@@ -99,6 +100,12 @@ export const RestaurantElementSettings: React.FC<RestaurantElementSettingsProps>
       )}
       <Label>طريقة العرض</Label>
       <Choices options={LAYOUTS} value={element.menuLayout || 'grid'} onChange={(id) => onUpdateElement({ menuLayout: id })} />
+      {element.menuLayout === 'marquee' && (
+        <>
+          <Label>سرعة الشريط: دورة كل {element.menuSpeed || 30} ثانية</Label>
+          <input type="range" min={8} max={90} value={element.menuSpeed || 30} onChange={(e) => onUpdateElement({ menuSpeed: Number(e.target.value) })} className="w-full accent-[#B5562B]" dir="ltr" />
+        </>
+      )}
       <Label>أقصى عدد للأطباق (فارغ = الكل)</Label>
       <input
         className={inputClass}

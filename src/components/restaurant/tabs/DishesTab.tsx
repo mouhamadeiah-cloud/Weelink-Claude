@@ -1,4 +1,4 @@
-// الأطباق: the dish list (search, filter by catalog, «متوفر اليوم» and «ظاهر في الموقع» switches,
+// الأطباق: the dish list (search, filter by catalog, «مميز», «متوفر اليوم» and «ظاهر في الموقع» switches,
 // edit, delete) and the dish editor: name, catalog, description, price and old price, photo, badge,
 // featured, and the options the guest gets, which come from the sub-catalogs linked to the dish's
 // catalog unless the dish picks its own; single items can be left out for this dish.
@@ -61,10 +61,18 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
             ))}
           </div>
         </Field>
-        <div className="grid sm:grid-cols-3 gap-x-6">
-          <Toggle label="طبق مميز" checked={d.featured} onChange={(featured) => setD({ ...d, featured })} />
-          <Toggle label="متوفر اليوم" checked={d.available} onChange={(available) => setD({ ...d, available })} />
-          <Toggle label="ظاهر في الموقع" checked={d.published} onChange={(published) => setD({ ...d, published })} />
+        {/* Each switch in its own box, so a label never reads as belonging to the next switch. */}
+        <div className="grid sm:grid-cols-3 gap-2">
+          {[
+            { label: 'طبق مميز', hint: 'يظهر في شرائح الأطباق المميزة', checked: d.featured, set: (featured: boolean) => setD({ ...d, featured }) },
+            { label: 'متوفر اليوم', hint: 'غير المتوفر يظهر بلا زر طلب', checked: d.available, set: (available: boolean) => setD({ ...d, available }) },
+            { label: 'ظاهر في الموقع', hint: 'المخفي لا يراه الزبائن', checked: d.published, set: (published: boolean) => setD({ ...d, published }) },
+          ].map((t) => (
+            <div key={t.label} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5">
+              <Toggle label={t.label} checked={t.checked} onChange={t.set} />
+              <div className="text-[10px] text-neutral-400 pb-0.5">{t.hint}</div>
+            </div>
+          ))}
         </div>
       </Card>
 
@@ -157,11 +165,19 @@ export const DishesTab: React.FC<RestaurantTabProps> = (props) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-black truncate">{d.name || 'طبق بدون اسم'}</span>
-                      {d.featured && <Star size={13} className="text-[#F59F00] fill-[#F59F00]" />}
                       {badge && <span className="h-5 px-1.5 rounded-full text-[10px] font-bold text-white inline-flex items-center" style={{ backgroundColor: badge.color }}>{badge.label}</span>}
                     </div>
                     <div className="text-[11px] text-neutral-400 font-bold">{c ? `${c.icon} ${c.name}` : 'بدون قسم'} · {formatMoney(d.price, currency)}</div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => patch(d.id, { featured: !d.featured })}
+                    aria-pressed={d.featured}
+                    title={d.featured ? 'إلغاء الطبق المميز' : 'اجعله طبقًا مميزًا'}
+                    className={`h-8 px-2.5 rounded-full border text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition ${d.featured ? 'bg-[#FFF4DB] border-[#F59F00] text-[#B26B00]' : 'bg-white border-neutral-200 text-neutral-400 hover:border-neutral-300'}`}
+                  >
+                    <Star size={13} className={d.featured ? 'text-[#F59F00] fill-[#F59F00]' : ''} /> مميز
+                  </button>
                   <label className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-neutral-500 cursor-pointer">
                     <input type="checkbox" checked={d.available} onChange={(e) => patch(d.id, { available: e.target.checked })} className="w-4 h-4 accent-[#34c759]" /> متوفر
                   </label>

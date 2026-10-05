@@ -107,11 +107,12 @@ export interface Hall {
   tables: RestTable[];
 }
 
-export type DeviceRole = 'kitchen' | 'cashier' | 'waiter' | 'display' | 'board';
+export type DeviceRole = 'kitchen' | 'cashier' | 'combo' | 'waiter' | 'display' | 'board';
 
 export const DEVICE_ROLES: { id: DeviceRole; label: string; hint: string }[] = [
   { id: 'kitchen', label: 'شاشة مطبخ', hint: 'تعرض الطلبات للتحضير، لكل الأقسام أو لقسم واحد.' },
   { id: 'cashier', label: 'كاشير', hint: 'الطاولات والطلبات والدفع.' },
+  { id: 'combo', label: 'كاشير ومطبخ', hint: 'للمطعم الصغير: الكاشير وشاشة المطبخ على جهاز واحد، وزر للتنقل بينهما.' },
   { id: 'waiter', label: 'تابلت نادل', hint: 'نفس برنامج الكاشير، يحمله النادل بين الطاولات.' },
   { id: 'display', label: 'شاشة الزبون', hint: 'تعرض للزبون طلبه والمبلغ عند الكاشير.' },
   { id: 'board', label: 'شاشة الانتظار', hint: 'تعرض للزبائن أرقام الطلبات قيد التحضير والجاهزة للاستلام، حسب حالة المطبخ.' },

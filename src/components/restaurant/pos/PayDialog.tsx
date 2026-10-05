@@ -1,10 +1,10 @@
 // الدفع: the whole bill, some of its dishes (each guest pays what he ate), an amount, or the bill split
 // equally between several people. The method is picked (cash, Sham Cash...), and for cash the
 // money handed over gives the change. Dishes not yet sent go to the kitchen with the payment.
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { PAYMENT_METHODS } from '../restaurantTypes';
-import { CASH, Tab, tabTotals, unsentItems } from '../staffTypes';
+import { CASH, ScreenDraft, Tab, tabTotals, unsentItems } from '../staffTypes';
 import { formatMoney } from '../../shop/adminUi';
 import { Modal, BigButton } from './posUi';
 
@@ -30,7 +30,7 @@ export interface PayRequest {
   given: number; // cash handed over (0 = exact)
 }
 
-export const PayDialog: React.FC<{ tab: Tab; currency: string; busy: boolean; onPay: (r: PayRequest) => void; onClose: () => void }> = ({ tab, currency, busy, onPay, onClose }) => {
+export const PayDialog: React.FC<{ tab: Tab; currency: string; busy: boolean; onPay: (r: PayRequest) => void; onClose: () => void; onDraft?: (d: ScreenDraft | null) => void }> = ({ tab, currency, busy, onPay, onClose, onDraft }) => {
   const { due, total, paid } = tabTotals(tab);
   const [mode, setMode] = useState<Mode>('all');
   const [method, setMethod] = useState(CASH);
@@ -46,7 +46,17 @@ export const PayDialog: React.FC<{ tab: Tab; currency: string; busy: boolean; on
   const given = method === CASH ? parse(givenText) : 0;
   const change = given > amount ? Math.round((given - amount) * 100) / 100 : 0;
   const unsent = unsentItems(tab).length;
-  const note = mode === 'items' ? 'بالأصناف' : mode === 'split' ? `حصة من ${people}` : mode === 'amount' ? 'دفعة جزئية' : '';
+  const picked = mode === 'items' ? open.filter((i) => (sel[i.id] || 0) > 0).map((i) => ({ name: i.name, qty: sel[i.id], amount: Math.round(sel[i.id] * i.unitPrice * 100) / 100 })) : [];
+  const note = mode === 'items' ? `بالأصناف: ${picked.map((l) => (l.qty > 1 ? `${l.name} ×${l.qty}` : l.name)).join('، ')}` : mode === 'split' ? `حصة من ${people}` : mode === 'amount' ? 'دفعة جزئية' : '';
+
+  // The guest sees on his screen what is being taken now, as the cashier picks it.
+  const label = mode === 'all' ? 'كامل المبلغ' : mode === 'items' ? 'بالأصناف' : mode === 'split' ? `حصة شخص من ${people}` : 'دفعة جزئية';
+  const draftKey = JSON.stringify([label, amount, picked, method, given, change]);
+  useEffect(() => {
+    onDraft?.({ label, amount, lines: picked, method, given, change });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+  useEffect(() => () => onDraft?.(null), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setQty = (id: string, max: number, d: number) => setSel((s) => ({ ...s, [id]: Math.max(0, Math.min(max, (s[id] || 0) + d)) }));
 

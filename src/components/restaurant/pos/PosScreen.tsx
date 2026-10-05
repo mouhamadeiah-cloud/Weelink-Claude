@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom';
 import { Armchair, ShoppingBag, Lock, LogOut, X, Wallet, ReceiptText, Plus, QrCode, BellRing, Users, Printer, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { MenuOrder } from '../restaurantTypes';
 import type { LiveState } from '../restaurantCloud';
-import { Actor, CASH, Tab, Worker, WORKER_ROLES, byMethod, openTabId, startOfToday, tabTitle, tabTotals, unsentItems } from '../staffTypes';
+import { Actor, CASH, ScreenDraft, ScreenPaid, ScreenState, Tab, Worker, WORKER_ROLES, byMethod, openTabId, startOfToday, tabTitle, tabTotals, unsentItems } from '../staffTypes';
 import { addLog, closeShift, openShift, openTab, reopenTab, setScreen, useClosedTabs, useOpenTabs, useShifts, TabPlace } from '../staffCloud';
 import { formatMoney } from '../../shop/adminUi';
 import { NumberPad } from './NumberPad';
@@ -114,14 +114,21 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
     };
   }, [worker, settings?.autoLockMinutes]);
 
-  // The customer's screen tied to this device follows the bill on it, and thanks the guest after paying.
-  const thanksRef = useRef<PaidInfo | null>(null);
+  // The customer's screen tied to this device follows the bill on it: what is being paid now, the
+  // part just paid, and a thank-you after the bill is closed.
+  const [screenThanks, setScreenThanks] = useState<ScreenState['thanks']>(null);
+  const [draft, setDraft] = useState<ScreenDraft | null>(null);
+  const [partPaid, setPartPaid] = useState<ScreenPaid | null>(null);
+  useEffect(() => {
+    if (tabId) setScreenThanks(null);
+    setDraft(null);
+    setPartPaid(null);
+  }, [tabId]);
   useEffect(() => {
     if (isAdmin) return;
-    const t = tabId ? null : thanksRef.current;
-    thanksRef.current = null;
-    setScreen(uid, device.id, { tabId, thanks: t ? { ...t, at: new Date().toISOString() } : null });
-  }, [uid, device.id, tabId, isAdmin]);
+    const t = window.setTimeout(() => setScreen(uid, device.id, { tabId, thanks: tabId ? null : screenThanks, draft: tabId ? draft : null, paid: tabId ? partPaid : null }), 150);
+    return () => window.clearTimeout(t);
+  }, [uid, device.id, tabId, isAdmin, screenThanks, draft, partPaid]);
 
   const tab = tabId ? openTabs.items.find((t) => t.id === tabId) : undefined;
   // The bill was closed or moved on another device (a bill just opened here may not be listed yet).
@@ -175,7 +182,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
   };
 
   const onClosedTab = (info: PaidInfo | null) => {
-    thanksRef.current = info;
+    setScreenThanks(info ? { ...info, at: new Date().toISOString() } : null);
     setTabId('');
     if (info) {
       setThanks(info);
@@ -339,6 +346,8 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
           onBack={() => setTabId('')}
           onMoved={setTabId}
           onClosed={onClosedTab}
+          onDraft={setDraft}
+          onPartPaid={setPartPaid}
         />
       )}
 

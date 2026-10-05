@@ -14,7 +14,7 @@ import { db } from '../../services/firebase';
 import { newId } from '../shop/shopTypes';
 import { MenuOrder, OrderLine, orderNumberNow, todayKey } from './restaurantTypes';
 import type { LiveState } from './restaurantCloud';
-import { Actor, LogEntry, ScreenState, Shift, Tab, TabItem, TabKind, TabPayment, normalizeLog, normalizeShift, normalizeTab, openTabId, tabTitle, tabTotals, unsentItems } from './staffTypes';
+import { Actor, LogEntry, ScreenState, Shift, Tab, TabItem, TabKind, TabPayment, normalizeLog, normalizeScreen, normalizeShift, normalizeTab, openTabId, tabTitle, tabTotals, unsentItems } from './staffTypes';
 
 const col = (uid: string, name: string) => collection(db, 'restaurants', uid, name);
 const tabDoc = (uid: string, id: string) => doc(db, 'restaurants', uid, 'tabs', id);
@@ -73,8 +73,8 @@ export const useScreen = (uid: string | null, deviceId: string) => {
     if (!uid || !deviceId) return;
     return onSnapshot(
       doc(db, 'restaurants', uid, 'screens', deviceId),
-      (s) => setScreenState(s.exists() ? { tabId: String(s.data().tabId || ''), thanks: s.data().thanks || null } : { tabId: '', thanks: null }),
-      () => setScreenState({ tabId: '', thanks: null })
+      (s) => setScreenState(normalizeScreen(s.exists() ? s.data() : null)),
+      () => setScreenState(normalizeScreen(null))
     );
   }, [uid, deviceId]);
   return screen;

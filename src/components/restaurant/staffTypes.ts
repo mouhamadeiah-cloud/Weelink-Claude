@@ -238,10 +238,49 @@ export const normalizeLog = (id: string, raw: any): LogEntry => ({
 // ---------- The customer's screen ----------
 // The cashier device writes which bill it shows; the customer's screen tied to it follows.
 
+// What the cashier is about to take, shown to the guest while the payment window is open.
+export interface ScreenDraft {
+  label: string; // كامل المبلغ، بالأصناف، حصة شخص من 3، دفعة جزئية
+  amount: number;
+  lines: { name: string; qty: number; amount: number }[]; // paying by items: the dishes picked
+  method: string;
+  given: number;
+  change: number;
+}
+
+// A part of the bill just paid, shown for a few seconds with what is still left.
+export interface ScreenPaid {
+  amount: number;
+  method: string;
+  note: string;
+  change: number;
+  left: number;
+  at: string;
+}
+
 export interface ScreenState {
   tabId: string; // '' = nothing open
   thanks: { total: number; paid: number; change: number; at: string } | null;
+  draft: ScreenDraft | null;
+  paid: ScreenPaid | null;
 }
+
+export const normalizeScreen = (raw: any): ScreenState => ({
+  tabId: str(raw?.tabId),
+  thanks: raw?.thanks && typeof raw.thanks === 'object' ? { total: num(raw.thanks.total), paid: num(raw.thanks.paid), change: num(raw.thanks.change), at: str(raw.thanks.at) } : null,
+  draft:
+    raw?.draft && typeof raw.draft === 'object'
+      ? {
+          label: str(raw.draft.label),
+          amount: num(raw.draft.amount),
+          lines: Array.isArray(raw.draft.lines) ? raw.draft.lines.map((l: any) => ({ name: str(l?.name), qty: num(l?.qty), amount: num(l?.amount) })) : [],
+          method: str(raw.draft.method),
+          given: num(raw.draft.given),
+          change: num(raw.draft.change),
+        }
+      : null,
+  paid: raw?.paid && typeof raw.paid === 'object' ? { amount: num(raw.paid.amount), method: str(raw.paid.method), note: str(raw.paid.note), change: num(raw.paid.change), left: num(raw.paid.left), at: str(raw.paid.at) } : null,
+});
 
 export const startOfToday = () => {
   const d = new Date();

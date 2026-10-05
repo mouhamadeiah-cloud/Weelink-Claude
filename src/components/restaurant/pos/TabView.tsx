@@ -5,7 +5,7 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowRight, Send, Wallet, MoveRight, UserRound, Percent, Printer, Minus, Plus, Trash2, Ban, Search, Users, QrCode, StickyNote, X } from 'lucide-react';
 import { Dish, MenuOrder, OrderLine, RestaurantAdminData, allTables, dishSubCatalogs } from '../restaurantTypes';
-import { Actor, Tab, Worker, itemTotal, openTabId, tabTitle, tabTotals, unsentItems } from '../staffTypes';
+import { Actor, ScreenDraft, ScreenPaid, Tab, Worker, itemTotal, openTabId, tabTitle, tabTotals, unsentItems } from '../staffTypes';
 import { addLog, attachOrder, changeTab, closeEmptyTab, moveTab, newItem, payTab, sendToKitchen, TabPlace } from '../staffCloud';
 import { formatMoney } from '../../shop/adminUi';
 import { DishOptions, lineOfDish } from './DishOptions';
@@ -36,6 +36,8 @@ interface TabViewProps {
   onBack: () => void;
   onMoved: (tabId: string) => void;
   onClosed: (info: PaidInfo | null) => void;
+  onDraft?: (d: ScreenDraft | null) => void;
+  onPartPaid?: (p: ScreenPaid) => void;
 }
 
 // How a sent dish stands in the kitchen, as the waiter needs to know it.
@@ -49,7 +51,7 @@ const KITCHEN_STATE: Record<string, [string, string]> = {
 
 const minutesSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
 
-export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, workers, actor, shiftId, orders, openTabs, askManager, toast, onBack, onMoved, onClosed }) => {
+export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, workers, actor, shiftId, orders, openTabs, askManager, toast, onBack, onMoved, onClosed, onDraft, onPartPaid }) => {
   const [cat, setCat] = useState('');
   const [search, setSearch] = useState('');
   const [optionsFor, setOptionsFor] = useState<Dish | null>(null);
@@ -118,7 +120,10 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
       setDialog('');
       const change = r.given > res.paid ? Math.round((r.given - res.paid) * 100) / 100 : 0;
       if (res.left <= 0) onClosed({ total: res.total, paid: res.paid, change });
-      else toast(`تم تحصيل ${money(res.paid)}${change ? ` · الباقي للزبون ${money(change)}` : ''}`);
+      else {
+        toast(`تم تحصيل ${money(res.paid)}${change ? ` · الباقي للزبون ${money(change)}` : ''}`);
+        onPartPaid?.({ amount: res.paid, method: r.method, note: r.note, change, left: res.left, at: new Date().toISOString() });
+      }
     } catch (e) {
       console.warn(e);
       toast(failText(e), true);
@@ -308,7 +313,7 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
       </div>
 
       {optionsFor && <DishOptions dish={optionsFor} subCatalogs={menu.subCatalogs} currency={currency} onAdd={addLine} onClose={() => setOptionsFor(null)} />}
-      {dialog === 'pay' && <PayDialog tab={tab} currency={currency} busy={busy} onPay={pay} onClose={() => setDialog('')} />}
+      {dialog === 'pay' && <PayDialog tab={tab} currency={currency} busy={busy} onPay={pay} onClose={() => setDialog('')} onDraft={onDraft} />}
 
       {dialog === 'move' && (
         <Modal title={`نقل ${tabTitle(tab)} أو دمجها`} onClose={() => setDialog('')} wide>

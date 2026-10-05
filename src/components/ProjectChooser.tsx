@@ -1,16 +1,17 @@
 // Shown after login: the user picks which project to open (or create).
 import React from 'react';
-import { FileText, ShoppingBag, CarFront, ArrowLeft, Loader2 } from 'lucide-react';
+import { FileText, ShoppingBag, CarFront, UtensilsCrossed, ArrowLeft, Loader2 } from 'lucide-react';
 import { ProjectType } from './shop/shopTypes';
 
 interface ProjectChooserProps {
   onChoose: (type: ProjectType) => void;
   hasShop: boolean;
   hasCars: boolean;
+  hasRestaurant: boolean;
   loadingType: ProjectType | null;
 }
 
-export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasShop, hasCars, loadingType }) => {
+export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasShop, hasCars, hasRestaurant, loadingType }) => {
   const cards: { type: ProjectType; title: string; subtitle: string; desc: string; icon: React.ElementType; accent: string; cta: string }[] = [
     {
       type: 'page',
@@ -39,11 +40,20 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
       accent: '#C8102E',
       cta: hasCars ? 'فتح المعرض' : 'إنشاء معرض',
     },
+    {
+      type: 'restaurant',
+      title: 'مطعم',
+      subtitle: 'Weelink / Restaurant',
+      desc: 'موقع لمطعمك مع منيو وطلب أونلاين، ولوحة إدارة للأقسام والأطباق والطلبات.',
+      icon: UtensilsCrossed,
+      accent: '#B5562B',
+      cta: hasRestaurant ? 'فتح المطعم' : 'إنشاء مطعم',
+    },
   ];
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] flex flex-col items-center justify-center px-5 py-12 font-sans" dir="rtl">
-      <div className="w-full max-w-5xl space-y-8">
+      <div className="w-full max-w-6xl space-y-8">
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2">
             <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center font-bold">W</span>
@@ -53,7 +63,7 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
           <p className="text-sm text-neutral-500">اختر مشروعاً للدخول إليه. يمكنك التبديل لاحقاً بالضغط على شعار weelink.</p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {cards.map((c) => (
             <button
               key={c.type}

@@ -19,6 +19,9 @@ import { ShopProductsView } from './shop/store/ShopProductsView';
 import { ShopSearchView } from './shop/store/ShopSearchView';
 import { CarListingsView } from './cars/store/CarListingsView';
 import { CarSearchView } from './cars/store/CarSearchView';
+import { MenuView } from './restaurant/store/MenuView';
+import { MenuCartView } from './restaurant/store/MenuCartView';
+import { useMenuCart, menuCartCount } from './restaurant/menuCartStore';
 import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { 
@@ -1976,10 +1979,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const navCustomItems = (navbar.items || []).filter((it) => it.linkType !== 'page');
   // The cart page's navbar link shows how many items the visitor has in the cart.
   const cartItems = useCart();
-  const cartCount = cartItems.reduce((n, i) => n + i.qty, 0);
+  const menuCartLines = useMenuCart();
+  const cartCount = cartItems.reduce((n, i) => n + i.qty, 0) + menuCartCount(menuCartLines);
   const cartPageIds = new Set(
     (allPages || [])
-      .filter((p) => p.slides.some((sl) => rawElements.some((e) => e.type === 'cart' && e.slideId === sl.id)))
+      .filter((p) => p.slides.some((sl) => rawElements.some((e) => (e.type === 'cart' || e.type === 'menuCart') && e.slideId === sl.id)))
       .map((p) => p.id)
   );
   // The store's main product slide (the tallest one: the full store rather than a featured row)
@@ -4112,6 +4116,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {elem.type === 'carListings' && (
                           <CarListingsView elem={elem} isPreviewActive={isPreviewActive} showsSearch={elem.id === showroomList?.id} onGrow={shopGrowHandler(elem.id)} boxHeight={elem.height - (isPreviewActive ? shopGrow[elem.id] || 0 : 0)} />
+                        )}
+
+                        {elem.type === 'menuList' && (
+                          <MenuView elem={elem} isPreviewActive={isPreviewActive} onGrow={shopGrowHandler(elem.id)} boxHeight={elem.height - (isPreviewActive ? shopGrow[elem.id] || 0 : 0)} />
+                        )}
+
+                        {elem.type === 'menuCart' && (
+                          <MenuCartView elem={elem} isPreviewActive={isPreviewActive} />
                         )}
 
                         {elem.type === 'carSearch' && (

@@ -9,7 +9,7 @@ import { Armchair, ShoppingBag, Lock, LogOut, X, Wallet, ReceiptText, Plus, QrCo
 import { MenuOrder } from '../restaurantTypes';
 import type { LiveState } from '../restaurantCloud';
 import { Actor, CASH, ScreenDraft, ScreenPaid, ScreenState, Tab, Worker, WORKER_ROLES, byMethod, openTabId, startOfToday, tabTitle, tabTotals, unsentItems } from '../staffTypes';
-import { addLog, closeShift, openShift, openTab, reopenTab, setScreen, useClosedTabs, useOpenTabs, useShifts, TabPlace } from '../staffCloud';
+import { addLog, closeShift, endSession, openShift, openTab, reopenTab, setScreen, startSession, useClosedTabs, useOpenTabs, useShifts, TabPlace } from '../staffCloud';
 import { formatMoney } from '../../shop/adminUi';
 import { NumberPad } from './NumberPad';
 import { TabView, PosMenu, PaidInfo } from './TabView';
@@ -92,6 +92,30 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
 
   const actor: Actor | null = worker ? { workerId: worker.id, workerName: worker.name, deviceId: device.id, deviceName: device.name } : null;
 
+  // Each sign-in is a session, until the worker locks the device (or it locks itself). Its end
+  // keeps the bills he still had open, so the manager sees what each session left behind.
+  const session = useRef<{ worker: Worker; id: Promise<string | null> } | null>(null);
+  const openTabsNow = useRef<Tab[]>([]);
+  openTabsNow.current = openTabs.items;
+  const beginSession = (w: Worker) => {
+    session.current = { worker: w, id: startSession(uid, { workerId: w.id, workerName: w.name, deviceId: device.id, deviceName: device.name }).catch((e) => { console.warn('Could not start the session:', e); return null; }) };
+  };
+  const finishSession = (reason: string) => {
+    const s = session.current;
+    session.current = null;
+    if (!s) return;
+    const left = openTabsNow.current.filter((t) => t.ownerId === s.worker.id).map((t) => ({ title: tabTitle(t), total: tabTotals(t).total, due: tabTotals(t).due }));
+    s.id.then((id) => {
+      if (id) endSession(uid, id, reason, left);
+    });
+  };
+  useEffect(() => {
+    const onHide = () => finishSession('إغلاق الصفحة');
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // The worker's till opens with his first sign-in.
   useEffect(() => {
     if (!worker || !actor || !shifts.ready || shifts.error || myShift || openingShift.current === worker.id) return;
@@ -110,6 +134,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
     window.addEventListener('keydown', touch);
     const t = window.setInterval(() => {
       if (Date.now() - last > mins * 60000) {
+        finishSession('قفل تلقائي');
         setWorker(null);
         setTabId('');
       }
@@ -153,6 +178,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
   }
 
   const signOut = () => {
+    finishSession('قفل');
     setWorker(null);
     setTabId('');
     setDialog('');
@@ -167,7 +193,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
     </div>
   );
 
-  if (!worker || !actor) return shell(<SignIn workers={workers} device={device.name} onSignIn={(w) => { setWorker(w); setOnlyMine(false); }} onClose={onClose} onLogout={onLogout} kitchen={kitchen} />);
+  if (!worker || !actor) return shell(<SignIn workers={workers} device={device.name} onSignIn={(w) => { beginSession(w); setWorker(w); setOnlyMine(false); }} onClose={onClose} onLogout={onLogout} kitchen={kitchen} />);
 
   const orders = live.items;
   const byId = new Map(openTabs.items.map((t) => [t.id, t]));

@@ -6,6 +6,8 @@
 //                   the worker counted.
 //   screens/{id}    what a cashier device shows its customer's screen.
 //   log/{id}        the sensitive actions (cancelled dishes, discounts, reopened bills).
+//   sessions/{id}   each sign-in of a worker on a device, until he locks it, with the bills he still
+//                   had open at that moment.
 // Every change of a bill runs in a transaction, so devices working on the same table at the same
 // time never overwrite each other. A payment also books its sale in the accounts (ledger).
 import { useEffect, useState } from 'react';
@@ -15,7 +17,7 @@ import { newId } from '../shop/shopTypes';
 import { MenuOrder, OrderLine, orderNumberNow, todayKey } from './restaurantTypes';
 import type { LiveState } from './restaurantCloud';
 import { NextNumber, readNextNumber } from './orderNumbers';
-import { Actor, LogEntry, ScreenState, Shift, Tab, TabItem, TabKind, TabPayment, normalizeLog, normalizeScreen, normalizeShift, normalizeTab, openTabId, tabTitle, tabTotals, unsentItems } from './staffTypes';
+import { Actor, LogEntry, ScreenState, SessionOpenTab, Shift, Tab, TabItem, TabKind, TabPayment, normalizeLog, normalizeScreen, normalizeSession, normalizeShift, normalizeTab, openTabId, tabTitle, tabTotals, unsentItems } from './staffTypes';
 
 const col = (uid: string, name: string) => collection(db, 'restaurants', uid, name);
 const tabDoc = (uid: string, id: string) => doc(db, 'restaurants', uid, 'tabs', id);
@@ -49,6 +51,9 @@ export const useShifts = (uid: string | null, max = 200) =>
 
 export const useLog = (uid: string | null, max = 200) =>
   useLive(() => (uid ? query(col(uid, 'log'), orderBy('at', 'desc'), limit(max)) : null), normalizeLog, [uid, max]);
+
+export const useSessions = (uid: string | null, since: string) =>
+  useLive(() => (uid ? query(col(uid, 'sessions'), where('startedAt', '>=', since)) : null), normalizeSession, [uid, since]);
 
 // One bill, live (null = it was closed or moved).
 export const useTab = (uid: string | null, tabId: string) => {
@@ -336,3 +341,12 @@ export const closeShift = (uid: string, shiftId: string, counted: number, expect
 
 export const addLog = (uid: string, e: Omit<LogEntry, 'id' | 'at'>) =>
   setDoc(doc(col(uid, 'log'), newId('log')), clean({ ...e, at: new Date().toISOString() })).catch((err) => console.warn('Could not write the log:', err));
+
+export const startSession = async (uid: string, actor: Actor) => {
+  const id = newId('ses');
+  await setDoc(doc(col(uid, 'sessions'), id), clean({ ...actor, id, startedAt: new Date().toISOString(), endedAt: '', endReason: '', openAtEnd: [] }));
+  return id;
+};
+
+export const endSession = (uid: string, id: string, endReason: string, openAtEnd: SessionOpenTab[]) =>
+  updateDoc(doc(col(uid, 'sessions'), id), clean({ endedAt: new Date().toISOString(), endReason, openAtEnd })).catch((e) => console.warn('Could not close the session:', e));

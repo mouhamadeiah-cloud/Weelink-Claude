@@ -200,6 +200,39 @@ export const normalizeShift = (id: string, raw: any): Shift => ({
   expectedCash: num(raw?.expectedCash),
 });
 
+// ---------- Sessions (each sign-in of a worker on a device, until he locks it) ----------
+
+// A bill the worker still had open when the session ended.
+export interface SessionOpenTab {
+  title: string;
+  total: number;
+  due: number;
+}
+
+export interface WorkerSession {
+  id: string;
+  workerId: string;
+  workerName: string;
+  deviceId: string;
+  deviceName: string;
+  startedAt: string;
+  endedAt: string; // '' while signed in, or when the device was closed without locking
+  endReason: string; // «قفل», «قفل تلقائي», «خروج الجهاز»
+  openAtEnd: SessionOpenTab[];
+}
+
+export const normalizeSession = (id: string, raw: any): WorkerSession => ({
+  id,
+  workerId: str(raw?.workerId),
+  workerName: str(raw?.workerName),
+  deviceId: str(raw?.deviceId),
+  deviceName: str(raw?.deviceName),
+  startedAt: str(raw?.startedAt),
+  endedAt: str(raw?.endedAt),
+  endReason: str(raw?.endReason),
+  openAtEnd: Array.isArray(raw?.openAtEnd) ? raw.openAtEnd.map((t: any) => ({ title: str(t?.title), total: num(t?.total), due: num(t?.due) })) : [],
+});
+
 export const CASH = 'نقدي';
 
 // The payments of a list of tabs, newest first, each with its tab.
@@ -286,4 +319,14 @@ export const startOfToday = () => {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d.toISOString();
+};
+
+// The start of the day `back` days ago (0 = today) and of the day after it.
+export const dayRange = (back: number) => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - back);
+  const end = new Date(d);
+  end.setDate(end.getDate() + 1);
+  return { start: d.toISOString(), end: end.toISOString(), date: d };
 };

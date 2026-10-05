@@ -100,10 +100,10 @@ service cloud.firestore {
         allow update: if isValidId(day) && ((request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1) || isOwner(userId) || isSimulatedOrPublic(userId));
       }
 
-      // The cashier and the waiters: bills, tills, the customer screens and the log of sensitive actions.
+      // The cashier and the waiters: bills, tills, the customer screens, the log of sensitive actions and the workers' sessions.
       match /{staffCollection}/{docId} {
-        allow read: if staffCollection in ['tabs', 'shifts', 'screens', 'log'] && (isOwner(userId) || isSimulatedOrPublic(userId));
-        allow write: if staffCollection in ['tabs', 'shifts', 'screens', 'log'] && (isOwner(userId) || isSimulatedOrPublic(userId)) && isValidId(docId);
+        allow read: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions'] && (isOwner(userId) || isSimulatedOrPublic(userId));
+        allow write: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions'] && (isOwner(userId) || isSimulatedOrPublic(userId)) && isValidId(docId);
       }
 
       match /ledger/{entryId} {

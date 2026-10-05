@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import type { CanvasElement, Page } from '../../types';
-import { LedgerEntry, MenuOrder, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry } from './restaurantTypes';
+import { LedgerEntry, MenuOrder, StaffDevice, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry } from './restaurantTypes';
 import { newId } from '../shop/shopTypes';
 
 const restaurantDoc = (uid: string) => doc(db, 'restaurants', uid);
@@ -36,6 +36,9 @@ export const publishRestaurant = (uid: string, pages: Page[], elements: CanvasEl
       categories: admin.categories.filter((c) => !c.hidden),
       subCatalogs: admin.subCatalogs,
       dishes: admin.dishes.filter((d) => d.published),
+      // The kitchen screens and the tables' QR codes need these; the devices and their codes stay private.
+      stations: admin.stations,
+      halls: admin.halls,
     }),
     settings: clean(admin.settings),
     updatedAt: new Date().toISOString(),
@@ -59,6 +62,18 @@ export const restaurantSiteUrl = (uid: string, table?: string | number) => {
 };
 
 export const kitchenScreenUrl = (uid: string) => `${window.location.origin}/?kitchen=${encodeURIComponent(uid)}`;
+
+// The address every restaurant tablet opens once; its code then picks its screen.
+export const deviceUrl = (uid: string) => `${window.location.origin}/?device=${encodeURIComponent(uid)}`;
+
+// The devices are kept in the owner's design document, which only the owner (and, for now, the
+// test accounts) can read. Real per-device sign-in comes with the separate customer/owner levels.
+export const loadDevices = async (uid: string): Promise<StaffDevice[]> => {
+  const snap = await getDoc(doc(db, 'designs', uid));
+  return snap.exists() ? normalizeRestaurantAdmin((snap.data() as any).restaurantAdmin || {}).devices : [];
+};
+
+export const setOrderDoneLines = (uid: string, orderId: string, doneLines: number[]) => updateDoc(doc(ordersCol(uid), orderId), { doneLines });
 
 // ---------- Orders ----------
 

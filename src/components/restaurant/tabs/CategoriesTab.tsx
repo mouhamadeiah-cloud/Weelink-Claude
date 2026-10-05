@@ -17,7 +17,7 @@ export const CategoriesTab: React.FC<RestaurantTabProps> = ({ data, update, onGo
   const add = () => {
     const name = draft.name.trim();
     if (!name) return;
-    update((d) => ({ ...d, categories: [...d.categories, { id: newId('cat'), name, icon: draft.icon, image: '', hidden: false }] }));
+    update((d) => ({ ...d, categories: [...d.categories, { id: newId('cat'), name, icon: draft.icon, image: '', hidden: false, stationId: d.stations[0]?.id || '' }] }));
     setDraft({ name: '', icon: draft.icon });
   };
   const patch = (id: string, p: Partial<MenuCategory>) => update((d) => ({ ...d, categories: d.categories.map((c) => (c.id === id ? { ...c, ...p } : c)) }));

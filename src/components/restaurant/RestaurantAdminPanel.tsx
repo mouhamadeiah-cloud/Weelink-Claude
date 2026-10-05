@@ -2,10 +2,12 @@
 // shop and the showroom. The menu (main catalogs, sub-catalogs, dishes), the website's orders and
 // the settings are managed here; the restaurant's pages are edited in the editor like any page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, ChefHat } from 'lucide-react';
+import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, ChefHat, Armchair, MonitorSmartphone } from 'lucide-react';
 import { RestaurantAdminData } from './restaurantTypes';
 import { RestaurantTabProps, RestaurantTabId } from './tabs/shared';
 import { TablesTab } from './tabs/TablesTab';
+import { HallsTab } from './tabs/HallsTab';
+import { DevicesTab } from './tabs/DevicesTab';
 import { AccountsTab } from './tabs/AccountsTab';
 import { KitchenOverlay } from './KitchenScreen';
 import { useLiveOrders } from './restaurantCloud';
@@ -22,7 +24,9 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'dishes', label: 'الأطباق', icon: UtensilsCrossed, Component: DishesTab },
   { id: 'categories', label: 'أقسام المنيو', icon: LayoutList, Component: CategoriesTab },
   { id: 'subcatalogs', label: 'الكاتالوكات الفرعية', icon: Layers, Component: SubCatalogsTab },
-  { id: 'tables', label: 'رابط الموقع والطاولات', icon: QrCode, Component: TablesTab },
+  { id: 'halls', label: 'الصالات والطاولات', icon: Armchair, Component: HallsTab },
+  { id: 'devices', label: 'الأجهزة والأكواد', icon: MonitorSmartphone, Component: DevicesTab },
+  { id: 'tables', label: 'رابط الموقع ورموز QR', icon: QrCode, Component: TablesTab },
   { id: 'accounts', label: 'الحسابات', icon: Wallet, Component: AccountsTab },
   { id: 'settings', label: 'الإعدادات', icon: SlidersHorizontal, Component: RestaurantSettingsTab },
 ];
@@ -113,7 +117,7 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
           </div>
         </div>
       )}
-      {kitchen && <KitchenOverlay uid={ownerUid} live={liveOrders} onClose={() => setKitchen(false)} />}
+      {kitchen && <KitchenOverlay uid={ownerUid} live={liveOrders} menu={data} onClose={() => setKitchen(false)} />}
     </>
   );
 };

@@ -2,41 +2,51 @@
 // shop and the showroom. The menu (main catalogs, sub-catalogs, dishes), the website's orders and
 // the settings are managed here; the restaurant's pages are edited in the editor like any page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal } from 'lucide-react';
+import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, ChefHat } from 'lucide-react';
 import { RestaurantAdminData } from './restaurantTypes';
-import { RestaurantTabProps } from './tabs/shared';
+import { RestaurantTabProps, RestaurantTabId } from './tabs/shared';
+import { TablesTab } from './tabs/TablesTab';
+import { AccountsTab } from './tabs/AccountsTab';
+import { KitchenOverlay } from './KitchenScreen';
+import { useLiveOrders } from './restaurantCloud';
 import { DishesTab } from './tabs/DishesTab';
 import { CategoriesTab } from './tabs/CategoriesTab';
 import { SubCatalogsTab } from './tabs/SubCatalogsTab';
 import { OrdersTab } from './tabs/OrdersTab';
 import { RestaurantSettingsTab } from './tabs/RestaurantSettingsTab';
 
-type TabId = RestaurantTabProps['onGoTo'] extends (t: infer T) => void ? T : never;
+type TabId = RestaurantTabId;
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<RestaurantTabProps> }[] = [
   { id: 'orders', label: 'الطلبات', icon: Inbox, Component: OrdersTab },
   { id: 'dishes', label: 'الأطباق', icon: UtensilsCrossed, Component: DishesTab },
   { id: 'categories', label: 'أقسام المنيو', icon: LayoutList, Component: CategoriesTab },
   { id: 'subcatalogs', label: 'الكاتالوكات الفرعية', icon: Layers, Component: SubCatalogsTab },
+  { id: 'tables', label: 'رابط الموقع والطاولات', icon: QrCode, Component: TablesTab },
+  { id: 'accounts', label: 'الحسابات', icon: Wallet, Component: AccountsTab },
   { id: 'settings', label: 'الإعدادات', icon: SlidersHorizontal, Component: RestaurantSettingsTab },
 ];
 
 interface RestaurantAdminPanelProps {
   data: RestaurantAdminData;
   onChange: (fn: (d: RestaurantAdminData) => RestaurantAdminData) => void;
+  ownerUid: string;
 }
 
-export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange }) => {
+export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid }) => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<TabId>('dishes');
-  const newOrders = data.orders.filter((o) => o.status === 'new').length;
+  const [kitchen, setKitchen] = useState(false);
+  const liveOrders = useLiveOrders(ownerUid);
+  const liveIds = new Set(liveOrders.items.map((o) => o.id));
+  const newOrders = [...liveOrders.items, ...data.orders.filter((o) => !liveIds.has(o.id))].filter((o) => o.status === 'new').length;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || kitchen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
+  }, [open, kitchen]);
 
   const active = TABS.find((t) => t.id === tab)!;
   const count = (id: TabId) => (id === 'dishes' ? data.dishes.length : id === 'categories' ? data.categories.length : id === 'subcatalogs' ? data.subCatalogs.length : 0);
@@ -67,6 +77,9 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
                 <div className="text-sm font-black text-[#1d1d1f] truncate">إدارة المطعم{data.settings.name ? ` · ${data.settings.name}` : ''}</div>
                 <div className="text-[10px] text-neutral-400 font-bold">Weelink / Restaurant</div>
               </div>
+              <button type="button" onClick={() => setKitchen(true)} className="h-9 px-3 rounded-xl bg-[#1d1d1f] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
+                <ChefHat size={15} /> شاشة المطبخ
+              </button>
               <button type="button" onClick={() => setOpen(false)} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق">
                 <X size={18} />
               </button>
@@ -94,12 +107,13 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
               </nav>
               <main className="flex-1 min-w-0 overflow-y-auto p-3 sm:p-6">
                 <h2 className="text-lg font-black text-[#1d1d1f] mb-4">{active.label}</h2>
-                <active.Component key={active.id} data={data} update={onChange} onGoTo={setTab} />
+                <active.Component key={active.id} data={data} update={onChange} onGoTo={setTab} ownerUid={ownerUid} liveOrders={liveOrders} onOpenKitchen={() => setKitchen(true)} />
               </main>
             </div>
           </div>
         </div>
       )}
+      {kitchen && <KitchenOverlay uid={ownerUid} live={liveOrders} onClose={() => setKitchen(false)} />}
     </>
   );
 };

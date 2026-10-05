@@ -22,6 +22,7 @@ export const RestaurantSettingsTab: React.FC<RestaurantTabProps> = ({ data, upda
       </Card>
       <Card title="الطلب أونلاين">
         <Toggle label="استقبال الطلبات من الموقع" checked={s.acceptOrders} onChange={(acceptOrders) => set({ acceptOrders })} />
+        <Toggle label="إرسال نسخة من الطلب على واتساب أيضًا" checked={s.whatsappCopy} onChange={(whatsappCopy) => set({ whatsappCopy })} />
         <Toggle label="توصيل" checked={s.delivery} onChange={(delivery) => set({ delivery, ...(!delivery && !s.pickup ? { pickup: true } : {}) })} />
         <Toggle label="استلام من المطعم" checked={s.pickup} onChange={(pickup) => set({ pickup, ...(!pickup && !s.delivery ? { delivery: true } : {}) })} />
         <div className="flex flex-wrap gap-3">

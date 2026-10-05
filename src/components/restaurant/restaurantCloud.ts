@@ -10,7 +10,7 @@
 //   restaurants/{uid}/deviceLinks/{authUid}   which code each tablet signed in with.
 // See firestore.rules. Nothing private (orders, accounts, customers) is ever in the public doc.
 import { useEffect, useState } from 'react';
-import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
 import type { CanvasElement, Page } from '../../types';
 import { LedgerEntry, MenuOrder, StaffDevice, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry, setDayStartHour } from './restaurantTypes';
@@ -85,6 +85,30 @@ export const saveStaff = (uid: string, admin: Pick<RestaurantAdminData, 'devices
     workers: clean(admin.workers),
     updatedAt: new Date().toISOString(),
   });
+
+// The owner's editor: the private doc's devices and workers, 'missing' before it was first written
+// (they are still in the design document then), 'denied' for a member without that permission.
+export const readStaff = async (uid: string): Promise<{ devices: StaffDevice[]; workers: Worker[] } | 'missing' | 'denied' | 'offline'> => {
+  try {
+    const snap = await getDoc(staffDoc(uid));
+    if (!snap.exists()) return 'missing';
+    const data: any = snap.data();
+    const admin = normalizeRestaurantAdmin({ devices: data.devices, workers: data.workers });
+    return { devices: admin.devices, workers: admin.workers };
+  } catch (e: any) {
+    return e?.code === 'permission-denied' ? 'denied' : 'offline';
+  }
+};
+
+// The design document keeps everything else of the restaurant's admin data; the devices and the
+// workers live only in the private doc, which members without that permission cannot read.
+export const withoutStaff = (admin: RestaurantAdminData) => {
+  const { devices: _d, workers: _w, ...rest } = admin;
+  return rest;
+};
+
+export const dropStaffFromDesign = (uid: string) =>
+  updateDoc(doc(db, 'designs', uid), { 'restaurantAdmin.devices': deleteField(), 'restaurantAdmin.workers': deleteField() });
 
 export const loadStaff = async (uid: string): Promise<{ devices: StaffDevice[]; workers: Worker[] }> => {
   const snap = await getDoc(staffDoc(uid));

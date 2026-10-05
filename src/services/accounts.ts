@@ -11,6 +11,7 @@
 import { User, createUserWithEmailAndPassword, deleteUser, signInWithEmailAndPassword } from 'firebase/auth';
 import { deleteDoc, deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { acceptPendingInvite, pendingInvite, readMembership } from './members';
 
 // While a sign-in is running, App leaves the workspace to the sign-in screen (it calls onAuthSuccess
 // with the right account once the old account has been claimed).
@@ -26,12 +27,39 @@ const cacheAccount = (uid: string, accountId: string) => {
   }
 };
 
-// The account a Firebase user works in. Offline, the one remembered on this browser.
+// Shown once after a sign-in when the invitation link could not be used.
+let inviteProblem = '';
+export const takeInviteProblem = () => {
+  const p = inviteProblem;
+  inviteProblem = '';
+  return p;
+};
+
+// Whether this user may still open that account: the old account it claimed, or one it is a member of.
+const stillHasAccess = async (user: User, accountId: string) => {
+  if (accountId === user.uid) return true;
+  if (await readMembership(accountId, user.uid)) return true;
+  try {
+    const s = await getDoc(doc(db, 'accounts', accountId));
+    return s.exists() && s.data().owner === user.uid;
+  } catch {
+    return false;
+  }
+};
+
+// The account a Firebase user works in (after joining the account of an invitation link opened on
+// this browser). Offline, the one remembered on this browser.
 export const resolveAccountId = async (user: User): Promise<string> => {
+  const invited = await acceptPendingInvite(user);
+  if (invited && 'error' in invited) inviteProblem = invited.error;
+  if (invited && 'accountId' in invited) {
+    cacheAccount(user.uid, invited.accountId);
+    return invited.accountId;
+  }
   try {
     const snap = await getDoc(doc(db, 'userAccounts', user.uid));
     const id = snap.exists() ? snap.data().accountId : '';
-    const accountId = typeof id === 'string' && id ? id : user.uid;
+    const accountId = typeof id === 'string' && id && (await stillHasAccess(user, id)) ? id : user.uid;
     cacheAccount(user.uid, accountId);
     return accountId;
   } catch {
@@ -112,7 +140,7 @@ export const signInOwner = async (email: string, password: string): Promise<stri
       throw e;
     }
     const oldId = await claimOldAccount(user, email, password).catch(() => '');
-    if (oldId) return oldId;
+    if (oldId) return pendingInvite() ? resolveAccountId(user) : oldId;
     // No old account with that email and password: undo the Firebase user just made.
     await deleteUser(user).catch(() => auth.signOut());
     throw new SignInError('credentials');
@@ -130,9 +158,10 @@ export const registerOwner = async (email: string, password: string): Promise<{ 
   try {
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
     const oldId = await claimOldAccount(user, email, password).catch(() => '');
-    if (oldId) return { accountId: oldId, isNew: false };
-    cacheAccount(user.uid, user.uid);
-    return { accountId: user.uid, isNew: true };
+    if (oldId) return { accountId: pendingInvite() ? await resolveAccountId(user) : oldId, isNew: false };
+    // A partner or manager who was invited signs up and joins the restaurant's account.
+    const accountId = await resolveAccountId(user);
+    return { accountId, isNew: accountId === user.uid };
   } catch (e) {
     throw toSignInError(e);
   } finally {

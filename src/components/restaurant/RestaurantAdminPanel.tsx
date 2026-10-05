@@ -2,7 +2,7 @@
 // shop and the showroom. The menu (main catalogs, sub-catalogs, dishes), the website's orders and
 // the settings are managed here; the restaurant's pages are edited in the editor like any page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users } from 'lucide-react';
+import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users, UserCog } from 'lucide-react';
 import { RestaurantAdminData, setDayStartHour } from './restaurantTypes';
 import { RestaurantTabProps, RestaurantTabId } from './tabs/shared';
 import { TablesTab } from './tabs/TablesTab';
@@ -16,34 +16,41 @@ import { CategoriesTab } from './tabs/CategoriesTab';
 import { SubCatalogsTab } from './tabs/SubCatalogsTab';
 import { OrdersTab } from './tabs/OrdersTab';
 import { RestaurantSettingsTab } from './tabs/RestaurantSettingsTab';
+import { MembersTab } from './tabs/MembersTab';
+import { Access, OWNER_ACCESS, PermId } from '../../services/members';
 
 type TabId = RestaurantTabId;
 
-const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<RestaurantTabProps> }[] = [
-  { id: 'orders', label: 'الطلبات', icon: Inbox, Component: OrdersTab },
-  { id: 'dishes', label: 'الأطباق', icon: UtensilsCrossed, Component: DishesTab },
-  { id: 'categories', label: 'أقسام المنيو', icon: LayoutList, Component: CategoriesTab },
-  { id: 'subcatalogs', label: 'الكاتالوكات الفرعية', icon: Layers, Component: SubCatalogsTab },
-  { id: 'halls', label: 'الصالات والطاولات', icon: Armchair, Component: HallsTab },
-  { id: 'devices', label: 'الأجهزة والأكواد', icon: MonitorSmartphone, Component: DevicesTab },
-  { id: 'workers', label: 'العمال والصناديق', icon: Users, Component: WorkersTab },
-  { id: 'tables', label: 'رابط الموقع ورموز QR', icon: QrCode, Component: TablesTab },
-  { id: 'accounts', label: 'الحسابات', icon: Wallet, Component: AccountsTab },
-  { id: 'settings', label: 'الإعدادات', icon: SlidersHorizontal, Component: RestaurantSettingsTab },
+// `perm` is what a management member needs to see the tab (the owner sees all); 'owner' is for the owner only.
+const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<RestaurantTabProps>; perm: PermId | 'owner' }[] = [
+  { id: 'orders', label: 'الطلبات', icon: Inbox, Component: OrdersTab, perm: 'orders' },
+  { id: 'dishes', label: 'الأطباق', icon: UtensilsCrossed, Component: DishesTab, perm: 'menu' },
+  { id: 'categories', label: 'أقسام المنيو', icon: LayoutList, Component: CategoriesTab, perm: 'menu' },
+  { id: 'subcatalogs', label: 'الكاتالوكات الفرعية', icon: Layers, Component: SubCatalogsTab, perm: 'menu' },
+  { id: 'halls', label: 'الصالات والطاولات', icon: Armchair, Component: HallsTab, perm: 'tables' },
+  { id: 'devices', label: 'الأجهزة والأكواد', icon: MonitorSmartphone, Component: DevicesTab, perm: 'staff' },
+  { id: 'workers', label: 'العمال والصناديق', icon: Users, Component: WorkersTab, perm: 'staff' },
+  { id: 'tables', label: 'رابط الموقع ورموز QR', icon: QrCode, Component: TablesTab, perm: 'tables' },
+  { id: 'accounts', label: 'الحسابات', icon: Wallet, Component: AccountsTab, perm: 'accounts' },
+  { id: 'settings', label: 'الإعدادات', icon: SlidersHorizontal, Component: RestaurantSettingsTab, perm: 'settings' },
+  { id: 'members', label: 'أعضاء الإدارة', icon: UserCog, Component: MembersTab, perm: 'owner' },
 ];
 
 interface RestaurantAdminPanelProps {
   data: RestaurantAdminData;
   onChange: (fn: (d: RestaurantAdminData) => RestaurantAdminData) => void;
   ownerUid: string;
+  access?: Access;
 }
 
-export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid }) => {
+export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid, access = OWNER_ACCESS }) => {
   // Before anything below reads «today»: the owner's business day.
   setDayStartHour(data.settings.dayStartHour);
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<TabId>('dishes');
-  const liveOrders = useLiveOrders(ownerUid);
+  const tabs = TABS.filter((t) => (t.perm === 'owner' ? access.owner : access.owner || access.perms[t.perm]));
+  const [chosen, setTab] = useState<TabId>('dishes');
+  const tab = tabs.some((t) => t.id === chosen) ? chosen : tabs[0]?.id;
+  const liveOrders = useLiveOrders(access.owner || access.perms.orders ? ownerUid : null);
   const liveIds = new Set(liveOrders.items.map((o) => o.id));
   const newOrders = [...liveOrders.items, ...data.orders.filter((o) => !liveIds.has(o.id))].filter((o) => o.status === 'new' && o.source !== 'staff').length;
 
@@ -54,7 +61,7 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const active = TABS.find((t) => t.id === tab)!;
+  const active = tabs.find((t) => t.id === tab);
   const count = (id: TabId) => (id === 'dishes' ? data.dishes.length : id === 'categories' ? data.categories.length : id === 'subcatalogs' ? data.subCatalogs.length : 0);
 
   return (
@@ -90,7 +97,7 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
 
             <div className="flex-1 flex flex-col md:flex-row min-h-0">
               <nav className="md:w-56 shrink-0 bg-white md:border-l border-b md:border-b-0 border-neutral-200 p-2 flex md:flex-col gap-1 overflow-x-auto">
-                {TABS.map((t) => (
+                {tabs.map((t) => (
                   <button
                     key={t.id}
                     type="button"
@@ -109,8 +116,14 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
                 ))}
               </nav>
               <main className="flex-1 min-w-0 overflow-y-auto p-3 sm:p-6">
-                <h2 className="text-lg font-black text-[#1d1d1f] mb-4">{active.label}</h2>
-                <active.Component key={active.id} data={data} update={onChange} onGoTo={setTab} ownerUid={ownerUid} liveOrders={liveOrders} />
+                {active ? (
+                  <>
+                    <h2 className="text-lg font-black text-[#1d1d1f] mb-4">{active.label}</h2>
+                    <active.Component key={active.id} data={data} update={onChange} onGoTo={setTab} ownerUid={ownerUid} liveOrders={liveOrders} />
+                  </>
+                ) : (
+                  <div className="py-16 text-center text-sm text-neutral-500 font-bold">لم يسمح لك صاحب الحساب بأي قسم بعد.</div>
+                )}
               </main>
             </div>
           </div>

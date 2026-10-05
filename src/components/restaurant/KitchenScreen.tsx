@@ -52,8 +52,9 @@ const Place: React.FC<{ o: MenuOrder; menu: KitchenMenu | null }> = ({ o, menu }
   return (
     <span className="h-8 px-3 rounded-full bg-white/10 text-base font-black inline-flex items-center gap-1.5 min-w-0">
       {o.type === 'table' ? <Armchair size={16} /> : o.type === 'delivery' ? <Bike size={16} /> : <Store size={16} />}
-      <span className="truncate">{o.type === 'table' ? `طاولة ${o.table}` : o.type === 'delivery' ? 'توصيل' : 'استلام'}</span>
+      <span className="truncate">{o.type === 'table' ? `طاولة ${o.table}` : o.type === 'delivery' ? 'توصيل' : o.source === 'staff' ? 'سفري' : 'استلام'}</span>
       {hall && <span className="text-xs font-bold text-white/60 truncate">{hall}</span>}
+      {o.source === 'staff' && o.name && <span className="text-xs font-bold text-white/60 truncate">· {o.name}</span>}
     </span>
   );
 };
@@ -364,9 +365,9 @@ export const KitchenOverlay: React.FC<{ uid: string; live: LiveState<MenuOrder>;
   return createPortal(<KitchenBoard uid={uid} live={live} menu={menu} onClose={onClose} />, document.body);
 };
 
-// The published menu (sections and halls) for a screen that runs on its own.
+// The published menu (dishes, sections, halls, settings) for a screen that runs on its own.
 export const usePublishedMenu = (uid: string) => {
-  const [menu, setMenu] = useState<KitchenMenu | null>(null);
+  const [menu, setMenu] = useState<RestaurantAdminData | null>(null);
   useEffect(() => {
     let alive = true;
     loadPublishedRestaurant(uid).then((r) => alive && r && setMenu(r.admin)).catch((e) => console.warn('Could not load the menu:', e));

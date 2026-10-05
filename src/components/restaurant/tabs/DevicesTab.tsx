@@ -29,7 +29,7 @@ const CopyLink: React.FC<{ url: string }> = ({ url }) => {
 
 export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid }) => {
   const [stationName, setStationName] = useState('');
-  const [draft, setDraft] = useState<{ name: string; role: DeviceRole; stationId: string }>({ name: '', role: 'kitchen', stationId: '' });
+  const [draft, setDraft] = useState<{ name: string; role: DeviceRole; stationId: string; displayFor: string }>({ name: '', role: 'kitchen', stationId: '', displayFor: '' });
   const stations = data.stations;
 
   const setStations = (fn: (s: KitchenStation[]) => KitchenStation[]) => update((d) => ({ ...d, stations: fn(d.stations) }));
@@ -57,7 +57,7 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
     const name = draft.name.trim() || DEVICE_ROLES.find((r) => r.id === draft.role)!.label;
     update((d) => ({
       ...d,
-      devices: [...d.devices, { id: newId('dev'), name, role: draft.role, stationId: draft.role === 'kitchen' ? draft.stationId : '', code: newDeviceCode(d.devices), active: true, createdAt: new Date().toISOString() }],
+      devices: [...d.devices, { id: newId('dev'), name, role: draft.role, stationId: draft.role === 'kitchen' ? draft.stationId : '', displayFor: draft.role === 'display' ? draft.displayFor : '', code: newDeviceCode(d.devices), active: true, createdAt: new Date().toISOString() }],
     }));
     setDraft({ ...draft, name: '' });
   };
@@ -66,6 +66,7 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
     update((d) => ({ ...d, devices: d.devices.filter((x) => x.id !== v.id) }));
   };
   const firstStation = stations[0]?.id || '';
+  const cashiers = data.devices.filter((v) => v.role === 'cashier' || v.role === 'waiter');
   const stationOf = (id: string) => stations.find((s) => s.id === id);
 
   return (
@@ -123,6 +124,14 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
               </select>
             </Field>
           )}
+          {draft.role === 'display' && (
+            <Field label="تعرض فواتير">
+              <select className={selectClass} value={draft.displayFor} onChange={(e) => setDraft({ ...draft, displayFor: e.target.value })}>
+                <option value="">اختر جهاز الكاشير</option>
+                {cashiers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </Field>
+          )}
           <PrimaryButton onClick={addDevice}><span className="inline-flex items-center gap-1"><Plus size={14} /> أضف الجهاز وأنشئ كوده</span></PrimaryButton>
         </div>
         <p className="text-[11px] text-neutral-400">{DEVICE_ROLES.find((r) => r.id === draft.role)?.hint}</p>
@@ -149,6 +158,12 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
                     <select className="h-8 px-2 rounded-lg border border-neutral-200 bg-white text-xs font-bold" value={v.role} onChange={(e) => patchDevice(v.id, { role: e.target.value as DeviceRole })}>
                       {DEVICE_ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
                     </select>
+                    {v.role === 'display' && (
+                      <select className={`h-8 px-2 rounded-lg border bg-white text-xs font-bold ${cashiers.some((c) => c.id === v.displayFor) ? 'border-neutral-200' : 'border-[#E03131] text-[#E03131]'}`} value={v.displayFor} onChange={(e) => patchDevice(v.id, { displayFor: e.target.value })}>
+                        <option value="">اربطها بجهاز كاشير</option>
+                        {cashiers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    )}
                     {v.role === 'kitchen' && (
                       <select className="h-8 px-2 rounded-lg border border-neutral-200 bg-white text-xs font-bold" value={st ? v.stationId : ''} onChange={(e) => patchDevice(v.id, { stationId: e.target.value })}>
                         <option value="">كل الأقسام</option>
@@ -170,7 +185,7 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
             })}
           </div>
         )}
-        <p className="text-[11px] text-neutral-400 leading-relaxed">مرحلة تجربة: الكود يفتح شاشة الجهاز الآن، والحماية الكاملة لكل جهاز تأتي مع فصل مستويات الدخول.</p>
+        <p className="text-[11px] text-neutral-400 leading-relaxed">على الكاشير وتابلت النادل يدخل كل عامل برقمه السري من «العمال والصناديق». شاشة الزبون تعرض فواتير جهاز الكاشير المربوطة به فقط. مرحلة تجربة: الحماية الكاملة لكل جهاز تأتي مع فصل مستويات الدخول.</p>
       </Card>
     </div>
   );

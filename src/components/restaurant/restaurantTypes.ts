@@ -4,6 +4,7 @@
 // Built after the owner's GastroPOS app: a dish shows the sub-catalogs linked to its catalog, unless
 // the dish picks its own.
 import { newId } from '../shop/shopTypes';
+import { Worker, normalizeWorker } from './staffTypes';
 
 // A main catalog of the menu: مشاوي، سندويش، مشروبات...
 export interface MenuCategory {
@@ -77,6 +78,8 @@ export interface RestaurantSettings {
   orderNote: string; // shown above the order form, e.g. delivery areas
   whatsappCopy: boolean; // also open WhatsApp with the order when a guest sends one
   tables: number; // how many tables get a QR code
+  payAnyWorker: boolean; // a table's bill can be paid at any worker (false = only at the one who opened it)
+  autoLockMinutes: number; // the cashier/waiter screen asks for a PIN again after this idle time (0 = never)
 }
 
 // ---------- Kitchen sections, halls, tables and devices (the staff side) ----------
@@ -118,6 +121,7 @@ export interface StaffDevice {
   role: DeviceRole;
   stationId: string; // kitchen screens: '' = every section
   code: string; // 6 digits
+  displayFor: string; // customer screens: the cashier device whose bills it shows
   active: boolean;
   createdAt: string;
 }
@@ -177,8 +181,8 @@ export interface OrderLine {
 
 export type OrderType = 'delivery' | 'pickup' | 'table';
 
-// Where an order came from: the website, or a table's QR code.
-export type OrderSource = 'website' | 'qr';
+// Where an order came from: the website, a table's QR code, or the staff (cashier, waiter).
+export type OrderSource = 'website' | 'qr' | 'staff';
 
 export interface MenuOrder {
   id: string;
@@ -198,6 +202,8 @@ export interface MenuOrder {
   total: number;
   // Set by the kitchen only (never part of a guest's new order): the lines it has finished.
   doneLines?: number[];
+  // Set by the staff only: the table's bill it was added to (its money is taken there, not here).
+  tabId?: string;
 }
 
 export interface RestaurantAdminData {
@@ -209,6 +215,7 @@ export interface RestaurantAdminData {
   stations: KitchenStation[];
   halls: Hall[];
   devices: StaffDevice[];
+  workers: Worker[];
 }
 
 export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
@@ -226,6 +233,8 @@ export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   orderNote: '',
   whatsappCopy: true,
   tables: 10,
+  payAnyWorker: true,
+  autoLockMinutes: 0,
 };
 
 export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
@@ -237,6 +246,7 @@ export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
   stations: DEFAULT_STATIONS.map((s) => ({ ...s })),
   halls: defaultHalls(DEFAULT_RESTAURANT_SETTINGS.tables),
   devices: [],
+  workers: [],
 });
 
 export const emptyDish = (categoryId = ''): Dish => ({
@@ -303,7 +313,7 @@ const normalizeOrder = (raw: any): MenuOrder => ({
   createdAt: str(raw?.createdAt) || new Date().toISOString(),
   status: ORDER_STATUSES.some((s) => s.id === raw?.status) ? raw.status : 'new',
   type: raw?.type === 'pickup' || raw?.type === 'table' ? raw.type : 'delivery',
-  source: raw?.source === 'qr' ? 'qr' : 'website',
+  source: raw?.source === 'qr' || raw?.source === 'staff' ? raw.source : 'website',
   table: str(raw?.table),
   name: str(raw?.name),
   phone: str(raw?.phone),
@@ -324,6 +334,7 @@ const normalizeOrder = (raw: any): MenuOrder => ({
   deliveryFee: num(raw?.deliveryFee),
   total: num(raw?.total),
   ...(Array.isArray(raw?.doneLines) ? { doneLines: raw.doneLines.filter((n: unknown) => typeof n === 'number') } : {}),
+  ...(typeof raw?.tabId === 'string' && raw.tabId ? { tabId: raw.tabId } : {}),
 });
 
 const normalizeStation = (raw: any, i: number): KitchenStation => ({
@@ -345,6 +356,7 @@ const normalizeDevice = (raw: any): StaffDevice => ({
   name: str(raw?.name),
   role: DEVICE_ROLES.some((r) => r.id === raw?.role) ? raw.role : 'kitchen',
   stationId: str(raw?.stationId),
+  displayFor: str(raw?.displayFor),
   code: /^\d{6}$/.test(str(raw?.code)) ? raw.code : '',
   active: raw?.active !== false,
   createdAt: str(raw?.createdAt) || new Date().toISOString(),
@@ -362,6 +374,7 @@ export const normalizeRestaurantAdmin = (raw: any): RestaurantAdminData => ({
   stations: Array.isArray(raw?.stations) && raw.stations.length ? raw.stations.map(normalizeStation) : DEFAULT_STATIONS.map((s) => ({ ...s })),
   halls: Array.isArray(raw?.halls) ? raw.halls.map(normalizeHall) : defaultHalls(num(raw?.settings?.tables ?? DEFAULT_RESTAURANT_SETTINGS.tables)),
   devices: Array.isArray(raw?.devices) ? raw.devices.map(normalizeDevice).filter((d: StaffDevice) => d.code) : [],
+  workers: Array.isArray(raw?.workers) ? raw.workers.map(normalizeWorker).filter((w: Worker) => w.pin) : [],
 });
 
 // The sub-catalogs a dish offers, each with only the items this dish keeps.

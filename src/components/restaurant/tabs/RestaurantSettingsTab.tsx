@@ -20,6 +20,14 @@ export const RestaurantSettingsTab: React.FC<RestaurantTabProps> = ({ data, upda
           <Field label="أوقات العمل"><input className={inputClass} value={s.hours} onChange={(e) => set({ hours: e.target.value })} /></Field>
         </div>
       </Card>
+      <Card title="الكاشير والنادل">
+        <Toggle label="الزبون يدفع عند أي عامل (إذا أوقفته: فقط عند من فتح الطاولة، أو المدير)" checked={s.payAnyWorker} onChange={(payAnyWorker) => set({ payAnyWorker })} />
+        <Field label="قفل شاشة الكاشير والتابلت تلقائيًا" hint="بعد هذه المدة بدون استعمال يُطلب الرقم السري من جديد، مفيد إذا تشارك عدة عمال جهازًا واحدًا.">
+          <select className="h-10 px-3 rounded-xl border border-neutral-200 bg-white text-sm font-bold" value={s.autoLockMinutes} onChange={(e) => set({ autoLockMinutes: Number(e.target.value) })}>
+            {[0, 1, 2, 5, 10].map((m) => <option key={m} value={m}>{m ? `بعد ${m} دقيقة` : 'بدون قفل تلقائي'}</option>)}
+          </select>
+        </Field>
+      </Card>
       <Card title="الطلب أونلاين">
         <Toggle label="استقبال الطلبات من الموقع" checked={s.acceptOrders} onChange={(acceptOrders) => set({ acceptOrders })} />
         <Toggle label="إرسال نسخة من الطلب على واتساب أيضًا" checked={s.whatsappCopy} onChange={(whatsappCopy) => set({ whatsappCopy })} />

@@ -3,7 +3,7 @@
 // start, so a device that was stopped, deleted or given a new code drops back to the code pad.
 // Kitchen devices show the kitchen screen (their section only, if they have one); the cashier and the
 // waiters' tablets the cashier program (each worker signs in with his PIN); the customer's screen
-// follows the cashier device it is tied to.
+// follows the cashier device it is tied to; the waiting screen shows the guests which orders are ready.
 import React, { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { MonitorSmartphone, X } from 'lucide-react';
@@ -15,6 +15,7 @@ import { KitchenBoard, usePublishedMenu } from './KitchenScreen';
 import { NumberPad } from './pos/NumberPad';
 import { PosScreen } from './pos/PosScreen';
 import { CustomerDisplay } from './pos/CustomerDisplay';
+import { OrderBoard } from './pos/OrderBoard';
 
 // One browser can hold several devices of the restaurant (for trying them out, or one computer that
 // is both cashier and kitchen in two tabs). Each device remembers its code under its own id, and the
@@ -121,6 +122,12 @@ const CashierDevice: React.FC<{ uid: string; device: StaffDevice; workers: Worke
   const live = useLiveOrders(uid);
   const menu = usePublishedMenu(uid);
   return <PosScreen uid={uid} menu={menu} workers={workers} device={{ id: device.id, name: device.name }} live={live} onLogout={onLogout} />;
+};
+
+const BoardDevice: React.FC<{ uid: string; onLogout: () => void }> = ({ uid, onLogout }) => {
+  const live = useLiveOrders(uid);
+  const menu = usePublishedMenu(uid, 120000);
+  return <OrderBoard live={live} settings={menu?.settings || null} onLogout={onLogout} />;
 };
 
 const DisplayDevice: React.FC<{ uid: string; device: StaffDevice; onLogout: () => void }> = ({ uid, device, onLogout }) => {
@@ -250,5 +257,6 @@ export const DevicePage: React.FC<{ uid: string }> = ({ uid }) => {
   }
   if (device.role === 'kitchen') return <KitchenDevice uid={uid} device={device} onLogout={logout} />;
   if (device.role === 'display') return <DisplayDevice uid={uid} device={device} onLogout={logout} />;
+  if (device.role === 'board') return <BoardDevice uid={uid} onLogout={logout} />;
   return <CashierDevice uid={uid} device={device} workers={workers} onLogout={logout} />;
 };

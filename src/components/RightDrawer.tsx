@@ -86,6 +86,7 @@ import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
 import { uploadGalleryImageToStorage } from '../utils/galleryUpload';
 import { buildAddMenuData } from './rightDrawer/addMenuTemplates';
+import { SlideTemplatePreview, SlidePayload } from './rightDrawer/SlideTemplatePreview';
 import { AnimationSection } from './rightDrawer/sections/AnimationSection';
 import { LayersSection } from './rightDrawer/sections/LayersSection';
 import { LinkSection } from './rightDrawer/sections/LinkSection';
@@ -5589,221 +5590,30 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             </button>
           </div>
 
-          {/* Scrollable list of 10 Miniature Slides */}
+          {/* Ready slides: one card per slide, drawn at its real proportions with example data */}
           <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
+            {activeTemplateCategory && (
+              <p className="text-[10.5px] text-neutral-500 leading-relaxed -mt-0.5">
+                كل شريحة معروضة بشكلها وارتفاعها الحقيقي. الصور والبيانات هنا افتراضية، وبعد الإضافة تظهر صورك وبياناتك.
+              </p>
+            )}
             {activeTemplateCategory && Array.from({ length: slideTemplateCount(activeTemplateCategory) }).map((_, idx) => {
               const cat = READY_SLIDE_CATEGORIES.find(c => c.id === activeTemplateCategory);
               const catName = cat ? cat.name : 'شريحة';
               const templatePayload = getSlideTemplatePayload(activeTemplateCategory, idx, catName);
-              
-              // Custom mini layout drawing depending on index
               return (
-                <div 
-                  key={idx}
-                  onClick={() => {
+                <SlideTemplatePreview
+                  key={`${activeTemplateCategory}-${idx}`}
+                  payload={templatePayload as SlidePayload}
+                  categoryId={activeTemplateCategory}
+                  index={idx}
+                  onAdd={() => {
                     if (onAddSlideTemplate) {
                       onAddSlideTemplate(templatePayload);
                     }
                     setActiveTemplateCategory(null);
                   }}
-                  className="w-full bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-2xs group cursor-pointer hover:border-[#0071e3] hover:shadow-md transition-all relative"
-                >
-                  {/* Miniature representation header */}
-                  <div className="p-2 border-b border-neutral-100 bg-[#fbfbfd] flex items-center justify-between text-[9px] font-bold text-neutral-400">
-                    <span>{catName} — نموذج {idx + 1}</span>
-                    <span className="text-[8px] bg-neutral-100 text-neutral-500 px-1 py-0.5 rounded">مصغر</span>
-                  </div>
-
-                  {/* MINI SLIDE LAYOUT VIEW (صورة مصغرة حقيقية تعبر عن الهيكل الفعلي للشريحة) */}
-                  <div
-                    className="w-full h-[135px] relative overflow-hidden"
-                    style={{ backgroundColor: templatePayload.backgroundColor || '#ffffff' }}
-                  >
-                    {/* Background image layer (own opacity, independent of overlaid content) */}
-                    {templatePayload.backgroundImage && (
-                      <div
-                        className="absolute inset-0 pointer-events-none select-none"
-                        style={{
-                          backgroundImage: `url(${templatePayload.backgroundImage})`,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                          opacity: templatePayload.backgroundOpacity ?? 1,
-                        }}
-                      />
-                    )}
-                    {/* Inner scaled container: 1280px wide and 580px high, scaled down to fit perfectly */}
-                    <div
-                      className="absolute top-0 left-0 origin-top-left pointer-events-none select-none"
-                      style={{
-                        width: '1280px',
-                        height: '580px',
-                        transform: 'scale(0.23)',
-                      }}
-                    >
-                      {/* Map through elements of the slide template to render exact miniature representations */}
-                      {templatePayload.elements && templatePayload.elements.map((el: any, elIdx: number) => {
-                        const elStyle: React.CSSProperties = {
-                          position: 'absolute',
-                          left: `${el.x}px`,
-                          top: `${el.y}px`,
-                          width: `${el.width}px`,
-                          height: `${el.height}px`,
-                          color: el.styles?.color || '#1d1d1f',
-                          background: el.styles?.backgroundColor || 'transparent',
-                          borderRadius: el.styles?.borderRadius ? `${el.styles.borderRadius}px` : undefined,
-                          borderWidth: el.styles?.borderWidth ? `${el.styles.borderWidth}px` : undefined,
-                          borderColor: el.styles?.borderColor || 'transparent',
-                          borderStyle: el.styles?.borderStyle || 'none',
-                          fontSize: el.styles?.fontSize ? `${el.styles.fontSize}px` : '14px',
-                          fontWeight: el.styles?.fontWeight || 'normal',
-                          textAlign: el.styles?.textAlign || 'right',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: el.styles?.textAlign === 'center' ? 'center' : (el.styles?.textAlign === 'left' ? 'flex-start' : 'flex-end'),
-                          padding: '4px 8px',
-                          boxShadow: el.styles?.shadow === 'apple' ? '0 4px 12px rgba(0,0,0,0.08)' : undefined,
-                          overflow: 'hidden',
-                        };
-
-                        if (el.type === 'image') {
-                          return (
-                            <div key={elIdx} style={{ ...elStyle, padding: 0 }}>
-                              <img 
-                                src={el.content || el.imageUrl || 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=400&q=80'} 
-                                alt="" 
-                                className="w-full h-full object-cover" 
-                                referrerPolicy="no-referrer"
-                              />
-                            </div>
-                          );
-                        }
-
-                        if (el.type === 'shape') {
-                          return (
-                            <div 
-                              key={elIdx} 
-                              style={{ 
-                                ...elStyle, 
-                                padding: 0
-                              }}
-                            >
-                              {el.content && (
-                                <span className="p-2 w-full text-center text-xs font-bold">{el.content}</span>
-                              )}
-                            </div>
-                          );
-                        }
-
-                        if (el.type === 'button') {
-                          return (
-                            <button 
-                              key={elIdx} 
-                              type="button" 
-                              style={{ 
-                                ...elStyle, 
-                                cursor: 'default'
-                              }}
-                            >
-                              <span className="w-full truncate">{el.content || 'زر الإجراء'}</span>
-                            </button>
-                          );
-                        }
-
-                        // Live shop elements: a row of card outlines / a search bar.
-                        if (el.type === 'shopProducts') {
-                          const tiny = el.shopLayout === 'marquee';
-                          return (
-                            <div key={elIdx} style={{ ...elStyle, padding: 0, gap: tiny ? 16 : 28, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap' }}>
-                              {Array.from({ length: tiny ? 8 : el.shopLayout === 'small' ? 6 : el.shopLayout === 'large' ? 3 : 4 }).map((__, k) => (
-                                <div key={k} style={{ flex: tiny ? '0 0 150px' : '1 1 0', minWidth: tiny ? 150 : 150, maxHeight: tiny ? undefined : 400, borderRadius: tiny ? 9999 : 24, background: tiny ? 'rgba(255,255,255,0.9)' : '#FFFFFF', border: '2px solid rgba(42,31,26,0.08)', boxShadow: '0 8px 24px rgba(42,31,26,0.08)' }} />
-                              ))}
-                            </div>
-                          );
-                        }
-                        if (el.type === 'cart' || el.type === 'checkout') {
-                          const rows = el.type === 'cart' ? 4 : 6;
-                          return (
-                            <div key={elIdx} style={{ ...elStyle, background: el.styles?.backgroundColor || '#FFFFFF', borderRadius: 24, flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', gap: 18, padding: 28 }}>
-                              <div style={{ height: 26, width: '45%', borderRadius: 8, background: el.shopAccent || '#B4532A', opacity: 0.85 }} />
-                              {Array.from({ length: rows }).map((__, k) => (
-                                <div key={k} style={{ height: el.type === 'cart' ? 70 : 52, borderRadius: 12, background: 'rgba(128,128,128,0.18)' }} />
-                              ))}
-                            </div>
-                          );
-                        }
-                        if (el.type === 'carListings') {
-                          const strip = el.carLayout === 'marquee';
-                          const n = strip ? 6 : el.carLayout === 'wide' ? 2 : el.carLayout === 'large' ? 2 : 3;
-                          return (
-                            <div key={elIdx} style={{ ...elStyle, padding: 0, gap: 24, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap', flexDirection: el.carLayout === 'wide' ? 'column' : 'row' }}>
-                              {Array.from({ length: n }).map((__, k) => (
-                                <div key={k} style={{ flex: strip ? '0 0 220px' : '1 1 0', minWidth: 150, maxHeight: strip ? undefined : 420, borderRadius: el.carCardRadius ?? 22, background: el.carCardBg || '#FFFFFF', border: '2px solid rgba(18,19,22,0.08)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                                  <div style={{ flex: '0 0 55%', background: 'linear-gradient(135deg,#d9dbe0,#b9bcc4)' }} />
-                                  <div style={{ margin: 16, height: 18, width: '40%', borderRadius: 6, background: el.styles?.color || '#C8102E', opacity: 0.85 }} />
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        }
-                        if (el.type === 'menuList') {
-                          const rows = el.menuLayout === 'list';
-                          const n = rows ? 4 : el.menuLayout === 'large' ? 2 : 3;
-                          return (
-                            <div key={elIdx} style={{ ...elStyle, padding: 0, gap: 24, justifyContent: 'center', alignItems: 'stretch', flexWrap: 'wrap', flexDirection: rows ? 'column' : 'row' }}>
-                              {Array.from({ length: n }).map((__, k) => (
-                                <div key={k} style={{ flex: '1 1 0', minWidth: 150, maxHeight: rows ? undefined : 420, borderRadius: el.menuCardRadius ?? 20, background: el.menuCardBg || '#FFFFFF', border: '2px solid rgba(43,33,24,0.08)', overflow: 'hidden', display: 'flex', flexDirection: rows ? 'row-reverse' : 'column' }}>
-                                  <div style={{ flex: rows ? '0 0 22%' : '0 0 55%', background: 'linear-gradient(135deg,#e9d8c4,#c99a74)' }} />
-                                  <div style={{ margin: 16, height: 18, width: '40%', borderRadius: 6, background: el.styles?.color || '#B5562B', opacity: 0.85 }} />
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        }
-                        if (el.type === 'menuCart') {
-                          return (
-                            <div key={elIdx} style={{ ...elStyle, padding: 0, gap: 20, alignItems: 'stretch' }}>
-                              {[2, 1].map((f, k) => (
-                                <div key={k} style={{ flex: `${f} 1 0`, background: '#FFFFFF', borderRadius: 24, padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                                  <div style={{ height: 24, width: '45%', borderRadius: 8, background: el.styles?.color || '#B5562B', opacity: 0.85 }} />
-                                  {Array.from({ length: 3 }).map((___, j) => <div key={j} style={{ height: 56, borderRadius: 12, background: 'rgba(128,128,128,0.18)' }} />)}
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        }
-                        if (el.type === 'carSearch') {
-                          return (
-                            <div key={elIdx} style={{ ...elStyle, background: el.shopSearchStyle === 'glass' ? 'rgba(255,255,255,0.18)' : el.shopSearchStyle === 'minimal' ? 'transparent' : '#FFFFFF', borderRadius: el.shopSearchStyle === 'minimal' ? 0 : 9999, borderBottom: `3px solid ${el.styles?.color || '#C8102E'}`, color: el.shopSearchStyle === 'glass' ? '#FFFFFF' : '#6b6e76', fontSize: '22px', padding: '0 24px' }}>
-                              <span className="w-full truncate">🔍 {el.content}</span>
-                            </div>
-                          );
-                        }
-                        if (el.type === 'shopSearch') {
-                          return (
-                            <div key={elIdx} style={{ ...elStyle, background: el.shopSearchStyle === 'minimal' ? 'transparent' : '#FFFFFF', borderRadius: el.shopSearchStyle === 'minimal' ? 0 : 9999, borderBottom: `3px solid ${el.styles?.color || '#B4532A'}`, color: '#8A7B70', fontSize: '22px', padding: '0 24px' }}>
-                              <span className="w-full truncate">🔍 {el.content}</span>
-                            </div>
-                          );
-                        }
-
-                        // Fallback for headings, paragraphs, badges, dividers
-                        return (
-                          <div key={elIdx} style={elStyle}>
-                            <span className="w-full truncate leading-tight">{el.content || el.name}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* HOVER HOOD OVERLAY (غطاء تفاعلي أنيق عند تمرير الماوس) */}
-                  <div className="absolute inset-0 bg-neutral-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 select-none z-20">
-                    <div className="w-7 h-7 rounded-full bg-[#0071e3] flex items-center justify-center text-white text-xs font-black shadow-lg">
-                      ＋
-                    </div>
-                    <span className="text-[10px] font-bold tracking-wide">انقر لإضافة النموذج للعمليات</span>
-                  </div>
-                </div>
+                />
               );
             })}
           </div>

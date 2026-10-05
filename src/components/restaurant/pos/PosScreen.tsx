@@ -5,8 +5,7 @@
 // Takeaway bills have their own row. «فواتير اليوم» lists the closed bills (print, reopen with the
 // manager's PIN) and «صندوقي» shows the worker's money and closes his till with the cash he counts.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Armchair, ShoppingBag, Lock, LogOut, X, Wallet, ReceiptText, Plus, QrCode, BellRing, Users, Printer, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { Armchair, ShoppingBag, Lock, LogOut, X, Wallet, ReceiptText, Plus, QrCode, BellRing, Users, Printer, RotateCcw, CheckCircle2, ChefHat } from 'lucide-react';
 import { MenuOrder } from '../restaurantTypes';
 import type { LiveState } from '../restaurantCloud';
 import { Actor, CASH, ScreenDraft, ScreenPaid, ScreenState, Tab, Worker, WORKER_ROLES, byMethod, openTabId, startOfToday, tabTitle, tabTotals, unsentItems } from '../staffTypes';
@@ -23,18 +22,27 @@ interface PosScreenProps {
   workers: Worker[];
   device: { id: string; name: string };
   live: LiveState<MenuOrder>;
-  onClose?: () => void; // inside the admin window
+  onClose?: () => void;
   onLogout?: () => void; // on a device: forget its code
+  kitchen?: { open: () => void; waiting: number }; // «كاشير ومطبخ» devices: the kitchen screen on the same device
 }
 
 const minutesSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
 
-const SignIn: React.FC<{ workers: Worker[]; device: string; onSignIn: (w: Worker) => void; onClose?: () => void; onLogout?: () => void }> = ({ workers, device, onSignIn, onClose, onLogout }) => {
+const KitchenButton: React.FC<{ open: () => void; waiting: number }> = ({ open, waiting }) => (
+  <button type="button" onClick={open} className="relative h-10 px-3 rounded-xl bg-[#E8590C] text-white text-xs font-black inline-flex items-center gap-1.5 cursor-pointer">
+    <ChefHat size={15} /> المطبخ
+    {waiting > 0 && <span className="absolute -top-1.5 -left-1.5 min-w-[20px] h-5 px-1 rounded-full bg-[#E03131] text-white text-[11px] font-black flex items-center justify-center">{waiting}</span>}
+  </button>
+);
+
+const SignIn: React.FC<{ workers: Worker[]; device: string; onSignIn: (w: Worker) => void; onClose?: () => void; onLogout?: () => void; kitchen?: { open: () => void; waiting: number } }> = ({ workers, device, onSignIn, onClose, onLogout, kitchen }) => {
   const [error, setError] = useState('');
   const active = workers.filter((w) => w.active);
   return (
     <div className="absolute inset-0 bg-[#18191c] text-white flex items-center justify-center p-6">
       <div className="absolute top-3 left-3 flex gap-2">
+        {kitchen && <KitchenButton {...kitchen} />}
         {onLogout && <button type="button" onClick={onLogout} className="h-10 px-3 rounded-xl bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"><LogOut size={15} /> خروج الجهاز</button>}
         {onClose && <button type="button" onClick={onClose} aria-label="إغلاق" className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center cursor-pointer"><X size={18} /></button>}
       </div>
@@ -61,7 +69,7 @@ const SignIn: React.FC<{ workers: Worker[]; device: string; onSignIn: (w: Worker
   );
 };
 
-export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device, live, onClose, onLogout }) => {
+export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device, live, onClose, onLogout, kitchen }) => {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [hallId, setHallId] = useState('');
   const [onlyMine, setOnlyMine] = useState(false);
@@ -73,7 +81,6 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
   const openingShift = useRef('');
   const { show: toast, node: toastNode } = useToast();
   const { askManager, dialog: managerDialog } = useManagerGate(workers, worker);
-  const isAdmin = device.id === 'admin';
 
   const openTabs = useOpenTabs(worker ? uid : null);
   const shifts = useShifts(worker ? uid : null);
@@ -125,10 +132,9 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
     setPartPaid(null);
   }, [tabId]);
   useEffect(() => {
-    if (isAdmin) return;
     const t = window.setTimeout(() => setScreen(uid, device.id, { tabId, thanks: tabId ? null : screenThanks, draft: tabId ? draft : null, paid: tabId ? partPaid : null }), 150);
     return () => window.clearTimeout(t);
-  }, [uid, device.id, tabId, isAdmin, screenThanks, draft, partPaid]);
+  }, [uid, device.id, tabId, screenThanks, draft, partPaid]);
 
   const tab = tabId ? openTabs.items.find((t) => t.id === tabId) : undefined;
   // The bill was closed or moved on another device (a bill just opened here may not be listed yet).
@@ -161,7 +167,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
     </div>
   );
 
-  if (!worker || !actor) return shell(<SignIn workers={workers} device={device.name} onSignIn={(w) => { setWorker(w); setOnlyMine(false); }} onClose={onClose} onLogout={onLogout} />);
+  if (!worker || !actor) return shell(<SignIn workers={workers} device={device.name} onSignIn={(w) => { setWorker(w); setOnlyMine(false); }} onClose={onClose} onLogout={onLogout} kitchen={kitchen} />);
 
   const orders = live.items;
   const byId = new Map(openTabs.items.map((t) => [t.id, t]));
@@ -281,6 +287,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
             <div className="text-base font-black truncate">{worker.name} <span className="text-xs font-bold text-white/50">· {roleLabel}</span></div>
             <div className="text-[11px] font-bold text-white/50 truncate">{device.name}{settings.name ? ` · ${settings.name}` : ''}</div>
           </div>
+          {kitchen && <KitchenButton {...kitchen} />}
           <button type="button" onClick={() => setDialog('closed')} className="h-10 px-3 rounded-xl bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"><ReceiptText size={15} /> فواتير اليوم</button>
           <button type="button" onClick={() => setDialog('shift')} className="h-10 px-3 rounded-xl bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"><Wallet size={15} /> صندوقي</button>
           <button type="button" onClick={signOut} className="h-10 px-3 rounded-xl bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer" title="تبديل العامل"><Lock size={15} /> قفل</button>
@@ -401,6 +408,3 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
     </>
   );
 };
-
-// Inside the admin window, for the owner to try the cashier on this computer.
-export const PosOverlay: React.FC<Omit<PosScreenProps, 'device'>> = (props) => createPortal(<PosScreen {...props} device={{ id: 'admin', name: 'لوحة الإدارة' }} />, document.body);

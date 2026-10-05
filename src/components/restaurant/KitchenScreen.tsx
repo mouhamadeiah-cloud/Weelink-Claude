@@ -6,11 +6,10 @@
 // waited (green, then orange; past the «late» minutes of the settings the ticket flashes red),
 // what was taken out or added and the notes. «ملخص الأصناف» counts what is still to prepare, and
 // «السجل» lists the delivered and cancelled orders to bring one back. A chime plays for each new order
-// once the sound is turned on (browsers only allow sound after a tap). Opened from the admin window,
-// on its own at ?kitchen=<uid>(&station=<id>), or on a kitchen device by its code.
+// once the sound is turned on (browsers only allow sound after a tap). Opened on its own at
+// ?kitchen=<uid>(&station=<id>), or on a kitchen or «كاشير ومطبخ» device by its code.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { X, Maximize2, Volume2, VolumeX, Armchair, Bike, Store, ChefHat, Check, RotateCcw, ListChecks, History, LogOut } from 'lucide-react';
+import { X, Maximize2, Volume2, VolumeX, Armchair, Bike, Store, ChefHat, Check, RotateCcw, ListChecks, History, LogOut, Calculator } from 'lucide-react';
 import { MenuOrder, OrderStatus, RestaurantAdminData, ORDER_STATUSES, hallOfTable, stationOfDish } from './restaurantTypes';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../services/firebase';
@@ -148,9 +147,10 @@ interface BoardProps {
   initialStation?: string;
   onClose?: () => void;
   onLogout?: () => void;
+  onSwitch?: () => void; // «كاشير ومطبخ» devices: back to the cashier
 }
 
-export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, lockedStation, initialStation, onClose, onLogout }) => {
+export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, lockedStation, initialStation, onClose, onLogout, onSwitch }) => {
   const [now, setNow] = useState(Date.now());
   const [sound, setSound] = useState(false);
   const [station, setStation] = useState(lockedStation || initialStation || '');
@@ -284,6 +284,7 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
         {locked && <span className="h-8 px-3 rounded-full text-sm font-black inline-flex items-center" style={{ background: stationById(lockedStation!)!.color }}>{stationById(lockedStation!)!.name}</span>}
         <div className="text-sm text-white/50 font-bold">{new Date(now).toLocaleTimeString('ar-SY-u-nu-latn', { hour: '2-digit', minute: '2-digit' })}</div>
         <div className="mr-auto flex flex-wrap items-center gap-2">
+          {onSwitch && <button type="button" onClick={onSwitch} className="h-10 px-4 rounded-xl bg-[#2F9E44] text-sm font-black inline-flex items-center gap-2 cursor-pointer"><Calculator size={18} /> الكاشير</button>}
           <button type="button" onClick={() => setSummary(!summary)} className={chip(summary)}><ListChecks size={18} /> ملخص الأصناف</button>
           <button type="button" onClick={() => setView(view === 'open' ? 'history' : 'open')} className={chip(view === 'history')}><History size={18} /> السجل</button>
           <button type="button" onClick={toggleSound} className={`h-10 px-4 rounded-xl text-sm font-bold inline-flex items-center gap-2 cursor-pointer ${sound ? 'bg-[#2F9E44]' : 'bg-white/10'}`}>
@@ -373,21 +374,6 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
       )}
     </div>
   );
-};
-
-// Inside the admin window: uses the orders it already listens to.
-export const KitchenOverlay: React.FC<{ uid: string; live: LiveState<MenuOrder>; menu: KitchenMenu; onClose: () => void }> = ({ uid, live, menu, onClose }) => {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [onClose]);
-  return createPortal(<KitchenBoard uid={uid} live={live} menu={menu} onClose={onClose} />, document.body);
 };
 
 // The published menu (dishes, sections, halls, settings) for a screen that runs on its own.

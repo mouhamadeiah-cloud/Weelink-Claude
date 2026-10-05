@@ -4,10 +4,10 @@
 // and tables themselves are set in «الصالات والطاولات».
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { Copy, ExternalLink, Printer, Check, ChefHat, Armchair } from 'lucide-react';
-import { kitchenScreenUrl, restaurantSiteUrl } from '../restaurantCloud';
+import { Copy, ExternalLink, Printer, Check, Armchair } from 'lucide-react';
+import { restaurantSiteUrl } from '../restaurantCloud';
 import { allTables } from '../restaurantTypes';
-import { Card, GhostButton, PrimaryButton, EmptyState } from '../../shop/adminUi';
+import { Card, GhostButton, EmptyState } from '../../shop/adminUi';
 import { RestaurantTabProps } from './shared';
 
 const useQr = (text: string) => {
@@ -64,7 +64,7 @@ const printTables = async (name: string, uid: string, tables: { name: string; ha
   w.document.close();
 };
 
-export const TablesTab: React.FC<RestaurantTabProps> = ({ data, ownerUid, onOpenKitchen, onGoTo }) => {
+export const TablesTab: React.FC<RestaurantTabProps> = ({ data, ownerUid, onGoTo }) => {
   const tables = allTables(data.halls).filter((t) => t.name.trim());
   const siteUrl = restaurantSiteUrl(ownerUid);
 
@@ -79,10 +79,11 @@ export const TablesTab: React.FC<RestaurantTabProps> = ({ data, ownerUid, onOpen
         </div>
       </Card>
 
-      <Card title="شاشة المطبخ">
-        <p className="text-xs text-neutral-500 leading-relaxed">افتح هذا الرابط على تابلت أو شاشة المطبخ بعد الدخول إلى نفس الحساب. الطلبات الجديدة تظهر فورًا مع صوت تنبيه.</p>
-        <LinkRow url={kitchenScreenUrl(ownerUid)} />
-        <PrimaryButton onClick={onOpenKitchen}><span className="inline-flex items-center gap-1.5"><ChefHat size={15} /> افتح شاشة المطبخ هنا</span></PrimaryButton>
+      <Card title="الكاشير وشاشة المطبخ">
+        <p className="text-xs text-neutral-500 leading-relaxed">
+          يعمل الكاشير وشاشة المطبخ على أجهزة المطعم، كل جهاز بكوده.{' '}
+          <button type="button" onClick={() => onGoTo('devices')} className="font-bold text-[#0071e3] cursor-pointer">الأجهزة والأكواد</button>
+        </p>
       </Card>
 
       <Card title="رموز QR للطاولات" actions={tables.length > 0 ? <GhostButton onClick={() => printTables(data.settings.name || 'مطعمنا', ownerUid, tables)}><span className="inline-flex items-center gap-1"><Printer size={14} /> اطبع كل الرموز</span></GhostButton> : undefined}>

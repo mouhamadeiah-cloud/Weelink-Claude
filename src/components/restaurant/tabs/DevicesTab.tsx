@@ -66,7 +66,7 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
     update((d) => ({ ...d, devices: d.devices.filter((x) => x.id !== v.id) }));
   };
   const firstStation = stations[0]?.id || '';
-  const cashiers = data.devices.filter((v) => v.role === 'cashier' || v.role === 'waiter');
+  const cashiers = data.devices.filter((v) => v.role === 'cashier' || v.role === 'combo' || v.role === 'waiter');
   const stationOf = (id: string) => stations.find((s) => s.id === id);
 
   return (

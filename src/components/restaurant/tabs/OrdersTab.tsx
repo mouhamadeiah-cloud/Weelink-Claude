@@ -4,11 +4,11 @@
 // order adds its sale to the accounts. Orders kept on this device before the live orders could be
 // reached are listed with them.
 import React, { useState } from 'react';
-import { Phone, MapPin, Bike, Store, Trash2, MessageCircle, Armchair, ChefHat } from 'lucide-react';
+import { Phone, MapPin, Bike, Store, Trash2, MessageCircle, Armchair } from 'lucide-react';
 import { MenuOrder, ORDER_STATUSES, OrderStatus } from '../restaurantTypes';
 import { describeLine } from '../menuCartStore';
 import { deleteOrder, setOrderStatus, syncOrderLedger } from '../restaurantCloud';
-import { Card, EmptyState, GhostButton, formatMoney } from '../../shop/adminUi';
+import { Card, EmptyState, formatMoney } from '../../shop/adminUi';
 import { whatsappHref } from '../../cars/carModel';
 import { CloudNotice, RestaurantTabProps } from './shared';
 
@@ -27,7 +27,7 @@ const waNumber = (phone: string) => {
 
 const isOpen = (o: MenuOrder) => o.status !== 'done' && o.status !== 'cancelled';
 
-export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid, liveOrders, onOpenKitchen }) => {
+export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid, liveOrders }) => {
   const [filter, setFilter] = useState<OrderStatus | 'open' | 'all'>('open');
   const currency = data.settings.currency;
   // A local copy whose late cloud save went through anyway shows once, as the live order.
@@ -70,7 +70,6 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid
             </button>
           );
         })}
-        <GhostButton onClick={onOpenKitchen} className="mr-auto"><span className="inline-flex items-center gap-1.5"><ChefHat size={15} /> شاشة المطبخ</span></GhostButton>
       </div>
 
       {list.length === 0 ? (

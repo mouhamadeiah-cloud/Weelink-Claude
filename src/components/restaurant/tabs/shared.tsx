@@ -14,7 +14,6 @@ export interface RestaurantTabProps {
   onGoTo: (tab: RestaurantTabId) => void;
   ownerUid: string;
   liveOrders: LiveState<MenuOrder>;
-  onOpenKitchen: () => void;
 }
 
 export const parseAmount = (v: string) => {

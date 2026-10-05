@@ -92,6 +92,14 @@ service cloud.firestore {
         allow get, list, update, delete: if isOwner(userId) || isSimulatedOrPublic(userId);
       }
 
+      // The day's order count (1, 2, 3...). A guest's order takes the next number in its transaction:
+      // a guest may only start the day at 1 or add exactly 1.
+      match /counters/{day} {
+        allow get: if isValidId(day);
+        allow create: if isValidId(day) && ((request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1) || isOwner(userId) || isSimulatedOrPublic(userId));
+        allow update: if isValidId(day) && ((request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1) || isOwner(userId) || isSimulatedOrPublic(userId));
+      }
+
       // The cashier and the waiters: bills, tills, the customer screens and the log of sensitive actions.
       match /{staffCollection}/{docId} {
         allow read: if staffCollection in ['tabs', 'shifts', 'screens', 'log'] && (isOwner(userId) || isSimulatedOrPublic(userId));

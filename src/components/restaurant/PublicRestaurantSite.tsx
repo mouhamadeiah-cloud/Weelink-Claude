@@ -62,11 +62,10 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
   const submit = useMemo(
     () => async (o: MenuOrder) => {
       try {
-        await placeOrder(uid, o);
-        return true;
+        return await placeOrder(uid, o);
       } catch (e) {
         console.warn('Could not send the order:', e);
-        return false;
+        return null;
       }
     },
     [uid]

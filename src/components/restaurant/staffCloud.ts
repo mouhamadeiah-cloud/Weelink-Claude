@@ -14,6 +14,7 @@ import { db } from '../../services/firebase';
 import { newId } from '../shop/shopTypes';
 import { MenuOrder, OrderLine, orderNumberNow, todayKey } from './restaurantTypes';
 import type { LiveState } from './restaurantCloud';
+import { NextNumber, readNextNumber } from './orderNumbers';
 import { Actor, LogEntry, ScreenState, Shift, Tab, TabItem, TabKind, TabPayment, normalizeLog, normalizeScreen, normalizeShift, normalizeTab, openTabId, tabTitle, tabTotals, unsentItems } from './staffTypes';
 
 const col = (uid: string, name: string) => collection(db, 'restaurants', uid, name);
@@ -93,16 +94,21 @@ const readTab = async (tx: Transaction, uid: string, tabId: string) => {
 
 const orderLineOf = (i: TabItem): OrderLine => ({ dishId: i.dishId, name: i.name, unitPrice: i.unitPrice, qty: i.qty, removed: i.removed, extras: i.extras, notes: i.notes });
 
+// The day's next number for the kitchen order of a table's unsent dishes (a takeaway keeps its own
+// number on every order). Reads only, so it goes before the transaction's first write.
+const kitchenNumber = (tx: Transaction, uid: string, t: Tab) => (t.kind !== 'takeaway' && unsentItems(t).length > 0 ? readNextNumber(tx, uid) : Promise.resolve(null));
+
 // Writes the kitchen order of the bill's unsent dishes and returns the bill's items marked as sent.
-const sendUnsent = (tx: Transaction, uid: string, t: Tab, actor: Actor): TabItem[] => {
+const sendUnsent = (tx: Transaction, uid: string, t: Tab, actor: Actor, next: NextNumber | null): TabItem[] => {
   const unsent = unsentItems(t);
   if (unsent.length === 0) return t.items;
+  next?.take();
   const now = new Date().toISOString();
   const lines = unsent.map(orderLineOf);
   const subtotal = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const order: MenuOrder = {
     id: newId('ord'),
-    number: t.kind === 'takeaway' ? t.number : orderNumberNow(),
+    number: t.kind === 'takeaway' ? t.number : next?.n ?? orderNumberNow(),
     createdAt: now,
     status: 'new',
     type: t.kind === 'takeaway' ? 'pickup' : 'table',
@@ -159,7 +165,12 @@ export const openTab = (uid: string, place: TabPlace, actor: Actor) =>
     const id = openTabId(tableId);
     const ref = tabDoc(uid, id);
     const s = await tx.get(ref);
-    if (!s.exists()) tx.set(ref, clean(newTab(id, { ...place, tableId }, actor)));
+    if (!s.exists()) {
+      // A takeaway gets the day's next number now: it is the number the guest waits for.
+      const next = place.kind === 'takeaway' ? await readNextNumber(tx, uid) : null;
+      next?.take();
+      tx.set(ref, clean({ ...newTab(id, { ...place, tableId }, actor), ...(next ? { number: next.n } : {}) }));
+    }
     return id;
   });
 
@@ -188,7 +199,8 @@ export const addItems = (uid: string, tabId: string, lines: OrderLine[], actor: 
 export const sendToKitchen = (uid: string, tabId: string, actor: Actor) =>
   runTransaction(db, async (tx) => {
     const t = await readTab(tx, uid, tabId);
-    tx.update(tabDoc(uid, tabId), { items: clean(sendUnsent(tx, uid, t, actor)) });
+    const seq = await kitchenNumber(tx, uid, t);
+    tx.update(tabDoc(uid, tabId), { items: clean(sendUnsent(tx, uid, t, actor, seq)) });
   });
 
 const closeInTx = (tx: Transaction, uid: string, t: Tab, actor: Actor) => {
@@ -210,7 +222,8 @@ export interface PayInput {
 export const payTab = (uid: string, tabId: string, input: PayInput, actor: Actor) =>
   runTransaction(db, async (tx) => {
     const t = await readTab(tx, uid, tabId);
-    const items = sendUnsent(tx, uid, t, actor).map((i) => (input.items?.[i.id] ? { ...i, paidQty: Math.min(i.qty, i.paidQty + input.items[i.id]) } : i));
+    const seq = await kitchenNumber(tx, uid, t);
+    const items = sendUnsent(tx, uid, t, actor, seq).map((i) => (input.items?.[i.id] ? { ...i, paidQty: Math.min(i.qty, i.paidQty + input.items[i.id]) } : i));
     const due = tabTotals(t).due;
     const amount = Math.min(due, Math.max(0, Math.round(input.amount * 100) / 100));
     const payment: TabPayment = {

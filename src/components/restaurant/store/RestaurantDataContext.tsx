@@ -7,7 +7,8 @@ export const RestaurantDataContext = createContext<RestaurantAdminData | null>(n
 
 export const useRestaurantData = () => useContext(RestaurantDataContext);
 
-// Hands a guest's order in; resolves true when it reached the live orders (kitchen, orders list).
-export const RestaurantOrderContext = createContext<((o: MenuOrder) => Promise<boolean>) | null>(null);
+// Hands a guest's order in; resolves to the order's number of the day when it reached the live orders
+// (kitchen, orders list), or null when it did not.
+export const RestaurantOrderContext = createContext<((o: MenuOrder) => Promise<number | null>) | null>(null);
 
 export const useRestaurantOrder = () => useContext(RestaurantOrderContext);

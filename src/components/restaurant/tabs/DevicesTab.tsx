@@ -12,7 +12,7 @@ import { RestaurantTabProps } from './shared';
 
 const selectClass = 'h-10 px-3 rounded-xl border border-neutral-200 bg-white text-sm font-bold';
 
-const CopyLink: React.FC<{ url: string }> = ({ url }) => {
+export const CopyLink: React.FC<{ url: string }> = ({ url }) => {
   const [done, setDone] = useState(false);
   return (
     <div className="flex flex-wrap items-center gap-2">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { auth } from '../services/firebase';
 import { SignInError, registerOwner, resolveAccountId, signInOwner } from '../services/accounts';
+import { pendingInvite } from '../services/members';
 
 interface StandardAuthProps {
   onLoginWithGoogle: () => Promise<void>;
@@ -96,6 +97,11 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
   return (
     <div className="min-h-screen bg-white flex flex-col justify-center items-center px-6 py-12 md:py-24 font-sans select-none" dir="rtl">
       <div className="w-full max-w-[420px] space-y-12">
+        {pendingInvite() && (
+          <div className="p-4 rounded-2xl bg-[#0071e3]/5 border border-[#0071e3]/20 text-sm font-bold text-[#0071e3] leading-relaxed text-right">
+            دُعيت لإدارة مطعم على Weelink. سجّل الدخول أو أنشئ حساباً بنفس البريد الإلكتروني الذي دُعيت به.
+          </div>
+        )}
         
         {/* IMAGE 1: LOGIN MODE (هل لديك حساب) */}
         {mode === 'login' && (

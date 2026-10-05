@@ -25,7 +25,7 @@ import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
-import { placeOrder, publishRestaurant, saveStaff } from './components/restaurant/restaurantCloud';
+import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, saveStaff, withoutStaff } from './components/restaurant/restaurantCloud';
 import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
@@ -37,7 +37,8 @@ import { withLocalGraphics } from './utils/localGraphics';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
-import { isSigningIn, resolveAccountId } from './services/accounts';
+import { isSigningIn, resolveAccountId, takeInviteProblem } from './services/accounts';
+import { Access, OWNER_ACCESS, loadAccess } from './services/members';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -237,6 +238,15 @@ export default function App() {
   const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
   const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
   const ownerUid = activeUserUid;
+  // The owner sees everything; a management member what the owner allowed (services/members.ts).
+  const [access, setAccess] = useState<Access>(OWNER_ACCESS);
+  useEffect(() => {
+    let alive = true;
+    loadAccess(currentUser, activeUserUid).then((a) => alive && setAccess(a));
+    return () => {
+      alive = false;
+    };
+  }, [currentUser, activeUserUid]);
   // An order placed in the preview goes to the live orders like a guest's; when they cannot be
   // reached it is kept in the admin data instead.
   const submitRestaurantOrder = useCallback(async (o: MenuOrder) => {
@@ -266,6 +276,8 @@ export default function App() {
   const isInitialLoadComplete = useRef<boolean>(false);
   // The Firebase user whose workspace was last loaded (undefined until the first auth answer).
   const handledAuthUid = useRef<string | null | undefined>(undefined);
+  // Whether the open restaurant's devices and workers may be written to their private doc.
+  const staffSyncRef = useRef<'private' | 'legacy' | 'off'>('off');
 
   // Loads pages/elements from LocalStorage only (offline fallback / pre-cloud-sync bootstrap)
   const loadLocalDesign = (userId: string) => {
@@ -548,7 +560,12 @@ export default function App() {
     } catch (e) {
       console.warn("Could not load the restaurant from Firebase, falling back to local cache:", e);
     }
+    // The devices and the workers come from the private doc once it exists (see restaurantCloud.ts).
+    const staff = await readStaff(userId);
     if (seq !== loadSeqRef.current) return;
+    staffSyncRef.current = typeof staff === 'object' ? 'private' : staff === 'missing' ? 'legacy' : 'off';
+    if (typeof staff === 'object') admin = { ...(admin || createEmptyRestaurantAdmin()), devices: staff.devices, workers: staff.workers };
+    else if (staff === 'denied' && admin) admin = { ...admin, devices: [], workers: [] };
     try {
       if (restPages.length === 0) {
         const storedPages = localStorage.getItem(`${localPrefix}pages_${userId}`);
@@ -632,6 +649,8 @@ export default function App() {
       const accountId = user ? await resolveAccountId(user) : 'mouhamadeiah';
       setActiveUserUid(accountId);
       await loadUserWorkspace(accountId);
+      const problem = takeInviteProblem();
+      if (problem) window.alert(problem);
       if (first || !user) setIsAuthActive(true);
       setIsFirebaseLoading(false);
       isInitialLoadComplete.current = true;
@@ -751,7 +770,7 @@ export default function App() {
       }
       try {
         await setDoc(doc(db, 'designs', targetUserId), {
-          restaurantAdmin: sanitizeData(restaurantAdmin),
+          restaurantAdmin: sanitizeData(withoutStaff(restaurantAdmin)),
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
@@ -768,7 +787,15 @@ export default function App() {
     if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant' || !projectReadyRef.current) return;
     const t = setTimeout(() => {
       publishRestaurant(ownerUid, pages, elements, restaurantAdmin).catch((e) => console.warn('Could not publish the restaurant site:', e));
-      saveStaff(ownerUid, restaurantAdmin).catch((e) => console.warn('Could not save the devices for the restaurant tablets:', e));
+      // Not when they could not be read (no permission, offline): the empty list would wipe them.
+      if (staffSyncRef.current !== 'off') {
+        saveStaff(ownerUid, restaurantAdmin)
+          .then(() => {
+            if (staffSyncRef.current === 'legacy') dropStaffFromDesign(ownerUid).catch(() => {});
+            staffSyncRef.current = 'private';
+          })
+          .catch((e) => console.warn('Could not save the devices for the restaurant tablets:', e));
+      }
     }, 1500);
     return () => clearTimeout(t);
   }, [pages, elements, restaurantAdmin, isFirebaseLoading, project, ownerUid]);
@@ -795,7 +822,7 @@ export default function App() {
       [elementsField]: serializeElements(elements),
       ...(project === 'shop' ? { shopAdmin: sanitizeData(shopAdmin) } : {}),
       ...(project === 'cars' ? { carAdmin: sanitizeData(carAdmin) } : {}),
-      ...(project === 'restaurant' ? { restaurantAdmin: sanitizeData(restaurantAdmin) } : {}),
+      ...(project === 'restaurant' ? { restaurantAdmin: sanitizeData(withoutStaff(restaurantAdmin)) } : {}),
       updatedAt: serverTimestamp(),
     }, { merge: true }).catch((e) => console.warn("Cloud save failed while switching projects:", e));
   };
@@ -863,6 +890,8 @@ export default function App() {
   const handleAuthSuccess = (userUid: string, isNewUser: boolean) => {
     handledAuthUid.current = auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser.uid : null;
     setActiveUserUid(userUid);
+    const inviteProblem = takeInviteProblem();
+    if (inviteProblem) window.setTimeout(() => window.alert(inviteProblem), 300);
     if (isNewUser) {
       // ALWAYS start a brand-new account with a blank page. The editor screen
       // (isAuthActive === false) never renders before authentication succeeds,
@@ -2970,7 +2999,7 @@ export default function App() {
         <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} />
       )}
       {project === 'restaurant' && (
-        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} />
+        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} access={access} />
       )}
 
       {/* Workspace Hub Drawer Panel */}

@@ -61,10 +61,18 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
             ))}
           </div>
         </Field>
-        <div className="grid sm:grid-cols-3 gap-x-6">
-          <Toggle label="طبق مميز" checked={d.featured} onChange={(featured) => setD({ ...d, featured })} />
-          <Toggle label="متوفر اليوم" checked={d.available} onChange={(available) => setD({ ...d, available })} />
-          <Toggle label="ظاهر في الموقع" checked={d.published} onChange={(published) => setD({ ...d, published })} />
+        {/* Each switch in its own box, so a label never reads as belonging to the next switch. */}
+        <div className="grid sm:grid-cols-3 gap-2">
+          {[
+            { label: 'طبق مميز', hint: 'يظهر في شرائح الأطباق المميزة', checked: d.featured, set: (featured: boolean) => setD({ ...d, featured }) },
+            { label: 'متوفر اليوم', hint: 'غير المتوفر يظهر بلا زر طلب', checked: d.available, set: (available: boolean) => setD({ ...d, available }) },
+            { label: 'ظاهر في الموقع', hint: 'المخفي لا يراه الزبائن', checked: d.published, set: (published: boolean) => setD({ ...d, published }) },
+          ].map((t) => (
+            <div key={t.label} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5">
+              <Toggle label={t.label} checked={t.checked} onChange={t.set} />
+              <div className="text-[10px] text-neutral-400 pb-0.5">{t.hint}</div>
+            </div>
+          ))}
         </div>
       </Card>
 

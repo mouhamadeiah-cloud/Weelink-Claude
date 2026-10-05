@@ -80,6 +80,22 @@ const SLIDES: (() => RestSlide)[] = [
     ],
   }),
 
+  // 2b. Featured dishes running sideways, under a running strip of short lines.
+  () => ({
+    name: 'أطباق مميزة متحركة',
+    height: 680,
+    backgroundColor: C.cream,
+    elements: [
+      el('shape', 'شريط ملون', { x: 0, y: 0, width: 1280, height: 64 }, '', { backgroundColor: C.accent }),
+      el('paragraph', 'نص متحرك', { x: 0, y: 12, width: 1280, height: 40 }, '✦ مشاوي على الفحم  ✦  توصيل سريع إلى بابك  ✦  مكونات طازجة كل صباح  ✦  اطلب الآن من الموقع', {
+        fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', fontFamily: REST_BODY_FONT, textAlign: 'center', animation: 'marquee-rtl', animationTrigger: 'loop', animationDuration: 18,
+      }),
+      heading({ x: 0, y: 110, width: 1280, height: 56 }, 'أطباقنا المميزة', 38),
+      paragraph({ x: 0, y: 170, width: 1280, height: 32 }, 'اختر طبقك المفضل واطلبه بضغطة'),
+      menu({ x: 0, y: 230, width: 1280, height: 400 }, { menuLayout: 'marquee', menuSource: 'featured', menuSpeed: 35 }),
+    ],
+  }),
+
   // 3. The whole menu: catalog tabs over cards.
   () => ({
     name: 'المنيو كاملًا بأقسام',

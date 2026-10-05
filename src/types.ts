@@ -154,7 +154,8 @@ export interface CanvasElement {
   carCardText?: string;
   carCardRadius?: number;
   // Restaurant 'menuList' element: how the menu's dishes are shown (see restaurant/store).
-  menuLayout?: 'grid' | 'list' | 'large';
+  menuLayout?: 'grid' | 'list' | 'large' | 'marquee';
+  menuSpeed?: number; // 'marquee' layout: seconds for one full pass
   menuSource?: 'all' | 'featured' | 'category'; // every dish, the featured ones or one catalog
   menuCategoryId?: string; // menuSource 'category': the catalog shown
   menuTabs?: boolean; // the catalogs as tabs above the dishes (unset = on)

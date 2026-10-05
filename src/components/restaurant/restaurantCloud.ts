@@ -3,15 +3,17 @@
 //                                     settings. Anyone can read it (the guests' site and QR codes).
 //   restaurants/{uid}/orders/{id}     the guests' orders. A guest can only add a new order; only the
 //                                     owner reads and updates them (orders list, kitchen screen).
-//   restaurants/{uid}/ledger/{id}     the accounts (الحسابات). Owner only. The cashier will write
-//                                     its sales here too.
+//   restaurants/{uid}/ledger/{id}     the accounts (الحسابات). Owner only. The cashier writes
+//                                     each payment here too.
+//   restaurants/{uid}/tabs|shifts|screens|log   the cashier and the waiters (see staffCloud.ts).
 // See firestore.rules. Nothing private (orders, accounts, customers) is ever in the public doc.
 import { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import type { CanvasElement, Page } from '../../types';
-import { LedgerEntry, MenuOrder, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry } from './restaurantTypes';
+import { LedgerEntry, MenuOrder, StaffDevice, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry } from './restaurantTypes';
 import { newId } from '../shop/shopTypes';
+import type { Worker } from './staffTypes';
 
 const restaurantDoc = (uid: string) => doc(db, 'restaurants', uid);
 const ordersCol = (uid: string) => collection(db, 'restaurants', uid, 'orders');
@@ -36,6 +38,9 @@ export const publishRestaurant = (uid: string, pages: Page[], elements: CanvasEl
       categories: admin.categories.filter((c) => !c.hidden),
       subCatalogs: admin.subCatalogs,
       dishes: admin.dishes.filter((d) => d.published),
+      // The kitchen screens and the tables' QR codes need these; the devices and their codes stay private.
+      stations: admin.stations,
+      halls: admin.halls,
     }),
     settings: clean(admin.settings),
     updatedAt: new Date().toISOString(),
@@ -60,6 +65,20 @@ export const restaurantSiteUrl = (uid: string, table?: string | number) => {
 
 export const kitchenScreenUrl = (uid: string) => `${window.location.origin}/?kitchen=${encodeURIComponent(uid)}`;
 
+// The address every restaurant tablet opens once; its code then picks its screen.
+export const deviceUrl = (uid: string) => `${window.location.origin}/?device=${encodeURIComponent(uid)}`;
+
+// The devices and the workers (with their PINs) are kept in the owner's design document, which only
+// the owner (and, for now, the test accounts) can read. Real per-device sign-in comes with the
+// separate customer/owner levels.
+export const loadStaff = async (uid: string): Promise<{ devices: StaffDevice[]; workers: Worker[] }> => {
+  const snap = await getDoc(doc(db, 'designs', uid));
+  const admin = normalizeRestaurantAdmin(snap.exists() ? (snap.data() as any).restaurantAdmin || {} : {});
+  return { devices: admin.devices, workers: admin.workers };
+};
+
+export const setOrderDoneLines = (uid: string, orderId: string, doneLines: number[]) => updateDoc(doc(ordersCol(uid), orderId), { doneLines });
+
 // ---------- Orders ----------
 
 // Gives up after a while on a bad connection, so the guest is offered WhatsApp instead of waiting.
@@ -70,8 +89,11 @@ export const placeOrder = (uid: string, order: MenuOrder, timeoutMs = 15000) =>
   ]);
 
 // A delivered order adds its sale to the accounts; taking it back from «تم التسليم» removes it.
+// The staff's orders and the ones added to a table's bill are paid at the cashier, which books them.
 export const syncOrderLedger = (uid: string, order: MenuOrder, status: OrderStatus) =>
-  status === 'done'
+  order.source === 'staff' || order.tabId
+    ? Promise.resolve()
+    : status === 'done'
     ? setDoc(doc(ledgerCol(uid), `order_${order.id}`), clean(orderLedgerEntry(order)))
     : order.status === 'done'
       ? deleteDoc(doc(ledgerCol(uid), `order_${order.id}`))

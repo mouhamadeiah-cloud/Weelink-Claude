@@ -85,8 +85,17 @@ service cloud.firestore {
       }
 
       match /orders/{orderId} {
-        allow create: if isValidId(orderId) && isValidNewOrder(request.resource.data, orderId) && acceptsOrders();
+        // Guests add new orders only; the staff (cashier, waiters) add theirs with the owner's access.
+        allow create: if isValidId(orderId) && (
+          (isValidNewOrder(request.resource.data, orderId) && acceptsOrders())
+          || isOwner(userId) || isSimulatedOrPublic(userId));
         allow get, list, update, delete: if isOwner(userId) || isSimulatedOrPublic(userId);
+      }
+
+      // The cashier and the waiters: bills, tills, the customer screens and the log of sensitive actions.
+      match /{staffCollection}/{docId} {
+        allow read: if staffCollection in ['tabs', 'shifts', 'screens', 'log'] && (isOwner(userId) || isSimulatedOrPublic(userId));
+        allow write: if staffCollection in ['tabs', 'shifts', 'screens', 'log'] && (isOwner(userId) || isSimulatedOrPublic(userId)) && isValidId(docId);
       }
 
       match /ledger/{entryId} {

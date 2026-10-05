@@ -4,6 +4,7 @@
 // Built after the owner's GastroPOS app: a dish shows the sub-catalogs linked to its catalog, unless
 // the dish picks its own.
 import { newId } from '../shop/shopTypes';
+import { Worker, normalizeWorker } from './staffTypes';
 
 // A main catalog of the menu: مشاوي، سندويش، مشروبات...
 export interface MenuCategory {
@@ -12,6 +13,7 @@ export interface MenuCategory {
   icon: string; // an emoji shown on the menu's tabs
   image: string;
   hidden: boolean;
+  stationId: string; // the kitchen section that prepares its dishes ('' = the first one)
 }
 
 export interface SubCatalogItem {
@@ -76,7 +78,86 @@ export interface RestaurantSettings {
   orderNote: string; // shown above the order form, e.g. delivery areas
   whatsappCopy: boolean; // also open WhatsApp with the order when a guest sends one
   tables: number; // how many tables get a QR code
+  payAnyWorker: boolean; // a table's bill can be paid at any worker (false = only at the one who opened it)
+  autoLockMinutes: number; // the cashier/waiter screen asks for a PIN again after this idle time (0 = never)
 }
+
+// ---------- Kitchen sections, halls, tables and devices (the staff side) ----------
+
+// A section of the kitchen (المطبخ، المشاوي، البار...). Each menu catalog is prepared by one section,
+// and a kitchen screen can show one section only.
+export interface KitchenStation {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface RestTable {
+  id: string;
+  name: string; // what the guests and the staff call it: «5», «تراس 2»; also the QR code's table
+  seats: number;
+}
+
+// A hall of the restaurant (الصالة الداخلية، التراس، الحديقة) with its tables.
+export interface Hall {
+  id: string;
+  name: string;
+  tables: RestTable[];
+}
+
+export type DeviceRole = 'kitchen' | 'cashier' | 'waiter' | 'display';
+
+export const DEVICE_ROLES: { id: DeviceRole; label: string; hint: string }[] = [
+  { id: 'kitchen', label: 'شاشة مطبخ', hint: 'تعرض الطلبات للتحضير، لكل الأقسام أو لقسم واحد.' },
+  { id: 'cashier', label: 'كاشير', hint: 'الطاولات والطلبات والدفع.' },
+  { id: 'waiter', label: 'تابلت نادل', hint: 'نفس برنامج الكاشير، يحمله النادل بين الطاولات.' },
+  { id: 'display', label: 'شاشة الزبون', hint: 'تعرض للزبون طلبه والمبلغ عند الكاشير.' },
+];
+
+// A tablet or screen of the restaurant. Its code opens only its own screen on that device.
+export interface StaffDevice {
+  id: string;
+  name: string;
+  role: DeviceRole;
+  stationId: string; // kitchen screens: '' = every section
+  code: string; // 6 digits
+  displayFor: string; // customer screens: the cashier device whose bills it shows
+  active: boolean;
+  createdAt: string;
+}
+
+export const STATION_COLORS = ['#E8590C', '#1971C2', '#2F9E44', '#C2255C', '#7048E8', '#F08C00', '#0C8599', '#868E96'];
+
+export const DEFAULT_STATIONS: KitchenStation[] = [
+  { id: 'st-kitchen', name: 'المطبخ', color: '#E8590C' },
+  { id: 'st-bar', name: 'البار والمشروبات', color: '#1971C2' },
+];
+
+const tablesOf = (prefix: string, from: number, count: number): RestTable[] =>
+  Array.from({ length: count }, (_, i) => ({ id: `${prefix}-${from + i}`, name: String(from + i), seats: 4 }));
+
+export const defaultHalls = (tables: number): Hall[] => [{ id: 'hall-main', name: 'الصالة الرئيسية', tables: tablesOf('tbl', 1, Math.max(0, Math.min(100, tables))) }];
+
+export const allTables = (halls: Hall[]) => halls.flatMap((h) => h.tables.map((t) => ({ ...t, hallId: h.id, hallName: h.name })));
+
+// The hall a table name belongs to ('' when no hall has it).
+export const hallOfTable = (halls: Hall[], table: string) => halls.find((h) => h.tables.some((t) => t.name === table))?.name || '';
+
+// A new six-digit code no other device has.
+export const newDeviceCode = (devices: StaffDevice[]) => {
+  for (;;) {
+    const c = String(Math.floor(100000 + Math.random() * 900000));
+    if (!devices.some((d) => d.code === c)) return c;
+  }
+};
+
+// The kitchen section a dish goes to: its catalog's section, else the first section.
+export const stationOfDish = (dishId: string, data: Pick<RestaurantAdminData, 'dishes' | 'categories' | 'stations'>) => {
+  const dish = data.dishes.find((d) => d.id === dishId);
+  const cat = dish && data.categories.find((c) => c.id === dish.categoryId);
+  const id = cat?.stationId;
+  return (id && data.stations.some((s) => s.id === id) ? id : data.stations[0]?.id) || '';
+};
 
 export type OrderStatus = 'new' | 'preparing' | 'ready' | 'done' | 'cancelled';
 
@@ -100,8 +181,8 @@ export interface OrderLine {
 
 export type OrderType = 'delivery' | 'pickup' | 'table';
 
-// Where an order came from: the website, or a table's QR code.
-export type OrderSource = 'website' | 'qr';
+// Where an order came from: the website, a table's QR code, or the staff (cashier, waiter).
+export type OrderSource = 'website' | 'qr' | 'staff';
 
 export interface MenuOrder {
   id: string;
@@ -119,6 +200,10 @@ export interface MenuOrder {
   subtotal: number;
   deliveryFee: number;
   total: number;
+  // Set by the kitchen only (never part of a guest's new order): the lines it has finished.
+  doneLines?: number[];
+  // Set by the staff only: the table's bill it was added to (its money is taken there, not here).
+  tabId?: string;
 }
 
 export interface RestaurantAdminData {
@@ -127,6 +212,10 @@ export interface RestaurantAdminData {
   dishes: Dish[];
   orders: MenuOrder[];
   settings: RestaurantSettings;
+  stations: KitchenStation[];
+  halls: Hall[];
+  devices: StaffDevice[];
+  workers: Worker[];
 }
 
 export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
@@ -144,6 +233,8 @@ export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   orderNote: '',
   whatsappCopy: true,
   tables: 10,
+  payAnyWorker: true,
+  autoLockMinutes: 0,
 };
 
 export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
@@ -152,6 +243,10 @@ export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
   dishes: [],
   orders: [],
   settings: { ...DEFAULT_RESTAURANT_SETTINGS },
+  stations: DEFAULT_STATIONS.map((s) => ({ ...s })),
+  halls: defaultHalls(DEFAULT_RESTAURANT_SETTINGS.tables),
+  devices: [],
+  workers: [],
 });
 
 export const emptyDish = (categoryId = ''): Dish => ({
@@ -181,6 +276,7 @@ const normalizeCategory = (raw: any): MenuCategory => ({
   icon: str(raw?.icon),
   image: str(raw?.image),
   hidden: !!raw?.hidden,
+  stationId: str(raw?.stationId),
 });
 
 const normalizeSubCatalog = (raw: any): SubCatalog => ({
@@ -217,7 +313,7 @@ const normalizeOrder = (raw: any): MenuOrder => ({
   createdAt: str(raw?.createdAt) || new Date().toISOString(),
   status: ORDER_STATUSES.some((s) => s.id === raw?.status) ? raw.status : 'new',
   type: raw?.type === 'pickup' || raw?.type === 'table' ? raw.type : 'delivery',
-  source: raw?.source === 'qr' ? 'qr' : 'website',
+  source: raw?.source === 'qr' || raw?.source === 'staff' ? raw.source : 'website',
   table: str(raw?.table),
   name: str(raw?.name),
   phone: str(raw?.phone),
@@ -237,6 +333,33 @@ const normalizeOrder = (raw: any): MenuOrder => ({
   subtotal: num(raw?.subtotal),
   deliveryFee: num(raw?.deliveryFee),
   total: num(raw?.total),
+  ...(Array.isArray(raw?.doneLines) ? { doneLines: raw.doneLines.filter((n: unknown) => typeof n === 'number') } : {}),
+  ...(typeof raw?.tabId === 'string' && raw.tabId ? { tabId: raw.tabId } : {}),
+});
+
+const normalizeStation = (raw: any, i: number): KitchenStation => ({
+  id: str(raw?.id) || newId('st'),
+  name: str(raw?.name),
+  color: str(raw?.color) || STATION_COLORS[i % STATION_COLORS.length],
+});
+
+const normalizeHall = (raw: any): Hall => ({
+  id: str(raw?.id) || newId('hall'),
+  name: str(raw?.name),
+  tables: Array.isArray(raw?.tables)
+    ? raw.tables.map((t: any) => ({ id: str(t?.id) || newId('tbl'), name: str(t?.name), seats: Math.max(0, Math.round(num(t?.seats))) }))
+    : [],
+});
+
+const normalizeDevice = (raw: any): StaffDevice => ({
+  id: str(raw?.id) || newId('dev'),
+  name: str(raw?.name),
+  role: DEVICE_ROLES.some((r) => r.id === raw?.role) ? raw.role : 'kitchen',
+  stationId: str(raw?.stationId),
+  displayFor: str(raw?.displayFor),
+  code: /^\d{6}$/.test(str(raw?.code)) ? raw.code : '',
+  active: raw?.active !== false,
+  createdAt: str(raw?.createdAt) || new Date().toISOString(),
 });
 
 export const normalizeOrderRecord = (raw: any): MenuOrder => normalizeOrder(raw);
@@ -247,6 +370,11 @@ export const normalizeRestaurantAdmin = (raw: any): RestaurantAdminData => ({
   subCatalogs: Array.isArray(raw?.subCatalogs) ? raw.subCatalogs.map(normalizeSubCatalog) : [],
   dishes: Array.isArray(raw?.dishes) ? raw.dishes.map(normalizeDish) : [],
   orders: Array.isArray(raw?.orders) ? raw.orders.map(normalizeOrder) : [],
+  // Older restaurants had only a number of tables and no kitchen sections.
+  stations: Array.isArray(raw?.stations) && raw.stations.length ? raw.stations.map(normalizeStation) : DEFAULT_STATIONS.map((s) => ({ ...s })),
+  halls: Array.isArray(raw?.halls) ? raw.halls.map(normalizeHall) : defaultHalls(num(raw?.settings?.tables ?? DEFAULT_RESTAURANT_SETTINGS.tables)),
+  devices: Array.isArray(raw?.devices) ? raw.devices.map(normalizeDevice).filter((d: StaffDevice) => d.code) : [],
+  workers: Array.isArray(raw?.workers) ? raw.workers.map(normalizeWorker).filter((w: Worker) => w.pin) : [],
 });
 
 // The sub-catalogs a dish offers, each with only the items this dish keeps.
@@ -349,11 +477,11 @@ export const exampleRestaurantAdmin = (): RestaurantAdminData => {
   const now = Date.now();
   const at = (i: number) => new Date(now - i * 60000).toISOString();
   const cats: MenuCategory[] = [
-    { id: 'cat-grill', name: 'مشاوي', icon: '🔥', image: '', hidden: false },
-    { id: 'cat-sandwich', name: 'سندويش وبرغر', icon: '🍔', image: '', hidden: false },
-    { id: 'cat-salad', name: 'سلطات ومقبلات', icon: '🥗', image: '', hidden: false },
-    { id: 'cat-sweets', name: 'حلويات', icon: '🍰', image: '', hidden: false },
-    { id: 'cat-drinks', name: 'مشروبات', icon: '🥤', image: '', hidden: false },
+    { id: 'cat-grill', name: 'مشاوي', icon: '🔥', image: '', hidden: false, stationId: 'st-kitchen' },
+    { id: 'cat-sandwich', name: 'سندويش وبرغر', icon: '🍔', image: '', hidden: false, stationId: 'st-kitchen' },
+    { id: 'cat-salad', name: 'سلطات ومقبلات', icon: '🥗', image: '', hidden: false, stationId: 'st-kitchen' },
+    { id: 'cat-sweets', name: 'حلويات', icon: '🍰', image: '', hidden: false, stationId: 'st-kitchen' },
+    { id: 'cat-drinks', name: 'مشروبات', icon: '🥤', image: '', hidden: false, stationId: 'st-bar' },
   ];
   const item = (id: string, name: string, price = 0): SubCatalogItem => ({ id, name, price });
   const subs: SubCatalog[] = [
@@ -393,6 +521,10 @@ export const exampleRestaurantAdmin = (): RestaurantAdminData => {
     categories: cats,
     subCatalogs: subs,
     dishes,
+    halls: [
+      { id: 'hall-main', name: 'الصالة الداخلية', tables: tablesOf('tbl', 1, 8) },
+      { id: 'hall-terrace', name: 'التراس', tables: tablesOf('tbl', 9, 4) },
+    ],
     settings: { ...DEFAULT_RESTAURANT_SETTINGS, name: 'مطعمك', whatsapp: '963991234567', deliveryFee: 10000, address: 'دمشق', hours: 'يوميًا من 11 صباحًا حتى 12 ليلًا' },
   };
 };

@@ -34,7 +34,8 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid
   const liveIds = new Set(liveOrders.items.map((o) => o.id));
   const localOnly = data.orders.filter((o) => !liveIds.has(o.id));
   const localIds = new Set(localOnly.map((o) => o.id));
-  const all = [...liveOrders.items, ...localOnly].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  // The cashier's and waiters' own kitchen orders are followed on the kitchen screen and their bills.
+  const all = [...liveOrders.items.filter((o) => o.source !== 'staff'), ...localOnly].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const list = all.filter((o) => (filter === 'all' ? true : filter === 'open' ? isOpen(o) : o.status === filter));
 
   const setStatus = (o: MenuOrder, status: OrderStatus) => {

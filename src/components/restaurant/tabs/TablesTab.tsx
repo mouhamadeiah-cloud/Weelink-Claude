@@ -1,14 +1,14 @@
 // الموقع والطاولات: the guests' link to the restaurant's site (copy, open, its QR code), a QR code
-// for each table (a guest who scans it orders to that table, with no address or delivery fee), a
-// sheet of all the table cards to print, and the kitchen screen's link for the kitchen's tablet.
+// for each table of each hall (a guest who scans it orders to that table, with no address or
+// delivery fee), a sheet of all the table cards to print, and the kitchen screen's link. The halls
+// and tables themselves are set in «الصالات والطاولات».
 import React, { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { Copy, ExternalLink, Printer, Check, ChefHat } from 'lucide-react';
+import { Copy, ExternalLink, Printer, Check, ChefHat, Armchair } from 'lucide-react';
 import { kitchenScreenUrl, restaurantSiteUrl } from '../restaurantCloud';
-import { Card, Field, inputFitClass, GhostButton, PrimaryButton } from '../../shop/adminUi';
+import { allTables } from '../restaurantTypes';
+import { Card, GhostButton, PrimaryButton, EmptyState } from '../../shop/adminUi';
 import { RestaurantTabProps } from './shared';
-
-const MAX_TABLES = 100;
 
 const useQr = (text: string) => {
   const [src, setSrc] = useState('');
@@ -43,11 +43,13 @@ const LinkRow: React.FC<{ url: string }> = ({ url }) => {
 };
 
 // A print window with one card per table: the restaurant's name, «اطلب من طاولتك» and the code.
-const printTables = async (name: string, uid: string, count: number) => {
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+const printTables = async (name: string, uid: string, tables: { name: string; hallName: string }[]) => {
   const cards = await Promise.all(
-    Array.from({ length: count }, async (_, i) => {
-      const src = await QRCode.toDataURL(restaurantSiteUrl(uid, i + 1), { margin: 1, width: 400 });
-      return `<div class="card"><div class="name">${name.replace(/</g, '&lt;')}</div><img src="${src}"/><div class="table">طاولة ${i + 1}</div><div class="hint">امسح الرمز واطلب من طاولتك</div></div>`;
+    tables.map(async (t) => {
+      const src = await QRCode.toDataURL(restaurantSiteUrl(uid, t.name), { margin: 1, width: 400 });
+      return `<div class="card"><div class="name">${esc(name)}</div><img src="${src}"/><div class="table">طاولة ${esc(t.name)}</div><div class="hint">${esc(t.hallName)} · امسح الرمز واطلب من طاولتك</div></div>`;
     })
   );
   const w = window.open('', '_blank');
@@ -62,10 +64,9 @@ const printTables = async (name: string, uid: string, count: number) => {
   w.document.close();
 };
 
-export const TablesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid, onOpenKitchen }) => {
-  const tables = Math.min(MAX_TABLES, Math.max(0, data.settings.tables || 0));
+export const TablesTab: React.FC<RestaurantTabProps> = ({ data, ownerUid, onOpenKitchen, onGoTo }) => {
+  const tables = allTables(data.halls).filter((t) => t.name.trim());
   const siteUrl = restaurantSiteUrl(ownerUid);
-  const setTables = (n: number) => update((d) => ({ ...d, settings: { ...d.settings, tables: Math.min(MAX_TABLES, Math.max(0, n)) } }));
 
   return (
     <div className="space-y-4">
@@ -84,20 +85,25 @@ export const TablesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid
         <PrimaryButton onClick={onOpenKitchen}><span className="inline-flex items-center gap-1.5"><ChefHat size={15} /> افتح شاشة المطبخ هنا</span></PrimaryButton>
       </Card>
 
-      <Card title="رموز QR للطاولات" actions={tables > 0 ? <GhostButton onClick={() => printTables(data.settings.name || 'مطعمنا', ownerUid, tables)}><span className="inline-flex items-center gap-1"><Printer size={14} /> اطبع كل الرموز</span></GhostButton> : undefined}>
-        <Field label="عدد الطاولات" hint="كل طاولة لها رمز خاص. الطلب منه يصل باسم الطاولة، بلا عنوان ولا رسوم توصيل.">
-          <input className={`${inputFitClass} w-32`} type="number" min={0} max={MAX_TABLES} value={tables || ''} placeholder="0" onChange={(e) => setTables(parseInt(e.target.value, 10) || 0)} />
-        </Field>
-        {tables > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-            {Array.from({ length: tables }, (_, i) => (
-              <a key={i} href={restaurantSiteUrl(ownerUid, i + 1)} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 p-3 rounded-2xl border border-neutral-200 bg-white hover:border-[#0071e3]">
-                <QrImage text={restaurantSiteUrl(ownerUid, i + 1)} size={110} label={`رمز طاولة ${i + 1}`} />
-                <span className="text-sm font-black">طاولة {i + 1}</span>
-              </a>
-            ))}
+      <Card title="رموز QR للطاولات" actions={tables.length > 0 ? <GhostButton onClick={() => printTables(data.settings.name || 'مطعمنا', ownerUid, tables)}><span className="inline-flex items-center gap-1"><Printer size={14} /> اطبع كل الرموز</span></GhostButton> : undefined}>
+        <p className="text-xs text-neutral-500 leading-relaxed">
+          كل طاولة لها رمز خاص. الطلب منه يصل باسم الطاولة، بلا عنوان ولا رسوم توصيل.{' '}
+          <button type="button" onClick={() => onGoTo('halls')} className="font-bold text-[#0071e3] cursor-pointer">تعديل الصالات والطاولات</button>
+        </p>
+        {tables.length === 0 && <EmptyState text="لا توجد طاولات بعد. أضفها من «الصالات والطاولات»." />}
+        {data.halls.filter((h) => h.tables.length > 0).map((h) => (
+          <div key={h.id} className="space-y-2">
+            <div className="text-sm font-black text-neutral-700 inline-flex items-center gap-1.5"><Armchair size={15} /> {h.name}</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              {h.tables.filter((t) => t.name.trim()).map((t) => (
+                <a key={t.id} href={restaurantSiteUrl(ownerUid, t.name)} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 p-3 rounded-2xl border border-neutral-200 bg-white hover:border-[#0071e3]">
+                  <QrImage text={restaurantSiteUrl(ownerUid, t.name)} size={110} label={`رمز طاولة ${t.name}`} />
+                  <span className="text-sm font-black">طاولة {t.name}</span>
+                </a>
+              ))}
+            </div>
           </div>
-        )}
+        ))}
       </Card>
     </div>
   );

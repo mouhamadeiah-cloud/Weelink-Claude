@@ -19,7 +19,7 @@ export const CustomerDisplay: React.FC<{ uid: string; cashierId: string; name: s
   const thanks = screen?.thanks && now - new Date(screen.thanks.at).getTime() < 20000 ? screen.thanks : null;
 
   const logout = (
-    <button type="button" onClick={onLogout} aria-label="خروج الجهاز" className="absolute bottom-3 left-3 w-9 h-9 rounded-xl text-white/20 hover:text-white/70 flex items-center justify-center cursor-pointer"><LogOut size={16} /></button>
+    <button type="button" onClick={onLogout} aria-label="خروج الجهاز" className="absolute bottom-3 left-3 w-10 h-10 rounded-xl bg-white/5 text-white/40 hover:text-white/80 flex items-center justify-center cursor-pointer"><LogOut size={16} /></button>
   );
 
   if (!cashierId) {

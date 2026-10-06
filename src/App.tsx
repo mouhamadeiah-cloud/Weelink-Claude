@@ -32,6 +32,7 @@ import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, restaura
 import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Eye, FileText, FolderTree, LayoutTemplate, Loader2, MousePointer2, Plus, Redo2, Settings, SlidersHorizontal, Store, Undo2 } from 'lucide-react';
+import { applyPageTexts, businessFacts, pageTextItems, requestPageTexts, type WeeAnswers } from './services/weeWriter';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
@@ -1023,7 +1024,7 @@ export default function App() {
     } catch (err) {
       console.error("Error saving completed chat state to LocalStorage:", err);
     }
-    setIsChatActive(false); // Move straight to builder workspace!
+    // Wee AI stays open: its next step is the button that writes the page's texts from these answers.
   };
 
   const handleManualSave = () => {
@@ -1098,6 +1099,22 @@ export default function App() {
     setHistoryIndex(updatedHistory.length - 1);
     setElements(newElements);
   }, [history, historyIndex]);
+
+  // Wee AI writes the texts of the page being edited from the owner's answers, as one step that
+  // undo takes back. The answer can take a while, so it is applied to the elements as they are then.
+  const pushToHistoryRef = useRef(pushToHistory);
+  pushToHistoryRef.current = pushToHistory;
+  const handleWriteTexts = async (answers: WeeAnswers) => {
+    const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
+    const items = pageTextItems(elementsRef.current, page.slides);
+    if (!items.length) return { ok: false, message: 'ما في نصوص بهالصفحة ليكتبها Wee AI. أضف عنوان أو فقرة أولاً.' };
+    const result = await requestPageTexts(businessFacts(answers, page.navbar.brandName || PROJECT_KIND_LABEL[project]), items);
+    if (!result.ok) return { ok: false, message: result.message };
+    const { next, changed } = applyPageTexts(elementsRef.current, result.texts);
+    if (!changed) return { ok: false, message: 'ما رجع Wee AI بنصوص جديدة. جرّب مرة ثانية.' };
+    pushToHistoryRef.current(next);
+    return { ok: true, message: `كتب Wee AI ${changed} نص بصفحة «${page.name}». إذا ما عجبوك اكبس تراجع (${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}+Z).` };
+  };
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -3330,6 +3347,7 @@ export default function App() {
         userEmail={currentUser?.email || ''}
         onCompleteChat={handleCompleteChat}
         onStepChange={handleStepChange}
+        onWriteTexts={handleWriteTexts}
         isWeeAiChatCollapsed={!isChatActive}
         onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
         dockedWidth={isDocked && !isSheet ? dockedPanelWidth : 0}

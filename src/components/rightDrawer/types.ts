@@ -111,6 +111,8 @@ export interface RightDrawerProps {
   userEmail?: string;
   onCompleteChat?: (collectedData: any) => void;
   onStepChange?: (stepNum: number) => void;
+  // Wee AI writing the page's texts from the owner's answers.
+  onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
   isWeeAiChatCollapsed?: boolean;
   onToggleWeeAiChat?: () => void;
   // Docked beside the workspace on a wide screen (its width in px): it then stays open while the

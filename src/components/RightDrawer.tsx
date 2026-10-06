@@ -90,6 +90,7 @@ import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
 import { InspectorCard, InspectorSubheading } from './rightDrawer/InspectorCard';
 import { elementDisplayName } from '../utils/elementLabels';
 import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
+import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
 import { uploadGalleryImageToStorage } from '../utils/galleryUpload';
@@ -174,6 +175,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onUpdateNavbar,
   isNavbarSelected = false,
   dockedWidth = 0,
+  sheet = false,
   headerSlot,
   sectionRequest = 0,
   addRequest,
@@ -186,7 +188,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   tabRequest,
   projectName,
 }) => {
-  const isDocked = dockedWidth > 0;
+  // The sheet shows the same one-page panel as the docked one; only where it sits differs.
+  const isDocked = dockedWidth > 0 || sheet;
   // Wee AI chat container collapse state inside the control panel
   // (controlled from the parent when provided, e.g. to auto-open for new users; falls back to local state otherwise)
   const [internalWeeAiChatCollapsed, setInternalWeeAiChatCollapsed] = useState<boolean>(true);
@@ -342,6 +345,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const sheetGrabY = useRef<number | null>(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const initialPos = useRef({ x: 0, y: 0 });
 
@@ -421,7 +425,18 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       ? `translate3d(${position.x}px, ${position.y}px, 0)`
       : 'translate3d(100%, 0, 0)';
 
-  const asideStyle: React.CSSProperties = isDocked
+  const asideStyle: React.CSSProperties = sheet
+    ? {
+        transform: isOpen ? 'none' : 'translate3d(0, 100%, 0)',
+        transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        top: 'auto',
+        bottom: SHEET_BAR_HEIGHT,
+        height: 'min(62vh, 520px)',
+        width: '100%',
+        minWidth: 0,
+        maxWidth: 'none',
+      }
+    : isDocked
     ? {
         transform: isOpen ? 'none' : 'translate3d(100%, 0, 0)',
         transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -5477,13 +5492,34 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         style={asideStyle}
-        className={isDocked
+        className={sheet
+          ? `fixed right-0 left-0 z-[999998] bg-white border-t border-neutral-200 rounded-t-2xl shadow-[0_-10px_30px_rgba(0,0,0,0.16)] flex flex-col select-none text-right overflow-hidden ${isOpen ? '' : 'pointer-events-none'}`
+          : isDocked
           ? `fixed right-0 z-[999998] bg-white border-l border-neutral-200 flex flex-col select-none text-right overflow-visible ${isOpen ? '' : 'pointer-events-none'}`
           : `fixed top-26 right-0 bottom-0 z-[999999] w-[320px] sm:w-[350px] md:w-[24vw] min-w-[290px] max-w-[430px] bg-white border-l-2 border-t-2 border-b-2 border-neutral-300 shadow-[-16px_0_40px_rgba(0,0,0,0.12)] rounded-l-2xl flex flex-col select-none text-right overflow-visible ${
           isOpen && !isMinimized ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         dir="rtl"
       >
+        {/* The sheet's grab bar: tap it or pull it down to put the panel away */}
+        {sheet && (
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="إغلاق اللوحة"
+            onClick={onClose}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose(); }}
+            onTouchStart={(e) => { sheetGrabY.current = e.touches[0].clientY; }}
+            onTouchEnd={(e) => {
+              if (sheetGrabY.current !== null && e.changedTouches[0].clientY - sheetGrabY.current > 40) onClose();
+              sheetGrabY.current = null;
+            }}
+            className="h-5 w-full flex items-center justify-center shrink-0 cursor-pointer touch-none"
+          >
+            <span className="w-10 h-1 rounded-full bg-neutral-300" />
+          </div>
+        )}
+
         {/* Striped Drag Handle Bar */}
         {!isDocked && <div 
           onMouseDown={handleMouseDown}

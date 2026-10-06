@@ -10,7 +10,7 @@ import {
 import { ControlBar } from './components/ControlBar';
 import { EditBar, SelectionNameInput, selectionName } from './components/EditBar';
 import { CanvasWorkspace } from './components/CanvasWorkspace';
-import { EditorColumn, EDITOR_COLUMN_WIDTH } from './components/EditorColumn';
+import { EditorColumn, EDITOR_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './components/EditorColumn';
 import { INSPECTOR_SECTIONS, InspectorGroupId, InspectorTarget, groupOfSection, inspectorGroups } from './components/rightDrawer/inspectorGroups';
 import { RightDrawer, DrawerSection } from './components/RightDrawer';
 import { ProjectSettingsSection } from './components/rightDrawer/sections/ProjectSettingsSection';
@@ -215,7 +215,8 @@ export default function App() {
   const [isPreviewActive, setIsPreviewActive] = useState<boolean>(false);
 
   // Drawer section & open state
-  const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(true);
+  // A phone starts with the canvas in full view; its panel opens from the bar at the bottom.
+  const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(() => window.innerWidth >= 1024);
   const [drawerSection, setDrawerSection] = useState<DrawerSection>('elements');
   const [drawerTab, setDrawerTab] = useState<'structure' | 'tool'>('structure');
   const [sectionRequest, setSectionRequest] = useState(0);
@@ -234,7 +235,11 @@ export default function App() {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-  const isDocked = windowWidth >= 1024 && !isPreviewActive;
+  // Narrower screens (phones, tablets) get the same panel as a sheet that slides up from the bottom,
+  // with the editing icons in a bar along the bottom edge.
+  const isWide = windowWidth >= 1024;
+  const isSheet = !isWide && !isPreviewActive;
+  const isDocked = !isPreviewActive;
   const dockedPanelWidth = Math.round(Math.min(400, Math.max(320, windowWidth * 0.24)));
   const EDIT_RAIL_WIDTH = EDITOR_COLUMN_WIDTH;
   const [isWorkspaceHubOpen, setIsWorkspaceHubOpen] = useState(false);
@@ -1002,7 +1007,8 @@ export default function App() {
     setIsSavingCloud(false);
     isInitialLoadComplete.current = true;
     setIsAuthActive(false); // Hide login screen, go straight to builder/chat!
-    setIsRightDrawerOpen(true); // Control panel open for chat!
+    // A phone sees its page first; the panel waits behind the bar at the bottom.
+    setIsRightDrawerOpen(window.innerWidth >= 1024);
   };
 
   const handleCompleteChat = (collectedData: any) => {
@@ -3149,13 +3155,19 @@ export default function App() {
         />
 
         {/* 2. Secondary Edit Bar directly beneath (narrow screens; wide ones dock it beside the panel) */}
-        {!isPreviewActive && !isDocked && <EditBar {...editBarProps} />}
+        {!isPreviewActive && !isDocked && !isSheet && <EditBar {...editBarProps} />}
       </div>
 
       {/* Main Operations Area (ساحة العمليات): left of the docked panel and its icons */}
       <div
         className="flex-1 flex relative overflow-hidden"
-        style={isDocked ? { marginRight: (isRightDrawerOpen ? dockedPanelWidth : 0) + EDIT_RAIL_WIDTH, transition: 'margin-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' } : undefined}
+        style={
+          isSheet
+            ? { paddingBottom: EDITOR_BAR_HEIGHT }
+            : isDocked
+              ? { marginRight: (isRightDrawerOpen ? dockedPanelWidth : 0) + EDIT_RAIL_WIDTH, transition: 'margin-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }
+              : undefined
+        }
       >
         <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
         <RestaurantOrderContext.Provider value={project === 'restaurant' ? submitRestaurantOrder : null}>
@@ -3191,7 +3203,7 @@ export default function App() {
           isPreviewActive={isPreviewActive}
           activePageId={activePageId}
           chromeHeight={isDocked ? 56 : 104}
-          renderSelectionBar={isDocked ? renderSelectionBar : undefined}
+          renderSelectionBar={renderSelectionBar}
         />
         </ShopUpdateContext.Provider>
         </ShopDataContext.Provider>
@@ -3209,13 +3221,18 @@ export default function App() {
 
       <CommandPalette open={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} commands={isPaletteOpen ? paletteCommands() : []} />
 
-      {/* The editing icons, docked as a column beside the control panel */}
+      {/* The editing icons: a column beside the docked panel, or a bar along the bottom of a phone */}
       {isDocked && (
         <div
-          className="fixed z-[999998]"
-          style={{ top: 56, bottom: 0, width: EDIT_RAIL_WIDTH, right: isRightDrawerOpen ? dockedPanelWidth : 0, transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
+          className="fixed z-[999999]"
+          style={
+            isSheet
+              ? { left: 0, right: 0, bottom: 0, height: EDITOR_BAR_HEIGHT }
+              : { top: 56, bottom: 0, width: EDIT_RAIL_WIDTH, right: isRightDrawerOpen ? dockedPanelWidth : 0, transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }
+          }
         >
           <EditorColumn
+            horizontal={isSheet}
             groups={inspectorGroups(currentInspectorTarget())}
             activeGroup={isRightDrawerOpen && drawerTab === 'tool' && drawerSection === 'inspector' ? inspectorGroup : null}
             onPickGroup={(g) => showInspector(g)}
@@ -3315,7 +3332,8 @@ export default function App() {
         onStepChange={handleStepChange}
         isWeeAiChatCollapsed={!isChatActive}
         onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
-        dockedWidth={isDocked ? dockedPanelWidth : 0}
+        dockedWidth={isDocked && !isSheet ? dockedPanelWidth : 0}
+        sheet={isSheet}
         headerSlot={
           <SelectionNameInput
             name={selectionName(selectedElement, currentSlide, isNavbarSelected)}

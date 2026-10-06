@@ -116,6 +116,8 @@ export interface RightDrawerProps {
   // Docked beside the workspace on a wide screen (its width in px): it then stays open while the
   // canvas is used, and cannot be dragged or minimised. 0 or absent: the floating drawer.
   dockedWidth?: number;
+  // The same panel as a sheet rising from the bottom of a phone, over the canvas.
+  sheet?: boolean;
   // Shown at the head of the docked panel (the selected element's name).
   headerSlot?: React.ReactNode;
   // Counts the times an icon asked for a section, so asking again for the one already chosen still

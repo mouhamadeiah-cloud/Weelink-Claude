@@ -13,6 +13,7 @@ import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
 import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
+import { getTextEffectStyles } from '../utils/textEffects';
 import { addToCart, useCart } from '../utils/cartStore';
 import { CartView } from './CartView';
 import { ShopProductsView } from './shop/store/ShopProductsView';
@@ -2608,6 +2609,20 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     display: 'inline-block',
                     width: '100%'
                   } : {};
+                  // The letters' ready-made look (glow, outline, highlight...) on top of the text's colour.
+                  const textFx = ['heading', 'paragraph', 'button'].includes(elem.type) && !elem.compoundType
+                    ? getTextEffectStyles(elem.styles, (elem.content || '').trim().split(/\s+/).length)
+                    : null;
+                  if (textFx) {
+                    // An effect that paints the letters itself replaces a gradient text colour.
+                    const b = textFx.block;
+                    if (b.color || b.backgroundImage || b.WebkitTextFillColor) {
+                      (['backgroundImage', 'WebkitBackgroundClip', 'WebkitTextFillColor', 'backgroundClip'] as const).forEach((k) => delete textGradientStyles[k]);
+                    }
+                    Object.assign(textGradientStyles, b);
+                  }
+                  // Highlights follow the lines of the words, so they sit on a span around them.
+                  const fxWords = (text: React.ReactNode) => (textFx?.inline ? <span style={textFx.inline}>{text}</span> : text);
 
                   const elementHasBg = Boolean(
                     elem.type !== 'mask' && 
@@ -3127,7 +3142,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             suppressContentEditableWarning
                             onBlur={(e) => onUpdateElementContent(elem.id, e.currentTarget.innerText)}
                           >
-                            {elem.content}
+                            {fxWords(elem.content)}
                           </h2>
                         )}
 
@@ -3143,7 +3158,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                               {elem.content.split('\n').map((line, idx) => (
                                 <div key={idx} className="flex items-start gap-2">
                                   <span className="text-[#0071e3] shrink-0 font-bold select-none">•</span>
-                                  <span>{line.replace(/^[•\-\d+\.]\s*/, '')}</span>
+                                  <span>{fxWords(line.replace(/^[•\-\d+\.]\s*/, ''))}</span>
                                 </div>
                               ))}
                             </div>
@@ -3158,7 +3173,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                               {elem.content.split('\n').map((line, idx) => (
                                 <div key={idx} className="flex items-start gap-2">
                                   <span className="text-[#0071e3] shrink-0 font-mono text-xs font-bold select-none">{idx + 1}.</span>
-                                  <span>{line.replace(/^[•\-\d+\.]\s*/, '')}</span>
+                                  <span>{fxWords(line.replace(/^[•\-\d+\.]\s*/, ''))}</span>
                                 </div>
                               ))}
                             </div>
@@ -3170,7 +3185,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                               suppressContentEditableWarning
                               onBlur={(e) => onUpdateElementContent(elem.id, e.currentTarget.innerText)}
                             >
-                              {elem.content}
+                              {fxWords(elem.content)}
                             </p>
                           )
                         )}
@@ -3183,7 +3198,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                               suppressContentEditableWarning
                               onBlur={(e) => onUpdateElementContent(elem.id, e.currentTarget.innerText)}
                             >
-                              {elem.content}
+                              {fxWords(elem.content)}
                             </span>
                           </div>
                         )}

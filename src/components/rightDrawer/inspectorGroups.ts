@@ -4,7 +4,7 @@
 import { ElementType } from '../../types';
 import type { DrawerSection } from './types';
 
-export type InspectorGroupId = 'content' | 'font' | 'colors' | 'shape' | 'layout' | 'motion';
+export type InspectorGroupId = 'content' | 'font' | 'effects' | 'colors' | 'shape' | 'layout' | 'motion';
 
 export type InspectorTarget =
   | { kind: 'navbar' }
@@ -60,6 +60,8 @@ export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
     groups.push({ id: 'content', title: 'محتوى العنصر', label: 'المحتوى', sections: content });
   }
   if (TEXT_TYPES.includes(type)) groups.push({ id: 'font', title: 'خط العنصر', label: 'الخط', sections: ['typography'] });
+  // Glow, outline, highlight... of the letters, drawn by the inspector itself.
+  if (TEXT_TYPES.includes(type)) groups.push({ id: 'effects', title: 'تأثيرات النص', label: 'تأثيرات', sections: [] });
   groups.push({
     id: 'colors',
     title: type === 'image' ? 'ألوان الصورة وفلاترها' : 'ألوان العنصر',
@@ -105,6 +107,8 @@ export const inspectorHelp = (id: InspectorGroupId, target: InspectorTarget): st
       return 'إعدادات هالعنصر الخاصة فيه: الصور بمعرض الصور، أوقات الحجز، خلايا الجدول، رابط الفيديو أو الخريطة، أو منتجات المتجر.';
     case 'font':
       return 'شكل الكتابة: نوع الخط وحجمه، عريض أو مائل أو تحته خط، المحاذاة يمين أو وسط أو يسار، وتحويل النص لقائمة بنقاط أو أرقام.';
+    case 'effects':
+      return 'شكل جاهز للحروف: توهج نيون، ظل، حروف مجوفة، تدرج أو ذهبي، تمييز الكلمة، أو حركة. اختار واحد، وبعدين غيّر لونه وقوته. «عرض المزيد» بيفتح كل التأثيرات.';
     case 'colors':
       if (kind === 'slide') return 'خلفية الشريحة: لون واحد، تدرج بين لونين أو أكتر، أو صورة. «ألوان صفحتك» هي الألوان الخمسة اللي اخترتها لكل الموقع.';
       if (kind === 'element' && target.type === 'image') return 'غيّر ألوان الصورة: صبغة بلون، أبيض وأسود، تفتيح أو تغميق، بدون ما تتغير الصورة الأصلية.';

@@ -5,6 +5,7 @@ import {
   NavbarConfig,
   DevicePreviewMode,
   getGlowShadowStyle,
+  getTextShadowParts,
   getLightGradientStyle,
   GalleryItem,
   Page
@@ -2620,6 +2621,21 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       (['backgroundImage', 'WebkitBackgroundClip', 'WebkitTextFillColor', 'backgroundClip'] as const).forEach((k) => delete textGradientStyles[k]);
                     }
                     Object.assign(textGradientStyles, b);
+                  }
+                  // The letters' own shadow (from the shadow card), on top of any effect.
+                  const letterShadow = ['heading', 'paragraph', 'button', 'badge'].includes(elem.type) && !elem.compoundType
+                    ? getTextShadowParts(elem.styles.textShadowIntensity, elem.styles.textShadowColor, elem.styles.textShadowPosition)
+                    : undefined;
+                  if (letterShadow) {
+                    const css = `${letterShadow.x}px ${letterShadow.y}px ${letterShadow.blur}px ${letterShadow.color}`;
+                    if (textGradientStyles.backgroundClip === 'text') {
+                      // A text painted by its background needs a drop shadow to get one behind it.
+                      const f = textGradientStyles.filter;
+                      textGradientStyles.filter = `${typeof f === 'string' ? `${f} ` : ''}drop-shadow(${css})`;
+                    } else {
+                      const t = textGradientStyles.textShadow;
+                      textGradientStyles.textShadow = typeof t === 'string' && t !== 'none' ? `${t}, ${css}` : css;
+                    }
                   }
                   // Highlights follow the lines of the words, so they sit on a span around them.
                   const fxWords = (text: React.ReactNode) => (textFx?.inline ? <span style={textFx.inline}>{text}</span> : text);

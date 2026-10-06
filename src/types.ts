@@ -58,6 +58,10 @@ export interface ElementStyles {
   innerGlowColor?: string;
   innerGlowIntensity?: number;
   innerGlowPosition?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  // The shadow of the letters themselves (texts), apart from the element frame's glow* shadow.
+  textShadowIntensity?: number;
+  textShadowColor?: string;
+  textShadowPosition?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
   textAlign?: 'right' | 'center' | 'left';
   fontSize?: number;
   fontWeight?: 'normal' | '500' | '600' | 'bold';
@@ -403,6 +407,28 @@ export const getGlowShadowStyle = (
         return `0px 0px ${blur}px ${spread}px ${shadowColor}`;
     }
   }
+};
+
+// The shadow of a text's letters: offset, blur and colour for a CSS text-shadow or drop-shadow.
+export const getTextShadowParts = (
+  intensity: number | undefined,
+  color: string | undefined,
+  position: string | undefined
+) => {
+  if (!intensity || intensity <= 0) return undefined;
+  const o = Math.max(2, Math.round(intensity / 4));
+  const [x, y] =
+    ({
+      top: [0, -o],
+      bottom: [0, o],
+      left: [-o, 0],
+      right: [o, 0],
+      'top-right': [o, -o],
+      'top-left': [-o, -o],
+      'bottom-right': [o, o],
+      'bottom-left': [-o, o],
+    } as Record<string, number[]>)[position || 'center'] || [0, 0];
+  return { x, y, blur: intensity, color: color || '#1d1d1f' };
 };
 
 export const getLightGradientStyle = (

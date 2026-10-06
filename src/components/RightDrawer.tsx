@@ -5996,15 +5996,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             // Beside the column of icons that sits left of the docked panel.
             style={sheet ? undefined : { right: `calc(100% + ${dockedWidth > 0 ? EDITOR_COLUMN_WIDTH : 0}px)` }}
           >
-            <TextEffectsGallery
-              styles={textFxTarget.styles || {}}
-              // Picking an effect applies it and closes the panel, like the ready slides.
-              onChange={(patch) => {
-                onUpdateElementStyles(patch);
-                setTextFxGalleryOpen(false);
-              }}
-              onClose={() => setTextFxGalleryOpen(false)}
-            />
+            <TextEffectsGallery styles={textFxTarget.styles || {}} onChange={onUpdateElementStyles} onClose={() => setTextFxGalleryOpen(false)} />
           </div>
         )}
 

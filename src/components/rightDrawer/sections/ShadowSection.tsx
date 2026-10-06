@@ -1,7 +1,7 @@
 // Moved verbatim from RightDrawer.tsx (was an inline IIFE in the drawer body).
 import React from 'react';
 import { Check } from 'lucide-react';
-import { CanvasElement, Slide, getGlowShadowStyle } from '../../../types';
+import { CanvasElement, Slide, getGlowShadowStyle, getTextShadowParts } from '../../../types';
 import { RightDrawerProps } from '../types';
 import { elementDisplayName } from '../../../utils/elementLabels';
 
@@ -30,21 +30,33 @@ export const ShadowSection = ({
   fixedTarget = false,
 }: ShadowSectionProps) => {
   const isTargetElement = shadowTarget === 'element' && !!selectedElement;
+  // A text's shadow can fall on its letters or on its frame; the letters are what people mean.
+  const isTextElement = isTargetElement && ['heading', 'paragraph', 'button', 'badge'].includes(selectedElement!.type);
+  const [shadowOn, setShadowOn] = React.useState<'letters' | 'frame'>('letters');
+  const onLetters = isTextElement && shadowOn === 'letters';
 
   // Read values based on target (glowIntensity/glowColor/glowPosition maps to outer shadow/glow)
-  const activeShadowIntensity = isTargetElement 
+  const activeShadowIntensity = onLetters
+    ? (styles.textShadowIntensity ?? 0)
+    : isTargetElement 
     ? (styles.glowIntensity ?? 0) 
     : (activeSlide?.glowIntensity ?? 0);
-  const activeShadowColor = isTargetElement 
+  const activeShadowColor = onLetters
+    ? (styles.textShadowColor || '#1d1d1f')
+    : isTargetElement 
     ? (styles.glowColor || '#1d1d1f') 
     : (activeSlide?.glowColor || '#1d1d1f');
-  const activeShadowPosition = isTargetElement 
+  const activeShadowPosition = onLetters
+    ? (styles.textShadowPosition || 'center')
+    : isTargetElement 
     ? (styles.glowPosition || 'center') 
     : (activeSlide?.glowPosition || 'center');
 
   // Update functions
   const updateShadowIntensity = (intensity: number) => {
-    if (isTargetElement) {
+    if (onLetters) {
+      onUpdateElementStyles({ textShadowIntensity: intensity });
+    } else if (isTargetElement) {
       onUpdateElementStyles({ glowIntensity: intensity });
     } else if (activeSlide) {
       onUpdateSlideGlow?.(activeSlide.id, { glowIntensity: intensity });
@@ -52,7 +64,9 @@ export const ShadowSection = ({
   };
 
   const updateShadowColor = (color: string) => {
-    if (isTargetElement) {
+    if (onLetters) {
+      onUpdateElementStyles({ textShadowColor: color });
+    } else if (isTargetElement) {
       onUpdateElementStyles({ glowColor: color });
     } else if (activeSlide) {
       onUpdateSlideGlow?.(activeSlide.id, { glowColor: color });
@@ -60,7 +74,9 @@ export const ShadowSection = ({
   };
 
   const updateShadowPosition = (pos: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left') => {
-    if (isTargetElement) {
+    if (onLetters) {
+      onUpdateElementStyles({ textShadowPosition: pos });
+    } else if (isTargetElement) {
       onUpdateElementStyles({ glowPosition: pos });
     } else if (activeSlide) {
       onUpdateSlideGlow?.(activeSlide.id, { glowPosition: pos });
@@ -123,9 +139,28 @@ export const ShadowSection = ({
         </div>
       )}
 
+      {isTextElement && (
+        <div role="radiogroup" aria-label="مكان الظل" className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1 text-[12px] font-bold">
+          {([['letters', 'حروف النص'], ['frame', 'إطار العنصر']] as const).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={shadowOn === k}
+              onClick={() => setShadowOn(k)}
+              className={`h-8 rounded-lg transition-colors cursor-pointer ${shadowOn === k ? 'bg-white text-[#0071e3] shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
         <span className="text-[11px] font-bold text-[#0071e3]">
-          {isTargetElement 
+          {onLetters
+            ? `تعديل ظل حروف: ${elementDisplayName(selectedElement)}`
+            : isTargetElement 
             ? `تعديل ظل العنصر: ${elementDisplayName(selectedElement)}` 
             : `تعديل ظل الشريحة: ${activeSlide?.name || 'الشريحة الحالية'}`}
         </span>
@@ -250,7 +285,9 @@ export const ShadowSection = ({
           توجيه اتجاه وزاوية الظل:
         </span>
         <p className="text-[10px] text-neutral-500 leading-tight">
-          انقر على المربع لتوجيه الظل في الاتجاه المرغوب. تبرز المعاينات شكل الظل الخارجي المطبق على مربع رمادي افتراضي:
+          {onLetters
+            ? 'انقر على المربع لتوجيه ظل الحروف في الاتجاه المرغوب:'
+            : 'انقر على المربع لتوجيه الظل في الاتجاه المرغوب. تبرز المعاينات شكل الظل الخارجي المطبق على مربع رمادي افتراضي:'}
         </p>
 
         {/* 3x3 Grid of Direction Previews */}
@@ -260,6 +297,8 @@ export const ShadowSection = ({
               const isSelected = activeShadowPosition === cell.id;
               const previewIntensity = activeShadowIntensity > 0 ? Math.min(activeShadowIntensity, 16) : 10;
               const boxPreviewShadow = getGlowShadowStyle(previewIntensity, activeShadowColor, cell.id, false);
+              const letterParts = getTextShadowParts(previewIntensity, activeShadowColor, cell.id);
+              const letterPreview = letterParts ? `${letterParts.x}px ${letterParts.y}px ${Math.min(letterParts.blur, 8)}px ${letterParts.color}` : undefined;
 
               return (
                 <button
@@ -273,14 +312,15 @@ export const ShadowSection = ({
                   title={cell.name}
                 >
                   <div 
-                    className="w-9 h-9 rounded-lg bg-neutral-300 transition-all flex items-center justify-center border border-neutral-300/40"
-                    style={{ boxShadow: boxPreviewShadow }}
+                    className={`w-9 h-9 rounded-lg transition-all flex items-center justify-center ${onLetters ? 'bg-white' : 'bg-neutral-300 border border-neutral-300/40'}`}
+                    style={onLetters ? undefined : { boxShadow: boxPreviewShadow }}
                   >
+                    {onLetters && <span className="text-[22px] font-black leading-none text-neutral-700 pointer-events-none" style={{ textShadow: letterPreview }}>أ</span>}
                     {isSelected ? (
                       <span className="w-4 h-4 rounded-full bg-[#0071e3] text-white flex items-center justify-center font-bold shadow-4xs shrink-0 z-20">
                         <Check size={10} strokeWidth={3} />
                       </span>
-                    ) : (
+                    ) : onLetters ? null : (
                       <span className="text-[8.5px] font-bold text-neutral-500/80 pointer-events-none select-none z-10">
                         {cell.label}
                       </span>

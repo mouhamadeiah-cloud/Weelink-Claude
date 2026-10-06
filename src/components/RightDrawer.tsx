@@ -80,6 +80,7 @@ import {
 import { WeeAIChat } from './WeeAIChat';
 import { ShopElementSettings } from './ShopElementSettings';
 import { CarElementSettings } from './cars/CarElementSettings';
+import { InvestElementSettings } from './invest/InvestElementSettings';
 import { RestaurantElementSettings } from './restaurant/RestaurantElementSettings';
 
 import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
@@ -1824,6 +1825,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     {/* The car showroom's live car list / search bar */}
                     {(selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
                       <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+                    )}
+                    {/* The investment company's live project list */}
+                    {selectedElement.type === 'investProjects' && (
+                      <InvestElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
                     )}
                     {/* The restaurant's live menu / order cart */}
                     {(selectedElement.type === 'menuList' || selectedElement.type === 'menuCart') && (
@@ -3717,6 +3722,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             )}
             {activeSection === 'animation' && selectedElement && (selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
               <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+            )}
+            {activeSection === 'animation' && selectedElement && selectedElement.type === 'investProjects' && (
+              <InvestElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
             )}
             {activeSection === 'animation' && selectedElement && (selectedElement.type === 'menuList' || selectedElement.type === 'menuCart') && (
               <RestaurantElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />

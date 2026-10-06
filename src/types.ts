@@ -26,7 +26,8 @@ export type ElementType =
   | 'carListings'
   | 'carSearch'
   | 'menuList'
-  | 'menuCart';
+  | 'menuCart'
+  | 'investProjects';
 
 export type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
 
@@ -153,6 +154,14 @@ export interface CanvasElement {
   carCardBg?: string;
   carCardText?: string;
   carCardRadius?: number;
+  // Investments 'investProjects' element: how the company's projects are shown (see invest/store).
+  investLayout?: 'grid' | 'wide';
+  investSource?: 'all' | 'featured' | 'open' | 'completed';
+  investLimit?: number; // projects per page (0 or unset = 9, at most 30)
+  investFilters?: boolean; // a bar with sector / status above the projects
+  investCardBg?: string;
+  investCardText?: string;
+  investCardRadius?: number;
   // Restaurant 'menuList' element: how the menu's dishes are shown (see restaurant/store).
   menuLayout?: 'grid' | 'list' | 'large' | 'marquee';
   menuSpeed?: number; // 'marquee' layout: seconds for one full pass

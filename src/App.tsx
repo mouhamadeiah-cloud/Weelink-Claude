@@ -23,6 +23,10 @@ import { CarDataContext, CarRequestContext } from './components/cars/store/CarDa
 import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { getCarShowroomTemplate } from './data/carShowroomTemplate';
+import { InvestAdminPanel } from './components/invest/InvestAdminPanel';
+import { InvestDataContext, InvestRequestContext } from './components/invest/store/InvestDataContext';
+import { InvestAdminData, InvestRequestInput, createEmptyInvestAdmin, normalizeInvestAdmin, exampleInvestAdmin, submitInvestRequest } from './components/invest/investTypes';
+import { getInvestTemplate } from './data/investTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
@@ -195,10 +199,11 @@ const PROJECT_STORAGE: Record<ProjectType, { pagesField: string; elementsField: 
   shop: { pagesField: 'shopPages', elementsField: 'shopElements', localPrefix: 'weelink_shop_' },
   cars: { pagesField: 'carPages', elementsField: 'carElements', localPrefix: 'weelink_cars_' },
   restaurant: { pagesField: 'restaurantPages', elementsField: 'restaurantElements', localPrefix: 'weelink_restaurant_' },
+  invest: { pagesField: 'investPages', elementsField: 'investElements', localPrefix: 'weelink_invest_' },
 };
 
 // Named in the top bar until the site has its own name (the navbar's brand name).
-const PROJECT_KIND_LABEL: Record<ProjectType, string> = { page: 'صفحتي', shop: 'المتجر', cars: 'معرض السيارات', restaurant: 'المطعم' };
+const PROJECT_KIND_LABEL: Record<ProjectType, string> = { page: 'صفحتي', shop: 'المتجر', cars: 'معرض السيارات', restaurant: 'المطعم', invest: 'المشاريع' };
 
 export default function App() {
   // Pages state
@@ -255,6 +260,10 @@ export default function App() {
   const [hasRestaurant, setHasRestaurant] = useState<boolean>(false);
   const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
   const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
+  const [hasInvest, setHasInvest] = useState<boolean>(false);
+  const [investAdmin, setInvestAdmin] = useState<InvestAdminData>(createEmptyInvestAdmin);
+  const updateInvestAdmin = useCallback((fn: (d: InvestAdminData) => InvestAdminData) => setInvestAdmin((prev) => fn(prev)), []);
+  const submitInvestorRequest = useCallback((r: InvestRequestInput) => setInvestAdmin((prev) => submitInvestRequest(prev, r)), []);
   const ownerUid = activeUserUid;
   // The owner sees everything; a management member what the owner allowed (services/members.ts).
   const [access, setAccess] = useState<Access>(OWNER_ACCESS);
@@ -381,10 +390,12 @@ export default function App() {
     let shopExists = false;
     let carsExist = false;
     let restaurantExists = false;
+    let investExists = false;
     try {
       shopExists = !!localStorage.getItem(`${PROJECT_STORAGE.shop.localPrefix}pages_${userId}`);
       carsExist = !!localStorage.getItem(`${PROJECT_STORAGE.cars.localPrefix}pages_${userId}`);
       restaurantExists = !!localStorage.getItem(`${PROJECT_STORAGE.restaurant.localPrefix}pages_${userId}`);
+      investExists = !!localStorage.getItem(`${PROJECT_STORAGE.invest.localPrefix}pages_${userId}`);
     } catch {
       // storage unavailable
     }
@@ -396,6 +407,7 @@ export default function App() {
         if (Array.isArray(data.shopPages) && data.shopPages.length > 0) shopExists = true;
         if (Array.isArray(data.carPages) && data.carPages.length > 0) carsExist = true;
         if (Array.isArray(data.restaurantPages) && data.restaurantPages.length > 0) restaurantExists = true;
+        if (Array.isArray(data.investPages) && data.investPages.length > 0) investExists = true;
         const cloudPages: Page[] = normalizeLegacyNavbarDefaults(Array.isArray(data.pages) ? data.pages : []);
         if (cloudPages.length > 0) {
           const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
@@ -417,6 +429,7 @@ export default function App() {
     setHasShop(shopExists);
     setHasCars(carsExist);
     setHasRestaurant(restaurantExists);
+    setHasInvest(investExists);
     setActivePageId('page-home');
     projectReadyRef.current = true;
 
@@ -553,6 +566,63 @@ export default function App() {
     setSelectedElementId(null);
     setIsChatActive(false);
     setHasCars(true);
+    projectReadyRef.current = true;
+  };
+
+  // Loads the investments project. A first visit starts from the investments template, with example
+  // projects in the admin window so its pages are not empty.
+  const loadInvestWorkspace = async (userId: string) => {
+    const seq = ++loadSeqRef.current;
+    projectReadyRef.current = false;
+    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE.invest;
+    let invPages: Page[] = [];
+    let invElements: CanvasElement[] = [];
+    let admin: InvestAdminData | null = null;
+    try {
+      const designSnap = await getDoc(doc(db, 'designs', userId));
+      if (designSnap.exists()) {
+        const data: any = designSnap.data();
+        if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
+          invPages = normalizeLegacyNavbarDefaults(data[pagesField]);
+          invElements = deserializeElements(data[elementsField] || []);
+        }
+        if (data.investAdmin) admin = normalizeInvestAdmin(data.investAdmin);
+      }
+    } catch (e) {
+      console.warn("Could not load the investments project from Firebase, falling back to local cache:", e);
+    }
+    if (seq !== loadSeqRef.current) return;
+    try {
+      if (invPages.length === 0) {
+        const storedPages = localStorage.getItem(`${localPrefix}pages_${userId}`);
+        const storedElements = localStorage.getItem(`${localPrefix}elements_${userId}`);
+        if (storedPages) invPages = normalizeLegacyNavbarDefaults(JSON.parse(storedPages));
+        if (storedElements) invElements = deserializeElements(JSON.parse(storedElements));
+      }
+      if (!admin) {
+        const storedAdmin = localStorage.getItem(`${localPrefix}admin_${userId}`);
+        if (storedAdmin) admin = normalizeInvestAdmin(JSON.parse(storedAdmin));
+      }
+    } catch (e) {
+      console.warn("Could not read the local investments cache:", e);
+    }
+    if (invPages.length === 0) {
+      const template = getInvestTemplate();
+      invPages = template.pages;
+      invElements = template.elements;
+      if (!admin) admin = exampleInvestAdmin();
+    }
+    setProject('invest');
+    setPages(invPages);
+    setElements(invElements);
+    setHistory([invElements]);
+    setHistoryIndex(0);
+    setInvestAdmin(admin || createEmptyInvestAdmin());
+    setActivePageId(invPages[0].id);
+    setActiveSlideId(invPages[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    setIsChatActive(false);
+    setHasInvest(true);
     projectReadyRef.current = true;
   };
 
@@ -774,6 +844,30 @@ export default function App() {
     return () => clearTimeout(delayDebounceFn);
   }, [carAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
 
+  // 5b. Debounced save of the investments project's admin data (projects, requests, investors, settings).
+  useEffect(() => {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'invest') {
+      return;
+    }
+    const targetUserId = activeUserUid;
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        localStorage.setItem(`${PROJECT_STORAGE.invest.localPrefix}admin_${targetUserId}`, JSON.stringify(investAdmin));
+      } catch (e) {
+        console.warn("Could not save investments data locally:", e);
+      }
+      try {
+        await setDoc(doc(db, 'designs', targetUserId), {
+          investAdmin: sanitizeData(investAdmin),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Cloud save of investments data failed:", e);
+      }
+    }, 800);
+    return () => clearTimeout(delayDebounceFn);
+  }, [investAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
+
   // 6. Debounced save of the restaurant's admin data (menu, orders, settings).
   useEffect(() => {
     if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant') {
@@ -830,6 +924,7 @@ export default function App() {
       if (project === 'shop') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(shopAdmin));
       if (project === 'cars') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(carAdmin));
       if (project === 'restaurant') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(restaurantAdmin));
+      if (project === 'invest') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(investAdmin));
     } catch (e) {
       console.warn("Could not save to LocalStorage:", e);
     }
@@ -841,6 +936,7 @@ export default function App() {
       ...(project === 'shop' ? { shopAdmin: sanitizeData(shopAdmin) } : {}),
       ...(project === 'cars' ? { carAdmin: sanitizeData(carAdmin) } : {}),
       ...(project === 'restaurant' ? { restaurantAdmin: sanitizeData(withoutStaff(restaurantAdmin)) } : {}),
+      ...(project === 'invest' ? { investAdmin: sanitizeData(investAdmin) } : {}),
       updatedAt: serverTimestamp(),
     }, { merge: true }).catch((e) => console.warn("Cloud save failed while switching projects:", e));
   };
@@ -855,6 +951,7 @@ export default function App() {
         if (type === 'shop') await loadShopWorkspace(targetUserId);
         else if (type === 'cars') await loadCarsWorkspace(targetUserId);
         else if (type === 'restaurant') await loadRestaurantWorkspace(targetUserId);
+        else if (type === 'invest') await loadInvestWorkspace(targetUserId);
         else await loadUserWorkspace(targetUserId);
       }
       setIsProjectChosen(true);
@@ -1056,6 +1153,8 @@ export default function App() {
         setCarAdmin(createEmptyCarAdmin());
         setHasRestaurant(false);
         setRestaurantAdmin(createEmptyRestaurantAdmin());
+        setHasInvest(false);
+        setInvestAdmin(createEmptyInvestAdmin());
         setIsAuthActive(true);
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
@@ -2169,6 +2268,15 @@ export default function App() {
         content: '',
         styles: { color: '#B5562B', ...(customStyles || {}) },
       },
+      investProjects: {
+        name: 'مشاريع الشركة',
+        width: 1100,
+        height: 900,
+        content: '',
+        investLayout: 'grid',
+        investLimit: 9,
+        styles: { color: '#0F6B4F', ...(customStyles || {}) },
+      },
       checkout: {
         name: 'بطاقة الطلب',
         width: 560,
@@ -2744,6 +2852,7 @@ export default function App() {
         hasShop={hasShop}
         hasCars={hasCars}
         hasRestaurant={hasRestaurant}
+        hasInvest={hasInvest}
         loadingType={projectLoading}
       />
     );
@@ -2889,7 +2998,7 @@ export default function App() {
           onManualSave={handleManualSave}
           projectName={currentPage.navbar.brandName || PROJECT_KIND_LABEL[project]}
           onOpenProjectSettings={() => handleSelectTool('project-settings')}
-          projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'restaurant' ? 'Restaurant' : undefined}
+          projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'restaurant' ? 'Restaurant' : project === 'invest' ? 'Invest' : undefined}
           onOpenProjects={handleOpenProjects}
         />
 
@@ -2908,6 +3017,8 @@ export default function App() {
         <CarRequestContext.Provider value={project === 'cars' ? submitCarRequest : null}>
         <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : null}>
         <ShopUpdateContext.Provider value={project === 'shop' ? updateShopAdmin : null}>
+        <InvestDataContext.Provider value={project === 'invest' ? investAdmin : null}>
+        <InvestRequestContext.Provider value={project === 'invest' ? submitInvestorRequest : null}>
         <CanvasWorkspace
           previewMode={previewMode}
           slides={currentPage.slides}
@@ -2937,6 +3048,8 @@ export default function App() {
           activePageId={activePageId}
           chromeHeight={isDocked ? 56 : 104}
         />
+        </InvestRequestContext.Provider>
+        </InvestDataContext.Provider>
         </ShopUpdateContext.Provider>
         </ShopDataContext.Provider>
         </CarRequestContext.Provider>
@@ -3062,6 +3175,9 @@ export default function App() {
       )}
       {project === 'cars' && (
         <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} />
+      )}
+      {project === 'invest' && (
+        <InvestAdminPanel data={investAdmin} onChange={updateInvestAdmin} />
       )}
       {project === 'restaurant' && (
         <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} access={access} />

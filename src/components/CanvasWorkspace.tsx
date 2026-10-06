@@ -77,6 +77,8 @@ interface CanvasWorkspaceProps {
   isPublicSite?: boolean;
   // Height of the editor's bars above the workspace (the edit bar under the top bar, or not).
   chromeHeight?: number;
+  // The docked editor's bar of quick tools, drawn above the selected element.
+  renderSelectionBar?: (element: CanvasElement) => React.ReactNode;
 }
 
 interface InteractiveCalendarWidgetProps {
@@ -712,6 +714,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onSelectNavbar,
   isPublicSite = false,
   chromeHeight = 104,
+  renderSelectionBar,
 }) => {
   // In mobile view, elements and slides render with their phone layout ("تنسيق الموبايل") when
   // they have one. Everything below works on these resolved values, so dragging/resizing in mobile
@@ -4210,8 +4213,20 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             </div>
                           )}
 
+                          {/* The quick tools bar (docked editor), kept at its own size whatever the zoom */}
+                          {renderSelectionBar && !isDragging && !isResizing && !isRotating && (
+                            <div
+                              className={`absolute right-0 z-[60] pointer-events-auto animate-[fade_0.15s_ease-out] ${elem.y < 56 ? 'top-full mt-2 origin-top-right' : 'bottom-full mb-2 origin-bottom-right'}`}
+                              style={{ transform: `scale(${1 / (scaleFactor || 1)})` }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {renderSelectionBar(elem)}
+                            </div>
+                          )}
+
                           {/* Dimensions & Controls Floating Tooltip */}
-                          <div 
+                          {!renderSelectionBar && <div 
                             className="absolute -top-7 right-0 flex items-center gap-1.5 bg-[#1d1d1f] text-white text-[10px] px-2 py-0.5 rounded-md shadow-md pointer-events-auto"
                             onMouseDown={(e) => e.stopPropagation()}
                           >
@@ -4237,7 +4252,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             >
                               <Trash2 size={11} />
                             </button>
-                          </div>
+                          </div>}
 
                            {/* Rotation Handle - Moved to bottom and distanced from the border to prevent overlap with drag/resize handles */}
                           <div

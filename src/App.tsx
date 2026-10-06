@@ -43,6 +43,7 @@ import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
 import { isSigningIn, resolveAccountId, takeInviteProblem } from './services/accounts';
 import { Access, OWNER_ACCESS, loadAccess } from './services/members';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { SelectionBar } from './components/SelectionBar';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const sanitizeData = (data: any): any => {
@@ -1890,6 +1891,118 @@ export default function App() {
     handleUpdateElementStyles({ textAlign: nextAlign });
   };
 
+  // The quick tools bar above the selected element (docked editor).
+  const renderSelectionBar = (el: CanvasElement) => (
+    <SelectionBar
+      element={el}
+      onToggleBold={handleToggleBold}
+      onToggleItalic={handleToggleItalic}
+      onSetAlign={(textAlign) => handleUpdateElementStyles({ textAlign })}
+      onFontSize={(fontSize) => handleUpdateElementStyles({ fontSize })}
+      onReplaceImage={() => {
+        setDrawerSection('add-image');
+        setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 }));
+        setIsRightDrawerOpen(true);
+      }}
+      onOpenGroup={showInspector}
+      onDuplicate={() => handleDuplicateElement(el.id)}
+      onCopyFormat={handleCopyFormat}
+      isFormatCopied={!!copiedFormat}
+      onToggleLock={handleToggleLock}
+      onDelete={() => handleDeleteElement(el.id)}
+    />
+  );
+
+  // Keyboard shortcuts of the editor. They stay out of the way while typing in a field or in a text
+  // on the canvas, and in the preview.
+  const [copiedElement, setCopiedElement] = useState<CanvasElement | null>(null);
+  const handleShortcut = (e: KeyboardEvent) => {
+    if (isPreviewActive || !currentUser) return;
+    const t = e.target as HTMLElement | null;
+    if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))) return;
+    if (document.querySelector('[role="dialog"], [aria-modal="true"]')) return;
+    const mod = e.ctrlKey || e.metaKey;
+    const key = e.key.toLowerCase();
+    const el = selectedElement;
+
+    if (mod && key === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) handleRedo();
+      else handleUndo();
+      return;
+    }
+    if (mod && key === 'y') {
+      e.preventDefault();
+      handleRedo();
+      return;
+    }
+    if (mod && key === 'v' && copiedElement) {
+      e.preventDefault();
+      const sameSlide = copiedElement.slideId === activeSlideId;
+      const pasted: CanvasElement = {
+        ...copiedElement,
+        id: `el-${Date.now()}`,
+        slideId: activeSlideId,
+        x: copiedElement.x + (sameSlide ? 24 : 0),
+        y: copiedElement.y + (sameSlide ? 24 : 0),
+        isLocked: false,
+      };
+      setSelectedElementId(pasted.id);
+      pushToHistory([...elements, pasted]);
+      // The next paste lands a step further.
+      setCopiedElement(pasted);
+      return;
+    }
+    if (!el) return;
+    if (e.key === 'Escape') {
+      handleSelectElement(null);
+      return;
+    }
+    if (mod && key === 'c') {
+      // Copy the element only when no text on the page is selected.
+      if (window.getSelection()?.toString()) return;
+      setCopiedElement(el);
+      return;
+    }
+    if (mod && key === 'd') {
+      e.preventDefault();
+      handleDuplicateElement(el.id);
+      return;
+    }
+    if (mod && key === 'b' && ['heading', 'paragraph', 'button'].includes(el.type)) {
+      e.preventDefault();
+      handleToggleBold();
+      return;
+    }
+    if (mod && key === 'i' && ['heading', 'paragraph', 'button'].includes(el.type)) {
+      e.preventDefault();
+      handleToggleItalic();
+      return;
+    }
+    if (el.isLocked) return;
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      handleDeleteElement(el.id);
+      return;
+    }
+    const step = e.shiftKey ? 10 : 1;
+    const move: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    if (move[e.key] && !mod) {
+      e.preventDefault();
+      const [dx, dy] = move[e.key];
+      // A plain move is one undo step; a group or the phone layout moves the way dragging does.
+      if (previewMode === 'mobile' || (el.type === 'shape' && el.isGroupContainer)) handleUpdateElementPosition(el.id, el.x + dx, el.y + dy);
+      else handleUpdateElementById(el.id, { x: el.x + dx, y: el.y + dy });
+    }
+  };
+  const shortcutRef = useRef(handleShortcut);
+  shortcutRef.current = handleShortcut;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => shortcutRef.current(e);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const handleToggleBulletList = () => {
     if (!selectedElement) return;
     const current = selectedElement.styles.listStyle;
@@ -2981,6 +3094,7 @@ export default function App() {
           isPreviewActive={isPreviewActive}
           activePageId={activePageId}
           chromeHeight={isDocked ? 56 : 104}
+          renderSelectionBar={isDocked ? renderSelectionBar : undefined}
         />
         </ShopUpdateContext.Provider>
         </ShopDataContext.Provider>

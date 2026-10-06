@@ -185,10 +185,10 @@ export const ColorSection = ({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-neutral-800">
-                ألوان صفحتك:
+                ألوان سريعة:
               </span>
               <span className="text-[10px] text-neutral-400">
-                (أساسيات التصميم)
+                (أبيض، أسود، أزرق…)
               </span>
             </div>
 
@@ -280,10 +280,10 @@ export const ColorSection = ({
       <div className="space-y-2 pt-1">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-neutral-800">
-            تدرجات لونية عصرية للعنصر:
+            تدرجات لونية للنص:
           </span>
           <span className="text-[10px] text-neutral-400">
-            (تطبق على النص أو العنصر)
+            (تلوّن حروف النص بتدرج)
           </span>
         </div>
 

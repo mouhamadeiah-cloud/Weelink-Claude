@@ -3752,7 +3752,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             />
                           </div>
                         ) : (elem.type === 'badge' || elem.type === 'icon') && (
-                          <div className="w-full h-full flex items-center justify-center text-center select-none overflow-hidden px-1 leading-none">
+                          // While selected its text can be typed in, so the selection lock comes off.
+                          <div className={`w-full h-full flex items-center justify-center text-center overflow-hidden px-1 leading-none ${!isPreviewActive && isSelected ? 'select-text cursor-text' : 'select-none'}`}>
                             {elem.content && (
                               <span 
                                 style={{

@@ -2470,8 +2470,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 }}
                 className={`relative w-full bg-white transition-all overflow-hidden ${
                   isPreviewActive ? '' : 'bg-freegrid-subtle'
-                } ${
-                  isSlideActive && !isPreviewActive ? 'ring-1 ring-[#0071e3]/30' : ''
                 }`}
                 style={{
                   height: `${slide.height}px`,
@@ -2554,9 +2552,23 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   />
                 )}
 
-                {/* Slide indicator badge in the corner */}
-                {!isPreviewActive && (
-                  <div className="absolute top-2 left-3 z-10 pointer-events-none flex items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+                {/* The slide being edited: a blue frame and its name in the corner; the others keep a quiet name tag */}
+                {!isPreviewActive && isSlideActive && (
+                  <>
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 z-[45] pointer-events-none border-2 border-[#0071e3] animate-[fade_0.25s_ease-out]"
+                      style={{ borderRadius: slide.borderRadius ? `${slide.borderRadius}px` : undefined }}
+                    />
+                    <div className="absolute top-2 right-3 z-[46] pointer-events-none animate-[fade_0.25s_ease-out]">
+                      <span className="text-[11px] font-bold bg-[#0071e3] text-white px-2.5 py-1 rounded-full shadow-[0_4px_12px_rgba(0,113,227,0.35)]">
+                        {slide.name}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {!isPreviewActive && !isSlideActive && (
+                  <div className="absolute top-2 right-3 z-10 pointer-events-none flex items-center gap-1.5 opacity-60">
                     <span className="text-[10px] font-semibold bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md border border-black/[0.05]">
                       {slide.name}
                     </span>

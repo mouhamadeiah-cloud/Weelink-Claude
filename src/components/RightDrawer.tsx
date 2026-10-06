@@ -60,7 +60,11 @@ import {
   BadgeCheck,
   Smile,
   ArrowUpToLine,
-  ArrowDownToLine
+  ArrowDownToLine,
+  Palette,
+  Move,
+  Zap,
+  PanelTop,
 } from 'lucide-react';
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape, getGlowShadowStyle, getLightGradientStyle, ContactType } from '../types';
 import { MASK_SHAPES } from '../utils/maskShapes';
@@ -83,6 +87,10 @@ import { CarElementSettings } from './cars/CarElementSettings';
 import { RestaurantElementSettings } from './restaurant/RestaurantElementSettings';
 
 import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
+import { InspectorCard, InspectorSubheading } from './rightDrawer/InspectorCard';
+import { elementDisplayName } from '../utils/elementLabels';
+import { inspectorGroups, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
+import { CLIP_GROUPS } from '../utils/clipShapes';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
 import { uploadGalleryImageToStorage } from '../utils/galleryUpload';
 import { buildAddMenuData } from './rightDrawer/addMenuTemplates';
@@ -170,6 +178,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   sectionRequest = 0,
   onActiveTabChange,
   projectSettings,
+  inspectorFocus,
+  onInspectorGroupChange,
+  onCopyFormat,
+  onToggleGroupContainer,
+  tabRequest,
+  projectName,
 }) => {
   const isDocked = dockedWidth > 0;
   // Wee AI chat container collapse state inside the control panel
@@ -292,12 +306,19 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  // When activeSlideId changes, reset the tab back to 'structure' so the slides list returns
+  // When activeSlideId changes, reset the tab back to 'structure' so the slides list returns. The
+  // docked panel keeps showing the new slide's settings instead.
   useEffect(() => {
-    if (activeSlideId) {
+    if (activeSlideId && !isDocked) {
       setActiveTab('structure');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSlideId]);
+
+  // The column's "structure" button, and selecting on the canvas, bring a tab to the front.
+  useEffect(() => {
+    if (tabRequest && tabRequest.n > 0) setActiveTab(tabRequest.tab);
+  }, [tabRequest?.n]);
 
   // Effect to automatically scroll all panels to the top when the drawer is opened/reopened or tab/section changes
   useEffect(() => {
@@ -967,6 +988,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       case 'gallery': return 'إعدادات المعرض';
       case 'grouping': return 'المجموعات';
       case 'wee-ai': return 'Wee AI';
+      case 'inspector': return 'الخصائص';
       default: return 'التعديلات';
     }
   };
@@ -995,6 +1017,4418 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   };
 
   const slotLabels = ['الخلفية', 'الصناديق', 'الإطارات', 'النصوص', 'البراند'];
+
+  // ===== The docked panel's inspector: everything about the selection on one page =====
+  const inspectorTarget: InspectorTarget = isNavbarSelected
+    ? { kind: 'navbar' }
+    : selectedElement
+      ? { kind: 'element', type: selectedElement.type }
+      : { kind: 'slide' };
+  const inspectorKind = isNavbarSelected ? 'navbar' : selectedElement ? `el:${selectedElement.type}` : 'slide';
+  const selectionKey = isNavbarSelected ? 'navbar' : selectedElement ? selectedElement.id : `slide:${activeSlideId}`;
+  const groups = inspectorGroups(inspectorTarget);
+  // The open cards are remembered per kind of selection: formatting five buttons in a row keeps the
+  // same cards open. At first: the content and, for a text, its font; otherwise the first card.
+  const [openByKind, setOpenByKind] = useState<Record<string, InspectorGroupId[]>>({});
+  const openGroups: InspectorGroupId[] =
+    openByKind[inspectorKind] ?? (groups[0]?.id === 'content' && groups[1] ? [groups[0].id, groups[1].id] : groups.slice(0, 1).map((g) => g.id));
+  const setOpenGroups = (next: InspectorGroupId[]) => setOpenByKind((prev) => ({ ...prev, [inspectorKind]: next }));
+  const [flashGroup, setFlashGroup] = useState<InspectorGroupId | null>(null);
+  const toolScrollRef = useRef<HTMLDivElement>(null);
+  const spyPausedUntil = useRef(0);
+
+  // A group picked in the column: open it and bring it into view.
+  useEffect(() => {
+    const g = inspectorFocus?.group;
+    if (!g || activeSection !== 'inspector') return;
+    if (!openGroups.includes(g)) setOpenGroups([...openGroups, g]);
+    onInspectorGroupChange?.(g);
+    setFlashGroup(g);
+    // The column keeps the picked group lit while the panel scrolls to it.
+    spyPausedUntil.current = Date.now() + 900;
+    const scrollToCard = () => {
+      const box = toolScrollRef.current;
+      const card = box?.querySelector<HTMLElement>(`[data-inspector-group="${g}"]`);
+      if (box && card) box.scrollTo({ top: Math.max(0, card.offsetTop - 10), behavior: 'smooth' });
+    };
+    // Once now, and again when the card has finished opening and the page below it has grown.
+    const scroll = setTimeout(scrollToCard, 90);
+    const settle = setTimeout(scrollToCard, 380);
+    const unflash = setTimeout(() => setFlashGroup(null), 800);
+    return () => {
+      clearTimeout(scroll);
+      clearTimeout(settle);
+      clearTimeout(unflash);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspectorFocus?.n]);
+
+  // A new selection starts at its first group.
+  useEffect(() => {
+    if (activeSection === 'inspector') onInspectorGroupChange?.(groups[0]?.id ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionKey, activeSection]);
+
+  // The column highlights the group at the top of the panel while it scrolls.
+  const handleInspectorScroll = () => {
+    if (activeSection !== 'inspector' || !onInspectorGroupChange || Date.now() < spyPausedUntil.current) return;
+    const box = toolScrollRef.current;
+    if (!box) return;
+    // At the very bottom the last cards can't reach the top; keep whichever one was picked.
+    if (box.scrollTop > 0 && box.scrollTop + box.clientHeight >= box.scrollHeight - 2) return;
+    let current: InspectorGroupId | null = null;
+    box.querySelectorAll<HTMLElement>('[data-inspector-group]').forEach((card) => {
+      if (card.offsetTop - box.scrollTop < 80) current = card.dataset.inspectorGroup as InspectorGroupId;
+    });
+    if (current) onInspectorGroupChange(current);
+  };
+
+  const inspectorIcon = (id: InspectorGroupId) => {
+    switch (id) {
+      case 'content': return isNavbarSelected ? <PanelTop size={17} /> : <SlidersHorizontal size={17} />;
+      case 'font': return <Type size={17} />;
+      case 'colors': return <Palette size={17} />;
+      case 'shape': return <Shapes size={17} />;
+      case 'layout': return selectedElement ? <Move size={17} /> : <Layers size={17} />;
+      case 'motion': return <Zap size={17} />;
+    }
+  };
+
+  const Swatch = ({ color }: { color?: string }) =>
+    color ? <span className="inline-block w-2.5 h-2.5 rounded-full border border-black/10 align-[-1px] ml-1" style={{ background: color }} /> : null;
+
+  // One line under each closed card's title: what is set now, so it reads without opening it.
+  const inspectorSummary = (id: InspectorGroupId): React.ReactNode => {
+    const st: any = isNavbarSelected ? navbar || {} : selectedElement ? selectedElement.styles || {} : activeSlide || {};
+    const join = (...parts: (string | false | undefined | null)[]) => parts.filter(Boolean).join(' · ');
+    switch (id) {
+      case 'content':
+        if (isNavbarSelected) return join(navbar?.brandName, navbar?.isSticky === false ? 'متحرك مع الصفحة' : 'ثابت بالأعلى');
+        if (selectedElement?.type === 'image') return selectedElement.clipPath ? 'مقصوصة بشكل' : 'صورة كاملة';
+        if (selectedElement?.type === 'gallery') return `${selectedElement.galleryConfig?.items.length || 0} صور`;
+        return selectedElement ? elementDisplayName(selectedElement) : '';
+      case 'font':
+        return join(st.fontSize ? `${st.fontSize}px` : '', st.fontWeight === 'bold' && 'عريض', st.fontStyle === 'italic' && 'مائل', st.fontFamily && String(st.fontFamily).split(',')[0].replace(/['"]/g, ''));
+      case 'colors': {
+        const fg = isNavbarSelected ? navbar?.textColor : st.color;
+        const bg = st.backgroundColor;
+        return (
+          <>
+            {fg && !String(fg).includes('gradient') && <>{selectedElement?.type === 'image' ? 'الصبغة' : 'النص'}<Swatch color={fg} /> </>}
+            {bg ? <>الخلفية<Swatch color={String(bg).includes('gradient') ? bg : bg} /></> : !fg ? 'بدون خلفية' : null}
+          </>
+        );
+      }
+      case 'shape':
+        return join(
+          st.borderWidth ? `إطار ${st.borderWidth}px` : 'بدون إطار',
+          st.borderRadius ? `زوايا ${st.borderRadius}` : '',
+          st.opacity !== undefined && st.opacity < 1 ? `شفافية ${Math.round(st.opacity * 100)}%` : '',
+          st.glowIntensity ? 'ظل' : ''
+        );
+      case 'layout':
+        if (!selectedElement) return `${elements.filter((e) => e.slideId === activeSlideId).length} عنصر بالشريحة`;
+        return join(`${Math.round(selectedElement.width)}×${Math.round(selectedElement.height)}`, selectedElement.rotation ? `مدوّر ${Math.round(selectedElement.rotation)}°` : '', selectedElement.isLocked && 'مقفل');
+      case 'motion':
+        return join(selectedElement?.linkUrl ? 'فيه رابط' : 'بدون رابط', st.animation && st.animation !== 'none' ? 'فيه حركة' : 'بدون حركة');
+    }
+  };
+
+  // Names of the sections inside a card that holds more than one.
+  const SUBHEADING: Partial<Record<DrawerSection, string>> = {
+    color: selectedElement?.type === 'image' ? 'الفلاتر والصبغة' : 'لون النص',
+    background: 'الخلفية',
+    border: 'الإطار',
+    opacity: 'الشفافية',
+    shadow: 'الظل',
+    lighting: 'الإضاءة',
+    format: 'الأبعاد والتدوير',
+    layers: 'الطبقات',
+    link: 'الرابط',
+    animation: 'الحركة',
+  };
+
+  // What only some elements have, drawn in their content card next to their own settings.
+  const renderContentExtras = () => {
+    if (!selectedElement) return null;
+    const el = selectedElement;
+    const option = (label: string, on: boolean, pick: () => void, key: string) => (
+      <button
+        key={key}
+        type="button"
+        onClick={pick}
+        className={`w-full h-9 text-right px-3 text-xs rounded-[10px] font-medium transition-colors cursor-pointer ${on ? 'bg-[#0071e3] text-white' : 'text-neutral-700 hover:bg-neutral-100'}`}
+      >
+        {label}
+      </button>
+    );
+    if (el.type === 'image') {
+      return (
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => onSelectSection('add-image')}
+            className="w-full h-9 rounded-[10px] bg-[#0071e3] hover:bg-[#0062c4] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <ImageIcon size={14} />
+            تبديل الصورة
+          </button>
+          <InspectorSubheading>صورة بشكل</InspectorSubheading>
+          <div className="max-h-56 overflow-y-auto rounded-xl border border-neutral-200 p-1">
+            {option('بدون قص (مستطيل طبيعي)', !el.clipPath, () => onUpdateElement({ clipPath: undefined }), 'none')}
+            {CLIP_GROUPS.map((g) => (
+              <div key={g.label}>
+                <div className="text-[10px] font-bold text-neutral-400 px-2 pt-2 pb-0.5">{g.label}</div>
+                {g.options.map(([value, label]) => option(label, el.clipPath === value, () => onUpdateElement({ clipPath: value }), value))}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (el.type === 'mask') {
+      return (
+        <div className="space-y-2">
+          <InspectorSubheading>شكل الصورة</InspectorSubheading>
+          <div className="max-h-56 overflow-y-auto rounded-xl border border-neutral-200 p-1">
+            {MASK_SHAPES.map((m) => option(m.name, (el.content || 'circle') === m.id, () => onUpdateElement({ content: m.id }), m.id))}
+          </div>
+        </div>
+      );
+    }
+    if (el.type === 'shape' && onToggleGroupContainer) {
+      return (
+        <button
+          type="button"
+          onClick={onToggleGroupContainer}
+          className={`w-full h-9 rounded-[10px] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+            el.isGroupContainer ? 'bg-[#0071e3]/10 text-[#0071e3]' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+          }`}
+          title="العناصر اللي بتنسحب فوق الشكل بتنضم إليه وبتتحرك معه"
+        >
+          <CreditCard size={14} />
+          {el.isGroupContainer ? 'مجموعة: إلغاء' : 'تحويل لمجموعة'}
+        </button>
+      );
+    }
+    if (el.type === 'shopProducts' || el.type === 'shopSearch') {
+      return <ShopElementSettings element={el} onUpdateElement={onUpdateElement} />;
+    }
+    return null;
+  };
+
+  const renderInspector = () => {
+    const el = selectedElement;
+    const action = (label: string, icon: React.ReactNode, onClick: () => void, opts: { on?: boolean; danger?: boolean } = {}) => (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`flex-1 h-9 rounded-[10px] flex items-center justify-center gap-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
+          opts.on ? 'bg-[#0071e3]/10 text-[#0071e3]' : opts.danger ? 'text-neutral-600 hover:bg-red-50 hover:text-red-600' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+        }`}
+      >
+        {icon}
+        {label}
+      </button>
+    );
+    return (
+      <div key={selectionKey} className="inspector-list space-y-2.5">
+        {el && (
+          <div className="flex items-center gap-1 rounded-xl bg-neutral-50 border border-neutral-200/70 p-0.5">
+            {action('تكرار', <Copy size={13} />, () => onDuplicateElement(el.id))}
+            {action(el.isLocked ? 'مقفل' : 'قفل', el.isLocked ? <Lock size={13} /> : <Unlock size={13} />, onToggleLock, { on: !!el.isLocked })}
+            {onCopyFormat && action(isFormatCopied ? 'انقر عنصراً' : 'نسخ التنسيق', <PaintRoller size={13} />, onCopyFormat, { on: !!isFormatCopied })}
+            {action('حذف', <Trash2 size={13} />, () => onDeleteElement(el.id), { danger: true })}
+          </div>
+        )}
+        {groups.map((g, i) => {
+          const open = openGroups.includes(g.id);
+          const many = g.sections.length > 1;
+          return (
+            <InspectorCard
+              key={g.id}
+              id={g.id}
+              index={i}
+              icon={inspectorIcon(g.id)}
+              title={g.title}
+              summary={inspectorSummary(g.id)}
+              open={open}
+              flash={flashGroup === g.id}
+              onToggle={() => {
+                setOpenGroups(open ? openGroups.filter((x) => x !== g.id) : [...openGroups, g.id]);
+                if (!open) onInspectorGroupChange?.(g.id);
+              }}
+            >
+              {g.id === 'content' && renderContentExtras()}
+              {g.sections.map((s) => (
+                <div key={s} className="space-y-3">
+                  {many && SUBHEADING[s] && <InspectorSubheading>{SUBHEADING[s]}</InspectorSubheading>}
+                  {renderSection(s)}
+                </div>
+              ))}
+            </InspectorCard>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Draws one section of the panel. The docked panel draws several of them at once on one page (the
+  // inspector), so the section is a parameter here rather than the panel's own.
+  const renderSection = (activeSection: DrawerSection) => (
+    <>
+
+              {/* ============================================================== */}
+              {/* SPECIAL SECTION: تعديل الصفحة (PAGE SETTINGS) AS IN USER DRAWINGS */}
+              {/* ============================================================== */}
+              {activeSection === 'project-settings' && projectSettings}
+
+              {activeSection === 'page-settings' && (
+                <div className="space-y-4">
+
+                  {/* 1. اسم الصفحة (كما في الصورة الأولى) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-neutral-800 block">
+                      اسم الصفحة:
+                    </label>
+                    <input
+                      type="text"
+                      value={currentPage.name}
+                      onChange={(e) => onUpdatePage({ name: e.target.value })}
+                      className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:bg-white focus:outline-none transition-all"
+                      placeholder="اسم الصفحة..."
+                    />
+                  </div>
+
+                  {/* 2. ألوان الصفحة (تحت اسم الصفحة - خيارين: افتراضي وشخصي) */}
+                  <div className="space-y-2.5 pt-2 border-t border-neutral-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-neutral-800">
+                        ألوان الصفحة:
+                      </span>
+                      <span className="text-[10px] text-neutral-400">
+                        (خلفية، صناديق، إطارات، نصوص، براند)
+                      </span>
+                    </div>
+
+                    {/* Sub-tabs: افتراضي | شخصي (كما في الصورة الأولى) */}
+                    <div className="flex rounded-xl bg-neutral-100 p-1 border border-neutral-200 gap-1">
+                      <button
+                        onClick={() => setPageColorMode('default')}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                          pageColorMode === 'default'
+                            ? 'bg-white text-[#0071e3] shadow-xs'
+                            : 'text-neutral-600 hover:text-black'
+                        }`}
+                      >
+                        افتراضي
+                      </button>
+                      <button
+                        onClick={() => setPageColorMode('custom')}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                          pageColorMode === 'custom'
+                            ? 'bg-white text-[#0071e3] shadow-xs'
+                            : 'text-neutral-600 hover:text-black'
+                        }`}
+                      >
+                        شخصي
+                      </button>
+                    </div>
+
+                    {/* MODE A: افتراضي - 20 خيار لألوان متناسقة كل خيار فيه 5 ألوان */}
+                    {pageColorMode === 'default' && (
+                      <div className="space-y-2 pt-1">
+                        <div className="text-[10.5px] text-neutral-500 font-medium leading-relaxed">
+                          اختر مجموعة ألوان متناسقة لتطبيقها فوراً على كامل الصفحة وعناصرها (20 مجموعة):
+                        </div>
+
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                          {TWENTY_PAGE_PALETTES.map((pal) => {
+                            const isCurrentActive = 
+                              currentPage.colorPalette && 
+                              currentPage.colorPalette[0] === pal.colors[0] &&
+                              currentPage.colorPalette[4] === pal.colors[4];
+
+                            return (
+                              <button
+                                key={pal.id}
+                                onClick={() => {
+                                  onApplyPagePalette(pal.colors);
+                                  setCustomColors(pal.colors);
+                                }}
+                                className={`w-full p-2 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer ${
+                                  isCurrentActive
+                                    ? 'border-[#0071e3] bg-[#0071e3]/5 ring-1 ring-[#0071e3]'
+                                    : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/80'
+                                }`}
+                              >
+                                <span className="text-[11px] font-bold text-neutral-800 truncate">
+                                  {pal.name}
+                                </span>
+
+                                {/* 5 Color Circles */}
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {pal.colors.map((c, i) => (
+                                    <span
+                                      key={i}
+                                      className="w-4 h-4 rounded-full border border-black/15 shadow-3xs"
+                                      style={{ backgroundColor: c }}
+                                      title={`${slotLabels[i]}: ${c}`}
+                                    />
+                                  ))}
+                                  {isCurrentActive && (
+                                    <Check size={12} className="text-[#0071e3] mr-1" />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* MODE B: شخصي - كما في الرسم السفلي بالصورة الأولى */}
+                    {pageColorMode === 'custom' && (
+                      <div className="space-y-3 pt-1">
+                        {/* 5 Circles at the top */}
+                        <div className="flex items-center justify-around p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
+                          {customColors.map((c, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setCustomSlotIndex(idx)}
+                              className={`flex flex-col items-center gap-1 group transition-transform ${
+                                customSlotIndex === idx ? 'scale-110' : 'opacity-85 hover:opacity-100'
+                              }`}
+                            >
+                              <span 
+                                className={`w-7 h-7 rounded-full border border-black/15 shadow-xs flex items-center justify-center ${
+                                  customSlotIndex === idx ? 'ring-2 ring-[#0071e3] ring-offset-2' : ''
+                                }`}
+                                style={{ backgroundColor: c }}
+                              >
+                                {customSlotIndex === idx && (
+                                  <Check size={12} className={c === '#ffffff' || c === '#fbfbfd' ? 'text-black' : 'text-white'} />
+                                )}
+                              </span>
+                              <span className="text-[9px] font-medium text-neutral-500">
+                                {slotLabels[idx]}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* غامق / فاتح (Dark / Light Buttons) */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => {
+                              const lightPal: [string, string, string, string, string] = [
+                                '#fbfbfd', '#ffffff', '#e5e5ea', '#1d1d1f', customColors[4] || '#0071e3'
+                              ];
+                              setCustomColors(lightPal);
+                              onApplyPagePalette(lightPal);
+                            }}
+                            className="py-1.5 px-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 text-xs font-semibold text-neutral-700 text-center"
+                          >
+                            فاتح (Light)
+                          </button>
+                          <button
+                            onClick={() => {
+                              const darkPal: [string, string, string, string, string] = [
+                                '#0f172a', '#1e293b', '#334155', '#f8fafc', customColors[4] || '#38bdf8'
+                              ];
+                              setCustomColors(darkPal);
+                              onApplyPagePalette(darkPal);
+                            }}
+                            className="py-1.5 px-3 rounded-lg bg-neutral-900 text-white hover:bg-black text-xs font-semibold text-center"
+                          >
+                            غامق (Dark)
+                          </button>
+                        </div>
+
+                        {/* الإضاءة (Brightness with Sun Icon) */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-neutral-600">
+                            <span className="flex items-center gap-1 font-medium">
+                              <Sun size={13} className="text-amber-500" />
+                              الإضاءة:
+                            </span>
+                            <span className="font-mono">{customBrightness}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="50"
+                            max="150"
+                            value={customBrightness}
+                            onChange={(e) => setCustomBrightness(Number(e.target.value))}
+                            className="w-full accent-[#0071e3]"
+                          />
+                        </div>
+
+                        {/* Numbered Pill Selector: ( 1 ) ( 2 ) ( 3 ) ( 4 ) ( 5 ) */}
+                        <div className="space-y-1">
+                          <span className="text-[11px] font-bold text-neutral-700 block">
+                            تحديد رقم اللون للتعديل:
+                          </span>
+                          <div className="flex items-center rounded-full bg-neutral-100 p-1 border border-neutral-200">
+                            {[0, 1, 2, 3, 4].map((idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setCustomSlotIndex(idx)}
+                                className={`flex-1 py-1 text-xs font-bold rounded-full transition-all ${
+                                  customSlotIndex === idx
+                                    ? 'bg-[#0071e3] text-white shadow-2xs'
+                                    : 'text-neutral-600 hover:text-black'
+                                }`}
+                              >
+                                {idx + 1}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* مربع اختيار اللون العام (Color Picker Box) */}
+                        <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-neutral-800">
+                              اختيار اللون للخانة ({customSlotIndex + 1}: {slotLabels[customSlotIndex]}):
+                            </span>
+                            <span 
+                              className="w-5 h-5 rounded-md border border-black/10" 
+                              style={{ backgroundColor: customColors[customSlotIndex] }} 
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={customColors[customSlotIndex]}
+                              onChange={(e) => handleUpdateCustomColorSlot(customSlotIndex, e.target.value)}
+                              className="w-9 h-9 rounded-xl cursor-pointer border-0 bg-transparent shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={customColors[customSlotIndex]}
+                              onChange={(e) => handleUpdateCustomColorSlot(customSlotIndex, e.target.value)}
+                              className="flex-1 text-xs px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-left"
+                              dir="ltr"
+                            />
+                          </div>
+                        </div>
+
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. أشكال تداخل الشرائح مع بعضها (كما في الصورة الثانية - 12 خيار على الأقل) */}
+                  <div className="space-y-2.5 pt-3 border-t border-neutral-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-neutral-800">
+                        أمثلة تداخل الشرائح:
+                      </span>
+                      <span className="text-[10px] text-neutral-400">
+                        (تداخل الشريحة النشطة)
+                      </span>
+                    </div>
+
+                    <div className="text-[10.5px] text-neutral-500 font-medium">
+                      مربعات صغيرة بلونين توضح طريقة تداخل الشريحة الحالية مع الشريحة التي تليها (12 خياراً):
+                    </div>
+
+                    {/* 12 Mini Two-Tone Transition Preview Squares */}
+                    <div className="grid grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
+                      {SLIDE_DIVIDER_OPTIONS.map((divOpt) => {
+                        const isSelected = (activeSlide.dividerShape || 'straight') === divOpt.id;
+
+                        return (
+                          <button
+                            key={divOpt.id}
+                            onClick={() => onUpdateSlideDivider(activeSlide.id, divOpt.id)}
+                            className={`flex flex-col items-center gap-1.5 p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-[#0071e3] bg-[#0071e3]/5 ring-2 ring-[#0071e3]/40 shadow-xs'
+                                : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                            }`}
+                            title={divOpt.name}
+                          >
+                            {/* Mini 2-tone Preview Box */}
+                            <div className="w-full h-11 border border-black/10 rounded-md overflow-hidden shadow-2xs">
+                              {divOpt.renderPreview(isSelected)}
+                            </div>
+
+                            <span className={`text-[9.5px] truncate w-full ${
+                              isSelected ? 'font-bold text-[#0071e3]' : 'text-neutral-600'
+                            }`}>
+                              {divOpt.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* ============================================================== */}
+              {/* OTHER TOOL SECTIONS */}
+              {/* ============================================================== */}
+
+              {/* TOOL: Color (الألوان - لون صلب، وتدرج لوني يطبق على النص/العنصر نفسه) */}
+              {activeSection === 'color' && isNavbarSelected && navbar && <NavbarColorSection navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
+
+              {activeSection === 'color' && !isNavbarSelected && <ColorSection elementGradientCategory={elementGradientCategory} onUpdateElementStyles={onUpdateElementStyles} selectedElement={selectedElement} setElementGradientCategory={setElementGradientCategory} styles={styles} />}
+
+              {/* TOOL: Shadow (الظلال) */}
+              {activeSection === 'shadow' && isNavbarSelected && navbar && <NavbarShadowSection customColors={customColors} navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
+
+              {activeSection === 'shadow' && !isNavbarSelected && <ShadowSection activeSlide={activeSlide} customColors={customColors} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideGlow={onUpdateSlideGlow} selectedElement={selectedElement} setShadowTarget={setShadowTarget} shadowTarget={shadowTarget} styles={styles} />}
+
+              {/* TOOL: Background (تعديل الخلفية - لون، الصورة، المعرض كالمخطط اليدوي) */}
+              {activeSection === 'background' && isNavbarSelected && navbar && (
+                <BackgroundDrawerSection
+                  targetType="navbar"
+                  targetName="النافبار"
+                  currentBgColor={navbar.bgColor}
+                  currentBgImage={navbar.backgroundImage}
+                  currentBgSize={navbar.backgroundSize}
+                  currentBgAttachment="scroll"
+                  onApplyColor={(color) => onUpdateNavbar({ bgColor: color, backgroundImage: undefined })}
+                  onApplyGradient={(gradientCss) => onUpdateNavbar({ bgColor: gradientCss, backgroundImage: undefined })}
+                  onApplyImage={(imageUrl, size = 'cover') => onUpdateNavbar({ backgroundImage: imageUrl, backgroundSize: size })}
+                  onRemoveImage={() => onUpdateNavbar({ backgroundImage: undefined })}
+                />
+              )}
+
+              {activeSection === 'background' && !isNavbarSelected && (
+                <BackgroundDrawerSection
+                  targetType={selectedElement ? 'element' : 'slide'}
+                  targetName={selectedElement ? elementDisplayName(selectedElement) : (activeSlide ? activeSlide.name : 'شريحة')}
+                  currentBgColor={selectedElement ? styles.backgroundColor : (activeSlide?.backgroundColor || '#ffffff')}
+                  currentBgImage={selectedElement ? styles.backgroundImage : activeSlide?.backgroundImage}
+                  currentBgSize={selectedElement ? (styles.backgroundSize as any) : activeSlide?.backgroundSize}
+                  currentBgAttachment={selectedElement ? (styles.backgroundAttachment as any) : activeSlide?.backgroundAttachment}
+                  onApplyColor={(color) => {
+                    if (selectedElement) {
+                      onUpdateElementStyles({ backgroundColor: color, backgroundImage: undefined });
+                    } else if (activeSlide) {
+                      onUpdateSlideBackground(activeSlide.id, { backgroundColor: color, backgroundImage: undefined });
+                    }
+                  }}
+                  onApplyGradient={(gradientCss) => {
+                    if (selectedElement) {
+                      onUpdateElementStyles({ backgroundColor: gradientCss, backgroundImage: undefined });
+                    } else if (activeSlide) {
+                      onUpdateSlideBackground(activeSlide.id, { backgroundColor: gradientCss, backgroundImage: undefined });
+                    }
+                  }}
+                  onApplyImage={(imageUrl, size = 'cover') => {
+                    if (selectedElement) {
+                      onUpdateElementStyles({ backgroundImage: imageUrl, backgroundSize: size });
+                    } else if (activeSlide) {
+                      onUpdateSlideBackground(activeSlide.id, { backgroundImage: imageUrl, backgroundSize: size });
+                    }
+                  }}
+                  onRemoveImage={() => {
+                    if (selectedElement) {
+                      onUpdateElementStyles({ backgroundImage: undefined });
+                    } else if (activeSlide) {
+                      onUpdateSlideBackground(activeSlide.id, { backgroundImage: undefined });
+                    }
+                  }}
+                  onApplyAttachment={(attachment) => {
+                    if (selectedElement) {
+                      onUpdateElementStyles({ backgroundAttachment: attachment });
+                    } else if (activeSlide) {
+                      onUpdateSlideBackground(activeSlide.id, { backgroundAttachment: attachment });
+                    }
+                  }}
+                />
+              )}
+
+              {/* TOOL: Border (تعديل الإطار للعنصر أو الشريحة) */}
+              {activeSection === 'border' && isNavbarSelected && navbar && <NavbarBorderSection navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
+
+              {activeSection === 'border' && !isNavbarSelected && <BorderSection activeSlide={activeSlide} borderTarget={borderTarget} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideBorder={onUpdateSlideBorder} selectedElement={selectedElement} setBorderTarget={setBorderTarget} styles={styles} />}
+
+              {/* TOOL: Opacity (الشفافية: خيار العنصر وخيار الخلفية) */}
+              {activeSection === 'opacity' && isNavbarSelected && navbar && <NavbarOpacitySection navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
+
+              {activeSection === 'opacity' && !isNavbarSelected && <OpacitySection activeSlide={activeSlide} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideOpacity={onUpdateSlideOpacity} opacityPart={opacityPart} opacityTarget={opacityTarget} selectedElement={selectedElement} setOpacityPart={setOpacityPart} setOpacityTarget={setOpacityTarget} styles={styles} />}
+
+              {/* TOOL: Lighting (الإضاءة) */}
+              {activeSection === 'lighting' && isNavbarSelected && navbar && <NavbarLightingSection customColors={customColors} navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
+
+              {activeSection === 'lighting' && !isNavbarSelected && <LightingSection activeSlide={activeSlide} customColors={customColors} lightingTarget={lightingTarget} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideGlow={onUpdateSlideGlow} selectedElement={selectedElement} setLightingTarget={setLightingTarget} styles={styles} />}
+
+              {/* TOOL: Format (التنسيق) */}
+              {(activeSection === 'format' || activeSection === 'gallery') && (
+                <div className="space-y-4">
+                  {selectedElement ? (
+                    <>
+                      {/* The shop cart / order card: accent colour and texts */}
+                      {(selectedElement.type === 'cart' || selectedElement.type === 'checkout') && (
+                        <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+                      )}
+                      {/* The car showroom's live car list / search bar */}
+                      {(selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
+                        <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+                      )}
+                      {/* The restaurant's live menu / order cart */}
+                      {(selectedElement.type === 'menuList' || selectedElement.type === 'menuCart') && (
+                        <RestaurantElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+                      )}
+                      {/* إعدادات معرض الصور (Gallery Settings) */}
+                      {selectedElement.type === 'gallery' && (() => {
+                        const config = selectedElement.galleryConfig || {
+                          layout: 'top-main',
+                          activeImageIndex: 0,
+                          showThumbnails: true,
+                          gap: 8,
+                          borderRadius: 12,
+                          objectFit: 'cover',
+                          items: [
+                            { id: '1', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&auto=format&fit=crop&q=80', title: 'طبيعة بحيرة وجبال' },
+                            { id: '2', url: 'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=1200&auto=format&fit=crop&q=80', title: 'قمم الثلوج' },
+                            { id: '3', url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1200&auto=format&fit=crop&q=80', title: 'غابة الصنوبر' },
+                            { id: '4', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&auto=format&fit=crop&q=80', title: 'شروق الشمس' },
+                            { id: '5', url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1200&auto=format&fit=crop&q=80', title: 'تلال وسهول' }
+                          ]
+                        };
+
+                        const items = config.items || [];
+                        const layout = config.layout || 'top-main';
+
+                        const updateGalleryConfig = (partial: Partial<typeof config>) => {
+                          onUpdateElement({
+                            galleryConfig: {
+                              ...config,
+                              ...partial
+                            }
+                          });
+                        };
+
+                        const handleMoveUp = (idx: number) => {
+                          if (idx <= 0) return;
+                          const newItems = [...items];
+                          const temp = newItems[idx];
+                          newItems[idx] = newItems[idx - 1];
+                          newItems[idx - 1] = temp;
+                          updateGalleryConfig({ items: newItems });
+                        };
+
+                        const handleMoveDown = (idx: number) => {
+                          if (idx >= items.length - 1) return;
+                          const newItems = [...items];
+                          const temp = newItems[idx];
+                          newItems[idx] = newItems[idx + 1];
+                          newItems[idx + 1] = temp;
+                          updateGalleryConfig({ items: newItems });
+                        };
+
+                        const handleTriggerDeviceUpload = (idx: number) => {
+                          setGalleryTargetReplaceIndex(idx);
+                          galleryFileInputRef.current?.click();
+                        };
+
+                        const handleDeviceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+                          const file = e.target.files?.[0];
+                          if (!file || galleryTargetReplaceIndex === null) return;
+                          setGalleryUploadingIndex(galleryTargetReplaceIndex);
+                          try {
+                            const downloadUrl = await uploadGalleryImageToStorage(file);
+                            const newItems = [...items];
+                            if (galleryTargetReplaceIndex === -1) {
+                              newItems.push({
+                                id: `img-${Date.now()}`,
+                                url: downloadUrl,
+                                title: file.name.replace(/\.[^/.]+$/, '')
+                              });
+                            } else {
+                              newItems[galleryTargetReplaceIndex] = {
+                                ...newItems[galleryTargetReplaceIndex],
+                                url: downloadUrl,
+                                title: file.name.replace(/\.[^/.]+$/, '')
+                              };
+                            }
+                            updateGalleryConfig({ items: newItems });
+                          } catch (err) {
+                            console.error('Failed to upload image to Firebase Storage, using local data URL fallback', err);
+                            const reader = new FileReader();
+                            reader.onload = (readerEvent) => {
+                              const localUrl = readerEvent.target?.result as string;
+                              if (localUrl) {
+                                const newItems = [...items];
+                                if (galleryTargetReplaceIndex === -1) {
+                                  newItems.push({
+                                    id: `img-${Date.now()}`,
+                                    url: localUrl,
+                                    title: file.name.replace(/\.[^/.]+$/, '')
+                                  });
+                                } else {
+                                  newItems[galleryTargetReplaceIndex] = {
+                                    ...newItems[galleryTargetReplaceIndex],
+                                    url: localUrl,
+                                    title: file.name.replace(/\.[^/.]+$/, '')
+                                  };
+                                }
+                                updateGalleryConfig({ items: newItems });
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          } finally {
+                            setGalleryUploadingIndex(null);
+                            setGalleryTargetReplaceIndex(null);
+                            if (e.target) e.target.value = '';
+                          }
+                        };
+
+                        const handleOpenUnsplashPicker = (idx: number) => {
+                          setUnsplashPickerIndex(idx);
+                          handleLoadUnsplashForGallery(unsplashSearchQuery);
+                        };
+
+                        const handleSelectUnsplashPhoto = (photoUrl: string, title?: string) => {
+                          if (unsplashPickerIndex === null) return;
+                          const newItems = [...items];
+                          if (unsplashPickerIndex === -1) {
+                            newItems.push({
+                              id: `img-${Date.now()}`,
+                              url: photoUrl,
+                              title: title || 'صورة من Unsplash'
+                            });
+                          } else {
+                            newItems[unsplashPickerIndex] = {
+                              ...newItems[unsplashPickerIndex],
+                              url: photoUrl,
+                              title: title || newItems[unsplashPickerIndex].title
+                            };
+                          }
+                          updateGalleryConfig({ items: newItems });
+                          setUnsplashPickerIndex(null);
+                        };
+
+                        const handleDownloadImage = async (url: string, name?: string) => {
+                          try {
+                            const res = await fetch(url);
+                            const blob = await res.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = `${name || 'gallery-photo'}.jpg`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(blobUrl);
+                          } catch {
+                            window.open(url, '_blank');
+                          }
+                        };
+
+                        const handleDeleteImage = (idx: number) => {
+                          if (items.length <= 2) {
+                            alert('يجب أن يحتوي المعرض على صورتين على الأقل');
+                            return;
+                          }
+                          const newItems = items.filter((_, i) => i !== idx);
+                          const newActive = config.activeImageIndex && config.activeImageIndex >= newItems.length ? 0 : config.activeImageIndex;
+                          updateGalleryConfig({ items: newItems, activeImageIndex: newActive });
+                        };
+
+                        return (
+                          <div className="space-y-4 p-3 bg-white rounded-2xl border border-neutral-200 text-right select-none shadow-2xs" dir="rtl">
+                            <input
+                              type="file"
+                              ref={galleryFileInputRef}
+                              onChange={handleDeviceFileChange}
+                              accept="image/*"
+                              className="hidden"
+                            />
+
+                            <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center font-bold">
+                                  <Images size={16} />
+                                </div>
+                                <div>
+                                  <h3 className="text-xs font-bold text-neutral-900">إعدادات معرض الصور (٥ صور)</h3>
+                                  <p className="text-[10px] text-neutral-500">تحكم بالصور، الترتيب، والتنسيقات الأربعة</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 1. SECTION: Gallery Layouts */}
+                            <div className="space-y-2">
+                              <label className="text-xs font-bold text-neutral-800 flex items-center justify-between">
+                                <span>تنسيق المعرض (الرسم التخطيطي 1 - 4):</span>
+                                <span className="text-[10px] text-[#0071e3] font-medium">٤ تنسيقات</span>
+                              </label>
+                              <div className="grid grid-cols-2 gap-2">
+                                {/* Layout 1 */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateGalleryConfig({ layout: 'top-main' })}
+                                  className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
+                                    layout === 'top-main'
+                                      ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
+                                      : 'border-neutral-200 bg-white hover:bg-neutral-50'
+                                  }`}
+                                >
+                                  <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-col justify-between">
+                                    <div className="h-6 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
+                                    <div className="h-2.5 grid grid-cols-4 gap-0.5">
+                                      <div className="bg-[#0071e3] rounded-2xs" />
+                                      <div className="bg-neutral-400 rounded-2xs" />
+                                      <div className="bg-neutral-400 rounded-2xs" />
+                                      <div className="bg-neutral-400 rounded-2xs" />
+                                    </div>
+                                  </div>
+                                  <span className="text-[11px] font-bold text-neutral-800">١. شاشة أعلى ومصغرات أسفل</span>
+                                </button>
+
+                                {/* Layout 2 */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateGalleryConfig({ layout: 'left-thumbnails' })}
+                                  className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
+                                    layout === 'left-thumbnails'
+                                      ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
+                                      : 'border-neutral-200 bg-white hover:bg-neutral-50'
+                                  }`}
+                                >
+                                  <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-row gap-1">
+                                    <div className="w-4.5 h-full grid grid-cols-2 grid-rows-2 gap-0.5">
+                                      <div className="bg-[#0071e3] rounded-2xs" />
+                                      <div className="bg-neutral-400 rounded-2xs" />
+                                      <div className="bg-neutral-400 rounded-2xs" />
+                                      <div className="bg-neutral-400 rounded-2xs" />
+                                    </div>
+                                    <div className="flex-1 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
+                                  </div>
+                                  <span className="text-[11px] font-bold text-neutral-800">٢. شبكة مصغرات يسار</span>
+                                </button>
+
+                                {/* Layout 3 */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateGalleryConfig({ layout: 'right-thumbnails' })}
+                                  className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
+                                    layout === 'right-thumbnails'
+                                      ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
+                                      : 'border-neutral-200 bg-white hover:bg-neutral-50'
+                                  }`}
+                                >
+                                  <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-row gap-1">
+                                    <div className="flex-1 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
+                                    <div className="w-4.5 h-full grid grid-cols-2 grid-rows-2 gap-0.5">
+                                      <div className="bg-[#0071e3] rounded-2xs" />
+                                      <div className="bg-neutral-400 rounded-2xs" />
+                                      <div className="bg-neutral-400 rounded-2xs" />
+                                      <div className="bg-neutral-400 rounded-2xs" />
+                                    </div>
+                                  </div>
+                                  <span className="text-[11px] font-bold text-neutral-800">٣. شبكة مصغرات يمين</span>
+                                </button>
+
+                                {/* Layout 4 */}
+                                <button
+                                  type="button"
+                                  onClick={() => updateGalleryConfig({ layout: 'left-main-row' })}
+                                  className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
+                                    layout === 'left-main-row'
+                                      ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
+                                      : 'border-neutral-200 bg-white hover:bg-neutral-50'
+                                  }`}
+                                >
+                                  <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-row gap-1">
+                                    <div className="w-8 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
+                                    <div className="flex-1 flex flex-col justify-between gap-0.5">
+                                      <div className="h-1.5 bg-[#0071e3] rounded-2xs" />
+                                      <div className="h-1.5 bg-neutral-400 rounded-2xs" />
+                                      <div className="h-1.5 bg-neutral-400 rounded-2xs" />
+                                      <div className="h-1.5 bg-neutral-400 rounded-2xs" />
+                                    </div>
+                                  </div>
+                                  <span className="text-[11px] font-bold text-neutral-800">٤. شاشة يسار ومصغرات صف</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* 2. SECTION: Photos List */}
+                            <div className="space-y-2 pt-2 border-t border-neutral-100">
+                              <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-neutral-800">
+                                  صور المعرض ({items.length} صور):
+                                </label>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTriggerDeviceUpload(-1)}
+                                    className="text-[10px] text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg font-bold flex items-center gap-1 border border-emerald-200/60 cursor-pointer"
+                                  >
+                                    <Upload size={10} />
+                                    <span>رفع صورة (+)</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenUnsplashPicker(-1)}
+                                    className="text-[10px] text-purple-600 hover:text-purple-700 bg-purple-50 px-2 py-1 rounded-lg font-bold flex items-center gap-1 border border-purple-200/60 cursor-pointer"
+                                  >
+                                    <Sparkles size={10} />
+                                    <span>Unsplash (+)</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                {items.map((item, idx) => {
+                                  const isUploadingThis = galleryUploadingIndex === idx;
+                                  return (
+                                    <div
+                                      key={item.id || idx}
+                                      className="p-2 bg-neutral-50 rounded-xl border border-neutral-200/80 flex items-center gap-2 transition-all hover:border-neutral-300"
+                                    >
+                                      <div className="w-12 h-10 rounded-lg overflow-hidden bg-neutral-200 shrink-0 border border-neutral-300 relative">
+                                        {isUploadingThis ? (
+                                          <div className="w-full h-full flex items-center justify-center bg-black/40">
+                                            <Loader2 size={14} className="text-white animate-spin" />
+                                          </div>
+                                        ) : (
+                                          <img
+                                            src={item.url}
+                                            alt={item.title || `صورة ${idx + 1}`}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        )}
+                                        <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[8px] font-bold px-1 rounded-xs">
+                                          {idx + 1}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex-1 min-w-0">
+                                        <input
+                                          type="text"
+                                          value={item.title || ''}
+                                          onChange={(e) => {
+                                            const newItems = [...items];
+                                            newItems[idx] = { ...newItems[idx], title: e.target.value };
+                                            updateGalleryConfig({ items: newItems });
+                                          }}
+                                          placeholder={`صورة رقم ${idx + 1}`}
+                                          className="w-full text-xs font-semibold text-neutral-800 bg-transparent outline-none truncate border-b border-transparent hover:border-neutral-200 focus:border-[#0071e3]"
+                                        />
+                                        <div className="flex items-center gap-1 mt-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTriggerDeviceUpload(idx)}
+                                            disabled={isUploadingThis}
+                                            className="text-[9.5px] text-neutral-600 hover:text-emerald-700 hover:bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
+                                            title="استبدال برفع صورة من جهازك إلى Firebase Storage"
+                                          >
+                                            <Upload size={9} />
+                                            <span>من الجهاز</span>
+                                          </button>
+                                          <span className="text-neutral-300 text-[9px]">|</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenUnsplashPicker(idx)}
+                                            className="text-[9.5px] text-neutral-600 hover:text-purple-700 hover:bg-purple-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
+                                            title="استبدال بصورة من Unsplash"
+                                          >
+                                            <Sparkles size={9} />
+                                            <span>Unsplash</span>
+                                          </button>
+                                          <span className="text-neutral-300 text-[9px]">|</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDownloadImage(item.url, item.title)}
+                                            className="text-[9.5px] text-neutral-600 hover:text-[#0071e3] hover:bg-blue-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
+                                            title="تنزيل الصورة الحالية لجهازك"
+                                          >
+                                            <Download size={9} />
+                                            <span>تنزيل</span>
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex flex-col gap-1 shrink-0">
+                                        <div className="flex items-center gap-0.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMoveUp(idx)}
+                                            disabled={idx === 0}
+                                            className="w-5 h-5 rounded flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-200/80 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                                            title="تقديم لأعلى"
+                                          >
+                                            <ArrowUp size={11} strokeWidth={2.2} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleMoveDown(idx)}
+                                            disabled={idx === items.length - 1}
+                                            className="w-5 h-5 rounded flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-200/80 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                                            title="تأخير لأسفل"
+                                          >
+                                            <ArrowDown size={11} strokeWidth={2.2} />
+                                          </button>
+                                        </div>
+                                        {items.length > 2 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeleteImage(idx)}
+                                            className="w-full text-center text-[9px] text-red-500 hover:text-red-700 py-0.5 rounded hover:bg-red-50 cursor-pointer"
+                                            title="حذف هذه الصورة"
+                                          >
+                                            حذف
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* 3. SECTION: Visual Settings */}
+                            <div className="space-y-2 pt-2 border-t border-neutral-100">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] text-neutral-600">نمط ملء شاشة العرض:</span>
+                                <div className="flex gap-1 bg-neutral-100 p-0.5 rounded-lg border border-neutral-200">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateGalleryConfig({ objectFit: 'cover' })}
+                                    className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                                      config.objectFit !== 'contain'
+                                        ? 'bg-white text-[#0071e3] shadow-xs'
+                                        : 'text-neutral-600 hover:text-black'
+                                    }`}
+                                  >
+                                    ملء وتناسق (Cover)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateGalleryConfig({ objectFit: 'contain' })}
+                                    className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                                      config.objectFit === 'contain'
+                                        ? 'bg-white text-[#0071e3] shadow-xs'
+                                        : 'text-neutral-600 hover:text-black'
+                                    }`}
+                                  >
+                                    احتواء (Contain)
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[11px] text-neutral-600">
+                                  <span>انحناء زوايا الصور:</span>
+                                  <span className="font-mono font-bold text-[#0071e3]">{config.borderRadius ?? 12}px</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="32"
+                                  value={config.borderRadius ?? 12}
+                                  onChange={(e) => updateGalleryConfig({ borderRadius: Number(e.target.value) })}
+                                  className="w-full accent-[#0071e3] cursor-pointer"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[11px] text-neutral-600">
+                                  <span>المسافة بين المصغرات:</span>
+                                  <span className="font-mono font-bold text-[#0071e3]">{config.gap ?? 8}px</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="2"
+                                  max="20"
+                                  value={config.gap ?? 8}
+                                  onChange={(e) => updateGalleryConfig({ gap: Number(e.target.value) })}
+                                  className="w-full accent-[#0071e3] cursor-pointer"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 4. SECTION: Image Filters (تعديل صور المعرض كالصور العادية) */}
+                            <div className="space-y-2 pt-2 border-t border-neutral-100">
+                              <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-neutral-800">
+                                  تأثيرات وفلاتر صور المعرض:
+                                </label>
+                                <span className="text-[10px] text-neutral-400">
+                                  (فلاتر بصرية جاهزة)
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {[
+                                  { id: 'none', name: 'أصلي', icon: '🖼️' },
+                                  { id: 'grayscale', name: 'أبيض وأسود', icon: '🌗' },
+                                  { id: 'warm', name: 'دافئ', icon: '🌅' },
+                                  { id: 'cool', name: 'بارد', icon: '❄️' },
+                                  { id: 'vintage', name: 'كلاسيكي', icon: '🕰️' },
+                                  { id: 'technicolor', name: 'سينمائي', icon: '🎬' },
+                                  { id: 'invert', name: 'معكوس', icon: '🧩' },
+                                  { id: 'blur', name: 'ضبابي', icon: '🌫️' }
+                                ].map((f) => {
+                                  const isCurrent = (styles.imageFilter || 'none') === f.id;
+                                  return (
+                                    <button
+                                      key={f.id}
+                                      type="button"
+                                      onClick={() => onUpdateElementStyles({ imageFilter: f.id === 'none' ? undefined : f.id })}
+                                      className={`py-1.5 px-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                                        isCurrent
+                                          ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] ring-1 ring-[#0071e3]'
+                                          : 'border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700'
+                                      }`}
+                                    >
+                                      <span className="text-xs">{f.icon}</span>
+                                      <span className="text-[9px] font-bold truncate max-w-full">{f.name}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* 5. Quick Actions */}
+                            <div className="flex gap-2 pt-2 border-t border-neutral-100">
+                              <button
+                                type="button"
+                                onClick={() => onDuplicateElement(selectedElement.id)}
+                                className="flex-1 py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-xl text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <Copy size={13} />
+                                <span>مضاعفة (Copy)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={onToggleLock}
+                                className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                                  selectedElement.isLocked
+                                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-700'
+                                    : 'bg-neutral-100 hover:bg-neutral-200 border-neutral-200 text-neutral-700'
+                                }`}
+                              >
+                                {selectedElement.isLocked ? <Lock size={13} /> : <Unlock size={13} />}
+                                <span>{selectedElement.isLocked ? 'إلغاء القفل' : 'قفل المعرض'}</span>
+                              </button>
+                            </div>
+
+                            {/* Unsplash Picker Modal Dialog */}
+                            {unsplashPickerIndex !== null && (
+                              <div 
+                                className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+                                onClick={() => setUnsplashPickerIndex(null)}
+                              >
+                                <div 
+                                  className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden text-right"
+                                  onClick={(e) => e.stopPropagation()}
+                                  dir="rtl"
+                                >
+                                  <div className="p-3.5 border-b border-neutral-200 flex items-center justify-between">
+                                    <div>
+                                      <h4 className="text-xs font-bold text-neutral-900">اختر صورة من مكتبة Unsplash</h4>
+                                      <p className="text-[10px] text-neutral-500">
+                                        {unsplashPickerIndex === -1 ? 'إضافة صورة جديدة للمعرض' : `استبدال الصورة رقم ${unsplashPickerIndex + 1}`}
+                                      </p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setUnsplashPickerIndex(null)}
+                                      className="w-7 h-7 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center cursor-pointer"
+                                    >
+                                      <X size={15} />
+                                    </button>
+                                  </div>
+
+                                  <div className="p-2.5 border-b border-neutral-100 bg-neutral-50 flex gap-2">
+                                    <input
+                                      type="text"
+                                      value={unsplashSearchQuery}
+                                      onChange={(e) => setUnsplashSearchQuery(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleLoadUnsplashForGallery(unsplashSearchQuery);
+                                      }}
+                                      placeholder="ابحث: طبيعة، فنادق، سيارات، أطعمة..."
+                                      className="flex-1 px-3 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-[#0071e3]"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleLoadUnsplashForGallery(unsplashSearchQuery)}
+                                      className="px-3 py-1.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                    >
+                                      بحث
+                                    </button>
+                                  </div>
+
+                                  <div className="flex-1 overflow-y-auto p-2.5 min-h-[220px]">
+                                    {isUnsplashLoading ? (
+                                      <div className="w-full h-36 flex flex-col items-center justify-center gap-2 text-neutral-500">
+                                        <Loader2 size={22} className="animate-spin text-[#0071e3]" />
+                                        <span className="text-[11px]">جاري جلب الصور...</span>
+                                      </div>
+                                    ) : unsplashPhotos.length > 0 ? (
+                                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                        {unsplashPhotos.map((photo: any, pIdx: number) => (
+                                          <div
+                                            key={photo.id || pIdx}
+                                            onClick={() => handleSelectUnsplashPhoto(photo.url, photo.title)}
+                                            className="group/photo relative aspect-4/3 rounded-lg overflow-hidden cursor-pointer border border-neutral-200 hover:border-[#0071e3] transition-all"
+                                          >
+                                            <img
+                                              src={photo.url}
+                                              alt={photo.title || 'صورة'}
+                                              className="w-full h-full object-cover group-hover/photo:scale-105 transition-transform duration-200"
+                                              loading="lazy"
+                                            />
+                                            <div className="absolute inset-0 bg-black/0 group-hover/photo:bg-black/30 flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity">
+                                              <span className="bg-[#0071e3] text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+                                                اختيار
+                                              </span>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="w-full h-36 flex items-center justify-center text-xs text-neutral-400">
+                                        لم يتم العثور على صور، جرب كلمة بحث أخرى.
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                        {/* إعدادات وتخصيص التقويم المتقدمة (حجز مواعيد متقدم) */}
+                      {selectedElement.type === 'calendar' && (() => {
+                        const title = selectedElement.calendarTitle || '';
+                        const nameLabel = selectedElement.calendarNameLabel || 'الاسم الكامل';
+                        const addressLabel = selectedElement.calendarAddressLabel || 'العنوان / مكان الإقامة';
+                        const phoneLabel = selectedElement.calendarPhoneLabel || 'رقم الهاتف المتنقل';
+                        const emailLabel = selectedElement.calendarEmailLabel || 'البريد الإلكتروني للعميل';
+                        const descLabel = selectedElement.calendarDescLabel || 'تفاصيل ووصف الطلب';
+
+                        const workingDays = selectedElement.calendarWorkingDays || ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
+                        const holidays = selectedElement.calendarHolidays || ['friday', 'saturday'];
+                        const workStart = selectedElement.calendarWorkStart || '09:00';
+                        const workEnd = selectedElement.calendarWorkEnd || '17:00';
+                        const breakStart = selectedElement.calendarBreakStart || '12:00';
+                        const breakEnd = selectedElement.calendarBreakEnd || '13:00';
+                        const interval = selectedElement.calendarInterval || '30';
+                        const intervalMins = selectedElement.calendarIntervalMinutes || 30;
+                        const needsConfirmation = selectedElement.calendarNeedsConfirmation ?? true;
+                        const accentColor = selectedElement.calendarAccentColor || '#0071e3';
+                        const slots = selectedElement.calendarSlots || ['09:00 ص', '11:30 ص', '02:00 م', '04:30 م'];
+
+                        // Supported meeting types as list (can select multiple!)
+                        const meetingTypes = selectedElement.calendarMeetingTypes || [selectedElement.calendarMeetingType || 'phone'];
+
+                        const daysList = [
+                          { id: 'sunday', name: 'الأحد' },
+                          { id: 'monday', name: 'الإثنين' },
+                          { id: 'tuesday', name: 'الثلاثاء' },
+                          { id: 'wednesday', name: 'الأربعاء' },
+                          { id: 'thursday', name: 'الخميس' },
+                          { id: 'friday', name: 'الجمعة' },
+                          { id: 'saturday', name: 'السبت' },
+                        ];
+
+                        const handleToggleDay = (dayId: string) => {
+                          let newWorking = [...workingDays];
+                          let newHolidays = [...holidays];
+
+                          if (workingDays.includes(dayId)) {
+                            // Change to holiday
+                            newWorking = newWorking.filter(d => d !== dayId);
+                            if (!newHolidays.includes(dayId)) {
+                              newHolidays.push(dayId);
+                            }
+                          } else {
+                            // Change to working day
+                            newHolidays = newHolidays.filter(d => d !== dayId);
+                            if (!newWorking.includes(dayId)) {
+                              newWorking.push(dayId);
+                            }
+                          }
+
+                          onUpdateElement({
+                            calendarWorkingDays: newWorking,
+                            calendarHolidays: newHolidays,
+                          });
+                        };
+
+                        const handleToggleMeetingType = (typeId: string) => {
+                          let newTypes = [...meetingTypes];
+                          if (newTypes.includes(typeId)) {
+                            // Don't allow empty list
+                            if (newTypes.length > 1) {
+                              newTypes = newTypes.filter(t => t !== typeId);
+                            }
+                          } else {
+                            newTypes.push(typeId);
+                          }
+                          
+                          onUpdateElement({
+                            calendarMeetingTypes: newTypes,
+                            calendarMeetingType: newTypes[0] as any // maintain single value fallback
+                          });
+                        };
+
+                        const presetColors = [
+                          { hex: '#0071e3', name: 'أزرق آبل' },
+                          { hex: '#10b981', name: 'زمردي' },
+                          { hex: '#ec4899', name: 'وردي' },
+                          { hex: '#8b5cf6', name: 'بنفسجي' },
+                          { hex: '#f97316', name: 'برتقالي' },
+                          { hex: '#ef4444', name: 'أحمر قاني' },
+                          { hex: '#111827', name: 'فحمي' }
+                        ];
+
+                        return (
+                          <div className="space-y-4 p-3.5 bg-blue-50/40 rounded-2xl border border-blue-200/50 text-right select-none shadow-2xs" dir="rtl">
+                            {/* Section Header */}
+                            <div className="flex items-center gap-2 pb-2 border-b border-blue-100">
+                              <div 
+                                className="w-8 h-8 rounded-xl text-white flex items-center justify-center font-bold shadow-xs transition-colors"
+                                style={{ backgroundColor: accentColor }}
+                              >
+                                📅
+                              </div>
+                              <div>
+                                <h3 className="text-xs font-bold text-neutral-900">ضبط إعدادات حجز المواعيد</h3>
+                                <p className="text-[10px] text-neutral-500">قم بضبط أوقات العمل واللون والتحقق والمدد</p>
+                              </div>
+                            </div>
+
+                            {/* 1. عنوان التقويم الرئيسي */}
+                            <div className="space-y-1">
+                              <label className="text-[10.5px] font-bold text-neutral-800 block">عنوان التقويم ورأس النموذج:</label>
+                              <input
+                                type="text"
+                                value={title}
+                                onChange={(e) => onUpdateElement({ calendarTitle: e.target.value, content: e.target.value })}
+                                placeholder="مثال: حجز موعد استشارة جديدة"
+                                className="w-full text-xs font-semibold px-3 py-2 bg-white rounded-xl border border-neutral-300 focus:outline-none transition-all"
+                              />
+                            </div>
+
+                            {/* 2. اللون الرئيسي / ألوان البطاقة */}
+                            <div className="space-y-1.5 border-t border-blue-100/50 pt-2">
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">لون البطاقة والتفاعل النشط (Accent Color):</span>
+                              <div className="flex flex-wrap gap-1.5 mb-2">
+                                {presetColors.map((color) => {
+                                  const isSelected = accentColor.toLowerCase() === color.hex.toLowerCase();
+                                  return (
+                                    <button
+                                      key={color.hex}
+                                      type="button"
+                                      onClick={() => onUpdateElement({ calendarAccentColor: color.hex })}
+                                      className={`w-6 h-6 rounded-full border transition-all relative flex items-center justify-center cursor-pointer ${
+                                        isSelected ? 'scale-110 ring-2 ring-offset-2 ring-blue-500 border-transparent' : 'border-neutral-200 hover:scale-105'
+                                      }`}
+                                      style={{ backgroundColor: color.hex }}
+                                      title={color.name}
+                                    >
+                                      {isSelected && <span className="text-[9px] text-white">✓</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-neutral-500">رمز اللون المخصص (Hex):</span>
+                                <input
+                                  type="text"
+                                  value={accentColor}
+                                  onChange={(e) => onUpdateElement({ calendarAccentColor: e.target.value })}
+                                  placeholder="#0071e3"
+                                  className="w-24 p-1 bg-white rounded-lg border border-neutral-300 font-mono text-center text-xs focus:outline-none uppercase"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 3. أيام العمل والعطل الأسبوعية */}
+                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">أيام العمل والعطل الأسبوعية:</span>
+                              <p className="text-[9.5px] text-neutral-400">اضغط على اليوم للتبديل بين يوم عمل (لون ملون) أو عطلة (رمادي):</p>
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {daysList.map((day) => {
+                                  const isWork = workingDays.includes(day.id);
+                                  return (
+                                    <button
+                                      key={day.id}
+                                      type="button"
+                                      onClick={() => handleToggleDay(day.id)}
+                                      className={`py-1 px-1 rounded-lg text-[10px] font-bold border transition-all text-center cursor-pointer ${
+                                        isWork
+                                          ? 'text-white border-transparent'
+                                          : 'bg-neutral-100 text-neutral-400 border-neutral-200 hover:bg-neutral-200'
+                                      }`}
+                                      style={{ backgroundColor: isWork ? accentColor : undefined }}
+                                    >
+                                      {day.name}
+                                      <div className="text-[7.5px] font-normal opacity-85 mt-0.5">
+                                        {isWork ? 'عمل' : 'عطلة'}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* 4. أوقات الدوام الرسمي اليومي */}
+                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">ساعات الدوام اليومي الرسمي:</span>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <span className="text-[10px] text-neutral-500 block mb-0.5">بداية العمل:</span>
+                                  <input
+                                    type="time"
+                                    value={workStart}
+                                    onChange={(e) => onUpdateElement({ calendarWorkStart: e.target.value })}
+                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                  />
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية العمل:</span>
+                                  <input
+                                    type="time"
+                                    value={workEnd}
+                                    onChange={(e) => onUpdateElement({ calendarWorkEnd: e.target.value })}
+                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 5. أوقات الاستراحة اليومية */}
+                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">أوقات الاستراحة (تُستثنى من الحجوزات):</span>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <span className="text-[10px] text-neutral-500 block mb-0.5">بداية الاستراحة:</span>
+                                  <input
+                                    type="time"
+                                    value={breakStart}
+                                    onChange={(e) => onUpdateElement({ calendarBreakStart: e.target.value })}
+                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                  />
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية الاستراحة:</span>
+                                  <input
+                                    type="time"
+                                    value={breakEnd}
+                                    onChange={(e) => onUpdateElement({ calendarBreakEnd: e.target.value })}
+                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 6. وتيرة تكرار المواعيد (Interval) */}
+                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">مدة الفترة المتاحة لكل موعد:</span>
+                              <select
+                                value={interval}
+                                onChange={(e) => onUpdateElement({ calendarInterval: e.target.value as any })}
+                                className="w-full text-xs font-semibold p-2 bg-white rounded-xl border border-neutral-300 focus:outline-none cursor-pointer"
+                              >
+                                <option value="10">موعد كل ١٠ دقائق</option>
+                                <option value="15">موعد كل ١٥ دقيقة</option>
+                                <option value="30">موعد كل ٣٠ دقيقة (نصف ساعة)</option>
+                                <option value="60">موعد كل ساعة كاملة</option>
+                                <option value="day">موعد واحد فقط طوال اليوم</option>
+                                <option value="manual">تخصيص يدوي بالدقائق...</option>
+                              </select>
+
+                              {interval === 'manual' && (
+                                <div className="space-y-1 mt-1.5 animate-fadeIn">
+                                  <label className="text-[10px] text-neutral-500 block">أدخل الوقت بالدقائق يدوياً:</label>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={480}
+                                      value={intervalMins}
+                                      onChange={(e) => onUpdateElement({ calendarIntervalMinutes: Math.max(1, Number(e.target.value)) })}
+                                      className="w-24 p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                    />
+                                    <span className="text-xs text-neutral-500 font-semibold">دقيقة</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* 7. هل يتطلب تأكيد مسبق */}
+                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">آلية الموافقة وتأكيد الموعد:</span>
+                              <label className="flex items-center gap-2 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={needsConfirmation}
+                                  onChange={(e) => onUpdateElement({ calendarNeedsConfirmation: e.target.checked })}
+                                  className="w-4 h-4 cursor-pointer"
+                                  style={{ accentColor: accentColor }}
+                                />
+                                <span className="text-xs font-medium text-neutral-700">يتطلب موافقة وتأكيد الإدارة أولاً (⏳ معلّق)</span>
+                              </label>
+                              <p className="text-[9px] text-neutral-400 mr-6">
+                                في حال عدم التفعيل، سيتم تأكيد الموعد للمستخدم مباشرة (✅ فوري).
+                              </p>
+                            </div>
+
+                            {/* 8. نوع الموعد (حضور شخصي، هاتفي، اتصال فيديو واتساب) - متعدد الخيارات! */}
+                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">طريقة ومكان إجراء المقابلة (اختر خياراً أو أكثر):</span>
+                              <p className="text-[9.5px] text-neutral-400">ستتاح للمتصفح إمكانية الاختيار بين الخيارات المحددة فقط:</p>
+                              <div className="grid grid-cols-3 gap-1">
+                                {[
+                                  { id: 'personal', name: '👤 شخصي', title: 'حضور شخصي بالمقر' },
+                                  { id: 'phone', name: '📞 هاتفي', title: 'مكالمة هاتفية صوتية' },
+                                  { id: 'whatsapp', name: '📹 فيديو', title: 'اتصال فيديو واتساب' },
+                                ].map((type) => {
+                                  const isSel = meetingTypes.includes(type.id);
+                                  return (
+                                    <button
+                                      key={type.id}
+                                      type="button"
+                                      onClick={() => handleToggleMeetingType(type.id)}
+                                      className={`py-1.5 rounded-lg text-[9.5px] font-bold border transition-all text-center cursor-pointer ${
+                                        isSel
+                                          ? 'text-white border-transparent font-black'
+                                          : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
+                                      }`}
+                                      style={{ backgroundColor: isSel ? accentColor : undefined }}
+                                      title={type.title}
+                                    >
+                                      {type.name}
+                                      {isSel && <span className="mr-0.5 text-[8px]">✓</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* 9. تخصيص عناوين حقول الإدخال */}
+                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">تخصيص عناوين حقول النموذج:</span>
+                              <p className="text-[9.5px] text-neutral-400">تحكم بأسماء الحقول الظاهرة للزوار للتوافق مع نشاطك:</p>
+                              
+                              <div className="space-y-2 text-xs">
+                                <div>
+                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل الاسم:</span>
+                                  <input
+                                    type="text"
+                                    value={nameLabel}
+                                    onChange={(e) => onUpdateElement({ calendarNameLabel: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
+                                  />
+                                </div>
+
+                                <div>
+                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل العنوان/المقر:</span>
+                                  <input
+                                    type="text"
+                                    value={addressLabel}
+                                    onChange={(e) => onUpdateElement({ calendarAddressLabel: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
+                                  />
+                                </div>
+
+                                <div>
+                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل الهاتف:</span>
+                                  <input
+                                    type="text"
+                                    value={phoneLabel}
+                                    onChange={(e) => onUpdateElement({ calendarPhoneLabel: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
+                                  />
+                                </div>
+
+                                <div>
+                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل البريد الإلكتروني:</span>
+                                  <input
+                                    type="text"
+                                    value={emailLabel}
+                                    onChange={(e) => onUpdateElement({ calendarEmailLabel: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
+                                  />
+                                </div>
+
+                                <div>
+                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل وصف الطلب:</span>
+                                  <input
+                                    type="text"
+                                    value={descLabel}
+                                    onChange={(e) => onUpdateElement({ calendarDescLabel: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 10. قائمة فترات الموعد المتاحة (كخيار احتياطي يدوي) */}
+                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">الفترات الزمنية الاحتياطية (في حال عدم جيلها تلقائياً):</span>
+                              <textarea
+                                value={slots.join(', ')}
+                                onChange={(e) => {
+                                  const newSlots = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                                  onUpdateElement({ calendarSlots: newSlots });
+                                }}
+                                rows={2}
+                                placeholder="مثال: 09:00 ص, 11:30 ص, 02:00 م, 04:30 م"
+                                className="w-full px-2.5 py-1.5 bg-white rounded-xl border border-neutral-300 text-xs focus:outline-none font-mono text-left font-semibold"
+                                dir="ltr"
+                              />
+                              <p className="text-[9px] text-neutral-400 leading-relaxed text-right" dir="rtl">
+                                تُستخدم هذه الفترات في حال رغبت بتجاوز الحساب التلقائي، اكتب الساعات مفصولة بفواصل.
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* إعدادات مشغل الفيديو مخصصة */}
+                      {selectedElement.type === 'video' && (
+                        <div className="space-y-2.5 p-3.5 bg-red-50/50 rounded-2xl border border-red-200/60 text-right" dir="rtl">
+                          <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                            <Play size={14} className="text-red-600 shrink-0" />
+                            <span>إعدادات مشغل الفيديو:</span>
+                          </span>
+                          
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-neutral-500 block">رابط الفيديو (YouTube أو TikTok):</label>
+                            <input
+                              type="url"
+                              value={selectedElement.videoUrl || ''}
+                              onChange={(e) => onUpdateElement({ videoUrl: e.target.value })}
+                              placeholder="https://www.youtube.com/watch?v=..."
+                              dir="ltr"
+                              className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs font-mono focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-neutral-500 block">عنوان الفيديو أو وصفه:</label>
+                            <input
+                              type="text"
+                              value={selectedElement.content || ''}
+                              onChange={(e) => onUpdateElement({ content: e.target.value })}
+                              placeholder="مثال: فيديو تعريفي للشركة"
+                              className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                            />
+                          </div>
+
+                          <div className="flex gap-1.5 pt-1.5">
+                            <button
+                              type="button"
+                              onClick={() => onUpdateElement({ videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' })}
+                              className="text-[9px] bg-red-100/50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md border border-red-200 font-bold font-mono transition-colors cursor-pointer"
+                            >
+                              YouTube تجريبي
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onUpdateElement({ videoUrl: 'https://www.tiktok.com/@tiktok/video/7106362547144887554' })}
+                              className="text-[9px] bg-neutral-900 text-white px-2 py-1 rounded-md border border-neutral-800 font-bold font-mono hover:bg-neutral-800 transition-colors cursor-pointer"
+                            >
+                              TikTok تجريبي
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* إعدادات الخريطة مخصصة */}
+                      {selectedElement.type === 'map' && (
+                        <div className="space-y-2.5 p-3.5 bg-blue-50/50 rounded-2xl border border-blue-200/60 text-right" dir="rtl">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                              <MapPin size={14} className="text-blue-600 shrink-0" />
+                              <span>إعدادات موقع الخريطة:</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDetectUserLocation((loc) => onUpdateElement({ mapLocation: loc, content: loc }))}
+                              disabled={isDetectingLocation}
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-white hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shadow-3xs transition-all cursor-pointer disabled:opacity-50"
+                              title="تحديد الموقع الجغرافي الحالي تلقائياً وتثبيت الدبوس عليه"
+                            >
+                              {isDetectingLocation ? (
+                                <>
+                                  <Loader2 size={11} className="animate-spin text-blue-600" />
+                                  <span>جاري التحديد...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Navigation size={11} className="text-blue-600" />
+                                  <span>موقعي الحالي 📍</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-neutral-500 block">العنوان أو المكان المستهدف:</label>
+                            <input
+                              type="text"
+                              value={selectedElement.mapLocation || selectedElement.content || ''}
+                              onChange={(e) => onUpdateElement({ mapLocation: e.target.value, content: e.target.value })}
+                              placeholder="مثال: الرياض، برج المملكة أو إحداثيات GPS"
+                              className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            />
+                            {locationDetectError && (
+                              <p className="text-[10px] text-red-600 font-semibold mt-1">⚠️ {locationDetectError}</p>
+                            )}
+                            <p className="text-[9.5px] text-neutral-400 leading-snug">
+                              اكتب اسم المعلم أو المدينة أو اضغط زر "موقعي الحالي" وسيتم وضع الدبوس وتحديث الخريطة فوراً.
+                            </p>
+                          </div>
+
+                          <div className="flex gap-1.5 pt-1">
+                            {[
+                              { name: 'برج خليفة', loc: 'دبي، برج خليفة، الإمارات العربية المتحدة' },
+                              { name: 'برج المملكة', loc: 'الرياض، برج المملكة، المملكة العربية السعودية' },
+                              { name: 'المعادي', loc: 'القاهرة، المعادي، مصر' }
+                            ].map((preset) => (
+                              <button
+                                key={preset.name}
+                                type="button"
+                                onClick={() => onUpdateElement({ mapLocation: preset.loc, content: preset.loc })}
+                                className="text-[9px] bg-blue-100/50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md border border-blue-200 font-bold transition-colors cursor-pointer"
+                              >
+                                {preset.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* إعدادات وتخصيص الجدول مخصصة */}
+                      {selectedElement.type === 'table' && (
+                        <div className="space-y-3.5 p-3.5 bg-emerald-50/50 rounded-2xl border border-emerald-200/60 text-right" dir="rtl">
+                          <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                            <Grid3X3 size={14} className="text-emerald-600 shrink-0" />
+                            <span>إعدادات وتصميم الجدول:</span>
+                          </span>
+
+                          {/* 10 Coordinated Colors Palette */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] text-neutral-500 block">لون الجدول (السطر الأول والإطارات):</label>
+                            <div className="grid grid-cols-5 gap-1.5">
+                              {[
+                                { label: 'أزرق', value: '#0071e3' },
+                                { label: 'أخضر', value: '#10b981' },
+                                { label: 'أحمر', value: '#ef4444' },
+                                { label: 'أصفر', value: '#f59e0b' },
+                                { label: 'بنفسجي', value: '#6366f1' },
+                                { label: 'وردي', value: '#ec4899' },
+                                { label: 'رمادي', value: '#475569' },
+                                { label: 'مائي', value: '#14b8a6' },
+                                { label: 'برتقالي', value: '#f97316' },
+                                { label: 'فحمي', value: '#1f2937' },
+                              ].map((color) => {
+                                const isSelected = selectedElement.tableConfig?.themeColor === color.value;
+                                return (
+                                  <button
+                                    key={color.value}
+                                    type="button"
+                                    onClick={() => {
+                                      const currentConfig = selectedElement.tableConfig || {
+                                        rows: 3,
+                                        cols: 3,
+                                        themeColor: '#0071e3',
+                                        headerRow: true,
+                                        indexCol: false,
+                                        colWidths: [120, 120, 120],
+                                        rowHeights: [40, 40, 40],
+                                        cells: [['', '', ''], ['', '', ''], ['', '', '']]
+                                      };
+                                      onUpdateElement({
+                                        tableConfig: {
+                                          ...currentConfig,
+                                          themeColor: color.value
+                                        }
+                                      });
+                                    }}
+                                    className="relative h-6 rounded-md cursor-pointer transition-all border border-black/[0.05]"
+                                    style={{ backgroundColor: color.value }}
+                                    title={color.label}
+                                  >
+                                    {isSelected && (
+                                      <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-bold">✓</span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Rows and columns spinners */}
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-[10px] text-neutral-500 block mb-0.5">عدد السطور:</span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={20}
+                                  value={selectedElement.tableConfig?.rows || 3}
+                                  onChange={(e) => {
+                                    const newRows = Math.max(1, Number(e.target.value));
+                                    const currentConfig = selectedElement.tableConfig || {
+                                      rows: 3,
+                                      cols: 3,
+                                      themeColor: '#0071e3',
+                                      headerRow: true,
+                                      indexCol: false,
+                                      colWidths: [120, 120, 120],
+                                      rowHeights: [40, 40, 40],
+                                      cells: [['', '', ''], ['', '', ''], ['', '', '']]
+                                    };
+                                    let newCells = [...currentConfig.cells];
+                                    if (newRows > currentConfig.rows) {
+                                      for (let r = currentConfig.rows; r < newRows; r++) {
+                                        newCells.push(Array(currentConfig.cols).fill(''));
+                                      }
+                                    } else if (newRows < currentConfig.rows) {
+                                      newCells = newCells.slice(0, newRows);
+                                    }
+                                    const newRowHeights = [...currentConfig.rowHeights];
+                                    if (newRowHeights.length < newRows) {
+                                      for (let r = newRowHeights.length; r < newRows; r++) {
+                                        newRowHeights.push(40);
+                                      }
+                                    }
+                                    onUpdateElement({
+                                      tableConfig: {
+                                        ...currentConfig,
+                                        rows: newRows,
+                                        cells: newCells,
+                                        rowHeights: newRowHeights
+                                      }
+                                    });
+                                  }}
+                                  className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-neutral-500 block mb-0.5">عدد الأعمدة:</span>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={15}
+                                  value={selectedElement.tableConfig?.cols || 3}
+                                  onChange={(e) => {
+                                    const newCols = Math.max(1, Number(e.target.value));
+                                    const currentConfig = selectedElement.tableConfig || {
+                                      rows: 3,
+                                      cols: 3,
+                                      themeColor: '#0071e3',
+                                      headerRow: true,
+                                      indexCol: false,
+                                      colWidths: [120, 120, 120],
+                                      rowHeights: [40, 40, 40],
+                                      cells: [['', '', ''], ['', '', ''], ['', '', '']]
+                                    };
+                                    let newCells = currentConfig.cells.map(row => {
+                                      let newRow = [...row];
+                                      if (newCols > currentConfig.cols) {
+                                        return newRow.concat(Array(newCols - currentConfig.cols).fill(''));
+                                      } else {
+                                        return newRow.slice(0, newCols);
+                                      }
+                                    });
+                                    const newColWidths = [...currentConfig.colWidths];
+                                    if (newColWidths.length < newCols) {
+                                      for (let c = newColWidths.length; c < newCols; c++) {
+                                        newColWidths.push(120);
+                                      }
+                                    }
+                                    onUpdateElement({
+                                      tableConfig: {
+                                        ...currentConfig,
+                                        cols: newCols,
+                                        cells: newCells,
+                                        colWidths: newColWidths
+                                      }
+                                    });
+                                  }}
+                                  className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Col Width and Row Height spinners */}
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-[10px] text-neutral-500 block mb-0.5">عرض الأعمدة الافتراضي:</span>
+                              <input
+                                type="number"
+                                min={30}
+                                max={300}
+                                value={selectedElement.tableConfig?.colWidths[0] || 120}
+                                onChange={(e) => {
+                                  const w = Math.max(30, Number(e.target.value));
+                                  const currentConfig = selectedElement.tableConfig || {
+                                    rows: 3,
+                                    cols: 3,
+                                    themeColor: '#0071e3',
+                                    headerRow: true,
+                                    indexCol: false,
+                                    colWidths: [120, 120, 120],
+                                    rowHeights: [40, 40, 40],
+                                    cells: [['', '', ''], ['', '', ''], ['', '', '']]
+                                  };
+                                  onUpdateElement({
+                                    tableConfig: {
+                                      ...currentConfig,
+                                      colWidths: currentConfig.colWidths.map(() => w)
+                                    }
+                                  });
+                                }}
+                                className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-neutral-500 block mb-0.5">ارتفاع الأسطر الافتراضي:</span>
+                              <input
+                                type="number"
+                                min={20}
+                                max={150}
+                                value={selectedElement.tableConfig?.rowHeights[0] || 40}
+                                onChange={(e) => {
+                                  const h = Math.max(20, Number(e.target.value));
+                                  const currentConfig = selectedElement.tableConfig || {
+                                    rows: 3,
+                                    cols: 3,
+                                    themeColor: '#0071e3',
+                                    headerRow: true,
+                                    indexCol: false,
+                                    colWidths: [120, 120, 120],
+                                    rowHeights: [40, 40, 40],
+                                    cells: [['', '', ''], ['', '', ''], ['', '', '']]
+                                  };
+                                  onUpdateElement({
+                                    tableConfig: {
+                                      ...currentConfig,
+                                      rowHeights: currentConfig.rowHeights.map(() => h)
+                                    }
+                                  });
+                                }}
+                                className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Toggles (Header, Index Numbering) */}
+                          <div className="space-y-2 pt-1">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={selectedElement.tableConfig?.headerRow ?? true}
+                                onChange={(e) => {
+                                  const currentConfig = selectedElement.tableConfig || {
+                                    rows: 3,
+                                    cols: 3,
+                                    themeColor: '#0071e3',
+                                    headerRow: true,
+                                    indexCol: false,
+                                    colWidths: [120, 120, 120],
+                                    rowHeights: [40, 40, 40],
+                                    cells: [['', '', ''], ['', '', ''], ['', '', '']]
+                                  };
+                                  onUpdateElement({
+                                    tableConfig: {
+                                      ...currentConfig,
+                                      headerRow: e.target.checked
+                                    }
+                                  });
+                                }}
+                                className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
+                              />
+                              <span className="text-xs text-neutral-700">تفعيل سطر العناوين (أول سطر)</span>
+                            </label>
+
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={selectedElement.tableConfig?.indexCol ?? false}
+                                onChange={(e) => {
+                                  const currentConfig = selectedElement.tableConfig || {
+                                    rows: 3,
+                                    cols: 3,
+                                    themeColor: '#0071e3',
+                                    headerRow: true,
+                                    indexCol: false,
+                                    colWidths: [120, 120, 120],
+                                    rowHeights: [40, 40, 40],
+                                    cells: [['', '', ''], ['', '', ''], ['', '', '']]
+                                  };
+                                  onUpdateElement({
+                                    tableConfig: {
+                                      ...currentConfig,
+                                      indexCol: e.target.checked
+                                    }
+                                  });
+                                }}
+                                className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
+                              />
+                              <span className="text-xs text-neutral-700">تفعيل عمود التعداد يميناً (1، 2، 3...)</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* أبعاد العنصر */}
+                      <div className="space-y-1.5">
+                        <span className="text-xs font-bold text-neutral-800 block">أبعاد العنصر:</span>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] text-neutral-400 block mb-0.5">العرض (W):</span>
+                            <input
+                              type="number"
+                              value={selectedElement.width}
+                              onChange={(e) => onUpdateElement({ width: Math.max(20, Number(e.target.value)) })}
+                              className="w-full p-2 bg-neutral-50 rounded-lg border border-neutral-200 font-mono text-center focus:border-[#0071e3] focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-neutral-400 block mb-0.5">الارتفاع (H):</span>
+                            <input
+                              type="number"
+                              value={selectedElement.height}
+                              onChange={(e) => onUpdateElement({ height: Math.max(20, Number(e.target.value)) })}
+                              className="w-full p-2 bg-neutral-50 rounded-lg border border-neutral-200 font-mono text-center focus:border-[#0071e3] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* تدوير العنصر في مركزه (Center Rotation) */}
+                      <div className="space-y-2 pt-2 border-t border-neutral-200/80">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                            <RotateCw size={13} className="text-[#0071e3]" />
+                            <span>تدوير العنصر في مركزه:</span>
+                          </span>
+                          <div className="flex items-center gap-1 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200 font-mono text-xs font-bold text-[#0071e3]">
+                            <span>{Math.round(selectedElement.rotation || 0)}°</span>
+                          </div>
+                        </div>
+
+                        {/* شريط السحب الزاوي Slider */}
+                        <div className="space-y-1">
+                          <input
+                            type="range"
+                            min="0"
+                            max="360"
+                            value={selectedElement.rotation || 0}
+                            onChange={(e) => onUpdateElement({ rotation: Number(e.target.value) })}
+                            className="w-full accent-[#0071e3] cursor-pointer"
+                          />
+                          <div className="flex justify-between text-[10px] text-neutral-400 font-mono px-0.5">
+                            <span>0°</span>
+                            <span>90°</span>
+                            <span>180°</span>
+                            <span>270°</span>
+                            <span>360°</span>
+                          </div>
+                        </div>
+
+                        {/* أزرار التدوير السريع */}
+                        <div className="grid grid-cols-4 gap-1.5 pt-1">
+                          {[
+                            { deg: 0, label: '0°' },
+                            { deg: 90, label: '90°' },
+                            { deg: 180, label: '180°' },
+                            { deg: 270, label: '270°' },
+                          ].map((btn) => (
+                            <button
+                              key={btn.deg}
+                              type="button"
+                              onClick={() => onUpdateElement({ rotation: btn.deg })}
+                              className={`py-1.5 rounded-lg border text-xs font-mono font-bold transition-all ${
+                                (selectedElement.rotation || 0) === btn.deg
+                                  ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-xs'
+                                  : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                              }`}
+                            >
+                              {btn.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* درجات إزاحة إضافية */}
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = selectedElement.rotation || 0;
+                              const next = (current - 45 + 360) % 360;
+                              onUpdateElement({ rotation: next });
+                            }}
+                            className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 text-neutral-700 transition-colors"
+                          >
+                            <RotateCcw size={12} />
+                            <span>-45° يسار</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = selectedElement.rotation || 0;
+                              const next = (current + 45) % 360;
+                              onUpdateElement({ rotation: next });
+                            }}
+                            className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 text-neutral-700 transition-colors"
+                          >
+                            <RotateCw size={12} />
+                            <span>+45° يمين</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* إجراءات سريعة: تكرار وقفل */}
+                      <div className="flex gap-2 pt-2 border-t border-neutral-200/80">
+                        <button
+                          onClick={() => onDuplicateElement(selectedElement.id)}
+                          className="flex-1 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Copy size={13} />
+                          <span>تكرار العنصر</span>
+                        </button>
+                        <button
+                          onClick={onToggleLock}
+                          className="flex-1 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          {selectedElement.isLocked ? <Lock size={13} className="text-amber-600" /> : <Unlock size={13} />}
+                          <span>{selectedElement.isLocked ? 'مقفل' : 'قفل العنصر'}</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-xs text-neutral-400 py-6 text-center">حدد عنصراً لضبط أبعاده وتدويره.</div>
+                  )}
+                </div>
+              )}
+
+              {/* TOOL: Format Painter (رول الدهان) */}
+              {activeSection === 'format-painter' && (
+                <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-[#0071e3]/20 text-xs text-[#0071e3] space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <PaintRoller size={16} />
+                    <span>{isFormatCopied ? 'تم نسخ التنسيق بنجاح!' : 'جاهز لنسخ التنسيق'}</span>
+                  </div>
+                  <p className="text-neutral-600 text-[11px] leading-relaxed">
+                    انقر الآن على أي عنصر آخر لتطبيق اللون والإطار والحجم عليه مباشرة.
+                  </p>
+                </div>
+              )}
+
+              {/* TOOL: Unified Text Editing (تعديل النص كالمخطط اليدوي تماماً) */}
+              {(activeSection === 'typography' || activeSection === 'fontSize' || activeSection === 'fontFamily' || activeSection === 'alignment' || activeSection === 'list') && (() => {
+                const isBold = styles.fontWeight === 'bold';
+                const isItalic = styles.fontStyle === 'italic';
+                const isUnderline = styles.textDecoration === 'underline';
+                const isBulletList = styles.listStyle === 'bullet';
+                const isNumericList = styles.listStyle === 'numeric';
+                const textAlign = styles.textAlign || 'right';
+                const currentFontSize = styles.fontSize || 16;
+                const currentFontFamily = styles.fontFamily || 'Readex Pro';
+
+                const toggleBold = () => {
+                  onUpdateElementStyles({ fontWeight: isBold ? 'normal' : 'bold' });
+                };
+                const toggleItalic = () => {
+                  onUpdateElementStyles({ fontStyle: isItalic ? 'normal' : 'italic' });
+                };
+                const toggleUnderline = () => {
+                  onUpdateElementStyles({ textDecoration: isUnderline ? 'none' : 'underline' });
+                };
+                const cycleAlignment = () => {
+                  const next = textAlign === 'right' ? 'center' : (textAlign === 'center' ? 'left' : 'right');
+                  onUpdateElementStyles({ textAlign: next });
+                };
+                const toggleBulletList = () => {
+                  onUpdateElementStyles({ listStyle: isBulletList ? 'none' : 'bullet' });
+                };
+                const toggleNumericList = () => {
+                  onUpdateElementStyles({ listStyle: isNumericList ? 'none' : 'numeric' });
+                };
+
+                return (
+                  <div className="space-y-4">
+                    {/* Top Oval Container / Capsule Toolbar - Exact Match to Sketch */}
+                    <div className="w-full p-1.5 bg-neutral-100 rounded-full border border-neutral-300 shadow-2xs flex items-center justify-between px-2 gap-0.5 select-none">
+                      {/* محاذاة النص */}
+                      <button
+                        type="button"
+                        onClick={cycleAlignment}
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-neutral-700 hover:text-black hover:bg-white active:scale-95 transition-all cursor-pointer"
+                        title={`محاذاة النص: ${textAlign === 'right' ? 'يمين' : textAlign === 'center' ? 'وسط' : 'يسار'}`}
+                      >
+                        {textAlign === 'right' && <AlignRight size={14} strokeWidth={2} />}
+                        {textAlign === 'center' && <AlignCenter size={14} strokeWidth={2} />}
+                        {textAlign === 'left' && <AlignLeft size={14} strokeWidth={2} />}
+                      </button>
+
+                      {/* ميلان النص */}
+                      <button
+                        type="button"
+                        onClick={toggleItalic}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                          isItalic 
+                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
+                        }`}
+                        title="ميلان النص (Italic)"
+                      >
+                        <Italic size={14} strokeWidth={2} />
+                      </button>
+
+                      {/* سمك الخط */}
+                      <button
+                        type="button"
+                        onClick={toggleBold}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                          isBold 
+                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
+                        }`}
+                        title="سمك الخط (Bold)"
+                      >
+                        <Bold size={14} strokeWidth={2.4} />
+                      </button>
+
+                      {/* تسطير النص */}
+                      <button
+                        type="button"
+                        onClick={toggleUnderline}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                          isUnderline 
+                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
+                        }`}
+                        title="تسطير النص (Underline)"
+                      >
+                        <Underline size={14} strokeWidth={2} />
+                      </button>
+
+                      {/* تعداد نقطي */}
+                      <button
+                        type="button"
+                        onClick={toggleBulletList}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                          isBulletList 
+                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
+                        }`}
+                        title="تعداد نقطي"
+                      >
+                        <List size={14} strokeWidth={2} />
+                      </button>
+
+                      {/* تعداد رقمي */}
+                      <button
+                        type="button"
+                        onClick={toggleNumericList}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                          isNumericList 
+                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
+                        }`}
+                        title="تعداد رقمي"
+                      >
+                        <ListOrdered size={14} strokeWidth={2} />
+                      </button>
+
+                      <div className="h-4 w-px bg-neutral-300 mx-0.5" />
+
+                      {/* نوع الخط (aA) - محاط بدائرة عند التفعيل كما في الرسم */}
+                      <button
+                        type="button"
+                        onClick={() => setTextSubSection('family')}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                          textSubSection === 'family'
+                            ? 'bg-white text-[#0071e3] ring-2 ring-[#0071e3] shadow-xs font-bold'
+                            : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
+                        }`}
+                        title="نوع وشكل الخط (aA)"
+                      >
+                        <span className="font-sans text-[12px] font-bold flex items-baseline select-none">
+                          <span>a</span>
+                          <span className="text-[10px] font-extrabold -mr-0.5 text-[#0071e3]">A</span>
+                        </span>
+                      </button>
+
+                      {/* حجم الخط (T) - محاط بدائرة عند التفعيل كما في الرسم */}
+                      <button
+                        type="button"
+                        onClick={() => setTextSubSection('size')}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                          textSubSection === 'size'
+                            ? 'bg-white text-[#0071e3] ring-2 ring-[#0071e3] shadow-xs font-bold'
+                            : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
+                        }`}
+                        title="حجم الخط (T)"
+                      >
+                        <span className="font-serif text-[14px] font-bold leading-none select-none">
+                          T
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* فرع حجم الخط: سلايدر + 4 مربعات رئيسية */}
+                    {textSubSection === 'size' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-neutral-800 font-bold text-sm">حجم الخط:</span>
+                          <span className="font-mono text-[#0071e3] font-bold text-sm bg-[#0071e3]/10 px-2.5 py-0.5 rounded-lg border border-[#0071e3]/20">
+                            {currentFontSize}px
+                          </span>
+                        </div>
+
+                        {/* شريط السحب (Slider) */}
+                        <div className="px-1 space-y-1">
+                          <input
+                            type="range"
+                            min="10"
+                            max="140"
+                            value={currentFontSize}
+                            onChange={(e) => onUpdateElementStyles({ fontSize: Number(e.target.value) })}
+                            className="w-full accent-[#0071e3] h-2 bg-neutral-200 rounded-lg cursor-pointer"
+                          />
+                          <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+                            <span>10px</span>
+                            <span>70px</span>
+                            <span>140px</span>
+                          </div>
+                        </div>
+
+                        {/* المربعات الأربعة السريعة كما في المخطط اليدوي: [140] [100] [48] [24] */}
+                        <div className="space-y-2 pt-1">
+                          <span className="text-[11px] text-neutral-500 block font-medium">أحجام شائعة سريعة:</span>
+                          <div className="grid grid-cols-4 gap-2">
+                            {[140, 100, 48, 24].map((sz) => (
+                              <button
+                                key={sz}
+                                type="button"
+                                onClick={() => onUpdateElementStyles({ fontSize: sz })}
+                                className={`py-2.5 rounded-xl border text-center font-bold text-sm transition-all cursor-pointer ${
+                                  currentFontSize === sz
+                                    ? 'border-[#0071e3] bg-[#0071e3]/15 text-[#0071e3] ring-2 ring-[#0071e3]/50 shadow-xs'
+                                    : 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800 shadow-2xs'
+                                }`}
+                              >
+                                {sz}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* صف إضافي لأحجام النصوص الدقيقة */}
+                          <div className="grid grid-cols-4 gap-1.5 pt-1">
+                            {[14, 18, 32, 64].map((sz) => (
+                              <button
+                                key={sz}
+                                type="button"
+                                onClick={() => onUpdateElementStyles({ fontSize: sz })}
+                                className={`py-1.5 rounded-lg border text-center font-semibold text-xs transition-all cursor-pointer ${
+                                  currentFontSize === sz
+                                    ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3]'
+                                    : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-600'
+                                }`}
+                              >
+                                {sz}px
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* فرع نوع الخط: قائمة بالخطوط العربية والأجنبية */}
+                    {textSubSection === 'family' && (() => {
+                      const filteredFonts = SIXTY_FONTS.filter(f => {
+                        if (fontLangFilter === 'ar' && f.lang !== 'ar') return false;
+                        if (fontLangFilter === 'lat' && f.lang !== 'lat') return false;
+                        if (fontSearch.trim()) {
+                          const query = fontSearch.toLowerCase();
+                          return f.name.toLowerCase().includes(query) || f.font.toLowerCase().includes(query);
+                        }
+                        return true;
+                      });
+
+                      return (
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-neutral-800 font-bold">نوع الخط:</span>
+                            <span className="text-neutral-400 text-[10px] font-mono">({filteredFonts.length} خط)</span>
+                          </div>
+
+                          {/* شريط البحث المدمج والكبسولات الذكية */}
+                          <div className="space-y-1.5">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={fontSearch}
+                                onChange={(e) => setFontSearch(e.target.value)}
+                                placeholder="ابحث عن خط..."
+                                className="w-full px-2.5 py-1.5 bg-neutral-100 focus:bg-white border border-neutral-300 focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] rounded-lg text-xs text-right placeholder:text-neutral-400 focus:outline-none transition-all"
+                                dir="rtl"
+                              />
+                              {fontSearch && (
+                                <button
+                                  type="button"
+                                  onClick={() => setFontSearch('')}
+                                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 text-xs focus:outline-none"
+                                >
+                                  ✖
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="flex gap-1 bg-neutral-100 p-0.5 rounded-lg border border-neutral-300">
+                              {[
+                                { id: 'all' as const, label: 'الكل' },
+                                { id: 'ar' as const, label: 'عربي' },
+                                { id: 'lat' as const, label: 'لاتيني' },
+                              ].map((tab) => (
+                                <button
+                                  key={tab.id}
+                                  type="button"
+                                  onClick={() => setFontLangFilter(tab.id)}
+                                  className={`flex-1 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                                    fontLangFilter === tab.id
+                                      ? 'bg-white text-[#0071e3] shadow-3xs'
+                                      : 'text-neutral-500 hover:text-neutral-800'
+                                  }`}
+                                >
+                                  {tab.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* قائمة الخطوط - خفيفة وبدون شرح */}
+                          <div className="space-y-1 max-h-[300px] overflow-y-auto pr-0.5 scroll-smooth border border-neutral-200/50 rounded-xl p-1 bg-neutral-50/50">
+                            {filteredFonts.map((f) => {
+                              const isSelected = currentFontFamily === f.font;
+                              return (
+                                <button
+                                  key={f.font}
+                                  type="button"
+                                  onClick={() => onUpdateElementStyles({ fontFamily: f.font })}
+                                  className={`w-full py-2 px-3 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer ${
+                                    isSelected
+                                      ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] font-bold shadow-2xs ring-1 ring-[#0071e3]/30'
+                                      : 'border-neutral-200/60 bg-white hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800'
+                                  }`}
+                                >
+                                  <span
+                                    className="text-[13px] truncate"
+                                    style={{ fontFamily: f.font }}
+                                  >
+                                    {f.name}
+                                  </span>
+                                  {isSelected && (
+                                    <div className="w-4 h-4 rounded-full bg-[#0071e3] text-white flex items-center justify-center shrink-0">
+                                      <Check size={10} strokeWidth={3} />
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+
+                            {filteredFonts.length === 0 && (
+                              <div className="text-center py-8 text-xs text-neutral-400 bg-white rounded-lg border border-neutral-100">
+                                لا توجد خطوط مطابقة للبحث
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                );
+              })()}
+
+              {/* TOOL: Animation. On a narrow screen the shop's, showroom's and menu's own settings were only
+                  reachable here; the docked panel shows them in their element's content card instead. */}
+              {activeSection === 'animation' && !isDocked && selectedElement && (selectedElement.type === 'shopProducts' || selectedElement.type === 'shopSearch') && (
+                <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+              )}
+              {activeSection === 'animation' && !isDocked && selectedElement && (selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
+                <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+              )}
+              {activeSection === 'animation' && !isDocked && selectedElement && (selectedElement.type === 'menuList' || selectedElement.type === 'menuCart') && (
+                <RestaurantElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
+              )}
+              {activeSection === 'animation' && <AnimationSection styles={styles} onUpdateElementStyles={onUpdateElementStyles} />}
+
+              {/* TOOL: Add Elements (+) - Step 1: Squares Grid (الصورة رقم ١) | Step 2: Detail with Subcategories Bar (الصورة رقم ٢) */}
+              {(activeSection === 'elements' || activeSection === 'add-text') && (() => {
+                const { ADD_CATEGORIES, SUBCATEGORIES_MAP, TEMPLATES_MAP } = buildAddMenuData({
+                  onAddElement,
+                  onAddGroup,
+                  videoAddUrl,
+                  mapAddLocation,
+                  calAddTitle,
+                  calAddAccentColor,
+                  calAddWorkingDays,
+                  calAddHolidays,
+                  calAddWorkStart,
+                  calAddWorkEnd,
+                  calAddBreakStart,
+                  calAddBreakEnd,
+                  calAddInterval,
+                  calAddIntervalMins,
+                  calAddNeedsConfirmation,
+                  calAddMeetingTypes,
+                  calAddNameLabel,
+                  calAddAddressLabel,
+                  calAddPhoneLabel,
+                  calAddEmailLabel,
+                  calAddDescLabel,
+                  calAddSlotsText,
+                });
+
+                // ==========================================
+                // VIEW 1: Grid of Squares & Slide/Page Tabs
+                // ==========================================
+                if (!activeAddCategory) {
+                  return (
+                    <div className="space-y-4 pb-6 text-right">
+                      {/* Top Segment Control */}
+                      <div className="flex bg-neutral-100 p-1 rounded-xl border border-black/[0.04] mb-3">
+                        <button
+                          type="button"
+                          onClick={() => setAddMenuMode('element')}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            addMenuMode === 'element'
+                              ? 'bg-white text-[#0071e3] shadow-2xs'
+                              : 'text-neutral-500 hover:text-black'
+                          }`}
+                        >
+                          إضافة عنصر
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAddMenuMode('slide')}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            addMenuMode === 'slide'
+                              ? 'bg-white text-[#0071e3] shadow-2xs'
+                              : 'text-neutral-500 hover:text-black'
+                          }`}
+                        >
+                          إضافة شريحة
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAddMenuMode('page')}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                            addMenuMode === 'page'
+                              ? 'bg-white text-[#0071e3] shadow-2xs'
+                              : 'text-neutral-500 hover:text-black'
+                          }`}
+                        >
+                          إضافة صفحة
+                        </button>
+                      </div>
+
+                      {/* RENDER MODE: element */}
+                      {addMenuMode === 'element' && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-bold text-neutral-600">
+                              اختر عنصراً لإضافته أو تخصيصه:
+                            </span>
+                            <span className="text-[10px] font-semibold text-neutral-400">
+                              12 عنصر متوفر
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2.5">
+                            {ADD_CATEGORIES.map((cat) => (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => {
+                                  setActiveAddCategory(cat.id);
+                                  const firstSub = SUBCATEGORIES_MAP[cat.id]?.[0]?.id || 'all';
+                                  setSelectedSubCategory(firstSub);
+                                }}
+                                className="aspect-square bg-white hover:bg-neutral-50/80 border-2 border-neutral-200/90 hover:border-[#0071e3] rounded-2xl p-3 flex flex-col items-center justify-center gap-2 shadow-2xs hover:shadow-md transition-all active:scale-95 cursor-pointer group text-center"
+                              >
+                                <div className="w-11 h-11 rounded-xl bg-neutral-100/80 group-hover:bg-[#0071e3]/10 text-neutral-700 group-hover:text-[#0071e3] flex items-center justify-center transition-colors">
+                                  {React.cloneElement(cat.icon as React.ReactElement<any>, { size: 22, strokeWidth: 2 })}
+                                </div>
+                                <span className="text-xs font-bold text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight line-clamp-2 px-1">
+                                  {cat.name}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* RENDER MODE: slide */}
+                      {addMenuMode === 'slide' && (
+                        <div className="space-y-4">
+                          {/* 1. Quick Actions */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => onAddSlide()}
+                              className="flex flex-col items-center justify-center p-3 bg-[#0071e3]/5 hover:bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
+                            >
+                              <Plus size={16} strokeWidth={2.5} />
+                              <span>إضافة شريحة فارغة</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onCopyCurrentSlide && onCopyCurrentSlide(activeSlideId)}
+                              className="flex flex-col items-center justify-center p-3 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border border-neutral-200/80 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
+                            >
+                              <Copy size={15} />
+                              <span>نسخ الشريحة (Copy)</span>
+                            </button>
+                          </div>
+
+                          {/* 2. Ready Slides Section */}
+                          <div className="space-y-2">
+                            <h4 className="text-[11px] font-black text-neutral-500 border-b border-neutral-100 pb-1.5 px-1 tracking-wide">
+                              اختر فئة لتصفح الشرائح المصممة مسبقاً:
+                            </h4>
+                            <div className="grid grid-cols-2 gap-2">
+                              {READY_SLIDE_CATEGORIES.filter((cat) => (cat.id !== 'shop' || isShopProject) && (cat.id !== 'cars' || isCarProject) && (cat.id !== 'restaurant' || isRestaurantProject)).map((cat) => (
+                                <button
+                                  key={cat.id}
+                                  type="button"
+                                  onClick={() => setActiveTemplateCategory(cat.id)}
+                                  className={`p-2.5 rounded-xl border-2 text-right transition-all hover:shadow-sm active:scale-97 cursor-pointer flex flex-col gap-1 text-right ${
+                                    activeTemplateCategory === cat.id
+                                      ? 'border-[#0071e3] bg-[#0071e3]/5 text-[#0071e3]'
+                                      : 'border-neutral-200 bg-white hover:border-neutral-300 text-neutral-800'
+                                  }`}
+                                >
+                                  <div className="text-lg mb-0.5">{cat.icon}</div>
+                                  <span className="text-[11px] font-black leading-tight">
+                                    {cat.name}
+                                  </span>
+                                  <span className="text-[9px] text-neutral-400 font-medium leading-normal line-clamp-2">
+                                    {cat.desc}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* RENDER MODE: page */}
+                      {addMenuMode === 'page' && (
+                        <div className="space-y-4">
+                          {/* 1. Quick Actions */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const pageName = prompt('أدخل اسم الصفحة الجديدة:');
+                                if (pageName) onAddPage(pageName);
+                              }}
+                              className="flex flex-col items-center justify-center p-3 bg-[#0071e3]/5 hover:bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
+                            >
+                              <Plus size={16} strokeWidth={2.5} />
+                              <span>إضافة صفحة فارغة</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onCopyCurrentPage && onCopyCurrentPage(currentPage.id)}
+                              className="flex flex-col items-center justify-center p-3 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border border-neutral-200/80 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
+                            >
+                              <Copy size={15} />
+                              <span>نسخ الصفحة (Copy)</span>
+                            </button>
+                          </div>
+
+                          {/* 2. Ready Site Template Section */}
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-bold text-neutral-700 border-b border-neutral-100 pb-1.5 px-1">
+                              موقع جاهز للتعديل والاستخدام:
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={() => onApplyFreeStarterTemplate && onApplyFreeStarterTemplate()}
+                              className="w-full bg-gradient-to-br from-[#1F5D50]/5 to-[#1F5D50]/[0.02] hover:from-[#1F5D50]/10 hover:to-[#1F5D50]/5 border border-[#1F5D50]/20 hover:border-[#1F5D50] rounded-2xl p-3.5 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className="text-xs font-bold text-neutral-800 group-hover:text-[#1F5D50] transition-colors">
+                                  القالب الأساسي: موقع تعريفي بخمس صفحات
+                                </span>
+                                <span className="text-[10px] text-[#1F5D50] font-semibold bg-[#1F5D50]/10 border border-[#1F5D50]/15 px-1.5 py-0.5 rounded-md">
+                                  5 صفحات
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
+                                مدخل، من نحن، أعمالنا، الأسعار، واتصل بنا — كل صفحة مرتبطة بالأخرى عبر شريط التنقل العلوي. سيستبدل هذا كل صفحات موقعك الحالية.
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onApplyOnlineShopTemplate && onApplyOnlineShopTemplate()}
+                              className="w-full bg-gradient-to-br from-[#B4532A]/5 to-[#B4532A]/[0.02] hover:from-[#B4532A]/10 hover:to-[#B4532A]/5 border border-[#B4532A]/20 hover:border-[#B4532A] rounded-2xl p-3.5 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className="text-xs font-bold text-neutral-800 group-hover:text-[#B4532A] transition-colors">
+                                  متجر إلكتروني: منتجات وسلة مشتريات
+                                </span>
+                                <span className="text-[10px] text-[#B4532A] font-semibold bg-[#B4532A]/10 border border-[#B4532A]/15 px-1.5 py-0.5 rounded-md">
+                                  5 صفحات
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
+                                الرئيسية، المنتجات، السلة، طريقة الطلب، وتواصل معنا — بطاقات منتجات بزر «أضف إلى السلة»، وصفحة سلة ترسل الطلب كاملًا عبر واتساب. سيستبدل هذا كل صفحات موقعك الحالية.
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // ==========================================
+                // SPECIAL VIEW: إضافة صورة (الأبواب الثلاثة كما في الرسومات اليدوية)
+                // ==========================================
+                if (activeAddCategory === 'image') {
+                  return (
+                    <ImageDrawerSection
+                      onAddImage={handleAddImageElement}
+                      onBack={() => setActiveAddCategory(null)}
+                      canvasElements={elements}
+                    />
+                  );
+                }
+
+                // ==========================================
+                // SPECIAL VIEW: إضافة نص (كما في الرسم اليدوي للمستخدم تماماً)
+                // ==========================================
+                if (activeAddCategory === 'text') {
+                  return (
+                    <div className="space-y-4 pb-8" dir="rtl">
+                      {/* Top Bar: Title "اضافة نص" & Back Button */}
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-200">
+                        <button
+                          type="button"
+                          onClick={() => setActiveAddCategory(null)}
+                          className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <ChevronRight size={15} strokeWidth={2.4} />
+                          <span>رجوع للعناصر</span>
+                        </button>
+
+                        <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
+                          <Type size={16} className="text-[#0071e3]" />
+                          <span>اضافة نص</span>
+                        </h3>
+                      </div>
+
+                      {/* Notice bar: فقط النصوص الممكنة اضافتها */}
+                      <div className="bg-neutral-50/90 border border-neutral-200/80 px-3 py-1.5 rounded-xl flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-neutral-700 flex items-center gap-1">
+                          <span>✦</span>
+                          <span>فقط النصوص الممكنة إضافتها:</span>
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-mono font-semibold">
+                          4 أحجام أساسية
+                        </span>
+                      </div>
+
+                      {/* The 4 Core Text Blocks (as in sketch with pixel side tags) */}
+                      <div className="space-y-2.5">
+                        {/* 1. عنوان رئيسي - 40 PXL */}
+                        <div className="flex items-stretch gap-2.5">
+                          <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
+                            <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">40</span>
+                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onAddElement(
+                                'heading',
+                                'عنوان رئيسي كبير',
+                                { fontSize: 40, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
+                                { name: 'عنوان رئيسي (40px)', width: 560, height: 75 }
+                              );
+                            }}
+                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-lg sm:text-xl font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
+                                عنوان رئيسي
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                + إضافة
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-neutral-400 mt-1">
+                              ترويسة عريضة وبارزة للموقع والشاشات الرئيسية
+                            </p>
+                          </button>
+                        </div>
+
+                        {/* 2. عنوان فرعي - 25 PXL */}
+                        <div className="flex items-stretch gap-2.5">
+                          <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
+                            <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">25</span>
+                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onAddElement(
+                                'heading',
+                                'عنوان فرعي تكميلي',
+                                { fontSize: 25, fontWeight: '600', color: '#1d1d1f', textAlign: 'right' },
+                                { name: 'عنوان فرعي (25px)', width: 440, height: 55 }
+                              );
+                            }}
+                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-base font-semibold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
+                                عنوان فرعي
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                + إضافة
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-neutral-400 mt-1">
+                              عنوان للأقسام والفقرات الداخلية
+                            </p>
+                          </button>
+                        </div>
+
+                        {/* 3. مسند نصي - 15 PXL */}
+                        <div className="flex items-stretch gap-2.5">
+                          <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
+                            <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">15</span>
+                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onAddElement(
+                                'paragraph',
+                                'هذا مسند نصي لتفاصيل الشرح والمعلومات التكميلية، يمكنك استبداله أو تعديله بكل مرونة.',
+                                { fontSize: 15, fontWeight: 'normal', color: '#4b5563', textAlign: 'right', lineHeight: 1.6 },
+                                { name: 'مسند نصي (15px)', width: 460, height: 75 }
+                              );
+                            }}
+                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-normal text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight">
+                                مسند نصي
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                + إضافة
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-neutral-400 mt-1">
+                              فقرة نصية لشرح وتفصيل المحتوى
+                            </p>
+                          </button>
+                        </div>
+
+                        {/* 4. حقل ادخال - 15 PXL مع السهم والملاحظة من الرسم اليدوي */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-stretch gap-2.5">
+                            <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
+                              <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">15</span>
+                              <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onAddElement(
+                                  'input',
+                                  'أدخل بريدك الإلكتروني أو بياناتك هنا...',
+                                  { fontSize: 15, borderRadius: 12 },
+                                  { name: 'حقل إدخال (15px)', width: 340, height: 48 }
+                                );
+                              }}
+                              className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight">
+                                  حقل ادخال
+                                </span>
+                                <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                  + إضافة
+                                </span>
+                              </div>
+                              <div className="mt-1.5 px-2.5 py-1 bg-neutral-100 rounded-lg border border-neutral-200 text-[11px] text-neutral-400 font-normal">
+                                حقل إدخال تفاعلي...
+                              </div>
+                            </button>
+                          </div>
+
+                          {/* Note callout as handwritten in sketch with arrow */}
+                          <div className="mr-16 bg-amber-50/80 border border-amber-200/90 rounded-xl p-2.5 text-right flex items-start gap-2 shadow-3xs">
+                            <span className="text-amber-600 text-sm font-bold shrink-0">↙</span>
+                            <div className="text-[11px] text-amber-900 leading-snug">
+                              <span className="font-bold block text-amber-950 mb-0.5">
+                                حقل إدخال نص تفاعلي:
+                              </span>
+                              حقل ادخال نص في حالة المعاينة أو على ويب لأخذ معلومات من المتصفح
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-neutral-200" />
+
+                      {/* Compound texts section: وعرض بعض النصوص المركبة بتنسيقات مختلفة */}
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between text-right px-0.5">
+                          <div>
+                            <h4 className="text-xs font-bold text-neutral-900">
+                              نصوص مركبة بتنسيقات مختلفة:
+                            </h4>
+                            <p className="text-[10px] text-neutral-400">
+                              تراكيب نصوص منسقة جاهزة للإضافة بنقرة واحدة
+                            </p>
+                          </div>
+                          <span className="text-[10px] font-mono text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-full font-bold">
+                            7 نماذج
+                          </span>
+                        </div>
+
+                        {/* Compound items list */}
+                        <div className="space-y-2.5">
+                          {/* 1. Hero Title + Subtitle */}
+                          <div 
+                            onClick={() => {
+                              onAddElement(
+                                'heading',
+                                'بناء مواقع المستقبل بهوية عربية فاخرة',
+                                { fontSize: 30, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
+                                {
+                                  name: 'ترويسة مع نص وصفي',
+                                  width: 560,
+                                  height: 110,
+                                  compoundType: 'hero',
+                                  subContent: 'مساحة عمل حرة تمنحك السيطرة المطلقة على كل تفصيلة في التصميم بدقة وسرعة فائقة.'
+                                }
+                              );
+                            }}
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-bold text-neutral-400">
+                                ترويسة وعنوان مع شرح
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                                + إضافة
+                              </span>
+                            </div>
+                            <div className="space-y-1 pr-1 border-r-2 border-[#0071e3]/40">
+                              <div className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
+                                بناء مواقع المستقبل بهوية فاخرة
+                              </div>
+                              <div className="text-[10.5px] text-neutral-500 leading-snug">
+                                مساحة عمل حرة تمنحك السيطرة المطلقة على كل تفصيلة...
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 2. Badge Tag + Heading */}
+                          <div 
+                            onClick={() => {
+                              onAddElement(
+                                'heading',
+                                'انطلاقة الجيل الجديد من تصاميم الويب',
+                                { fontSize: 26, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
+                                {
+                                  name: 'شارة ترويجية مع عنوان',
+                                  width: 480,
+                                  height: 95,
+                                  compoundType: 'badge-heading',
+                                  badgeText: '✦ جديد وحصري'
+                                }
+                              );
+                            }}
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-bold text-neutral-400">
+                                شارة تعريفية مع عنوان
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                                + إضافة
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#0071e3]/10 text-[#0071e3]">
+                                ✦ جديد وحصري
+                              </span>
+                              <div className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
+                                انطلاقة الجيل الجديد من تصاميم الويب
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 3. Quote + Author Citation */}
+                          <div 
+                            onClick={() => {
+                              onAddElement(
+                                'paragraph',
+                                '«البساطة والتصميم المتقن هما جوهر التجربة الرقمية الناجحة.»',
+                                { fontSize: 16, fontStyle: 'italic', color: '#1d1d1f', textAlign: 'right' },
+                                {
+                                  name: 'اقتباس مع اسم الكاتب',
+                                  width: 440,
+                                  height: 100,
+                                  compoundType: 'quote',
+                                  authorText: '— ستيف جوبز'
+                                }
+                              );
+                            }}
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-bold text-neutral-400">
+                                اقتباس مع اسم الكاتب
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                                + إضافة
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2 pr-1 border-r-3 border-amber-400">
+                              <span className="text-xl text-amber-500 font-serif leading-none select-none">❝</span>
+                              <div className="flex-1 space-y-0.5">
+                                <div className="text-xs italic text-neutral-800 leading-snug">
+                                  «البساطة والتصميم المتقن هما جوهر التجربة الرقمية...»
+                                </div>
+                                <div className="text-[10px] font-semibold text-neutral-500">
+                                  — ستيف جوبز
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 4. Stat Number + Label */}
+                          <div 
+                            onClick={() => {
+                              onAddElement(
+                                'heading',
+                                '+99.9%',
+                                { fontSize: 38, fontWeight: 'bold', color: '#0071e3', textAlign: 'right' },
+                                {
+                                  name: 'رقم إحصائي مع تسمية',
+                                  width: 280,
+                                  height: 90,
+                                  compoundType: 'stat',
+                                  subContent: 'نسبة رضا وثقة العملاء في استقرار الخدمة'
+                                }
+                              );
+                            }}
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-bold text-neutral-400">
+                                رقم إحصائي بارز
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                                + إضافة
+                              </span>
+                            </div>
+                            <div className="flex items-baseline gap-2">
+                              <span className="font-mono font-black text-2xl text-[#0071e3] leading-none">
+                                +99.9%
+                              </span>
+                              <span className="text-xs font-semibold text-neutral-600 truncate">
+                                نسبة رضا وثقة العملاء
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* 5. Feature Checklist */}
+                          <div 
+                            onClick={() => {
+                              onAddElement(
+                                'paragraph',
+                                'أهم المزايا والمواصفات',
+                                { fontSize: 18, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
+                                {
+                                  name: 'ترويسة ميزات مع نقاط',
+                                  width: 400,
+                                  height: 125,
+                                  compoundType: 'checklist',
+                                  subContent: '✓ سرعة تحميل فائقة وتوافق كامل\n✓ خوادم سحابية آمنة مع نسخ دوري\n✓ دعم فني مباشر واستشارات مجانية'
+                                }
+                              );
+                            }}
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-bold text-neutral-400">
+                                ترويسة مع قائمة نقاط
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                                + إضافة
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="text-xs font-bold text-neutral-900">أهم المزايا والمواصفات</div>
+                              <div className="text-[10.5px] text-neutral-600 space-y-0.5">
+                                <div>✓ سرعة تحميل فائقة وتوافق كامل</div>
+                                <div>✓ خوادم سحابية آمنة مع نسخ دوري</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 6. Accent Bordered Headline */}
+                          <div 
+                            onClick={() => {
+                              onAddElement(
+                                'heading',
+                                'رؤيتنا للمستقبل والريادة',
+                                { fontSize: 22, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
+                                {
+                                  name: 'عنوان جانبي مع خط ملون',
+                                  width: 420,
+                                  height: 85,
+                                  compoundType: 'accent-border',
+                                  subContent: 'تمكين رواد الأعمال والمصممين من ابتكار تجارب ويب فريدة وغير مسبوقة.'
+                                }
+                              );
+                            }}
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-bold text-neutral-400">
+                                عنوان جانبي مع خط بارز
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                                + إضافة
+                              </span>
+                            </div>
+                            <div className="pr-2 border-r-3 border-[#0071e3] space-y-0.5">
+                              <div className="text-xs font-bold text-neutral-900 group-hover:text-[#0071e3] transition-colors">
+                                رؤيتنا للمستقبل والريادة
+                              </div>
+                              <div className="text-[10px] text-neutral-500">
+                                تمكين رواد الأعمال والمصممين من ابتكار تجارب ويب فريدة...
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 7. Product Title + Price Tag */}
+                          <div 
+                            onClick={() => {
+                              onAddElement(
+                                'card',
+                                'باقة الانطلاق للأعمال',
+                                { fontSize: 15, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
+                                {
+                                  name: 'ترويسة منتج مع سعر',
+                                  width: 320,
+                                  height: 105,
+                                  compoundType: 'price-tag',
+                                  badgeText: '١٩٩ ر.س / شهرياً',
+                                  subContent: 'اشتراك شهري شامل كافة الخصائص والدعم الفني.'
+                                }
+                              );
+                            }}
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-bold text-neutral-400">
+                                عنوان منتج مع سعر
+                              </span>
+                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                                + إضافة
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-neutral-900">
+                                باقة الانطلاق للأعمال
+                              </span>
+                              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 font-bold text-[10px] rounded-md">
+                                ١٩٩ ر.س / شهرياً
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ==========================================
+                // VIEW 2: Detail with Subcategories Bar (كما في الصورة رقم ٢)
+                // ==========================================
+                const currentCategoryObj = ADD_CATEGORIES.find(c => c.id === activeAddCategory);
+                const currentSubCats = SUBCATEGORIES_MAP[activeAddCategory] || [{ id: 'all', label: 'الكل' }];
+                const currentTemplates = (TEMPLATES_MAP[activeAddCategory] || []).filter(t => {
+                  if (activeAddCategory === 'shape') {
+                    if (selectedSubCategory === 'all') {
+                      return !t.subCategories.includes('undraw');
+                    }
+                    if (selectedSubCategory === 'undraw') {
+                      return t.subCategories.includes('undraw');
+                    }
+                    if (selectedSubCategory === 'boxes') {
+                      return t.subCategories.includes('boxes') || t.subCategories.includes('cards');
+                    }
+                    if (selectedSubCategory === 'text-boxes') {
+                      return t.subCategories.includes('text-boxes');
+                    }
+                    if (selectedSubCategory === 'geometric') {
+                      return t.subCategories.includes('geometric');
+                    }
+                    if (selectedSubCategory === 'organic') {
+                      return t.subCategories.includes('organic') || t.subCategories.includes('shapes') || t.subCategories.includes('badges');
+                    }
+                    if (selectedSubCategory === 'fluid') {
+                      return t.subCategories.includes('fluid') || t.subCategories.includes('graphic') || t.subCategories.includes('dividers') || t.subCategories.includes('brush');
+                    }
+                  }
+                  if (activeAddCategory === 'icons') {
+                    if (selectedSubCategory === 'all') return true;
+                    if (selectedSubCategory === 'social') {
+                      const socialIds = [
+                        'icon-whatsapp', 'icon-instagram', 'icon-snapchat', 'icon-tiktok', 'icon-youtube',
+                        'icon-twitter', 'icon-facebook', 'icon-linkedin', 'icon-telegram', 'icon-pinterest',
+                        'icon-github', 'icon-discord', 'icon-reddit', 'icon-skype', 'icon-spotify'
+                      ];
+                      return socialIds.includes(t.id);
+                    }
+                    if (selectedSubCategory === 'utility') {
+                      const utilityIds = [
+                        'icon-home', 'icon-phone', 'icon-mail', 'icon-user', 'icon-calendar', 'icon-clock',
+                        'icon-search', 'icon-settings', 'icon-lock', 'icon-unlock', 'icon-trash', 'icon-edit',
+                        'icon-save', 'icon-download', 'icon-upload', 'icon-share', 'icon-heart', 'icon-star',
+                        'icon-info', 'icon-check'
+                      ];
+                      return utilityIds.includes(t.id);
+                    }
+                    if (selectedSubCategory === 'separators') {
+                      const separatorIds = [
+                        'icon-syrian-pound', 'icon-exclamation', 'icon-question', 'icon-price-tag',
+                        'icon-sep-stars', 'icon-sep-diamond', 'icon-sep-wave', 'icon-sep-dots',
+                        'icon-alert', 'icon-gift', 'icon-fire', 'icon-crown', 'icon-trophy', 'icon-bell', 'icon-dollar'
+                      ];
+                      return separatorIds.includes(t.id);
+                    }
+                  }
+                  return selectedSubCategory === 'all' || t.subCategories.includes(selectedSubCategory);
+                });
+
+                if (activeAddCategory === 'iconify') {
+                  const popularIcons = [
+                    'lucide:home', 'lucide:user', 'lucide:settings', 'lucide:search', 'lucide:bell', 'lucide:mail',
+                    'lucide:phone', 'lucide:calendar', 'lucide:check-circle', 'lucide:alert-circle', 'lucide:info', 'lucide:help-circle',
+                    'lucide:shopping-cart', 'lucide:heart', 'lucide:star', 'lucide:map-pin', 'lucide:camera', 'lucide:video',
+                    'lucide:folder', 'lucide:download', 'lucide:upload', 'lucide:share-2', 'lucide:lock', 'lucide:unlock',
+                    'tabler:brand-whatsapp', 'tabler:brand-instagram', 'tabler:brand-youtube', 'tabler:brand-facebook', 'tabler:brand-linkedin', 'tabler:brand-tiktok'
+                  ];
+                  const activeResults = iconifySearch.trim() ? iconifyResults : popularIcons;
+
+                  return (
+                    <div className="space-y-3.5 pb-6 text-right" dir="rtl">
+                      {/* Header */}
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-200">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveAddCategory(null);
+                            setIconifySearch('');
+                          }}
+                          className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <ChevronRight size={15} strokeWidth={2.4} />
+                          <span>رجوع للعناصر</span>
+                        </button>
+
+                        <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
+                          <span className="text-[#0071e3]">🔍</span>
+                          <span>مكتبة أيقونات Iconify</span>
+                        </h3>
+                      </div>
+
+                      {/* Description */}
+                      <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 space-y-1">
+                        <h4 className="text-xs font-bold text-blue-900">ابحث عن ملايين الأيقونات العالمية</h4>
+                        <p className="text-[10px] text-blue-700 leading-normal">
+                          اكتب اسم أي موضوع بالإنجليزية (مثل: <code className="bg-white px-1 py-0.5 rounded border font-mono">user</code>، <code className="bg-white px-1 py-0.5 rounded border font-mono">arrow</code>، <code className="bg-white px-1 py-0.5 rounded border font-mono">heart</code>) للبحث الفوري في كافة المكتبات العالمية!
+                        </p>
+                      </div>
+
+                      {/* Live Search Input */}
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={iconifySearch}
+                          onChange={(e) => setIconifySearch(e.target.value)}
+                          placeholder="ابحث بالأجنبية... (مثال: heart, user, search)"
+                          className="w-full text-xs font-semibold px-3 py-2.5 pr-8 bg-white rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:outline-none transition-all shadow-3xs text-right"
+                        />
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                          {isSearchingIconify ? (
+                            <div className="w-4 h-4 border-2 border-neutral-300 border-t-[#0071e3] rounded-full animate-spin" />
+                          ) : (
+                            <Search size={14} />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Results Label */}
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[11px] font-bold text-neutral-500">
+                          {iconifySearch.trim() ? `نتائج البحث لـ "${iconifySearch}"` : 'أيقونات شائعة ومقترحة:'}
+                        </span>
+                        <span className="text-[10px] text-neutral-400">
+                          {activeResults.length} أيقونة معروضة
+                        </span>
+                      </div>
+
+                      {/* Icons Grid */}
+                      {activeResults.length === 0 && !isSearchingIconify ? (
+                        <div className="py-10 text-center text-xs text-neutral-400 font-medium">
+                          لا توجد أيقونات تطابق بحثك. جرب كلمات أخرى مثل chart, star, phone.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-4 gap-2">
+                          {activeResults.map((iconName) => (
+                            <button
+                              key={iconName}
+                              type="button"
+                              onClick={() => {
+                                const simpleName = iconName.split(':').pop() || 'أيقونة';
+                                onAddElement(
+                                  'icon', 
+                                  'iconify:' + iconName, 
+                                  { color: '#0071e3' }, 
+                                  { name: `أيقونة ${simpleName}`, width: 64, height: 64 }
+                                );
+                              }}
+                              className="bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-[#0071e3] rounded-xl p-2.5 aspect-square flex flex-col items-center justify-center gap-1.5 shadow-3xs hover:shadow-sm transition-all active:scale-95 cursor-pointer group text-center"
+                              title={`إدراج ${iconName}`}
+                            >
+                              <div className="text-2xl text-neutral-700 group-hover:text-[#0071e3] transition-colors flex items-center justify-center w-8 h-8">
+                                <Icon icon={iconName} />
+                              </div>
+                              <span className="text-[8px] text-neutral-400 group-hover:text-neutral-700 font-mono truncate max-w-full block" dir="ltr">
+                                {iconName.split(':').pop()}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-3.5 pb-6">
+                    {/* Top Bar: Title "اضافة نص" (as handwritten in sketch) & Back Button */}
+                    <div className="flex items-center justify-between pb-2 border-b border-neutral-200">
+                      <button
+                        type="button"
+                        onClick={() => setActiveAddCategory(null)}
+                        className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <ChevronRight size={15} strokeWidth={2.4} />
+                        <span>رجوع للعناصر</span>
+                      </button>
+
+                      <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
+                        <span className="text-[#0071e3]">{currentCategoryObj?.icon}</span>
+                        <span>اضافة {currentCategoryObj?.name}</span>
+                      </h3>
+                    </div>
+
+                    {/* Horizontal Capsule Bar (كما في الصورة رقم ٢ تماماً مع سهم عند عدم الاتساع) */}
+                    <div className="relative flex items-center border-2 border-neutral-300 bg-white rounded-full p-1 shadow-2xs">
+                      {/* Left Arrow Button (سهم التمرير لليسار كما في الصورة رقم ٢) */}
+                      <button
+                        type="button"
+                        onClick={() => scrollSubCategories('left')}
+                        className="w-7 h-7 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-black flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-2xs"
+                        title="تمرير لليسار لرؤية المزيد"
+                        aria-label="تمرير لليسار"
+                      >
+                        <ChevronLeft size={15} strokeWidth={2.4} />
+                      </button>
+
+                      {/* Scrollable Subcategories Pills Track */}
+                      <div
+                        ref={subCategoryScrollRef}
+                        className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 px-1 scroll-smooth flex-1"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                      >
+                        {currentSubCats.map((sub) => {
+                          const isSubActive = selectedSubCategory === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={() => setSelectedSubCategory(sub.id)}
+                              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                                isSubActive
+                                  ? 'bg-[#0071e3] text-white shadow-xs font-bold'
+                                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-black'
+                              }`}
+                            >
+                              {sub.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Right Arrow Button */}
+                      <button
+                        type="button"
+                        onClick={() => scrollSubCategories('right')}
+                        className="w-7 h-7 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-black flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-2xs"
+                        title="تمرير لليمين"
+                        aria-label="تمرير لليمين"
+                      >
+                        <ChevronRight size={15} strokeWidth={2.4} />
+                      </button>
+                    </div>
+
+                    {/* Templates & Examples Grid */}
+                    <div className="space-y-2.5">
+                      {activeAddCategory === 'calendar' && (
+                        <div className="p-3.5 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 border-2 border-[#0071e3]/30 rounded-2xl text-right space-y-3.5 shadow-sm" dir="rtl">
+                          {/* Header with expand/collapse toggle */}
+                          <div className="flex items-center justify-between pb-2 border-b border-blue-200/60">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-8 h-8 rounded-xl text-white flex items-center justify-center font-bold text-sm shadow-xs transition-colors"
+                                style={{ backgroundColor: calAddAccentColor }}
+                              >
+                                ⚙️
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-black text-neutral-900">ضبط إعدادات بطاقة التقويم قبل الإضافة</h4>
+                                <p className="text-[10px] text-neutral-500">حدد ساعات الدوام، العطل، الألوان وحقول الحجز</p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setCalAddSettingsOpen(prev => !prev)}
+                              className="text-[10px] font-bold text-[#0071e3] bg-white px-2 py-1 rounded-lg border border-blue-200 hover:bg-blue-50 transition-all cursor-pointer"
+                            >
+                              {calAddSettingsOpen ? 'طي الإعدادات ▲' : 'توسيع الإعدادات ▼'}
+                            </button>
+                          </div>
+
+                          {calAddSettingsOpen && (
+                            <div className="space-y-3 pt-1 text-xs">
+                              {/* 1. عنوان التقويم الرئيسي */}
+                              <div className="space-y-1">
+                                <label className="text-[10.5px] font-bold text-neutral-800 block">عنوان التقويم ورأس النموذج:</label>
+                                <input
+                                  type="text"
+                                  value={calAddTitle}
+                                  onChange={(e) => setCalAddTitle(e.target.value)}
+                                  placeholder="مثال: حجز موعد استشارة جديدة"
+                                  className="w-full text-xs font-semibold px-3 py-2 bg-white rounded-xl border border-neutral-300 focus:outline-none transition-all shadow-3xs"
+                                />
+                              </div>
+
+                              {/* 2. اللون الرئيسي للبطاقة */}
+                              <div className="space-y-1.5 border-t border-blue-100 pt-2">
+                                <span className="text-[10.5px] font-bold text-neutral-800 block">ألوان البطاقة والتفاعل النشط (Accent Color):</span>
+                                <div className="flex flex-wrap gap-1.5 mb-1.5">
+                                  {[
+                                    { hex: '#0071e3', name: 'أزرق آبل' },
+                                    { hex: '#10b981', name: 'زمردي' },
+                                    { hex: '#ec4899', name: 'وردي' },
+                                    { hex: '#8b5cf6', name: 'بنفسجي' },
+                                    { hex: '#f97316', name: 'برتقالي' },
+                                    { hex: '#ef4444', name: 'أحمر قاني' },
+                                    { hex: '#111827', name: 'فحمي' }
+                                  ].map((color) => {
+                                    const isSelected = calAddAccentColor.toLowerCase() === color.hex.toLowerCase();
+                                    return (
+                                      <button
+                                        key={color.hex}
+                                        type="button"
+                                        onClick={() => setCalAddAccentColor(color.hex)}
+                                        className={`w-6 h-6 rounded-full border transition-all relative flex items-center justify-center cursor-pointer ${
+                                          isSelected ? 'scale-110 ring-2 ring-offset-2 ring-blue-500 border-transparent' : 'border-neutral-200 hover:scale-105'
+                                        }`}
+                                        style={{ backgroundColor: color.hex }}
+                                        title={color.name}
+                                      >
+                                        {isSelected && <span className="text-[9px] text-white">✓</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] text-neutral-500">رمز اللون المخصص (Hex):</span>
+                                  <input
+                                    type="text"
+                                    value={calAddAccentColor}
+                                    onChange={(e) => setCalAddAccentColor(e.target.value)}
+                                    placeholder="#0071e3"
+                                    className="w-24 p-1 bg-white rounded-lg border border-neutral-300 font-mono text-center text-xs focus:outline-none uppercase"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* 3. أيام العمل والعطل الأسبوعية */}
+                              <div className="space-y-1.5 border-t border-blue-100 pt-2">
+                                <span className="text-[10.5px] font-bold text-neutral-800 block">أيام العمل والعطل الأسبوعية:</span>
+                                <p className="text-[9.5px] text-neutral-500">اضغط على اليوم للتبديل بين يوم عمل متاح (ملوّن) أو عطلة (رمادي):</p>
+                                <div className="grid grid-cols-4 gap-1">
+                                  {[
+                                    { id: 'sunday', name: 'الأحد' },
+                                    { id: 'monday', name: 'الإثنين' },
+                                    { id: 'tuesday', name: 'الثلاثاء' },
+                                    { id: 'wednesday', name: 'الأربعاء' },
+                                    { id: 'thursday', name: 'الخميس' },
+                                    { id: 'friday', name: 'الجمعة' },
+                                    { id: 'saturday', name: 'السبت' },
+                                  ].map((day) => {
+                                    const isWork = calAddWorkingDays.includes(day.id);
+                                    return (
+                                      <button
+                                        key={day.id}
+                                        type="button"
+                                        onClick={() => {
+                                          let newW = [...calAddWorkingDays];
+                                          let newH = [...calAddHolidays];
+                                          if (newW.includes(day.id)) {
+                                            newW = newW.filter(d => d !== day.id);
+                                            if (!newH.includes(day.id)) newH.push(day.id);
+                                          } else {
+                                            newH = newH.filter(d => d !== day.id);
+                                            if (!newW.includes(day.id)) newW.push(day.id);
+                                          }
+                                          setCalAddWorkingDays(newW);
+                                          setCalAddHolidays(newH);
+                                        }}
+                                        className={`py-1 px-1 rounded-lg text-[10px] font-bold border transition-all text-center cursor-pointer ${
+                                          isWork
+                                            ? 'text-white border-transparent'
+                                            : 'bg-neutral-100 text-neutral-400 border-neutral-200 hover:bg-neutral-200'
+                                        }`}
+                                        style={{ backgroundColor: isWork ? calAddAccentColor : undefined }}
+                                      >
+                                        {day.name}
+                                        <div className="text-[7.5px] font-normal opacity-85 mt-0.5">
+                                          {isWork ? 'عمل' : 'عطلة'}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* 4. ساعات الدوام الرسمي اليومي */}
+                              <div className="space-y-1.5 border-t border-blue-100 pt-2">
+                                <span className="text-[10.5px] font-bold text-neutral-800 block">ساعات الدوام اليومي الرسمي:</span>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-[10px] text-neutral-500 block mb-0.5">بداية العمل:</span>
+                                    <input
+                                      type="time"
+                                      value={calAddWorkStart}
+                                      onChange={(e) => setCalAddWorkStart(e.target.value)}
+                                      className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية العمل:</span>
+                                    <input
+                                      type="time"
+                                      value={calAddWorkEnd}
+                                      onChange={(e) => setCalAddWorkEnd(e.target.value)}
+                                      className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 5. أوقات الاستراحة اليومية */}
+                              <div className="space-y-1.5 border-t border-blue-100 pt-2">
+                                <span className="text-[10.5px] font-bold text-neutral-800 block">أوقات الاستراحة (تُستثنى من الحجوزات):</span>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-[10px] text-neutral-500 block mb-0.5">بداية الاستراحة:</span>
+                                    <input
+                                      type="time"
+                                      value={calAddBreakStart}
+                                      onChange={(e) => setCalAddBreakStart(e.target.value)}
+                                      className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية الاستراحة:</span>
+                                    <input
+                                      type="time"
+                                      value={calAddBreakEnd}
+                                      onChange={(e) => setCalAddBreakEnd(e.target.value)}
+                                      className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 6. وتيرة تكرار المواعيد (Interval) */}
+                              <div className="space-y-1.5 border-t border-blue-100 pt-2">
+                                <span className="text-[10.5px] font-bold text-neutral-800 block">مدة الفترة المتاحة لكل موعد:</span>
+                                <select
+                                  value={calAddInterval}
+                                  onChange={(e) => setCalAddInterval(e.target.value as any)}
+                                  className="w-full text-xs font-semibold p-2 bg-white rounded-xl border border-neutral-300 focus:outline-none cursor-pointer"
+                                >
+                                  <option value="10">موعد كل ١٠ دقائق</option>
+                                  <option value="15">موعد كل ١٥ دقيقة</option>
+                                  <option value="30">موعد كل ٣٠ دقيقة (نصف ساعة)</option>
+                                  <option value="60">موعد كل ساعة كاملة</option>
+                                  <option value="day">موعد واحد فقط طوال اليوم</option>
+                                  <option value="manual">تخصيص يدوي بالدقائق...</option>
+                                </select>
+
+                                {calAddInterval === 'manual' && (
+                                  <div className="space-y-1 mt-1.5">
+                                    <label className="text-[10px] text-neutral-500 block">أدخل الوقت بالدقائق يدوياً:</label>
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={480}
+                                        value={calAddIntervalMins}
+                                        onChange={(e) => setCalAddIntervalMins(Math.max(1, Number(e.target.value)))}
+                                        className="w-24 p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
+                                      />
+                                      <span className="text-xs text-neutral-500 font-semibold">دقيقة</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* 7. آلية الموافقة وتأكيد الموعد */}
+                              <div className="space-y-1.5 border-t border-blue-100 pt-2">
+                                <span className="text-[10.5px] font-bold text-neutral-800 block">آلية الموافقة وتأكيد الموعد:</span>
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={calAddNeedsConfirmation}
+                                    onChange={(e) => setCalAddNeedsConfirmation(e.target.checked)}
+                                    className="w-4 h-4 cursor-pointer"
+                                    style={{ accentColor: calAddAccentColor }}
+                                  />
+                                  <span className="text-xs font-medium text-neutral-700">يتطلب موافقة وتأكيد الإدارة أولاً (⏳ معلّق)</span>
+                                </label>
+                              </div>
+
+                              {/* 8. طرق إجراء المقابلة المتاحة */}
+                              <div className="space-y-1.5 border-t border-blue-100 pt-2">
+                                <span className="text-[10.5px] font-bold text-neutral-800 block">طريقة ومكان إجراء المقابلة (اختر خياراً أو أكثر):</span>
+                                <div className="grid grid-cols-3 gap-1">
+                                  {[
+                                    { id: 'personal', name: '👤 شخصي', title: 'حضور شخصي بالمقر' },
+                                    { id: 'phone', name: '📞 هاتفي', title: 'مكالمة هاتفية صوتية' },
+                                    { id: 'whatsapp', name: '📹 فيديو', title: 'اتصال فيديو واتساب' },
+                                  ].map((type) => {
+                                    const isSel = calAddMeetingTypes.includes(type.id);
+                                    return (
+                                      <button
+                                        key={type.id}
+                                        type="button"
+                                        onClick={() => {
+                                          let newT = [...calAddMeetingTypes];
+                                          if (newT.includes(type.id)) {
+                                            if (newT.length > 1) newT = newT.filter(t => t !== type.id);
+                                          } else {
+                                            newT.push(type.id);
+                                          }
+                                          setCalAddMeetingTypes(newT);
+                                        }}
+                                        className={`py-1.5 rounded-lg text-[9.5px] font-bold border transition-all text-center cursor-pointer ${
+                                          isSel
+                                            ? 'text-white border-transparent font-black'
+                                            : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
+                                        }`}
+                                        style={{ backgroundColor: isSel ? calAddAccentColor : undefined }}
+                                      >
+                                        {type.name}
+                                        {isSel && <span className="mr-0.5 text-[8px]">✓</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* 9. تخصيص عناوين حقول النموذج */}
+                              <div className="space-y-1.5 border-t border-blue-100 pt-2">
+                                <span className="text-[10.5px] font-bold text-neutral-800 block">تخصيص عناوين حقول النموذج:</span>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل الاسم:</span>
+                                    <input
+                                      type="text"
+                                      value={calAddNameLabel}
+                                      onChange={(e) => setCalAddNameLabel(e.target.value)}
+                                      className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 text-xs font-semibold focus:outline-none"
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل العنوان:</span>
+                                    <input
+                                      type="text"
+                                      value={calAddAddressLabel}
+                                      onChange={(e) => setCalAddAddressLabel(e.target.value)}
+                                      className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 text-xs font-semibold focus:outline-none"
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل الهاتف:</span>
+                                    <input
+                                      type="text"
+                                      value={calAddPhoneLabel}
+                                      onChange={(e) => setCalAddPhoneLabel(e.target.value)}
+                                      className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 text-xs font-semibold focus:outline-none"
+                                    />
+                                  </div>
+                                  <div>
+                                    <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل البريد:</span>
+                                    <input
+                                      type="text"
+                                      value={calAddEmailLabel}
+                                      onChange={(e) => setCalAddEmailLabel(e.target.value)}
+                                      className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 text-xs font-semibold focus:outline-none"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* زر الإدراج المباشر للبطاقة العرضية الفاخرة */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onAddElement('calendar', calAddTitle, { 
+                                backgroundColor: '#ffffff', 
+                                borderRadius: 24, 
+                                glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' 
+                              }, { 
+                                name: 'بطاقة حجز مواعيد عرضية', 
+                                calendarTitle: calAddTitle, 
+                                calendarAccentColor: calAddAccentColor,
+                                calendarSlots: calAddSlotsText.split(',').map(s => s.trim()).filter(Boolean),
+                                width: 780, 
+                                height: 440,
+                                calendarWorkingDays: calAddWorkingDays,
+                                calendarHolidays: calAddHolidays,
+                                calendarWorkStart: calAddWorkStart,
+                                calendarWorkEnd: calAddWorkEnd,
+                                calendarBreakStart: calAddBreakStart,
+                                calendarBreakEnd: calAddBreakEnd,
+                                calendarInterval: calAddInterval,
+                                calendarIntervalMinutes: calAddIntervalMins,
+                                calendarNeedsConfirmation: calAddNeedsConfirmation,
+                                calendarMeetingTypes: calAddMeetingTypes,
+                                calendarMeetingType: calAddMeetingTypes[0] as any,
+                                calendarNameLabel: calAddNameLabel,
+                                calendarAddressLabel: calAddAddressLabel,
+                                calendarPhoneLabel: calAddPhoneLabel,
+                                calendarEmailLabel: calAddEmailLabel,
+                                calendarDescLabel: calAddDescLabel
+                              });
+                            }}
+                            className="w-full py-2.5 px-3 text-white rounded-xl text-xs font-black shadow-md hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            style={{ backgroundColor: calAddAccentColor }}
+                          >
+                            <span>➕</span>
+                            <span>إدراج بطاقة حجز الموعد العرضية للكانفاس (780 × 440)</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {activeAddCategory === 'video' && (
+                        <div className="p-3 bg-red-50/50 border border-red-200/60 rounded-2xl text-right space-y-1.5" dir="rtl">
+                          <label className="text-xs font-bold text-neutral-800 block">رابط الفيديو المستهدف (اختياري):</label>
+                          <input
+                            type="url"
+                            value={videoAddUrl}
+                            onChange={(e) => setVideoAddUrl(e.target.value)}
+                            placeholder="ألصق رابط يوتيوب أو تيك توك هنا..."
+                            dir="ltr"
+                            className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs font-mono focus:outline-none focus:border-red-500"
+                          />
+                          <p className="text-[9.5px] text-neutral-400 leading-snug">
+                            سيتم تزويد المشغل المختار بهذا الرابط تلقائياً عند إضافته للكانفاس. يمكنك أيضاً تعديل الرابط لاحقاً في أي وقت.
+                          </p>
+                        </div>
+                      )}
+
+                      {activeAddCategory === 'map' && (
+                        <div className="p-3 bg-blue-50/50 border border-blue-200/60 rounded-2xl text-right space-y-2" dir="rtl">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-neutral-800 block">حدد موقع العنوان أو اضغط لتحديده:</label>
+                            <button
+                              type="button"
+                              onClick={() => handleDetectUserLocation((loc) => setMapAddLocation(loc))}
+                              disabled={isDetectingLocation}
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-white hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shadow-3xs transition-all cursor-pointer disabled:opacity-50"
+                              title="تحديد موقعك الجغرافي الحالي تلقائياً"
+                            >
+                              {isDetectingLocation ? (
+                                <>
+                                  <Loader2 size={11} className="animate-spin text-blue-600" />
+                                  <span>جاري التحديد...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Navigation size={11} className="text-blue-600" />
+                                  <span>موقعي الحالي 📍</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          <input
+                            type="text"
+                            value={mapAddLocation}
+                            onChange={(e) => setMapAddLocation(e.target.value)}
+                            placeholder="مثال: دبي مول أو اضغط 'موقعي الحالي'..."
+                            className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-blue-500"
+                          />
+
+                          {locationDetectError && (
+                            <p className="text-[10px] text-red-600 font-semibold">⚠️ {locationDetectError}</p>
+                          )}
+
+                          <p className="text-[9.5px] text-neutral-400 leading-snug">
+                            سيتم تزويد الخريطة المختارة بهذا الموقع وتثبيت الدبوس عليه وتفعيلها تلقائياً عند إنزالها للكانفاس.
+                          </p>
+                        </div>
+                      )}
+
+                      {activeAddCategory === 'sheet' && (
+                        <div className="p-3.5 bg-emerald-50/50 border border-emerald-200/60 rounded-2xl text-right space-y-3" dir="rtl">
+                          <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                            <Grid3X3 size={14} className="text-emerald-600 shrink-0" />
+                            <span>تخصيص جدول البيانات الجديد:</span>
+                          </span>
+
+                          {/* Theme color selector */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] text-neutral-500 block">اختر لون الجدول (10 ألوان متناسقة):</label>
+                            <div className="grid grid-cols-5 gap-1.5">
+                              {[
+                                { label: 'أزرق', value: '#0071e3' },
+                                { label: 'أخضر', value: '#10b981' },
+                                { label: 'أحمر', value: '#ef4444' },
+                                { label: 'أصفر', value: '#f59e0b' },
+                                { label: 'بنفسجي', value: '#6366f1' },
+                                { label: 'وردي', value: '#ec4899' },
+                                { label: 'رمادي', value: '#475569' },
+                                { label: 'مائي', value: '#14b8a6' },
+                                { label: 'برتقالي', value: '#f97316' },
+                                { label: 'فحمي', value: '#1f2937' },
+                              ].map((c) => (
+                                <button
+                                  key={c.value}
+                                  type="button"
+                                  onClick={() => setTableAddColor(c.value)}
+                                  className="relative h-6 rounded-md cursor-pointer transition-all border border-black/[0.05]"
+                                  style={{ backgroundColor: c.value }}
+                                  title={c.label}
+                                >
+                                  {tableAddColor === c.value && (
+                                    <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-bold">✓</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Rows and columns arrow spinners */}
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-[10px] text-neutral-500 block mb-0.5">عدد الأسطر (الصفوف):</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setTableAddRows(Math.max(1, tableAddRows - 1))}
+                                  className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="flex-1 text-center font-mono font-bold text-neutral-800 bg-white border border-neutral-200 py-1 rounded">
+                                  {tableAddRows}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setTableAddRows(Math.min(20, tableAddRows + 1))}
+                                  className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-neutral-500 block mb-0.5">عدد الأعمدة:</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setTableAddCols(Math.max(1, tableAddCols - 1))}
+                                  className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="flex-1 text-center font-mono font-bold text-neutral-800 bg-white border border-neutral-200 py-1 rounded">
+                                  {tableAddCols}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setTableAddCols(Math.min(15, tableAddCols + 1))}
+                                  className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Column width and row height spinners */}
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-[10px] text-neutral-500 block mb-0.5">عرض العمود (بكسل):</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setTableAddColWidth(Math.max(40, tableAddColWidth - 10))}
+                                  className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="flex-1 text-center font-mono font-bold text-neutral-800 bg-white border border-neutral-200 py-1 rounded">
+                                  {tableAddColWidth}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setTableAddColWidth(Math.min(300, tableAddColWidth + 10))}
+                                  className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-neutral-500 block mb-0.5">ارتفاع السطر (بكسل):</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setTableAddRowHeight(Math.max(20, tableAddRowHeight - 5))}
+                                  className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <span className="flex-1 text-center font-mono font-bold text-neutral-800 bg-white border border-neutral-200 py-1 rounded">
+                                  {tableAddRowHeight}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setTableAddRowHeight(Math.min(150, tableAddRowHeight + 5))}
+                                  className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Checkboxes (Header, Indexing) */}
+                          <div className="space-y-2 pt-1">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={tableAddHeaderRow}
+                                onChange={(e) => setTableAddHeaderRow(e.target.checked)}
+                                className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
+                              />
+                              <span className="text-xs text-neutral-700">اضافة سطر العناوين (أول سطر كعنوان مميز)</span>
+                            </label>
+
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={tableAddIndexCol}
+                                onChange={(e) => setTableAddIndexCol(e.target.checked)}
+                                className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
+                              />
+                              <span className="text-xs text-neutral-700">اضافة عمود التعداد يميناً (1، 2، 3...)</span>
+                            </label>
+                          </div>
+
+                          {/* Add button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cells: string[][] = [];
+                              for (let r = 0; r < tableAddRows; r++) {
+                                const rowArr: string[] = [];
+                                for (let c = 0; c < tableAddCols; c++) {
+                                  if (r === 0 && tableAddHeaderRow) {
+                                    rowArr.push(`عنوان ${c + 1}`);
+                                  } else if (c === 0 && tableAddIndexCol) {
+                                    rowArr.push(`${r}`);
+                                  } else {
+                                    rowArr.push(`خلية ${r + 1}-${c + 1}`);
+                                  }
+                                }
+                                cells.push(rowArr);
+                              }
+
+                              const calculatedWidth = tableAddCols * tableAddColWidth + (tableAddIndexCol ? 50 : 0);
+                              const calculatedHeight = tableAddRows * tableAddRowHeight;
+
+                              onAddElement(
+                                'table',
+                                'جدول مخصص',
+                                { borderRadius: 12, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
+                                {
+                                  name: 'جدول مخصص',
+                                  width: Math.max(300, calculatedWidth),
+                                  height: Math.max(120, calculatedHeight),
+                                  tableConfig: {
+                                    rows: tableAddRows,
+                                    cols: tableAddCols,
+                                    themeColor: tableAddColor,
+                                    headerRow: tableAddHeaderRow,
+                                    indexCol: tableAddIndexCol,
+                                    colWidths: Array(tableAddCols).fill(tableAddColWidth),
+                                    rowHeights: Array(tableAddRows).fill(tableAddRowHeight),
+                                    cells: cells
+                                  }
+                                }
+                              );
+                            }}
+                            className="w-full mt-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <span>✨</span>
+                            <span>إدراج الجدول المخصص الآن في الشريحة</span>
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {currentTemplates.map((item) => (
+                          <div
+                            key={item.id}
+                            onClick={item.action}
+                            className="group bg-white rounded-2xl border-2 border-neutral-200 hover:border-[#0071e3] p-2.5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer text-right"
+                          >
+                            {/* Visual Miniature Preview */}
+                            <div className="mb-2">
+                              {item.preview}
+                            </div>
+
+                            {/* Details & Action */}
+                            <div>
+                              <h4 className="text-xs font-bold text-neutral-900 group-hover:text-[#0071e3] transition-colors truncate">
+                                {item.title}
+                              </h4>
+                              <p className="text-[10px] text-neutral-500 line-clamp-1 mt-0.5">
+                                {item.sub}
+                              </p>
+
+                              <div className="mt-2 pt-1.5 border-t border-neutral-100 flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md group-hover:bg-[#0071e3] group-hover:text-white transition-colors">
+                                  إضافة +
+                                </span>
+                                <span className="text-[10px] text-neutral-400 group-hover:text-[#0071e3]">
+                                  ✦
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {currentTemplates.length === 0 && (
+                        <div className="py-8 text-center text-xs text-neutral-400 bg-neutral-50 rounded-2xl border border-neutral-200/60">
+                          لا توجد عناصر مطابقة في هذا الفلتر حالياً
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* TOOL: Wee AI */}
+              {activeSection === 'wee-ai' && (
+                <div className="space-y-2.5">
+                  <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-xs text-purple-900 flex items-center gap-2 font-bold">
+                    <Sparkles size={16} className="text-purple-600" />
+                    <span>توليد أقسام بالذكاء الاصطناعي</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      {
+                        title: 'قسم الواجهة (Hero Section)',
+                        action: () => {
+                          onAddElement('heading', 'مرحباً بك في عالم التصميم المتطور', { fontSize: 32, fontWeight: 'bold' });
+                          onAddElement('button', 'ابدأ تجربتك الآن ✦', { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 999 });
+                        }
+                      },
+                      {
+                        title: 'بطاقات المميزات (Features)',
+                        action: () => {
+                          onAddGroup?.({
+                            name: 'بطاقة ميزة',
+                            width: 300,
+                            height: 150,
+                            styles: { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' }
+                          }, [
+                            { type: 'heading', name: 'عنوان الميزة', content: 'أداء فائق السرعة', x: 16, y: 16, width: 268, height: 28, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
+                            { type: 'paragraph', name: 'وصف الميزة', content: 'سرعة متناهية وخوادم سحابية فائقة الثبات.', x: 16, y: 50, width: 268, height: 84, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } }
+                          ]);
+                        }
+                      },
+                    ].map((tmpl, idx) => (
+                      <button
+                        key={idx}
+                        onClick={tmpl.action}
+                        className="w-full p-2.5 rounded-xl border border-neutral-200 hover:border-purple-300 hover:bg-purple-50/50 text-right text-xs font-medium flex items-center justify-between transition-all"
+                      >
+                        <span>{tmpl.title}</span>
+                        <Wand2 size={13} className="text-purple-600" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TOOL: Link (إضافة رابط كالمخطط اليدوي تماماً) */}
+              {activeSection === 'link' && <LinkSection pages={pages} slides={slides} selectedElement={selectedElement} onUpdateElement={onUpdateElement} linkSubSection={linkSubSection} setLinkSubSection={setLinkSubSection} contactMethod={contactMethod} setContactMethod={setContactMethod} contactInputValue={contactInputValue} setContactInputValue={setContactInputValue} urlInputValue={urlInputValue} setUrlInputValue={setUrlInputValue} withShopSettings={!isDocked} />}
+
+              {/* TOOL: Layers (إدارة الطبقات) */}
+              {activeSection === 'layers' && <LayersSection elements={elements} activeSlideId={activeSlideId} selectedElement={selectedElement} onSelectElement={onSelectElement} onDeleteElement={onDeleteElement} onDuplicateElement={onDuplicateElement} onToggleLock={onToggleLock} onMoveLayerUp={onMoveLayerUp} onMoveLayerDown={onMoveLayerDown} onMoveLayerToFront={onMoveLayerToFront} onMoveLayerToBack={onMoveLayerToBack} getElementIcon={getElementIcon} />}
+
+              {/* TOOL: Add/Edit Image (تبديل/تعديل الصورة) */}
+              {activeSection === 'add-image' && (
+                <ImageDrawerSection
+                  onAddImage={handleAddImageElement}
+                  onBack={() => {
+                    if (selectedElement) {
+                      onSelectSection('format');
+                    } else {
+                      onSelectSection('elements');
+                    }
+                  }}
+                  canvasElements={elements}
+                  selectedElement={selectedElement}
+                  onUpdateElement={onUpdateElement}
+                />
+              )}
+
+              {/* TOOL: Navbar settings (ترس الإعدادات) — التثبيت، الطول، اسم الموقع، وتموضع/تنسيق أسماء الصفحات */}
+              {activeSection === 'navbar-settings' && navbar && (
+                <div className="space-y-6 text-right" dir="rtl">
+                  <div className="space-y-2">
+                    <SectionHeader title="سلوك النافبار عند التمرير" />
+                    <PillTabs
+                      options={[
+                        { value: 'sticky', label: 'ثابت عائم في الرأس' },
+                        { value: 'scroll', label: 'متحرك مع الصفحة' },
+                      ]}
+                      value={navbar.isSticky ? 'sticky' : 'scroll'}
+                      onChange={(v) => onUpdateNavbar({ isSticky: v === 'sticky' })}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-black/[0.06]">
+                    <Slider
+                      label="طول (ارتفاع) النافبار"
+                      value={navbar.height ?? 60}
+                      min={44}
+                      max={140}
+                      onChange={(v) => onUpdateNavbar({ height: v })}
+                      formatValue={(v) => `${v}px`}
+                    />
+                    <Slider
+                      label="عرض النافبار"
+                      value={navbar.width ?? 100}
+                      min={40}
+                      max={100}
+                      onChange={(v) => onUpdateNavbar({ width: v })}
+                      formatValue={(v) => `${v}%`}
+                    />
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-black/[0.06]">
+                    <SectionHeader title="اسم الموقع" />
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-neutral-800 block">
+                        اسم الشركة / اسم صاحب الموقع:
+                      </label>
+                      <input
+                        type="text"
+                        value={navbar.brandName || ''}
+                        onChange={(e) => onUpdateNavbar({ brandName: e.target.value })}
+                        className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:bg-white focus:outline-none transition-all"
+                        placeholder="مثال: متجر الأمل..."
+                        dir="rtl"
+                      />
+                      <p className="text-[10px] text-neutral-400 leading-tight">
+                        هذا الاسم هو ما يظهر في النافبار — اكتب اسم شركتك أو اسمك الشخصي، فهو لا يُملأ تلقائيًا.
+                      </p>
+                    </div>
+                    <PillTabs
+                      options={[
+                        { value: 'show', label: 'إظهار اسم الموقع' },
+                        { value: 'hide', label: 'إخفاء اسم الموقع' },
+                      ]}
+                      value={navbar.showBrandName === false ? 'hide' : 'show'}
+                      onChange={(v) => onUpdateNavbar({ showBrandName: v === 'show' })}
+                      className="w-full"
+                    />
+
+                    <div className="flex items-center gap-2.5 pt-1">
+                      <div className="w-9 h-9 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shrink-0">
+                        {navbar.logoUrl ? (
+                          <img src={navbar.logoUrl} alt="شعار الموقع" className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-[10px] text-neutral-400 font-bold">بدون شعار</span>
+                        )}
+                      </div>
+                      <input
+                        ref={navbarLogoFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleNavbarLogoFileChange}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => navbarLogoFileInputRef.current?.click()}
+                        disabled={isNavbarLogoUploading}
+                        className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20 transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        {isNavbarLogoUploading ? 'جارٍ رفع الشعار...' : (navbar.logoUrl ? 'تغيير الشعار' : 'رفع شعار من الجهاز')}
+                      </button>
+                      {navbar.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => onUpdateNavbar({ logoUrl: undefined })}
+                          className="py-1.5 px-2.5 text-xs font-bold rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
+                        >
+                          إزالة
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-neutral-400 leading-tight">
+                      عند رفع شعار، يظهر بدل الحرف الافتراضي بجانب اسم الموقع.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-black/[0.06]">
+                    <SectionHeader title="تموضع أسماء صفحات الموقع" />
+                    <PillTabs
+                      options={[
+                        { value: 'right', label: 'اليمين' },
+                        { value: 'center', label: 'الوسط' },
+                        { value: 'left', label: 'اليسار' },
+                      ]}
+                      value={navbar.itemsAlign || 'right'}
+                      onChange={(v) => onUpdateNavbar({ itemsAlign: v as 'right' | 'center' | 'left' })}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div className="space-y-3 pt-2 border-t border-black/[0.06]">
+                    <SectionHeader title="إطار أسماء الصفحات" />
+                    <p className="text-[11px] text-neutral-500 -mt-1">
+                      إطار اختياري حول كل اسم صفحة في النافبار: سمك وتدوير الحواف ولون الإطار، ولون خلفية النص.
+                    </p>
+                    <Slider
+                      label="سمك الإطار"
+                      value={navbar.itemsFrameBorderWidth ?? 0}
+                      min={0}
+                      max={6}
+                      onChange={(v) => onUpdateNavbar({ itemsFrameBorderWidth: v })}
+                      formatValue={(v) => `${v}px`}
+                    />
+                    <Slider
+                      label="تدوير حواف الإطار"
+                      value={navbar.itemsFrameBorderRadius ?? 0}
+                      min={0}
+                      max={24}
+                      onChange={(v) => onUpdateNavbar({ itemsFrameBorderRadius: v })}
+                      formatValue={(v) => `${v}px`}
+                    />
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-bold text-neutral-700 block">لون الإطار</span>
+                      <ColorSwatchPicker
+                        swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
+                        selectedValue={navbar.itemsFrameBorderColor || 'transparent'}
+                        onSelect={(color) => onUpdateNavbar({ itemsFrameBorderColor: color })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-bold text-neutral-700 block">لون خلفية النص</span>
+                      <ColorSwatchPicker
+                        swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
+                        selectedValue={navbar.itemsFrameBgColor || 'transparent'}
+                        onSelect={(color) => onUpdateNavbar({ itemsFrameBgColor: color })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-bold text-neutral-700 block">نوع الخط لأسماء الصفحات</span>
+                      <select
+                        value={navbar.itemsFontFamily || ''}
+                        onChange={(e) => onUpdateNavbar({ itemsFontFamily: e.target.value || undefined })}
+                        className="w-full px-2.5 py-2 bg-white border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
+                        style={{ fontFamily: navbar.itemsFontFamily || undefined }}
+                      >
+                        <option value="">الخط الافتراضي</option>
+                        {SIXTY_FONTS.map((f) => (
+                          <option key={f.font} value={f.font} style={{ fontFamily: f.font }}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Default for other tools */}
+              {['grid', 'list', 'slides', 'navbar', 'grouping'].includes(activeSection) && (
+                <div className="p-3.5 bg-neutral-50 rounded-xl text-xs text-neutral-600 space-y-1">
+                  <span className="font-bold block text-neutral-800">خيارات {getToolTitle()}:</span>
+                  <p className="text-[11px] text-neutral-500">
+                    يمكنك تعديل إعدادات هذه الأداة مباشرة على العنصر المحدد في ساحة العمليات.
+                  </p>
+                </div>
+              )}
+    </>
+  );
 
   if (isPreviewActive) {
     return null;
@@ -1079,8 +5513,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 </span>
               </>
             )}
-            {/* AI Toggle Button next to name */}
-            <button
+            {/* AI Toggle Button next to name (the docked panel has Wee AI in its column) */}
+            {!isDocked && <button
               type="button"
               onClick={toggleWeeAiChat}
               className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9.5px] font-black transition-all cursor-pointer ${
@@ -1097,7 +5531,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               ) : (
                 <ChevronUp size={11} strokeWidth={2.8} />
               )}
-            </button>
+            </button>}
           </div>
 
           <div className="flex items-center gap-1">
@@ -1121,12 +5555,53 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           </div>
         </div>
 
+        {/* Where the selection is: project › page › slide (or the navbar) › element. Each step opens its settings. */}
+        {isDocked && (
+          <nav aria-label="مسار التحديد" className="flex items-center flex-wrap gap-x-1 gap-y-0.5 px-3 py-2 text-[11px] text-neutral-500 bg-[#f5f5f7] border-b border-neutral-200 shrink-0 select-none">
+            {(() => {
+              const crumb = (label: string, onClick: () => void, current: boolean, key: string) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={onClick}
+                  className={`max-w-[9rem] truncate rounded-full px-2 py-0.5 transition-colors cursor-pointer ${
+                    current ? 'bg-[#0071e3]/10 text-[#0071e3] font-bold' : 'hover:bg-black/[0.05] hover:text-neutral-900'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+              const showingSettings = activeTab === 'tool';
+              const steps: React.ReactNode[] = [
+                crumb(projectName || 'المشروع', () => onSelectSection('project-settings'), showingSettings && activeSection === 'project-settings', 'project'),
+                crumb(currentPage.name, () => onSelectSection('page-settings'), showingSettings && activeSection === 'page-settings', 'page'),
+                crumb(
+                  isNavbarSelected ? 'النافبار' : activeSlide?.name || 'الشريحة',
+                  () => {
+                    if (!isNavbarSelected) {
+                      onSelectElement(null);
+                      onSelectSlide(activeSlideId);
+                    }
+                    onSelectSection('inspector');
+                  },
+                  showingSettings && activeSection === 'inspector' && !selectedElement,
+                  'slide'
+                ),
+              ];
+              if (selectedElement) {
+                steps.push(crumb(elementDisplayName(selectedElement), () => onSelectSection('inspector'), showingSettings && activeSection === 'inspector', 'element'));
+              }
+              return steps.flatMap((step, i) => (i === 0 ? [step] : [<ChevronLeft key={`sep-${i}`} size={11} className="text-neutral-300 shrink-0" />, step]));
+            })()}
+          </nav>
+        )}
+
         {/* 
           TABS AT THE TOP (Exact Match to User Drawing 1):
           Right Tab: الهيكل
           Left Tab: تعديل الصفحة (أو الأداة الحالية)
         */}
-        <div className="flex items-end px-3 pt-1 border-b-2 border-neutral-300 bg-[#f5f5f7] gap-2">
+        {!isDocked && <div className="flex items-end px-3 pt-1 border-b-2 border-neutral-300 bg-[#f5f5f7] gap-2">
           {/* Tab 1: الهيكل */}
           <button
             onClick={() => setActiveTab('structure')}
@@ -1152,7 +5627,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             <SlidersHorizontal size={13} />
             <span className="truncate">{getToolTitle()}</span>
           </button>
-        </div>
+        </div>}
 
         {/* TAB 1: الهيكل (Structure) */}
         {activeTab === 'structure' && (
@@ -1428,4156 +5903,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
         {/* TAB 2: تعديل الصفحة / أداة التعديل */}
         {activeTab === 'tool' && (
-          <div className="flex-1 overflow-y-auto p-3.5 space-y-4 bg-white text-right">
-
-            {/* ============================================================== */}
-            {/* SPECIAL SECTION: تعديل الصفحة (PAGE SETTINGS) AS IN USER DRAWINGS */}
-            {/* ============================================================== */}
-            {activeSection === 'project-settings' && projectSettings}
-
-            {activeSection === 'page-settings' && (
-              <div className="space-y-4">
-
-                {/* 1. اسم الصفحة (كما في الصورة الأولى) */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-neutral-800 block">
-                    اسم الصفحة:
-                  </label>
-                  <input
-                    type="text"
-                    value={currentPage.name}
-                    onChange={(e) => onUpdatePage({ name: e.target.value })}
-                    className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:bg-white focus:outline-none transition-all"
-                    placeholder="اسم الصفحة..."
-                  />
-                </div>
-
-                {/* 2. ألوان الصفحة (تحت اسم الصفحة - خيارين: افتراضي وشخصي) */}
-                <div className="space-y-2.5 pt-2 border-t border-neutral-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-neutral-800">
-                      ألوان الصفحة:
-                    </span>
-                    <span className="text-[10px] text-neutral-400">
-                      (خلفية، صناديق، إطارات، نصوص، براند)
-                    </span>
-                  </div>
-
-                  {/* Sub-tabs: افتراضي | شخصي (كما في الصورة الأولى) */}
-                  <div className="flex rounded-xl bg-neutral-100 p-1 border border-neutral-200 gap-1">
-                    <button
-                      onClick={() => setPageColorMode('default')}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                        pageColorMode === 'default'
-                          ? 'bg-white text-[#0071e3] shadow-xs'
-                          : 'text-neutral-600 hover:text-black'
-                      }`}
-                    >
-                      افتراضي
-                    </button>
-                    <button
-                      onClick={() => setPageColorMode('custom')}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                        pageColorMode === 'custom'
-                          ? 'bg-white text-[#0071e3] shadow-xs'
-                          : 'text-neutral-600 hover:text-black'
-                      }`}
-                    >
-                      شخصي
-                    </button>
-                  </div>
-
-                  {/* MODE A: افتراضي - 20 خيار لألوان متناسقة كل خيار فيه 5 ألوان */}
-                  {pageColorMode === 'default' && (
-                    <div className="space-y-2 pt-1">
-                      <div className="text-[10.5px] text-neutral-500 font-medium leading-relaxed">
-                        اختر مجموعة ألوان متناسقة لتطبيقها فوراً على كامل الصفحة وعناصرها (20 مجموعة):
-                      </div>
-
-                      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                        {TWENTY_PAGE_PALETTES.map((pal) => {
-                          const isCurrentActive = 
-                            currentPage.colorPalette && 
-                            currentPage.colorPalette[0] === pal.colors[0] &&
-                            currentPage.colorPalette[4] === pal.colors[4];
-
-                          return (
-                            <button
-                              key={pal.id}
-                              onClick={() => {
-                                onApplyPagePalette(pal.colors);
-                                setCustomColors(pal.colors);
-                              }}
-                              className={`w-full p-2 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer ${
-                                isCurrentActive
-                                  ? 'border-[#0071e3] bg-[#0071e3]/5 ring-1 ring-[#0071e3]'
-                                  : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/80'
-                              }`}
-                            >
-                              <span className="text-[11px] font-bold text-neutral-800 truncate">
-                                {pal.name}
-                              </span>
-
-                              {/* 5 Color Circles */}
-                              <div className="flex items-center gap-1 shrink-0">
-                                {pal.colors.map((c, i) => (
-                                  <span
-                                    key={i}
-                                    className="w-4 h-4 rounded-full border border-black/15 shadow-3xs"
-                                    style={{ backgroundColor: c }}
-                                    title={`${slotLabels[i]}: ${c}`}
-                                  />
-                                ))}
-                                {isCurrentActive && (
-                                  <Check size={12} className="text-[#0071e3] mr-1" />
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* MODE B: شخصي - كما في الرسم السفلي بالصورة الأولى */}
-                  {pageColorMode === 'custom' && (
-                    <div className="space-y-3 pt-1">
-                      {/* 5 Circles at the top */}
-                      <div className="flex items-center justify-around p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
-                        {customColors.map((c, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => setCustomSlotIndex(idx)}
-                            className={`flex flex-col items-center gap-1 group transition-transform ${
-                              customSlotIndex === idx ? 'scale-110' : 'opacity-85 hover:opacity-100'
-                            }`}
-                          >
-                            <span 
-                              className={`w-7 h-7 rounded-full border border-black/15 shadow-xs flex items-center justify-center ${
-                                customSlotIndex === idx ? 'ring-2 ring-[#0071e3] ring-offset-2' : ''
-                              }`}
-                              style={{ backgroundColor: c }}
-                            >
-                              {customSlotIndex === idx && (
-                                <Check size={12} className={c === '#ffffff' || c === '#fbfbfd' ? 'text-black' : 'text-white'} />
-                              )}
-                            </span>
-                            <span className="text-[9px] font-medium text-neutral-500">
-                              {slotLabels[idx]}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* غامق / فاتح (Dark / Light Buttons) */}
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => {
-                            const lightPal: [string, string, string, string, string] = [
-                              '#fbfbfd', '#ffffff', '#e5e5ea', '#1d1d1f', customColors[4] || '#0071e3'
-                            ];
-                            setCustomColors(lightPal);
-                            onApplyPagePalette(lightPal);
-                          }}
-                          className="py-1.5 px-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 text-xs font-semibold text-neutral-700 text-center"
-                        >
-                          فاتح (Light)
-                        </button>
-                        <button
-                          onClick={() => {
-                            const darkPal: [string, string, string, string, string] = [
-                              '#0f172a', '#1e293b', '#334155', '#f8fafc', customColors[4] || '#38bdf8'
-                            ];
-                            setCustomColors(darkPal);
-                            onApplyPagePalette(darkPal);
-                          }}
-                          className="py-1.5 px-3 rounded-lg bg-neutral-900 text-white hover:bg-black text-xs font-semibold text-center"
-                        >
-                          غامق (Dark)
-                        </button>
-                      </div>
-
-                      {/* الإضاءة (Brightness with Sun Icon) */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs text-neutral-600">
-                          <span className="flex items-center gap-1 font-medium">
-                            <Sun size={13} className="text-amber-500" />
-                            الإضاءة:
-                          </span>
-                          <span className="font-mono">{customBrightness}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="50"
-                          max="150"
-                          value={customBrightness}
-                          onChange={(e) => setCustomBrightness(Number(e.target.value))}
-                          className="w-full accent-[#0071e3]"
-                        />
-                      </div>
-
-                      {/* Numbered Pill Selector: ( 1 ) ( 2 ) ( 3 ) ( 4 ) ( 5 ) */}
-                      <div className="space-y-1">
-                        <span className="text-[11px] font-bold text-neutral-700 block">
-                          تحديد رقم اللون للتعديل:
-                        </span>
-                        <div className="flex items-center rounded-full bg-neutral-100 p-1 border border-neutral-200">
-                          {[0, 1, 2, 3, 4].map((idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => setCustomSlotIndex(idx)}
-                              className={`flex-1 py-1 text-xs font-bold rounded-full transition-all ${
-                                customSlotIndex === idx
-                                  ? 'bg-[#0071e3] text-white shadow-2xs'
-                                  : 'text-neutral-600 hover:text-black'
-                              }`}
-                            >
-                              {idx + 1}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* مربع اختيار اللون العام (Color Picker Box) */}
-                      <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-neutral-800">
-                            اختيار اللون للخانة ({customSlotIndex + 1}: {slotLabels[customSlotIndex]}):
-                          </span>
-                          <span 
-                            className="w-5 h-5 rounded-md border border-black/10" 
-                            style={{ backgroundColor: customColors[customSlotIndex] }} 
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="color"
-                            value={customColors[customSlotIndex]}
-                            onChange={(e) => handleUpdateCustomColorSlot(customSlotIndex, e.target.value)}
-                            className="w-9 h-9 rounded-xl cursor-pointer border-0 bg-transparent shrink-0"
-                          />
-                          <input
-                            type="text"
-                            value={customColors[customSlotIndex]}
-                            onChange={(e) => handleUpdateCustomColorSlot(customSlotIndex, e.target.value)}
-                            className="flex-1 text-xs px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-left"
-                            dir="ltr"
-                          />
-                        </div>
-                      </div>
-
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. أشكال تداخل الشرائح مع بعضها (كما في الصورة الثانية - 12 خيار على الأقل) */}
-                <div className="space-y-2.5 pt-3 border-t border-neutral-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-neutral-800">
-                      أمثلة تداخل الشرائح:
-                    </span>
-                    <span className="text-[10px] text-neutral-400">
-                      (تداخل الشريحة النشطة)
-                    </span>
-                  </div>
-
-                  <div className="text-[10.5px] text-neutral-500 font-medium">
-                    مربعات صغيرة بلونين توضح طريقة تداخل الشريحة الحالية مع الشريحة التي تليها (12 خياراً):
-                  </div>
-
-                  {/* 12 Mini Two-Tone Transition Preview Squares */}
-                  <div className="grid grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
-                    {SLIDE_DIVIDER_OPTIONS.map((divOpt) => {
-                      const isSelected = (activeSlide.dividerShape || 'straight') === divOpt.id;
-
-                      return (
-                        <button
-                          key={divOpt.id}
-                          onClick={() => onUpdateSlideDivider(activeSlide.id, divOpt.id)}
-                          className={`flex flex-col items-center gap-1.5 p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
-                            isSelected
-                              ? 'border-[#0071e3] bg-[#0071e3]/5 ring-2 ring-[#0071e3]/40 shadow-xs'
-                              : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
-                          }`}
-                          title={divOpt.name}
-                        >
-                          {/* Mini 2-tone Preview Box */}
-                          <div className="w-full h-11 border border-black/10 rounded-md overflow-hidden shadow-2xs">
-                            {divOpt.renderPreview(isSelected)}
-                          </div>
-
-                          <span className={`text-[9.5px] truncate w-full ${
-                            isSelected ? 'font-bold text-[#0071e3]' : 'text-neutral-600'
-                          }`}>
-                            {divOpt.name}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-              </div>
-            )}
-
-            {/* ============================================================== */}
-            {/* OTHER TOOL SECTIONS */}
-            {/* ============================================================== */}
-
-            {/* TOOL: Color (الألوان - لون صلب، وتدرج لوني يطبق على النص/العنصر نفسه) */}
-            {activeSection === 'color' && isNavbarSelected && navbar && <NavbarColorSection navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
-
-            {activeSection === 'color' && !isNavbarSelected && <ColorSection elementGradientCategory={elementGradientCategory} onUpdateElementStyles={onUpdateElementStyles} selectedElement={selectedElement} setElementGradientCategory={setElementGradientCategory} styles={styles} />}
-
-            {/* TOOL: Shadow (الظلال) */}
-            {activeSection === 'shadow' && isNavbarSelected && navbar && <NavbarShadowSection customColors={customColors} navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
-
-            {activeSection === 'shadow' && !isNavbarSelected && <ShadowSection activeSlide={activeSlide} customColors={customColors} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideGlow={onUpdateSlideGlow} selectedElement={selectedElement} setShadowTarget={setShadowTarget} shadowTarget={shadowTarget} styles={styles} />}
-
-            {/* TOOL: Background (تعديل الخلفية - لون، الصورة، المعرض كالمخطط اليدوي) */}
-            {activeSection === 'background' && isNavbarSelected && navbar && (
-              <BackgroundDrawerSection
-                targetType="navbar"
-                targetName="النافبار"
-                currentBgColor={navbar.bgColor}
-                currentBgImage={navbar.backgroundImage}
-                currentBgSize={navbar.backgroundSize}
-                currentBgAttachment="scroll"
-                onApplyColor={(color) => onUpdateNavbar({ bgColor: color, backgroundImage: undefined })}
-                onApplyGradient={(gradientCss) => onUpdateNavbar({ bgColor: gradientCss, backgroundImage: undefined })}
-                onApplyImage={(imageUrl, size = 'cover') => onUpdateNavbar({ backgroundImage: imageUrl, backgroundSize: size })}
-                onRemoveImage={() => onUpdateNavbar({ backgroundImage: undefined })}
-              />
-            )}
-
-            {activeSection === 'background' && !isNavbarSelected && (
-              <BackgroundDrawerSection
-                targetType={selectedElement ? 'element' : 'slide'}
-                targetName={selectedElement ? selectedElement.name : (activeSlide ? activeSlide.name : 'شريحة')}
-                currentBgColor={selectedElement ? styles.backgroundColor : (activeSlide?.backgroundColor || '#ffffff')}
-                currentBgImage={selectedElement ? styles.backgroundImage : activeSlide?.backgroundImage}
-                currentBgSize={selectedElement ? (styles.backgroundSize as any) : activeSlide?.backgroundSize}
-                currentBgAttachment={selectedElement ? (styles.backgroundAttachment as any) : activeSlide?.backgroundAttachment}
-                onApplyColor={(color) => {
-                  if (selectedElement) {
-                    onUpdateElementStyles({ backgroundColor: color, backgroundImage: undefined });
-                  } else if (activeSlide) {
-                    onUpdateSlideBackground(activeSlide.id, { backgroundColor: color, backgroundImage: undefined });
-                  }
-                }}
-                onApplyGradient={(gradientCss) => {
-                  if (selectedElement) {
-                    onUpdateElementStyles({ backgroundColor: gradientCss, backgroundImage: undefined });
-                  } else if (activeSlide) {
-                    onUpdateSlideBackground(activeSlide.id, { backgroundColor: gradientCss, backgroundImage: undefined });
-                  }
-                }}
-                onApplyImage={(imageUrl, size = 'cover') => {
-                  if (selectedElement) {
-                    onUpdateElementStyles({ backgroundImage: imageUrl, backgroundSize: size });
-                  } else if (activeSlide) {
-                    onUpdateSlideBackground(activeSlide.id, { backgroundImage: imageUrl, backgroundSize: size });
-                  }
-                }}
-                onRemoveImage={() => {
-                  if (selectedElement) {
-                    onUpdateElementStyles({ backgroundImage: undefined });
-                  } else if (activeSlide) {
-                    onUpdateSlideBackground(activeSlide.id, { backgroundImage: undefined });
-                  }
-                }}
-                onApplyAttachment={(attachment) => {
-                  if (selectedElement) {
-                    onUpdateElementStyles({ backgroundAttachment: attachment });
-                  } else if (activeSlide) {
-                    onUpdateSlideBackground(activeSlide.id, { backgroundAttachment: attachment });
-                  }
-                }}
-              />
-            )}
-
-            {/* TOOL: Border (تعديل الإطار للعنصر أو الشريحة) */}
-            {activeSection === 'border' && isNavbarSelected && navbar && <NavbarBorderSection navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
-
-            {activeSection === 'border' && !isNavbarSelected && <BorderSection activeSlide={activeSlide} borderTarget={borderTarget} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideBorder={onUpdateSlideBorder} selectedElement={selectedElement} setBorderTarget={setBorderTarget} styles={styles} />}
-
-            {/* TOOL: Opacity (الشفافية: خيار العنصر وخيار الخلفية) */}
-            {activeSection === 'opacity' && isNavbarSelected && navbar && <NavbarOpacitySection navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
-
-            {activeSection === 'opacity' && !isNavbarSelected && <OpacitySection activeSlide={activeSlide} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideOpacity={onUpdateSlideOpacity} opacityPart={opacityPart} opacityTarget={opacityTarget} selectedElement={selectedElement} setOpacityPart={setOpacityPart} setOpacityTarget={setOpacityTarget} styles={styles} />}
-
-            {/* TOOL: Lighting (الإضاءة) */}
-            {activeSection === 'lighting' && isNavbarSelected && navbar && <NavbarLightingSection customColors={customColors} navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
-
-            {activeSection === 'lighting' && !isNavbarSelected && <LightingSection activeSlide={activeSlide} customColors={customColors} lightingTarget={lightingTarget} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideGlow={onUpdateSlideGlow} selectedElement={selectedElement} setLightingTarget={setLightingTarget} styles={styles} />}
-
-            {/* TOOL: Format (التنسيق) */}
-            {(activeSection === 'format' || activeSection === 'gallery') && (
-              <div className="space-y-4">
-                {selectedElement ? (
-                  <>
-                    {/* The shop cart / order card: accent colour and texts */}
-                    {(selectedElement.type === 'cart' || selectedElement.type === 'checkout') && (
-                      <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
-                    )}
-                    {/* The car showroom's live car list / search bar */}
-                    {(selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
-                      <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
-                    )}
-                    {/* The restaurant's live menu / order cart */}
-                    {(selectedElement.type === 'menuList' || selectedElement.type === 'menuCart') && (
-                      <RestaurantElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
-                    )}
-                    {/* إعدادات معرض الصور (Gallery Settings) */}
-                    {selectedElement.type === 'gallery' && (() => {
-                      const config = selectedElement.galleryConfig || {
-                        layout: 'top-main',
-                        activeImageIndex: 0,
-                        showThumbnails: true,
-                        gap: 8,
-                        borderRadius: 12,
-                        objectFit: 'cover',
-                        items: [
-                          { id: '1', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&auto=format&fit=crop&q=80', title: 'طبيعة بحيرة وجبال' },
-                          { id: '2', url: 'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?w=1200&auto=format&fit=crop&q=80', title: 'قمم الثلوج' },
-                          { id: '3', url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1200&auto=format&fit=crop&q=80', title: 'غابة الصنوبر' },
-                          { id: '4', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&auto=format&fit=crop&q=80', title: 'شروق الشمس' },
-                          { id: '5', url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1200&auto=format&fit=crop&q=80', title: 'تلال وسهول' }
-                        ]
-                      };
-
-                      const items = config.items || [];
-                      const layout = config.layout || 'top-main';
-
-                      const updateGalleryConfig = (partial: Partial<typeof config>) => {
-                        onUpdateElement({
-                          galleryConfig: {
-                            ...config,
-                            ...partial
-                          }
-                        });
-                      };
-
-                      const handleMoveUp = (idx: number) => {
-                        if (idx <= 0) return;
-                        const newItems = [...items];
-                        const temp = newItems[idx];
-                        newItems[idx] = newItems[idx - 1];
-                        newItems[idx - 1] = temp;
-                        updateGalleryConfig({ items: newItems });
-                      };
-
-                      const handleMoveDown = (idx: number) => {
-                        if (idx >= items.length - 1) return;
-                        const newItems = [...items];
-                        const temp = newItems[idx];
-                        newItems[idx] = newItems[idx + 1];
-                        newItems[idx + 1] = temp;
-                        updateGalleryConfig({ items: newItems });
-                      };
-
-                      const handleTriggerDeviceUpload = (idx: number) => {
-                        setGalleryTargetReplaceIndex(idx);
-                        galleryFileInputRef.current?.click();
-                      };
-
-                      const handleDeviceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-                        const file = e.target.files?.[0];
-                        if (!file || galleryTargetReplaceIndex === null) return;
-                        setGalleryUploadingIndex(galleryTargetReplaceIndex);
-                        try {
-                          const downloadUrl = await uploadGalleryImageToStorage(file);
-                          const newItems = [...items];
-                          if (galleryTargetReplaceIndex === -1) {
-                            newItems.push({
-                              id: `img-${Date.now()}`,
-                              url: downloadUrl,
-                              title: file.name.replace(/\.[^/.]+$/, '')
-                            });
-                          } else {
-                            newItems[galleryTargetReplaceIndex] = {
-                              ...newItems[galleryTargetReplaceIndex],
-                              url: downloadUrl,
-                              title: file.name.replace(/\.[^/.]+$/, '')
-                            };
-                          }
-                          updateGalleryConfig({ items: newItems });
-                        } catch (err) {
-                          console.error('Failed to upload image to Firebase Storage, using local data URL fallback', err);
-                          const reader = new FileReader();
-                          reader.onload = (readerEvent) => {
-                            const localUrl = readerEvent.target?.result as string;
-                            if (localUrl) {
-                              const newItems = [...items];
-                              if (galleryTargetReplaceIndex === -1) {
-                                newItems.push({
-                                  id: `img-${Date.now()}`,
-                                  url: localUrl,
-                                  title: file.name.replace(/\.[^/.]+$/, '')
-                                });
-                              } else {
-                                newItems[galleryTargetReplaceIndex] = {
-                                  ...newItems[galleryTargetReplaceIndex],
-                                  url: localUrl,
-                                  title: file.name.replace(/\.[^/.]+$/, '')
-                                };
-                              }
-                              updateGalleryConfig({ items: newItems });
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        } finally {
-                          setGalleryUploadingIndex(null);
-                          setGalleryTargetReplaceIndex(null);
-                          if (e.target) e.target.value = '';
-                        }
-                      };
-
-                      const handleOpenUnsplashPicker = (idx: number) => {
-                        setUnsplashPickerIndex(idx);
-                        handleLoadUnsplashForGallery(unsplashSearchQuery);
-                      };
-
-                      const handleSelectUnsplashPhoto = (photoUrl: string, title?: string) => {
-                        if (unsplashPickerIndex === null) return;
-                        const newItems = [...items];
-                        if (unsplashPickerIndex === -1) {
-                          newItems.push({
-                            id: `img-${Date.now()}`,
-                            url: photoUrl,
-                            title: title || 'صورة من Unsplash'
-                          });
-                        } else {
-                          newItems[unsplashPickerIndex] = {
-                            ...newItems[unsplashPickerIndex],
-                            url: photoUrl,
-                            title: title || newItems[unsplashPickerIndex].title
-                          };
-                        }
-                        updateGalleryConfig({ items: newItems });
-                        setUnsplashPickerIndex(null);
-                      };
-
-                      const handleDownloadImage = async (url: string, name?: string) => {
-                        try {
-                          const res = await fetch(url);
-                          const blob = await res.blob();
-                          const blobUrl = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = blobUrl;
-                          a.download = `${name || 'gallery-photo'}.jpg`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          URL.revokeObjectURL(blobUrl);
-                        } catch {
-                          window.open(url, '_blank');
-                        }
-                      };
-
-                      const handleDeleteImage = (idx: number) => {
-                        if (items.length <= 2) {
-                          alert('يجب أن يحتوي المعرض على صورتين على الأقل');
-                          return;
-                        }
-                        const newItems = items.filter((_, i) => i !== idx);
-                        const newActive = config.activeImageIndex && config.activeImageIndex >= newItems.length ? 0 : config.activeImageIndex;
-                        updateGalleryConfig({ items: newItems, activeImageIndex: newActive });
-                      };
-
-                      return (
-                        <div className="space-y-4 p-3 bg-white rounded-2xl border border-neutral-200 text-right select-none shadow-2xs" dir="rtl">
-                          <input
-                            type="file"
-                            ref={galleryFileInputRef}
-                            onChange={handleDeviceFileChange}
-                            accept="image/*"
-                            className="hidden"
-                          />
-
-                          <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center font-bold">
-                                <Images size={16} />
-                              </div>
-                              <div>
-                                <h3 className="text-xs font-bold text-neutral-900">إعدادات معرض الصور (٥ صور)</h3>
-                                <p className="text-[10px] text-neutral-500">تحكم بالصور، الترتيب، والتنسيقات الأربعة</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 1. SECTION: Gallery Layouts */}
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold text-neutral-800 flex items-center justify-between">
-                              <span>تنسيق المعرض (الرسم التخطيطي 1 - 4):</span>
-                              <span className="text-[10px] text-[#0071e3] font-medium">٤ تنسيقات</span>
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {/* Layout 1 */}
-                              <button
-                                type="button"
-                                onClick={() => updateGalleryConfig({ layout: 'top-main' })}
-                                className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
-                                  layout === 'top-main'
-                                    ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
-                                    : 'border-neutral-200 bg-white hover:bg-neutral-50'
-                                }`}
-                              >
-                                <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-col justify-between">
-                                  <div className="h-6 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
-                                  <div className="h-2.5 grid grid-cols-4 gap-0.5">
-                                    <div className="bg-[#0071e3] rounded-2xs" />
-                                    <div className="bg-neutral-400 rounded-2xs" />
-                                    <div className="bg-neutral-400 rounded-2xs" />
-                                    <div className="bg-neutral-400 rounded-2xs" />
-                                  </div>
-                                </div>
-                                <span className="text-[11px] font-bold text-neutral-800">١. شاشة أعلى ومصغرات أسفل</span>
-                              </button>
-
-                              {/* Layout 2 */}
-                              <button
-                                type="button"
-                                onClick={() => updateGalleryConfig({ layout: 'left-thumbnails' })}
-                                className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
-                                  layout === 'left-thumbnails'
-                                    ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
-                                    : 'border-neutral-200 bg-white hover:bg-neutral-50'
-                                }`}
-                              >
-                                <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-row gap-1">
-                                  <div className="w-4.5 h-full grid grid-cols-2 grid-rows-2 gap-0.5">
-                                    <div className="bg-[#0071e3] rounded-2xs" />
-                                    <div className="bg-neutral-400 rounded-2xs" />
-                                    <div className="bg-neutral-400 rounded-2xs" />
-                                    <div className="bg-neutral-400 rounded-2xs" />
-                                  </div>
-                                  <div className="flex-1 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
-                                </div>
-                                <span className="text-[11px] font-bold text-neutral-800">٢. شبكة مصغرات يسار</span>
-                              </button>
-
-                              {/* Layout 3 */}
-                              <button
-                                type="button"
-                                onClick={() => updateGalleryConfig({ layout: 'right-thumbnails' })}
-                                className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
-                                  layout === 'right-thumbnails'
-                                    ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
-                                    : 'border-neutral-200 bg-white hover:bg-neutral-50'
-                                }`}
-                              >
-                                <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-row gap-1">
-                                  <div className="flex-1 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
-                                  <div className="w-4.5 h-full grid grid-cols-2 grid-rows-2 gap-0.5">
-                                    <div className="bg-[#0071e3] rounded-2xs" />
-                                    <div className="bg-neutral-400 rounded-2xs" />
-                                    <div className="bg-neutral-400 rounded-2xs" />
-                                    <div className="bg-neutral-400 rounded-2xs" />
-                                  </div>
-                                </div>
-                                <span className="text-[11px] font-bold text-neutral-800">٣. شبكة مصغرات يمين</span>
-                              </button>
-
-                              {/* Layout 4 */}
-                              <button
-                                type="button"
-                                onClick={() => updateGalleryConfig({ layout: 'left-main-row' })}
-                                className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
-                                  layout === 'left-main-row'
-                                    ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
-                                    : 'border-neutral-200 bg-white hover:bg-neutral-50'
-                                }`}
-                              >
-                                <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-row gap-1">
-                                  <div className="w-8 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
-                                  <div className="flex-1 flex flex-col justify-between gap-0.5">
-                                    <div className="h-1.5 bg-[#0071e3] rounded-2xs" />
-                                    <div className="h-1.5 bg-neutral-400 rounded-2xs" />
-                                    <div className="h-1.5 bg-neutral-400 rounded-2xs" />
-                                    <div className="h-1.5 bg-neutral-400 rounded-2xs" />
-                                  </div>
-                                </div>
-                                <span className="text-[11px] font-bold text-neutral-800">٤. شاشة يسار ومصغرات صف</span>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* 2. SECTION: Photos List */}
-                          <div className="space-y-2 pt-2 border-t border-neutral-100">
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs font-bold text-neutral-800">
-                                صور المعرض ({items.length} صور):
-                              </label>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleTriggerDeviceUpload(-1)}
-                                  className="text-[10px] text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg font-bold flex items-center gap-1 border border-emerald-200/60 cursor-pointer"
-                                >
-                                  <Upload size={10} />
-                                  <span>رفع صورة (+)</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenUnsplashPicker(-1)}
-                                  className="text-[10px] text-purple-600 hover:text-purple-700 bg-purple-50 px-2 py-1 rounded-lg font-bold flex items-center gap-1 border border-purple-200/60 cursor-pointer"
-                                >
-                                  <Sparkles size={10} />
-                                  <span>Unsplash (+)</span>
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              {items.map((item, idx) => {
-                                const isUploadingThis = galleryUploadingIndex === idx;
-                                return (
-                                  <div
-                                    key={item.id || idx}
-                                    className="p-2 bg-neutral-50 rounded-xl border border-neutral-200/80 flex items-center gap-2 transition-all hover:border-neutral-300"
-                                  >
-                                    <div className="w-12 h-10 rounded-lg overflow-hidden bg-neutral-200 shrink-0 border border-neutral-300 relative">
-                                      {isUploadingThis ? (
-                                        <div className="w-full h-full flex items-center justify-center bg-black/40">
-                                          <Loader2 size={14} className="text-white animate-spin" />
-                                        </div>
-                                      ) : (
-                                        <img
-                                          src={item.url}
-                                          alt={item.title || `صورة ${idx + 1}`}
-                                          className="w-full h-full object-cover"
-                                        />
-                                      )}
-                                      <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[8px] font-bold px-1 rounded-xs">
-                                        {idx + 1}
-                                      </span>
-                                    </div>
-
-                                    <div className="flex-1 min-w-0">
-                                      <input
-                                        type="text"
-                                        value={item.title || ''}
-                                        onChange={(e) => {
-                                          const newItems = [...items];
-                                          newItems[idx] = { ...newItems[idx], title: e.target.value };
-                                          updateGalleryConfig({ items: newItems });
-                                        }}
-                                        placeholder={`صورة رقم ${idx + 1}`}
-                                        className="w-full text-xs font-semibold text-neutral-800 bg-transparent outline-none truncate border-b border-transparent hover:border-neutral-200 focus:border-[#0071e3]"
-                                      />
-                                      <div className="flex items-center gap-1 mt-1">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleTriggerDeviceUpload(idx)}
-                                          disabled={isUploadingThis}
-                                          className="text-[9.5px] text-neutral-600 hover:text-emerald-700 hover:bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
-                                          title="استبدال برفع صورة من جهازك إلى Firebase Storage"
-                                        >
-                                          <Upload size={9} />
-                                          <span>من الجهاز</span>
-                                        </button>
-                                        <span className="text-neutral-300 text-[9px]">|</span>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleOpenUnsplashPicker(idx)}
-                                          className="text-[9.5px] text-neutral-600 hover:text-purple-700 hover:bg-purple-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
-                                          title="استبدال بصورة من Unsplash"
-                                        >
-                                          <Sparkles size={9} />
-                                          <span>Unsplash</span>
-                                        </button>
-                                        <span className="text-neutral-300 text-[9px]">|</span>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleDownloadImage(item.url, item.title)}
-                                          className="text-[9.5px] text-neutral-600 hover:text-[#0071e3] hover:bg-blue-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
-                                          title="تنزيل الصورة الحالية لجهازك"
-                                        >
-                                          <Download size={9} />
-                                          <span>تنزيل</span>
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex flex-col gap-1 shrink-0">
-                                      <div className="flex items-center gap-0.5">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleMoveUp(idx)}
-                                          disabled={idx === 0}
-                                          className="w-5 h-5 rounded flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-200/80 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                                          title="تقديم لأعلى"
-                                        >
-                                          <ArrowUp size={11} strokeWidth={2.2} />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleMoveDown(idx)}
-                                          disabled={idx === items.length - 1}
-                                          className="w-5 h-5 rounded flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-200/80 disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
-                                          title="تأخير لأسفل"
-                                        >
-                                          <ArrowDown size={11} strokeWidth={2.2} />
-                                        </button>
-                                      </div>
-                                      {items.length > 2 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleDeleteImage(idx)}
-                                          className="w-full text-center text-[9px] text-red-500 hover:text-red-700 py-0.5 rounded hover:bg-red-50 cursor-pointer"
-                                          title="حذف هذه الصورة"
-                                        >
-                                          حذف
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* 3. SECTION: Visual Settings */}
-                          <div className="space-y-2 pt-2 border-t border-neutral-100">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] text-neutral-600">نمط ملء شاشة العرض:</span>
-                              <div className="flex gap-1 bg-neutral-100 p-0.5 rounded-lg border border-neutral-200">
-                                <button
-                                  type="button"
-                                  onClick={() => updateGalleryConfig({ objectFit: 'cover' })}
-                                  className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
-                                    config.objectFit !== 'contain'
-                                      ? 'bg-white text-[#0071e3] shadow-xs'
-                                      : 'text-neutral-600 hover:text-black'
-                                  }`}
-                                >
-                                  ملء وتناسق (Cover)
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => updateGalleryConfig({ objectFit: 'contain' })}
-                                  className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
-                                    config.objectFit === 'contain'
-                                      ? 'bg-white text-[#0071e3] shadow-xs'
-                                      : 'text-neutral-600 hover:text-black'
-                                  }`}
-                                >
-                                  احتواء (Contain)
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[11px] text-neutral-600">
-                                <span>انحناء زوايا الصور:</span>
-                                <span className="font-mono font-bold text-[#0071e3]">{config.borderRadius ?? 12}px</span>
-                              </div>
-                              <input
-                                type="range"
-                                min="0"
-                                max="32"
-                                value={config.borderRadius ?? 12}
-                                onChange={(e) => updateGalleryConfig({ borderRadius: Number(e.target.value) })}
-                                className="w-full accent-[#0071e3] cursor-pointer"
-                              />
-                            </div>
-
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[11px] text-neutral-600">
-                                <span>المسافة بين المصغرات:</span>
-                                <span className="font-mono font-bold text-[#0071e3]">{config.gap ?? 8}px</span>
-                              </div>
-                              <input
-                                type="range"
-                                min="2"
-                                max="20"
-                                value={config.gap ?? 8}
-                                onChange={(e) => updateGalleryConfig({ gap: Number(e.target.value) })}
-                                className="w-full accent-[#0071e3] cursor-pointer"
-                              />
-                            </div>
-                          </div>
-
-                          {/* 4. SECTION: Image Filters (تعديل صور المعرض كالصور العادية) */}
-                          <div className="space-y-2 pt-2 border-t border-neutral-100">
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs font-bold text-neutral-800">
-                                تأثيرات وفلاتر صور المعرض:
-                              </label>
-                              <span className="text-[10px] text-neutral-400">
-                                (فلاتر بصرية جاهزة)
-                              </span>
-                            </div>
-
-                            <div className="grid grid-cols-4 gap-1.5">
-                              {[
-                                { id: 'none', name: 'أصلي', icon: '🖼️' },
-                                { id: 'grayscale', name: 'أبيض وأسود', icon: '🌗' },
-                                { id: 'warm', name: 'دافئ', icon: '🌅' },
-                                { id: 'cool', name: 'بارد', icon: '❄️' },
-                                { id: 'vintage', name: 'كلاسيكي', icon: '🕰️' },
-                                { id: 'technicolor', name: 'سينمائي', icon: '🎬' },
-                                { id: 'invert', name: 'معكوس', icon: '🧩' },
-                                { id: 'blur', name: 'ضبابي', icon: '🌫️' }
-                              ].map((f) => {
-                                const isCurrent = (styles.imageFilter || 'none') === f.id;
-                                return (
-                                  <button
-                                    key={f.id}
-                                    type="button"
-                                    onClick={() => onUpdateElementStyles({ imageFilter: f.id === 'none' ? undefined : f.id })}
-                                    className={`py-1.5 px-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
-                                      isCurrent
-                                        ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] ring-1 ring-[#0071e3]'
-                                        : 'border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700'
-                                    }`}
-                                  >
-                                    <span className="text-xs">{f.icon}</span>
-                                    <span className="text-[9px] font-bold truncate max-w-full">{f.name}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* 5. Quick Actions */}
-                          <div className="flex gap-2 pt-2 border-t border-neutral-100">
-                            <button
-                              type="button"
-                              onClick={() => onDuplicateElement(selectedElement.id)}
-                              className="flex-1 py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-xl text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                            >
-                              <Copy size={13} />
-                              <span>مضاعفة (Copy)</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={onToggleLock}
-                              className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
-                                selectedElement.isLocked
-                                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-700'
-                                  : 'bg-neutral-100 hover:bg-neutral-200 border-neutral-200 text-neutral-700'
-                              }`}
-                            >
-                              {selectedElement.isLocked ? <Lock size={13} /> : <Unlock size={13} />}
-                              <span>{selectedElement.isLocked ? 'إلغاء القفل' : 'قفل المعرض'}</span>
-                            </button>
-                          </div>
-
-                          {/* Unsplash Picker Modal Dialog */}
-                          {unsplashPickerIndex !== null && (
-                            <div 
-                              className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
-                              onClick={() => setUnsplashPickerIndex(null)}
-                            >
-                              <div 
-                                className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden text-right"
-                                onClick={(e) => e.stopPropagation()}
-                                dir="rtl"
-                              >
-                                <div className="p-3.5 border-b border-neutral-200 flex items-center justify-between">
-                                  <div>
-                                    <h4 className="text-xs font-bold text-neutral-900">اختر صورة من مكتبة Unsplash</h4>
-                                    <p className="text-[10px] text-neutral-500">
-                                      {unsplashPickerIndex === -1 ? 'إضافة صورة جديدة للمعرض' : `استبدال الصورة رقم ${unsplashPickerIndex + 1}`}
-                                    </p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => setUnsplashPickerIndex(null)}
-                                    className="w-7 h-7 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center cursor-pointer"
-                                  >
-                                    <X size={15} />
-                                  </button>
-                                </div>
-
-                                <div className="p-2.5 border-b border-neutral-100 bg-neutral-50 flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={unsplashSearchQuery}
-                                    onChange={(e) => setUnsplashSearchQuery(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') handleLoadUnsplashForGallery(unsplashSearchQuery);
-                                    }}
-                                    placeholder="ابحث: طبيعة، فنادق، سيارات، أطعمة..."
-                                    className="flex-1 px-3 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-[#0071e3]"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleLoadUnsplashForGallery(unsplashSearchQuery)}
-                                    className="px-3 py-1.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
-                                  >
-                                    بحث
-                                  </button>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto p-2.5 min-h-[220px]">
-                                  {isUnsplashLoading ? (
-                                    <div className="w-full h-36 flex flex-col items-center justify-center gap-2 text-neutral-500">
-                                      <Loader2 size={22} className="animate-spin text-[#0071e3]" />
-                                      <span className="text-[11px]">جاري جلب الصور...</span>
-                                    </div>
-                                  ) : unsplashPhotos.length > 0 ? (
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                                      {unsplashPhotos.map((photo: any, pIdx: number) => (
-                                        <div
-                                          key={photo.id || pIdx}
-                                          onClick={() => handleSelectUnsplashPhoto(photo.url, photo.title)}
-                                          className="group/photo relative aspect-4/3 rounded-lg overflow-hidden cursor-pointer border border-neutral-200 hover:border-[#0071e3] transition-all"
-                                        >
-                                          <img
-                                            src={photo.url}
-                                            alt={photo.title || 'صورة'}
-                                            className="w-full h-full object-cover group-hover/photo:scale-105 transition-transform duration-200"
-                                            loading="lazy"
-                                          />
-                                          <div className="absolute inset-0 bg-black/0 group-hover/photo:bg-black/30 flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity">
-                                            <span className="bg-[#0071e3] text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs">
-                                              اختيار
-                                            </span>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="w-full h-36 flex items-center justify-center text-xs text-neutral-400">
-                                      لم يتم العثور على صور، جرب كلمة بحث أخرى.
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-
-                      {/* إعدادات وتخصيص التقويم المتقدمة (حجز مواعيد متقدم) */}
-                    {selectedElement.type === 'calendar' && (() => {
-                      const title = selectedElement.calendarTitle || '';
-                      const nameLabel = selectedElement.calendarNameLabel || 'الاسم الكامل';
-                      const addressLabel = selectedElement.calendarAddressLabel || 'العنوان / مكان الإقامة';
-                      const phoneLabel = selectedElement.calendarPhoneLabel || 'رقم الهاتف المتنقل';
-                      const emailLabel = selectedElement.calendarEmailLabel || 'البريد الإلكتروني للعميل';
-                      const descLabel = selectedElement.calendarDescLabel || 'تفاصيل ووصف الطلب';
-
-                      const workingDays = selectedElement.calendarWorkingDays || ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
-                      const holidays = selectedElement.calendarHolidays || ['friday', 'saturday'];
-                      const workStart = selectedElement.calendarWorkStart || '09:00';
-                      const workEnd = selectedElement.calendarWorkEnd || '17:00';
-                      const breakStart = selectedElement.calendarBreakStart || '12:00';
-                      const breakEnd = selectedElement.calendarBreakEnd || '13:00';
-                      const interval = selectedElement.calendarInterval || '30';
-                      const intervalMins = selectedElement.calendarIntervalMinutes || 30;
-                      const needsConfirmation = selectedElement.calendarNeedsConfirmation ?? true;
-                      const accentColor = selectedElement.calendarAccentColor || '#0071e3';
-                      const slots = selectedElement.calendarSlots || ['09:00 ص', '11:30 ص', '02:00 م', '04:30 م'];
-
-                      // Supported meeting types as list (can select multiple!)
-                      const meetingTypes = selectedElement.calendarMeetingTypes || [selectedElement.calendarMeetingType || 'phone'];
-
-                      const daysList = [
-                        { id: 'sunday', name: 'الأحد' },
-                        { id: 'monday', name: 'الإثنين' },
-                        { id: 'tuesday', name: 'الثلاثاء' },
-                        { id: 'wednesday', name: 'الأربعاء' },
-                        { id: 'thursday', name: 'الخميس' },
-                        { id: 'friday', name: 'الجمعة' },
-                        { id: 'saturday', name: 'السبت' },
-                      ];
-
-                      const handleToggleDay = (dayId: string) => {
-                        let newWorking = [...workingDays];
-                        let newHolidays = [...holidays];
-
-                        if (workingDays.includes(dayId)) {
-                          // Change to holiday
-                          newWorking = newWorking.filter(d => d !== dayId);
-                          if (!newHolidays.includes(dayId)) {
-                            newHolidays.push(dayId);
-                          }
-                        } else {
-                          // Change to working day
-                          newHolidays = newHolidays.filter(d => d !== dayId);
-                          if (!newWorking.includes(dayId)) {
-                            newWorking.push(dayId);
-                          }
-                        }
-
-                        onUpdateElement({
-                          calendarWorkingDays: newWorking,
-                          calendarHolidays: newHolidays,
-                        });
-                      };
-
-                      const handleToggleMeetingType = (typeId: string) => {
-                        let newTypes = [...meetingTypes];
-                        if (newTypes.includes(typeId)) {
-                          // Don't allow empty list
-                          if (newTypes.length > 1) {
-                            newTypes = newTypes.filter(t => t !== typeId);
-                          }
-                        } else {
-                          newTypes.push(typeId);
-                        }
-                        
-                        onUpdateElement({
-                          calendarMeetingTypes: newTypes,
-                          calendarMeetingType: newTypes[0] as any // maintain single value fallback
-                        });
-                      };
-
-                      const presetColors = [
-                        { hex: '#0071e3', name: 'أزرق آبل' },
-                        { hex: '#10b981', name: 'زمردي' },
-                        { hex: '#ec4899', name: 'وردي' },
-                        { hex: '#8b5cf6', name: 'بنفسجي' },
-                        { hex: '#f97316', name: 'برتقالي' },
-                        { hex: '#ef4444', name: 'أحمر قاني' },
-                        { hex: '#111827', name: 'فحمي' }
-                      ];
-
-                      return (
-                        <div className="space-y-4 p-3.5 bg-blue-50/40 rounded-2xl border border-blue-200/50 text-right select-none shadow-2xs" dir="rtl">
-                          {/* Section Header */}
-                          <div className="flex items-center gap-2 pb-2 border-b border-blue-100">
-                            <div 
-                              className="w-8 h-8 rounded-xl text-white flex items-center justify-center font-bold shadow-xs transition-colors"
-                              style={{ backgroundColor: accentColor }}
-                            >
-                              📅
-                            </div>
-                            <div>
-                              <h3 className="text-xs font-bold text-neutral-900">ضبط إعدادات حجز المواعيد</h3>
-                              <p className="text-[10px] text-neutral-500">قم بضبط أوقات العمل واللون والتحقق والمدد</p>
-                            </div>
-                          </div>
-
-                          {/* 1. عنوان التقويم الرئيسي */}
-                          <div className="space-y-1">
-                            <label className="text-[10.5px] font-bold text-neutral-800 block">عنوان التقويم ورأس النموذج:</label>
-                            <input
-                              type="text"
-                              value={title}
-                              onChange={(e) => onUpdateElement({ calendarTitle: e.target.value, content: e.target.value })}
-                              placeholder="مثال: حجز موعد استشارة جديدة"
-                              className="w-full text-xs font-semibold px-3 py-2 bg-white rounded-xl border border-neutral-300 focus:outline-none transition-all"
-                            />
-                          </div>
-
-                          {/* 2. اللون الرئيسي / ألوان البطاقة */}
-                          <div className="space-y-1.5 border-t border-blue-100/50 pt-2">
-                            <span className="text-[10.5px] font-bold text-neutral-800 block">لون البطاقة والتفاعل النشط (Accent Color):</span>
-                            <div className="flex flex-wrap gap-1.5 mb-2">
-                              {presetColors.map((color) => {
-                                const isSelected = accentColor.toLowerCase() === color.hex.toLowerCase();
-                                return (
-                                  <button
-                                    key={color.hex}
-                                    type="button"
-                                    onClick={() => onUpdateElement({ calendarAccentColor: color.hex })}
-                                    className={`w-6 h-6 rounded-full border transition-all relative flex items-center justify-center cursor-pointer ${
-                                      isSelected ? 'scale-110 ring-2 ring-offset-2 ring-blue-500 border-transparent' : 'border-neutral-200 hover:scale-105'
-                                    }`}
-                                    style={{ backgroundColor: color.hex }}
-                                    title={color.name}
-                                  >
-                                    {isSelected && <span className="text-[9px] text-white">✓</span>}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-neutral-500">رمز اللون المخصص (Hex):</span>
-                              <input
-                                type="text"
-                                value={accentColor}
-                                onChange={(e) => onUpdateElement({ calendarAccentColor: e.target.value })}
-                                placeholder="#0071e3"
-                                className="w-24 p-1 bg-white rounded-lg border border-neutral-300 font-mono text-center text-xs focus:outline-none uppercase"
-                              />
-                            </div>
-                          </div>
-
-                          {/* 3. أيام العمل والعطل الأسبوعية */}
-                          <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                            <span className="text-[10.5px] font-bold text-neutral-800 block">أيام العمل والعطل الأسبوعية:</span>
-                            <p className="text-[9.5px] text-neutral-400">اضغط على اليوم للتبديل بين يوم عمل (لون ملون) أو عطلة (رمادي):</p>
-                            <div className="grid grid-cols-4 gap-1.5">
-                              {daysList.map((day) => {
-                                const isWork = workingDays.includes(day.id);
-                                return (
-                                  <button
-                                    key={day.id}
-                                    type="button"
-                                    onClick={() => handleToggleDay(day.id)}
-                                    className={`py-1 px-1 rounded-lg text-[10px] font-bold border transition-all text-center cursor-pointer ${
-                                      isWork
-                                        ? 'text-white border-transparent'
-                                        : 'bg-neutral-100 text-neutral-400 border-neutral-200 hover:bg-neutral-200'
-                                    }`}
-                                    style={{ backgroundColor: isWork ? accentColor : undefined }}
-                                  >
-                                    {day.name}
-                                    <div className="text-[7.5px] font-normal opacity-85 mt-0.5">
-                                      {isWork ? 'عمل' : 'عطلة'}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* 4. أوقات الدوام الرسمي اليومي */}
-                          <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                            <span className="text-[10.5px] font-bold text-neutral-800 block">ساعات الدوام اليومي الرسمي:</span>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <span className="text-[10px] text-neutral-500 block mb-0.5">بداية العمل:</span>
-                                <input
-                                  type="time"
-                                  value={workStart}
-                                  onChange={(e) => onUpdateElement({ calendarWorkStart: e.target.value })}
-                                  className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية العمل:</span>
-                                <input
-                                  type="time"
-                                  value={workEnd}
-                                  onChange={(e) => onUpdateElement({ calendarWorkEnd: e.target.value })}
-                                  className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 5. أوقات الاستراحة اليومية */}
-                          <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                            <span className="text-[10.5px] font-bold text-neutral-800 block">أوقات الاستراحة (تُستثنى من الحجوزات):</span>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <span className="text-[10px] text-neutral-500 block mb-0.5">بداية الاستراحة:</span>
-                                <input
-                                  type="time"
-                                  value={breakStart}
-                                  onChange={(e) => onUpdateElement({ calendarBreakStart: e.target.value })}
-                                  className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية الاستراحة:</span>
-                                <input
-                                  type="time"
-                                  value={breakEnd}
-                                  onChange={(e) => onUpdateElement({ calendarBreakEnd: e.target.value })}
-                                  className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 6. وتيرة تكرار المواعيد (Interval) */}
-                          <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                            <span className="text-[10.5px] font-bold text-neutral-800 block">مدة الفترة المتاحة لكل موعد:</span>
-                            <select
-                              value={interval}
-                              onChange={(e) => onUpdateElement({ calendarInterval: e.target.value as any })}
-                              className="w-full text-xs font-semibold p-2 bg-white rounded-xl border border-neutral-300 focus:outline-none cursor-pointer"
-                            >
-                              <option value="10">موعد كل ١٠ دقائق</option>
-                              <option value="15">موعد كل ١٥ دقيقة</option>
-                              <option value="30">موعد كل ٣٠ دقيقة (نصف ساعة)</option>
-                              <option value="60">موعد كل ساعة كاملة</option>
-                              <option value="day">موعد واحد فقط طوال اليوم</option>
-                              <option value="manual">تخصيص يدوي بالدقائق...</option>
-                            </select>
-
-                            {interval === 'manual' && (
-                              <div className="space-y-1 mt-1.5 animate-fadeIn">
-                                <label className="text-[10px] text-neutral-500 block">أدخل الوقت بالدقائق يدوياً:</label>
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    max={480}
-                                    value={intervalMins}
-                                    onChange={(e) => onUpdateElement({ calendarIntervalMinutes: Math.max(1, Number(e.target.value)) })}
-                                    className="w-24 p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                  />
-                                  <span className="text-xs text-neutral-500 font-semibold">دقيقة</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* 7. هل يتطلب تأكيد مسبق */}
-                          <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                            <span className="text-[10.5px] font-bold text-neutral-800 block">آلية الموافقة وتأكيد الموعد:</span>
-                            <label className="flex items-center gap-2 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={needsConfirmation}
-                                onChange={(e) => onUpdateElement({ calendarNeedsConfirmation: e.target.checked })}
-                                className="w-4 h-4 cursor-pointer"
-                                style={{ accentColor: accentColor }}
-                              />
-                              <span className="text-xs font-medium text-neutral-700">يتطلب موافقة وتأكيد الإدارة أولاً (⏳ معلّق)</span>
-                            </label>
-                            <p className="text-[9px] text-neutral-400 mr-6">
-                              في حال عدم التفعيل، سيتم تأكيد الموعد للمستخدم مباشرة (✅ فوري).
-                            </p>
-                          </div>
-
-                          {/* 8. نوع الموعد (حضور شخصي، هاتفي، اتصال فيديو واتساب) - متعدد الخيارات! */}
-                          <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                            <span className="text-[10.5px] font-bold text-neutral-800 block">طريقة ومكان إجراء المقابلة (اختر خياراً أو أكثر):</span>
-                            <p className="text-[9.5px] text-neutral-400">ستتاح للمتصفح إمكانية الاختيار بين الخيارات المحددة فقط:</p>
-                            <div className="grid grid-cols-3 gap-1">
-                              {[
-                                { id: 'personal', name: '👤 شخصي', title: 'حضور شخصي بالمقر' },
-                                { id: 'phone', name: '📞 هاتفي', title: 'مكالمة هاتفية صوتية' },
-                                { id: 'whatsapp', name: '📹 فيديو', title: 'اتصال فيديو واتساب' },
-                              ].map((type) => {
-                                const isSel = meetingTypes.includes(type.id);
-                                return (
-                                  <button
-                                    key={type.id}
-                                    type="button"
-                                    onClick={() => handleToggleMeetingType(type.id)}
-                                    className={`py-1.5 rounded-lg text-[9.5px] font-bold border transition-all text-center cursor-pointer ${
-                                      isSel
-                                        ? 'text-white border-transparent font-black'
-                                        : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
-                                    }`}
-                                    style={{ backgroundColor: isSel ? accentColor : undefined }}
-                                    title={type.title}
-                                  >
-                                    {type.name}
-                                    {isSel && <span className="mr-0.5 text-[8px]">✓</span>}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* 9. تخصيص عناوين حقول الإدخال */}
-                          <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                            <span className="text-[10.5px] font-bold text-neutral-800 block">تخصيص عناوين حقول النموذج:</span>
-                            <p className="text-[9.5px] text-neutral-400">تحكم بأسماء الحقول الظاهرة للزوار للتوافق مع نشاطك:</p>
-                            
-                            <div className="space-y-2 text-xs">
-                              <div>
-                                <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل الاسم:</span>
-                                <input
-                                  type="text"
-                                  value={nameLabel}
-                                  onChange={(e) => onUpdateElement({ calendarNameLabel: e.target.value })}
-                                  className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
-                                />
-                              </div>
-
-                              <div>
-                                <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل العنوان/المقر:</span>
-                                <input
-                                  type="text"
-                                  value={addressLabel}
-                                  onChange={(e) => onUpdateElement({ calendarAddressLabel: e.target.value })}
-                                  className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
-                                />
-                              </div>
-
-                              <div>
-                                <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل الهاتف:</span>
-                                <input
-                                  type="text"
-                                  value={phoneLabel}
-                                  onChange={(e) => onUpdateElement({ calendarPhoneLabel: e.target.value })}
-                                  className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
-                                />
-                              </div>
-
-                              <div>
-                                <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل البريد الإلكتروني:</span>
-                                <input
-                                  type="text"
-                                  value={emailLabel}
-                                  onChange={(e) => onUpdateElement({ calendarEmailLabel: e.target.value })}
-                                  className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
-                                />
-                              </div>
-
-                              <div>
-                                <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل وصف الطلب:</span>
-                                <input
-                                  type="text"
-                                  value={descLabel}
-                                  onChange={(e) => onUpdateElement({ calendarDescLabel: e.target.value })}
-                                  className="w-full px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none font-semibold"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 10. قائمة فترات الموعد المتاحة (كخيار احتياطي يدوي) */}
-                          <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                            <span className="text-[10.5px] font-bold text-neutral-800 block">الفترات الزمنية الاحتياطية (في حال عدم جيلها تلقائياً):</span>
-                            <textarea
-                              value={slots.join(', ')}
-                              onChange={(e) => {
-                                const newSlots = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                                onUpdateElement({ calendarSlots: newSlots });
-                              }}
-                              rows={2}
-                              placeholder="مثال: 09:00 ص, 11:30 ص, 02:00 م, 04:30 م"
-                              className="w-full px-2.5 py-1.5 bg-white rounded-xl border border-neutral-300 text-xs focus:outline-none font-mono text-left font-semibold"
-                              dir="ltr"
-                            />
-                            <p className="text-[9px] text-neutral-400 leading-relaxed text-right" dir="rtl">
-                              تُستخدم هذه الفترات في حال رغبت بتجاوز الحساب التلقائي، اكتب الساعات مفصولة بفواصل.
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* إعدادات مشغل الفيديو مخصصة */}
-                    {selectedElement.type === 'video' && (
-                      <div className="space-y-2.5 p-3.5 bg-red-50/50 rounded-2xl border border-red-200/60 text-right" dir="rtl">
-                        <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
-                          <Play size={14} className="text-red-600 shrink-0" />
-                          <span>إعدادات مشغل الفيديو:</span>
-                        </span>
-                        
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-neutral-500 block">رابط الفيديو (YouTube أو TikTok):</label>
-                          <input
-                            type="url"
-                            value={selectedElement.videoUrl || ''}
-                            onChange={(e) => onUpdateElement({ videoUrl: e.target.value })}
-                            placeholder="https://www.youtube.com/watch?v=..."
-                            dir="ltr"
-                            className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs font-mono focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-neutral-500 block">عنوان الفيديو أو وصفه:</label>
-                          <input
-                            type="text"
-                            value={selectedElement.content || ''}
-                            onChange={(e) => onUpdateElement({ content: e.target.value })}
-                            placeholder="مثال: فيديو تعريفي للشركة"
-                            className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                          />
-                        </div>
-
-                        <div className="flex gap-1.5 pt-1.5">
-                          <button
-                            type="button"
-                            onClick={() => onUpdateElement({ videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' })}
-                            className="text-[9px] bg-red-100/50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md border border-red-200 font-bold font-mono transition-colors cursor-pointer"
-                          >
-                            YouTube تجريبي
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onUpdateElement({ videoUrl: 'https://www.tiktok.com/@tiktok/video/7106362547144887554' })}
-                            className="text-[9px] bg-neutral-900 text-white px-2 py-1 rounded-md border border-neutral-800 font-bold font-mono hover:bg-neutral-800 transition-colors cursor-pointer"
-                          >
-                            TikTok تجريبي
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* إعدادات الخريطة مخصصة */}
-                    {selectedElement.type === 'map' && (
-                      <div className="space-y-2.5 p-3.5 bg-blue-50/50 rounded-2xl border border-blue-200/60 text-right" dir="rtl">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
-                            <MapPin size={14} className="text-blue-600 shrink-0" />
-                            <span>إعدادات موقع الخريطة:</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleDetectUserLocation((loc) => onUpdateElement({ mapLocation: loc, content: loc }))}
-                            disabled={isDetectingLocation}
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-white hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shadow-3xs transition-all cursor-pointer disabled:opacity-50"
-                            title="تحديد الموقع الجغرافي الحالي تلقائياً وتثبيت الدبوس عليه"
-                          >
-                            {isDetectingLocation ? (
-                              <>
-                                <Loader2 size={11} className="animate-spin text-blue-600" />
-                                <span>جاري التحديد...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Navigation size={11} className="text-blue-600" />
-                                <span>موقعي الحالي 📍</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-neutral-500 block">العنوان أو المكان المستهدف:</label>
-                          <input
-                            type="text"
-                            value={selectedElement.mapLocation || selectedElement.content || ''}
-                            onChange={(e) => onUpdateElement({ mapLocation: e.target.value, content: e.target.value })}
-                            placeholder="مثال: الرياض، برج المملكة أو إحداثيات GPS"
-                            className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                          />
-                          {locationDetectError && (
-                            <p className="text-[10px] text-red-600 font-semibold mt-1">⚠️ {locationDetectError}</p>
-                          )}
-                          <p className="text-[9.5px] text-neutral-400 leading-snug">
-                            اكتب اسم المعلم أو المدينة أو اضغط زر "موقعي الحالي" وسيتم وضع الدبوس وتحديث الخريطة فوراً.
-                          </p>
-                        </div>
-
-                        <div className="flex gap-1.5 pt-1">
-                          {[
-                            { name: 'برج خليفة', loc: 'دبي، برج خليفة، الإمارات العربية المتحدة' },
-                            { name: 'برج المملكة', loc: 'الرياض، برج المملكة، المملكة العربية السعودية' },
-                            { name: 'المعادي', loc: 'القاهرة، المعادي، مصر' }
-                          ].map((preset) => (
-                            <button
-                              key={preset.name}
-                              type="button"
-                              onClick={() => onUpdateElement({ mapLocation: preset.loc, content: preset.loc })}
-                              className="text-[9px] bg-blue-100/50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md border border-blue-200 font-bold transition-colors cursor-pointer"
-                            >
-                              {preset.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* إعدادات وتخصيص الجدول مخصصة */}
-                    {selectedElement.type === 'table' && (
-                      <div className="space-y-3.5 p-3.5 bg-emerald-50/50 rounded-2xl border border-emerald-200/60 text-right" dir="rtl">
-                        <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
-                          <Grid3X3 size={14} className="text-emerald-600 shrink-0" />
-                          <span>إعدادات وتصميم الجدول:</span>
-                        </span>
-
-                        {/* 10 Coordinated Colors Palette */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] text-neutral-500 block">لون الجدول (السطر الأول والإطارات):</label>
-                          <div className="grid grid-cols-5 gap-1.5">
-                            {[
-                              { label: 'أزرق', value: '#0071e3' },
-                              { label: 'أخضر', value: '#10b981' },
-                              { label: 'أحمر', value: '#ef4444' },
-                              { label: 'أصفر', value: '#f59e0b' },
-                              { label: 'بنفسجي', value: '#6366f1' },
-                              { label: 'وردي', value: '#ec4899' },
-                              { label: 'رمادي', value: '#475569' },
-                              { label: 'مائي', value: '#14b8a6' },
-                              { label: 'برتقالي', value: '#f97316' },
-                              { label: 'فحمي', value: '#1f2937' },
-                            ].map((color) => {
-                              const isSelected = selectedElement.tableConfig?.themeColor === color.value;
-                              return (
-                                <button
-                                  key={color.value}
-                                  type="button"
-                                  onClick={() => {
-                                    const currentConfig = selectedElement.tableConfig || {
-                                      rows: 3,
-                                      cols: 3,
-                                      themeColor: '#0071e3',
-                                      headerRow: true,
-                                      indexCol: false,
-                                      colWidths: [120, 120, 120],
-                                      rowHeights: [40, 40, 40],
-                                      cells: [['', '', ''], ['', '', ''], ['', '', '']]
-                                    };
-                                    onUpdateElement({
-                                      tableConfig: {
-                                        ...currentConfig,
-                                        themeColor: color.value
-                                      }
-                                    });
-                                  }}
-                                  className="relative h-6 rounded-md cursor-pointer transition-all border border-black/[0.05]"
-                                  style={{ backgroundColor: color.value }}
-                                  title={color.label}
-                                >
-                                  {isSelected && (
-                                    <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-bold">✓</span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Rows and columns spinners */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <span className="text-[10px] text-neutral-500 block mb-0.5">عدد السطور:</span>
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="number"
-                                min={1}
-                                max={20}
-                                value={selectedElement.tableConfig?.rows || 3}
-                                onChange={(e) => {
-                                  const newRows = Math.max(1, Number(e.target.value));
-                                  const currentConfig = selectedElement.tableConfig || {
-                                    rows: 3,
-                                    cols: 3,
-                                    themeColor: '#0071e3',
-                                    headerRow: true,
-                                    indexCol: false,
-                                    colWidths: [120, 120, 120],
-                                    rowHeights: [40, 40, 40],
-                                    cells: [['', '', ''], ['', '', ''], ['', '', '']]
-                                  };
-                                  let newCells = [...currentConfig.cells];
-                                  if (newRows > currentConfig.rows) {
-                                    for (let r = currentConfig.rows; r < newRows; r++) {
-                                      newCells.push(Array(currentConfig.cols).fill(''));
-                                    }
-                                  } else if (newRows < currentConfig.rows) {
-                                    newCells = newCells.slice(0, newRows);
-                                  }
-                                  const newRowHeights = [...currentConfig.rowHeights];
-                                  if (newRowHeights.length < newRows) {
-                                    for (let r = newRowHeights.length; r < newRows; r++) {
-                                      newRowHeights.push(40);
-                                    }
-                                  }
-                                  onUpdateElement({
-                                    tableConfig: {
-                                      ...currentConfig,
-                                      rows: newRows,
-                                      cells: newCells,
-                                      rowHeights: newRowHeights
-                                    }
-                                  });
-                                }}
-                                className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-neutral-500 block mb-0.5">عدد الأعمدة:</span>
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="number"
-                                min={1}
-                                max={15}
-                                value={selectedElement.tableConfig?.cols || 3}
-                                onChange={(e) => {
-                                  const newCols = Math.max(1, Number(e.target.value));
-                                  const currentConfig = selectedElement.tableConfig || {
-                                    rows: 3,
-                                    cols: 3,
-                                    themeColor: '#0071e3',
-                                    headerRow: true,
-                                    indexCol: false,
-                                    colWidths: [120, 120, 120],
-                                    rowHeights: [40, 40, 40],
-                                    cells: [['', '', ''], ['', '', ''], ['', '', '']]
-                                  };
-                                  let newCells = currentConfig.cells.map(row => {
-                                    let newRow = [...row];
-                                    if (newCols > currentConfig.cols) {
-                                      return newRow.concat(Array(newCols - currentConfig.cols).fill(''));
-                                    } else {
-                                      return newRow.slice(0, newCols);
-                                    }
-                                  });
-                                  const newColWidths = [...currentConfig.colWidths];
-                                  if (newColWidths.length < newCols) {
-                                    for (let c = newColWidths.length; c < newCols; c++) {
-                                      newColWidths.push(120);
-                                    }
-                                  }
-                                  onUpdateElement({
-                                    tableConfig: {
-                                      ...currentConfig,
-                                      cols: newCols,
-                                      cells: newCells,
-                                      colWidths: newColWidths
-                                    }
-                                  });
-                                }}
-                                className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Col Width and Row Height spinners */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <span className="text-[10px] text-neutral-500 block mb-0.5">عرض الأعمدة الافتراضي:</span>
-                            <input
-                              type="number"
-                              min={30}
-                              max={300}
-                              value={selectedElement.tableConfig?.colWidths[0] || 120}
-                              onChange={(e) => {
-                                const w = Math.max(30, Number(e.target.value));
-                                const currentConfig = selectedElement.tableConfig || {
-                                  rows: 3,
-                                  cols: 3,
-                                  themeColor: '#0071e3',
-                                  headerRow: true,
-                                  indexCol: false,
-                                  colWidths: [120, 120, 120],
-                                  rowHeights: [40, 40, 40],
-                                  cells: [['', '', ''], ['', '', ''], ['', '', '']]
-                                };
-                                onUpdateElement({
-                                  tableConfig: {
-                                    ...currentConfig,
-                                    colWidths: currentConfig.colWidths.map(() => w)
-                                  }
-                                });
-                              }}
-                              className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                            />
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-neutral-500 block mb-0.5">ارتفاع الأسطر الافتراضي:</span>
-                            <input
-                              type="number"
-                              min={20}
-                              max={150}
-                              value={selectedElement.tableConfig?.rowHeights[0] || 40}
-                              onChange={(e) => {
-                                const h = Math.max(20, Number(e.target.value));
-                                const currentConfig = selectedElement.tableConfig || {
-                                  rows: 3,
-                                  cols: 3,
-                                  themeColor: '#0071e3',
-                                  headerRow: true,
-                                  indexCol: false,
-                                  colWidths: [120, 120, 120],
-                                  rowHeights: [40, 40, 40],
-                                  cells: [['', '', ''], ['', '', ''], ['', '', '']]
-                                };
-                                onUpdateElement({
-                                  tableConfig: {
-                                    ...currentConfig,
-                                    rowHeights: currentConfig.rowHeights.map(() => h)
-                                  }
-                                });
-                              }}
-                              className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Toggles (Header, Index Numbering) */}
-                        <div className="space-y-2 pt-1">
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={selectedElement.tableConfig?.headerRow ?? true}
-                              onChange={(e) => {
-                                const currentConfig = selectedElement.tableConfig || {
-                                  rows: 3,
-                                  cols: 3,
-                                  themeColor: '#0071e3',
-                                  headerRow: true,
-                                  indexCol: false,
-                                  colWidths: [120, 120, 120],
-                                  rowHeights: [40, 40, 40],
-                                  cells: [['', '', ''], ['', '', ''], ['', '', '']]
-                                };
-                                onUpdateElement({
-                                  tableConfig: {
-                                    ...currentConfig,
-                                    headerRow: e.target.checked
-                                  }
-                                });
-                              }}
-                              className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
-                            />
-                            <span className="text-xs text-neutral-700">تفعيل سطر العناوين (أول سطر)</span>
-                          </label>
-
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={selectedElement.tableConfig?.indexCol ?? false}
-                              onChange={(e) => {
-                                const currentConfig = selectedElement.tableConfig || {
-                                  rows: 3,
-                                  cols: 3,
-                                  themeColor: '#0071e3',
-                                  headerRow: true,
-                                  indexCol: false,
-                                  colWidths: [120, 120, 120],
-                                  rowHeights: [40, 40, 40],
-                                  cells: [['', '', ''], ['', '', ''], ['', '', '']]
-                                };
-                                onUpdateElement({
-                                  tableConfig: {
-                                    ...currentConfig,
-                                    indexCol: e.target.checked
-                                  }
-                                });
-                              }}
-                              className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
-                            />
-                            <span className="text-xs text-neutral-700">تفعيل عمود التعداد يميناً (1، 2، 3...)</span>
-                          </label>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* أبعاد العنصر */}
-                    <div className="space-y-1.5">
-                      <span className="text-xs font-bold text-neutral-800 block">أبعاد العنصر:</span>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-[10px] text-neutral-400 block mb-0.5">العرض (W):</span>
-                          <input
-                            type="number"
-                            value={selectedElement.width}
-                            onChange={(e) => onUpdateElement({ width: Math.max(20, Number(e.target.value)) })}
-                            className="w-full p-2 bg-neutral-50 rounded-lg border border-neutral-200 font-mono text-center focus:border-[#0071e3] focus:outline-none"
-                          />
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-neutral-400 block mb-0.5">الارتفاع (H):</span>
-                          <input
-                            type="number"
-                            value={selectedElement.height}
-                            onChange={(e) => onUpdateElement({ height: Math.max(20, Number(e.target.value)) })}
-                            className="w-full p-2 bg-neutral-50 rounded-lg border border-neutral-200 font-mono text-center focus:border-[#0071e3] focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* تدوير العنصر في مركزه (Center Rotation) */}
-                    <div className="space-y-2 pt-2 border-t border-neutral-200/80">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
-                          <RotateCw size={13} className="text-[#0071e3]" />
-                          <span>تدوير العنصر في مركزه:</span>
-                        </span>
-                        <div className="flex items-center gap-1 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200 font-mono text-xs font-bold text-[#0071e3]">
-                          <span>{Math.round(selectedElement.rotation || 0)}°</span>
-                        </div>
-                      </div>
-
-                      {/* شريط السحب الزاوي Slider */}
-                      <div className="space-y-1">
-                        <input
-                          type="range"
-                          min="0"
-                          max="360"
-                          value={selectedElement.rotation || 0}
-                          onChange={(e) => onUpdateElement({ rotation: Number(e.target.value) })}
-                          className="w-full accent-[#0071e3] cursor-pointer"
-                        />
-                        <div className="flex justify-between text-[10px] text-neutral-400 font-mono px-0.5">
-                          <span>0°</span>
-                          <span>90°</span>
-                          <span>180°</span>
-                          <span>270°</span>
-                          <span>360°</span>
-                        </div>
-                      </div>
-
-                      {/* أزرار التدوير السريع */}
-                      <div className="grid grid-cols-4 gap-1.5 pt-1">
-                        {[
-                          { deg: 0, label: '0°' },
-                          { deg: 90, label: '90°' },
-                          { deg: 180, label: '180°' },
-                          { deg: 270, label: '270°' },
-                        ].map((btn) => (
-                          <button
-                            key={btn.deg}
-                            type="button"
-                            onClick={() => onUpdateElement({ rotation: btn.deg })}
-                            className={`py-1.5 rounded-lg border text-xs font-mono font-bold transition-all ${
-                              (selectedElement.rotation || 0) === btn.deg
-                                ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-xs'
-                                : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
-                            }`}
-                          >
-                            {btn.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* درجات إزاحة إضافية */}
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const current = selectedElement.rotation || 0;
-                            const next = (current - 45 + 360) % 360;
-                            onUpdateElement({ rotation: next });
-                          }}
-                          className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 text-neutral-700 transition-colors"
-                        >
-                          <RotateCcw size={12} />
-                          <span>-45° يسار</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const current = selectedElement.rotation || 0;
-                            const next = (current + 45) % 360;
-                            onUpdateElement({ rotation: next });
-                          }}
-                          className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 text-neutral-700 transition-colors"
-                        >
-                          <RotateCw size={12} />
-                          <span>+45° يمين</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* إجراءات سريعة: تكرار وقفل */}
-                    <div className="flex gap-2 pt-2 border-t border-neutral-200/80">
-                      <button
-                        onClick={() => onDuplicateElement(selectedElement.id)}
-                        className="flex-1 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        <Copy size={13} />
-                        <span>تكرار العنصر</span>
-                      </button>
-                      <button
-                        onClick={onToggleLock}
-                        className="flex-1 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        {selectedElement.isLocked ? <Lock size={13} className="text-amber-600" /> : <Unlock size={13} />}
-                        <span>{selectedElement.isLocked ? 'مقفل' : 'قفل العنصر'}</span>
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-xs text-neutral-400 py-6 text-center">حدد عنصراً لضبط أبعاده وتدويره.</div>
-                )}
-              </div>
-            )}
-
-            {/* TOOL: Format Painter (رول الدهان) */}
-            {activeSection === 'format-painter' && (
-              <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-[#0071e3]/20 text-xs text-[#0071e3] space-y-1.5">
-                <div className="flex items-center gap-2 font-bold text-sm">
-                  <PaintRoller size={16} />
-                  <span>{isFormatCopied ? 'تم نسخ التنسيق بنجاح!' : 'جاهز لنسخ التنسيق'}</span>
-                </div>
-                <p className="text-neutral-600 text-[11px] leading-relaxed">
-                  انقر الآن على أي عنصر آخر لتطبيق اللون والإطار والحجم عليه مباشرة.
-                </p>
-              </div>
-            )}
-
-            {/* TOOL: Unified Text Editing (تعديل النص كالمخطط اليدوي تماماً) */}
-            {(activeSection === 'typography' || activeSection === 'fontSize' || activeSection === 'fontFamily' || activeSection === 'alignment' || activeSection === 'list') && (() => {
-              const isBold = styles.fontWeight === 'bold';
-              const isItalic = styles.fontStyle === 'italic';
-              const isUnderline = styles.textDecoration === 'underline';
-              const isBulletList = styles.listStyle === 'bullet';
-              const isNumericList = styles.listStyle === 'numeric';
-              const textAlign = styles.textAlign || 'right';
-              const currentFontSize = styles.fontSize || 16;
-              const currentFontFamily = styles.fontFamily || 'Readex Pro';
-
-              const toggleBold = () => {
-                onUpdateElementStyles({ fontWeight: isBold ? 'normal' : 'bold' });
-              };
-              const toggleItalic = () => {
-                onUpdateElementStyles({ fontStyle: isItalic ? 'normal' : 'italic' });
-              };
-              const toggleUnderline = () => {
-                onUpdateElementStyles({ textDecoration: isUnderline ? 'none' : 'underline' });
-              };
-              const cycleAlignment = () => {
-                const next = textAlign === 'right' ? 'center' : (textAlign === 'center' ? 'left' : 'right');
-                onUpdateElementStyles({ textAlign: next });
-              };
-              const toggleBulletList = () => {
-                onUpdateElementStyles({ listStyle: isBulletList ? 'none' : 'bullet' });
-              };
-              const toggleNumericList = () => {
-                onUpdateElementStyles({ listStyle: isNumericList ? 'none' : 'numeric' });
-              };
-
-              return (
-                <div className="space-y-4">
-                  {/* Top Oval Container / Capsule Toolbar - Exact Match to Sketch */}
-                  <div className="w-full p-1.5 bg-neutral-100 rounded-full border border-neutral-300 shadow-2xs flex items-center justify-between px-2 gap-0.5 select-none">
-                    {/* محاذاة النص */}
-                    <button
-                      type="button"
-                      onClick={cycleAlignment}
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-neutral-700 hover:text-black hover:bg-white active:scale-95 transition-all cursor-pointer"
-                      title={`محاذاة النص: ${textAlign === 'right' ? 'يمين' : textAlign === 'center' ? 'وسط' : 'يسار'}`}
-                    >
-                      {textAlign === 'right' && <AlignRight size={14} strokeWidth={2} />}
-                      {textAlign === 'center' && <AlignCenter size={14} strokeWidth={2} />}
-                      {textAlign === 'left' && <AlignLeft size={14} strokeWidth={2} />}
-                    </button>
-
-                    {/* ميلان النص */}
-                    <button
-                      type="button"
-                      onClick={toggleItalic}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        isItalic 
-                          ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
-                          : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
-                      }`}
-                      title="ميلان النص (Italic)"
-                    >
-                      <Italic size={14} strokeWidth={2} />
-                    </button>
-
-                    {/* سمك الخط */}
-                    <button
-                      type="button"
-                      onClick={toggleBold}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        isBold 
-                          ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
-                          : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
-                      }`}
-                      title="سمك الخط (Bold)"
-                    >
-                      <Bold size={14} strokeWidth={2.4} />
-                    </button>
-
-                    {/* تسطير النص */}
-                    <button
-                      type="button"
-                      onClick={toggleUnderline}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        isUnderline 
-                          ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
-                          : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
-                      }`}
-                      title="تسطير النص (Underline)"
-                    >
-                      <Underline size={14} strokeWidth={2} />
-                    </button>
-
-                    {/* تعداد نقطي */}
-                    <button
-                      type="button"
-                      onClick={toggleBulletList}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        isBulletList 
-                          ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
-                          : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
-                      }`}
-                      title="تعداد نقطي"
-                    >
-                      <List size={14} strokeWidth={2} />
-                    </button>
-
-                    {/* تعداد رقمي */}
-                    <button
-                      type="button"
-                      onClick={toggleNumericList}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        isNumericList 
-                          ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
-                          : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
-                      }`}
-                      title="تعداد رقمي"
-                    >
-                      <ListOrdered size={14} strokeWidth={2} />
-                    </button>
-
-                    <div className="h-4 w-px bg-neutral-300 mx-0.5" />
-
-                    {/* نوع الخط (aA) - محاط بدائرة عند التفعيل كما في الرسم */}
-                    <button
-                      type="button"
-                      onClick={() => setTextSubSection('family')}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        textSubSection === 'family'
-                          ? 'bg-white text-[#0071e3] ring-2 ring-[#0071e3] shadow-xs font-bold'
-                          : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
-                      }`}
-                      title="نوع وشكل الخط (aA)"
-                    >
-                      <span className="font-sans text-[12px] font-bold flex items-baseline select-none">
-                        <span>a</span>
-                        <span className="text-[10px] font-extrabold -mr-0.5 text-[#0071e3]">A</span>
-                      </span>
-                    </button>
-
-                    {/* حجم الخط (T) - محاط بدائرة عند التفعيل كما في الرسم */}
-                    <button
-                      type="button"
-                      onClick={() => setTextSubSection('size')}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        textSubSection === 'size'
-                          ? 'bg-white text-[#0071e3] ring-2 ring-[#0071e3] shadow-xs font-bold'
-                          : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
-                      }`}
-                      title="حجم الخط (T)"
-                    >
-                      <span className="font-serif text-[14px] font-bold leading-none select-none">
-                        T
-                      </span>
-                    </button>
-                  </div>
-
-                  {/* فرع حجم الخط: سلايدر + 4 مربعات رئيسية */}
-                  {textSubSection === 'size' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-neutral-800 font-bold text-sm">حجم الخط:</span>
-                        <span className="font-mono text-[#0071e3] font-bold text-sm bg-[#0071e3]/10 px-2.5 py-0.5 rounded-lg border border-[#0071e3]/20">
-                          {currentFontSize}px
-                        </span>
-                      </div>
-
-                      {/* شريط السحب (Slider) */}
-                      <div className="px-1 space-y-1">
-                        <input
-                          type="range"
-                          min="10"
-                          max="140"
-                          value={currentFontSize}
-                          onChange={(e) => onUpdateElementStyles({ fontSize: Number(e.target.value) })}
-                          className="w-full accent-[#0071e3] h-2 bg-neutral-200 rounded-lg cursor-pointer"
-                        />
-                        <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
-                          <span>10px</span>
-                          <span>70px</span>
-                          <span>140px</span>
-                        </div>
-                      </div>
-
-                      {/* المربعات الأربعة السريعة كما في المخطط اليدوي: [140] [100] [48] [24] */}
-                      <div className="space-y-2 pt-1">
-                        <span className="text-[11px] text-neutral-500 block font-medium">أحجام شائعة سريعة:</span>
-                        <div className="grid grid-cols-4 gap-2">
-                          {[140, 100, 48, 24].map((sz) => (
-                            <button
-                              key={sz}
-                              type="button"
-                              onClick={() => onUpdateElementStyles({ fontSize: sz })}
-                              className={`py-2.5 rounded-xl border text-center font-bold text-sm transition-all cursor-pointer ${
-                                currentFontSize === sz
-                                  ? 'border-[#0071e3] bg-[#0071e3]/15 text-[#0071e3] ring-2 ring-[#0071e3]/50 shadow-xs'
-                                  : 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800 shadow-2xs'
-                              }`}
-                            >
-                              {sz}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* صف إضافي لأحجام النصوص الدقيقة */}
-                        <div className="grid grid-cols-4 gap-1.5 pt-1">
-                          {[14, 18, 32, 64].map((sz) => (
-                            <button
-                              key={sz}
-                              type="button"
-                              onClick={() => onUpdateElementStyles({ fontSize: sz })}
-                              className={`py-1.5 rounded-lg border text-center font-semibold text-xs transition-all cursor-pointer ${
-                                currentFontSize === sz
-                                  ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3]'
-                                  : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-600'
-                              }`}
-                            >
-                              {sz}px
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* فرع نوع الخط: قائمة بالخطوط العربية والأجنبية */}
-                  {textSubSection === 'family' && (() => {
-                    const filteredFonts = SIXTY_FONTS.filter(f => {
-                      if (fontLangFilter === 'ar' && f.lang !== 'ar') return false;
-                      if (fontLangFilter === 'lat' && f.lang !== 'lat') return false;
-                      if (fontSearch.trim()) {
-                        const query = fontSearch.toLowerCase();
-                        return f.name.toLowerCase().includes(query) || f.font.toLowerCase().includes(query);
-                      }
-                      return true;
-                    });
-
-                    return (
-                      <div className="space-y-2.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-neutral-800 font-bold">نوع الخط:</span>
-                          <span className="text-neutral-400 text-[10px] font-mono">({filteredFonts.length} خط)</span>
-                        </div>
-
-                        {/* شريط البحث المدمج والكبسولات الذكية */}
-                        <div className="space-y-1.5">
-                          <div className="relative">
-                            <input
-                              type="text"
-                              value={fontSearch}
-                              onChange={(e) => setFontSearch(e.target.value)}
-                              placeholder="ابحث عن خط..."
-                              className="w-full px-2.5 py-1.5 bg-neutral-100 focus:bg-white border border-neutral-300 focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] rounded-lg text-xs text-right placeholder:text-neutral-400 focus:outline-none transition-all"
-                              dir="rtl"
-                            />
-                            {fontSearch && (
-                              <button
-                                type="button"
-                                onClick={() => setFontSearch('')}
-                                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 text-xs focus:outline-none"
-                              >
-                                ✖
-                              </button>
-                            )}
-                          </div>
-
-                          <div className="flex gap-1 bg-neutral-100 p-0.5 rounded-lg border border-neutral-300">
-                            {[
-                              { id: 'all' as const, label: 'الكل' },
-                              { id: 'ar' as const, label: 'عربي' },
-                              { id: 'lat' as const, label: 'لاتيني' },
-                            ].map((tab) => (
-                              <button
-                                key={tab.id}
-                                type="button"
-                                onClick={() => setFontLangFilter(tab.id)}
-                                className={`flex-1 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
-                                  fontLangFilter === tab.id
-                                    ? 'bg-white text-[#0071e3] shadow-3xs'
-                                    : 'text-neutral-500 hover:text-neutral-800'
-                                }`}
-                              >
-                                {tab.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* قائمة الخطوط - خفيفة وبدون شرح */}
-                        <div className="space-y-1 max-h-[300px] overflow-y-auto pr-0.5 scroll-smooth border border-neutral-200/50 rounded-xl p-1 bg-neutral-50/50">
-                          {filteredFonts.map((f) => {
-                            const isSelected = currentFontFamily === f.font;
-                            return (
-                              <button
-                                key={f.font}
-                                type="button"
-                                onClick={() => onUpdateElementStyles({ fontFamily: f.font })}
-                                className={`w-full py-2 px-3 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer ${
-                                  isSelected
-                                    ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] font-bold shadow-2xs ring-1 ring-[#0071e3]/30'
-                                    : 'border-neutral-200/60 bg-white hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800'
-                                }`}
-                              >
-                                <span
-                                  className="text-[13px] truncate"
-                                  style={{ fontFamily: f.font }}
-                                >
-                                  {f.name}
-                                </span>
-                                {isSelected && (
-                                  <div className="w-4 h-4 rounded-full bg-[#0071e3] text-white flex items-center justify-center shrink-0">
-                                    <Check size={10} strokeWidth={3} />
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          })}
-
-                          {filteredFonts.length === 0 && (
-                            <div className="text-center py-8 text-xs text-neutral-400 bg-white rounded-lg border border-neutral-100">
-                              لا توجد خطوط مطابقة للبحث
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              );
-            })()}
-
-            {/* TOOL: Animation */}
-            {activeSection === 'animation' && selectedElement && (selectedElement.type === 'shopProducts' || selectedElement.type === 'shopSearch') && (
-              <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
-            )}
-            {activeSection === 'animation' && selectedElement && (selectedElement.type === 'carListings' || selectedElement.type === 'carSearch') && (
-              <CarElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
-            )}
-            {activeSection === 'animation' && selectedElement && (selectedElement.type === 'menuList' || selectedElement.type === 'menuCart') && (
-              <RestaurantElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
-            )}
-            {activeSection === 'animation' && <AnimationSection styles={styles} onUpdateElementStyles={onUpdateElementStyles} />}
-
-            {/* TOOL: Add Elements (+) - Step 1: Squares Grid (الصورة رقم ١) | Step 2: Detail with Subcategories Bar (الصورة رقم ٢) */}
-            {(activeSection === 'elements' || activeSection === 'add-text') && (() => {
-              const { ADD_CATEGORIES, SUBCATEGORIES_MAP, TEMPLATES_MAP } = buildAddMenuData({
-                onAddElement,
-                onAddGroup,
-                videoAddUrl,
-                mapAddLocation,
-                calAddTitle,
-                calAddAccentColor,
-                calAddWorkingDays,
-                calAddHolidays,
-                calAddWorkStart,
-                calAddWorkEnd,
-                calAddBreakStart,
-                calAddBreakEnd,
-                calAddInterval,
-                calAddIntervalMins,
-                calAddNeedsConfirmation,
-                calAddMeetingTypes,
-                calAddNameLabel,
-                calAddAddressLabel,
-                calAddPhoneLabel,
-                calAddEmailLabel,
-                calAddDescLabel,
-                calAddSlotsText,
-              });
-
-              // ==========================================
-              // VIEW 1: Grid of Squares & Slide/Page Tabs
-              // ==========================================
-              if (!activeAddCategory) {
-                return (
-                  <div className="space-y-4 pb-6 text-right">
-                    {/* Top Segment Control */}
-                    <div className="flex bg-neutral-100 p-1 rounded-xl border border-black/[0.04] mb-3">
-                      <button
-                        type="button"
-                        onClick={() => setAddMenuMode('element')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                          addMenuMode === 'element'
-                            ? 'bg-white text-[#0071e3] shadow-2xs'
-                            : 'text-neutral-500 hover:text-black'
-                        }`}
-                      >
-                        إضافة عنصر
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAddMenuMode('slide')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                          addMenuMode === 'slide'
-                            ? 'bg-white text-[#0071e3] shadow-2xs'
-                            : 'text-neutral-500 hover:text-black'
-                        }`}
-                      >
-                        إضافة شريحة
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAddMenuMode('page')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                          addMenuMode === 'page'
-                            ? 'bg-white text-[#0071e3] shadow-2xs'
-                            : 'text-neutral-500 hover:text-black'
-                        }`}
-                      >
-                        إضافة صفحة
-                      </button>
-                    </div>
-
-                    {/* RENDER MODE: element */}
-                    {addMenuMode === 'element' && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between px-1">
-                          <span className="text-xs font-bold text-neutral-600">
-                            اختر عنصراً لإضافته أو تخصيصه:
-                          </span>
-                          <span className="text-[10px] font-semibold text-neutral-400">
-                            12 عنصر متوفر
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2.5">
-                          {ADD_CATEGORIES.map((cat) => (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => {
-                                setActiveAddCategory(cat.id);
-                                const firstSub = SUBCATEGORIES_MAP[cat.id]?.[0]?.id || 'all';
-                                setSelectedSubCategory(firstSub);
-                              }}
-                              className="aspect-square bg-white hover:bg-neutral-50/80 border-2 border-neutral-200/90 hover:border-[#0071e3] rounded-2xl p-3 flex flex-col items-center justify-center gap-2 shadow-2xs hover:shadow-md transition-all active:scale-95 cursor-pointer group text-center"
-                            >
-                              <div className="w-11 h-11 rounded-xl bg-neutral-100/80 group-hover:bg-[#0071e3]/10 text-neutral-700 group-hover:text-[#0071e3] flex items-center justify-center transition-colors">
-                                {React.cloneElement(cat.icon as React.ReactElement<any>, { size: 22, strokeWidth: 2 })}
-                              </div>
-                              <span className="text-xs font-bold text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight line-clamp-2 px-1">
-                                {cat.name}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* RENDER MODE: slide */}
-                    {addMenuMode === 'slide' && (
-                      <div className="space-y-4">
-                        {/* 1. Quick Actions */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onAddSlide()}
-                            className="flex flex-col items-center justify-center p-3 bg-[#0071e3]/5 hover:bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
-                          >
-                            <Plus size={16} strokeWidth={2.5} />
-                            <span>إضافة شريحة فارغة</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onCopyCurrentSlide && onCopyCurrentSlide(activeSlideId)}
-                            className="flex flex-col items-center justify-center p-3 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border border-neutral-200/80 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
-                          >
-                            <Copy size={15} />
-                            <span>نسخ الشريحة (Copy)</span>
-                          </button>
-                        </div>
-
-                        {/* 2. Ready Slides Section */}
-                        <div className="space-y-2">
-                          <h4 className="text-[11px] font-black text-neutral-500 border-b border-neutral-100 pb-1.5 px-1 tracking-wide">
-                            اختر فئة لتصفح الشرائح المصممة مسبقاً:
-                          </h4>
-                          <div className="grid grid-cols-2 gap-2">
-                            {READY_SLIDE_CATEGORIES.filter((cat) => (cat.id !== 'shop' || isShopProject) && (cat.id !== 'cars' || isCarProject) && (cat.id !== 'restaurant' || isRestaurantProject)).map((cat) => (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                onClick={() => setActiveTemplateCategory(cat.id)}
-                                className={`p-2.5 rounded-xl border-2 text-right transition-all hover:shadow-sm active:scale-97 cursor-pointer flex flex-col gap-1 text-right ${
-                                  activeTemplateCategory === cat.id
-                                    ? 'border-[#0071e3] bg-[#0071e3]/5 text-[#0071e3]'
-                                    : 'border-neutral-200 bg-white hover:border-neutral-300 text-neutral-800'
-                                }`}
-                              >
-                                <div className="text-lg mb-0.5">{cat.icon}</div>
-                                <span className="text-[11px] font-black leading-tight">
-                                  {cat.name}
-                                </span>
-                                <span className="text-[9px] text-neutral-400 font-medium leading-normal line-clamp-2">
-                                  {cat.desc}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* RENDER MODE: page */}
-                    {addMenuMode === 'page' && (
-                      <div className="space-y-4">
-                        {/* 1. Quick Actions */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const pageName = prompt('أدخل اسم الصفحة الجديدة:');
-                              if (pageName) onAddPage(pageName);
-                            }}
-                            className="flex flex-col items-center justify-center p-3 bg-[#0071e3]/5 hover:bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
-                          >
-                            <Plus size={16} strokeWidth={2.5} />
-                            <span>إضافة صفحة فارغة</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onCopyCurrentPage && onCopyCurrentPage(currentPage.id)}
-                            className="flex flex-col items-center justify-center p-3 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border border-neutral-200/80 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
-                          >
-                            <Copy size={15} />
-                            <span>نسخ الصفحة (Copy)</span>
-                          </button>
-                        </div>
-
-                        {/* 2. Ready Site Template Section */}
-                        <div className="space-y-2">
-                          <h4 className="text-xs font-bold text-neutral-700 border-b border-neutral-100 pb-1.5 px-1">
-                            موقع جاهز للتعديل والاستخدام:
-                          </h4>
-                          <button
-                            type="button"
-                            onClick={() => onApplyFreeStarterTemplate && onApplyFreeStarterTemplate()}
-                            className="w-full bg-gradient-to-br from-[#1F5D50]/5 to-[#1F5D50]/[0.02] hover:from-[#1F5D50]/10 hover:to-[#1F5D50]/5 border border-[#1F5D50]/20 hover:border-[#1F5D50] rounded-2xl p-3.5 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <span className="text-xs font-bold text-neutral-800 group-hover:text-[#1F5D50] transition-colors">
-                                القالب الأساسي: موقع تعريفي بخمس صفحات
-                              </span>
-                              <span className="text-[10px] text-[#1F5D50] font-semibold bg-[#1F5D50]/10 border border-[#1F5D50]/15 px-1.5 py-0.5 rounded-md">
-                                5 صفحات
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
-                              مدخل، من نحن، أعمالنا، الأسعار، واتصل بنا — كل صفحة مرتبطة بالأخرى عبر شريط التنقل العلوي. سيستبدل هذا كل صفحات موقعك الحالية.
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onApplyOnlineShopTemplate && onApplyOnlineShopTemplate()}
-                            className="w-full bg-gradient-to-br from-[#B4532A]/5 to-[#B4532A]/[0.02] hover:from-[#B4532A]/10 hover:to-[#B4532A]/5 border border-[#B4532A]/20 hover:border-[#B4532A] rounded-2xl p-3.5 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <span className="text-xs font-bold text-neutral-800 group-hover:text-[#B4532A] transition-colors">
-                                متجر إلكتروني: منتجات وسلة مشتريات
-                              </span>
-                              <span className="text-[10px] text-[#B4532A] font-semibold bg-[#B4532A]/10 border border-[#B4532A]/15 px-1.5 py-0.5 rounded-md">
-                                5 صفحات
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
-                              الرئيسية، المنتجات، السلة، طريقة الطلب، وتواصل معنا — بطاقات منتجات بزر «أضف إلى السلة»، وصفحة سلة ترسل الطلب كاملًا عبر واتساب. سيستبدل هذا كل صفحات موقعك الحالية.
-                            </span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              // ==========================================
-              // SPECIAL VIEW: إضافة صورة (الأبواب الثلاثة كما في الرسومات اليدوية)
-              // ==========================================
-              if (activeAddCategory === 'image') {
-                return (
-                  <ImageDrawerSection
-                    onAddImage={handleAddImageElement}
-                    onBack={() => setActiveAddCategory(null)}
-                    canvasElements={elements}
-                  />
-                );
-              }
-
-              // ==========================================
-              // SPECIAL VIEW: إضافة نص (كما في الرسم اليدوي للمستخدم تماماً)
-              // ==========================================
-              if (activeAddCategory === 'text') {
-                return (
-                  <div className="space-y-4 pb-8" dir="rtl">
-                    {/* Top Bar: Title "اضافة نص" & Back Button */}
-                    <div className="flex items-center justify-between pb-2 border-b border-neutral-200">
-                      <button
-                        type="button"
-                        onClick={() => setActiveAddCategory(null)}
-                        className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
-                      >
-                        <ChevronRight size={15} strokeWidth={2.4} />
-                        <span>رجوع للعناصر</span>
-                      </button>
-
-                      <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-                        <Type size={16} className="text-[#0071e3]" />
-                        <span>اضافة نص</span>
-                      </h3>
-                    </div>
-
-                    {/* Notice bar: فقط النصوص الممكنة اضافتها */}
-                    <div className="bg-neutral-50/90 border border-neutral-200/80 px-3 py-1.5 rounded-xl flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-neutral-700 flex items-center gap-1">
-                        <span>✦</span>
-                        <span>فقط النصوص الممكنة إضافتها:</span>
-                      </span>
-                      <span className="text-[10px] text-neutral-400 font-mono font-semibold">
-                        4 أحجام أساسية
-                      </span>
-                    </div>
-
-                    {/* The 4 Core Text Blocks (as in sketch with pixel side tags) */}
-                    <div className="space-y-2.5">
-                      {/* 1. عنوان رئيسي - 40 PXL */}
-                      <div className="flex items-stretch gap-2.5">
-                        <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
-                          <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">40</span>
-                          <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onAddElement(
-                              'heading',
-                              'عنوان رئيسي كبير',
-                              { fontSize: 40, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
-                              { name: 'عنوان رئيسي (40px)', width: 560, height: 75 }
-                            );
-                          }}
-                          className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-lg sm:text-xl font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
-                              عنوان رئيسي
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                              + إضافة
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-neutral-400 mt-1">
-                            ترويسة عريضة وبارزة للموقع والشاشات الرئيسية
-                          </p>
-                        </button>
-                      </div>
-
-                      {/* 2. عنوان فرعي - 25 PXL */}
-                      <div className="flex items-stretch gap-2.5">
-                        <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
-                          <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">25</span>
-                          <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onAddElement(
-                              'heading',
-                              'عنوان فرعي تكميلي',
-                              { fontSize: 25, fontWeight: '600', color: '#1d1d1f', textAlign: 'right' },
-                              { name: 'عنوان فرعي (25px)', width: 440, height: 55 }
-                            );
-                          }}
-                          className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-base font-semibold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
-                              عنوان فرعي
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                              + إضافة
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-neutral-400 mt-1">
-                            عنوان للأقسام والفقرات الداخلية
-                          </p>
-                        </button>
-                      </div>
-
-                      {/* 3. مسند نصي - 15 PXL */}
-                      <div className="flex items-stretch gap-2.5">
-                        <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
-                          <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">15</span>
-                          <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onAddElement(
-                              'paragraph',
-                              'هذا مسند نصي لتفاصيل الشرح والمعلومات التكميلية، يمكنك استبداله أو تعديله بكل مرونة.',
-                              { fontSize: 15, fontWeight: 'normal', color: '#4b5563', textAlign: 'right', lineHeight: 1.6 },
-                              { name: 'مسند نصي (15px)', width: 460, height: 75 }
-                            );
-                          }}
-                          className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-normal text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight">
-                              مسند نصي
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                              + إضافة
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-neutral-400 mt-1">
-                            فقرة نصية لشرح وتفصيل المحتوى
-                          </p>
-                        </button>
-                      </div>
-
-                      {/* 4. حقل ادخال - 15 PXL مع السهم والملاحظة من الرسم اليدوي */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-stretch gap-2.5">
-                          <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
-                            <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">15</span>
-                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onAddElement(
-                                'input',
-                                'أدخل بريدك الإلكتروني أو بياناتك هنا...',
-                                { fontSize: 15, borderRadius: 12 },
-                                { name: 'حقل إدخال (15px)', width: 340, height: 48 }
-                              );
-                            }}
-                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-semibold text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight">
-                                حقل ادخال
-                              </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                                + إضافة
-                              </span>
-                            </div>
-                            <div className="mt-1.5 px-2.5 py-1 bg-neutral-100 rounded-lg border border-neutral-200 text-[11px] text-neutral-400 font-normal">
-                              حقل إدخال تفاعلي...
-                            </div>
-                          </button>
-                        </div>
-
-                        {/* Note callout as handwritten in sketch with arrow */}
-                        <div className="mr-16 bg-amber-50/80 border border-amber-200/90 rounded-xl p-2.5 text-right flex items-start gap-2 shadow-3xs">
-                          <span className="text-amber-600 text-sm font-bold shrink-0">↙</span>
-                          <div className="text-[11px] text-amber-900 leading-snug">
-                            <span className="font-bold block text-amber-950 mb-0.5">
-                              حقل إدخال نص تفاعلي:
-                            </span>
-                            حقل ادخال نص في حالة المعاينة أو على ويب لأخذ معلومات من المتصفح
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Divider */}
-                    <div className="pt-2 border-t border-neutral-200" />
-
-                    {/* Compound texts section: وعرض بعض النصوص المركبة بتنسيقات مختلفة */}
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between text-right px-0.5">
-                        <div>
-                          <h4 className="text-xs font-bold text-neutral-900">
-                            نصوص مركبة بتنسيقات مختلفة:
-                          </h4>
-                          <p className="text-[10px] text-neutral-400">
-                            تراكيب نصوص منسقة جاهزة للإضافة بنقرة واحدة
-                          </p>
-                        </div>
-                        <span className="text-[10px] font-mono text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-full font-bold">
-                          7 نماذج
-                        </span>
-                      </div>
-
-                      {/* Compound items list */}
-                      <div className="space-y-2.5">
-                        {/* 1. Hero Title + Subtitle */}
-                        <div 
-                          onClick={() => {
-                            onAddElement(
-                              'heading',
-                              'بناء مواقع المستقبل بهوية عربية فاخرة',
-                              { fontSize: 30, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
-                              {
-                                name: 'ترويسة مع نص وصفي',
-                                width: 560,
-                                height: 110,
-                                compoundType: 'hero',
-                                subContent: 'مساحة عمل حرة تمنحك السيطرة المطلقة على كل تفصيلة في التصميم بدقة وسرعة فائقة.'
-                              }
-                            );
-                          }}
-                          className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-neutral-400">
-                              ترويسة وعنوان مع شرح
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
-                              + إضافة
-                            </span>
-                          </div>
-                          <div className="space-y-1 pr-1 border-r-2 border-[#0071e3]/40">
-                            <div className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
-                              بناء مواقع المستقبل بهوية فاخرة
-                            </div>
-                            <div className="text-[10.5px] text-neutral-500 leading-snug">
-                              مساحة عمل حرة تمنحك السيطرة المطلقة على كل تفصيلة...
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 2. Badge Tag + Heading */}
-                        <div 
-                          onClick={() => {
-                            onAddElement(
-                              'heading',
-                              'انطلاقة الجيل الجديد من تصاميم الويب',
-                              { fontSize: 26, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
-                              {
-                                name: 'شارة ترويجية مع عنوان',
-                                width: 480,
-                                height: 95,
-                                compoundType: 'badge-heading',
-                                badgeText: '✦ جديد وحصري'
-                              }
-                            );
-                          }}
-                          className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-neutral-400">
-                              شارة تعريفية مع عنوان
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
-                              + إضافة
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#0071e3]/10 text-[#0071e3]">
-                              ✦ جديد وحصري
-                            </span>
-                            <div className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
-                              انطلاقة الجيل الجديد من تصاميم الويب
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 3. Quote + Author Citation */}
-                        <div 
-                          onClick={() => {
-                            onAddElement(
-                              'paragraph',
-                              '«البساطة والتصميم المتقن هما جوهر التجربة الرقمية الناجحة.»',
-                              { fontSize: 16, fontStyle: 'italic', color: '#1d1d1f', textAlign: 'right' },
-                              {
-                                name: 'اقتباس مع اسم الكاتب',
-                                width: 440,
-                                height: 100,
-                                compoundType: 'quote',
-                                authorText: '— ستيف جوبز'
-                              }
-                            );
-                          }}
-                          className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-neutral-400">
-                              اقتباس مع اسم الكاتب
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
-                              + إضافة
-                            </span>
-                          </div>
-                          <div className="flex items-start gap-2 pr-1 border-r-3 border-amber-400">
-                            <span className="text-xl text-amber-500 font-serif leading-none select-none">❝</span>
-                            <div className="flex-1 space-y-0.5">
-                              <div className="text-xs italic text-neutral-800 leading-snug">
-                                «البساطة والتصميم المتقن هما جوهر التجربة الرقمية...»
-                              </div>
-                              <div className="text-[10px] font-semibold text-neutral-500">
-                                — ستيف جوبز
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 4. Stat Number + Label */}
-                        <div 
-                          onClick={() => {
-                            onAddElement(
-                              'heading',
-                              '+99.9%',
-                              { fontSize: 38, fontWeight: 'bold', color: '#0071e3', textAlign: 'right' },
-                              {
-                                name: 'رقم إحصائي مع تسمية',
-                                width: 280,
-                                height: 90,
-                                compoundType: 'stat',
-                                subContent: 'نسبة رضا وثقة العملاء في استقرار الخدمة'
-                              }
-                            );
-                          }}
-                          className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-neutral-400">
-                              رقم إحصائي بارز
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
-                              + إضافة
-                            </span>
-                          </div>
-                          <div className="flex items-baseline gap-2">
-                            <span className="font-mono font-black text-2xl text-[#0071e3] leading-none">
-                              +99.9%
-                            </span>
-                            <span className="text-xs font-semibold text-neutral-600 truncate">
-                              نسبة رضا وثقة العملاء
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* 5. Feature Checklist */}
-                        <div 
-                          onClick={() => {
-                            onAddElement(
-                              'paragraph',
-                              'أهم المزايا والمواصفات',
-                              { fontSize: 18, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
-                              {
-                                name: 'ترويسة ميزات مع نقاط',
-                                width: 400,
-                                height: 125,
-                                compoundType: 'checklist',
-                                subContent: '✓ سرعة تحميل فائقة وتوافق كامل\n✓ خوادم سحابية آمنة مع نسخ دوري\n✓ دعم فني مباشر واستشارات مجانية'
-                              }
-                            );
-                          }}
-                          className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-neutral-400">
-                              ترويسة مع قائمة نقاط
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
-                              + إضافة
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="text-xs font-bold text-neutral-900">أهم المزايا والمواصفات</div>
-                            <div className="text-[10.5px] text-neutral-600 space-y-0.5">
-                              <div>✓ سرعة تحميل فائقة وتوافق كامل</div>
-                              <div>✓ خوادم سحابية آمنة مع نسخ دوري</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 6. Accent Bordered Headline */}
-                        <div 
-                          onClick={() => {
-                            onAddElement(
-                              'heading',
-                              'رؤيتنا للمستقبل والريادة',
-                              { fontSize: 22, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
-                              {
-                                name: 'عنوان جانبي مع خط ملون',
-                                width: 420,
-                                height: 85,
-                                compoundType: 'accent-border',
-                                subContent: 'تمكين رواد الأعمال والمصممين من ابتكار تجارب ويب فريدة وغير مسبوقة.'
-                              }
-                            );
-                          }}
-                          className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-neutral-400">
-                              عنوان جانبي مع خط بارز
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
-                              + إضافة
-                            </span>
-                          </div>
-                          <div className="pr-2 border-r-3 border-[#0071e3] space-y-0.5">
-                            <div className="text-xs font-bold text-neutral-900 group-hover:text-[#0071e3] transition-colors">
-                              رؤيتنا للمستقبل والريادة
-                            </div>
-                            <div className="text-[10px] text-neutral-500">
-                              تمكين رواد الأعمال والمصممين من ابتكار تجارب ويب فريدة...
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 7. Product Title + Price Tag */}
-                        <div 
-                          onClick={() => {
-                            onAddElement(
-                              'card',
-                              'باقة الانطلاق للأعمال',
-                              { fontSize: 15, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' },
-                              {
-                                name: 'ترويسة منتج مع سعر',
-                                width: 320,
-                                height: 105,
-                                compoundType: 'price-tag',
-                                badgeText: '١٩٩ ر.س / شهرياً',
-                                subContent: 'اشتراك شهري شامل كافة الخصائص والدعم الفني.'
-                              }
-                            );
-                          }}
-                          className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-neutral-400">
-                              عنوان منتج مع سعر
-                            </span>
-                            <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
-                              + إضافة
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-neutral-900">
-                              باقة الانطلاق للأعمال
-                            </span>
-                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 font-bold text-[10px] rounded-md">
-                              ١٩٩ ر.س / شهرياً
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              // ==========================================
-              // VIEW 2: Detail with Subcategories Bar (كما في الصورة رقم ٢)
-              // ==========================================
-              const currentCategoryObj = ADD_CATEGORIES.find(c => c.id === activeAddCategory);
-              const currentSubCats = SUBCATEGORIES_MAP[activeAddCategory] || [{ id: 'all', label: 'الكل' }];
-              const currentTemplates = (TEMPLATES_MAP[activeAddCategory] || []).filter(t => {
-                if (activeAddCategory === 'shape') {
-                  if (selectedSubCategory === 'all') {
-                    return !t.subCategories.includes('undraw');
-                  }
-                  if (selectedSubCategory === 'undraw') {
-                    return t.subCategories.includes('undraw');
-                  }
-                  if (selectedSubCategory === 'boxes') {
-                    return t.subCategories.includes('boxes') || t.subCategories.includes('cards');
-                  }
-                  if (selectedSubCategory === 'text-boxes') {
-                    return t.subCategories.includes('text-boxes');
-                  }
-                  if (selectedSubCategory === 'geometric') {
-                    return t.subCategories.includes('geometric');
-                  }
-                  if (selectedSubCategory === 'organic') {
-                    return t.subCategories.includes('organic') || t.subCategories.includes('shapes') || t.subCategories.includes('badges');
-                  }
-                  if (selectedSubCategory === 'fluid') {
-                    return t.subCategories.includes('fluid') || t.subCategories.includes('graphic') || t.subCategories.includes('dividers') || t.subCategories.includes('brush');
-                  }
-                }
-                if (activeAddCategory === 'icons') {
-                  if (selectedSubCategory === 'all') return true;
-                  if (selectedSubCategory === 'social') {
-                    const socialIds = [
-                      'icon-whatsapp', 'icon-instagram', 'icon-snapchat', 'icon-tiktok', 'icon-youtube',
-                      'icon-twitter', 'icon-facebook', 'icon-linkedin', 'icon-telegram', 'icon-pinterest',
-                      'icon-github', 'icon-discord', 'icon-reddit', 'icon-skype', 'icon-spotify'
-                    ];
-                    return socialIds.includes(t.id);
-                  }
-                  if (selectedSubCategory === 'utility') {
-                    const utilityIds = [
-                      'icon-home', 'icon-phone', 'icon-mail', 'icon-user', 'icon-calendar', 'icon-clock',
-                      'icon-search', 'icon-settings', 'icon-lock', 'icon-unlock', 'icon-trash', 'icon-edit',
-                      'icon-save', 'icon-download', 'icon-upload', 'icon-share', 'icon-heart', 'icon-star',
-                      'icon-info', 'icon-check'
-                    ];
-                    return utilityIds.includes(t.id);
-                  }
-                  if (selectedSubCategory === 'separators') {
-                    const separatorIds = [
-                      'icon-syrian-pound', 'icon-exclamation', 'icon-question', 'icon-price-tag',
-                      'icon-sep-stars', 'icon-sep-diamond', 'icon-sep-wave', 'icon-sep-dots',
-                      'icon-alert', 'icon-gift', 'icon-fire', 'icon-crown', 'icon-trophy', 'icon-bell', 'icon-dollar'
-                    ];
-                    return separatorIds.includes(t.id);
-                  }
-                }
-                return selectedSubCategory === 'all' || t.subCategories.includes(selectedSubCategory);
-              });
-
-              if (activeAddCategory === 'iconify') {
-                const popularIcons = [
-                  'lucide:home', 'lucide:user', 'lucide:settings', 'lucide:search', 'lucide:bell', 'lucide:mail',
-                  'lucide:phone', 'lucide:calendar', 'lucide:check-circle', 'lucide:alert-circle', 'lucide:info', 'lucide:help-circle',
-                  'lucide:shopping-cart', 'lucide:heart', 'lucide:star', 'lucide:map-pin', 'lucide:camera', 'lucide:video',
-                  'lucide:folder', 'lucide:download', 'lucide:upload', 'lucide:share-2', 'lucide:lock', 'lucide:unlock',
-                  'tabler:brand-whatsapp', 'tabler:brand-instagram', 'tabler:brand-youtube', 'tabler:brand-facebook', 'tabler:brand-linkedin', 'tabler:brand-tiktok'
-                ];
-                const activeResults = iconifySearch.trim() ? iconifyResults : popularIcons;
-
-                return (
-                  <div className="space-y-3.5 pb-6 text-right" dir="rtl">
-                    {/* Header */}
-                    <div className="flex items-center justify-between pb-2 border-b border-neutral-200">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveAddCategory(null);
-                          setIconifySearch('');
-                        }}
-                        className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
-                      >
-                        <ChevronRight size={15} strokeWidth={2.4} />
-                        <span>رجوع للعناصر</span>
-                      </button>
-
-                      <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-                        <span className="text-[#0071e3]">🔍</span>
-                        <span>مكتبة أيقونات Iconify</span>
-                      </h3>
-                    </div>
-
-                    {/* Description */}
-                    <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 space-y-1">
-                      <h4 className="text-xs font-bold text-blue-900">ابحث عن ملايين الأيقونات العالمية</h4>
-                      <p className="text-[10px] text-blue-700 leading-normal">
-                        اكتب اسم أي موضوع بالإنجليزية (مثل: <code className="bg-white px-1 py-0.5 rounded border font-mono">user</code>، <code className="bg-white px-1 py-0.5 rounded border font-mono">arrow</code>، <code className="bg-white px-1 py-0.5 rounded border font-mono">heart</code>) للبحث الفوري في كافة المكتبات العالمية!
-                      </p>
-                    </div>
-
-                    {/* Live Search Input */}
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={iconifySearch}
-                        onChange={(e) => setIconifySearch(e.target.value)}
-                        placeholder="ابحث بالأجنبية... (مثال: heart, user, search)"
-                        className="w-full text-xs font-semibold px-3 py-2.5 pr-8 bg-white rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:outline-none transition-all shadow-3xs text-right"
-                      />
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
-                        {isSearchingIconify ? (
-                          <div className="w-4 h-4 border-2 border-neutral-300 border-t-[#0071e3] rounded-full animate-spin" />
-                        ) : (
-                          <Search size={14} />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Results Label */}
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[11px] font-bold text-neutral-500">
-                        {iconifySearch.trim() ? `نتائج البحث لـ "${iconifySearch}"` : 'أيقونات شائعة ومقترحة:'}
-                      </span>
-                      <span className="text-[10px] text-neutral-400">
-                        {activeResults.length} أيقونة معروضة
-                      </span>
-                    </div>
-
-                    {/* Icons Grid */}
-                    {activeResults.length === 0 && !isSearchingIconify ? (
-                      <div className="py-10 text-center text-xs text-neutral-400 font-medium">
-                        لا توجد أيقونات تطابق بحثك. جرب كلمات أخرى مثل chart, star, phone.
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-4 gap-2">
-                        {activeResults.map((iconName) => (
-                          <button
-                            key={iconName}
-                            type="button"
-                            onClick={() => {
-                              const simpleName = iconName.split(':').pop() || 'أيقونة';
-                              onAddElement(
-                                'icon', 
-                                'iconify:' + iconName, 
-                                { color: '#0071e3' }, 
-                                { name: `أيقونة ${simpleName}`, width: 64, height: 64 }
-                              );
-                            }}
-                            className="bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-[#0071e3] rounded-xl p-2.5 aspect-square flex flex-col items-center justify-center gap-1.5 shadow-3xs hover:shadow-sm transition-all active:scale-95 cursor-pointer group text-center"
-                            title={`إدراج ${iconName}`}
-                          >
-                            <div className="text-2xl text-neutral-700 group-hover:text-[#0071e3] transition-colors flex items-center justify-center w-8 h-8">
-                              <Icon icon={iconName} />
-                            </div>
-                            <span className="text-[8px] text-neutral-400 group-hover:text-neutral-700 font-mono truncate max-w-full block" dir="ltr">
-                              {iconName.split(':').pop()}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              return (
-                <div className="space-y-3.5 pb-6">
-                  {/* Top Bar: Title "اضافة نص" (as handwritten in sketch) & Back Button */}
-                  <div className="flex items-center justify-between pb-2 border-b border-neutral-200">
-                    <button
-                      type="button"
-                      onClick={() => setActiveAddCategory(null)}
-                      className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <ChevronRight size={15} strokeWidth={2.4} />
-                      <span>رجوع للعناصر</span>
-                    </button>
-
-                    <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-                      <span className="text-[#0071e3]">{currentCategoryObj?.icon}</span>
-                      <span>اضافة {currentCategoryObj?.name}</span>
-                    </h3>
-                  </div>
-
-                  {/* Horizontal Capsule Bar (كما في الصورة رقم ٢ تماماً مع سهم عند عدم الاتساع) */}
-                  <div className="relative flex items-center border-2 border-neutral-300 bg-white rounded-full p-1 shadow-2xs">
-                    {/* Left Arrow Button (سهم التمرير لليسار كما في الصورة رقم ٢) */}
-                    <button
-                      type="button"
-                      onClick={() => scrollSubCategories('left')}
-                      className="w-7 h-7 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-black flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-2xs"
-                      title="تمرير لليسار لرؤية المزيد"
-                      aria-label="تمرير لليسار"
-                    >
-                      <ChevronLeft size={15} strokeWidth={2.4} />
-                    </button>
-
-                    {/* Scrollable Subcategories Pills Track */}
-                    <div
-                      ref={subCategoryScrollRef}
-                      className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 px-1 scroll-smooth flex-1"
-                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                    >
-                      {currentSubCats.map((sub) => {
-                        const isSubActive = selectedSubCategory === sub.id;
-                        return (
-                          <button
-                            key={sub.id}
-                            type="button"
-                            onClick={() => setSelectedSubCategory(sub.id)}
-                            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                              isSubActive
-                                ? 'bg-[#0071e3] text-white shadow-xs font-bold'
-                                : 'text-neutral-700 hover:bg-neutral-100 hover:text-black'
-                            }`}
-                          >
-                            {sub.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Right Arrow Button */}
-                    <button
-                      type="button"
-                      onClick={() => scrollSubCategories('right')}
-                      className="w-7 h-7 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-black flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-2xs"
-                      title="تمرير لليمين"
-                      aria-label="تمرير لليمين"
-                    >
-                      <ChevronRight size={15} strokeWidth={2.4} />
-                    </button>
-                  </div>
-
-                  {/* Templates & Examples Grid */}
-                  <div className="space-y-2.5">
-                    {activeAddCategory === 'calendar' && (
-                      <div className="p-3.5 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 border-2 border-[#0071e3]/30 rounded-2xl text-right space-y-3.5 shadow-sm" dir="rtl">
-                        {/* Header with expand/collapse toggle */}
-                        <div className="flex items-center justify-between pb-2 border-b border-blue-200/60">
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-8 h-8 rounded-xl text-white flex items-center justify-center font-bold text-sm shadow-xs transition-colors"
-                              style={{ backgroundColor: calAddAccentColor }}
-                            >
-                              ⚙️
-                            </div>
-                            <div>
-                              <h4 className="text-xs font-black text-neutral-900">ضبط إعدادات بطاقة التقويم قبل الإضافة</h4>
-                              <p className="text-[10px] text-neutral-500">حدد ساعات الدوام، العطل، الألوان وحقول الحجز</p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setCalAddSettingsOpen(prev => !prev)}
-                            className="text-[10px] font-bold text-[#0071e3] bg-white px-2 py-1 rounded-lg border border-blue-200 hover:bg-blue-50 transition-all cursor-pointer"
-                          >
-                            {calAddSettingsOpen ? 'طي الإعدادات ▲' : 'توسيع الإعدادات ▼'}
-                          </button>
-                        </div>
-
-                        {calAddSettingsOpen && (
-                          <div className="space-y-3 pt-1 text-xs">
-                            {/* 1. عنوان التقويم الرئيسي */}
-                            <div className="space-y-1">
-                              <label className="text-[10.5px] font-bold text-neutral-800 block">عنوان التقويم ورأس النموذج:</label>
-                              <input
-                                type="text"
-                                value={calAddTitle}
-                                onChange={(e) => setCalAddTitle(e.target.value)}
-                                placeholder="مثال: حجز موعد استشارة جديدة"
-                                className="w-full text-xs font-semibold px-3 py-2 bg-white rounded-xl border border-neutral-300 focus:outline-none transition-all shadow-3xs"
-                              />
-                            </div>
-
-                            {/* 2. اللون الرئيسي للبطاقة */}
-                            <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">ألوان البطاقة والتفاعل النشط (Accent Color):</span>
-                              <div className="flex flex-wrap gap-1.5 mb-1.5">
-                                {[
-                                  { hex: '#0071e3', name: 'أزرق آبل' },
-                                  { hex: '#10b981', name: 'زمردي' },
-                                  { hex: '#ec4899', name: 'وردي' },
-                                  { hex: '#8b5cf6', name: 'بنفسجي' },
-                                  { hex: '#f97316', name: 'برتقالي' },
-                                  { hex: '#ef4444', name: 'أحمر قاني' },
-                                  { hex: '#111827', name: 'فحمي' }
-                                ].map((color) => {
-                                  const isSelected = calAddAccentColor.toLowerCase() === color.hex.toLowerCase();
-                                  return (
-                                    <button
-                                      key={color.hex}
-                                      type="button"
-                                      onClick={() => setCalAddAccentColor(color.hex)}
-                                      className={`w-6 h-6 rounded-full border transition-all relative flex items-center justify-center cursor-pointer ${
-                                        isSelected ? 'scale-110 ring-2 ring-offset-2 ring-blue-500 border-transparent' : 'border-neutral-200 hover:scale-105'
-                                      }`}
-                                      style={{ backgroundColor: color.hex }}
-                                      title={color.name}
-                                    >
-                                      {isSelected && <span className="text-[9px] text-white">✓</span>}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-neutral-500">رمز اللون المخصص (Hex):</span>
-                                <input
-                                  type="text"
-                                  value={calAddAccentColor}
-                                  onChange={(e) => setCalAddAccentColor(e.target.value)}
-                                  placeholder="#0071e3"
-                                  className="w-24 p-1 bg-white rounded-lg border border-neutral-300 font-mono text-center text-xs focus:outline-none uppercase"
-                                />
-                              </div>
-                            </div>
-
-                            {/* 3. أيام العمل والعطل الأسبوعية */}
-                            <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">أيام العمل والعطل الأسبوعية:</span>
-                              <p className="text-[9.5px] text-neutral-500">اضغط على اليوم للتبديل بين يوم عمل متاح (ملوّن) أو عطلة (رمادي):</p>
-                              <div className="grid grid-cols-4 gap-1">
-                                {[
-                                  { id: 'sunday', name: 'الأحد' },
-                                  { id: 'monday', name: 'الإثنين' },
-                                  { id: 'tuesday', name: 'الثلاثاء' },
-                                  { id: 'wednesday', name: 'الأربعاء' },
-                                  { id: 'thursday', name: 'الخميس' },
-                                  { id: 'friday', name: 'الجمعة' },
-                                  { id: 'saturday', name: 'السبت' },
-                                ].map((day) => {
-                                  const isWork = calAddWorkingDays.includes(day.id);
-                                  return (
-                                    <button
-                                      key={day.id}
-                                      type="button"
-                                      onClick={() => {
-                                        let newW = [...calAddWorkingDays];
-                                        let newH = [...calAddHolidays];
-                                        if (newW.includes(day.id)) {
-                                          newW = newW.filter(d => d !== day.id);
-                                          if (!newH.includes(day.id)) newH.push(day.id);
-                                        } else {
-                                          newH = newH.filter(d => d !== day.id);
-                                          if (!newW.includes(day.id)) newW.push(day.id);
-                                        }
-                                        setCalAddWorkingDays(newW);
-                                        setCalAddHolidays(newH);
-                                      }}
-                                      className={`py-1 px-1 rounded-lg text-[10px] font-bold border transition-all text-center cursor-pointer ${
-                                        isWork
-                                          ? 'text-white border-transparent'
-                                          : 'bg-neutral-100 text-neutral-400 border-neutral-200 hover:bg-neutral-200'
-                                      }`}
-                                      style={{ backgroundColor: isWork ? calAddAccentColor : undefined }}
-                                    >
-                                      {day.name}
-                                      <div className="text-[7.5px] font-normal opacity-85 mt-0.5">
-                                        {isWork ? 'عمل' : 'عطلة'}
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-
-                            {/* 4. ساعات الدوام الرسمي اليومي */}
-                            <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">ساعات الدوام اليومي الرسمي:</span>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <span className="text-[10px] text-neutral-500 block mb-0.5">بداية العمل:</span>
-                                  <input
-                                    type="time"
-                                    value={calAddWorkStart}
-                                    onChange={(e) => setCalAddWorkStart(e.target.value)}
-                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية العمل:</span>
-                                  <input
-                                    type="time"
-                                    value={calAddWorkEnd}
-                                    onChange={(e) => setCalAddWorkEnd(e.target.value)}
-                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* 5. أوقات الاستراحة اليومية */}
-                            <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">أوقات الاستراحة (تُستثنى من الحجوزات):</span>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <span className="text-[10px] text-neutral-500 block mb-0.5">بداية الاستراحة:</span>
-                                  <input
-                                    type="time"
-                                    value={calAddBreakStart}
-                                    onChange={(e) => setCalAddBreakStart(e.target.value)}
-                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية الاستراحة:</span>
-                                  <input
-                                    type="time"
-                                    value={calAddBreakEnd}
-                                    onChange={(e) => setCalAddBreakEnd(e.target.value)}
-                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* 6. وتيرة تكرار المواعيد (Interval) */}
-                            <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">مدة الفترة المتاحة لكل موعد:</span>
-                              <select
-                                value={calAddInterval}
-                                onChange={(e) => setCalAddInterval(e.target.value as any)}
-                                className="w-full text-xs font-semibold p-2 bg-white rounded-xl border border-neutral-300 focus:outline-none cursor-pointer"
-                              >
-                                <option value="10">موعد كل ١٠ دقائق</option>
-                                <option value="15">موعد كل ١٥ دقيقة</option>
-                                <option value="30">موعد كل ٣٠ دقيقة (نصف ساعة)</option>
-                                <option value="60">موعد كل ساعة كاملة</option>
-                                <option value="day">موعد واحد فقط طوال اليوم</option>
-                                <option value="manual">تخصيص يدوي بالدقائق...</option>
-                              </select>
-
-                              {calAddInterval === 'manual' && (
-                                <div className="space-y-1 mt-1.5">
-                                  <label className="text-[10px] text-neutral-500 block">أدخل الوقت بالدقائق يدوياً:</label>
-                                  <div className="flex items-center gap-2">
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={480}
-                                      value={calAddIntervalMins}
-                                      onChange={(e) => setCalAddIntervalMins(Math.max(1, Number(e.target.value)))}
-                                      className="w-24 p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                    />
-                                    <span className="text-xs text-neutral-500 font-semibold">دقيقة</span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* 7. آلية الموافقة وتأكيد الموعد */}
-                            <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">آلية الموافقة وتأكيد الموعد:</span>
-                              <label className="flex items-center gap-2 cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  checked={calAddNeedsConfirmation}
-                                  onChange={(e) => setCalAddNeedsConfirmation(e.target.checked)}
-                                  className="w-4 h-4 cursor-pointer"
-                                  style={{ accentColor: calAddAccentColor }}
-                                />
-                                <span className="text-xs font-medium text-neutral-700">يتطلب موافقة وتأكيد الإدارة أولاً (⏳ معلّق)</span>
-                              </label>
-                            </div>
-
-                            {/* 8. طرق إجراء المقابلة المتاحة */}
-                            <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">طريقة ومكان إجراء المقابلة (اختر خياراً أو أكثر):</span>
-                              <div className="grid grid-cols-3 gap-1">
-                                {[
-                                  { id: 'personal', name: '👤 شخصي', title: 'حضور شخصي بالمقر' },
-                                  { id: 'phone', name: '📞 هاتفي', title: 'مكالمة هاتفية صوتية' },
-                                  { id: 'whatsapp', name: '📹 فيديو', title: 'اتصال فيديو واتساب' },
-                                ].map((type) => {
-                                  const isSel = calAddMeetingTypes.includes(type.id);
-                                  return (
-                                    <button
-                                      key={type.id}
-                                      type="button"
-                                      onClick={() => {
-                                        let newT = [...calAddMeetingTypes];
-                                        if (newT.includes(type.id)) {
-                                          if (newT.length > 1) newT = newT.filter(t => t !== type.id);
-                                        } else {
-                                          newT.push(type.id);
-                                        }
-                                        setCalAddMeetingTypes(newT);
-                                      }}
-                                      className={`py-1.5 rounded-lg text-[9.5px] font-bold border transition-all text-center cursor-pointer ${
-                                        isSel
-                                          ? 'text-white border-transparent font-black'
-                                          : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
-                                      }`}
-                                      style={{ backgroundColor: isSel ? calAddAccentColor : undefined }}
-                                    >
-                                      {type.name}
-                                      {isSel && <span className="mr-0.5 text-[8px]">✓</span>}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-
-                            {/* 9. تخصيص عناوين حقول النموذج */}
-                            <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">تخصيص عناوين حقول النموذج:</span>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل الاسم:</span>
-                                  <input
-                                    type="text"
-                                    value={calAddNameLabel}
-                                    onChange={(e) => setCalAddNameLabel(e.target.value)}
-                                    className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 text-xs font-semibold focus:outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل العنوان:</span>
-                                  <input
-                                    type="text"
-                                    value={calAddAddressLabel}
-                                    onChange={(e) => setCalAddAddressLabel(e.target.value)}
-                                    className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 text-xs font-semibold focus:outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل الهاتف:</span>
-                                  <input
-                                    type="text"
-                                    value={calAddPhoneLabel}
-                                    onChange={(e) => setCalAddPhoneLabel(e.target.value)}
-                                    className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 text-xs font-semibold focus:outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل البريد:</span>
-                                  <input
-                                    type="text"
-                                    value={calAddEmailLabel}
-                                    onChange={(e) => setCalAddEmailLabel(e.target.value)}
-                                    className="w-full p-1.5 bg-white rounded-lg border border-neutral-300 text-xs font-semibold focus:outline-none"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* زر الإدراج المباشر للبطاقة العرضية الفاخرة */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onAddElement('calendar', calAddTitle, { 
-                              backgroundColor: '#ffffff', 
-                              borderRadius: 24, 
-                              glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' 
-                            }, { 
-                              name: 'بطاقة حجز مواعيد عرضية', 
-                              calendarTitle: calAddTitle, 
-                              calendarAccentColor: calAddAccentColor,
-                              calendarSlots: calAddSlotsText.split(',').map(s => s.trim()).filter(Boolean),
-                              width: 780, 
-                              height: 440,
-                              calendarWorkingDays: calAddWorkingDays,
-                              calendarHolidays: calAddHolidays,
-                              calendarWorkStart: calAddWorkStart,
-                              calendarWorkEnd: calAddWorkEnd,
-                              calendarBreakStart: calAddBreakStart,
-                              calendarBreakEnd: calAddBreakEnd,
-                              calendarInterval: calAddInterval,
-                              calendarIntervalMinutes: calAddIntervalMins,
-                              calendarNeedsConfirmation: calAddNeedsConfirmation,
-                              calendarMeetingTypes: calAddMeetingTypes,
-                              calendarMeetingType: calAddMeetingTypes[0] as any,
-                              calendarNameLabel: calAddNameLabel,
-                              calendarAddressLabel: calAddAddressLabel,
-                              calendarPhoneLabel: calAddPhoneLabel,
-                              calendarEmailLabel: calAddEmailLabel,
-                              calendarDescLabel: calAddDescLabel
-                            });
-                          }}
-                          className="w-full py-2.5 px-3 text-white rounded-xl text-xs font-black shadow-md hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                          style={{ backgroundColor: calAddAccentColor }}
-                        >
-                          <span>➕</span>
-                          <span>إدراج بطاقة حجز الموعد العرضية للكانفاس (780 × 440)</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {activeAddCategory === 'video' && (
-                      <div className="p-3 bg-red-50/50 border border-red-200/60 rounded-2xl text-right space-y-1.5" dir="rtl">
-                        <label className="text-xs font-bold text-neutral-800 block">رابط الفيديو المستهدف (اختياري):</label>
-                        <input
-                          type="url"
-                          value={videoAddUrl}
-                          onChange={(e) => setVideoAddUrl(e.target.value)}
-                          placeholder="ألصق رابط يوتيوب أو تيك توك هنا..."
-                          dir="ltr"
-                          className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs font-mono focus:outline-none focus:border-red-500"
-                        />
-                        <p className="text-[9.5px] text-neutral-400 leading-snug">
-                          سيتم تزويد المشغل المختار بهذا الرابط تلقائياً عند إضافته للكانفاس. يمكنك أيضاً تعديل الرابط لاحقاً في أي وقت.
-                        </p>
-                      </div>
-                    )}
-
-                    {activeAddCategory === 'map' && (
-                      <div className="p-3 bg-blue-50/50 border border-blue-200/60 rounded-2xl text-right space-y-2" dir="rtl">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-bold text-neutral-800 block">حدد موقع العنوان أو اضغط لتحديده:</label>
-                          <button
-                            type="button"
-                            onClick={() => handleDetectUserLocation((loc) => setMapAddLocation(loc))}
-                            disabled={isDetectingLocation}
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-white hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shadow-3xs transition-all cursor-pointer disabled:opacity-50"
-                            title="تحديد موقعك الجغرافي الحالي تلقائياً"
-                          >
-                            {isDetectingLocation ? (
-                              <>
-                                <Loader2 size={11} className="animate-spin text-blue-600" />
-                                <span>جاري التحديد...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Navigation size={11} className="text-blue-600" />
-                                <span>موقعي الحالي 📍</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-
-                        <input
-                          type="text"
-                          value={mapAddLocation}
-                          onChange={(e) => setMapAddLocation(e.target.value)}
-                          placeholder="مثال: دبي مول أو اضغط 'موقعي الحالي'..."
-                          className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-blue-500"
-                        />
-
-                        {locationDetectError && (
-                          <p className="text-[10px] text-red-600 font-semibold">⚠️ {locationDetectError}</p>
-                        )}
-
-                        <p className="text-[9.5px] text-neutral-400 leading-snug">
-                          سيتم تزويد الخريطة المختارة بهذا الموقع وتثبيت الدبوس عليه وتفعيلها تلقائياً عند إنزالها للكانفاس.
-                        </p>
-                      </div>
-                    )}
-
-                    {activeAddCategory === 'sheet' && (
-                      <div className="p-3.5 bg-emerald-50/50 border border-emerald-200/60 rounded-2xl text-right space-y-3" dir="rtl">
-                        <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
-                          <Grid3X3 size={14} className="text-emerald-600 shrink-0" />
-                          <span>تخصيص جدول البيانات الجديد:</span>
-                        </span>
-
-                        {/* Theme color selector */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] text-neutral-500 block">اختر لون الجدول (10 ألوان متناسقة):</label>
-                          <div className="grid grid-cols-5 gap-1.5">
-                            {[
-                              { label: 'أزرق', value: '#0071e3' },
-                              { label: 'أخضر', value: '#10b981' },
-                              { label: 'أحمر', value: '#ef4444' },
-                              { label: 'أصفر', value: '#f59e0b' },
-                              { label: 'بنفسجي', value: '#6366f1' },
-                              { label: 'وردي', value: '#ec4899' },
-                              { label: 'رمادي', value: '#475569' },
-                              { label: 'مائي', value: '#14b8a6' },
-                              { label: 'برتقالي', value: '#f97316' },
-                              { label: 'فحمي', value: '#1f2937' },
-                            ].map((c) => (
-                              <button
-                                key={c.value}
-                                type="button"
-                                onClick={() => setTableAddColor(c.value)}
-                                className="relative h-6 rounded-md cursor-pointer transition-all border border-black/[0.05]"
-                                style={{ backgroundColor: c.value }}
-                                title={c.label}
-                              >
-                                {tableAddColor === c.value && (
-                                  <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-bold">✓</span>
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Rows and columns arrow spinners */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <span className="text-[10px] text-neutral-500 block mb-0.5">عدد الأسطر (الصفوف):</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setTableAddRows(Math.max(1, tableAddRows - 1))}
-                                className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
-                              >
-                                -
-                              </button>
-                              <span className="flex-1 text-center font-mono font-bold text-neutral-800 bg-white border border-neutral-200 py-1 rounded">
-                                {tableAddRows}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setTableAddRows(Math.min(20, tableAddRows + 1))}
-                                className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-neutral-500 block mb-0.5">عدد الأعمدة:</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setTableAddCols(Math.max(1, tableAddCols - 1))}
-                                className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
-                              >
-                                -
-                              </button>
-                              <span className="flex-1 text-center font-mono font-bold text-neutral-800 bg-white border border-neutral-200 py-1 rounded">
-                                {tableAddCols}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setTableAddCols(Math.min(15, tableAddCols + 1))}
-                                className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Column width and row height spinners */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <span className="text-[10px] text-neutral-500 block mb-0.5">عرض العمود (بكسل):</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setTableAddColWidth(Math.max(40, tableAddColWidth - 10))}
-                                className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
-                              >
-                                -
-                              </button>
-                              <span className="flex-1 text-center font-mono font-bold text-neutral-800 bg-white border border-neutral-200 py-1 rounded">
-                                {tableAddColWidth}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setTableAddColWidth(Math.min(300, tableAddColWidth + 10))}
-                                className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-neutral-500 block mb-0.5">ارتفاع السطر (بكسل):</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setTableAddRowHeight(Math.max(20, tableAddRowHeight - 5))}
-                                className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
-                              >
-                                -
-                              </button>
-                              <span className="flex-1 text-center font-mono font-bold text-neutral-800 bg-white border border-neutral-200 py-1 rounded">
-                                {tableAddRowHeight}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setTableAddRowHeight(Math.min(150, tableAddRowHeight + 5))}
-                                className="w-7 h-7 rounded bg-white border border-neutral-300 flex items-center justify-center font-bold text-neutral-600 active:bg-neutral-100 cursor-pointer"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Checkboxes (Header, Indexing) */}
-                        <div className="space-y-2 pt-1">
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={tableAddHeaderRow}
-                              onChange={(e) => setTableAddHeaderRow(e.target.checked)}
-                              className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
-                            />
-                            <span className="text-xs text-neutral-700">اضافة سطر العناوين (أول سطر كعنوان مميز)</span>
-                          </label>
-
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={tableAddIndexCol}
-                              onChange={(e) => setTableAddIndexCol(e.target.checked)}
-                              className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
-                            />
-                            <span className="text-xs text-neutral-700">اضافة عمود التعداد يميناً (1، 2، 3...)</span>
-                          </label>
-                        </div>
-
-                        {/* Add button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cells: string[][] = [];
-                            for (let r = 0; r < tableAddRows; r++) {
-                              const rowArr: string[] = [];
-                              for (let c = 0; c < tableAddCols; c++) {
-                                if (r === 0 && tableAddHeaderRow) {
-                                  rowArr.push(`عنوان ${c + 1}`);
-                                } else if (c === 0 && tableAddIndexCol) {
-                                  rowArr.push(`${r}`);
-                                } else {
-                                  rowArr.push(`خلية ${r + 1}-${c + 1}`);
-                                }
-                              }
-                              cells.push(rowArr);
-                            }
-
-                            const calculatedWidth = tableAddCols * tableAddColWidth + (tableAddIndexCol ? 50 : 0);
-                            const calculatedHeight = tableAddRows * tableAddRowHeight;
-
-                            onAddElement(
-                              'table',
-                              'جدول مخصص',
-                              { borderRadius: 12, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' },
-                              {
-                                name: 'جدول مخصص',
-                                width: Math.max(300, calculatedWidth),
-                                height: Math.max(120, calculatedHeight),
-                                tableConfig: {
-                                  rows: tableAddRows,
-                                  cols: tableAddCols,
-                                  themeColor: tableAddColor,
-                                  headerRow: tableAddHeaderRow,
-                                  indexCol: tableAddIndexCol,
-                                  colWidths: Array(tableAddCols).fill(tableAddColWidth),
-                                  rowHeights: Array(tableAddRows).fill(tableAddRowHeight),
-                                  cells: cells
-                                }
-                              }
-                            );
-                          }}
-                          className="w-full mt-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                        >
-                          <span>✨</span>
-                          <span>إدراج الجدول المخصص الآن في الشريحة</span>
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {currentTemplates.map((item) => (
-                        <div
-                          key={item.id}
-                          onClick={item.action}
-                          className="group bg-white rounded-2xl border-2 border-neutral-200 hover:border-[#0071e3] p-2.5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer text-right"
-                        >
-                          {/* Visual Miniature Preview */}
-                          <div className="mb-2">
-                            {item.preview}
-                          </div>
-
-                          {/* Details & Action */}
-                          <div>
-                            <h4 className="text-xs font-bold text-neutral-900 group-hover:text-[#0071e3] transition-colors truncate">
-                              {item.title}
-                            </h4>
-                            <p className="text-[10px] text-neutral-500 line-clamp-1 mt-0.5">
-                              {item.sub}
-                            </p>
-
-                            <div className="mt-2 pt-1.5 border-t border-neutral-100 flex items-center justify-between">
-                              <span className="text-[9px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md group-hover:bg-[#0071e3] group-hover:text-white transition-colors">
-                                إضافة +
-                              </span>
-                              <span className="text-[10px] text-neutral-400 group-hover:text-[#0071e3]">
-                                ✦
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {currentTemplates.length === 0 && (
-                      <div className="py-8 text-center text-xs text-neutral-400 bg-neutral-50 rounded-2xl border border-neutral-200/60">
-                        لا توجد عناصر مطابقة في هذا الفلتر حالياً
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* TOOL: Wee AI */}
-            {activeSection === 'wee-ai' && (
-              <div className="space-y-2.5">
-                <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-xs text-purple-900 flex items-center gap-2 font-bold">
-                  <Sparkles size={16} className="text-purple-600" />
-                  <span>توليد أقسام بالذكاء الاصطناعي</span>
-                </div>
-                <div className="space-y-2">
-                  {[
-                    {
-                      title: 'قسم الواجهة (Hero Section)',
-                      action: () => {
-                        onAddElement('heading', 'مرحباً بك في عالم التصميم المتطور', { fontSize: 32, fontWeight: 'bold' });
-                        onAddElement('button', 'ابدأ تجربتك الآن ✦', { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 999 });
-                      }
-                    },
-                    {
-                      title: 'بطاقات المميزات (Features)',
-                      action: () => {
-                        onAddGroup?.({
-                          name: 'بطاقة ميزة',
-                          width: 300,
-                          height: 150,
-                          styles: { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' }
-                        }, [
-                          { type: 'heading', name: 'عنوان الميزة', content: 'أداء فائق السرعة', x: 16, y: 16, width: 268, height: 28, styles: { fontSize: 16, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'right' } },
-                          { type: 'paragraph', name: 'وصف الميزة', content: 'سرعة متناهية وخوادم سحابية فائقة الثبات.', x: 16, y: 50, width: 268, height: 84, styles: { fontSize: 12, color: '#4b5563', textAlign: 'right' } }
-                        ]);
-                      }
-                    },
-                  ].map((tmpl, idx) => (
-                    <button
-                      key={idx}
-                      onClick={tmpl.action}
-                      className="w-full p-2.5 rounded-xl border border-neutral-200 hover:border-purple-300 hover:bg-purple-50/50 text-right text-xs font-medium flex items-center justify-between transition-all"
-                    >
-                      <span>{tmpl.title}</span>
-                      <Wand2 size={13} className="text-purple-600" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* TOOL: Link (إضافة رابط كالمخطط اليدوي تماماً) */}
-            {activeSection === 'link' && <LinkSection pages={pages} slides={slides} selectedElement={selectedElement} onUpdateElement={onUpdateElement} linkSubSection={linkSubSection} setLinkSubSection={setLinkSubSection} contactMethod={contactMethod} setContactMethod={setContactMethod} contactInputValue={contactInputValue} setContactInputValue={setContactInputValue} urlInputValue={urlInputValue} setUrlInputValue={setUrlInputValue} />}
-
-            {/* TOOL: Layers (إدارة الطبقات) */}
-            {activeSection === 'layers' && <LayersSection elements={elements} activeSlideId={activeSlideId} selectedElement={selectedElement} onSelectElement={onSelectElement} onDeleteElement={onDeleteElement} onDuplicateElement={onDuplicateElement} onToggleLock={onToggleLock} onMoveLayerUp={onMoveLayerUp} onMoveLayerDown={onMoveLayerDown} onMoveLayerToFront={onMoveLayerToFront} onMoveLayerToBack={onMoveLayerToBack} getElementIcon={getElementIcon} />}
-
-            {/* TOOL: Add/Edit Image (تبديل/تعديل الصورة) */}
-            {activeSection === 'add-image' && (
-              <ImageDrawerSection
-                onAddImage={handleAddImageElement}
-                onBack={() => {
-                  if (selectedElement) {
-                    onSelectSection('format');
-                  } else {
-                    onSelectSection('elements');
-                  }
-                }}
-                canvasElements={elements}
-                selectedElement={selectedElement}
-                onUpdateElement={onUpdateElement}
-              />
-            )}
-
-            {/* TOOL: Navbar settings (ترس الإعدادات) — التثبيت، الطول، اسم الموقع، وتموضع/تنسيق أسماء الصفحات */}
-            {activeSection === 'navbar-settings' && navbar && (
-              <div className="space-y-6 text-right" dir="rtl">
-                <div className="space-y-2">
-                  <SectionHeader title="سلوك النافبار عند التمرير" />
-                  <PillTabs
-                    options={[
-                      { value: 'sticky', label: 'ثابت عائم في الرأس' },
-                      { value: 'scroll', label: 'متحرك مع الصفحة' },
-                    ]}
-                    value={navbar.isSticky ? 'sticky' : 'scroll'}
-                    onChange={(v) => onUpdateNavbar({ isSticky: v === 'sticky' })}
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-black/[0.06]">
-                  <Slider
-                    label="طول (ارتفاع) النافبار"
-                    value={navbar.height ?? 60}
-                    min={44}
-                    max={140}
-                    onChange={(v) => onUpdateNavbar({ height: v })}
-                    formatValue={(v) => `${v}px`}
-                  />
-                  <Slider
-                    label="عرض النافبار"
-                    value={navbar.width ?? 100}
-                    min={40}
-                    max={100}
-                    onChange={(v) => onUpdateNavbar({ width: v })}
-                    formatValue={(v) => `${v}%`}
-                  />
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-black/[0.06]">
-                  <SectionHeader title="اسم الموقع" />
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-neutral-800 block">
-                      اسم الشركة / اسم صاحب الموقع:
-                    </label>
-                    <input
-                      type="text"
-                      value={navbar.brandName || ''}
-                      onChange={(e) => onUpdateNavbar({ brandName: e.target.value })}
-                      className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:bg-white focus:outline-none transition-all"
-                      placeholder="مثال: متجر الأمل..."
-                      dir="rtl"
-                    />
-                    <p className="text-[10px] text-neutral-400 leading-tight">
-                      هذا الاسم هو ما يظهر في النافبار — اكتب اسم شركتك أو اسمك الشخصي، فهو لا يُملأ تلقائيًا.
-                    </p>
-                  </div>
-                  <PillTabs
-                    options={[
-                      { value: 'show', label: 'إظهار اسم الموقع' },
-                      { value: 'hide', label: 'إخفاء اسم الموقع' },
-                    ]}
-                    value={navbar.showBrandName === false ? 'hide' : 'show'}
-                    onChange={(v) => onUpdateNavbar({ showBrandName: v === 'show' })}
-                    className="w-full"
-                  />
-
-                  <div className="flex items-center gap-2.5 pt-1">
-                    <div className="w-9 h-9 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shrink-0">
-                      {navbar.logoUrl ? (
-                        <img src={navbar.logoUrl} alt="شعار الموقع" className="w-full h-full object-contain" />
-                      ) : (
-                        <span className="text-[10px] text-neutral-400 font-bold">بدون شعار</span>
-                      )}
-                    </div>
-                    <input
-                      ref={navbarLogoFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleNavbarLogoFileChange}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => navbarLogoFileInputRef.current?.click()}
-                      disabled={isNavbarLogoUploading}
-                      className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20 transition-all cursor-pointer disabled:opacity-60"
-                    >
-                      {isNavbarLogoUploading ? 'جارٍ رفع الشعار...' : (navbar.logoUrl ? 'تغيير الشعار' : 'رفع شعار من الجهاز')}
-                    </button>
-                    {navbar.logoUrl && (
-                      <button
-                        type="button"
-                        onClick={() => onUpdateNavbar({ logoUrl: undefined })}
-                        className="py-1.5 px-2.5 text-xs font-bold rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all cursor-pointer"
-                      >
-                        إزالة
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-neutral-400 leading-tight">
-                    عند رفع شعار، يظهر بدل الحرف الافتراضي بجانب اسم الموقع.
-                  </p>
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-black/[0.06]">
-                  <SectionHeader title="تموضع أسماء صفحات الموقع" />
-                  <PillTabs
-                    options={[
-                      { value: 'right', label: 'اليمين' },
-                      { value: 'center', label: 'الوسط' },
-                      { value: 'left', label: 'اليسار' },
-                    ]}
-                    value={navbar.itemsAlign || 'right'}
-                    onChange={(v) => onUpdateNavbar({ itemsAlign: v as 'right' | 'center' | 'left' })}
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="space-y-3 pt-2 border-t border-black/[0.06]">
-                  <SectionHeader title="إطار أسماء الصفحات" />
-                  <p className="text-[11px] text-neutral-500 -mt-1">
-                    إطار اختياري حول كل اسم صفحة في النافبار: سمك وتدوير الحواف ولون الإطار، ولون خلفية النص.
-                  </p>
-                  <Slider
-                    label="سمك الإطار"
-                    value={navbar.itemsFrameBorderWidth ?? 0}
-                    min={0}
-                    max={6}
-                    onChange={(v) => onUpdateNavbar({ itemsFrameBorderWidth: v })}
-                    formatValue={(v) => `${v}px`}
-                  />
-                  <Slider
-                    label="تدوير حواف الإطار"
-                    value={navbar.itemsFrameBorderRadius ?? 0}
-                    min={0}
-                    max={24}
-                    onChange={(v) => onUpdateNavbar({ itemsFrameBorderRadius: v })}
-                    formatValue={(v) => `${v}px`}
-                  />
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-bold text-neutral-700 block">لون الإطار</span>
-                    <ColorSwatchPicker
-                      swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
-                      selectedValue={navbar.itemsFrameBorderColor || 'transparent'}
-                      onSelect={(color) => onUpdateNavbar({ itemsFrameBorderColor: color })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-bold text-neutral-700 block">لون خلفية النص</span>
-                    <ColorSwatchPicker
-                      swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
-                      selectedValue={navbar.itemsFrameBgColor || 'transparent'}
-                      onSelect={(color) => onUpdateNavbar({ itemsFrameBgColor: color })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-bold text-neutral-700 block">نوع الخط لأسماء الصفحات</span>
-                    <select
-                      value={navbar.itemsFontFamily || ''}
-                      onChange={(e) => onUpdateNavbar({ itemsFontFamily: e.target.value || undefined })}
-                      className="w-full px-2.5 py-2 bg-white border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
-                      style={{ fontFamily: navbar.itemsFontFamily || undefined }}
-                    >
-                      <option value="">الخط الافتراضي</option>
-                      {SIXTY_FONTS.map((f) => (
-                        <option key={f.font} value={f.font} style={{ fontFamily: f.font }}>
-                          {f.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Default for other tools */}
-            {['grid', 'list', 'slides', 'navbar', 'grouping'].includes(activeSection) && (
-              <div className="p-3.5 bg-neutral-50 rounded-xl text-xs text-neutral-600 space-y-1">
-                <span className="font-bold block text-neutral-800">خيارات {getToolTitle()}:</span>
-                <p className="text-[11px] text-neutral-500">
-                  يمكنك تعديل إعدادات هذه الأداة مباشرة على العنصر المحدد في ساحة العمليات.
-                </p>
-              </div>
-            )}
+          <div ref={toolScrollRef} onScroll={handleInspectorScroll} className="relative flex-1 overflow-y-auto p-3.5 space-y-4 bg-white text-right">
+            {activeSection === 'inspector' ? renderInspector() : renderSection(activeSection)}
 
           </div>
         )}

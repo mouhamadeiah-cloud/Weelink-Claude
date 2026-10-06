@@ -41,12 +41,19 @@ interface RestaurantAdminPanelProps {
   onChange: (fn: (d: RestaurantAdminData) => RestaurantAdminData) => void;
   ownerUid: string;
   access?: Access;
+  // Asks the admin to open (counted); the editor's column has an "admin" button for this.
+  openRequest?: number;
+  // The floating gear is left out where the column's button opens the admin instead.
+  hideGear?: boolean;
 }
 
-export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid, access = OWNER_ACCESS }) => {
+export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid, access = OWNER_ACCESS, openRequest = 0, hideGear = false }) => {
   // Before anything below reads «today»: the owner's business day.
   setDayStartHour(data.settings.dayStartHour);
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (openRequest > 0) setOpen(true);
+  }, [openRequest]);
   const tabs = TABS.filter((t) => (t.perm === 'owner' ? access.owner : access.owner || access.perms[t.perm]));
   const [chosen, setTab] = useState<TabId>('dishes');
   const tab = tabs.some((t) => t.id === chosen) ? chosen : tabs[0]?.id;
@@ -66,6 +73,7 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
 
   return (
     <>
+      {!hideGear && (
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -76,6 +84,7 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
         <Settings size={30} strokeWidth={1.8} />
         {newOrders > 0 && <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1 rounded-full bg-[#ff3b30] text-white text-[11px] font-bold flex items-center justify-center">{newOrders}</span>}
       </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-[1000001] bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-2 sm:p-6" onMouseDown={() => setOpen(false)}>

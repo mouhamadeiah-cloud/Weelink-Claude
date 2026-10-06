@@ -18,7 +18,12 @@ interface LinkSectionProps {
   setContactInputValue: React.Dispatch<React.SetStateAction<string>>;
   urlInputValue: string;
   setUrlInputValue: React.Dispatch<React.SetStateAction<string>>;
+  // The shop's own settings of a cart, checkout, product list or search bar. The docked panel shows
+  // them in the element's content card, so it leaves them out here (a product button's keeps).
+  withShopSettings?: boolean;
 }
+
+const SHOP_PANEL_TYPES = ['cart', 'checkout', 'shopProducts', 'shopSearch'];
 
 export const LinkSection = ({
   pages,
@@ -33,6 +38,7 @@ export const LinkSection = ({
   setContactInputValue,
   urlInputValue,
   setUrlInputValue,
+  withShopSettings = true,
 }: LinkSectionProps) => {
   const contactPlatforms = [
     {
@@ -198,7 +204,7 @@ export const LinkSection = ({
 
   return (
     <div className="space-y-4">
-      {selectedElement && (
+      {selectedElement && (withShopSettings || !SHOP_PANEL_TYPES.includes(selectedElement.type)) && (
         <ShopElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
       )}
 

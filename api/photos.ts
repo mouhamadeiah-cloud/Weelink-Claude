@@ -109,7 +109,7 @@ export default {
       const res = await unsplash(path, key);
       if (!res.ok) {
         console.error('Unsplash answered', res.status, await res.text().catch(() => ''));
-        return json({ error: res.status === 403 || res.status === 429 ? 'rate_limited' : 'unsplash_failed' }, 502);
+        return json({ error: res.status === 401 ? 'bad_key' : res.status === 403 || res.status === 429 ? 'rate_limited' : 'unsplash_failed' }, 502);
       }
       const data: any = await res.json();
       const raw: any[] = Array.isArray(data) ? data : data.results || [];

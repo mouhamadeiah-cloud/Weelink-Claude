@@ -29,7 +29,7 @@ import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
 import { elementDisplayName } from '../utils/elementLabels';
-import { PhotoBrowserPanel } from './PhotoBrowserPanel';
+import { PhotoBrowserPanel, notLiveMessage } from './PhotoBrowserPanel';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
   const arr = dataurl.split(',');
@@ -687,9 +687,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
 
           {!isLive && !isLoadingGallery && (
             <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800">
-              {galleryError === 'rate_limited'
-                ? 'وصلنا للحد المسموح من طلبات Unsplash لهذه الساعة، فهذه صور مختارة حتى يتجدد.'
-                : 'مكتبة Unsplash الكاملة غير مفعّلة بعد على الخادم، فهذه صور مختارة فقط.'}
+              {notLiveMessage(galleryError)}
             </p>
           )}
 

@@ -74,6 +74,13 @@ export interface ElementStyles {
   imageTintColor?: string;
   imageTintOpacity?: number;
   imageTintBlendMode?: string;
+  // A ready-made look for the letters (see utils/textEffects): its id, colours, strength 0..100
+  // (50 = as designed) and, for «صورة بالحروف», the picture inside the letters.
+  textEffect?: string;
+  textEffectColor?: string;
+  textEffectColor2?: string;
+  textEffectIntensity?: number;
+  textEffectImage?: string;
 }
 
 export type LinkType = 'page' | 'slide' | 'url' | 'contact';

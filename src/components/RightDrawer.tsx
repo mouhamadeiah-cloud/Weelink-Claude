@@ -88,9 +88,11 @@ import { RestaurantElementSettings } from './restaurant/RestaurantElementSetting
 
 import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
 import { InspectorCard, InspectorSubheading } from './rightDrawer/InspectorCard';
+import { TextEffectsGallery, TextEffectsPicker } from './rightDrawer/TextEffectsPicker';
+import { textEffectById } from '../utils/textEffects';
 import { elementDisplayName } from '../utils/elementLabels';
 import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
-import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT } from './EditorColumn';
+import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
 import { uploadGalleryImageToStorage } from '../utils/galleryUpload';
@@ -1060,6 +1062,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const toolScrollRef = useRef<HTMLDivElement>(null);
   const spyPausedUntil = useRef(0);
   const [glowSide, setGlowSide] = useState<'out' | 'in'>('out');
+  // All the text effects, in the panel beside this one.
+  const [textFxGalleryOpen, setTextFxGalleryOpen] = useState(false);
+  const textFxTarget = activeSection === 'inspector' && selectedElement && ['heading', 'paragraph', 'button'].includes(selectedElement.type) ? selectedElement : null;
+  useEffect(() => {
+    if (!textFxTarget) setTextFxGalleryOpen(false);
+  }, [textFxTarget]);
 
   // A group picked in the column: open it and bring it into view.
   useEffect(() => {
@@ -1111,6 +1119,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     switch (id) {
       case 'content': return isNavbarSelected ? <PanelTop size={17} /> : <SlidersHorizontal size={17} />;
       case 'font': return <Type size={17} />;
+      case 'effects': return <Sparkles size={17} />;
       case 'colors': return <Palette size={17} />;
       case 'shape': return <Shapes size={17} />;
       case 'layout': return selectedElement ? <Move size={17} /> : <Layers size={17} />;
@@ -1134,6 +1143,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         return `مع التالية: ${SLIDE_DIVIDER_OPTIONS.find((o) => o.id === (activeSlide?.dividerShape || 'straight'))?.name || 'مستقيم'}`;
       case 'font':
         return join(st.fontSize ? `${st.fontSize}px` : '', st.fontWeight === 'bold' && 'عريض', st.fontStyle === 'italic' && 'مائل', st.fontFamily && String(st.fontFamily).split(',')[0].replace(/['"]/g, ''));
+      case 'effects':
+        return textEffectById(st.textEffect)?.name || 'بدون تأثير';
       case 'colors': {
         const fg = isNavbarSelected ? navbar?.textColor : st.color;
         const bg = st.backgroundColor;
@@ -1315,6 +1326,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               }}
             >
               {g.id === 'content' && renderContentExtras()}
+              {g.id === 'effects' && selectedElement && (
+                <TextEffectsPicker styles={selectedElement.styles || {}} onChange={onUpdateElementStyles} onShowAll={() => setTextFxGalleryOpen(true)} />
+              )}
               {g.sections.filter((s) => s !== 'lighting').map((s) =>
                 // The outer shadow and the inner glow are one tool with a side to pick.
                 s === 'shadow' && g.sections.includes('lighting') ? (
@@ -5971,6 +5985,20 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           onStepChange={onStepChange}
           onWriteTexts={onWriteTexts}
         />
+
+        {/* All the text effects: beside the panel, or over it on a phone's sheet. */}
+        {textFxTarget && (
+          <div
+            className={`${sheet ? 'absolute inset-0 rounded-t-2xl' : 'absolute top-0 w-[310px] md:w-[350px] h-full border-l-2 border-t-2 border-b-2 border-neutral-300 shadow-[-12px_0_30px_rgba(0,0,0,0.15)] rounded-l-2xl'} overflow-hidden select-none font-sans transition-all duration-300 z-[150] ${
+              textFxGalleryOpen ? 'opacity-100 translate-x-0 scale-100 pointer-events-auto' : 'opacity-0 translate-x-[20px] scale-95 pointer-events-none'
+            }`}
+            aria-hidden={!textFxGalleryOpen}
+            // Beside the column of icons that sits left of the docked panel.
+            style={sheet ? undefined : { right: `calc(100% + ${dockedWidth > 0 ? EDITOR_COLUMN_WIDTH : 0}px)` }}
+          >
+            <TextEffectsGallery styles={textFxTarget.styles || {}} onChange={onUpdateElementStyles} onClose={() => setTextFxGalleryOpen(false)} />
+          </div>
+        )}
 
         {/* ========================================================
             SLIDE TEMPLATES SUB-SIDEBAR (لوحة الشرائح الجاهزة المنبثقة)

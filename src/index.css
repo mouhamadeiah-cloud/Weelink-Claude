@@ -265,3 +265,34 @@
 @media (prefers-reduced-motion: reduce) {
   .inspector-list > .inspector-card { animation: none; }
 }
+
+/* Text effects (utils/textEffects): motions of whole words, never single letters. */
+@keyframes fx-flicker {
+  0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
+  20%, 24%, 55% { opacity: 0.55; }
+}
+@keyframes fx-gradient-move {
+  from { background-position: 0% 50%; }
+  to { background-position: 200% 50%; }
+}
+@keyframes fx-shine {
+  from { background-position: 150% 50%; }
+  to { background-position: -50% 50%; }
+}
+@keyframes fx-wave {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-5px) rotate(-1deg); }
+  75% { transform: translateY(4px) rotate(1deg); }
+}
+@keyframes fx-appear {
+  from { opacity: 0; filter: blur(8px); transform: translateY(10px); }
+  to { opacity: 1; filter: none; transform: none; }
+}
+/* Revealed from the right edge leftwards, the way Arabic is read. */
+@keyframes fx-type {
+  from { clip-path: inset(0 0 0 100%); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="fx-"] { animation: none !important; }
+}

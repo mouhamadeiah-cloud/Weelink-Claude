@@ -3,7 +3,7 @@
 // what is selected, each with its name, which scroll the panel to that group. A soft highlight
 // slides to the group showing in the panel.
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, FolderTree, Layers, Move, PanelRightClose, PanelRightOpen, PanelTop, Palette, Plus, Search, Shapes, SlidersHorizontal, Store, Type, Zap } from 'lucide-react';
+import { ChevronDown, ChevronUp, FolderTree, Layers, Move, PanelRightClose, PanelRightOpen, PanelTop, Palette, Plus, Search, Shapes, SlidersHorizontal, Sparkles, Store, Type, Zap } from 'lucide-react';
 import type { InspectorGroup, InspectorGroupId } from './rightDrawer/inspectorGroups';
 import { WeeDots } from './ui/WeeDots';
 
@@ -15,6 +15,7 @@ const groupIcon = (g: InspectorGroup) => {
   switch (g.id) {
     case 'content': return g.sections.includes('navbar-settings') ? <PanelTop size={19} /> : <SlidersHorizontal size={19} />;
     case 'font': return <Type size={19} />;
+    case 'effects': return <Sparkles size={19} />;
     case 'colors': return <Palette size={19} />;
     case 'shape': return <Shapes size={19} />;
     case 'layout': return g.sections.length === 1 ? <Layers size={19} /> : <Move size={19} />;

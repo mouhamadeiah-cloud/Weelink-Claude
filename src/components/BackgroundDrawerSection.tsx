@@ -5,10 +5,11 @@ import {
   Trash2, 
   Check, 
   Loader2, 
-  Key,
   ChevronDown,
   Info
 } from 'lucide-react';
+import { fetchUnsplashPhotos } from '../services/unsplashService';
+import { notLiveMessage } from './PhotoBrowserPanel';
 import { 
   MANDATORY_BG_COLORS, 
   FIFTY_SOLID_COLORS, 
@@ -92,11 +93,6 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
   const [unsplashPhotos, setUnsplashPhotos] = useState<UnsplashPreset[]>(CURATED_UNSPLASH_PHOTOS);
   const [isLoadingUnsplash, setIsLoadingUnsplash] = useState(false);
   const [unsplashError, setUnsplashError] = useState<string | null>(null);
-  const [userApiKey, setUserApiKey] = useState<string>(() => {
-    return localStorage.getItem('unsplash_user_key') || (process.env.UNSPLASH_ACCESS_KEY || '');
-  });
-  const [showKeyConfig, setShowKeyConfig] = useState(false);
-
   const categories = ['الكل', 'طبيعة', 'معمار', 'أعمال', 'تجريدي', 'تكنولوجيا', 'خلفيات', 'فخامة', 'مدن'];
 
   // Handle local file upload
@@ -177,55 +173,31 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
       return;
     }
 
-    const accessKey = userApiKey.trim() || (process.env.UNSPLASH_ACCESS_KEY || '').trim();
-
-    if (!accessKey) {
-      // Filter locally from curated photos
-      const filtered = CURATED_UNSPLASH_PHOTOS.filter(photo => {
-        const matchesCategory = selectedCategory === 'الكل' || photo.category === selectedCategory;
-        const matchesTerm = !term || photo.title.includes(term) || photo.category.includes(term);
-        return matchesCategory && matchesTerm;
-      });
-      setUnsplashPhotos(filtered.length > 0 ? filtered : CURATED_UNSPLASH_PHOTOS);
+    // Photos come through the server function, which holds the Unsplash key.
+    setIsLoadingUnsplash(true);
+    setUnsplashError(null);
+    const result = await fetchUnsplashPhotos({ query: englishQuery || 'background wallpaper', perPage: 20 });
+    setIsLoadingUnsplash(false);
+    if (result.isLive && result.items.length > 0) {
+      setUnsplashPhotos(
+        result.items.map((item) => ({
+          id: item.id,
+          title: item.title,
+          category: selectedCategory !== 'الكل' ? selectedCategory : 'Unsplash',
+          thumbUrl: item.thumbUrl,
+          fullUrl: item.fullUrl,
+          photographer: item.photographer || 'Unsplash',
+        }))
+      );
       return;
     }
-
-    try {
-      setIsLoadingUnsplash(true);
-      setUnsplashError(null);
-      const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(englishQuery || 'background wallpaper')}&per_page=20&orientation=landscape&client_id=${accessKey}`;
-      
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`خطأ في جلب الصور: ${res.statusText}`);
-      }
-      const data = await res.json();
-      if (data.results && data.results.length > 0) {
-        const formatted: UnsplashPreset[] = data.results.map((item: any) => ({
-          id: item.id,
-          title: item.description || item.alt_description || 'صورة من Unsplash',
-          category: selectedCategory !== 'الكل' ? selectedCategory : 'Unsplash',
-          thumbUrl: item.urls.small || item.urls.regular,
-          fullUrl: item.urls.regular || item.urls.full,
-          photographer: item.user?.name || 'Unsplash',
-        }));
-        setUnsplashPhotos(formatted);
-      } else {
-        // Fallback to local
-        setUnsplashPhotos(CURATED_UNSPLASH_PHOTOS);
-      }
-    } catch (err: any) {
-      console.warn('Unsplash fetch fallback:', err);
-      setUnsplashError('تعذر الاتصال بـ Unsplash حالياً، تم عرض الصور المختارة الجاهزة.');
-      // Filter curated as fallback
-      const filtered = CURATED_UNSPLASH_PHOTOS.filter(photo => {
-        const matchesCategory = selectedCategory === 'الكل' || photo.category === selectedCategory;
-        return matchesCategory;
-      });
-      setUnsplashPhotos(filtered.length > 0 ? filtered : CURATED_UNSPLASH_PHOTOS);
-    } finally {
-      setIsLoadingUnsplash(false);
-    }
+    if (!result.isLive) setUnsplashError(notLiveMessage(result.error));
+    const filtered = CURATED_UNSPLASH_PHOTOS.filter((photo) => {
+      const matchesCategory = selectedCategory === 'الكل' || photo.category === selectedCategory;
+      const matchesTerm = !term || photo.title.includes(term) || photo.category.includes(term);
+      return matchesCategory && matchesTerm;
+    });
+    setUnsplashPhotos(filtered.length > 0 ? filtered : CURATED_UNSPLASH_PHOTOS);
   };
 
   const handleCategorySelect = (cat: string) => {
@@ -240,11 +212,6 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
       const term = queryTranslations[cat] || cat;
       handleSearchUnsplash(term);
     }
-  };
-
-  const handleSaveApiKey = (key: string) => {
-    setUserApiKey(key);
-    localStorage.setItem('unsplash_user_key', key.trim());
   };
 
   const isGradient = currentBgColor?.includes('gradient');
@@ -627,37 +594,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
             <span className="text-xs font-bold text-neutral-800">
               تصفح معرض Unsplash:
             </span>
-            <button
-              onClick={() => setShowKeyConfig(!showKeyConfig)}
-              className="text-[10.5px] text-[#0071e3] hover:underline flex items-center gap-1 cursor-pointer font-medium"
-              title="إعدادات مفتاح Unsplash API"
-            >
-              <Key size={11} />
-              <span>مفتاح الربط</span>
-              <ChevronDown size={11} className={`transition-transform ${showKeyConfig ? 'rotate-180' : ''}`} />
-            </button>
           </div>
-
-          {/* Collapsible API Key settings */}
-          {showKeyConfig && (
-            <div className="p-2.5 bg-neutral-100 rounded-xl border border-neutral-200 space-y-1.5 text-xs">
-              <div className="flex items-center gap-1 text-neutral-600 text-[10.5px]">
-                <Info size={12} className="text-[#0071e3] shrink-0" />
-                <span>مفتاح الربط (Unsplash Access Key):</span>
-              </div>
-              <input
-                type="password"
-                value={userApiKey}
-                onChange={(e) => handleSaveApiKey(e.target.value)}
-                placeholder="أدخل مفتاح Unsplash الخاص بك..."
-                className="w-full text-xs px-2.5 py-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-left"
-                dir="ltr"
-              />
-              <p className="text-[9.5px] text-neutral-400">
-                تم ربط المفتاح من Secrets تلقائياً. يمكنك تعديله هنا في أي وقت لحسابك.
-              </p>
-            </div>
-          )}
 
           {/* Search Input Bar */}
           <div className="relative">

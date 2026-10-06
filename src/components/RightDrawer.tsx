@@ -166,7 +166,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   navbar,
   onUpdateNavbar,
   isNavbarSelected = false,
+  dockedWidth = 0,
+  headerSlot,
+  sectionRequest = 0,
+  onActiveTabChange,
+  projectSettings,
 }) => {
+  const isDocked = dockedWidth > 0;
   // Wee AI chat container collapse state inside the control panel
   // (controlled from the parent when provided, e.g. to auto-open for new users; falls back to local state otherwise)
   const [internalWeeAiChatCollapsed, setInternalWeeAiChatCollapsed] = useState<boolean>(true);
@@ -203,7 +209,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
   // Effect to collapse/close the drawer when clicking outside the panel (and not clicking the toggle button)
   useEffect(() => {
-    if (!isOpen) return;
+    // The docked panel sits beside the workspace and stays open while the canvas is used.
+    if (!isOpen || isDocked) return;
 
     const handleClickOutside = (event: MouseEvent) => {
       if (asideRef.current && !asideRef.current.contains(event.target as Node)) {
@@ -239,7 +246,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       clearTimeout(timer);
       document.removeEventListener('mousedown', handleClickOutside, true);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isDocked]);
 
   // Screen size state to calculate drawer scale factor dynamically on mobile/tablet
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1280);
@@ -274,10 +281,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
   // Automatically switch tab to 'tool' when activeSection changes (unless it is structural/elements)
   useEffect(() => {
-    if (activeSection && !['structure', 'elements'].includes(activeSection)) {
+    // The add-elements section waits behind the structure when the panel first opens; asked for
+    // with an icon (+), it comes to the front like any other.
+    if (activeSection && (sectionRequest > 0 || !['structure', 'elements'].includes(activeSection))) {
       setActiveTab('tool');
     }
-  }, [activeSection]);
+  }, [activeSection, sectionRequest]);
+
+  useEffect(() => {
+    onActiveTabChange?.(activeTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // When activeSlideId changes, reset the tab back to 'structure' so the slides list returns
   useEffect(() => {
@@ -386,13 +400,24 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       ? `translate3d(${position.x}px, ${position.y}px, 0)`
       : 'translate3d(100%, 0, 0)';
 
-  const asideStyle: React.CSSProperties = {
-    transform: `${baseTransform} scale(${drawerScale})`,
-    transformOrigin: 'top right',
-    transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease-out',
-    height: `calc((100vh - 104px) / ${drawerScale})`,
-    bottom: 'auto',
-  };
+  const asideStyle: React.CSSProperties = isDocked
+    ? {
+        transform: isOpen ? 'none' : 'translate3d(100%, 0, 0)',
+        transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        top: 56,
+        width: dockedWidth,
+        minWidth: 0,
+        maxWidth: 'none',
+        height: 'calc(100vh - 56px)',
+        bottom: 'auto',
+      }
+    : {
+        transform: `${baseTransform} scale(${drawerScale})`,
+        transformOrigin: 'top right',
+        transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease-out',
+        height: `calc((100vh - 104px) / ${drawerScale})`,
+        bottom: 'auto',
+      };
 
   // Page Colors sub-tab: 'default' (افتراضي) | 'custom' (شخصي)
   const [pageColorMode, setPageColorMode] = useState<'default' | 'custom'>('default');
@@ -913,6 +938,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const getToolTitle = () => {
     switch (activeSection) {
       case 'page-settings': return 'تعديل الصفحة';
+      case 'project-settings': return 'إعدادات المشروع';
       case 'add-text': return 'اضافة نص';
       case 'add-image': return 'اضافة صورة';
       case 'elements':
@@ -981,7 +1007,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           z-index kept above the page's own navbar (which can be set sticky with z-index 100000 by
           the user inside the canvas) so this app control — "لوحة التحكم" — always stays reachable
           and on top of it, never covered by a sticky navbar scrolling underneath it. */}
-      <button
+      {!isDocked && <button
         onClick={onToggle}
         className="fixed top-32 right-0 z-[999999] w-7 h-11 bg-white/95 backdrop-blur-md border border-r-0 border-neutral-300 rounded-l-xl shadow-[-3px_2px_12px_rgba(0,0,0,0.1)] flex items-center justify-center text-neutral-600 hover:text-[#0071e3] transition-all hover:w-8 active:scale-95 group focus:outline-none"
         title={isOpen ? "إغلاق لوحة التحكم" : "فتح لوحة التحكم"}
@@ -992,7 +1018,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         ) : (
           <ChevronLeft size={16} strokeWidth={2.4} className="text-neutral-500 group-hover:text-[#0071e3] transition-transform group-hover:-translate-x-0.5" />
         )}
-      </button>
+      </button>}
 
       {/* 
         Control Panel Drawer (~20% of page)
@@ -1004,13 +1030,15 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         style={asideStyle}
-        className={`fixed top-26 right-0 bottom-0 z-[999999] w-[320px] sm:w-[350px] md:w-[24vw] min-w-[290px] max-w-[430px] bg-white border-l-2 border-t-2 border-b-2 border-neutral-300 shadow-[-16px_0_40px_rgba(0,0,0,0.12)] rounded-l-2xl flex flex-col select-none text-right overflow-visible ${
+        className={isDocked
+          ? `fixed right-0 z-[999998] bg-white border-l border-neutral-200 flex flex-col select-none text-right overflow-visible ${isOpen ? '' : 'pointer-events-none'}`
+          : `fixed top-26 right-0 bottom-0 z-[999999] w-[320px] sm:w-[350px] md:w-[24vw] min-w-[290px] max-w-[430px] bg-white border-l-2 border-t-2 border-b-2 border-neutral-300 shadow-[-16px_0_40px_rgba(0,0,0,0.12)] rounded-l-2xl flex flex-col select-none text-right overflow-visible ${
           isOpen && !isMinimized ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         dir="rtl"
       >
         {/* Striped Drag Handle Bar */}
-        <div 
+        {!isDocked && <div 
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStartDrag}
           className="h-6 w-full bg-neutral-100 bg-[repeating-linear-gradient(-45deg,#d4d4d8,#d4d4d8_2px,transparent_2px,transparent_6px)] cursor-grab active:cursor-grabbing border-b border-neutral-300 flex items-center justify-between px-3.5 relative select-none shrink-0"
@@ -1037,15 +1065,21 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           </div>
 
           <div className="w-4 h-4" />
-        </div>
+        </div>}
 
         {/* Top Header with Close & Minimize Buttons */}
         <div className="flex items-center justify-between px-3 pt-2 pb-1.5 bg-[#f5f5f7] border-b border-neutral-200 shrink-0 select-none">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#0071e3] animate-pulse" />
-            <span className="text-[11.5px] font-bold text-neutral-800">
-              لوحة التحكم
-            </span>
+          <div className="flex items-center gap-2 min-w-0">
+            {isDocked && headerSlot ? (
+              headerSlot
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-[#0071e3] animate-pulse" />
+                <span className="text-[11.5px] font-bold text-neutral-800">
+                  لوحة التحكم
+                </span>
+              </>
+            )}
             {/* AI Toggle Button next to name */}
             <button
               type="button"
@@ -1069,13 +1103,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
           <div className="flex items-center gap-1">
             {/* Minimize button */}
-            <button
+            {!isDocked && <button
               onClick={() => setIsMinimized(true)}
               className="w-6 h-6 rounded-full bg-neutral-200/80 hover:bg-neutral-300 text-neutral-600 hover:text-black flex items-center justify-center transition-all focus:outline-none cursor-pointer"
               title="تصغير اللوحة لأيقونة عائمة"
             >
               <Minus size={12} strokeWidth={2.5} />
-            </button>
+            </button>}
 
             {/* Close button */}
             <button
@@ -1400,6 +1434,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {/* ============================================================== */}
             {/* SPECIAL SECTION: تعديل الصفحة (PAGE SETTINGS) AS IN USER DRAWINGS */}
             {/* ============================================================== */}
+            {activeSection === 'project-settings' && projectSettings}
+
             {activeSection === 'page-settings' && (
               <div className="space-y-4">
 

@@ -8,9 +8,10 @@ import {
   SlideDividerShape
 } from './types';
 import { ControlBar } from './components/ControlBar';
-import { EditBar } from './components/EditBar';
+import { EditBar, SelectionNameInput, selectionName } from './components/EditBar';
 import { CanvasWorkspace } from './components/CanvasWorkspace';
 import { RightDrawer, DrawerSection } from './components/RightDrawer';
+import { ProjectSettingsSection } from './components/rightDrawer/sections/ProjectSettingsSection';
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
 import { ProjectChooser } from './components/ProjectChooser';
@@ -25,7 +26,7 @@ import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
-import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, saveStaff, withoutStaff } from './components/restaurant/restaurantCloud';
+import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, restaurantSiteUrl, saveStaff, withoutStaff } from './components/restaurant/restaurantCloud';
 import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Loader2 } from 'lucide-react';
@@ -196,6 +197,9 @@ const PROJECT_STORAGE: Record<ProjectType, { pagesField: string; elementsField: 
   restaurant: { pagesField: 'restaurantPages', elementsField: 'restaurantElements', localPrefix: 'weelink_restaurant_' },
 };
 
+// Named in the top bar until the site has its own name (the navbar's brand name).
+const PROJECT_KIND_LABEL: Record<ProjectType, string> = { page: 'صفحتي', shop: 'المتجر', cars: 'معرض السيارات', restaurant: 'المطعم' };
+
 export default function App() {
   // Pages state
   const [pages, setPages] = useState<Page[]>(getInitialPages);
@@ -208,6 +212,20 @@ export default function App() {
   // Drawer section & open state
   const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(true);
   const [drawerSection, setDrawerSection] = useState<DrawerSection>('elements');
+  const [drawerTab, setDrawerTab] = useState<'structure' | 'tool'>('structure');
+  const [sectionRequest, setSectionRequest] = useState(0);
+
+  // On a wide screen the control panel is docked on the right with the icons beside it, and the
+  // workspace takes the rest of the width, so the panel never covers the canvas.
+  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const isDocked = windowWidth >= 1024 && !isPreviewActive;
+  const dockedPanelWidth = Math.round(Math.min(400, Math.max(320, windowWidth * 0.24)));
+  const EDIT_RAIL_WIDTH = 52;
   const [isWorkspaceHubOpen, setIsWorkspaceHubOpen] = useState(false);
 
   // Elements state (Canvas elements in freegrid)
@@ -1156,7 +1174,7 @@ export default function App() {
   const handleSelectSlide = (id: string) => {
     setActiveSlideId(id);
     setIsNavbarSelected(false);
-    setIsRightDrawerOpen(false); // Hide the control panel when a slide is selected
+    if (!isDocked) setIsRightDrawerOpen(false); // The floating panel would cover the selected slide
 
     if (copiedFormat && copiedType === 'slide') {
       // Apply slide styles to this slide
@@ -1308,8 +1326,14 @@ export default function App() {
   };
 
   // Tool Selection from any icon: Opens Control Drawer and selects corresponding tool
+  // Asking again for the section the docked panel is showing closes the panel.
   const handleSelectTool = (tool: DrawerSection) => {
+    if (isDocked && isRightDrawerOpen && drawerTab === 'tool' && drawerSection === tool) {
+      setIsRightDrawerOpen(false);
+      return;
+    }
     setDrawerSection(tool);
+    setSectionRequest((n) => n + 1);
     setIsRightDrawerOpen(true);
   };
 
@@ -2725,6 +2749,28 @@ export default function App() {
     );
   }
 
+  // The editing icons: the bar under the top bar on a narrow screen, the rail beside the panel on a wide one.
+  const editBarProps = {
+    selectedElement,
+    selectedSlide: currentSlide,
+    onUpdateElementName: handleUpdateElementName,
+    onSelectTool: handleSelectTool,
+    onToggleBold: handleToggleBold,
+    onToggleItalic: handleToggleItalic,
+    onToggleUnderline: handleToggleUnderline,
+    onCycleAlignment: handleCycleAlignment,
+    onToggleBulletList: handleToggleBulletList,
+    onToggleNumericList: handleToggleNumericList,
+    onToggleLock: handleToggleLock,
+    onDuplicate: () => selectedElementId && handleDuplicateElement(selectedElementId),
+    onMoveLayerUp: handleMoveLayerUp,
+    onMoveLayerDown: handleMoveLayerDown,
+    onCopyFormat: handleCopyFormat,
+    isFormatCopied: !!copiedFormat,
+    onToggleGroupContainer: handleToggleGroupContainer,
+    onUpdateElement: handleUpdateElementById,
+    isNavbarSelected,
+  };
   return (
     <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col antialiased selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
       {/* Modal for Firebase Domain Authorization Guidance */}
@@ -2841,38 +2887,21 @@ export default function App() {
           isSaving={isSavingCloud}
           onOpenWorkspaceHub={() => setIsWorkspaceHubOpen(true)}
           onManualSave={handleManualSave}
+          projectName={currentPage.navbar.brandName || PROJECT_KIND_LABEL[project]}
+          onOpenProjectSettings={() => handleSelectTool('project-settings')}
           projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'restaurant' ? 'Restaurant' : undefined}
           onOpenProjects={handleOpenProjects}
         />
 
-        {/* 2. Secondary Edit Bar directly beneath */}
-        {!isPreviewActive && (
-          <EditBar
-            selectedElement={selectedElement}
-            selectedSlide={currentSlide}
-            onUpdateElementName={handleUpdateElementName}
-            onSelectTool={handleSelectTool}
-            onToggleBold={handleToggleBold}
-            onToggleItalic={handleToggleItalic}
-            onToggleUnderline={handleToggleUnderline}
-            onCycleAlignment={handleCycleAlignment}
-            onToggleBulletList={handleToggleBulletList}
-            onToggleNumericList={handleToggleNumericList}
-            onToggleLock={handleToggleLock}
-            onDuplicate={() => selectedElementId && handleDuplicateElement(selectedElementId)}
-            onMoveLayerUp={handleMoveLayerUp}
-            onMoveLayerDown={handleMoveLayerDown}
-            onCopyFormat={handleCopyFormat}
-            isFormatCopied={!!copiedFormat}
-            onToggleGroupContainer={handleToggleGroupContainer}
-            onUpdateElement={handleUpdateElementById}
-            isNavbarSelected={isNavbarSelected}
-          />
-        )}
+        {/* 2. Secondary Edit Bar directly beneath (narrow screens; wide ones dock it beside the panel) */}
+        {!isPreviewActive && !isDocked && <EditBar {...editBarProps} />}
       </div>
 
-      {/* Main Operations Area (ساحة العمليات) */}
-      <div className="flex-1 flex relative overflow-hidden">
+      {/* Main Operations Area (ساحة العمليات): left of the docked panel and its icons */}
+      <div
+        className="flex-1 flex relative overflow-hidden"
+        style={isDocked ? { marginRight: (isRightDrawerOpen ? dockedPanelWidth : 0) + EDIT_RAIL_WIDTH, transition: 'margin-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' } : undefined}
+      >
         <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
         <RestaurantOrderContext.Provider value={project === 'restaurant' ? submitRestaurantOrder : null}>
         <CarDataContext.Provider value={project === 'cars' ? carAdmin : null}>
@@ -2906,6 +2935,7 @@ export default function App() {
           navbar={currentPage.navbar}
           isPreviewActive={isPreviewActive}
           activePageId={activePageId}
+          chromeHeight={isDocked ? 56 : 104}
         />
         </ShopUpdateContext.Provider>
         </ShopDataContext.Provider>
@@ -2921,7 +2951,23 @@ export default function App() {
         )}
       </div>
 
-      {/* Floating Right Control Drawer on right edge (~20% of page) */}
+      {/* The editing icons, docked as a column beside the control panel */}
+      {isDocked && (
+        <div
+          className="fixed z-[999998]"
+          style={{ top: 56, bottom: 0, width: EDIT_RAIL_WIDTH, right: isRightDrawerOpen ? dockedPanelWidth : 0, transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        >
+          <EditBar
+            {...editBarProps}
+            orientation="vertical"
+            shownSection={isRightDrawerOpen && drawerTab === 'tool' ? drawerSection : null}
+            isPanelOpen={isRightDrawerOpen}
+            onTogglePanel={() => setIsRightDrawerOpen(!isRightDrawerOpen)}
+          />
+        </div>
+      )}
+
+      {/* Right Control Drawer: docked on a wide screen, floating over the canvas on a narrow one */}
       <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
       <RightDrawer
         isShopProject={project === 'shop'}
@@ -2988,6 +3034,25 @@ export default function App() {
         onStepChange={handleStepChange}
         isWeeAiChatCollapsed={!isChatActive}
         onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
+        dockedWidth={isDocked ? dockedPanelWidth : 0}
+        headerSlot={
+          <SelectionNameInput
+            name={selectionName(selectedElement, currentSlide, isNavbarSelected)}
+            onRename={handleUpdateElementName}
+            disabled={isNavbarSelected}
+            className="w-40"
+          />
+        }
+        sectionRequest={sectionRequest}
+        onActiveTabChange={setDrawerTab}
+        projectSettings={
+          <ProjectSettingsSection
+            name={currentPage.navbar.brandName || ''}
+            onRename={(brandName) => setPages(pages.map(p => ({ ...p, navbar: { ...p.navbar, brandName } })))}
+            kindLabel={PROJECT_KIND_LABEL[project]}
+            siteUrl={project === 'restaurant' ? restaurantSiteUrl(ownerUid) : undefined}
+          />
+        }
       />
       </RestaurantDataContext.Provider>
 

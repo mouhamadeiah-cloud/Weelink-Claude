@@ -1,3 +1,4 @@
+import type React from 'react';
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape } from '../../types';
 
 export type DrawerSection = 
@@ -27,6 +28,7 @@ export type DrawerSection =
   | 'grouping' 
   | 'wee-ai' 
   | 'page-settings'
+  | 'project-settings'
   | 'gallery';
 
 export interface RightDrawerProps {
@@ -108,4 +110,15 @@ export interface RightDrawerProps {
   onStepChange?: (stepNum: number) => void;
   isWeeAiChatCollapsed?: boolean;
   onToggleWeeAiChat?: () => void;
+  // Docked beside the workspace on a wide screen (its width in px): it then stays open while the
+  // canvas is used, and cannot be dragged or minimised. 0 or absent: the floating drawer.
+  dockedWidth?: number;
+  // Shown at the head of the docked panel (the selected element's name).
+  headerSlot?: React.ReactNode;
+  // Counts the times an icon asked for a section, so asking again for the one already chosen still
+  // brings its tab to the front.
+  sectionRequest?: number;
+  onActiveTabChange?: (tab: 'structure' | 'tool') => void;
+  // Project settings (the gear beside the project name in the top bar).
+  projectSettings?: React.ReactNode;
 }

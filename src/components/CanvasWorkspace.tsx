@@ -75,6 +75,8 @@ interface CanvasWorkspaceProps {
   // The guests' own view of a published site (no editor around it): fills the browser window
   // edge to edge, with no device frame, in desktop or phone layout.
   isPublicSite?: boolean;
+  // Height of the editor's bars above the workspace (the edit bar under the top bar, or not).
+  chromeHeight?: number;
 }
 
 interface InteractiveCalendarWidgetProps {
@@ -709,6 +711,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   isNavbarSelected = false,
   onSelectNavbar,
   isPublicSite = false,
+  chromeHeight = 104,
 }) => {
   // In mobile view, elements and slides render with their phone layout ("تنسيق الموبايل") when
   // they have one. Everything below works on these resolved values, so dragging/resizing in mobile
@@ -2058,7 +2061,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     )}
     <div 
       ref={workspaceRef}
-      // IMPORTANT: this must be a capped `h-[...]`, never `min-h-[...]`. A min-height is only a
+      // IMPORTANT: this must be a capped height, never `min-h-[...]`. A min-height is only a
       // floor — once the slides' combined content is taller than one viewport (true almost always,
       // the moment there's more than a couple of slides), the div simply grows to fit everything
       // instead of clipping. That means it never actually overflows ITSELF, so `overflow-y-auto`
@@ -2076,9 +2079,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         isPublicSite
           ? 'bg-white p-0 m-0 h-[100dvh] flex flex-col items-center justify-start'
           : previewMode === 'desktop'
-          ? (isPreviewActive ? 'bg-white p-0 m-0 h-[calc(100vh-56px)] flex flex-col items-center justify-start' : 'bg-[#ececf0] p-4 sm:p-8 h-[calc(100vh-104px)] flex flex-col items-center justify-start')
-          : 'bg-[#ececf0] h-[calc(100vh-104px)] p-4 sm:p-8 flex flex-col items-center justify-start'
+          ? (isPreviewActive ? 'bg-white p-0 m-0 h-[calc(100vh-56px)] flex flex-col items-center justify-start' : 'bg-[#ececf0] p-4 sm:p-8 flex flex-col items-center justify-start')
+          : 'bg-[#ececf0] p-4 sm:p-8 flex flex-col items-center justify-start'
       }`}
+      style={isPublicSite || (previewMode === 'desktop' && isPreviewActive) ? undefined : { height: `calc(100vh - ${chromeHeight}px)` }}
       onClick={() => {
         onSelectElement(null);
         setFocusedElementId(null);

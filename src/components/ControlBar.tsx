@@ -40,6 +40,9 @@ interface ControlBarProps {
   projectLabel?: string;
   // Opens the project chooser (clicking the logo).
   onOpenProjects?: () => void;
+  // The project's name before the page's, with the gear of the project's settings.
+  projectName?: string;
+  onOpenProjectSettings?: () => void;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = ({
@@ -65,6 +68,8 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   onManualSave,
   projectLabel,
   onOpenProjects,
+  projectName,
+  onOpenProjectSettings,
 }) => {
   const [isPagesDropdownOpen, setIsPagesDropdownOpen] = useState(false);
   const [newPageName, setNewPageName] = useState('');
@@ -90,6 +95,30 @@ export const ControlBar: React.FC<ControlBarProps> = ({
     >
       {/* Right side items (in RTL: Right to Left) */}
       <div className="flex items-center gap-2 sm:gap-3.5 flex-shrink-0">
+        {/* 0. The project's name + the gear of the project's settings */}
+        {projectName !== undefined && !isPreviewActive && (
+          <div className="flex items-center gap-1 bg-neutral-100/90 rounded-xl p-1 border border-black/[0.05]">
+            <button
+              type="button"
+              onClick={onOpenProjectSettings}
+              className="px-2.5 py-1 text-xs sm:text-sm font-bold text-[#1d1d1f] max-w-[110px] sm:max-w-[160px] truncate rounded-lg hover:bg-black/[0.04] transition-colors cursor-pointer"
+              title="المشروع"
+            >
+              {projectName || 'مشروعي'}
+            </button>
+            <button
+              type="button"
+              onClick={onOpenProjectSettings}
+              className="w-7 h-7 rounded-lg text-neutral-400 hover:text-[#0071e3] hover:bg-black/[0.04] active:scale-95 flex items-center justify-center transition-all cursor-pointer"
+              title="إعدادات المشروع (الاسم والرابط، ولاحقاً النشر والدومين)"
+              aria-label="إعدادات المشروع"
+            >
+              <Settings size={14} strokeWidth={2} />
+            </button>
+          </div>
+        )}
+        {projectName !== undefined && !isPreviewActive && <span className="text-neutral-300 text-lg -mx-1 select-none">/</span>}
+
         {/* 1. Current Page Name in a Dropdown Box + Settings Gear */}
         <div className="flex items-center gap-1.5 bg-neutral-100/90 hover:bg-neutral-200/70 rounded-xl p-1 border border-black/[0.05] transition-colors relative">
           <button

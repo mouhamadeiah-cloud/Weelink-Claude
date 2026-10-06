@@ -2610,7 +2610,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     width: '100%'
                   } : {};
                   // The letters' ready-made look (glow, outline, highlight...) on top of the text's colour.
-                  const textFx = ['heading', 'paragraph', 'button'].includes(elem.type) && !elem.compoundType
+                  const textFx = ['heading', 'paragraph', 'button', 'badge'].includes(elem.type) && !elem.compoundType
                     ? getTextEffectStyles(elem.styles, (elem.content || '').trim().split(/\s+/).length)
                     : null;
                   if (textFx) {
@@ -3785,7 +3785,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                 suppressContentEditableWarning
                                 onBlur={(e) => onUpdateElementContent(elem.id, e.currentTarget.innerText)}
                               >
-                                {elem.content}
+                                {fxWords(elem.content)}
                               </span>
                             )}
                           </div>

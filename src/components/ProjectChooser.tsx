@@ -1,6 +1,6 @@
 // Shown after login: the user picks which project to open (or create).
 import React from 'react';
-import { FileText, ShoppingBag, CarFront, UtensilsCrossed, ArrowLeft, Loader2 } from 'lucide-react';
+import { FileText, ShoppingBag, CarFront, UtensilsCrossed, BriefcaseBusiness, ArrowLeft, Loader2 } from 'lucide-react';
 import { ProjectType } from './shop/shopTypes';
 
 interface ProjectChooserProps {
@@ -8,10 +8,11 @@ interface ProjectChooserProps {
   hasShop: boolean;
   hasCars: boolean;
   hasRestaurant: boolean;
+  hasJobs: boolean;
   loadingType: ProjectType | null;
 }
 
-export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasShop, hasCars, hasRestaurant, loadingType }) => {
+export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasShop, hasCars, hasRestaurant, hasJobs, loadingType }) => {
   const cards: { type: ProjectType; title: string; subtitle: string; desc: string; icon: React.ElementType; accent: string; cta: string }[] = [
     {
       type: 'page',
@@ -49,11 +50,20 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
       accent: '#B5562B',
       cta: hasRestaurant ? 'فتح المطعم' : 'إنشاء مطعم',
     },
+    {
+      type: 'jobs',
+      title: 'سوق العمل',
+      subtitle: 'Weelink / Jobs',
+      desc: 'موقع لنشر الوظائف بصفحات جاهزة: الوظائف المتاحة، صفحة للشركات، والتواصل.',
+      icon: BriefcaseBusiness,
+      accent: '#0F7B6C',
+      cta: hasJobs ? 'فتح سوق العمل' : 'إنشاء سوق عمل',
+    },
   ];
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] flex flex-col items-center justify-center px-5 py-12 font-sans" dir="rtl">
-      <div className="w-full max-w-6xl space-y-8">
+      <div className="w-full max-w-7xl space-y-8">
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2">
             <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center font-bold">W</span>
@@ -63,7 +73,7 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
           <p className="text-sm text-neutral-500">اختر مشروعاً للدخول إليه. يمكنك التبديل لاحقاً بالضغط على شعار weelink.</p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {cards.map((c) => (
             <button
               key={c.type}

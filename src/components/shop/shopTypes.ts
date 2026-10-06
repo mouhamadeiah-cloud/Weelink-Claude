@@ -2,7 +2,7 @@
 // It is saved with the shop project in the user's design document (field `shopAdmin`).
 import type { GalleryLayout } from '../../types';
 
-export type ProjectType = 'page' | 'shop' | 'cars' | 'restaurant';
+export type ProjectType = 'page' | 'shop' | 'cars' | 'restaurant' | 'jobs';
 
 export interface ShopCatalog {
   id: string;

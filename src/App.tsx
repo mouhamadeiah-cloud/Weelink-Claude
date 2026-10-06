@@ -22,6 +22,7 @@ import { CarDataContext, CarRequestContext } from './components/cars/store/CarDa
 import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { getCarShowroomTemplate } from './data/carShowroomTemplate';
+import { getJobMarketTemplate } from './data/jobMarketTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
@@ -194,6 +195,7 @@ const PROJECT_STORAGE: Record<ProjectType, { pagesField: string; elementsField: 
   shop: { pagesField: 'shopPages', elementsField: 'shopElements', localPrefix: 'weelink_shop_' },
   cars: { pagesField: 'carPages', elementsField: 'carElements', localPrefix: 'weelink_cars_' },
   restaurant: { pagesField: 'restaurantPages', elementsField: 'restaurantElements', localPrefix: 'weelink_restaurant_' },
+  jobs: { pagesField: 'jobPages', elementsField: 'jobElements', localPrefix: 'weelink_jobs_' },
 };
 
 export default function App() {
@@ -235,6 +237,7 @@ export default function App() {
   const updateCarAdmin = useCallback((fn: (d: CarAdminData) => CarAdminData) => setCarAdmin((prev) => fn(prev)), []);
   const submitCarRequest = useCallback((r: RequestInput) => setCarAdmin((prev) => submitRequest(prev, r)), []);
   const [hasRestaurant, setHasRestaurant] = useState<boolean>(false);
+  const [hasJobs, setHasJobs] = useState<boolean>(false);
   const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
   const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
   const ownerUid = activeUserUid;
@@ -363,10 +366,12 @@ export default function App() {
     let shopExists = false;
     let carsExist = false;
     let restaurantExists = false;
+    let jobsExist = false;
     try {
       shopExists = !!localStorage.getItem(`${PROJECT_STORAGE.shop.localPrefix}pages_${userId}`);
       carsExist = !!localStorage.getItem(`${PROJECT_STORAGE.cars.localPrefix}pages_${userId}`);
       restaurantExists = !!localStorage.getItem(`${PROJECT_STORAGE.restaurant.localPrefix}pages_${userId}`);
+      jobsExist = !!localStorage.getItem(`${PROJECT_STORAGE.jobs.localPrefix}pages_${userId}`);
     } catch {
       // storage unavailable
     }
@@ -378,6 +383,7 @@ export default function App() {
         if (Array.isArray(data.shopPages) && data.shopPages.length > 0) shopExists = true;
         if (Array.isArray(data.carPages) && data.carPages.length > 0) carsExist = true;
         if (Array.isArray(data.restaurantPages) && data.restaurantPages.length > 0) restaurantExists = true;
+        if (Array.isArray(data.jobPages) && data.jobPages.length > 0) jobsExist = true;
         const cloudPages: Page[] = normalizeLegacyNavbarDefaults(Array.isArray(data.pages) ? data.pages : []);
         if (cloudPages.length > 0) {
           const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
@@ -399,6 +405,7 @@ export default function App() {
     setHasShop(shopExists);
     setHasCars(carsExist);
     setHasRestaurant(restaurantExists);
+    setHasJobs(jobsExist);
     setActivePageId('page-home');
     projectReadyRef.current = true;
 
@@ -597,6 +604,54 @@ export default function App() {
     setSelectedElementId(null);
     setIsChatActive(false);
     setHasRestaurant(true);
+    projectReadyRef.current = true;
+  };
+
+  // Loads the job market project. A first visit starts from the job market template.
+  const loadJobsWorkspace = async (userId: string) => {
+    const seq = ++loadSeqRef.current;
+    projectReadyRef.current = false;
+    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE.jobs;
+    let jobPages: Page[] = [];
+    let jobElements: CanvasElement[] = [];
+    try {
+      const designSnap = await getDoc(doc(db, 'designs', userId));
+      if (designSnap.exists()) {
+        const data: any = designSnap.data();
+        if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
+          jobPages = normalizeLegacyNavbarDefaults(data[pagesField]);
+          jobElements = deserializeElements(data[elementsField] || []);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load the job market from Firebase, falling back to local cache:", e);
+    }
+    if (seq !== loadSeqRef.current) return;
+    try {
+      if (jobPages.length === 0) {
+        const storedPages = localStorage.getItem(`${localPrefix}pages_${userId}`);
+        const storedElements = localStorage.getItem(`${localPrefix}elements_${userId}`);
+        if (storedPages) jobPages = normalizeLegacyNavbarDefaults(JSON.parse(storedPages));
+        if (storedElements) jobElements = deserializeElements(JSON.parse(storedElements));
+      }
+    } catch (e) {
+      console.warn("Could not read the local job market cache:", e);
+    }
+    if (jobPages.length === 0) {
+      const template = getJobMarketTemplate();
+      jobPages = template.pages;
+      jobElements = template.elements;
+    }
+    setProject('jobs');
+    setPages(jobPages);
+    setElements(jobElements);
+    setHistory([jobElements]);
+    setHistoryIndex(0);
+    setActivePageId(jobPages[0].id);
+    setActiveSlideId(jobPages[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    setIsChatActive(false);
+    setHasJobs(true);
     projectReadyRef.current = true;
   };
 
@@ -837,6 +892,7 @@ export default function App() {
         if (type === 'shop') await loadShopWorkspace(targetUserId);
         else if (type === 'cars') await loadCarsWorkspace(targetUserId);
         else if (type === 'restaurant') await loadRestaurantWorkspace(targetUserId);
+        else if (type === 'jobs') await loadJobsWorkspace(targetUserId);
         else await loadUserWorkspace(targetUserId);
       }
       setIsProjectChosen(true);
@@ -1038,6 +1094,7 @@ export default function App() {
         setCarAdmin(createEmptyCarAdmin());
         setHasRestaurant(false);
         setRestaurantAdmin(createEmptyRestaurantAdmin());
+        setHasJobs(false);
         setIsAuthActive(true);
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
@@ -2720,6 +2777,7 @@ export default function App() {
         hasShop={hasShop}
         hasCars={hasCars}
         hasRestaurant={hasRestaurant}
+        hasJobs={hasJobs}
         loadingType={projectLoading}
       />
     );
@@ -2841,7 +2899,7 @@ export default function App() {
           isSaving={isSavingCloud}
           onOpenWorkspaceHub={() => setIsWorkspaceHubOpen(true)}
           onManualSave={handleManualSave}
-          projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'restaurant' ? 'Restaurant' : undefined}
+          projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'restaurant' ? 'Restaurant' : project === 'jobs' ? 'Jobs' : undefined}
           onOpenProjects={handleOpenProjects}
         />
 

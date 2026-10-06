@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
+import { WeeDots } from './ui/WeeDots';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   ChevronDown, 
   ChevronUp, 
   Upload, 
   MapPin, 
-  Sparkles, 
   Check, 
   ArrowLeft,
   X
@@ -19,6 +19,8 @@ interface WeeAIChatProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onStepChange?: (stepNum: number) => void;
+  // Wee AI writes the page's texts from these answers; resolves to a message to show the owner.
+  onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
 }
 
 const SYRIAN_GOVERNORATES = [
@@ -101,7 +103,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   onCompleteChat,
   isCollapsed: externalIsCollapsed,
   onToggleCollapse: externalOnToggleCollapse,
-  onStepChange
+  onStepChange,
+  onWriteTexts
 }) => {
   // Local collapsed state if not externally controlled
   const [internalCollapsed, setInternalCollapsed] = useState<boolean>(false);
@@ -110,6 +113,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // Current Step (1 through 12, then 13 = complete)
   const [step, setStep] = useState<number>(1);
+  const [isWriting, setIsWriting] = useState(false);
+  const [writeNote, setWriteNote] = useState<{ ok: boolean; message: string } | null>(null);
   const [gpsLoading, setGpsLoading] = useState<boolean>(false);
 
   // Typewriter text state
@@ -1182,17 +1187,39 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
       </div>
 
-      {/* STATIC BOTTOM BUTTON: «أنشئ الصفحة المجانية» (معطل مبدئياً) */}
-      <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0">
+      {/* Wee AI writes the texts of the page from the answers above */}
+      <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0 space-y-2">
+        {writeNote && (
+          <p role="status" className={`text-[11px] font-semibold leading-relaxed ${writeNote.ok ? 'text-green-700' : 'text-rose-600'}`}>
+            {writeNote.message}
+          </p>
+        )}
         <button
           type="button"
-          disabled={true}
-          className="w-full py-2.5 rounded-xl text-xs font-bold text-neutral-400 bg-neutral-100 border border-neutral-200 cursor-not-allowed flex items-center justify-center gap-1.5 shadow-none"
-          title="هذا الزر معطل مبدئياً للمناقشة لاحقاً"
+          disabled={!onWriteTexts || step < 13 || isWriting}
+          onClick={async () => {
+            if (!onWriteTexts) return;
+            setIsWriting(true);
+            setWriteNote(null);
+            try {
+              setWriteNote(await onWriteTexts({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers }));
+            } finally {
+              setIsWriting(false);
+            }
+          }}
+          className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+            step < 13 || !onWriteTexts
+              ? 'text-neutral-400 bg-neutral-100 border border-neutral-200 cursor-not-allowed'
+              : 'text-white bg-gradient-to-l from-violet-600 to-[#0071e3] hover:brightness-110 cursor-pointer disabled:cursor-wait shadow-[0_6px_16px_rgba(79,70,229,0.25)]'
+          }`}
+          title={step < 13 ? 'جاوب على الأسئلة أولاً، وبعدها بيكتب Wee AI نصوص صفحتك' : 'Wee AI يكتب العناوين والفقرات والأزرار من معلوماتك'}
         >
-          <Sparkles size={13} />
-          <span>أنشئ الصفحة المجانية</span>
+          <span className={`rounded-full p-0.5 flex ${step < 13 || !onWriteTexts ? '' : 'bg-white'}`}>
+            <WeeDots size={16} busy={isWriting} />
+          </span>
+          <span>{isWriting ? 'Wee AI عم يكتب نصوصك…' : 'اكتب نصوص صفحتي'}</span>
         </button>
+        {step < 13 && <p className="text-[10px] text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيكتب Wee AI نصوص صفحتك.</p>}
       </div>
 
     </div>

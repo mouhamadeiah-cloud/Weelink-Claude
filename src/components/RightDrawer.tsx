@@ -169,6 +169,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   userEmail,
   onCompleteChat,
   onStepChange,
+  onWriteTexts,
   isWeeAiChatCollapsed: externalIsWeeAiChatCollapsed,
   onToggleWeeAiChat: externalOnToggleWeeAiChat,
   navbar,
@@ -5968,6 +5969,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           isCollapsed={isWeeAiChatCollapsed}
           onToggleCollapse={toggleWeeAiChat}
           onStepChange={onStepChange}
+          onWriteTexts={onWriteTexts}
         />
 
         {/* ========================================================

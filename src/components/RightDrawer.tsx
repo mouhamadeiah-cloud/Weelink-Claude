@@ -1268,29 +1268,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   };
 
   const renderInspector = () => {
-    const el = selectedElement;
-    const action = (label: string, icon: React.ReactNode, onClick: () => void, opts: { on?: boolean; danger?: boolean } = {}) => (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`flex-1 h-9 rounded-[10px] flex items-center justify-center gap-1.5 text-[11px] font-semibold transition-colors cursor-pointer ${
-          opts.on ? 'bg-[#0071e3]/10 text-[#0071e3]' : opts.danger ? 'text-neutral-600 hover:bg-red-50 hover:text-red-600' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-        }`}
-      >
-        {icon}
-        {label}
-      </button>
-    );
     return (
       <div key={selectionKey} className="inspector-list space-y-2.5">
-        {el && (
-          <div className="flex items-center gap-1 rounded-xl bg-neutral-50 border border-neutral-200/70 p-0.5">
-            {action('تكرار', <Copy size={13} />, () => onDuplicateElement(el.id))}
-            {action(el.isLocked ? 'مقفل' : 'قفل', el.isLocked ? <Lock size={13} /> : <Unlock size={13} />, onToggleLock, { on: !!el.isLocked })}
-            {onCopyFormat && action(isFormatCopied ? 'انقر عنصراً' : 'نسخ التنسيق', <PaintRoller size={13} />, onCopyFormat, { on: !!isFormatCopied })}
-            {action('حذف', <Trash2 size={13} />, () => onDeleteElement(el.id), { danger: true })}
-          </div>
-        )}
+        {/* Copy, lock, copy format and delete are in the bar above the element on the canvas. */}
         {groups.map((g, i) => {
           const open = openGroups.includes(g.id);
           const many = g.sections.length > 1;

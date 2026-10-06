@@ -6,7 +6,7 @@ import { AlignCenter, AlignLeft, AlignRight, Bold, Copy, Image as ImageIcon, Ita
 import type { CanvasElement } from '../types';
 import type { InspectorGroupId } from './rightDrawer/inspectorGroups';
 
-const TEXT_TYPES = ['heading', 'paragraph', 'button'];
+const TEXT_TYPES = ['heading', 'paragraph', 'button', 'badge'];
 const ALIGN_NEXT = { right: 'center', center: 'left', left: 'right' } as const;
 
 // Shown in the buttons' tooltips; the shortcuts themselves live in App.

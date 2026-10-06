@@ -86,8 +86,8 @@ export const InspectorCard: React.FC<InspectorCardProps> = ({ id, icon, title, s
 
 // A small heading between the sections inside one card (e.g. "الإطار" then "الظل").
 export const InspectorSubheading: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="flex items-center gap-2 pt-1 text-[11px] font-bold text-neutral-400">
-    <span>{children}</span>
+  <div className="flex items-center gap-2 pt-1 text-[12.5px] font-extrabold text-neutral-800">
+    <span className="rounded-lg bg-[#0071e3]/10 px-2.5 py-1 text-[#0071e3]">{children}</span>
     <span className="flex-1 h-px bg-neutral-200" />
   </div>
 );

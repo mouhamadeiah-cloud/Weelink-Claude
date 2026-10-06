@@ -13,6 +13,8 @@ interface BorderSectionProps {
   selectedElement: RightDrawerProps['selectedElement'];
   setBorderTarget: React.Dispatch<React.SetStateAction<'element' | 'slide'>>;
   styles: CanvasElement['styles'];
+  // The one-page panel edits what is selected only: the element, or the slide when none is.
+  fixedTarget?: boolean;
 }
 
 export const BorderSection = ({
@@ -23,6 +25,7 @@ export const BorderSection = ({
   selectedElement,
   setBorderTarget,
   styles,
+  fixedTarget = false,
 }: BorderSectionProps) => {
   // Determine current targets and styles
   const isTargetElement = borderTarget === 'element' && !!selectedElement;
@@ -108,7 +111,7 @@ export const BorderSection = ({
     <div className="space-y-4 text-right" dir="rtl">
                   
       {/* Target Toggle Tab (إذا كان هناك عنصر محدد، يتيح الاختيار بين تعديل إطار العنصر أو الشريحة) */}
-      {selectedElement && (
+      {selectedElement && !fixedTarget && (
         <div className="flex bg-neutral-100 p-1 rounded-xl border border-neutral-200">
           <button
             onClick={() => setBorderTarget('element')}

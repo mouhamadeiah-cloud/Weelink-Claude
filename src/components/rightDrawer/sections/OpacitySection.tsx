@@ -14,6 +14,8 @@ interface OpacitySectionProps {
   setOpacityPart: React.Dispatch<React.SetStateAction<'element' | 'background'>>;
   setOpacityTarget: React.Dispatch<React.SetStateAction<'element' | 'slide'>>;
   styles: CanvasElement['styles'];
+  // The one-page panel edits what is selected only: the element, or the slide when none is.
+  fixedTarget?: boolean;
 }
 
 export const OpacitySection = ({
@@ -26,6 +28,7 @@ export const OpacitySection = ({
   setOpacityPart,
   setOpacityTarget,
   styles,
+  fixedTarget = false,
 }: OpacitySectionProps) => {
   const isTargetElement = opacityTarget === 'element' && !!selectedElement;
               
@@ -83,7 +86,7 @@ export const OpacitySection = ({
   return (
     <div className="space-y-4 text-right" dir="rtl">
       {/* Target Scope Switcher (العنصر المختار / الشريحة الحالية) */}
-      {selectedElement && (
+      {selectedElement && !fixedTarget && (
         <div className="flex bg-neutral-100 p-1 rounded-xl border border-neutral-200">
           <button
             onClick={() => setOpacityTarget('element')}

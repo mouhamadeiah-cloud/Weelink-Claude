@@ -7,6 +7,8 @@ export interface GalleryImageItem {
   photographer?: string;
   photographerUrl?: string;
   downloadLocation?: string;
+  unsplashId?: string;
+  color?: string;
   width?: number;
   height?: number;
 }

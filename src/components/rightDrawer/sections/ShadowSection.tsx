@@ -14,6 +14,8 @@ interface ShadowSectionProps {
   setShadowTarget: React.Dispatch<React.SetStateAction<'element' | 'slide'>>;
   shadowTarget: 'element' | 'slide';
   styles: CanvasElement['styles'];
+  // The one-page panel edits what is selected only: the element, or the slide when none is.
+  fixedTarget?: boolean;
 }
 
 export const ShadowSection = ({
@@ -25,6 +27,7 @@ export const ShadowSection = ({
   setShadowTarget,
   shadowTarget,
   styles,
+  fixedTarget = false,
 }: ShadowSectionProps) => {
   const isTargetElement = shadowTarget === 'element' && !!selectedElement;
 
@@ -95,7 +98,7 @@ export const ShadowSection = ({
     <div className="space-y-4 text-right" dir="rtl">
                   
       {/* Target Scope Switcher */}
-      {selectedElement && (
+      {selectedElement && !fixedTarget && (
         <div className="flex bg-neutral-100 p-1 rounded-xl border border-neutral-200">
           <button
             onClick={() => setShadowTarget('element')}

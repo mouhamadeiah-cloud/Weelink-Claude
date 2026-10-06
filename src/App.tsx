@@ -1465,12 +1465,29 @@ export default function App() {
       return;
     }
 
+    // A group's text colour goes to the texts inside it, since the group itself shows no text.
+    const groupTextIds = new Set<string>();
+    if (selectedElement.type === 'shape' && selectedElement.isGroupContainer && newStyles.color !== undefined) {
+      const g = selectedElement;
+      elements.forEach(el => {
+        if (
+          el.slideId === g.slideId && !el.isLocked &&
+          ['heading', 'paragraph', 'button', 'badge'].includes(el.type) &&
+          el.x >= g.x && el.x + el.width <= g.x + g.width &&
+          el.y >= g.y && el.y + el.height <= g.y + g.height
+        ) groupTextIds.add(el.id);
+      });
+    }
+
     const updated = elements.map(el => {
       if (el.id === selectedElement.id) {
         return {
           ...el,
           styles: { ...el.styles, ...newStyles }
         };
+      }
+      if (groupTextIds.has(el.id)) {
+        return { ...el, styles: { ...el.styles, color: newStyles.color } };
       }
       return el;
     });

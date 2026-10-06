@@ -66,7 +66,35 @@ export interface FetchPhotosResult {
  * Fetch photos directly from Unsplash API with automatic pagination,
  * Arabic translation, caching, and fallback presets.
  */
-export async function fetchUnsplashPhotos({
+export async function fetchUnsplashPhotos(options: FetchPhotosOptions): Promise<FetchPhotosResult> {
+  const { query = '', category = 'all', page = 1, perPage = 15 } = options;
+  const cacheKey = `server|${category}|${query.trim().toLowerCase()}|${page}|${perPage}`;
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return { items: cached.items, totalPages: cached.totalPages, total: cached.total, isLive: true, page };
+  }
+
+  // The server function holds the Unsplash key; the browser never sees it.
+  let serverError = 'not_configured';
+  try {
+    const params = new URLSearchParams({ q: query.trim(), category, page: String(page), perPage: String(perPage) });
+    const res = await fetch(`/api/photos?${params}`);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && Array.isArray(data.items)) {
+      cache.set(cacheKey, { items: data.items, totalPages: data.totalPages, total: data.total, timestamp: Date.now() });
+      return { items: data.items, totalPages: data.totalPages, total: data.total, isLive: true, page };
+    }
+    if (data.error) serverError = data.error;
+  } catch {
+    serverError = 'offline';
+  }
+
+  // Without the server (local development), a key saved in this browser still works.
+  if (getUnsplashAccessKey()) return fetchUnsplashDirect(options);
+  return getFallbackPhotos(query.trim(), category, page, perPage, false, serverError);
+}
+
+async function fetchUnsplashDirect({
   query = '',
   category = 'all',
   page = 1,
@@ -194,7 +222,11 @@ export async function fetchUnsplashPhotos({
 /**
  * Triggers Unsplash download tracking per API Guidelines
  */
-export async function trackUnsplashDownload(downloadLocation?: string): Promise<void> {
+export async function trackUnsplashDownload(downloadLocation?: string, unsplashId?: string): Promise<void> {
+  if (unsplashId) {
+    fetch(`/api/photos?track=${encodeURIComponent(unsplashId)}`).catch(() => null);
+    return;
+  }
   if (!downloadLocation) return;
   const accessKey = getUnsplashAccessKey();
   if (!accessKey) return;
@@ -233,6 +265,7 @@ function getFallbackPhotos(
       (p) =>
         p.title.toLowerCase().includes(q) ||
         p.category.toLowerCase().includes(q) ||
+        q.includes(p.category.toLowerCase()) ||
         (p.photographer && p.photographer.toLowerCase().includes(q))
     );
   }

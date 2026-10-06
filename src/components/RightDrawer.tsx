@@ -1172,8 +1172,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
   // Names of the sections inside a card that holds more than one.
   const SUBHEADING: Partial<Record<DrawerSection, string>> = {
-    color: selectedElement?.type === 'image' ? 'الفلاتر والصبغة' : 'لون النص',
-    background: 'الخلفية',
+    color: selectedElement?.type === 'image' ? 'الفلاتر والصبغة' : selectedElement?.type === 'shape' && selectedElement.isGroupContainer ? 'لون نصوص المجموعة' : 'لون نص العنصر',
+    background: selectedElement ? 'لون خلفية العنصر' : 'خلفية الشريحة',
     border: 'الإطار',
     opacity: 'الشفافية',
     shadow: 'الظل',
@@ -1609,7 +1609,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               {/* TOOL: Shadow (الظلال) */}
               {activeSection === 'shadow' && isNavbarSelected && navbar && <NavbarShadowSection customColors={customColors} navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
 
-              {activeSection === 'shadow' && !isNavbarSelected && <ShadowSection activeSlide={activeSlide} customColors={customColors} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideGlow={onUpdateSlideGlow} selectedElement={selectedElement} setShadowTarget={setShadowTarget} shadowTarget={shadowTarget} styles={styles} />}
+              {activeSection === 'shadow' && !isNavbarSelected && <ShadowSection fixedTarget={isDocked} activeSlide={activeSlide} customColors={customColors} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideGlow={onUpdateSlideGlow} selectedElement={selectedElement} setShadowTarget={setShadowTarget} shadowTarget={shadowTarget} styles={styles} />}
 
               {/* TOOL: Background (تعديل الخلفية - لون، الصورة، المعرض كالمخطط اليدوي) */}
               {activeSection === 'background' && isNavbarSelected && navbar && (
@@ -1676,17 +1676,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               {/* TOOL: Border (تعديل الإطار للعنصر أو الشريحة) */}
               {activeSection === 'border' && isNavbarSelected && navbar && <NavbarBorderSection navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
 
-              {activeSection === 'border' && !isNavbarSelected && <BorderSection activeSlide={activeSlide} borderTarget={borderTarget} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideBorder={onUpdateSlideBorder} selectedElement={selectedElement} setBorderTarget={setBorderTarget} styles={styles} />}
+              {activeSection === 'border' && !isNavbarSelected && <BorderSection fixedTarget={isDocked} activeSlide={activeSlide} borderTarget={borderTarget} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideBorder={onUpdateSlideBorder} selectedElement={selectedElement} setBorderTarget={setBorderTarget} styles={styles} />}
 
               {/* TOOL: Opacity (الشفافية: خيار العنصر وخيار الخلفية) */}
               {activeSection === 'opacity' && isNavbarSelected && navbar && <NavbarOpacitySection navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
 
-              {activeSection === 'opacity' && !isNavbarSelected && <OpacitySection activeSlide={activeSlide} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideOpacity={onUpdateSlideOpacity} opacityPart={opacityPart} opacityTarget={opacityTarget} selectedElement={selectedElement} setOpacityPart={setOpacityPart} setOpacityTarget={setOpacityTarget} styles={styles} />}
+              {activeSection === 'opacity' && !isNavbarSelected && <OpacitySection fixedTarget={isDocked} activeSlide={activeSlide} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideOpacity={onUpdateSlideOpacity} opacityPart={opacityPart} opacityTarget={opacityTarget} selectedElement={selectedElement} setOpacityPart={setOpacityPart} setOpacityTarget={setOpacityTarget} styles={styles} />}
 
               {/* TOOL: Lighting (الإضاءة) */}
               {activeSection === 'lighting' && isNavbarSelected && navbar && <NavbarLightingSection customColors={customColors} navbar={navbar} onUpdateNavbar={onUpdateNavbar} />}
 
-              {activeSection === 'lighting' && !isNavbarSelected && <LightingSection activeSlide={activeSlide} customColors={customColors} lightingTarget={lightingTarget} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideGlow={onUpdateSlideGlow} selectedElement={selectedElement} setLightingTarget={setLightingTarget} styles={styles} />}
+              {activeSection === 'lighting' && !isNavbarSelected && <LightingSection fixedTarget={isDocked} activeSlide={activeSlide} customColors={customColors} lightingTarget={lightingTarget} onUpdateElementStyles={onUpdateElementStyles} onUpdateSlideGlow={onUpdateSlideGlow} selectedElement={selectedElement} setLightingTarget={setLightingTarget} styles={styles} />}
 
               {/* TOOL: Format (التنسيق) */}
               {(activeSection === 'format' || activeSection === 'gallery') && (

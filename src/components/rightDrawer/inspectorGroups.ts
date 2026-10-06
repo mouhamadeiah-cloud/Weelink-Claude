@@ -26,25 +26,27 @@ export const TYPES_WITH_SETTINGS: ElementType[] = [
 ];
 // Elements whose settings are drawn by the shop's own panel rather than the format section.
 export const SHOP_SETTING_TYPES: ElementType[] = ['shopProducts', 'shopSearch'];
-const TEXT_TYPES: ElementType[] = ['heading', 'paragraph', 'button'];
+const TEXT_TYPES: ElementType[] = ['heading', 'paragraph', 'button', 'badge'];
 
+// Each card's title says whose settings it holds (the element's, the slide's or the navbar's), so
+// the two are never mixed up; the column keeps the short labels.
 export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
-  const look: InspectorGroup = { id: 'shape', title: 'الشكل', label: 'الشكل', sections: ['border', 'opacity', 'shadow', 'lighting'] };
+  const shapeSections: DrawerSection[] = ['border', 'opacity', 'shadow', 'lighting'];
 
   if (target.kind === 'navbar') {
     return [
-      { id: 'content', title: 'النافبار', label: 'النافبار', sections: ['navbar-settings'] },
-      { id: 'colors', title: 'الألوان', label: 'الألوان', sections: ['color', 'background'] },
-      look,
+      { id: 'content', title: 'إعدادات النافبار', label: 'النافبار', sections: ['navbar-settings'] },
+      { id: 'colors', title: 'ألوان النافبار', label: 'الألوان', sections: ['color', 'background'] },
+      { id: 'shape', title: 'شكل النافبار', label: 'الشكل', sections: shapeSections },
     ];
   }
   if (target.kind === 'slide') {
     return [
       // The way this slide meets the next one, drawn by the inspector itself.
-      { id: 'content', title: 'الشريحة', label: 'الشريحة', sections: [] },
-      { id: 'colors', title: 'الخلفية', label: 'الخلفية', sections: ['background'] },
-      look,
-      { id: 'layout', title: 'الطبقات', label: 'الطبقات', sections: ['layers'] },
+      { id: 'content', title: 'تداخل الشريحة', label: 'الشريحة', sections: [] },
+      { id: 'colors', title: 'خلفية الشريحة', label: 'الخلفية', sections: ['background'] },
+      { id: 'shape', title: 'شكل الشريحة', label: 'الشكل', sections: shapeSections },
+      { id: 'layout', title: 'طبقات الشريحة', label: 'الطبقات', sections: ['layers'] },
     ];
   }
 
@@ -55,26 +57,26 @@ export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
   // inspector itself (content: []), next to any settings the type has.
   const content: DrawerSection[] = type === 'gallery' ? ['gallery'] : hasSettings ? ['format'] : [];
   if (content.length || ['image', 'mask', 'shape', ...SHOP_SETTING_TYPES].includes(type)) {
-    groups.push({ id: 'content', title: 'المحتوى', label: 'المحتوى', sections: content });
+    groups.push({ id: 'content', title: 'محتوى العنصر', label: 'المحتوى', sections: content });
   }
-  if (TEXT_TYPES.includes(type)) groups.push({ id: 'font', title: 'الخط', label: 'الخط', sections: ['typography'] });
+  if (TEXT_TYPES.includes(type)) groups.push({ id: 'font', title: 'خط العنصر', label: 'الخط', sections: ['typography'] });
   // Glow, outline, highlight... of the letters, drawn by the inspector itself.
   if (TEXT_TYPES.includes(type)) groups.push({ id: 'effects', title: 'تأثيرات النص', label: 'تأثيرات', sections: [] });
   groups.push({
     id: 'colors',
-    title: type === 'image' ? 'الألوان والفلاتر' : 'الألوان',
+    title: type === 'image' ? 'ألوان الصورة وفلاترها' : 'ألوان العنصر',
     label: 'الألوان',
     sections: type === 'image' ? ['color'] : ['color', 'background'],
   });
-  groups.push(look);
+  groups.push({ id: 'shape', title: 'شكل العنصر', label: 'الشكل', sections: shapeSections });
   groups.push({
     id: 'layout',
-    title: 'المكان والحجم',
+    title: 'مكان العنصر وحجمه',
     label: 'المكان',
     // An element with its own settings shows its size inside them already.
     sections: hasSettings ? ['layers'] : ['format', 'layers'],
   });
-  groups.push({ id: 'motion', title: 'الرابط والحركة', label: 'الحركة', sections: ['link', 'animation'] });
+  groups.push({ id: 'motion', title: 'رابط العنصر وحركته', label: 'الحركة', sections: ['link', 'animation'] });
   return groups;
 };
 

@@ -14,6 +14,8 @@ interface LightingSectionProps {
   selectedElement: RightDrawerProps['selectedElement'];
   setLightingTarget: React.Dispatch<React.SetStateAction<'element' | 'slide'>>;
   styles: CanvasElement['styles'];
+  // The one-page panel edits what is selected only: the element, or the slide when none is.
+  fixedTarget?: boolean;
 }
 
 export const LightingSection = ({
@@ -25,6 +27,7 @@ export const LightingSection = ({
   selectedElement,
   setLightingTarget,
   styles,
+  fixedTarget = false,
 }: LightingSectionProps) => {
   const isTargetElement = lightingTarget === 'element' && !!selectedElement;
 
@@ -98,7 +101,7 @@ export const LightingSection = ({
     <div className="space-y-4 text-right" dir="rtl">
                   
       {/* Target Scope Switcher (تعديل إضاءة العنصر أو الشريحة) */}
-      {selectedElement && (
+      {selectedElement && !fixedTarget && (
         <div className="flex bg-neutral-100 p-1 rounded-xl border border-neutral-200">
           <button
             onClick={() => setLightingTarget('element')}

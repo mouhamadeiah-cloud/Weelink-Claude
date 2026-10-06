@@ -29,6 +29,7 @@ import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
 import { elementDisplayName } from '../utils/elementLabels';
+import { PhotoBrowserPanel, notLiveMessage } from './PhotoBrowserPanel';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
   const arr = dataurl.split(',');
@@ -257,8 +258,10 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
   const [totalPages, setTotalPages] = useState<number>(50);
   const [totalCount, setTotalCount] = useState<number>(10000);
   const [isLoadingGallery, setIsLoadingGallery] = useState<boolean>(false);
-  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [isLive, setIsLive] = useState<boolean>(true);
+  const [galleryError, setGalleryError] = useState<string | undefined>();
+  const [isPhotoBrowserOpen, setIsPhotoBrowserOpen] = useState(false);
+  const galleryRootRef = useRef<HTMLDivElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
 
   const scrollCategories = (dir: 'left' | 'right') => {
@@ -283,10 +286,11 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           query: gallerySearch,
           category: galleryCategory,
           page: 1,
-          perPage: 15,
+          perPage: 9,
         });
 
         if (isMounted) {
+          setGalleryError(result.error);
           setGalleryPhotos(result.items);
           setGalleryPage(1);
           setTotalPages(result.totalPages);
@@ -307,40 +311,6 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
       clearTimeout(timer);
     };
   }, [activeDoor, galleryCategory, gallerySearch]);
-
-  // Load More Handler (جلب المزيد من ملايين الصور عبر Unsplash)
-  const handleLoadMoreGallery = async () => {
-    if (isLoadingMore || galleryPage >= totalPages) return;
-
-    setIsLoadingMore(true);
-    const nextPage = galleryPage + 1;
-
-    try {
-      const result = await fetchUnsplashPhotos({
-        query: gallerySearch,
-        category: galleryCategory,
-        page: nextPage,
-        perPage: 15,
-      });
-
-      if (result.items.length > 0) {
-        setGalleryPhotos((prev) => {
-          // Avoid duplicate photos by ID
-          const existingIds = new Set(prev.map((p) => p.id));
-          const newItems = result.items.filter((p) => !existingIds.has(p.id));
-          return [...prev, ...newItems];
-        });
-        setGalleryPage(nextPage);
-        setTotalPages(result.totalPages);
-        setTotalCount(result.total);
-        setIsLive(result.isLive);
-      }
-    } catch (e) {
-      console.error('Error loading more Unsplash photos:', e);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
 
   // Handle adding gallery photo to canvas with automatic compression to <= 150 KB
   const handleAddGalleryPhoto = async (photo: GalleryImageItem) => {
@@ -375,8 +345,8 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
       setTimeout(() => setCompressedNotice(null), 3500);
 
       // Trigger Unsplash API download tracking
-      if (photo.downloadLocation) {
-        trackUnsplashDownload(photo.downloadLocation);
+      if (photo.downloadLocation || photo.unsplashId) {
+        trackUnsplashDownload(photo.downloadLocation, photo.unsplashId);
       }
     } catch (e) {
       console.error('Error compressing gallery photo:', e);
@@ -613,8 +583,22 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
       {/* ==================================================== */}
       {/* DOOR 2 CONTENT: من المعرض (صورة رقم ٢ في طلب المستخدم) */}
       {/* ==================================================== */}
+      {activeDoor === 'gallery' && isPhotoBrowserOpen && (
+        <PhotoBrowserPanel
+          anchor={galleryRootRef.current}
+          initialQuery={gallerySearch}
+          initialCategory={galleryCategory}
+          pickingId={compressingPhotoId}
+          onPick={async (photo) => {
+            await handleAddGalleryPhoto(photo);
+            setIsPhotoBrowserOpen(false);
+          }}
+          onClose={() => setIsPhotoBrowserOpen(false)}
+        />
+      )}
+
       {activeDoor === 'gallery' && (
-        <div className="space-y-3">
+        <div ref={galleryRootRef} className="space-y-3">
           {/* Scrollable Category Chips (كما في الصورة ٢: خلفيات، رخام، طعام، بورتريه...) */}
           <div className="relative flex items-center">
             <button
@@ -685,8 +669,8 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           {/* Status info bar: Live Unsplash Indicator, Loaded Count & Compression Badge */}
           <div className="flex items-center justify-between px-1 text-[11px] text-neutral-500">
             <div className="flex items-center gap-1.5 font-medium text-neutral-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 animate-pulse" />
-              <span>{isLive ? 'بحث Unsplash المباشر نشط' : 'معرض الصور'}</span>
+              <span className={`w-2 h-2 rounded-full ring-2 ${isLive ? 'bg-emerald-500 ring-emerald-500/20' : 'bg-amber-400 ring-amber-400/20'}`} />
+              <span>{isLive ? 'صور Unsplash' : 'صور مختارة'}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -695,11 +679,17 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
               </span>
               {totalCount > 0 && !isLoadingGallery && (
                 <span className="text-[10px] text-neutral-400 font-mono">
-                  {galleryPhotos.length} {totalCount > 1000 ? '+ من آلاف' : `من ${totalCount}`}
+                  {totalCount > 1000 ? 'آلاف الصور' : `${totalCount} صورة`}
                 </span>
               )}
             </div>
           </div>
+
+          {!isLive && !isLoadingGallery && (
+            <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800">
+              {notLiveMessage(galleryError)}
+            </p>
+          )}
 
           {/* Compressed Notice Toast */}
           {compressedNotice && (
@@ -802,30 +792,20 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
             </div>
           )}
 
-          {/* Load More Button (زر عرض المزيد اللانهائي كما في المخطط اليدوي بالصورة الثانية) */}
-          {!isLoadingGallery && galleryPhotos.length > 0 && galleryPage < totalPages && (
+          {/* «عرض المزيد» opens the wide photo panel beside the control panel. */}
+          {!isLoadingGallery && galleryPhotos.length > 0 && (
             <button
               type="button"
-              disabled={isLoadingMore}
-              onClick={handleLoadMoreGallery}
-              className="w-full py-2.5 rounded-xl border border-neutral-300 hover:border-[#0071e3] bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-[#0071e3] transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={() => setIsPhotoBrowserOpen(true)}
+              className="w-full py-2.5 rounded-xl border border-neutral-300 hover:border-[#0071e3] bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-[#0071e3] transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer active:scale-[0.99]"
             >
-              {isLoadingMore ? (
-                <>
-                  <RefreshCw size={13} className="animate-spin text-[#0071e3]" />
-                  <span>جاري تحميل المزيد من صور Unsplash...</span>
-                </>
-              ) : (
-                <>
-                  <span>عرض المزيد ({galleryPhotos.length} محملة)</span>
-                  <span className="text-sm">↓</span>
-                </>
-              )}
+              <span>عرض المزيد والبحث بصور أكثر</span>
+              <ChevronLeft size={14} strokeWidth={2.5} />
             </button>
           )}
 
           <div className="text-[10px] text-neutral-400 text-center flex items-center justify-center gap-1">
-            <span>ملايين الصور عالية الدقة مدعومة بربط حي مع</span>
+            <span>الصور من</span>
             <a
               href="https://unsplash.com?utm_source=weelink&utm_medium=referral"
               target="_blank"

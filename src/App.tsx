@@ -31,7 +31,9 @@ import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRe
 import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, restaurantSiteUrl, saveStaff, withoutStaff } from './components/restaurant/restaurantCloud';
 import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
-import { Loader2 } from 'lucide-react';
+import { Eye, FileText, FolderTree, LayoutTemplate, Loader2, MousePointer2, Plus, Redo2, Settings, SlidersHorizontal, Store, Undo2 } from 'lucide-react';
+import { CommandPalette, PaletteCommand } from './components/CommandPalette';
+import { elementDisplayName } from './utils/elementLabels';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
 import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
 import { arrangeForMobile } from './utils/mobileLayout';
@@ -1913,11 +1915,106 @@ export default function App() {
     />
   );
 
+  // Quick search (Ctrl/⌘+K) over settings, things to add, pages, slides, elements and actions.
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [addRequest, setAddRequest] = useState<{ mode: 'element' | 'slide' | 'page'; category: string | null; n: number }>({ mode: 'element', category: null, n: 0 });
+  const openAdd = (mode: 'element' | 'slide' | 'page', category: string | null = null) => {
+    setDrawerSection('elements');
+    setIsChatActive(false);
+    setAddRequest((r) => ({ mode, category, n: r.n + 1 }));
+    setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 }));
+    setIsRightDrawerOpen(true);
+  };
+  const paletteCommands = (): PaletteCommand[] => {
+    const cmds: PaletteCommand[] = [];
+    const target = currentInspectorTarget();
+    const settingsTitle = isNavbarSelected ? 'النافبار' : selectedElement ? elementDisplayName(selectedElement) : 'الشريحة';
+    const SETTINGS: [DrawerSection, string, string][] = [
+      ['typography', 'الخط وحجمه', 'خط نوع حجم عريض مائل محاذاة'],
+      ['color', 'لون النص', 'لون ألوان'],
+      ['background', 'الخلفية', 'لون صورة تدرج خلفيه'],
+      ['border', 'الإطار والزوايا', 'حدود دوران زوايا'],
+      ['opacity', 'الشفافية', 'شفاف'],
+      ['shadow', 'الظل والتوهج', 'ظل توهج إضاءة'],
+      ['format', 'الأبعاد والتدوير', 'عرض طول حجم تدوير مكان'],
+      ['layers', 'الطبقات', 'ترتيب فوق تحت'],
+      ['link', 'الرابط', 'رابط لينك url'],
+      ['animation', 'حركة الظهور', 'حركه انيميشن'],
+      ['navbar-settings', 'إعدادات النافبار', 'قائمة شعار'],
+    ];
+    if (isDocked) {
+      SETTINGS.forEach(([section, title, keywords]) => {
+        const group = groupOfSection(section, target);
+        if (!group) return;
+        cmds.push({ id: `set-${section}`, section: `إعدادات ${settingsTitle}`, title, keywords, icon: <SlidersHorizontal size={14} />, run: () => showInspector(group) });
+      });
+    }
+    const ADDS: [string, string, string?][] = [
+      ['text', 'نص', 'عنوان فقرة كتابة'], ['image', 'صورة', 'صوره'], ['button', 'زر', 'كبسة'], ['icons', 'أيقونة', 'ايقونه رمز'],
+      ['shape', 'أشكال', 'شكل مربع دائرة'], ['divider', 'خط فاصل', 'فاصل خط'], ['video', 'فيديو', 'يوتيوب'], ['gallery', 'معرض صور', 'البوم'],
+      ['map', 'خريطة', 'موقع عنوان'], ['calendar', 'حجز مواعيد', 'تقويم موعد'], ['pricing', 'أسعار', 'باقة سعر'], ['sheet', 'جدول', 'جدول'],
+      ['group-templates', 'بطاقات جاهزة', 'بطاقة مجموعة'], ['html', 'كود مخصص', 'html كود'],
+    ];
+    ADDS.forEach(([category, name, keywords]) =>
+      cmds.push({ id: `add-${category}`, section: 'إضافة', title: `إضافة ${name}`, keywords, icon: <Plus size={14} />, run: () => openAdd('element', category) })
+    );
+    cmds.push({ id: 'add-slide', section: 'إضافة', title: 'إضافة شريحة', keywords: 'قسم سلايد', icon: <Plus size={14} />, run: () => openAdd('slide') });
+    cmds.push({ id: 'add-page', section: 'إضافة', title: 'إضافة صفحة', keywords: 'صفحه', icon: <Plus size={14} />, run: () => openAdd('page') });
+
+    pages.forEach((pg) =>
+      cmds.push({ id: `page-${pg.id}`, section: 'الصفحات', title: pg.name, keywords: 'صفحة', icon: <FileText size={14} />, hint: pg.id === activePageId ? 'الحالية' : undefined, run: () => setActivePageId(pg.id) })
+    );
+    currentPage.slides.forEach((sl) =>
+      cmds.push({
+        id: `slide-${sl.id}`, section: 'الشرائح', title: sl.name, keywords: 'شريحة قسم', icon: <LayoutTemplate size={14} />,
+        run: () => {
+          handleSelectElement(null);
+          handleSelectSlide(sl.id);
+          document.getElementById(`slide-container-${sl.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+      })
+    );
+    elements
+      .filter((el) => currentPage.slides.some((sl) => sl.id === el.slideId))
+      .forEach((el) => {
+        const slideName = currentPage.slides.find((sl) => sl.id === el.slideId)?.name || '';
+        // Many elements share a name like «عنوان», so a few words of their text tell them apart.
+        const text = ['heading', 'paragraph', 'button'].includes(el.type) ? (el.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40) : '';
+        const name = elementDisplayName(el);
+        cmds.push({
+          id: `el-${el.id}`, section: 'عناصر الصفحة', title: text && text !== name ? `${name}: ${text}` : name, keywords: `${slideName} ${el.type} ${(el.content || '').slice(0, 60)}`,
+          icon: <MousePointer2 size={14} />, hint: slideName,
+          run: () => {
+            handleSelectElement(el.id);
+            document.getElementById(`canvas-elem-${el.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          },
+        });
+      });
+
+    const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
+    cmds.push({ id: 'undo', section: 'أوامر', title: 'تراجع', keywords: 'رجوع', icon: <Undo2 size={14} />, hint: `${mod}+Z`, run: handleUndo });
+    cmds.push({ id: 'redo', section: 'أوامر', title: 'إعادة', icon: <Redo2 size={14} />, hint: `${mod}+Y`, run: handleRedo });
+    cmds.push({ id: 'preview', section: 'أوامر', title: 'معاينة الموقع', keywords: 'عرض شوف', icon: <Eye size={14} />, run: () => { setSelectedElementId(null); setIsRightDrawerOpen(false); setIsPreviewActive(true); } });
+    cmds.push({ id: 'structure', section: 'أوامر', title: 'هيكل الموقع', keywords: 'صفحات شرائح عناصر شجرة', icon: <FolderTree size={14} />, run: () => { setIsChatActive(false); setTabRequest((r) => ({ tab: 'structure', n: r.n + 1 })); setIsRightDrawerOpen(true); } });
+    cmds.push({ id: 'page-settings', section: 'أوامر', title: 'إعدادات الصفحة', keywords: 'ألوان الصفحة', icon: <Settings size={14} />, run: () => { setIsChatActive(false); setDrawerSection('page-settings'); setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 })); setIsRightDrawerOpen(true); } });
+    cmds.push({ id: 'project-settings', section: 'أوامر', title: 'إعدادات المشروع', keywords: 'اسم المشروع', icon: <Settings size={14} />, run: () => { setIsChatActive(false); setDrawerSection('project-settings'); setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 })); setIsRightDrawerOpen(true); } });
+    if (project !== 'page') {
+      cmds.push({ id: 'admin', section: 'أوامر', title: project === 'shop' ? 'إدارة المتجر' : project === 'cars' ? 'إدارة معرض السيارات' : 'إدارة المطعم', keywords: 'ادارة طلبات منتجات', icon: <Store size={14} />, run: () => setAdminOpenRequest((n) => n + 1) });
+    }
+    cmds.push({ id: 'wee-ai', section: 'أوامر', title: 'Wee AI', keywords: 'ذكاء اصطناعي كتابة نصوص', icon: <SlidersHorizontal size={14} />, run: () => { setIsChatActive(true); setIsRightDrawerOpen(true); } });
+    return cmds;
+  };
+
   // Keyboard shortcuts of the editor. They stay out of the way while typing in a field or in a text
   // on the canvas, and in the preview.
   const [copiedElement, setCopiedElement] = useState<CanvasElement | null>(null);
   const handleShortcut = (e: KeyboardEvent) => {
     if (isPreviewActive || !currentUser) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      setIsPaletteOpen((v) => !v);
+      return;
+    }
     const t = e.target as HTMLElement | null;
     if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))) return;
     if (document.querySelector('[role="dialog"], [aria-modal="true"]')) return;
@@ -3110,6 +3207,8 @@ export default function App() {
         )}
       </div>
 
+      <CommandPalette open={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} commands={isPaletteOpen ? paletteCommands() : []} />
+
       {/* The editing icons, docked as a column beside the control panel */}
       {isDocked && (
         <div
@@ -3144,6 +3243,7 @@ export default function App() {
             isWeeAiOpen={isRightDrawerOpen && isChatActive}
             isPanelOpen={isRightDrawerOpen}
             onTogglePanel={() => setIsRightDrawerOpen(!isRightDrawerOpen)}
+            onSearch={() => setIsPaletteOpen(true)}
           />
         </div>
       )}
@@ -3225,6 +3325,7 @@ export default function App() {
           />
         }
         sectionRequest={sectionRequest}
+        addRequest={addRequest}
         onActiveTabChange={setDrawerTab}
         inspectorFocus={inspectorFocus}
         onInspectorGroupChange={setInspectorGroup}

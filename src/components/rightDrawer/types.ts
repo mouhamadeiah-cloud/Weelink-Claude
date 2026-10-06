@@ -121,6 +121,8 @@ export interface RightDrawerProps {
   // Counts the times an icon asked for a section, so asking again for the one already chosen still
   // brings its tab to the front.
   sectionRequest?: number;
+  // Asks the add panel to open on one kind of element, or on adding a slide or a page (counted).
+  addRequest?: { mode: 'element' | 'slide' | 'page'; category: string | null; n: number };
   onActiveTabChange?: (tab: 'structure' | 'tool') => void;
   // Project settings (the gear beside the project name in the top bar).
   projectSettings?: React.ReactNode;

@@ -1064,7 +1064,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const [glowSide, setGlowSide] = useState<'out' | 'in'>('out');
   // All the text effects, in the panel beside this one.
   const [textFxGalleryOpen, setTextFxGalleryOpen] = useState(false);
-  const textFxTarget = activeSection === 'inspector' && selectedElement && ['heading', 'paragraph', 'button'].includes(selectedElement.type) ? selectedElement : null;
+  const textFxTarget = activeSection === 'inspector' && selectedElement && ['heading', 'paragraph', 'button', 'badge'].includes(selectedElement.type) ? selectedElement : null;
   useEffect(() => {
     if (!textFxTarget) setTextFxGalleryOpen(false);
   }, [textFxTarget]);
@@ -5996,7 +5996,15 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             // Beside the column of icons that sits left of the docked panel.
             style={sheet ? undefined : { right: `calc(100% + ${dockedWidth > 0 ? EDITOR_COLUMN_WIDTH : 0}px)` }}
           >
-            <TextEffectsGallery styles={textFxTarget.styles || {}} onChange={onUpdateElementStyles} onClose={() => setTextFxGalleryOpen(false)} />
+            <TextEffectsGallery
+              styles={textFxTarget.styles || {}}
+              // Picking an effect applies it and closes the panel, like the ready slides.
+              onChange={(patch) => {
+                onUpdateElementStyles(patch);
+                setTextFxGalleryOpen(false);
+              }}
+              onClose={() => setTextFxGalleryOpen(false)}
+            />
           </div>
         )}
 

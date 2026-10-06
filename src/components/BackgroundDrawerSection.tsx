@@ -293,7 +293,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
               : 'text-neutral-600 hover:text-black'
           }`}
         >
-          المعرض
+          مكتبة الصور
         </button>
       </div>
 
@@ -307,7 +307,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-neutral-800">
-                الألوان الإلزامية للخلفية:
+                ألوان صفحتك:
               </span>
               <span className="text-[10px] text-neutral-400">
                 (أساسيات التصميم)
@@ -365,7 +365,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-neutral-800">
-                منحدر لوني (50 لون):
+                ألوان أساسية:
               </span>
               <span className="text-[10px] text-neutral-400">
                 (تدرج متناسق)
@@ -793,9 +793,9 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
             </span>
             <div className="grid grid-cols-3 gap-1.5">
               {[
-                { id: 'cover', label: 'تغطية (Cover)' },
-                { id: 'contain', label: 'احتواء (Contain)' },
-                { id: 'auto', label: 'تكرار (Repeat)' },
+                { id: 'cover', label: 'تغطية' },
+                { id: 'contain', label: 'احتواء' },
+                { id: 'auto', label: 'تكرار' },
               ].map((mode) => (
                 <button
                   key={mode.id}
@@ -816,12 +816,12 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           {/* Image Attachment Mode (تثبيت الصورة في الخلفية) */}
           <div className="space-y-1.5 pt-2 border-t border-neutral-200/50">
             <span className="text-[11px] font-semibold text-neutral-600 block">
-              تثبيت الصورة في الخلفية (Parallax Effect):
+              تثبيت الصورة في الخلفية:
             </span>
             <div className="grid grid-cols-2 gap-1.5">
               {[
-                { id: 'scroll', label: 'متحركة مع التمرير (Scroll)' },
-                { id: 'fixed', label: 'ثابتة في الخلفية (Fixed)' },
+                { id: 'scroll', label: 'متحركة مع التمرير' },
+                { id: 'fixed', label: 'ثابتة في الخلفية' },
               ].map((mode) => (
                 <button
                   key={mode.id}

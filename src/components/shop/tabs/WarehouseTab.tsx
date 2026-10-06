@@ -113,7 +113,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
   };
 
   const remove = (p: ShopProduct) => {
-    if (!window.confirm(`حذف "${p.name}" من المستودع وكل الكاتالوكات؟`)) return;
+    if (!window.confirm(`حذف "${p.name}" من المستودع وكل التصنيفات؟`)) return;
     update((d) => ({ ...d, products: d.products.filter((x) => x.id !== p.id) }));
   };
 
@@ -151,8 +151,8 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
         {data.products.length > 0 && (
           <div className="space-y-2">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              <select className={`${inputClass} h-9 text-xs`} value={filters.catalog} onChange={(e) => setFilter({ catalog: e.target.value })} aria-label="فلترة بالكاتالوك">
-                <option value="">كل الكاتالوكات</option>
+              <select className={`${inputClass} h-9 text-xs`} value={filters.catalog} onChange={(e) => setFilter({ catalog: e.target.value })} aria-label="فلترة بالتصنيف">
+                <option value="">كل التصنيفات</option>
                 {mains.map((m) => (
                   <React.Fragment key={m.id}>
                     <option value={m.id}>{m.name}</option>

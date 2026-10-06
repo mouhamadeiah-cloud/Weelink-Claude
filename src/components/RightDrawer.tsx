@@ -721,7 +721,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     '#fbfbfd', '#ffffff', '#e5e5ea', '#1d1d1f', '#0071e3'
   ];
   const [customColors, setCustomColors] = useState<[string, string, string, string, string]>(defaultPalette);
-  const [customBrightness, setCustomBrightness] = useState<number>(100);
 
   // When an icon/section is selected from outside, switch to 'tool' tab automatically
   useEffect(() => {
@@ -959,12 +958,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     switch (activeSection) {
       case 'page-settings': return 'تعديل الصفحة';
       case 'project-settings': return 'إعدادات المشروع';
-      case 'add-text': return 'اضافة نص';
-      case 'add-image': return 'اضافة صورة';
+      case 'add-text': return 'إضافة نص';
+      case 'add-image': return 'إضافة صورة';
       case 'elements':
-        if (activeAddCategory === 'text') return 'اضافة نص';
-        if (activeAddCategory === 'image') return 'اضافة صورة';
-        return activeAddCategory ? `اضافة ${activeAddCategory}` : 'اضافة عناصر';
+        if (activeAddCategory === 'text') return 'إضافة نص';
+        if (activeAddCategory === 'image') return 'إضافة صورة';
+        return activeAddCategory ? `إضافة ${activeAddCategory}` : 'إضافة عناصر';
       case 'slides': return 'الشرائح';
       case 'navbar': return 'النافبار';
       case 'color': return 'الألوان';
@@ -974,7 +973,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       case 'lighting': return 'الإضاءة';
       case 'shadow': return 'الظلال';
       case 'format': return 'التنسيق';
-      case 'format-painter': return 'رول الدهان';
+      case 'format-painter': return 'نسخ التنسيق';
       case 'alignment':
       case 'typography':
       case 'fontSize':
@@ -985,7 +984,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       case 'layers': return 'الطبقات';
       case 'link': return 'إضافة رابط';
       case 'grid': return 'الجدول';
-      case 'gallery': return 'إعدادات المعرض';
+      case 'gallery': return 'إعدادات معرض الصور';
       case 'grouping': return 'المجموعات';
       case 'wee-ai': return 'Wee AI';
       case 'inspector': return 'الخصائص';
@@ -1036,6 +1035,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const [flashGroup, setFlashGroup] = useState<InspectorGroupId | null>(null);
   const toolScrollRef = useRef<HTMLDivElement>(null);
   const spyPausedUntil = useRef(0);
+  const [glowSide, setGlowSide] = useState<'out' | 'in'>('out');
 
   // A group picked in the column: open it and bring it into view.
   useEffect(() => {
@@ -1106,7 +1106,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         if (isNavbarSelected) return join(navbar?.brandName, navbar?.isSticky === false ? 'متحرك مع الصفحة' : 'ثابت بالأعلى');
         if (selectedElement?.type === 'image') return selectedElement.clipPath ? 'مقصوصة بشكل' : 'صورة كاملة';
         if (selectedElement?.type === 'gallery') return `${selectedElement.galleryConfig?.items.length || 0} صور`;
-        return selectedElement ? elementDisplayName(selectedElement) : '';
+        if (selectedElement) return elementDisplayName(selectedElement);
+        return `مع التالية: ${SLIDE_DIVIDER_OPTIONS.find((o) => o.id === (activeSlide?.dividerShape || 'straight'))?.name || 'مستقيم'}`;
       case 'font':
         return join(st.fontSize ? `${st.fontSize}px` : '', st.fontWeight === 'bold' && 'عريض', st.fontStyle === 'italic' && 'مائل', st.fontFamily && String(st.fontFamily).split(',')[0].replace(/['"]/g, ''));
       case 'colors': {
@@ -1149,8 +1150,57 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   };
 
   // What only some elements have, drawn in their content card next to their own settings.
+  // How the active slide meets the one after it (12 shapes).
+  const renderSlideOverlap = () => (
+      <div className="space-y-2.5 pt-3 border-t border-neutral-200">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-neutral-800">
+            أمثلة تداخل الشرائح:
+          </span>
+          <span className="text-[10px] text-neutral-400">
+            (تداخل الشريحة النشطة)
+          </span>
+        </div>
+
+        <div className="text-[10.5px] text-neutral-500 font-medium">
+          مربعات صغيرة بلونين توضح طريقة تداخل الشريحة الحالية مع الشريحة التي تليها (12 خياراً):
+        </div>
+
+        {/* 12 Mini Two-Tone Transition Preview Squares */}
+        <div className="grid grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
+          {SLIDE_DIVIDER_OPTIONS.map((divOpt) => {
+            const isSelected = (activeSlide.dividerShape || 'straight') === divOpt.id;
+
+            return (
+              <button
+                key={divOpt.id}
+                onClick={() => onUpdateSlideDivider(activeSlide.id, divOpt.id)}
+                className={`flex flex-col items-center gap-1.5 p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-[#0071e3] bg-[#0071e3]/5 ring-2 ring-[#0071e3]/40 shadow-xs'
+                    : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                }`}
+                title={divOpt.name}
+              >
+                {/* Mini 2-tone Preview Box */}
+                <div className="w-full h-11 border border-black/10 rounded-md overflow-hidden shadow-2xs">
+                  {divOpt.renderPreview(isSelected)}
+                </div>
+
+                <span className={`text-[9.5px] truncate w-full ${
+                  isSelected ? 'font-bold text-[#0071e3]' : 'text-neutral-600'
+                }`}>
+                  {divOpt.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+  );
+
   const renderContentExtras = () => {
-    if (!selectedElement) return null;
+    if (!selectedElement) return isNavbarSelected ? null : renderSlideOverlap();
     const el = selectedElement;
     const option = (label: string, on: boolean, pick: () => void, key: string) => (
       <button
@@ -1260,12 +1310,34 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               }}
             >
               {g.id === 'content' && renderContentExtras()}
-              {g.sections.map((s) => (
-                <div key={s} className="space-y-3">
-                  {many && SUBHEADING[s] && <InspectorSubheading>{SUBHEADING[s]}</InspectorSubheading>}
-                  {renderSection(s)}
-                </div>
-              ))}
+              {g.sections.filter((s) => s !== 'lighting').map((s) =>
+                // The outer shadow and the inner glow are one tool with a side to pick.
+                s === 'shadow' && g.sections.includes('lighting') ? (
+                  <div key="glow" className="space-y-3">
+                    <InspectorSubheading>الظل والتوهج</InspectorSubheading>
+                    <div role="radiogroup" aria-label="جهة الظل" className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1 text-[12px] font-bold">
+                      {([['out', 'خارجي'], ['in', 'داخلي']] as const).map(([side, label]) => (
+                        <button
+                          key={side}
+                          type="button"
+                          role="radio"
+                          aria-checked={glowSide === side}
+                          onClick={() => setGlowSide(side)}
+                          className={`h-8 rounded-lg transition-colors cursor-pointer ${glowSide === side ? 'bg-white text-[#0071e3] shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    {renderSection(glowSide === 'out' ? 'shadow' : 'lighting')}
+                  </div>
+                ) : (
+                  <div key={s} className="space-y-3">
+                    {many && SUBHEADING[s] && <InspectorSubheading>{SUBHEADING[s]}</InspectorSubheading>}
+                    {renderSection(s)}
+                  </div>
+                )
+              )}
             </InspectorCard>
           );
         })}
@@ -1429,7 +1501,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             }}
                             className="py-1.5 px-3 rounded-lg border border-neutral-200 hover:bg-neutral-50 text-xs font-semibold text-neutral-700 text-center"
                           >
-                            فاتح (Light)
+                            فاتح
                           </button>
                           <button
                             onClick={() => {
@@ -1441,27 +1513,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             }}
                             className="py-1.5 px-3 rounded-lg bg-neutral-900 text-white hover:bg-black text-xs font-semibold text-center"
                           >
-                            غامق (Dark)
+                            غامق
                           </button>
-                        </div>
-
-                        {/* الإضاءة (Brightness with Sun Icon) */}
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs text-neutral-600">
-                            <span className="flex items-center gap-1 font-medium">
-                              <Sun size={13} className="text-amber-500" />
-                              الإضاءة:
-                            </span>
-                            <span className="font-mono">{customBrightness}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="50"
-                            max="150"
-                            value={customBrightness}
-                            onChange={(e) => setCustomBrightness(Number(e.target.value))}
-                            className="w-full accent-[#0071e3]"
-                          />
                         </div>
 
                         {/* Numbered Pill Selector: ( 1 ) ( 2 ) ( 3 ) ( 4 ) ( 5 ) */}
@@ -1519,52 +1572,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     )}
                   </div>
 
-                  {/* 3. أشكال تداخل الشرائح مع بعضها (كما في الصورة الثانية - 12 خيار على الأقل) */}
-                  <div className="space-y-2.5 pt-3 border-t border-neutral-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-neutral-800">
-                        أمثلة تداخل الشرائح:
-                      </span>
-                      <span className="text-[10px] text-neutral-400">
-                        (تداخل الشريحة النشطة)
-                      </span>
-                    </div>
-
-                    <div className="text-[10.5px] text-neutral-500 font-medium">
-                      مربعات صغيرة بلونين توضح طريقة تداخل الشريحة الحالية مع الشريحة التي تليها (12 خياراً):
-                    </div>
-
-                    {/* 12 Mini Two-Tone Transition Preview Squares */}
-                    <div className="grid grid-cols-3 gap-2.5 max-h-60 overflow-y-auto pr-1">
-                      {SLIDE_DIVIDER_OPTIONS.map((divOpt) => {
-                        const isSelected = (activeSlide.dividerShape || 'straight') === divOpt.id;
-
-                        return (
-                          <button
-                            key={divOpt.id}
-                            onClick={() => onUpdateSlideDivider(activeSlide.id, divOpt.id)}
-                            className={`flex flex-col items-center gap-1.5 p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
-                              isSelected
-                                ? 'border-[#0071e3] bg-[#0071e3]/5 ring-2 ring-[#0071e3]/40 shadow-xs'
-                                : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
-                            }`}
-                            title={divOpt.name}
-                          >
-                            {/* Mini 2-tone Preview Box */}
-                            <div className="w-full h-11 border border-black/10 rounded-md overflow-hidden shadow-2xs">
-                              {divOpt.renderPreview(isSelected)}
-                            </div>
-
-                            <span className={`text-[9.5px] truncate w-full ${
-                              isSelected ? 'font-bold text-[#0071e3]' : 'text-neutral-600'
-                            }`}>
-                              {divOpt.name}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  {/* 3. How this slide meets the next one. The docked panel shows it in the slide's own card. */}
+                  {!isDocked && renderSlideOverlap()}
 
                 </div>
               )}
@@ -2102,7 +2111,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                         : 'text-neutral-600 hover:text-black'
                                     }`}
                                   >
-                                    ملء وتناسق (Cover)
+                                    ملء وتناسق
                                   </button>
                                   <button
                                     type="button"
@@ -2113,7 +2122,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                         : 'text-neutral-600 hover:text-black'
                                     }`}
                                   >
-                                    احتواء (Contain)
+                                    احتواء
                                   </button>
                                 </div>
                               </div>
@@ -2199,7 +2208,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 className="flex-1 py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-xl text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                               >
                                 <Copy size={13} />
-                                <span>مضاعفة (Copy)</span>
+                                <span>تكرار</span>
                               </button>
                               <button
                                 type="button"
@@ -2211,7 +2220,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }`}
                               >
                                 {selectedElement.isLocked ? <Lock size={13} /> : <Unlock size={13} />}
-                                <span>{selectedElement.isLocked ? 'إلغاء القفل' : 'قفل المعرض'}</span>
+                                <span>{selectedElement.isLocked ? 'إلغاء القفل' : 'قفل معرض الصور'}</span>
                               </button>
                             </div>
 
@@ -2418,7 +2427,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* 2. اللون الرئيسي / ألوان البطاقة */}
                             <div className="space-y-1.5 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">لون البطاقة والتفاعل النشط (Accent Color):</span>
+                              <span className="text-[10.5px] font-bold text-neutral-800 block">لون البطاقة والتفاعل النشط:</span>
                               <div className="flex flex-wrap gap-1.5 mb-2">
                                 {presetColors.map((color) => {
                                   const isSelected = accentColor.toLowerCase() === color.hex.toLowerCase();
@@ -2439,7 +2448,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 })}
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-neutral-500">رمز اللون المخصص (Hex):</span>
+                                <span className="text-[10px] text-neutral-500">رمز اللون المخصص:</span>
                                 <input
                                   type="text"
                                   value={accentColor}
@@ -3288,7 +3297,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
-                        title="ميلان النص (Italic)"
+                        title="ميلان النص"
                       >
                         <Italic size={14} strokeWidth={2} />
                       </button>
@@ -3302,7 +3311,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
-                        title="سمك الخط (Bold)"
+                        title="عريض"
                       >
                         <Bold size={14} strokeWidth={2.4} />
                       </button>
@@ -3316,7 +3325,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
-                        title="تسطير النص (Underline)"
+                        title="تسطير النص"
                       >
                         <Underline size={14} strokeWidth={2} />
                       </button>
@@ -3697,7 +3706,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               className="flex flex-col items-center justify-center p-3 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border border-neutral-200/80 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
                             >
                               <Copy size={15} />
-                              <span>نسخ الشريحة (Copy)</span>
+                              <span>تكرار الشريحة</span>
                             </button>
                           </div>
 
@@ -3754,7 +3763,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               className="flex flex-col items-center justify-center p-3 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border border-neutral-200/80 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
                             >
                               <Copy size={15} />
-                              <span>نسخ الصفحة (Copy)</span>
+                              <span>تكرار الصفحة</span>
                             </button>
                           </div>
 
@@ -3836,7 +3845,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                         <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
                           <Type size={16} className="text-[#0071e3]" />
-                          <span>اضافة نص</span>
+                          <span>إضافة نص</span>
                         </h3>
                       </div>
 
@@ -3857,7 +3866,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <div className="flex items-stretch gap-2.5">
                           <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
                             <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">40</span>
-                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
+                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">px</span>
                           </div>
                           <button
                             type="button"
@@ -3889,7 +3898,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <div className="flex items-stretch gap-2.5">
                           <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
                             <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">25</span>
-                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
+                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">px</span>
                           </div>
                           <button
                             type="button"
@@ -3921,23 +3930,23 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <div className="flex items-stretch gap-2.5">
                           <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
                             <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">15</span>
-                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
+                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">px</span>
                           </div>
                           <button
                             type="button"
                             onClick={() => {
                               onAddElement(
                                 'paragraph',
-                                'هذا مسند نصي لتفاصيل الشرح والمعلومات التكميلية، يمكنك استبداله أو تعديله بكل مرونة.',
+                                'هذه فقرة لتفاصيل الشرح والمعلومات التكميلية، يمكنك استبداله أو تعديله بكل مرونة.',
                                 { fontSize: 15, fontWeight: 'normal', color: '#4b5563', textAlign: 'right', lineHeight: 1.6 },
-                                { name: 'مسند نصي (15px)', width: 460, height: 75 }
+                                { name: 'فقرة (15px)', width: 460, height: 75 }
                               );
                             }}
                             className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-normal text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight">
-                                مسند نصي
+                                فقرة
                               </span>
                               <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
                                 + إضافة
@@ -3954,7 +3963,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           <div className="flex items-stretch gap-2.5">
                             <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
                               <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">15</span>
-                              <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">PXL</span>
+                              <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">px</span>
                             </div>
                             <button
                               type="button"
@@ -4456,7 +4465,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                       <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
                         <span className="text-[#0071e3]">{currentCategoryObj?.icon}</span>
-                        <span>اضافة {currentCategoryObj?.name}</span>
+                        <span>إضافة {currentCategoryObj?.name}</span>
                       </h3>
                     </div>
 
@@ -4553,7 +4562,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {/* 2. اللون الرئيسي للبطاقة */}
                               <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                                <span className="text-[10.5px] font-bold text-neutral-800 block">ألوان البطاقة والتفاعل النشط (Accent Color):</span>
+                                <span className="text-[10.5px] font-bold text-neutral-800 block">ألوان البطاقة والتفاعل النشط:</span>
                                 <div className="flex flex-wrap gap-1.5 mb-1.5">
                                   {[
                                     { hex: '#0071e3', name: 'أزرق آبل' },
@@ -4582,7 +4591,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   })}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-neutral-500">رمز اللون المخصص (Hex):</span>
+                                  <span className="text-[10px] text-neutral-500">رمز اللون المخصص:</span>
                                   <input
                                     type="text"
                                     value={calAddAccentColor}
@@ -5070,7 +5079,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 onChange={(e) => setTableAddHeaderRow(e.target.checked)}
                                 className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
                               />
-                              <span className="text-xs text-neutral-700">اضافة سطر العناوين (أول سطر كعنوان مميز)</span>
+                              <span className="text-xs text-neutral-700">إضافة سطر العناوين (أول سطر كعنوان مميز)</span>
                             </label>
 
                             <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -5080,7 +5089,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 onChange={(e) => setTableAddIndexCol(e.target.checked)}
                                 className="accent-emerald-600 w-3.5 h-3.5 cursor-pointer"
                               />
-                              <span className="text-xs text-neutral-700">اضافة عمود التعداد يميناً (1، 2، 3...)</span>
+                              <span className="text-xs text-neutral-700">إضافة عمود التعداد يميناً (1، 2، 3...)</span>
                             </label>
                           </div>
 
@@ -5189,14 +5198,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                   <div className="space-y-2">
                     {[
                       {
-                        title: 'قسم الواجهة (Hero Section)',
+                        title: 'قسم الواجهة',
                         action: () => {
                           onAddElement('heading', 'مرحباً بك في عالم التصميم المتطور', { fontSize: 32, fontWeight: 'bold' });
                           onAddElement('button', 'ابدأ تجربتك الآن ✦', { backgroundColor: '#0071e3', color: '#ffffff', borderRadius: 999 });
                         }
                       },
                       {
-                        title: 'بطاقات المميزات (Features)',
+                        title: 'بطاقات المميزات',
                         action: () => {
                           onAddGroup?.({
                             name: 'بطاقة ميزة',

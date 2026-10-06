@@ -1,4 +1,4 @@
-// الكاتالوكات: the store's catalogs and sub-catalogs. They are created from "إضافة منتج": picking
+// التصنيفات: the store's catalogs and sub-catalogs. They are created from "إضافة منتج": picking
 // a catalog from artikel.json adds it on save, and "غير ذلك" + the green button adds the store's
 // own catalog. Here they can be renamed or deleted.
 import React, { useState } from 'react';
@@ -23,8 +23,8 @@ export const CatalogsTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const remove = (c: ShopCatalog) => {
     const subs = childrenOf(c.id);
     const msg = subs.length
-      ? `حذف كاتالوك "${c.name}" مع ${subs.length} كاتالوك فرعي؟ المنتجات تبقى في المستودع.`
-      : `حذف كاتالوك "${c.name}"؟ المنتجات تبقى في المستودع.`;
+      ? `حذف تصنيف "${c.name}" مع ${subs.length} تصنيف فرعي؟ المنتجات تبقى في المستودع.`
+      : `حذف تصنيف "${c.name}"؟ المنتجات تبقى في المستودع.`;
     if (!window.confirm(msg)) return;
     const removed = new Set([c.id, ...subs.map((s) => s.id)]);
     update((d) => ({
@@ -70,12 +70,12 @@ export const CatalogsTab: React.FC<AdminTabProps> = ({ data, update }) => {
 
   return (
     <div className="max-w-3xl">
-      <Card title="الكاتالوكات">
+      <Card title="التصنيفات">
         <p className="text-[11px] text-neutral-400 leading-relaxed">
-          تُضاف الكاتالوكات من «إضافة منتج»: اختر كاتالوكاً من القائمة فيُضاف عند الحفظ، أو اختر «غير ذلك» واكتب اسماً ثم اضغط الزر الأخضر لإضافة كاتالوك خاص بمتجرك.
+          تُضاف التصنيفات من «إضافة منتج»: اختر تصنيفاً من القائمة فيُضاف عند الحفظ، أو اختر «غير ذلك» واكتب اسماً ثم اضغط الزر الأخضر لإضافة تصنيف خاص بمتجرك.
         </p>
         {topLevel.length === 0 ? (
-          <EmptyState text="لا توجد كاتالوكات بعد." />
+          <EmptyState text="لا توجد تصنيفات بعد." />
         ) : (
           <div className="space-y-2">
             {topLevel.map((c) => (

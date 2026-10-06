@@ -13,7 +13,7 @@ export type Perms = Record<PermId, boolean>;
 
 export const PERMS: { id: PermId; label: string; hint: string }[] = [
   { id: 'orders', label: 'الطلبات', hint: 'طلبات الموقع وحالتها' },
-  { id: 'menu', label: 'المنيو', hint: 'الأطباق والأقسام والكاتالوكات' },
+  { id: 'menu', label: 'المنيو', hint: 'الأطباق والأقسام ومجموعات المكونات' },
   { id: 'tables', label: 'الصالات والطاولات', hint: 'الطاولات ورابط الموقع ورموز QR' },
   { id: 'staff', label: 'العمال والأجهزة', hint: 'العمال وأرقامهم السرية وصناديقهم، والأجهزة وأكوادها' },
   { id: 'accounts', label: 'الحسابات', hint: 'المبيعات والمصاريف والأرباح' },

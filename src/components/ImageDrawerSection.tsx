@@ -28,6 +28,7 @@ import {
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
+import { elementDisplayName } from '../utils/elementLabels';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
   const arr = dataurl.split(',');
@@ -424,7 +425,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
 
           <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
             <ImageIcon size={16} className="text-[#0071e3]" />
-            <span>{selectedElement?.type === 'image' ? 'تبديل وتغيير الصورة' : 'اضافة صورة'}</span>
+            <span>{selectedElement?.type === 'image' ? 'تبديل وتغيير الصورة' : 'إضافة صورة'}</span>
           </h3>
         </div>
       )}
@@ -449,7 +450,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
             </div>
             <div className="flex-1 min-w-0 text-right">
               <p className="text-xs font-bold text-neutral-800 truncate">
-                {selectedElement.name || 'عنصر صورة'}
+                {elementDisplayName(selectedElement)}
               </p>
               <p className="text-[10px] text-neutral-400 mt-0.5 truncate">
                 {selectedElement.width} × {selectedElement.height} بكسل
@@ -494,7 +495,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           }`}
         >
           <ImageIcon size={13} strokeWidth={2.3} />
-          <span>من المعرض</span>
+          <span>مكتبة الصور</span>
         </button>
 
         {/* Door 3: جرافيك */}

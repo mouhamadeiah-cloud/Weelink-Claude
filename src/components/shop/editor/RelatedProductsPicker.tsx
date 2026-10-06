@@ -87,13 +87,13 @@ export const RelatedProductsPicker: React.FC<RelatedProductsPickerProps> = ({ pr
               <GhostButton onClick={addByNumber} className="h-10 flex items-center gap-1"><Plus size={13} /> ربط</GhostButton>
             </div>
           </Field>
-          <Field label="أو بالكاتالوك">
+          <Field label="أو بالتصنيف">
             <div className="grid sm:grid-cols-3 gap-2">
-              <select className={inputClass} value={mainId} onChange={(e) => { setMainId(e.target.value); setSubId(''); }} aria-label="الكاتالوك">
-                <option value="">كل الكاتالوكات</option>
+              <select className={inputClass} value={mainId} onChange={(e) => { setMainId(e.target.value); setSubId(''); }} aria-label="التصنيف">
+                <option value="">كل التصنيفات</option>
                 {mains.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <select className={inputClass} value={subId} onChange={(e) => setSubId(e.target.value)} disabled={!mainId} aria-label="الكاتالوك الفرعي">
+              <select className={inputClass} value={subId} onChange={(e) => setSubId(e.target.value)} disabled={!mainId} aria-label="التصنيف الفرعي">
                 <option value="">كل الفرعية</option>
                 {subs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>

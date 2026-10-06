@@ -40,6 +40,8 @@ export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
   }
   if (target.kind === 'slide') {
     return [
+      // The way this slide meets the next one, drawn by the inspector itself.
+      { id: 'content', title: 'الشريحة', label: 'الشريحة', sections: [] },
       { id: 'colors', title: 'الخلفية', label: 'الخلفية', sections: ['background'] },
       look,
       { id: 'layout', title: 'الطبقات', label: 'الطبقات', sections: ['layers'] },

@@ -88,11 +88,11 @@ export const CategoriesTab: React.FC<RestaurantTabProps> = ({ data, update, onGo
                         </div>
                       </Field>
                       <Field label="صورة القسم (اختيارية)"><ImagePicker value={c.image} onChange={(image) => patch(c.id, { image })} /></Field>
-                      <Field label="الكاتالوكات الفرعية المربوطة بهذا القسم">
+                      <Field label="مجموعات المكونات المربوطة بهذا القسم">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {subs.length === 0 && <span className="text-[11px] text-neutral-400 font-bold">لا شيء بعد.</span>}
                           {subs.map((s) => <span key={s.id} className="h-7 px-2.5 rounded-full bg-white border border-neutral-200 text-[11px] font-bold inline-flex items-center">{s.name}</span>)}
-                          <button type="button" onClick={() => onGoTo('subcatalogs')} className="text-[11px] font-bold text-[#0071e3] cursor-pointer">إدارة الكاتالوكات الفرعية</button>
+                          <button type="button" onClick={() => onGoTo('subcatalogs')} className="text-[11px] font-bold text-[#0071e3] cursor-pointer">إدارة مجموعات المكونات</button>
                         </div>
                       </Field>
                     </div>

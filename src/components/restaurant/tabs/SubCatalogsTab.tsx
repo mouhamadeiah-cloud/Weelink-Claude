@@ -38,7 +38,7 @@ export const SubCatalogsTab: React.FC<RestaurantTabProps> = ({ data, update, onG
     setForm(null);
   };
   const remove = (id: string) => {
-    if (!window.confirm('حذف هذا الكاتالوك الفرعي؟ سيختفي من كل الأطباق.')) return;
+    if (!window.confirm('حذف مجموعة المكونات هذه؟ سيختفي من كل الأطباق.')) return;
     update((d) => ({
       ...d,
       subCatalogs: d.subCatalogs.filter((s) => s.id !== id),
@@ -49,7 +49,7 @@ export const SubCatalogsTab: React.FC<RestaurantTabProps> = ({ data, update, onG
   if (form) {
     return (
       <div className="space-y-4">
-        <Card title={form.id ? 'تعديل الكاتالوك الفرعي' : 'كاتالوك فرعي جديد'}>
+        <Card title={form.id ? 'تعديل مجموعة المكونات' : 'مجموعة مكونات جديدة'}>
           <Field label="الاسم"><input className={inputClass} placeholder="مثلاً: مكونات السندويش" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
           <Field label="النوع">
             <div className="grid sm:grid-cols-2 gap-2">
@@ -62,7 +62,7 @@ export const SubCatalogsTab: React.FC<RestaurantTabProps> = ({ data, update, onG
               ))}
             </div>
           </Field>
-          <Field label="اربطه بالأقسام الأساسية" hint="كل طبق في هذه الأقسام سيعرض هذا الكاتالوك للزبون.">
+          <Field label="اربطه بالأقسام الأساسية" hint="كل طبق في هذه الأقسام سيعرض هذه المجموعة للزبون.">
             <MultiChips options={catOptions} value={form.categoryIds} onChange={(categoryIds) => setForm({ ...form, categoryIds })} empty="أضف أقسام المنيو أولًا." />
           </Field>
         </Card>
@@ -101,11 +101,11 @@ export const SubCatalogsTab: React.FC<RestaurantTabProps> = ({ data, update, onG
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-neutral-500 leading-relaxed max-w-xl">الكاتالوك الفرعي مجموعة مكونات أو إضافات تربطها بقسم أو أكثر من أقسام المنيو، فتظهر في نافذة كل طبق من هذه الأقسام.</p>
-        <PrimaryButton onClick={() => { setForm(blank()); setItem({ name: '', price: '' }); }}><span className="inline-flex items-center gap-1"><Plus size={14} /> كاتالوك فرعي</span></PrimaryButton>
+        <p className="text-xs text-neutral-500 leading-relaxed max-w-xl">مجموعة المكونات قائمة مكونات أو إضافات تربطها بقسم أو أكثر من أقسام المنيو، فتظهر في نافذة كل طبق من هذه الأقسام.</p>
+        <PrimaryButton onClick={() => { setForm(blank()); setItem({ name: '', price: '' }); }}><span className="inline-flex items-center gap-1"><Plus size={14} /> مجموعة مكونات</span></PrimaryButton>
       </div>
       {data.subCatalogs.length === 0 ? (
-        <EmptyState text="لا توجد كاتالوكات فرعية بعد." />
+        <EmptyState text="لا توجد مجموعات مكونات بعد." />
       ) : (
         <div className="grid sm:grid-cols-2 gap-3">
           {data.subCatalogs.map((s) => {

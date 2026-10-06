@@ -82,11 +82,11 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
           <button type="button" onClick={() => setD({ ...d, subCatalogIds: linked.map((s) => s.id) })} className={`h-9 px-3 rounded-xl text-xs font-bold border cursor-pointer ${custom ? 'bg-[#0071e3] border-[#0071e3] text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>اختيار خاص بهذا الطبق</button>
         </div>
         {custom ? (
-          <Field label="الكاتالوكات الفرعية لهذا الطبق">
-            <MultiChips options={data.subCatalogs.map((s) => ({ id: s.id, label: s.name }))} value={d.subCatalogIds || []} onChange={(ids) => setD({ ...d, subCatalogIds: ids })} empty="لا توجد كاتالوكات فرعية بعد." />
+          <Field label="مجموعات المكونات لهذا الطبق">
+            <MultiChips options={data.subCatalogs.map((s) => ({ id: s.id, label: s.name }))} value={d.subCatalogIds || []} onChange={(ids) => setD({ ...d, subCatalogIds: ids })} empty="لا توجد مجموعات مكونات بعد." />
           </Field>
         ) : (
-          <p className="text-[11px] text-neutral-500 leading-relaxed">{d.categoryId ? (linked.length ? `يعرض ما رُبط بقسمه: ${linked.map((s) => s.name).join('، ')}.` : 'لا كاتالوك فرعي مربوط بقسم هذا الطبق بعد.') : 'اختر قسم الطبق أولًا.'}</p>
+          <p className="text-[11px] text-neutral-500 leading-relaxed">{d.categoryId ? (linked.length ? `يعرض ما رُبط بقسمه: ${linked.map((s) => s.name).join('، ')}.` : 'لا مجموعة مكونات مربوطة بقسم هذا الطبق بعد.') : 'اختر قسم الطبق أولًا.'}</p>
         )}
         {active.map((s) => (
           <Field key={s.id} label={`${s.name} · اضغط عنصرًا لإخفائه من هذا الطبق`}>
@@ -104,7 +104,7 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
             </div>
           </Field>
         ))}
-        <button type="button" onClick={() => onGoTo('subcatalogs')} className="text-[11px] font-bold text-[#0071e3] cursor-pointer">إدارة الكاتالوكات الفرعية</button>
+        <button type="button" onClick={() => onGoTo('subcatalogs')} className="text-[11px] font-bold text-[#0071e3] cursor-pointer">إدارة مجموعات المكونات</button>
       </Card>
 
       <div className="flex gap-2 justify-end">

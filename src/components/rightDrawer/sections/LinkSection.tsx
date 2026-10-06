@@ -430,7 +430,7 @@ export const LinkSection = ({
       {linkSubSection === 'url' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-neutral-800 font-bold text-sm">رابط خارجي (URL):</span>
+            <span className="text-neutral-800 font-bold text-sm">رابط خارجي:</span>
             <span className="text-[11px] text-neutral-500">موقع ويب خارجي</span>
           </div>
           <div className="space-y-2">

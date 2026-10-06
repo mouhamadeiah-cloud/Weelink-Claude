@@ -114,7 +114,7 @@ export const SelectionNameInput: React.FC<{ name: string; onRename: (name: strin
 
 // Elements whose own settings (in the panel's format section) are more than size and rotation.
 const SETTINGS_TITLE: Partial<Record<ElementType, string>> = {
-  gallery: 'إعدادات المعرض (الصور وترتيبها وتنسيقاتها)',
+  gallery: 'إعدادات معرض الصور (الصور وترتيبها وتنسيقاتها)',
   table: 'إعدادات الجدول',
   calendar: 'إعدادات التقويم والحجز',
   video: 'إعدادات الفيديو',
@@ -239,10 +239,10 @@ export const EditBar: React.FC<EditBarProps> = ({
     add({ kind: 'tool', id: 'navbar-settings', title: 'إعدادات النافبار (التثبيت، الطول، وأسماء الصفحات)', icon: <Settings size={15} />, section: 'navbar-settings', tone: 'accent' });
   } else if (el) {
     if (type === 'image') {
-      add({ kind: 'tool', id: 'add-image', title: 'تبديل الصورة (رفع من الجهاز، المعرض، أو جرافيك)', icon: <Settings size={15} />, section: 'add-image', tone: 'accent' });
+      add({ kind: 'tool', id: 'add-image', title: 'تبديل الصورة (من الجهاز، مكتبة الصور، أو رسومات)', icon: <Settings size={15} />, section: 'add-image', tone: 'accent' });
       if (onUpdateElement) add({ kind: 'tool', id: 'clip', title: 'قص الحواف الفني', icon: <Scissors size={15} />, popover: 'clip', on: !!el.clipPath });
     } else if (type === 'mask' && onUpdateElement) {
-      add({ kind: 'tool', id: 'mask', title: 'شكل الماسك', icon: <Shapes size={15} />, popover: 'mask' });
+      add({ kind: 'tool', id: 'mask', title: 'شكل الصورة', icon: <Shapes size={15} />, popover: 'mask' });
     }
     const settings = type ? SETTINGS_TITLE[type] : undefined;
     if (settings) {
@@ -304,7 +304,7 @@ export const EditBar: React.FC<EditBarProps> = ({
   add(sep);
   if (isNavbarSelected || el) add({ kind: 'tool', id: 'color', title: type === 'image' ? 'الفلاتر والتلوين' : 'اللون', icon: <Palette size={15} />, section: 'color' });
   if (type !== 'image') {
-    add({ kind: 'tool', id: 'background', title: type === 'mask' ? 'لون إطار الماسك (طابقه مع خلفية الشريحة)' : 'الخلفية', icon: <BackgroundIcon />, section: 'background' });
+    add({ kind: 'tool', id: 'background', title: type === 'mask' ? 'لون إطار الصورة (طابقه مع خلفية الشريحة)' : 'الخلفية', icon: <BackgroundIcon />, section: 'background' });
   }
   add(
     { kind: 'tool', id: 'border', title: 'الإطار', icon: <Square size={15} />, section: 'border' },
@@ -316,7 +316,7 @@ export const EditBar: React.FC<EditBarProps> = ({
     add({
       kind: 'tool',
       id: 'painter',
-      title: isFormatCopied ? 'نشط: انقر على أي عنصر لتطبيق هذا التنسيق' : 'نسخ التصميم (رول الدهان)',
+      title: isFormatCopied ? 'نشط: انقر على أي عنصر لتطبيق هذا التنسيق' : 'نسخ التنسيق',
       icon: <PaintRoller size={15} />,
       onClick: onCopyFormat,
       on: !!isFormatCopied,
@@ -337,7 +337,7 @@ export const EditBar: React.FC<EditBarProps> = ({
     add(
       { kind: 'tool', id: 'up', title: 'طبقة لأعلى', icon: <ChevronUp size={15} />, onClick: onMoveLayerUp },
       { kind: 'tool', id: 'down', title: 'طبقة لأسفل', icon: <ChevronDown size={15} />, onClick: onMoveLayerDown },
-      { kind: 'tool', id: 'duplicate', title: 'مضاعفة العنصر', icon: <Copy size={15} />, onClick: onDuplicate },
+      { kind: 'tool', id: 'duplicate', title: 'تكرار العنصر', icon: <Copy size={15} />, onClick: onDuplicate },
       {
         kind: 'tool',
         id: 'lock',
@@ -416,7 +416,7 @@ export const EditBar: React.FC<EditBarProps> = ({
           </>
         ) : (
           <>
-            <div className="text-[11px] font-bold text-neutral-500 px-2 py-1">شكل الماسك</div>
+            <div className="text-[11px] font-bold text-neutral-500 px-2 py-1">شكل الصورة</div>
             {MASK_SHAPES.map((m) => (
               <PopoverOption key={m.id} label={m.name} on={(el.content || 'circle') === m.id} onPick={() => onUpdateElement(el.id, { content: m.id })} />
             ))}

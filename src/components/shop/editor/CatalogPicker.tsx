@@ -76,7 +76,7 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
   }, [catalogs, path, onChange]);
 
   if (!catalogs) {
-    return <div className="flex items-center gap-2 text-xs text-neutral-400"><Loader2 size={14} className="animate-spin" /> جاري تحميل الكاتالوكات…</div>;
+    return <div className="flex items-center gap-2 text-xs text-neutral-400"><Loader2 size={14} className="animate-spin" /> جاري تحميل التصنيفات…</div>;
   }
 
   const pickMain = (value: string) => {
@@ -131,7 +131,7 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
       disabled={disabled}
       className="w-full h-9 rounded-xl bg-[#34c759] hover:bg-[#2fb350] disabled:opacity-40 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
     >
-      <Plus size={14} /> إضافة الكاتالوك إلى متجري
+      <Plus size={14} /> إضافة التصنيف إلى متجري
     </button>
   );
 
@@ -170,11 +170,11 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
       </div>
 
       <div className="grid sm:grid-cols-3 gap-3 items-start">
-        <Field label="الكاتالوك الرئيسي">
+        <Field label="التصنيف الرئيسي">
           <select className={inputClass} value={path.mainKey} onChange={(e) => pickMain(e.target.value)}>
             <option value="">— اختر —</option>
             {customMains.length > 0 && (
-              <optgroup label="كاتالوكات متجري">
+              <optgroup label="تصنيفات متجري">
                 {customMains.map((c) => <option key={c.id} value={`c:${c.name}`}>{c.name}</option>)}
               </optgroup>
             )}
@@ -183,16 +183,16 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
           </select>
           {path.mainKey === OTHER && (
             <>
-              <input className={inputClass} placeholder="اسم الكاتالوك الجديد" value={path.mainName} onChange={(e) => onChange({ ...path, mainName: e.target.value })} autoFocus />
+              <input className={inputClass} placeholder="اسم التصنيف الجديد" value={path.mainName} onChange={(e) => onChange({ ...path, mainName: e.target.value })} autoFocus />
               <GreenAdd onClick={addMain} disabled={!path.mainName.trim()} />
             </>
           )}
         </Field>
-        <Field label="الكاتالوك الفرعي">
+        <Field label="التصنيف الفرعي">
           <select className={inputClass} value={path.subKey} onChange={(e) => pickSub(e.target.value)} disabled={!path.mainKey || path.mainKey === OTHER}>
             <option value="">— اختر —</option>
             {customSubs.length > 0 && (
-              <optgroup label="كاتالوكات متجري">
+              <optgroup label="تصنيفات متجري">
                 {customSubs.map((c) => <option key={c.id} value={`c:${c.name}`}>{c.name}</option>)}
               </optgroup>
             )}
@@ -201,7 +201,7 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
           </select>
           {path.subKey === OTHER && (
             <>
-              <input className={inputClass} placeholder="اسم الكاتالوك الفرعي الجديد" value={path.subName} onChange={(e) => onChange({ ...path, subName: e.target.value })} autoFocus />
+              <input className={inputClass} placeholder="اسم التصنيف الفرعي الجديد" value={path.subName} onChange={(e) => onChange({ ...path, subName: e.target.value })} autoFocus />
               <GreenAdd onClick={addSub} disabled={!path.subName.trim()} />
             </>
           )}

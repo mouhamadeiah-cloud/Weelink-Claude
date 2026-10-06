@@ -3,6 +3,7 @@ import React from 'react';
 import { Check } from 'lucide-react';
 import { CanvasElement, Slide, getGlowShadowStyle } from '../../../types';
 import { RightDrawerProps } from '../types';
+import { elementDisplayName } from '../../../utils/elementLabels';
 
 interface ShadowSectionProps {
   activeSlide: Slide;
@@ -122,7 +123,7 @@ export const ShadowSection = ({
       <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
         <span className="text-[11px] font-bold text-[#0071e3]">
           {isTargetElement 
-            ? `تعديل ظل العنصر: ${selectedElement.name}` 
+            ? `تعديل ظل العنصر: ${elementDisplayName(selectedElement)}` 
             : `تعديل ظل الشريحة: ${activeSlide?.name || 'الشريحة الحالية'}`}
         </span>
       </div>
@@ -130,7 +131,7 @@ export const ShadowSection = ({
       {/* أولاً: درجة الظلال الخارجي */}
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
-          <span className="text-neutral-700 font-bold">درجة وشدة الظل (Shadow Intensity):</span>
+          <span className="text-neutral-700 font-bold">درجة وشدة الظل:</span>
           <span className="font-mono text-[#0071e3] font-bold">{activeShadowIntensity}px</span>
         </div>
         <input
@@ -151,7 +152,7 @@ export const ShadowSection = ({
       {/* ثانياً: لون الظل */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-neutral-800 block">
-          لون الظل الخارجي (Shadow Color):
+          لون الظل الخارجي:
         </span>
 
         {/* أ. ألوان الصفحة الافتراضية */}
@@ -243,7 +244,7 @@ export const ShadowSection = ({
       {/* ثالثاً: مربعات خفيفة تبرز مربعات رمادية مطبق عليها الظلال من الخارج */}
       <div className="space-y-2 pt-1">
         <span className="text-xs font-bold text-neutral-800 block">
-          توجيه اتجاه وزاوية الظل (Shadow Position):
+          توجيه اتجاه وزاوية الظل:
         </span>
         <p className="text-[10px] text-neutral-500 leading-tight">
           انقر على المربع لتوجيه الظل في الاتجاه المرغوب. تبرز المعاينات شكل الظل الخارجي المطبق على مربع رمادي افتراضي:

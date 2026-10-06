@@ -10,6 +10,8 @@ import {
 import { ControlBar } from './components/ControlBar';
 import { EditBar, SelectionNameInput, selectionName } from './components/EditBar';
 import { CanvasWorkspace } from './components/CanvasWorkspace';
+import { EditorColumn, EDITOR_COLUMN_WIDTH } from './components/EditorColumn';
+import { INSPECTOR_SECTIONS, InspectorGroupId, InspectorTarget, groupOfSection, inspectorGroups } from './components/rightDrawer/inspectorGroups';
 import { RightDrawer, DrawerSection } from './components/RightDrawer';
 import { ProjectSettingsSection } from './components/rightDrawer/sections/ProjectSettingsSection';
 import { WorkspaceHub } from './components/WorkspaceHub';
@@ -214,6 +216,12 @@ export default function App() {
   const [drawerSection, setDrawerSection] = useState<DrawerSection>('elements');
   const [drawerTab, setDrawerTab] = useState<'structure' | 'tool'>('structure');
   const [sectionRequest, setSectionRequest] = useState(0);
+  // The docked panel's inspector: the group the column asked for, and the group showing at its top.
+  const [inspectorFocus, setInspectorFocus] = useState<{ group: InspectorGroupId | null; n: number }>({ group: null, n: 0 });
+  const [inspectorGroup, setInspectorGroup] = useState<InspectorGroupId | null>(null);
+  const [tabRequest, setTabRequest] = useState<{ tab: 'structure' | 'tool'; n: number }>({ tab: 'structure', n: 0 });
+  // The column's "admin" button opens the restaurant, shop or showroom admin.
+  const [adminOpenRequest, setAdminOpenRequest] = useState(0);
 
   // On a wide screen the control panel is docked on the right with the icons beside it, and the
   // workspace takes the rest of the width, so the panel never covers the canvas.
@@ -225,7 +233,7 @@ export default function App() {
   }, []);
   const isDocked = windowWidth >= 1024 && !isPreviewActive;
   const dockedPanelWidth = Math.round(Math.min(400, Math.max(320, windowWidth * 0.24)));
-  const EDIT_RAIL_WIDTH = 52;
+  const EDIT_RAIL_WIDTH = EDITOR_COLUMN_WIDTH;
   const [isWorkspaceHubOpen, setIsWorkspaceHubOpen] = useState(false);
 
   // Elements state (Canvas elements in freegrid)
@@ -1174,6 +1182,7 @@ export default function App() {
   const handleSelectSlide = (id: string) => {
     setActiveSlideId(id);
     setIsNavbarSelected(false);
+    followSelectionInPanel();
     if (!isDocked) setIsRightDrawerOpen(false); // The floating panel would cover the selected slide
 
     if (copiedFormat && copiedType === 'slide') {
@@ -1272,7 +1281,13 @@ export default function App() {
     
     if (id) {
       const el = elements.find(item => item.id === id);
-      if (el && el.type === 'gallery') {
+      if (isDocked) {
+        // Picking an element on the canvas always shows its settings (even after adding).
+        if (drawerSection !== 'add-image') {
+          setDrawerSection('inspector');
+          setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 }));
+        }
+      } else if (el && el.type === 'gallery') {
         setDrawerSection('gallery');
         setIsRightDrawerOpen(true);
       }
@@ -1286,6 +1301,7 @@ export default function App() {
     if (isPreviewActive) return;
     setSelectedElementId(null);
     setIsNavbarSelected(true);
+    followSelectionInPanel();
 
     if (copiedFormat && copiedType === 'navbar') {
       setPages(pages.map(p => ({
@@ -1325,9 +1341,38 @@ export default function App() {
     }
   };
 
+  // What the docked panel's inspector is about right now.
+  const currentInspectorTarget = (): InspectorTarget => {
+    const el = isNavbarSelected ? null : elements.find((e) => e.id === selectedElementId);
+    return isNavbarSelected ? { kind: 'navbar' } : el ? { kind: 'element', type: el.type } : { kind: 'slide' };
+  };
+
+  // Shows the inspector in the docked panel, scrolled to a group when one is given.
+  const showInspector = (group: InspectorGroupId | null = null) => {
+    setDrawerSection('inspector');
+    setInspectorFocus((f) => ({ group, n: f.n + 1 }));
+    setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 }));
+    setIsRightDrawerOpen(true);
+  };
+
+  // Selecting on the canvas shows what was selected in the docked panel, unless the panel is in the
+  // middle of adding something (a new element is selected as it is added).
+  const followSelectionInPanel = () => {
+    if (!isDocked) return;
+    if (drawerSection === 'elements' || drawerSection === 'add-text' || drawerSection === 'add-image') return;
+    setDrawerSection('inspector');
+    setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 }));
+  };
+
   // Tool Selection from any icon: Opens Control Drawer and selects corresponding tool
   // Asking again for the section the docked panel is showing closes the panel.
   const handleSelectTool = (tool: DrawerSection) => {
+    // The docked panel shows an element's settings together on one page: a section asked for by
+    // name opens its group there.
+    if (isDocked && INSPECTOR_SECTIONS.includes(tool)) {
+      showInspector(groupOfSection(tool, currentInspectorTarget()));
+      return;
+    }
     if (isDocked && isRightDrawerOpen && drawerTab === 'tool' && drawerSection === tool) {
       setIsRightDrawerOpen(false);
       return;
@@ -2957,10 +3002,32 @@ export default function App() {
           className="fixed z-[999998]"
           style={{ top: 56, bottom: 0, width: EDIT_RAIL_WIDTH, right: isRightDrawerOpen ? dockedPanelWidth : 0, transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
         >
-          <EditBar
-            {...editBarProps}
-            orientation="vertical"
-            shownSection={isRightDrawerOpen && drawerTab === 'tool' ? drawerSection : null}
+          <EditorColumn
+            groups={inspectorGroups(currentInspectorTarget())}
+            activeGroup={isRightDrawerOpen && drawerTab === 'tool' && drawerSection === 'inspector' ? inspectorGroup : null}
+            onPickGroup={(g) => showInspector(g)}
+            onAdd={() => handleSelectTool('elements')}
+            isAddShown={isRightDrawerOpen && !isChatActive && drawerTab === 'tool' && (drawerSection === 'elements' || drawerSection === 'add-text' || drawerSection === 'add-image')}
+            onStructure={() => {
+              if (isRightDrawerOpen && drawerTab === 'structure') {
+                setIsRightDrawerOpen(false);
+                return;
+              }
+              setTabRequest((r) => ({ tab: 'structure', n: r.n + 1 }));
+              setIsRightDrawerOpen(true);
+            }}
+            isStructureShown={isRightDrawerOpen && !isChatActive && drawerTab === 'structure'}
+            admin={
+              project === 'shop' ? { label: 'إدارة المتجر', onOpen: () => setAdminOpenRequest((n) => n + 1) }
+              : project === 'cars' ? { label: 'إدارة معرض السيارات', onOpen: () => setAdminOpenRequest((n) => n + 1) }
+              : project === 'restaurant' ? { label: 'إدارة المطعم', onOpen: () => setAdminOpenRequest((n) => n + 1) }
+              : null
+            }
+            onWeeAi={() => {
+              setIsChatActive((v) => !v);
+              setIsRightDrawerOpen(true);
+            }}
+            isWeeAiOpen={isRightDrawerOpen && isChatActive}
             isPanelOpen={isRightDrawerOpen}
             onTogglePanel={() => setIsRightDrawerOpen(!isRightDrawerOpen)}
           />
@@ -3045,6 +3112,12 @@ export default function App() {
         }
         sectionRequest={sectionRequest}
         onActiveTabChange={setDrawerTab}
+        inspectorFocus={inspectorFocus}
+        onInspectorGroupChange={setInspectorGroup}
+        onCopyFormat={handleCopyFormat}
+        onToggleGroupContainer={handleToggleGroupContainer}
+        tabRequest={tabRequest}
+        projectName={currentPage.navbar.brandName || PROJECT_KIND_LABEL[project]}
         projectSettings={
           <ProjectSettingsSection
             name={currentPage.navbar.brandName || ''}
@@ -3058,13 +3131,13 @@ export default function App() {
 
       {/* Online Shop admin: floating gear + admin window */}
       {project === 'shop' && (
-        <ShopAdminPanel data={shopAdmin} onChange={updateShopAdmin} />
+        <ShopAdminPanel data={shopAdmin} onChange={updateShopAdmin} openRequest={adminOpenRequest} hideGear={isDocked} />
       )}
       {project === 'cars' && (
-        <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} />
+        <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} openRequest={adminOpenRequest} hideGear={isDocked} />
       )}
       {project === 'restaurant' && (
-        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} access={access} />
+        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} access={access} openRequest={adminOpenRequest} hideGear={isDocked} />
       )}
 
       {/* Workspace Hub Drawer Panel */}

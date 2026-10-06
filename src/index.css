@@ -253,3 +253,15 @@
   animation-delay: inherit;
 }
 .shop-anim-float:hover, .shop-anim-pulse:hover, .shop-anim-swing:hover, .shop-anim-shake:hover { animation-play-state: paused; }
+
+/* The docked panel's cards come in one after another when the selection changes. */
+@keyframes inspector-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.inspector-list > .inspector-card {
+  animation: inspector-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inspector-list > .inspector-card { animation: none; }
+}

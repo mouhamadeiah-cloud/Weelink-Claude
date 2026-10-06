@@ -1,5 +1,6 @@
 import type React from 'react';
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape } from '../../types';
+import type { InspectorGroupId } from './inspectorGroups';
 
 export type DrawerSection = 
   | 'elements' 
@@ -29,7 +30,9 @@ export type DrawerSection =
   | 'wee-ai' 
   | 'page-settings'
   | 'project-settings'
-  | 'gallery';
+  | 'gallery'
+  // The docked panel's one page of everything about the selection (cards per group of settings).
+  | 'inspector';
 
 export interface RightDrawerProps {
   isOpen: boolean;
@@ -121,4 +124,13 @@ export interface RightDrawerProps {
   onActiveTabChange?: (tab: 'structure' | 'tool') => void;
   // Project settings (the gear beside the project name in the top bar).
   projectSettings?: React.ReactNode;
+  // The docked panel's inspector: the group the column asked to show (counted, so asking again for
+  // the same one scrolls to it again), and the group at the top of the panel as it scrolls.
+  inspectorFocus?: { group: InspectorGroupId | null; n: number };
+  onInspectorGroupChange?: (group: InspectorGroupId | null) => void;
+  onCopyFormat?: () => void;
+  onToggleGroupContainer?: () => void;
+  // Asks the panel to show its structure or its tools (counted like sectionRequest).
+  tabRequest?: { tab: 'structure' | 'tool'; n: number };
+  projectName?: string;
 }

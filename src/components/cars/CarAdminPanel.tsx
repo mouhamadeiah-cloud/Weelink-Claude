@@ -28,10 +28,17 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
 interface CarAdminPanelProps {
   data: CarAdminData;
   onChange: (fn: (d: CarAdminData) => CarAdminData) => void;
+  // Asks the admin to open (counted); the editor's column has an "admin" button for this.
+  openRequest?: number;
+  // The floating gear is left out where the column's button opens the admin instead.
+  hideGear?: boolean;
 }
 
-export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange }) => {
+export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange, openRequest = 0, hideGear = false }) => {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (openRequest > 0) setOpen(true);
+  }, [openRequest]);
   const [tab, setTab] = useState<TabId>('inventory');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [docTarget, setDocTarget] = useState<DocEditorTarget | null>(null);
@@ -49,6 +56,7 @@ export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange }) 
 
   return (
     <>
+      {!hideGear && (
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -58,6 +66,7 @@ export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange }) 
       >
         <Settings size={30} strokeWidth={1.8} />
       </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-[1000001] bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-2 sm:p-6" onMouseDown={() => setOpen(false)}>

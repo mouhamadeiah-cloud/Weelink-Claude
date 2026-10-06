@@ -19,12 +19,17 @@ interface PhotoBrowserPanelProps {
   onClose: () => void;
 }
 
-const notLiveMessage = (error?: string) =>
+// Why the full Unsplash library is not showing, in words the owner can act on.
+export const notLiveMessage = (error?: string) =>
   error === 'rate_limited'
-    ? 'وصلنا للحد المسموح من طلبات Unsplash لهذه الساعة. هذه صور مختارة حتى يتجدد الحد.'
-    : error === 'offline'
-      ? 'ما في اتصال بالخادم. هذه صور مختارة محفوظة بالتطبيق.'
-      : 'مكتبة Unsplash الكاملة غير مفعّلة بعد على الخادم، فهذه صور مختارة فقط.';
+    ? 'وصلنا للحد المسموح من طلبات Unsplash لهذه الساعة، فهذه صور مختارة حتى يتجدد.'
+    : error === 'bad_key'
+      ? 'Unsplash رفض المفتاح. تأكد أن UNSPLASH_ACCESS_KEY هو الـ Access Key وليس الـ Secret key.'
+      : error === 'unsplash_failed'
+        ? 'Unsplash لم يرد هذه المرة، فهذه صور مختارة. جرّب بعد قليل.'
+        : error === 'offline'
+          ? 'لا اتصال بالخادم، فهذه صور مختارة محفوظة بالتطبيق.'
+          : 'مكتبة Unsplash الكاملة غير مفعّلة بعد على الخادم (المفتاح UNSPLASH_ACCESS_KEY غير موجود في النشر الحالي)، فهذه صور مختارة فقط.';
 
 // Where the panel goes: beside the control panel when it fits, else over the screen.
 const usePlacement = (anchor: HTMLElement | null) => {

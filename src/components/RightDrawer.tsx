@@ -3654,36 +3654,32 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       {/* RENDER MODE: element */}
                       {addMenuMode === 'element' && (
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between px-1">
-                            <span className="text-xs font-bold text-neutral-600">
-                              اختر عنصراً لإضافته أو تخصيصه:
-                            </span>
-                            <span className="text-[10px] font-semibold text-neutral-400">
-                              12 عنصر متوفر
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2.5">
-                            {ADD_CATEGORIES.map((cat) => (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                onClick={() => {
-                                  setActiveAddCategory(cat.id);
-                                  const firstSub = SUBCATEGORIES_MAP[cat.id]?.[0]?.id || 'all';
-                                  setSelectedSubCategory(firstSub);
-                                }}
-                                className="aspect-square bg-white hover:bg-neutral-50/80 border-2 border-neutral-200/90 hover:border-[#0071e3] rounded-2xl p-3 flex flex-col items-center justify-center gap-2 shadow-2xs hover:shadow-md transition-all active:scale-95 cursor-pointer group text-center"
-                              >
-                                <div className="w-11 h-11 rounded-xl bg-neutral-100/80 group-hover:bg-[#0071e3]/10 text-neutral-700 group-hover:text-[#0071e3] flex items-center justify-center transition-colors">
-                                  {React.cloneElement(cat.icon as React.ReactElement<any>, { size: 22, strokeWidth: 2 })}
-                                </div>
-                                <span className="text-xs font-bold text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight line-clamp-2 px-1">
-                                  {cat.name}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
+                          {([['basic', 'أساسي'], ['media', 'وسائط'], ['business', 'أعمال'], ['ready', 'جاهز']] as const).map(([group, title]) => (
+                            <div key={group} className="space-y-1.5">
+                              <div className="text-[11px] font-bold text-neutral-400 px-1">{title}</div>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {ADD_CATEGORIES.filter((cat) => cat.group === group).map((cat) => (
+                                  <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveAddCategory(cat.id);
+                                      const firstSub = SUBCATEGORIES_MAP[cat.id]?.[0]?.id || 'all';
+                                      setSelectedSubCategory(firstSub);
+                                    }}
+                                    className="group h-[76px] bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-[#0071e3]/60 rounded-xl px-1.5 flex flex-col items-center justify-center gap-1.5 transition-[border-color,box-shadow,transform] duration-200 hover:shadow-[0_4px_12px_rgba(16,24,40,0.08)] hover:-translate-y-px active:scale-95 cursor-pointer text-center"
+                                  >
+                                    <span className="w-9 h-9 rounded-lg bg-neutral-100 group-hover:bg-[#0071e3]/10 text-neutral-700 group-hover:text-[#0071e3] flex items-center justify-center transition-[background-color,color,transform] duration-200 group-hover:scale-110">
+                                      {React.cloneElement(cat.icon as React.ReactElement<any>, { size: 18, strokeWidth: 2 })}
+                                    </span>
+                                    <span className="text-[11.5px] font-semibold text-neutral-800 group-hover:text-[#0071e3] leading-tight truncate max-w-full">
+                                      {cat.name}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
 
@@ -4289,34 +4285,33 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 // VIEW 2: Detail with Subcategories Bar (كما في الصورة رقم ٢)
                 // ==========================================
                 const currentCategoryObj = ADD_CATEGORIES.find(c => c.id === activeAddCategory);
-                const currentSubCats = SUBCATEGORIES_MAP[activeAddCategory] || [{ id: 'all', label: 'الكل' }];
-                const currentTemplates = (TEMPLATES_MAP[activeAddCategory] || []).filter(t => {
+                const matchesSub = (t: { id: string; subCategories: string[] }, sub: string) => {
                   if (activeAddCategory === 'shape') {
-                    if (selectedSubCategory === 'all') {
+                    if (sub === 'all') {
                       return !t.subCategories.includes('undraw');
                     }
-                    if (selectedSubCategory === 'undraw') {
+                    if (sub === 'undraw') {
                       return t.subCategories.includes('undraw');
                     }
-                    if (selectedSubCategory === 'boxes') {
+                    if (sub === 'boxes') {
                       return t.subCategories.includes('boxes') || t.subCategories.includes('cards');
                     }
-                    if (selectedSubCategory === 'text-boxes') {
+                    if (sub === 'text-boxes') {
                       return t.subCategories.includes('text-boxes');
                     }
-                    if (selectedSubCategory === 'geometric') {
+                    if (sub === 'geometric') {
                       return t.subCategories.includes('geometric');
                     }
-                    if (selectedSubCategory === 'organic') {
+                    if (sub === 'organic') {
                       return t.subCategories.includes('organic') || t.subCategories.includes('shapes') || t.subCategories.includes('badges');
                     }
-                    if (selectedSubCategory === 'fluid') {
+                    if (sub === 'fluid') {
                       return t.subCategories.includes('fluid') || t.subCategories.includes('graphic') || t.subCategories.includes('dividers') || t.subCategories.includes('brush');
                     }
                   }
                   if (activeAddCategory === 'icons') {
-                    if (selectedSubCategory === 'all') return true;
-                    if (selectedSubCategory === 'social') {
+                    if (sub === 'all') return true;
+                    if (sub === 'social') {
                       const socialIds = [
                         'icon-whatsapp', 'icon-instagram', 'icon-snapchat', 'icon-tiktok', 'icon-youtube',
                         'icon-twitter', 'icon-facebook', 'icon-linkedin', 'icon-telegram', 'icon-pinterest',
@@ -4324,7 +4319,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       ];
                       return socialIds.includes(t.id);
                     }
-                    if (selectedSubCategory === 'utility') {
+                    if (sub === 'utility') {
                       const utilityIds = [
                         'icon-home', 'icon-phone', 'icon-mail', 'icon-user', 'icon-calendar', 'icon-clock',
                         'icon-search', 'icon-settings', 'icon-lock', 'icon-unlock', 'icon-trash', 'icon-edit',
@@ -4333,7 +4328,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       ];
                       return utilityIds.includes(t.id);
                     }
-                    if (selectedSubCategory === 'separators') {
+                    if (sub === 'separators') {
                       const separatorIds = [
                         'icon-syrian-pound', 'icon-exclamation', 'icon-question', 'icon-price-tag',
                         'icon-sep-stars', 'icon-sep-diamond', 'icon-sep-wave', 'icon-sep-dots',
@@ -4342,8 +4337,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       return separatorIds.includes(t.id);
                     }
                   }
-                  return selectedSubCategory === 'all' || t.subCategories.includes(selectedSubCategory);
-                });
+                  return sub === 'all' || t.subCategories.includes(sub);
+                };
+                const categoryTemplates = TEMPLATES_MAP[activeAddCategory] || [];
+                const currentTemplates = categoryTemplates.filter((t) => matchesSub(t, selectedSubCategory));
+                // Filters with nothing in them are left out.
+                const currentSubCats = (SUBCATEGORIES_MAP[activeAddCategory] || [{ id: 'all', label: 'الكل' }]).filter(
+                  (sub) => sub.id === 'all' || !categoryTemplates.length || categoryTemplates.some((t) => matchesSub(t, sub.id))
+                );
 
                 if (activeAddCategory === 'iconify') {
                   const popularIcons = [
@@ -4362,7 +4363,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            setActiveAddCategory(null);
+                            setActiveAddCategory('icons');
+                            setSelectedSubCategory('all');
                             setIconifySearch('');
                           }}
                           className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
@@ -4373,7 +4375,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                         <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
                           <span className="text-[#0071e3]">🔍</span>
-                          <span>مكتبة أيقونات Iconify</span>
+                          <span>مكتبة الأيقونات الكبيرة</span>
                         </h3>
                       </div>
 
@@ -4521,6 +4523,20 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                     {/* Templates & Examples Grid */}
                     <div className="space-y-2.5">
+                      {activeAddCategory === 'icons' && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveAddCategory('iconify')}
+                          className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-dashed border-[#0071e3]/40 bg-[#0071e3]/5 hover:bg-[#0071e3]/10 text-right cursor-pointer transition-colors"
+                        >
+                          <Search size={16} className="text-[#0071e3] shrink-0" />
+                          <span className="flex-1">
+                            <span className="block text-xs font-bold text-[#0071e3]">ابحث بالمكتبة الكبيرة</span>
+                            <span className="block text-[10.5px] text-neutral-500">آلاف الأيقونات الإضافية</span>
+                          </span>
+                          <ChevronLeft size={15} className="text-[#0071e3]" />
+                        </button>
+                      )}
                       {activeAddCategory === 'calendar' && (
                         <div className="p-3.5 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 border-2 border-[#0071e3]/30 rounded-2xl text-right space-y-3.5 shadow-sm" dir="rtl">
                           {/* Header with expand/collapse toggle */}

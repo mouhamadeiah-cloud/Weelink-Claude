@@ -1,7 +1,7 @@
 // Category list, sub-category tabs and ready-made element templates for the "+" add menu.
 // Moved verbatim from RightDrawer.tsx; built per render exactly as before.
 import React from 'react';
-import { Type, Square, Image as ImageIcon, Sparkles, Globe, Shapes, Video, MapPin, Tag, Calendar, Grid3X3, Code, Images, FolderOpen, Stethoscope } from 'lucide-react';
+import { Type, Square, Image as ImageIcon, Sparkles, Globe, Shapes, Video, MapPin, Tag, Calendar, Grid3X3, Code, Images, FolderOpen, Stethoscope, Minus } from 'lucide-react';
 import { ElementType } from '../../types';
 import { MASK_SHAPES } from '../../utils/maskShapes';
 import { RightDrawerProps } from './types';
@@ -55,21 +55,24 @@ export const buildAddMenuData = ({
   calAddDescLabel,
   calAddSlotsText,
 }: AddMenuDataDeps) => {
+  // The add panel's elements in four groups: the basics, media, business blocks and ready-made blocks.
   const ADD_CATEGORIES = [
-    { id: 'text', name: 'نص', icon: <Type size={18} /> },
-    { id: 'image', name: 'صورة', icon: <ImageIcon size={18} /> },
-    { id: 'button', name: 'زر', icon: <Square size={18} /> },
-    { id: 'icons', name: 'أيقونات جاهزة 🌟', icon: <Sparkles size={18} /> },
-    { id: 'iconify', name: 'أيقونات Iconify العالمية 🔍', icon: <Globe size={18} /> },
-    { id: 'shape', name: 'أشكال', icon: <Shapes size={18} /> },
-    { id: 'video', name: 'فيديو', icon: <Video size={18} /> },
-    { id: 'map', name: 'خرائط جوجل', icon: <MapPin size={18} /> },
-    { id: 'pricing', name: 'أسعار', icon: <Tag size={18} /> },
-    { id: 'calendar', name: 'حجز مواعيد', icon: <Calendar size={18} /> },
-    { id: 'sheet', name: 'جدول', icon: <Grid3X3 size={18} /> },
-    { id: 'html', name: 'كود مخصص', icon: <Code size={18} /> },
-    { id: 'gallery', name: 'معرض صور 🖼️', icon: <Images size={18} /> },
-    { id: 'group-templates', name: 'بطاقات ومجموعات جاهزة 📁', icon: <FolderOpen size={18} /> },
+    { id: 'text', name: 'نص', group: 'basic', icon: <Type size={18} /> },
+    { id: 'image', name: 'صورة', group: 'basic', icon: <ImageIcon size={18} /> },
+    { id: 'button', name: 'زر', group: 'basic', icon: <Square size={18} /> },
+    { id: 'icons', name: 'أيقونة', group: 'basic', icon: <Sparkles size={18} /> },
+    { id: 'shape', name: 'أشكال', group: 'basic', icon: <Shapes size={18} /> },
+    { id: 'divider', name: 'خط فاصل', group: 'basic', icon: <Minus size={18} /> },
+    { id: 'video', name: 'فيديو', group: 'media', icon: <Video size={18} /> },
+    { id: 'gallery', name: 'معرض صور', group: 'media', icon: <Images size={18} /> },
+    { id: 'map', name: 'خريطة', group: 'media', icon: <MapPin size={18} /> },
+    { id: 'calendar', name: 'حجز مواعيد', group: 'business', icon: <Calendar size={18} /> },
+    { id: 'pricing', name: 'أسعار', group: 'business', icon: <Tag size={18} /> },
+    { id: 'sheet', name: 'جدول', group: 'business', icon: <Grid3X3 size={18} /> },
+    { id: 'group-templates', name: 'بطاقات جاهزة', group: 'ready', icon: <FolderOpen size={18} /> },
+    { id: 'html', name: 'كود مخصص', group: 'ready', icon: <Code size={18} /> },
+    // Opened from inside «أيقونة» (search the big icon library); not a tile of its own.
+    { id: 'iconify', name: 'مكتبة الأيقونات', group: 'hidden', icon: <Globe size={18} /> },
   ];
 
   const SUBCATEGORIES_MAP: Record<string, { id: string; label: string }[]> = {
@@ -96,7 +99,7 @@ export const buildAddMenuData = ({
       { id: 'sub', label: 'نص فرعي' },
       { id: 'main', label: 'نص رئيسي' },
       { id: 'lead', label: 'نص تعريفي' },
-      { id: 'input', label: 'حقل ادخال' },
+      { id: 'input', label: 'حقل إدخال' },
       { id: 'compound', label: 'نصوص مركبة' },
       { id: 'all', label: 'الكل' },
     ],
@@ -109,27 +112,29 @@ export const buildAddMenuData = ({
     ],
     button: [
       { id: 'primary', label: 'رئيسي وعصري' },
-      { id: 'pill', label: 'كبسولة Capsule' },
-      { id: 'gradients', label: 'تدرج Gradient' },
-      { id: 'glass', label: 'زجاجي Glass' },
-      { id: 'outline', label: 'إطار Outline' },
+      { id: 'pill', label: 'كبسولة' },
+      { id: 'gradients', label: 'تدرج' },
+      { id: 'glass', label: 'زجاجي' },
+      { id: 'outline', label: 'إطار' },
       { id: 'all', label: 'الكل' },
     ],
     shape: [
-      { id: 'boxes', label: 'أشكال وهياكل 🟥' },
-      { id: 'masks', label: 'صورة بشكل 🖼️' },
-      { id: 'lines', label: 'خطوط وفواصل ⚡' },
-      { id: 'undraw', label: 'رسومات unDraw 🎨' },
+      { id: 'boxes', label: 'أشكال وهياكل' },
+      { id: 'masks', label: 'صورة بشكل' },
       { id: 'all', label: 'الكل' }
     ],
     icons: [
-      { id: 'social', label: 'وسائل تواصل 📲' },
-      { id: 'utility', label: 'أيقونات عامة ⚙️' },
-      { id: 'separators', label: 'فواصل وعلامات 🔗' },
+      { id: 'social', label: 'وسائل تواصل' },
+      { id: 'utility', label: 'أيقونات عامة' },
       { id: 'all', label: 'الكل' },
     ],
     video: [
-      { id: 'all', label: 'جميع مشغلات الفيديو 🎬' },
+      { id: 'all', label: 'جميع مشغلات الفيديو' },
+    ],
+    divider: [
+      { id: 'all', label: 'الكل' },
+      { id: 'lines', label: 'خطوط' },
+      { id: 'marks', label: 'علامات' },
     ],
 
     map: [
@@ -3777,6 +3782,17 @@ export const buildAddMenuData = ({
       },
     ],
   };
+
+  // «خط فاصل» gathers the shapes' lines and the icons' separator marks in one place.
+  const SEPARATOR_ICON_IDS = [
+    'icon-sep-stars', 'icon-sep-diamond', 'icon-sep-wave', 'icon-sep-dots',
+  ];
+  TEMPLATES_MAP.divider = [
+    ...(TEMPLATES_MAP.shape || []).filter((t) => t.subCategories.includes('lines')).map((t) => ({ ...t, subCategories: ['lines'] })),
+    ...(TEMPLATES_MAP.icons || []).filter((t) => SEPARATOR_ICON_IDS.includes(t.id)).map((t) => ({ ...t, subCategories: ['marks'] })),
+  ];
+  TEMPLATES_MAP.shape = (TEMPLATES_MAP.shape || []).filter((t) => !t.subCategories.includes('lines'));
+  TEMPLATES_MAP.icons = (TEMPLATES_MAP.icons || []).filter((t) => !SEPARATOR_ICON_IDS.includes(t.id));
 
   return { ADD_CATEGORIES, SUBCATEGORIES_MAP, TEMPLATES_MAP };
 };

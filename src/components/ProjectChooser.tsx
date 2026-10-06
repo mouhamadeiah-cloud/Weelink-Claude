@@ -1,6 +1,6 @@
 // Shown after login: the user picks which project to open (or create).
 import React from 'react';
-import { FileText, ShoppingBag, CarFront, UtensilsCrossed, ArrowLeft, Loader2 } from 'lucide-react';
+import { FileText, ShoppingBag, CarFront, UtensilsCrossed, Briefcase, ArrowLeft, Loader2 } from 'lucide-react';
 import { ProjectType } from './shop/shopTypes';
 
 interface ProjectChooserProps {
@@ -8,10 +8,11 @@ interface ProjectChooserProps {
   hasShop: boolean;
   hasCars: boolean;
   hasRestaurant: boolean;
+  hasInvest: boolean;
   loadingType: ProjectType | null;
 }
 
-export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasShop, hasCars, hasRestaurant, loadingType }) => {
+export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasShop, hasCars, hasRestaurant, hasInvest, loadingType }) => {
   const cards: { type: ProjectType; title: string; subtitle: string; desc: string; icon: React.ElementType; accent: string; cta: string }[] = [
     {
       type: 'page',
@@ -49,6 +50,15 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
       accent: '#B5562B',
       cta: hasRestaurant ? 'فتح المطعم' : 'إنشاء مطعم',
     },
+    {
+      type: 'invest',
+      title: 'استثمارات ومشاريع',
+      subtitle: 'Weelink / Invest',
+      desc: 'موقع لشركتك يعرض المشاريع وفرص الاستثمار، مع لوحة إدارة للمشاريع وطلبات المستثمرين.',
+      icon: Briefcase,
+      accent: '#0F6B4F',
+      cta: hasInvest ? 'فتح المشاريع' : 'إنشاء موقع استثمار',
+    },
   ];
 
   return (
@@ -63,7 +73,7 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
           <p className="text-sm text-neutral-500">اختر مشروعاً للدخول إليه. يمكنك التبديل لاحقاً بالضغط على شعار weelink.</p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {cards.map((c) => (
             <button
               key={c.type}

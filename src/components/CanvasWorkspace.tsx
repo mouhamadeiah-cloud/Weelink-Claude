@@ -19,6 +19,7 @@ import { ShopProductsView } from './shop/store/ShopProductsView';
 import { ShopSearchView } from './shop/store/ShopSearchView';
 import { CarListingsView } from './cars/store/CarListingsView';
 import { CarSearchView } from './cars/store/CarSearchView';
+import { ProjectListingsView } from './invest/store/ProjectListingsView';
 import { MenuView } from './restaurant/store/MenuView';
 import { MenuCartView } from './restaurant/store/MenuCartView';
 import { useMenuCart, menuCartCount } from './restaurant/menuCartStore';
@@ -4137,6 +4138,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {elem.type === 'carListings' && (
                           <CarListingsView elem={elem} isPreviewActive={isPreviewActive} showsSearch={elem.id === showroomList?.id} onGrow={shopGrowHandler(elem.id)} boxHeight={elem.height - (isPreviewActive ? shopGrow[elem.id] || 0 : 0)} />
+                        )}
+
+                        {elem.type === 'investProjects' && (
+                          <ProjectListingsView elem={elem} isPreviewActive={isPreviewActive} onGrow={shopGrowHandler(elem.id)} boxHeight={elem.height - (isPreviewActive ? shopGrow[elem.id] || 0 : 0)} />
                         )}
 
                         {elem.type === 'menuList' && (

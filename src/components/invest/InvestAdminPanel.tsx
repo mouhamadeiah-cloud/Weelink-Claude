@@ -1,0 +1,113 @@
+// Investment company admin: a large floating gear (bottom-left) that opens the floating admin window,
+// as in the other projects. Projects, visitors' requests, investors and settings live here; the
+// site's pages are edited in the editor like any other page.
+import React, { useEffect, useState } from 'react';
+import { Settings, X, Briefcase, FolderKanban, Inbox, Users, SlidersHorizontal, PlusSquare } from 'lucide-react';
+import { InvestAdminData } from './investTypes';
+import { ProjectEditor, InvestTabProps } from './tabs/ProjectEditor';
+import { ProjectsTab } from './tabs/ProjectsTab';
+import { InvestRequestsTab } from './tabs/InvestRequestsTab';
+import { InvestorsTab } from './tabs/InvestorsTab';
+import { InvestSettingsTab } from './tabs/InvestSettingsTab';
+
+type TabId = 'add' | 'projects' | 'requests' | 'investors' | 'settings';
+
+const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<InvestTabProps> }[] = [
+  { id: 'add', label: 'إضافة مشروع', icon: PlusSquare, Component: ProjectEditor },
+  { id: 'projects', label: 'المشاريع', icon: FolderKanban, Component: ProjectsTab },
+  { id: 'requests', label: 'طلبات الاستثمار', icon: Inbox, Component: InvestRequestsTab },
+  { id: 'investors', label: 'المستثمرون', icon: Users, Component: InvestorsTab },
+  { id: 'settings', label: 'إعدادات الشركة', icon: SlidersHorizontal, Component: InvestSettingsTab },
+];
+
+interface InvestAdminPanelProps {
+  data: InvestAdminData;
+  onChange: (fn: (d: InvestAdminData) => InvestAdminData) => void;
+}
+
+export const InvestAdminPanel: React.FC<InvestAdminPanelProps> = ({ data, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<TabId>('projects');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const newRequests = data.requests.filter((r) => r.status === 'new').length;
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  const active = TABS.find((t) => t.id === tab)!;
+  const editing = tab === 'add' && editingId ? data.projects.find((p) => p.id === editingId) : undefined;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="fixed bottom-6 left-6 z-[1000000] w-16 h-16 rounded-full bg-[#1d1d1f] text-white shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 transition flex items-center justify-center cursor-pointer"
+        title="إدارة المشاريع"
+        aria-label="إدارة المشاريع"
+      >
+        <Settings size={30} strokeWidth={1.8} />
+        {newRequests > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1 rounded-full bg-[#ff3b30] text-white text-[11px] font-bold flex items-center justify-center">{newRequests}</span>
+        )}
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-[1000001] bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-2 sm:p-6" onMouseDown={() => setOpen(false)}>
+          <div
+            dir="rtl"
+            className="w-full max-w-6xl h-full max-h-[880px] bg-[#f5f5f7] rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.35)] flex flex-col overflow-hidden text-right font-sans"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <header className="flex items-center gap-3 px-4 sm:px-6 h-16 bg-white border-b border-neutral-200 shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-[#0F6B4F] text-white flex items-center justify-center"><Briefcase size={18} /></div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-black text-[#1d1d1f] truncate">إدارة المشاريع{data.settings.companyName ? ` · ${data.settings.companyName}` : ''}</div>
+                <div className="text-[10px] text-neutral-400 font-bold">Weelink / Invest</div>
+              </div>
+              <button type="button" onClick={() => setOpen(false)} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق">
+                <X size={18} />
+              </button>
+            </header>
+
+            <div className="flex-1 flex flex-col md:flex-row min-h-0">
+              <nav className="md:w-52 shrink-0 bg-white md:border-l border-b md:border-b-0 border-neutral-200 p-2 flex md:flex-col gap-1 overflow-x-auto">
+                {TABS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => { setTab(t.id); if (t.id === 'add') setEditingId(null); }}
+                    className={`shrink-0 flex items-center gap-2.5 h-10 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${tab === t.id ? 'bg-[#0071e3] text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}
+                  >
+                    <t.icon size={16} />
+                    <span>{t.label}</span>
+                    {t.id === 'requests' && newRequests > 0 && (
+                      <span className="mr-auto min-w-[20px] h-5 px-1 rounded-full text-[10px] flex items-center justify-center bg-[#ff3b30] text-white">{newRequests}</span>
+                    )}
+                    {t.id === 'projects' && data.projects.length > 0 && (
+                      <span className={`mr-auto min-w-[20px] h-5 px-1 rounded-full text-[10px] flex items-center justify-center ${tab === t.id ? 'bg-white text-[#0071e3]' : 'bg-neutral-100 text-neutral-500'}`}>{data.projects.length}</span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+              <main className="flex-1 min-w-0 overflow-y-auto p-3 sm:p-6">
+                <h2 className="text-lg font-black text-[#1d1d1f] mb-4">{editing ? 'تعديل مشروع' : active.label}</h2>
+                <active.Component
+                  data={data}
+                  update={onChange}
+                  editingId={editingId}
+                  onEdit={(id) => { setEditingId(id || null); setTab('add'); }}
+                  onSaved={() => { setEditingId(null); setTab('projects'); }}
+                />
+              </main>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};

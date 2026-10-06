@@ -3,6 +3,7 @@ import React from 'react';
 import { Check } from 'lucide-react';
 import { CanvasElement, Slide, getGlowShadowStyle, getLightGradientStyle } from '../../../types';
 import { RightDrawerProps } from '../types';
+import { elementDisplayName } from '../../../utils/elementLabels';
 
 interface LightingSectionProps {
   activeSlide: Slide;
@@ -125,7 +126,7 @@ export const LightingSection = ({
       <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
         <span className="text-[11px] font-bold text-[#0071e3]">
           {isTargetElement 
-            ? `تعديل إضاءة العنصر: ${selectedElement.name}` 
+            ? `تعديل إضاءة العنصر: ${elementDisplayName(selectedElement)}` 
             : `تعديل إضاءة الشريحة: ${activeSlide?.name || 'الشريحة الحالية'}`}
         </span>
       </div>
@@ -134,7 +135,7 @@ export const LightingSection = ({
       {isTargetElement && (
         <div className="space-y-1.5 pb-2 border-b border-neutral-200/70">
           <div className="flex justify-between text-xs">
-            <span className="text-neutral-700 font-bold">سطوع العنصر (Brightness):</span>
+            <span className="text-neutral-700 font-bold">سطوع العنصر:</span>
             <span className="font-mono text-neutral-500 font-bold">{activeBrightness}%</span>
           </div>
           <input
@@ -152,7 +153,7 @@ export const LightingSection = ({
       {/* أولاً: درجة الإضاءة (Intensity / Spread / Glow Radius) */}
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
-          <span className="text-neutral-700 font-bold">شدة ومدى الإضاءة الداخلية (Lighting Intensity):</span>
+          <span className="text-neutral-700 font-bold">شدة ومدى الإضاءة الداخلية:</span>
           <span className="font-mono text-[#0071e3] font-bold">{activeLightIntensity}px</span>
         </div>
         <input
@@ -173,7 +174,7 @@ export const LightingSection = ({
       {/* ثانياً: لون الإضاءة */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-neutral-800 block">
-          لون الإضاءة والتوهج الداخلي (Light Color):
+          لون الإضاءة والتوهج الداخلي:
         </span>
 
         {/* أ. ألوان الصفحة الافتراضية */}
@@ -265,10 +266,10 @@ export const LightingSection = ({
       {/* ثالثاً: مربعات خفيفة تبرز مربعات رمادية مطبق عليها الإضاءة من الداخل */}
       <div className="space-y-2 pt-1">
         <span className="text-xs font-bold text-neutral-800 block">
-          توجيه اتجاه وزاوية الإضاءة الداخلية (Light Position):
+          توجيه اتجاه وزاوية الإضاءة الداخلية:
         </span>
         <p className="text-[10px] text-neutral-500 leading-tight">
-          انقر على المربع لتوجيه الإضاءة في الاتجاه المرغوب. تبرز المعاينات شكل الإضاءة الداخلية (inset) المطبقة على مربع رمادي افتراضي:
+          انقر على المربع لتوجيه الإضاءة في الاتجاه المرغوب. تبرز المعاينات شكل الإضاءة الداخلية المطبقة على مربع رمادي افتراضي:
         </p>
 
         {/* 3x3 Grid of Direction Previews (using isInset = true) */}

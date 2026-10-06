@@ -26,7 +26,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'orders', label: 'الطلبات', icon: Inbox, Component: OrdersTab, perm: 'orders' },
   { id: 'dishes', label: 'الأطباق', icon: UtensilsCrossed, Component: DishesTab, perm: 'menu' },
   { id: 'categories', label: 'أقسام المنيو', icon: LayoutList, Component: CategoriesTab, perm: 'menu' },
-  { id: 'subcatalogs', label: 'الكاتالوكات الفرعية', icon: Layers, Component: SubCatalogsTab, perm: 'menu' },
+  { id: 'subcatalogs', label: 'مجموعات المكونات', icon: Layers, Component: SubCatalogsTab, perm: 'menu' },
   { id: 'halls', label: 'الصالات والطاولات', icon: Armchair, Component: HallsTab, perm: 'tables' },
   { id: 'devices', label: 'الأجهزة والأكواد', icon: MonitorSmartphone, Component: DevicesTab, perm: 'staff' },
   { id: 'workers', label: 'العمال والصناديق', icon: Users, Component: WorkersTab, perm: 'staff' },

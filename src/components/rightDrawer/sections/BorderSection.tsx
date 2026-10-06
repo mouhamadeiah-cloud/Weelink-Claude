@@ -3,6 +3,7 @@ import React from 'react';
 import { Check } from 'lucide-react';
 import { CanvasElement, Slide } from '../../../types';
 import { RightDrawerProps } from '../types';
+import { elementDisplayName } from '../../../utils/elementLabels';
 
 interface BorderSectionProps {
   activeSlide: Slide;
@@ -135,7 +136,7 @@ export const BorderSection = ({
       <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
         <span className="text-[11px] font-bold text-[#0071e3]">
           {isTargetElement 
-            ? `تعديل إطار العنصر: ${selectedElement.name}` 
+            ? `تعديل إطار العنصر: ${elementDisplayName(selectedElement)}` 
             : `تعديل إطار الشريحة: ${activeSlide?.name || 'الشريحة الحالية'}`}
         </span>
       </div>
@@ -143,7 +144,7 @@ export const BorderSection = ({
       {/* 1. سمك الإطار */}
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
-          <span className="text-neutral-700 font-bold">سمك الإطار (Border Width):</span>
+          <span className="text-neutral-700 font-bold">سمك الإطار:</span>
           <span className="font-mono text-[#0071e3] font-bold">{activeBorderWidth}px</span>
         </div>
         <input
@@ -159,7 +160,7 @@ export const BorderSection = ({
       {/* 2. درجة تدوير الحواف */}
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
-          <span className="text-neutral-700 font-bold">تدوير الحواف (Border Radius):</span>
+          <span className="text-neutral-700 font-bold">تدوير الحواف:</span>
           <span className="font-mono text-[#0071e3] font-bold">{activeBorderRadius}px</span>
         </div>
         <input
@@ -175,7 +176,7 @@ export const BorderSection = ({
       {/* 3. نوع الإطار */}
       <div className="space-y-1.5">
         <span className="text-xs font-bold text-neutral-800 block">
-          خيارات نمط الإطار (Border Style):
+          خيارات نمط الإطار:
         </span>
         <div className="grid grid-cols-4 gap-1.5">
           {[
@@ -205,7 +206,7 @@ export const BorderSection = ({
       {/* 4. لون الإطار */}
       <div className="space-y-1.5">
         <span className="text-xs font-bold text-neutral-800 block">
-          لون الإطار (Border Color):
+          لون الإطار:
         </span>
                     
         {/* لوحة الألوان القياسية */}

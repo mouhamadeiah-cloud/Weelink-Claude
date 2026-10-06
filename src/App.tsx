@@ -2034,7 +2034,7 @@ export default function App() {
         styles: { borderRadius: 12, ...(customStyles || {}) },
       },
       table: {
-        name: 'جدول sheet',
+        name: 'جدول',
         width: 380,
         height: 180,
         content: customContent || 'جدول الخدمات',
@@ -2085,7 +2085,7 @@ export default function App() {
         styles: { borderRadius: 20, shadow: 'apple', ...(customStyles || {}) },
       },
       pricing: {
-        name: 'حاوية أسعار',
+        name: 'أسعار',
         width: 320,
         height: 380,
         content: customContent || 'باقة الانطلاق للأعمال',
@@ -2096,7 +2096,7 @@ export default function App() {
         styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple', ...(customStyles || {}) },
       },
       calendar: {
-        name: 'Kalender حجز مواعيد',
+        name: 'حجز مواعيد',
         width: 360,
         height: 360,
         content: customContent || 'حجز استشارة أو موعد',
@@ -2155,7 +2155,7 @@ export default function App() {
         styles: { backgroundColor: '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple', ...(customStyles || {}) },
       },
       mask: {
-        name: 'ماسك تفريغ فني',
+        name: 'صورة بشكل',
         width: 220,
         height: 220,
         content: customContent || 'circle',

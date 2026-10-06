@@ -16,7 +16,7 @@ type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' |
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<AdminTabProps> }[] = [
   { id: 'add-product', label: 'إضافة منتج', icon: PackagePlus, Component: AddProductTab },
   { id: 'warehouse', label: 'المستودع', icon: Warehouse, Component: WarehouseTab },
-  { id: 'catalogs', label: 'الكاتالوكات', icon: FolderTree, Component: CatalogsTab },
+  { id: 'catalogs', label: 'التصنيفات', icon: FolderTree, Component: CatalogsTab },
   { id: 'customers', label: 'الزبائن', icon: Users, Component: CustomersTab },
   { id: 'orders', label: 'الطلبات', icon: ClipboardList, Component: OrdersTab },
   { id: 'accounts', label: 'الحسابات', icon: BarChart3, Component: AccountsTab },

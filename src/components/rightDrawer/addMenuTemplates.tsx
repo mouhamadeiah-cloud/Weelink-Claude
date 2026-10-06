@@ -61,13 +61,13 @@ export const buildAddMenuData = ({
     { id: 'button', name: 'زر', icon: <Square size={18} /> },
     { id: 'icons', name: 'أيقونات جاهزة 🌟', icon: <Sparkles size={18} /> },
     { id: 'iconify', name: 'أيقونات Iconify العالمية 🔍', icon: <Globe size={18} /> },
-    { id: 'shape', name: 'اشكال هندسية وجرافيك', icon: <Shapes size={18} /> },
+    { id: 'shape', name: 'أشكال', icon: <Shapes size={18} /> },
     { id: 'video', name: 'فيديو', icon: <Video size={18} /> },
     { id: 'map', name: 'خرائط جوجل', icon: <MapPin size={18} /> },
-    { id: 'pricing', name: 'حاوية اسعار', icon: <Tag size={18} /> },
-    { id: 'calendar', name: 'Kalender حجز مواعيد', icon: <Calendar size={18} /> },
-    { id: 'sheet', name: 'جدول sheet', icon: <Grid3X3 size={18} /> },
-    { id: 'html', name: 'Html container', icon: <Code size={18} /> },
+    { id: 'pricing', name: 'أسعار', icon: <Tag size={18} /> },
+    { id: 'calendar', name: 'حجز مواعيد', icon: <Calendar size={18} /> },
+    { id: 'sheet', name: 'جدول', icon: <Grid3X3 size={18} /> },
+    { id: 'html', name: 'كود مخصص', icon: <Code size={18} /> },
     { id: 'gallery', name: 'معرض صور 🖼️', icon: <Images size={18} /> },
     { id: 'group-templates', name: 'بطاقات ومجموعات جاهزة 📁', icon: <FolderOpen size={18} /> },
   ];
@@ -117,7 +117,7 @@ export const buildAddMenuData = ({
     ],
     shape: [
       { id: 'boxes', label: 'أشكال وهياكل 🟥' },
-      { id: 'masks', label: 'ماسكات الصور 🖼️' },
+      { id: 'masks', label: 'صورة بشكل 🖼️' },
       { id: 'lines', label: 'خطوط وفواصل ⚡' },
       { id: 'undraw', label: 'رسومات unDraw 🎨' },
       { id: 'all', label: 'الكل' }
@@ -1908,7 +1908,7 @@ export const buildAddMenuData = ({
       // 20 Creative Visual Cutout Masks with direct live photo preview
       ...MASK_SHAPES.map(mask => ({
         id: `mask-item-${mask.id}`,
-        title: `ماسك: ${mask.name}`,
+        title: `صورة بشكل: ${mask.name}`,
         sub: `إطار مفرغ لقص الصور على شكل ${mask.name.replace(/[^أ-ي\s]/g, '').trim()} أنيق ومميز`,
         subCategories: ['masks'], // 🖼️ ASSIGNED TO MASKS CATEGORY TAB
         type: 'mask' as const,
@@ -1925,7 +1925,7 @@ export const buildAddMenuData = ({
           </div>
         ),
         action: () => {
-          onAddElement('mask', mask.id, { backgroundColor: '#ffffff' }, { name: `ماسك ${mask.name.replace(/[^أ-ي\s]/g, '').trim()}`, width: 220, height: 220 });
+          onAddElement('mask', mask.id, { backgroundColor: '#ffffff' }, { name: `صورة بشكل ${mask.name.replace(/[^أ-ي\s]/g, '').trim()}`, width: 220, height: 220 });
         }
       })),
 
@@ -1966,7 +1966,7 @@ export const buildAddMenuData = ({
       },
       {
         id: 'line-glow',
-        title: 'خط نيوم مضيء ✨',
+        title: 'خط نيون مضيء ✨',
         sub: 'خط متوهج بفلتر ضوئي مشرق للتصميم العصري',
         subCategories: ['lines'], // ⚡ ASSIGNED TO LINES CATEGORY TAB
         type: 'shape' as const,
@@ -1978,7 +1978,7 @@ export const buildAddMenuData = ({
           </div>
         ),
         action: () => {
-          onAddElement('shape', 'line-glow', { backgroundColor: '#0071e3' }, { name: 'خط نيوم مضيء', width: 300, height: 30 });
+          onAddElement('shape', 'line-glow', { backgroundColor: '#0071e3' }, { name: 'خط نيون مضيء', width: 300, height: 30 });
         }
       },
       {
@@ -2853,7 +2853,7 @@ export const buildAddMenuData = ({
       },
       {
         id: 'icon-unlock',
-        title: 'حرية 🔓',
+        title: 'فتح القفل 🔓',
         sub: 'رمز الأمان المفتوح والصلاحية المفتوحة',
         subCategories: ['icons'],
         type: 'badge',
@@ -3527,7 +3527,7 @@ export const buildAddMenuData = ({
     sheet: [
       {
         id: 'data-table',
-        title: 'جدول بيانات متطور (Sheet)',
+        title: 'جدول بيانات متطور',
         sub: 'أعمدة وصفوف مع حالات الخدمة',
         subCategories: ['data'],
         type: 'table',
@@ -3546,7 +3546,7 @@ export const buildAddMenuData = ({
           </div>
         ),
         action: () => {
-          onAddElement('table', 'جدول متابعة الخدمات والمشاريع', { borderRadius: 16, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'جدول sheet', width: 420, height: 200 });
+          onAddElement('table', 'جدول متابعة الخدمات والمشاريع', { borderRadius: 16, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'جدول', width: 420, height: 200 });
         }
       },
       {
@@ -3591,7 +3591,7 @@ export const buildAddMenuData = ({
       },
       {
         id: 'embed-module',
-        title: 'تضمين إطار خارجي (iFrame)',
+        title: 'تضمين إطار خارجي',
         sub: 'تضمين ويدجت ونماذج خارجية',
         subCategories: ['embed'],
         type: 'html',

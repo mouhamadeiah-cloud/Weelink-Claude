@@ -61,8 +61,8 @@ export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange, op
         type="button"
         onClick={() => setOpen(true)}
         className="fixed bottom-6 left-6 z-[1000000] w-16 h-16 rounded-full bg-[#1d1d1f] text-white shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 transition flex items-center justify-center cursor-pointer"
-        title="إدارة المعرض"
-        aria-label="إدارة المعرض"
+        title="إدارة معرض السيارات"
+        aria-label="إدارة معرض السيارات"
       >
         <Settings size={30} strokeWidth={1.8} />
       </button>
@@ -78,7 +78,7 @@ export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange, op
             <header className="flex items-center gap-3 px-4 sm:px-6 h-16 bg-white border-b border-neutral-200 shrink-0">
               <div className="w-9 h-9 rounded-xl bg-[#1d1d1f] text-white flex items-center justify-center"><CarFront size={18} /></div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-black text-[#1d1d1f] truncate">إدارة المعرض{data.settings.showroomName ? ` · ${data.settings.showroomName}` : ''}</div>
+                <div className="text-sm font-black text-[#1d1d1f] truncate">إدارة معرض السيارات{data.settings.showroomName ? ` · ${data.settings.showroomName}` : ''}</div>
                 <div className="text-[10px] text-neutral-400 font-bold">Weelink / Cars</div>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق">

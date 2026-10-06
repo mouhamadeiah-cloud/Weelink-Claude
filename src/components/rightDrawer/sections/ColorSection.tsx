@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { CanvasElement } from '../../../types';
 import { FIFTY_SOLID_COLORS, MANDATORY_BG_COLORS, PASTEL_SOFT_GRADIENTS, RICH_MULTI_GRADIENTS } from '../../../data/backgroundPresets';
 import { RightDrawerProps } from '../types';
+import { elementDisplayName } from '../../../utils/elementLabels';
 
 interface ColorSectionProps {
   elementGradientCategory: string;
@@ -29,7 +30,7 @@ export const ColorSection = ({
           <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
             <span className="text-[11px] font-bold text-[#0071e3]">
               {selectedElement.type === 'gallery' ? 'تعديل ألوان وفلاتر صور المعرض: ' : 'تعديل ألوان وفلاتر الصورة: '}
-              {selectedElement.name}
+              {elementDisplayName(selectedElement)}
             </span>
           </div>
 
@@ -132,7 +133,7 @@ export const ColorSection = ({
             <>
               <div className="space-y-1.5 pt-1 border-t border-neutral-200/80">
                 <div className="flex justify-between text-xs">
-                  <span className="text-neutral-700 font-bold">كثافة صبغ الألوان (Tint Intensity):</span>
+                  <span className="text-neutral-700 font-bold">كثافة صبغ الألوان:</span>
                   <span className="font-mono text-[#0071e3] font-bold">{styles.imageTintOpacity ?? 50}%</span>
                 </div>
                 <input
@@ -148,7 +149,7 @@ export const ColorSection = ({
               {/* 4. نمط دمج الألوان */}
               <div className="space-y-1.5 pt-1">
                 <span className="text-xs font-bold text-neutral-800 block">
-                  نمط دمج وصبغ الألوان (Blend Mode):
+                  نمط دمج وصبغ الألوان:
                 </span>
                 <div className="grid grid-cols-4 gap-1">
                   {[
@@ -184,7 +185,7 @@ export const ColorSection = ({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-neutral-800">
-                الألوان الإلزامية للعنصر:
+                ألوان صفحتك:
               </span>
               <span className="text-[10px] text-neutral-400">
                 (أساسيات التصميم)
@@ -238,7 +239,7 @@ export const ColorSection = ({
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-neutral-800">
-                منحدر لوني (50 لون):
+                ألوان أساسية:
               </span>
               <span className="text-[10px] text-neutral-400">
                 (ألوان صلبة دقيقة)

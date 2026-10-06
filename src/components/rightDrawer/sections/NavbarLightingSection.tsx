@@ -60,7 +60,7 @@ export const NavbarLightingSection = ({
 
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
-          <span className="text-neutral-700 font-bold">شدة ومدى الإضاءة الداخلية (Lighting Intensity):</span>
+          <span className="text-neutral-700 font-bold">شدة ومدى الإضاءة الداخلية:</span>
           <span className="font-mono text-[#0071e3] font-bold">{activeLightIntensity}px</span>
         </div>
         <input
@@ -79,7 +79,7 @@ export const NavbarLightingSection = ({
       </div>
 
       <div className="space-y-2">
-        <span className="text-xs font-bold text-neutral-800 block">لون الإضاءة والتوهج الداخلي (Light Color):</span>
+        <span className="text-xs font-bold text-neutral-800 block">لون الإضاءة والتوهج الداخلي:</span>
 
         <div className="space-y-1">
           <span className="text-[10px] text-neutral-400 font-semibold block">ألوان الصفحة الافتراضية:</span>
@@ -153,9 +153,9 @@ export const NavbarLightingSection = ({
       </div>
 
       <div className="space-y-2 pt-1">
-        <span className="text-xs font-bold text-neutral-800 block">توجيه اتجاه وزاوية الإضاءة الداخلية (Light Position):</span>
+        <span className="text-xs font-bold text-neutral-800 block">توجيه اتجاه وزاوية الإضاءة الداخلية:</span>
         <p className="text-[10px] text-neutral-500 leading-tight">
-          انقر على المربع لتوجيه الإضاءة في الاتجاه المرغوب. تبرز المعاينات شكل الإضاءة الداخلية (inset) المطبقة على مربع رمادي افتراضي:
+          انقر على المربع لتوجيه الإضاءة في الاتجاه المرغوب. تبرز المعاينات شكل الإضاءة الداخلية المطبقة على مربع رمادي افتراضي:
         </p>
 
         <div className="bg-neutral-100 p-3 rounded-2xl border border-neutral-200/80 flex justify-center items-center">

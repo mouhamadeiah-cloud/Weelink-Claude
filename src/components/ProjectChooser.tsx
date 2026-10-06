@@ -26,7 +26,7 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
       type: 'shop',
       title: 'متجر إلكتروني',
       subtitle: 'Weelink / Shops',
-      desc: 'متجر بصفحات جاهزة، مع لوحة إدارة للكاتالوكات والمستودع والطلبات والزبائن والحسابات.',
+      desc: 'متجر بصفحات جاهزة، مع لوحة إدارة للتصنيفات والمستودع والطلبات والزبائن والحسابات.',
       icon: ShoppingBag,
       accent: '#1d1d1f',
       cta: hasShop ? 'فتح المتجر' : 'إنشاء متجر',

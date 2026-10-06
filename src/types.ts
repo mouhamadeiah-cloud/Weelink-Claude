@@ -26,7 +26,8 @@ export type ElementType =
   | 'carListings'
   | 'carSearch'
   | 'menuList'
-  | 'menuCart';
+  | 'menuCart'
+  | 'lottie';
 
 export type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
 
@@ -179,6 +180,15 @@ export interface CanvasElement {
   contactValue?: string;
   imageUrl?: string;
   videoUrl?: string;
+  // 'lottie' element: one of Weelink's animations (utils/lottieAnimations) in its colours, or a
+  // Lottie file the user linked (lottieUrl wins). Plays on its own, on hover or when scrolled to.
+  lottieId?: string;
+  lottieUrl?: string;
+  lottieColor?: string;
+  lottieColor2?: string;
+  lottieLoop?: boolean; // unset = repeats
+  lottieSpeed?: number; // 1 = normal
+  lottieTrigger?: 'auto' | 'hover' | 'view';
   mapLocation?: string;
   htmlCode?: string;
   pricingPlan?: string;

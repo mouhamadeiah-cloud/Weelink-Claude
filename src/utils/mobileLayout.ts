@@ -39,7 +39,7 @@ interface LayoutNode {
 
 const TEXT_TYPES = new Set(['heading', 'paragraph']);
 const SMALL_INLINE_TYPES = new Set(['button', 'icon', 'badge']);
-const MEDIA_TYPES = new Set(['image', 'video', 'map', 'gallery', 'mask', 'table', 'shape']);
+const MEDIA_TYPES = new Set(['image', 'video', 'lottie', 'map', 'gallery', 'mask', 'table', 'shape']);
 const REFLOW_TYPES = new Set(['pricing', 'calendar', 'html', 'input', 'divider', 'menuCart']);
 
 const DEFAULT_FONT_SIZE: Record<string, number> = { heading: 32, paragraph: 16 };

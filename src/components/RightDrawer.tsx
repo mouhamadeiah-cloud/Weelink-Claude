@@ -41,6 +41,7 @@ import {
   ArrowDown,
   Shapes,
   Video,
+  Clapperboard,
   Layers,
   MapPin,
   Navigation,
@@ -89,6 +90,7 @@ import { RestaurantElementSettings } from './restaurant/RestaurantElementSetting
 import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
 import { InspectorCard, InspectorSubheading } from './rightDrawer/InspectorCard';
 import { TextEffectsGallery, TextEffectsPicker } from './rightDrawer/TextEffectsPicker';
+import { LottieGallery, LottieSettings } from './rightDrawer/LottiePicker';
 import { textEffectById } from '../utils/textEffects';
 import { elementDisplayName } from '../utils/elementLabels';
 import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
@@ -1033,6 +1035,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       case 'badge': return <BadgeCheck size={12} className="text-amber-500" />;
       case 'icon': return <Smile size={12} className="text-fuchsia-500" />;
       case 'video': return <Video size={12} className="text-rose-500" />;
+      case 'lottie': return <Clapperboard size={12} className="text-orange-500" />;
       case 'map': return <MapPin size={12} className="text-emerald-600" />;
       case 'pricing': return <Tag size={12} className="text-amber-600" />;
       case 'calendar': return <Calendar size={12} className="text-blue-600" />;
@@ -1068,6 +1071,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   useEffect(() => {
     if (!textFxTarget) setTextFxGalleryOpen(false);
   }, [textFxTarget]);
+  // All the animations, in the same place, for a «رسوم متحركة» element.
+  const [lottieGalleryOpen, setLottieGalleryOpen] = useState(false);
+  const lottieTarget = activeSection === 'inspector' && selectedElement?.type === 'lottie' ? selectedElement : null;
+  useEffect(() => {
+    if (!lottieTarget) setLottieGalleryOpen(false);
+  }, [lottieTarget?.id]);
 
   // A group picked in the column: open it and bring it into view.
   useEffect(() => {
@@ -1295,6 +1304,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           {el.isGroupContainer ? 'مجموعة: إلغاء' : 'تحويل لمجموعة'}
         </button>
       );
+    }
+    if (el.type === 'lottie') {
+      return <LottieSettings key={el.id} element={el} onChange={onUpdateElement} onShowAll={() => setLottieGalleryOpen(true)} />;
     }
     if (el.type === 'shopProducts' || el.type === 'shopSearch') {
       return <ShopElementSettings element={el} onUpdateElement={onUpdateElement} />;
@@ -5997,6 +6009,20 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             style={sheet ? undefined : { right: `calc(100% + ${dockedWidth > 0 ? EDITOR_COLUMN_WIDTH : 0}px)` }}
           >
             <TextEffectsGallery styles={textFxTarget.styles || {}} onChange={onUpdateElementStyles} onClose={() => setTextFxGalleryOpen(false)} />
+          </div>
+        )}
+
+        {/* All the animations: beside the panel, or over it on a phone's sheet. */}
+        {lottieTarget && (
+          <div
+            className={`${sheet ? 'absolute inset-0 rounded-t-2xl' : 'absolute top-0 w-[310px] md:w-[350px] h-full border-l-2 border-t-2 border-b-2 border-neutral-300 shadow-[-12px_0_30px_rgba(0,0,0,0.15)] rounded-l-2xl'} overflow-hidden select-none font-sans transition-all duration-300 z-[150] ${
+              lottieGalleryOpen ? 'opacity-100 translate-x-0 scale-100 pointer-events-auto' : 'opacity-0 translate-x-[20px] scale-95 pointer-events-none'
+            }`}
+            aria-hidden={!lottieGalleryOpen}
+            style={sheet ? undefined : { right: `calc(100% + ${dockedWidth > 0 ? EDITOR_COLUMN_WIDTH : 0}px)` }}
+          >
+            {/* Drawn only while open, so its animations don't play hidden. */}
+            {lottieGalleryOpen && <LottieGallery element={lottieTarget} onChange={onUpdateElement} onClose={() => setLottieGalleryOpen(false)} />}
           </div>
         )}
 

@@ -204,6 +204,8 @@ const StaticBody: React.FC<{ el: any }> = ({ el }) => {
           {el.content}
         </div>
       );
+    case 'lottie':
+      return <div className="w-full h-full rounded-xl bg-neutral-100 flex items-center justify-center text-6xl">✨</div>;
     case 'video':
       return <div className="w-full h-full rounded-xl bg-neutral-900 flex items-center justify-center text-white text-6xl">▶</div>;
     case 'map':

@@ -1991,7 +1991,7 @@ export default function App() {
     }
     const ADDS: [string, string, string?][] = [
       ['text', 'نص', 'عنوان فقرة كتابة'], ['image', 'صورة', 'صوره'], ['button', 'زر', 'كبسة'], ['icons', 'أيقونة', 'ايقونه رمز'],
-      ['shape', 'أشكال', 'شكل مربع دائرة'], ['divider', 'خط فاصل', 'فاصل خط'], ['video', 'فيديو', 'يوتيوب'], ['gallery', 'معرض صور', 'البوم'],
+      ['shape', 'أشكال', 'شكل مربع دائرة'], ['divider', 'خط فاصل', 'فاصل خط'], ['video', 'فيديو', 'يوتيوب'], ['lottie', 'رسوم متحركة', 'لوتي lottie انيميشن حركة'], ['gallery', 'معرض صور', 'البوم'],
       ['map', 'خريطة', 'موقع عنوان'], ['calendar', 'حجز مواعيد', 'تقويم موعد'], ['pricing', 'أسعار', 'باقة سعر'], ['sheet', 'جدول', 'جدول'],
       ['group-templates', 'بطاقات جاهزة', 'بطاقة مجموعة'], ['html', 'كود مخصص', 'html كود'],
     ];
@@ -2456,6 +2456,14 @@ export default function App() {
         content: '',
         menuLayout: 'grid',
         styles: { color: '#B5562B', ...(customStyles || {}) },
+      },
+      lottie: {
+        name: 'رسم متحرك',
+        width: 160,
+        height: 160,
+        content: '',
+        lottieId: 'success',
+        styles: { ...(customStyles || {}) },
       },
       menuCart: {
         name: 'سلة الطلب',

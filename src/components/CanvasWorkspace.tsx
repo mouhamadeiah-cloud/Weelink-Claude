@@ -14,6 +14,7 @@ import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
 import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
+import { LottiePlayer } from './LottiePlayer';
 import { getTextEffectStyles } from '../utils/textEffects';
 import { addToCart, useCart } from '../utils/cartStore';
 import { CartView } from './CartView';
@@ -3924,6 +3925,20 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             </div>
                           );
                         })()}
+
+                        {elem.type === 'lottie' && (
+                          <LottiePlayer
+                            animationId={elem.lottieId}
+                            url={elem.lottieUrl}
+                            color={elem.lottieColor}
+                            color2={elem.lottieColor2}
+                            loop={elem.lottieLoop !== false}
+                            speed={elem.lottieSpeed || 1}
+                            trigger={elem.lottieTrigger || 'auto'}
+                            label={elem.name}
+                            className="select-none"
+                          />
+                        )}
 
                         {elem.type === 'video' && (() => {
                           // Extract embed URL for YouTube or TikTok

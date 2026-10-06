@@ -1,9 +1,11 @@
 // Category list, sub-category tabs and ready-made element templates for the "+" add menu.
 // Moved verbatim from RightDrawer.tsx; built per render exactly as before.
 import React from 'react';
-import { Type, Square, Image as ImageIcon, Sparkles, Globe, Shapes, Video, MapPin, Tag, Calendar, Grid3X3, Code, Images, FolderOpen, Stethoscope, Minus } from 'lucide-react';
+import { Type, Square, Image as ImageIcon, Sparkles, Globe, Shapes, Video, Clapperboard, MapPin, Tag, Calendar, Grid3X3, Code, Images, FolderOpen, Stethoscope, Minus } from 'lucide-react';
 import { ElementType } from '../../types';
 import { MASK_SHAPES } from '../../utils/maskShapes';
+import { LOTTIE_ANIMATIONS, LOTTIE_GROUPS } from '../../utils/lottieAnimations';
+import { LottiePlayer } from '../LottiePlayer';
 import { RightDrawerProps } from './types';
 
 export interface AddMenuDataDeps {
@@ -64,6 +66,7 @@ export const buildAddMenuData = ({
     { id: 'shape', name: 'أشكال', group: 'basic', icon: <Shapes size={18} /> },
     { id: 'divider', name: 'خط فاصل', group: 'basic', icon: <Minus size={18} /> },
     { id: 'video', name: 'فيديو', group: 'media', icon: <Video size={18} /> },
+    { id: 'lottie', name: 'رسوم متحركة', group: 'media', icon: <Clapperboard size={18} /> },
     { id: 'gallery', name: 'معرض صور', group: 'media', icon: <Images size={18} /> },
     { id: 'map', name: 'خريطة', group: 'media', icon: <MapPin size={18} /> },
     { id: 'calendar', name: 'حجز مواعيد', group: 'business', icon: <Calendar size={18} /> },
@@ -131,6 +134,7 @@ export const buildAddMenuData = ({
     video: [
       { id: 'all', label: 'جميع مشغلات الفيديو' },
     ],
+    lottie: [{ id: 'all', label: 'الكل' }, ...LOTTIE_GROUPS.map((g) => ({ id: g.id, label: g.name }))],
     divider: [
       { id: 'all', label: 'الكل' },
       { id: 'lines', label: 'خطوط' },
@@ -180,6 +184,20 @@ export const buildAddMenuData = ({
   }
 
   const TEMPLATES_MAP: Record<string, TemplateItem[]> = {
+    // Weelink's own animations (utils/lottieAnimations), each playing in its tile.
+    lottie: LOTTIE_ANIMATIONS.map((def) => ({
+      id: `lottie-${def.id}`,
+      title: def.name,
+      sub: LOTTIE_GROUPS.find((g) => g.id === def.group)?.name || '',
+      subCategories: [def.group],
+      type: 'lottie' as ElementType,
+      preview: (
+        <div className="w-full h-18 bg-neutral-50 rounded-xl border border-neutral-200 p-1">
+          <LottiePlayer animationId={def.id} />
+        </div>
+      ),
+      action: () => onAddElement('lottie', '', {}, { name: def.name, lottieId: def.id, width: 160, height: 160 }),
+    })),
     'group-templates': [
       {
         id: 'grp-team-member',

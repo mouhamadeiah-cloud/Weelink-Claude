@@ -89,7 +89,7 @@ import { RestaurantElementSettings } from './restaurant/RestaurantElementSetting
 import { DrawerSection, RightDrawerProps } from './rightDrawer/types';
 import { InspectorCard, InspectorSubheading } from './rightDrawer/InspectorCard';
 import { elementDisplayName } from '../utils/elementLabels';
-import { inspectorGroups, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
+import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
 import { CLIP_GROUPS } from '../utils/clipShapes';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
 import { uploadGalleryImageToStorage } from '../utils/galleryUpload';
@@ -176,6 +176,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   dockedWidth = 0,
   headerSlot,
   sectionRequest = 0,
+  addRequest,
   onActiveTabChange,
   projectSettings,
   inspectorFocus,
@@ -451,6 +452,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
   // Add Elements State (Grid of Squares -> Detail View with Subcategories Bar)
   const [activeAddCategory, setActiveAddCategory] = useState<string | null>(null);
+  useEffect(() => {
+    if (!addRequest?.n) return;
+    setAddMenuMode(addRequest.mode);
+    setActiveAddCategory(addRequest.category);
+    setSelectedSubCategory('all');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addRequest?.n]);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
   
   // Iconify Search states
@@ -1282,6 +1290,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               icon={inspectorIcon(g.id)}
               title={g.title}
               summary={inspectorSummary(g.id)}
+              help={inspectorHelp(g.id, inspectorTarget)}
               open={open}
               flash={flashGroup === g.id}
               onToggle={() => {

@@ -3,7 +3,7 @@
 // what is selected, each with its name, which scroll the panel to that group. A soft highlight
 // slides to the group showing in the panel.
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { FolderTree, Layers, Move, PanelRightClose, PanelRightOpen, PanelTop, Palette, Plus, Shapes, SlidersHorizontal, Store, Type, Zap } from 'lucide-react';
+import { FolderTree, Layers, Move, PanelRightClose, PanelRightOpen, PanelTop, Palette, Plus, Search, Shapes, SlidersHorizontal, Store, Type, Zap } from 'lucide-react';
 import type { InspectorGroup, InspectorGroupId } from './rightDrawer/inspectorGroups';
 import { WeeDots } from './ui/WeeDots';
 
@@ -34,6 +34,7 @@ interface EditorColumnProps {
   isWeeAiOpen: boolean;
   isPanelOpen: boolean;
   onTogglePanel: () => void;
+  onSearch?: () => void;
 }
 
 const Tile: React.FC<{
@@ -73,6 +74,7 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
   isWeeAiOpen,
   isPanelOpen,
   onTogglePanel,
+  onSearch,
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
   const [pill, setPill] = useState<{ top: number; height: number } | null>(null);
@@ -135,6 +137,9 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
       </div>
 
       <div className="w-full flex flex-col items-center py-2 border-t border-black/[0.06] shrink-0">
+        {onSearch && (
+          <Tile label="بحث" title={`بحث سريع (${(typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl')}+K)`} icon={<Search size={18} />} tint="text-neutral-600" onClick={onSearch} />
+        )}
         <Tile
           label={isPanelOpen ? 'إخفاء' : 'إظهار'}
           title={isPanelOpen ? 'إخفاء لوحة التحكم' : 'إظهار لوحة التحكم'}

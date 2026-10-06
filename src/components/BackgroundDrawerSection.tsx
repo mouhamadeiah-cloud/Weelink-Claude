@@ -6,10 +6,11 @@ import {
   Check, 
   Loader2, 
   ChevronDown,
+  ChevronLeft,
   Info
 } from 'lucide-react';
 import { fetchUnsplashPhotos } from '../services/unsplashService';
-import { notLiveMessage } from './PhotoBrowserPanel';
+import { PhotoBrowserPanel, notLiveMessage } from './PhotoBrowserPanel';
 import { 
   MANDATORY_BG_COLORS, 
   FIFTY_SOLID_COLORS, 
@@ -93,6 +94,8 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
   const [unsplashPhotos, setUnsplashPhotos] = useState<UnsplashPreset[]>(CURATED_UNSPLASH_PHOTOS);
   const [isLoadingUnsplash, setIsLoadingUnsplash] = useState(false);
   const [unsplashError, setUnsplashError] = useState<string | null>(null);
+  const [isPhotoBrowserOpen, setIsPhotoBrowserOpen] = useState(false);
+  const galleryRootRef = useRef<HTMLDivElement>(null);
   const categories = ['الكل', 'طبيعة', 'معمار', 'أعمال', 'تجريدي', 'تكنولوجيا', 'خلفيات', 'فخامة', 'مدن'];
 
   // Handle local file upload
@@ -589,7 +592,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
       {/* TAB 3: المعرض (Unsplash Gallery as in Sketch Example 3) */}
       {/* ============================================================== */}
       {activeTab === 'gallery' && (
-        <div className="space-y-3">
+        <div ref={galleryRootRef} className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-neutral-800">
               تصفح معرض Unsplash:
@@ -621,12 +624,12 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           </div>
 
           {/* Quick Category Filter Pills */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex flex-wrap items-center gap-1.5 pb-1">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => handleCategorySelect(cat)}
-                className={`text-[10px] px-2.5 py-1 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
+                className={`text-[11px] px-2.5 py-1 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                   selectedCategory === cat
                     ? 'bg-[#0071e3] text-white shadow-xs'
                     : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80 hover:text-black'
@@ -692,8 +695,30 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                 );
               })}
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsPhotoBrowserOpen(true)}
+              className="mt-2 w-full py-2.5 rounded-xl border border-neutral-300 hover:border-[#0071e3] bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-[#0071e3] transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer active:scale-[0.99]"
+            >
+              <span>عرض المزيد والبحث بصور أكثر</span>
+              <ChevronLeft size={14} strokeWidth={2.5} />
+            </button>
           </div>
 
+          {isPhotoBrowserOpen && (
+            <PhotoBrowserPanel
+              anchor={galleryRootRef.current}
+              initialQuery={searchQuery}
+              initialCategory="all"
+              pickingId={null}
+              onPick={(photo) => {
+                onApplyImage(photo.fullUrl, 'cover');
+                setIsPhotoBrowserOpen(false);
+              }}
+              onClose={() => setIsPhotoBrowserOpen(false)}
+            />
+          )}
         </div>
       )}
 

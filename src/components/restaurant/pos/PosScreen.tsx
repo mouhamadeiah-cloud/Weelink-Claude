@@ -5,15 +5,16 @@
 // Takeaway bills have their own row. «فواتير اليوم» lists the closed bills (print, reopen with the
 // manager's PIN) and «صندوقي» shows the worker's money and closes his till with the cash he counts.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Armchair, ShoppingBag, Lock, LogOut, X, Wallet, ReceiptText, Plus, QrCode, BellRing, Users, Printer, RotateCcw, CheckCircle2, ChefHat } from 'lucide-react';
-import { MenuOrder } from '../restaurantTypes';
+import { Armchair, ShoppingBag, LogOut, X, Wallet, ReceiptText, Plus, QrCode, BellRing, Users, Printer, RotateCcw, CheckCircle2, ChefHat, Menu } from 'lucide-react';
+import { DeviceRole, MenuOrder } from '../restaurantTypes';
 import type { LiveState } from '../restaurantCloud';
-import { Actor, CASH, ScreenDraft, ScreenPaid, ScreenState, Tab, Worker, WORKER_ROLES, byMethod, openTabId, startOfToday, tabTitle, tabTotals, unsentItems } from '../staffTypes';
-import { addLog, closeShift, endSession, openShift, openTab, reopenTab, setScreen, startSession, useClosedTabs, useOpenTabs, useShifts, TabPlace } from '../staffCloud';
+import { Actor, CASH, ScreenDraft, ScreenPaid, ScreenState, Tab, Worker, WORKER_ROLES, byMethod, openTabId, shiftTips, startOfToday, tabTitle, tabTotals, unsentItems } from '../staffTypes';
+import { addLog, closeShift, endSession, openShift, openTab, reopenTab, setScreen, startSession, useClosedTabs, useHandovers, useOpenTabs, useShifts, TabPlace } from '../staffCloud';
 import { formatMoney } from '../../shop/adminUi';
 import { NumberPad } from './NumberPad';
 import { TabView, PosMenu, PaidInfo } from './TabView';
 import { printReceipt } from './receipt';
+import { CashierHandoverDialog, ExitDialog, MenuDialog, SessionOrdersDialog, SettingsDialog, WaiterHandoverDialog } from './StaffMenu';
 import { BigButton, Modal, failText, useManagerGate, useToast } from './posUi';
 
 interface PosScreenProps {
@@ -21,6 +22,7 @@ interface PosScreenProps {
   menu: PosMenu | null;
   workers: Worker[];
   device: { id: string; name: string };
+  deviceRole?: DeviceRole; // a waiter's tablet ends its session by handing the money to the main cashier
   live: LiveState<MenuOrder>;
   onClose?: () => void;
   onLogout?: () => void; // on a device: forget its code
@@ -69,12 +71,12 @@ const SignIn: React.FC<{ workers: Worker[]; device: string; onSignIn: (w: Worker
   );
 };
 
-export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device, live, onClose, onLogout, kitchen }) => {
+export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device, deviceRole, live, onClose, onLogout, kitchen }) => {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [hallId, setHallId] = useState('');
   const [onlyMine, setOnlyMine] = useState(false);
   const [tabId, setTabId] = useState('');
-  const [dialog, setDialog] = useState<'' | 'shift' | 'closed'>('');
+  const [dialog, setDialog] = useState<'' | 'shift' | 'closed' | 'menu' | 'orders' | 'exit' | 'handover' | 'handovers' | 'settings'>('');
   const [thanks, setThanks] = useState<PaidInfo | null>(null);
   const [counted, setCounted] = useState('');
   const [busy, setBusy] = useState(false);
@@ -87,6 +89,10 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
   const myShift = worker ? shifts.items.find((s) => s.workerId === worker.id && !s.closedAt) : undefined;
   const since = useMemo(() => (myShift && myShift.openedAt < startOfToday() ? myShift.openedAt : startOfToday()), [myShift]);
   const closedTabs = useClosedTabs(worker ? uid : null, since);
+  const isWaiterDevice = deviceRole === 'waiter';
+  // The handovers waiting for the main cashier (a shift can reach back to the day before).
+  const handoverSince = useMemo(() => new Date(Date.now() - 36 * 3600000).toISOString(), []);
+  const pendingHandovers = useHandovers(worker && !isWaiterDevice ? uid : null, handoverSince).items.filter((h) => h.status === 'requested').length;
   const settings = menu?.settings;
   const money = (n: number) => formatMoney(n, settings?.currency || '');
 
@@ -245,6 +251,9 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
     setBusy(false);
   };
 
+  const sessionTabs = allTabs.filter((t) => t.ownerId === worker.id && (t.status === 'open' || (myShift ? t.openedAt >= myShift.openedAt : true)));
+  const shiftTipsNow = myShift ? shiftTips(allTabs, myShift.id) : 0;
+
   const reopen = async (t: Tab) => {
     const by = await askManager(`إعادة فتح ${tabTitle(t)} المغلقة`);
     if (!by) return;
@@ -316,7 +325,10 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
           {kitchen && <KitchenButton {...kitchen} />}
           <button type="button" onClick={() => setDialog('closed')} className="h-10 px-3 rounded-xl bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"><ReceiptText size={15} /> فواتير اليوم</button>
           <button type="button" onClick={() => setDialog('shift')} className="h-10 px-3 rounded-xl bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"><Wallet size={15} /> صندوقي</button>
-          <button type="button" onClick={signOut} className="h-10 px-3 rounded-xl bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer" title="تبديل العامل"><Lock size={15} /> قفل</button>
+          <button type="button" onClick={() => setDialog('menu')} aria-label="القائمة" title="القائمة" className="relative w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center cursor-pointer">
+            <Menu size={18} />
+            {pendingHandovers > 0 && <span className="absolute -top-1.5 -left-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#E03131] text-[10px] font-black flex items-center justify-center">{pendingHandovers}</span>}
+          </button>
           {onClose && <button type="button" onClick={onClose} aria-label="إغلاق" className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center cursor-pointer"><X size={18} /></button>}
         </header>
 
@@ -392,6 +404,23 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
           {thanks.change > 0 && <div className="mt-2 px-6 py-3 rounded-3xl bg-white text-[#2F9E44] text-3xl font-black">الباقي للزبون {money(thanks.change)}</div>}
         </div>
       )}
+
+      {dialog === 'menu' && <MenuDialog cashier={!isWaiterDevice} pending={pendingHandovers} onClose={() => setDialog('')} onPick={(w) => setDialog(w)} />}
+      {dialog === 'orders' && <SessionOrdersDialog tabs={sessionTabs} money={money} onClose={() => setDialog('')} />}
+      {dialog === 'settings' && <SettingsDialog onClose={() => setDialog('')} />}
+      {dialog === 'exit' && (
+        <ExitDialog
+          waiter={isWaiterDevice}
+          openCount={myOpen.length}
+          onClose={() => setDialog('')}
+          onBreak={signOut}
+          onEnd={() => setDialog(isWaiterDevice ? 'handover' : 'shift')}
+        />
+      )}
+      {dialog === 'handover' && (
+        <WaiterHandoverDialog uid={uid} shift={myShift} expectedCash={cashExpected} expectedTips={shiftTipsNow} money={money} toast={toast} onClose={() => setDialog('')} onDone={signOut} />
+      )}
+      {dialog === 'handovers' && <CashierHandoverDialog uid={uid} worker={worker} since={handoverSince} money={money} settings={settings} toast={toast} onClose={() => setDialog('')} />}
 
       {dialog === 'shift' && (
         <Modal title={`صندوق ${worker.name}`} onClose={() => setDialog('')} footer={<BigButton tone="dark" className="w-full" disabled={busy || !myShift} onClick={doCloseShift}>إغلاق الصندوق وتسليمه</BigButton>}>

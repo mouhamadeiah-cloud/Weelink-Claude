@@ -66,6 +66,7 @@ export interface TabItem extends OrderLine {
   paidQty: number; // paid by items
   voided: boolean;
   voidNote: string;
+  tip?: boolean; // a tip (بخشيش) added to the bill: it never goes to the kitchen and gets no discount
 }
 
 export interface TabPayment {
@@ -123,6 +124,7 @@ const normalizeItem = (raw: any): TabItem => ({
   paidQty: Math.max(0, num(raw?.paidQty)),
   voided: !!raw?.voided,
   voidNote: str(raw?.voidNote),
+  ...(raw?.tip ? { tip: true } : {}),
 });
 
 const normalizePayment = (raw: any): TabPayment => ({
@@ -164,12 +166,17 @@ const round = (n: number) => Math.round(n * 100) / 100;
 
 export const itemTotal = (i: TabItem) => (i.voided ? 0 : i.unitPrice * i.qty);
 
+// The tips on a bill (they are part of what the guest pays, but not of the sale).
+export const tipTotal = (t: Tab) => round(t.items.filter((i) => i.tip).reduce((s, i) => s + itemTotal(i), 0));
+
 export const tabTotals = (t: Tab) => {
-  const subtotal = round(t.items.reduce((s, i) => s + itemTotal(i), 0));
-  const discount = round(Math.min(subtotal, t.discountPct ? (subtotal * t.discountPct) / 100 : t.discount));
+  const tips = tipTotal(t);
+  const dishes = round(t.items.reduce((s, i) => s + itemTotal(i), 0) - tips);
+  const subtotal = round(dishes + tips);
+  const discount = round(Math.min(dishes, t.discountPct ? (dishes * t.discountPct) / 100 : t.discount));
   const total = round(Math.max(0, subtotal - discount));
   const paid = round(t.payments.reduce((s, p) => s + p.amount, 0));
-  return { subtotal, discount, total, paid, due: round(Math.max(0, total - paid)) };
+  return { subtotal, discount, total, paid, tips, due: round(Math.max(0, total - paid)) };
 };
 
 export const unsentItems = (t: Tab) => t.items.filter((i) => !i.voided && !i.sentAt);
@@ -234,6 +241,10 @@ export const normalizeSession = (id: string, raw: any): WorkerSession => ({
 });
 
 export const CASH = 'نقدي';
+
+// The tips on the bills a shift took money for.
+export const shiftTips = (tabs: Tab[], shiftId: string) =>
+  round(tabs.filter((t) => t.payments.some((p) => p.shiftId === shiftId)).reduce((s, t) => s + tipTotal(t), 0));
 
 // The payments of a list of tabs, newest first, each with its tab.
 export const paymentsOf = (tabs: Tab[]) =>
@@ -323,3 +334,46 @@ export const dayRange = (back: number) => {
   const d = businessDayStart(back);
   return { start: d.toISOString(), end: businessDayStart(back - 1).toISOString(), date: d };
 };
+
+// ---------- Handing the money of a waiter over to the main cashier ----------
+// The waiter ends his session and asks to hand over: the cashier counts what he receives and the tips,
+// and gets a random four-digit code. The waiter types it on his tablet, which ends the handover (an
+// electronic signature of both devices). Its id is the waiter's shift id.
+
+export type HandoverStatus = 'requested' | 'received' | 'confirmed' | 'skipped';
+
+export interface Handover {
+  id: string;
+  workerId: string;
+  workerName: string;
+  deviceName: string;
+  shiftOpenedAt: string;
+  requestedAt: string;
+  expectedCash: number; // the cash the waiter took in his shift
+  expectedTips: number; // the tips on the bills he took money for
+  status: HandoverStatus;
+  code: string; // four digits, written by the cashier when he receives the money
+  receivedCash: number;
+  receivedTips: number;
+  receivedBy: string; // the cashier who took it
+  receivedAt: string;
+  confirmedAt: string; // when the waiter typed the code
+}
+
+export const normalizeHandover = (id: string, raw: any): Handover => ({
+  id,
+  workerId: str(raw?.workerId),
+  workerName: str(raw?.workerName),
+  deviceName: str(raw?.deviceName),
+  shiftOpenedAt: str(raw?.shiftOpenedAt),
+  requestedAt: str(raw?.requestedAt),
+  expectedCash: num(raw?.expectedCash),
+  expectedTips: num(raw?.expectedTips),
+  status: ['requested', 'received', 'confirmed', 'skipped'].includes(raw?.status) ? raw.status : 'requested',
+  code: /^\d{4}$/.test(str(raw?.code)) ? raw.code : '',
+  receivedCash: num(raw?.receivedCash),
+  receivedTips: num(raw?.receivedTips),
+  receivedBy: str(raw?.receivedBy),
+  receivedAt: str(raw?.receivedAt),
+  confirmedAt: str(raw?.confirmedAt),
+});

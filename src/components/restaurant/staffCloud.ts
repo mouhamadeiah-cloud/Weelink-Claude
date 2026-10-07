@@ -6,6 +6,7 @@
 //                   the worker counted.
 //   screens/{id}    what a cashier device shows its customer's screen.
 //   log/{id}        the sensitive actions (cancelled dishes, discounts, reopened bills).
+//   handovers/{shiftId}  a waiter handing his money to the main cashier (see Handover).
 //   sessions/{id}   each sign-in of a worker on a device, until he locks it, with the bills he still
 //                   had open at that moment.
 // Every change of a bill runs in a transaction, so devices working on the same table at the same
@@ -17,7 +18,7 @@ import { newId } from '../shop/shopTypes';
 import { MenuOrder, OrderLine, orderNumberNow, todayKey } from './restaurantTypes';
 import type { LiveState } from './restaurantCloud';
 import { NextNumber, readNextNumber } from './orderNumbers';
-import { Actor, LogEntry, ScreenState, SessionOpenTab, Shift, Tab, TabItem, TabKind, TabPayment, normalizeLog, normalizeScreen, normalizeSession, normalizeShift, normalizeTab, openTabId, tabTitle, tabTotals, unsentItems } from './staffTypes';
+import { Actor, Handover, LogEntry, ScreenState, SessionOpenTab, Shift, Tab, TabItem, TabKind, TabPayment, normalizeHandover, normalizeLog, normalizeScreen, normalizeSession, normalizeShift, normalizeTab, openTabId, tabTitle, tabTotals, unsentItems } from './staffTypes';
 
 const col = (uid: string, name: string) => collection(db, 'restaurants', uid, name);
 const tabDoc = (uid: string, id: string) => doc(db, 'restaurants', uid, 'tabs', id);
@@ -54,6 +55,26 @@ export const useLog = (uid: string | null, max = 200) =>
 
 export const useSessions = (uid: string | null, since: string) =>
   useLive(() => (uid ? query(col(uid, 'sessions'), where('startedAt', '>=', since)) : null), normalizeSession, [uid, since]);
+
+export const useHandovers = (uid: string | null, since: string) =>
+  useLive(() => (uid ? query(col(uid, 'handovers'), where('requestedAt', '>=', since)) : null), normalizeHandover, [uid, since]);
+
+// One handover, live (undefined until the first answer).
+export const useHandover = (uid: string | null, id: string) => {
+  const [h, setH] = useState<Handover | null | undefined>(undefined);
+  useEffect(() => {
+    if (!uid || !id) {
+      setH(null);
+      return;
+    }
+    return onSnapshot(
+      doc(db, 'restaurants', uid, 'handovers', id),
+      (s) => setH(s.exists() ? normalizeHandover(s.id, s.data()) : null),
+      () => setH(null)
+    );
+  }, [uid, id]);
+  return h;
+};
 
 // One bill, live (null = it was closed or moved).
 export const useTab = (uid: string | null, tabId: string) => {
@@ -350,3 +371,43 @@ export const startSession = async (uid: string, actor: Actor) => {
 
 export const endSession = (uid: string, id: string, endReason: string, openAtEnd: SessionOpenTab[]) =>
   updateDoc(doc(col(uid, 'sessions'), id), clean({ endedAt: new Date().toISOString(), endReason, openAtEnd })).catch((e) => console.warn('Could not close the session:', e));
+
+// ---------- Handovers ----------
+
+const handoverDoc = (uid: string, id: string) => doc(db, 'restaurants', uid, 'handovers', id);
+
+// The waiter asks to hand his money over (or records that he closed his till without handing it).
+export const requestHandover = (uid: string, shift: Shift, expectedCash: number, expectedTips: number, skipped = false) =>
+  setDoc(handoverDoc(uid, shift.id), clean({
+    id: shift.id,
+    workerId: shift.workerId,
+    workerName: shift.workerName,
+    deviceName: shift.deviceName,
+    shiftOpenedAt: shift.openedAt,
+    requestedAt: new Date().toISOString(),
+    expectedCash,
+    expectedTips,
+    status: skipped ? 'skipped' : 'requested',
+    code: '',
+    receivedCash: 0,
+    receivedTips: 0,
+    receivedBy: '',
+    receivedAt: '',
+    confirmedAt: '',
+  }));
+
+// The cashier took the money: a random four-digit code is written for the waiter to type.
+export const receiveHandover = async (uid: string, id: string, receivedCash: number, receivedTips: number, receivedBy: string) => {
+  const code = String(Math.floor(1000 + Math.random() * 9000));
+  await updateDoc(handoverDoc(uid, id), { status: 'received', code, receivedCash, receivedTips, receivedBy, receivedAt: new Date().toISOString() });
+  return code;
+};
+
+// The waiter typed the code: the handover is complete and his till closes with what the cashier counted.
+export const confirmHandover = async (uid: string, h: Handover) => {
+  await updateDoc(handoverDoc(uid, h.id), { status: 'confirmed', confirmedAt: new Date().toISOString() });
+  await updateDoc(doc(col(uid, 'shifts'), h.id), { closedAt: new Date().toISOString(), counted: h.receivedCash, expectedCash: h.expectedCash });
+};
+
+// The cashier hands out the amount he opened the day with, or a handover that never came is dropped.
+export const cancelHandover = (uid: string, id: string) => updateDoc(handoverDoc(uid, id), { status: 'skipped' });

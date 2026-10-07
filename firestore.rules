@@ -165,6 +165,12 @@ service cloud.firestore {
         allow write: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions', 'handovers'] && isStaff() && isValidId(docId);
       }
 
+      // The main cashier's sessions and their reports (kept two years): the devices write them, the accounts' readers read them.
+      match /cashDays/{dayId} {
+        allow read: if isStaff() || memberCan(userId, 'accounts');
+        allow write: if isStaff() && isValidId(dayId);
+      }
+
       // The accounts: only the owner (and members allowed to) read them; the devices book their payments.
       match /ledger/{entryId} {
         allow read: if isOwner(userId) || memberCan(userId, 'accounts');

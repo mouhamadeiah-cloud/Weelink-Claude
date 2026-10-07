@@ -3,7 +3,7 @@
 // from. From here the bill goes to the kitchen, gets paid (all or part), moves to another table or
 // merges with it, passes to another worker, gets a discount or a note, and prints.
 import React, { useMemo, useState } from 'react';
-import { ArrowRight, Send, Wallet, MoveRight, UserRound, Percent, Printer, Minus, Plus, Trash2, Ban, Search, Users, QrCode, StickyNote, X } from 'lucide-react';
+import { ArrowRight, Send, Wallet, MoveRight, UserRound, Percent, Printer, Minus, Plus, Trash2, Ban, Search, Users, QrCode, StickyNote, X, HandCoins } from 'lucide-react';
 import { Dish, MenuOrder, OrderLine, RestaurantAdminData, allTables, dishSubCatalogs } from '../restaurantTypes';
 import { Actor, ScreenDraft, ScreenPaid, Tab, Worker, itemTotal, openTabId, tabTitle, tabTotals, unsentItems } from '../staffTypes';
 import { addLog, attachOrder, changeTab, closeEmptyTab, moveTab, newItem, payTab, sendToKitchen, TabPlace } from '../staffCloud';
@@ -55,11 +55,12 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
   const [cat, setCat] = useState('');
   const [search, setSearch] = useState('');
   const [optionsFor, setOptionsFor] = useState<Dish | null>(null);
-  const [dialog, setDialog] = useState<'' | 'pay' | 'move' | 'transfer' | 'discount' | 'note'>('');
+  const [dialog, setDialog] = useState<'' | 'pay' | 'move' | 'transfer' | 'discount' | 'note' | 'tip'>('');
   const [busy, setBusy] = useState(false);
   const [side, setSide] = useState<'bill' | 'menu'>('bill');
   const [discountText, setDiscountText] = useState('');
   const [discountNote, setDiscountNote] = useState('');
+  const [tipText, setTipText] = useState('');
   const currency = menu.settings.currency;
   const money = (n: number) => formatMoney(n, currency);
   const totals = tabTotals(tab);
@@ -166,6 +167,16 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
     setDialog('');
   };
 
+  // A tip goes on the bill as its own line: it is already «sent» (never reaches the kitchen) and the
+  // discount does not touch it.
+  const addTip = async () => {
+    const n = Math.round((parseFloat(tipText.replace(/[,\s]/g, '')) || 0) * 100) / 100;
+    if (n <= 0) return;
+    const line: OrderLine = { dishId: 'tip', name: 'بخشيش', unitPrice: n, qty: 1, removed: [], extras: [], notes: '' };
+    await run(() => changeTab(uid, tab.id, (t) => ({ items: [...t.items, { ...newItem(line, actor), sentAt: new Date().toISOString(), tip: true }] })), 'أُضيف البخشيش إلى الفاتورة');
+    setDialog('');
+  };
+
   const qrOrders = tab.kind === 'table' ? orders.filter((o) => o.source === 'qr' && o.type === 'table' && o.table === tab.table && !o.tabId && o.status !== 'cancelled') : [];
   const place: TabPlace = { kind: tab.kind, tableId: tab.tableId, table: tab.table, hall: tab.hall };
   const orderOf = (id: string) => orders.find((o) => o.id === id);
@@ -184,6 +195,18 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
         ))}
         {tab.items.length === 0 && qrOrders.length === 0 && <div className="py-10 text-center text-sm font-bold text-neutral-400">اختر الأطباق من المنيو</div>}
         {tab.items.map((i) => {
+          if (i.tip) {
+            return (
+              <div key={i.id} className={`p-2.5 rounded-2xl border flex items-center gap-2 ${i.voided ? 'border-neutral-100 bg-neutral-50 opacity-60' : 'border-[#8CE99A] bg-[#F4FCF5]'}`}>
+                <HandCoins size={16} className="text-[#2F9E44]" />
+                <div className="flex-1 text-sm font-black text-[#2B8A3E]">بخشيش{i.addedBy && i.addedBy !== worker.name ? <span className="text-[10px] font-bold text-neutral-400"> · {i.addedBy}</span> : null}</div>
+                <div className="text-sm font-black">{money(itemTotal(i))}</div>
+                {!i.voided && totals.paid === 0 && (
+                  <button type="button" aria-label="حذف البخشيش" disabled={busy} onClick={() => setQty(i.id, 0)} className="w-9 h-9 rounded-xl text-[#E03131] hover:bg-red-50 flex items-center justify-center cursor-pointer"><Trash2 size={15} /></button>
+                )}
+              </div>
+            );
+          }
           const o = i.orderId ? orderOf(i.orderId) : undefined;
           const st = o ? KITCHEN_STATE[o.status] : undefined;
           const details = [...i.removed.map((r) => `بدون ${r}`), ...i.extras.map((e) => `+ ${e.name}`)].join('، ');
@@ -233,7 +256,10 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
         <div className="grid grid-cols-2 gap-2">
           <BigButton tone="orange" disabled={busy || unsent.length === 0} onClick={() => run(() => sendToKitchen(uid, tab.id, actor), 'أُرسل إلى المطبخ')}><Send size={16} /> للمطبخ{unsent.length ? ` (${unsent.length})` : ''}</BigButton>
           {totals.total > 0 || tab.payments.length ? (
-            <BigButton tone="green" disabled={busy || !canPay || totals.due <= 0} onClick={() => setDialog('pay')}><Wallet size={16} /> الدفع</BigButton>
+            <div className="flex gap-2">
+              <BigButton tone="green" className="flex-1" disabled={busy || !canPay || totals.due <= 0} onClick={() => setDialog('pay')}><Wallet size={16} /> الدفع</BigButton>
+              <BigButton tone="light" className="w-12 px-0 text-xl" aria-label="إضافة بخشيش" title="إضافة بخشيش" disabled={busy || totals.due <= 0} onClick={() => { setTipText(''); setDialog('tip'); }}><Plus size={20} strokeWidth={3} /></BigButton>
+            </div>
           ) : (
             <BigButton tone="light" disabled={busy} onClick={() => window.confirm('إغلاق الطاولة بدون فاتورة؟') && run(() => closeEmptyTab(uid, tab.id, actor).then(() => onClosed(null)))}>إغلاق الطاولة</BigButton>
           )}
@@ -361,6 +387,22 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
             <input className="w-full h-12 px-3 rounded-2xl border border-neutral-200 text-sm font-bold outline-none" value={discountNote} onChange={(e) => setDiscountNote(e.target.value)} placeholder="زبون دائم، تأخير..." />
           </label>
           <p className="text-[11px] font-bold text-neutral-400">يحتاج رقم المدير، ويُسجل في سجل العمليات. ضع 0 لإزالة الخصم.</p>
+        </Modal>
+      )}
+
+      {dialog === 'tip' && (
+        <Modal title="إضافة بخشيش إلى الفاتورة" onClose={() => setDialog('')} footer={<BigButton tone="green" className="w-full" disabled={busy || !(parseFloat(tipText.replace(/[,\s]/g, '')) > 0)} onClick={addTip}>إضافة {parseFloat(tipText.replace(/[,\s]/g, '')) > 0 ? money(parseFloat(tipText.replace(/[,\s]/g, ''))) : ''}</BigButton>}>
+          <div className="grid grid-cols-4 gap-2">
+            {[5, 10, 15, 20].map((p) => {
+              const v = Math.round(((totals.subtotal - totals.tips - totals.discount) * p) / 100);
+              return <BigButton key={p} tone="light" className="h-14 flex-col gap-0 text-sm" onClick={() => setTipText(String(v))}>{p}%<span className="text-[10px] font-bold text-neutral-500">{money(v)}</span></BigButton>;
+            })}
+          </div>
+          <label className="block space-y-1">
+            <span className="text-sm font-black">المبلغ</span>
+            <input autoFocus className="w-full h-12 px-3 rounded-2xl border border-neutral-200 text-lg font-black outline-none" dir="ltr" inputMode="decimal" value={tipText} onChange={(e) => setTipText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTip()} />
+          </label>
+          <p className="text-[11px] font-bold text-neutral-400">يظهر على الفاتورة كسطر «بخشيش»، ولا يصل للمطبخ، ولا يدخل في الخصم، ويُسلَّم مع الصندوق ويظهر في التقارير.</p>
         </Modal>
       )}
 

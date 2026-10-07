@@ -161,8 +161,8 @@ service cloud.firestore {
 
       // The cashier and the waiters: bills, tills, the customer screens, the log of sensitive actions and the workers' sessions.
       match /{staffCollection}/{docId} {
-        allow read: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions'] && isStaff();
-        allow write: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions'] && isStaff() && isValidId(docId);
+        allow read: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions', 'handovers'] && isStaff();
+        allow write: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions', 'handovers'] && isStaff() && isValidId(docId);
       }
 
       // The accounts: only the owner (and members allowed to) read them; the devices book their payments.

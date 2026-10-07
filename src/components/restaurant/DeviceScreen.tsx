@@ -125,7 +125,7 @@ const KitchenDevice: React.FC<{ uid: string; device: StaffDevice; onLogout: () =
 const CashierDevice: React.FC<{ uid: string; device: StaffDevice; workers: Worker[]; onLogout: () => void }> = ({ uid, device, workers, onLogout }) => {
   const live = useLiveOrders(uid);
   const menu = usePublishedMenu(uid);
-  return <PosScreen uid={uid} menu={menu} workers={workers} device={{ id: device.id, name: device.name }} live={live} onLogout={onLogout} />;
+  return <PosScreen uid={uid} menu={menu} workers={workers} device={{ id: device.id, name: device.name }} live={live} deviceRole={device.role} onLogout={onLogout} />;
 };
 
 // Both screens stay mounted, so switching keeps the signed-in worker and the open bill, and the
@@ -139,7 +139,7 @@ const ComboDevice: React.FC<{ uid: string; device: StaffDevice; workers: Worker[
   return (
     <>
       <div className={view === 'pos' ? '' : 'hidden'}>
-        <PosScreen uid={uid} menu={menu} workers={workers} device={{ id: device.id, name: device.name }} live={live} onLogout={onLogout} kitchen={{ open: () => setView('kitchen'), waiting }} />
+        <PosScreen uid={uid} menu={menu} workers={workers} device={{ id: device.id, name: device.name }} live={live} deviceRole={device.role} onLogout={onLogout} kitchen={{ open: () => setView('kitchen'), waiting }} />
       </div>
       <div className={view === 'kitchen' ? '' : 'hidden'}>
         <KitchenBoard uid={uid} live={live} menu={menu} title={device.name} onLogout={onLogout} onSwitch={() => setView('pos')} />

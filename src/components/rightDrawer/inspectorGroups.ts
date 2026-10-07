@@ -56,7 +56,7 @@ export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
   // The image's replacing and clipping, the mask's shape and the shape's grouping are drawn by the
   // inspector itself (content: []), next to any settings the type has.
   const content: DrawerSection[] = type === 'gallery' ? ['gallery'] : hasSettings ? ['format'] : [];
-  if (content.length || ['image', 'mask', 'shape', ...SHOP_SETTING_TYPES].includes(type)) {
+  if (content.length || ['image', 'mask', 'shape', 'lottie', ...SHOP_SETTING_TYPES].includes(type)) {
     groups.push({ id: 'content', title: 'محتوى العنصر', label: 'المحتوى', sections: content });
   }
   if (TEXT_TYPES.includes(type)) groups.push({ id: 'font', title: 'خط العنصر', label: 'الخط', sections: ['typography'] });
@@ -64,9 +64,10 @@ export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
   if (TEXT_TYPES.includes(type)) groups.push({ id: 'effects', title: 'تأثيرات النص', label: 'تأثيرات', sections: [] });
   groups.push({
     id: 'colors',
-    title: type === 'image' ? 'ألوان الصورة وفلاترها' : 'ألوان العنصر',
-    label: 'الألوان',
-    sections: type === 'image' ? ['color'] : ['color', 'background'],
+    title: type === 'image' ? 'ألوان الصورة وفلاترها' : type === 'lottie' ? 'خلفية العنصر' : 'ألوان العنصر',
+    label: type === 'lottie' ? 'الخلفية' : 'الألوان',
+    // The animation's own colours are with the animation, in its content card.
+    sections: type === 'image' ? ['color'] : type === 'lottie' ? ['background'] : ['color', 'background'],
   });
   groups.push({ id: 'shape', title: 'شكل العنصر', label: 'الشكل', sections: shapeSections });
   groups.push({
@@ -103,6 +104,7 @@ export const inspectorHelp = (id: InspectorGroupId, target: InspectorTarget): st
     case 'content':
       if (kind === 'navbar') return 'الشريط اللي بأعلى كل صفحات موقعك: اسمك أو شعارك، وأسماء الصفحات اللي بيضغط عليها الزائر، وهل بيضل ثابت فوق وقت ينزل الزائر بالصفحة.';
       if (kind === 'slide') return 'كيف بتلتقي هالشريحة مع الشريحة اللي بعدها: خط مستقيم، موجة، زاوية مايلة… اختار الشكل وشوف النتيجة تحت الشريحة مباشرة.';
+      if (target.type === 'lottie') return 'اختار الرسمة المتحركة ولونها وسرعتها، ومتى بتتحرك: دائماً، لما يوصلها الزائر، أو لما يمرّق الماوس فوقها. «عرض المزيد» بيفتح كل الرسوم، وفيك تلصق رابط رسمة من LottieFiles.';
       if (target.type === 'image') return 'بدّل الصورة بصورة من جهازك أو من مكتبة الصور، أو قصّها بشكل (دائرة، قلب، نجمة…) بدل المستطيل.';
       return 'إعدادات هالعنصر الخاصة فيه: الصور بمعرض الصور، أوقات الحجز، خلايا الجدول، رابط الفيديو أو الخريطة، أو منتجات المتجر.';
     case 'font':

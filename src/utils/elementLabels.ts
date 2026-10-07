@@ -29,6 +29,7 @@ export const ELEMENT_TYPE_LABEL: Record<ElementType, string> = {
   carSearch: 'بحث السيارات',
   menuList: 'المنيو',
   menuCart: 'سلة الطلب',
+  lottie: 'رسم متحرك',
 };
 
 export const elementDisplayName = (el: Pick<CanvasElement, 'name' | 'type'>) => {

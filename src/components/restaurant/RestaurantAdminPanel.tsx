@@ -2,7 +2,7 @@
 // shop and the showroom. The menu (main catalogs, sub-catalogs, dishes), the website's orders and
 // the settings are managed here; the restaurant's pages are edited in the editor like any page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users, UserCog } from 'lucide-react';
+import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users, UserCog, FileBarChart } from 'lucide-react';
 import { RestaurantAdminData, setDayStartHour } from './restaurantTypes';
 import { RestaurantTabProps, RestaurantTabId } from './tabs/shared';
 import { TablesTab } from './tabs/TablesTab';
@@ -10,6 +10,7 @@ import { HallsTab } from './tabs/HallsTab';
 import { DevicesTab } from './tabs/DevicesTab';
 import { WorkersTab } from './tabs/WorkersTab';
 import { AccountsTab } from './tabs/AccountsTab';
+import { SalesReportsTab } from './tabs/SalesReportsTab';
 import { useLiveOrders } from './restaurantCloud';
 import { DishesTab } from './tabs/DishesTab';
 import { CategoriesTab } from './tabs/CategoriesTab';
@@ -32,6 +33,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'workers', label: 'العمال والصناديق', icon: Users, Component: WorkersTab, perm: 'staff' },
   { id: 'tables', label: 'رابط الموقع ورموز QR', icon: QrCode, Component: TablesTab, perm: 'tables' },
   { id: 'accounts', label: 'الحسابات', icon: Wallet, Component: AccountsTab, perm: 'accounts' },
+  { id: 'reports', label: 'تقارير الكاشير', icon: FileBarChart, Component: SalesReportsTab, perm: 'accounts' },
   { id: 'settings', label: 'الإعدادات', icon: SlidersHorizontal, Component: RestaurantSettingsTab, perm: 'settings' },
   { id: 'members', label: 'أعضاء الإدارة', icon: UserCog, Component: MembersTab, perm: 'owner' },
 ];

@@ -9,12 +9,12 @@ import { Armchair, ShoppingBag, LogOut, X, Wallet, ReceiptText, Plus, QrCode, Be
 import { DeviceRole, MenuOrder } from '../restaurantTypes';
 import type { LiveState } from '../restaurantCloud';
 import { Actor, CASH, ScreenDraft, ScreenPaid, ScreenState, Tab, Worker, WORKER_ROLES, byMethod, openTabId, shiftTips, startOfToday, tabTitle, tabTotals, unsentItems } from '../staffTypes';
-import { addLog, closeShift, endSession, openShift, openTab, reopenTab, setScreen, startSession, useClosedTabs, useHandovers, useOpenTabs, useShifts, TabPlace } from '../staffCloud';
+import { addLog, closeShift, endSession, openShift, openTab, reopenTab, setScreen, openCashDay, pruneCashDays, startSession, useClosedTabs, useHandovers, useOpenCashDay, useOpenTabs, useShifts, TabPlace } from '../staffCloud';
 import { formatMoney } from '../../shop/adminUi';
 import { NumberPad } from './NumberPad';
 import { TabView, PosMenu, PaidInfo } from './TabView';
 import { printReceipt } from './receipt';
-import { CashierHandoverDialog, ExitDialog, MenuDialog, SessionOrdersDialog, SettingsDialog, WaiterHandoverDialog } from './StaffMenu';
+import { CashierHandoverDialog, CloseDayDialog, ExitDialog, MenuDialog, OpenDayDialog, ReportsArchiveDialog, SessionOrdersDialog, SettingsDialog, WaiterHandoverDialog } from './StaffMenu';
 import { BigButton, Modal, failText, useManagerGate, useToast } from './posUi';
 
 interface PosScreenProps {
@@ -76,7 +76,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
   const [hallId, setHallId] = useState('');
   const [onlyMine, setOnlyMine] = useState(false);
   const [tabId, setTabId] = useState('');
-  const [dialog, setDialog] = useState<'' | 'shift' | 'closed' | 'menu' | 'orders' | 'exit' | 'handover' | 'handovers' | 'settings'>('');
+  const [dialog, setDialog] = useState<'' | 'shift' | 'closed' | 'menu' | 'orders' | 'exit' | 'handover' | 'handovers' | 'closeDay' | 'reports' | 'settings'>('');
   const [thanks, setThanks] = useState<PaidInfo | null>(null);
   const [counted, setCounted] = useState('');
   const [busy, setBusy] = useState(false);
@@ -92,6 +92,12 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
   const isWaiterDevice = deviceRole === 'waiter';
   // The handovers waiting for the main cashier (a shift can reach back to the day before).
   const handoverSince = useMemo(() => new Date(Date.now() - 36 * 3600000).toISOString(), []);
+  // The main cashier's session: it opens with the amount in the drawer and closes with its report.
+  const cashierWorker = !!worker && !isWaiterDevice && worker.role !== 'waiter';
+  const cashDay = useOpenCashDay(cashierWorker ? uid : null);
+  useEffect(() => {
+    if (cashierWorker && cashDay) pruneCashDays(uid);
+  }, [cashierWorker, cashDay === undefined, uid]);
   const pendingHandovers = useHandovers(worker && !isWaiterDevice ? uid : null, handoverSince).items.filter((h) => h.status === 'requested').length;
   const settings = menu?.settings;
   const money = (n: number) => formatMoney(n, settings?.currency || '');
@@ -421,6 +427,12 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
         <WaiterHandoverDialog uid={uid} shift={myShift} expectedCash={cashExpected} expectedTips={shiftTipsNow} money={money} toast={toast} onClose={() => setDialog('')} onDone={signOut} />
       )}
       {dialog === 'handovers' && <CashierHandoverDialog uid={uid} worker={worker} since={handoverSince} money={money} settings={settings} toast={toast} onClose={() => setDialog('')} />}
+
+      {dialog === 'closeDay' && cashDay && <CloseDayDialog uid={uid} day={cashDay} worker={worker} workers={workers} money={money} settings={settings} toast={toast} onClose={() => setDialog('')} onClosed={() => { setDialog(''); signOut(); }} />}
+      {dialog === 'reports' && <ReportsArchiveDialog uid={uid} money={money} settings={settings} worker={worker} onClose={() => setDialog('')} />}
+      {cashierWorker && cashDay === null && (
+        <OpenDayDialog money={money} onLogout={signOut} onOpen={(a) => openCashDay(uid, worker.name, a).catch((e) => toast(failText(e), true))} />
+      )}
 
       {dialog === 'shift' && (
         <Modal title={`صندوق ${worker.name}`} onClose={() => setDialog('')} footer={<BigButton tone="dark" className="w-full" disabled={busy || !myShift} onClick={doCloseShift}>إغلاق الصندوق وتسليمه</BigButton>}>

@@ -6,18 +6,20 @@
 //                   the worker counted.
 //   screens/{id}    what a cashier device shows its customer's screen.
 //   log/{id}        the sensitive actions (cancelled dishes, discounts, reopened bills).
+//   cashDays/open  the main cashier's open session; closing moves it to cashDays/{id} with its report.
 //   handovers/{shiftId}  a waiter handing his money to the main cashier (see Handover).
 //   sessions/{id}   each sign-in of a worker on a device, until he locks it, with the bills he still
 //                   had open at that moment.
 // Every change of a bill runs in a transaction, so devices working on the same table at the same
 // time never overwrite each other. A payment also books its sale in the accounts (ledger).
 import { useEffect, useState } from 'react';
-import { collection, doc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where, Transaction } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where, Transaction } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { newId } from '../shop/shopTypes';
 import { MenuOrder, OrderLine, orderNumberNow, todayKey } from './restaurantTypes';
 import type { LiveState } from './restaurantCloud';
 import { NextNumber, readNextNumber } from './orderNumbers';
+import { CashDay, CashReport, newCashDay, normalizeCashDay } from './cashDay';
 import { Actor, Handover, LogEntry, ScreenState, SessionOpenTab, Shift, Tab, TabItem, TabKind, TabPayment, normalizeHandover, normalizeLog, normalizeScreen, normalizeSession, normalizeShift, normalizeTab, openTabId, tabTitle, tabTotals, unsentItems } from './staffTypes';
 
 const col = (uid: string, name: string) => collection(db, 'restaurants', uid, name);
@@ -411,3 +413,55 @@ export const confirmHandover = async (uid: string, h: Handover) => {
 
 // The cashier hands out the amount he opened the day with, or a handover that never came is dropped.
 export const cancelHandover = (uid: string, id: string) => updateDoc(handoverDoc(uid, id), { status: 'skipped' });
+
+// ---------- The main cashier's session (see cashDay.ts) ----------
+
+const OPEN_DAY = 'open';
+
+// The open session (null = none open, undefined until the first answer).
+export const useOpenCashDay = (uid: string | null) => {
+  const [day, setDay] = useState<CashDay | null | undefined>(undefined);
+  useEffect(() => {
+    if (!uid) return;
+    return onSnapshot(
+      doc(db, 'restaurants', uid, 'cashDays', OPEN_DAY),
+      (s) => setDay(s.exists() ? normalizeCashDay(s.id, s.data()) : null),
+      () => setDay(null)
+    );
+  }, [uid]);
+  return day;
+};
+
+// The closed sessions since a moment.
+export const useClosedCashDays = (uid: string | null, since: string) =>
+  useLive(() => (uid ? query(col(uid, 'cashDays'), where('closedAt', '>=', since)) : null), normalizeCashDay, [uid, since]);
+
+// Opens the session with the amount in the drawer; when another device opened it first, that one stays.
+export const openCashDay = (uid: string, openedBy: string, openingAmount: number) =>
+  runTransaction(db, async (tx) => {
+    const ref = doc(db, 'restaurants', uid, 'cashDays', OPEN_DAY);
+    if ((await tx.get(ref)).exists()) return;
+    tx.set(ref, clean(newCashDay(openedBy, openingAmount)));
+  });
+
+// Closes it: the report is written with it, and the open session is gone.
+export const closeCashDay = (uid: string, day: CashDay, closedBy: string, expectedDrawer: number, counted: number, report: CashReport) =>
+  runTransaction(db, async (tx) => {
+    const ref = doc(db, 'restaurants', uid, 'cashDays', OPEN_DAY);
+    const cur = await tx.get(ref);
+    if (!cur.exists()) throw new Error('gone');
+    const closedAt = new Date().toISOString();
+    const id = newId('day');
+    tx.set(doc(db, 'restaurants', uid, 'cashDays', id), clean({ ...day, id, closedAt, closedBy, expectedDrawer, counted, report: { ...report, to: closedAt } }));
+    tx.delete(ref);
+  });
+
+// Reports older than two years are deleted.
+export const pruneCashDays = async (uid: string) => {
+  try {
+    const old = await getDocs(query(col(uid, 'cashDays'), where('keepUntil', '<', new Date().toISOString())));
+    await Promise.all(old.docs.filter((d) => d.id !== OPEN_DAY).map((d) => deleteDoc(d.ref)));
+  } catch (e) {
+    console.warn('Could not delete the old reports:', e);
+  }
+};

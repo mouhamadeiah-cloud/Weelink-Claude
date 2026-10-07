@@ -81,6 +81,35 @@ export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
   return groups;
 };
 
+// The quick ways into a group, shown under it in the column once it is picked: each one brings that
+// part of the group's card into view. A font's are the two halves of its toolbar.
+export type InspectorShortcutId = DrawerSection | 'font-family' | 'font-size';
+export interface InspectorShortcut {
+  id: InspectorShortcutId;
+  label: string;
+}
+const SHORTCUT_LABEL: Partial<Record<DrawerSection, string>> = {
+  color: 'لون النص',
+  background: 'الخلفية',
+  border: 'الإطار',
+  opacity: 'الشفافية',
+  shadow: 'الظل',
+  format: 'الأبعاد',
+  layers: 'الطبقات',
+  link: 'الرابط',
+  animation: 'الحركة',
+};
+export const groupShortcuts = (group: InspectorGroup, target: InspectorTarget): InspectorShortcut[] => {
+  if (group.id === 'font') return [{ id: 'font-family', label: 'نوع الخط' }, { id: 'font-size', label: 'الحجم' }];
+  const isImage = target.kind === 'element' && target.type === 'image';
+  const items = group.sections
+    // The glow is drawn with the shadow, as one tool.
+    .filter((s) => s !== 'lighting' && SHORTCUT_LABEL[s])
+    .map((s) => ({ id: s, label: s === 'color' && isImage ? 'الفلاتر' : SHORTCUT_LABEL[s]! }));
+  // One part alone is the group itself.
+  return items.length > 1 ? items : [];
+};
+
 // Where a section asked for by name (an old shortcut, a "settings" link) now lives.
 export const groupOfSection = (section: DrawerSection, target: InspectorTarget): InspectorGroupId | null => {
   const normalized: DrawerSection =

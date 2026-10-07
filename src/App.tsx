@@ -11,7 +11,7 @@ import { ControlBar } from './components/ControlBar';
 import { EditBar, SelectionNameInput, selectionName } from './components/EditBar';
 import { CanvasWorkspace } from './components/CanvasWorkspace';
 import { EditorColumn, EDITOR_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './components/EditorColumn';
-import { INSPECTOR_SECTIONS, InspectorGroupId, InspectorTarget, groupOfSection, inspectorGroups } from './components/rightDrawer/inspectorGroups';
+import { INSPECTOR_SECTIONS, InspectorGroupId, InspectorShortcutId, InspectorTarget, groupOfSection, inspectorGroups } from './components/rightDrawer/inspectorGroups';
 import { RightDrawer, DrawerSection } from './components/RightDrawer';
 import { ProjectSettingsSection } from './components/rightDrawer/sections/ProjectSettingsSection';
 import { WorkspaceHub } from './components/WorkspaceHub';
@@ -222,7 +222,7 @@ export default function App() {
   const [drawerTab, setDrawerTab] = useState<'structure' | 'tool'>('structure');
   const [sectionRequest, setSectionRequest] = useState(0);
   // The docked panel's inspector: the group the column asked for, and the group showing at its top.
-  const [inspectorFocus, setInspectorFocus] = useState<{ group: InspectorGroupId | null; n: number }>({ group: null, n: 0 });
+  const [inspectorFocus, setInspectorFocus] = useState<{ group: InspectorGroupId | null; shortcut?: InspectorShortcutId; n: number }>({ group: null, n: 0 });
   const [inspectorGroup, setInspectorGroup] = useState<InspectorGroupId | null>(null);
   const [tabRequest, setTabRequest] = useState<{ tab: 'structure' | 'tool'; n: number }>({ tab: 'structure', n: 0 });
   // The column's "admin" button opens the restaurant, shop or showroom admin.
@@ -1374,9 +1374,9 @@ export default function App() {
   };
 
   // Shows the inspector in the docked panel, scrolled to a group when one is given.
-  const showInspector = (group: InspectorGroupId | null = null) => {
+  const showInspector = (group: InspectorGroupId | null = null, shortcut?: InspectorShortcutId) => {
     setDrawerSection('inspector');
-    setInspectorFocus((f) => ({ group, n: f.n + 1 }));
+    setInspectorFocus((f) => ({ group, shortcut, n: f.n + 1 }));
     setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 }));
     setIsRightDrawerOpen(true);
   };
@@ -3276,11 +3276,28 @@ export default function App() {
           <EditorColumn
             horizontal={isSheet}
             groups={inspectorGroups(currentInspectorTarget())}
-            activeGroup={isRightDrawerOpen && drawerTab === 'tool' && drawerSection === 'inspector' ? inspectorGroup : null}
-            onPickGroup={(g) => showInspector(g)}
-            onAdd={() => handleSelectTool('elements')}
+            target={currentInspectorTarget()}
+            activeGroup={isRightDrawerOpen && !isChatActive && drawerTab === 'tool' && drawerSection === 'inspector' ? inspectorGroup : null}
+            // Every tab but Wee AI puts the chat away and shows its own settings in the panel.
+            onPickGroup={(g, shortcut) => {
+              setIsChatActive(false);
+              showInspector(g, shortcut);
+            }}
+            onAdd={() => {
+              if (isChatActive) {
+                setIsChatActive(false);
+                if (isRightDrawerOpen && drawerTab === 'tool' && drawerSection === 'elements') return;
+              }
+              handleSelectTool('elements');
+            }}
             isAddShown={isRightDrawerOpen && !isChatActive && drawerTab === 'tool' && (drawerSection === 'elements' || drawerSection === 'add-text' || drawerSection === 'add-image')}
             onStructure={() => {
+              if (isChatActive) {
+                setIsChatActive(false);
+                setTabRequest((r) => ({ tab: 'structure', n: r.n + 1 }));
+                setIsRightDrawerOpen(true);
+                return;
+              }
               if (isRightDrawerOpen && drawerTab === 'structure') {
                 setIsRightDrawerOpen(false);
                 return;

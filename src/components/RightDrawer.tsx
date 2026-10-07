@@ -1087,10 +1087,18 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     setFlashGroup(g);
     // The column keeps the picked group lit while the panel scrolls to it.
     spyPausedUntil.current = Date.now() + 900;
+    // A shortcut picked under the group: that part of the card (the font's two halves open their own).
+    const shortcut = inspectorFocus?.shortcut;
+    if (shortcut === 'font-family') setTextSubSection('family');
+    if (shortcut === 'font-size') setTextSubSection('size');
+    const part = shortcut && shortcut !== 'font-family' && shortcut !== 'font-size' ? shortcut : null;
     const scrollToCard = () => {
       const box = toolScrollRef.current;
       const card = box?.querySelector<HTMLElement>(`[data-inspector-group="${g}"]`);
-      if (box && card) box.scrollTo({ top: Math.max(0, card.offsetTop - 10), behavior: 'smooth' });
+      const target = (part && card?.querySelector<HTMLElement>(`[data-inspector-section="${part}"]`)) || card;
+      if (!box || !target) return;
+      const top = target.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+      box.scrollTo({ top: Math.max(0, top - 10), behavior: 'smooth' });
     };
     // Once now, and again when the card has finished opening and the page below it has grown.
     const scroll = setTimeout(scrollToCard, 90);
@@ -1344,7 +1352,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               {g.sections.filter((s) => s !== 'lighting').map((s) =>
                 // The outer shadow and the inner glow are one tool with a side to pick.
                 s === 'shadow' && g.sections.includes('lighting') ? (
-                  <div key="glow" className="space-y-3">
+                  <div key="glow" data-inspector-section="shadow" className="space-y-3">
                     <InspectorSubheading>الظل والتوهج</InspectorSubheading>
                     <div role="radiogroup" aria-label="جهة الظل" className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1 text-[12px] font-bold">
                       {([['out', 'خارجي'], ['in', 'داخلي']] as const).map(([side, label]) => (
@@ -1363,7 +1371,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     {renderSection(glowSide === 'out' ? 'shadow' : 'lighting')}
                   </div>
                 ) : (
-                  <div key={s} className="space-y-3">
+                  <div key={s} data-inspector-section={s} className="space-y-3">
                     {many && SUBHEADING[s] && <InspectorSubheading>{SUBHEADING[s]}</InspectorSubheading>}
                     {renderSection(s)}
                   </div>

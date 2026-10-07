@@ -1,6 +1,6 @@
 import type React from 'react';
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape } from '../../types';
-import type { InspectorGroupId } from './inspectorGroups';
+import type { InspectorGroupId, InspectorShortcutId } from './inspectorGroups';
 
 export type DrawerSection = 
   | 'elements' 
@@ -132,7 +132,7 @@ export interface RightDrawerProps {
   projectSettings?: React.ReactNode;
   // The docked panel's inspector: the group the column asked to show (counted, so asking again for
   // the same one scrolls to it again), and the group at the top of the panel as it scrolls.
-  inspectorFocus?: { group: InspectorGroupId | null; n: number };
+  inspectorFocus?: { group: InspectorGroupId | null; shortcut?: InspectorShortcutId; n: number };
   onInspectorGroupChange?: (group: InspectorGroupId | null) => void;
   onCopyFormat?: () => void;
   onToggleGroupContainer?: () => void;

@@ -1,10 +1,12 @@
 // The column beside the docked panel (wide screens). At its head four fixed buttons: add, the page's
 // structure, the restaurant/shop/showroom admin and Wee AI. Under them, the groups of settings of
 // what is selected, each with its name, which scroll the panel to that group. A soft highlight
-// slides to the group showing in the panel.
-import React, { useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, FolderTree, Layers, Move, PanelRightClose, PanelRightOpen, PanelTop, Palette, Plus, Search, Shapes, SlidersHorizontal, Sparkles, Store, Type, Zap } from 'lucide-react';
-import type { InspectorGroup, InspectorGroupId } from './rightDrawer/inspectorGroups';
+// slides to the group showing in the panel. The group last picked opens its parts under it (border,
+// opacity, shadow...) for a quicker way in; picking another group folds them away.
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ALargeSmall, Baseline, CaseSensitive, ChevronDown, ChevronUp, Droplet, FolderTree, Layers, Link, Move, PaintBucket, PanelRightClose, PanelRightOpen, PanelTop, Palette, Plus, Scaling, Search, Shapes, SlidersHorizontal, Sparkle, Sparkles, Square, Store, SunDim, Type, Zap } from 'lucide-react';
+import { groupShortcuts } from './rightDrawer/inspectorGroups';
+import type { InspectorGroup, InspectorGroupId, InspectorShortcutId, InspectorTarget } from './rightDrawer/inspectorGroups';
 import { WeeDots } from './ui/WeeDots';
 
 export const EDITOR_COLUMN_WIDTH = 76;
@@ -23,10 +25,28 @@ const groupIcon = (g: InspectorGroup) => {
   }
 };
 
+const shortcutIcon = (id: InspectorShortcutId) => {
+  switch (id) {
+    case 'font-family': return <CaseSensitive size={16} />;
+    case 'font-size': return <ALargeSmall size={16} />;
+    case 'color': return <Baseline size={16} />;
+    case 'background': return <PaintBucket size={16} />;
+    case 'border': return <Square size={16} />;
+    case 'opacity': return <Droplet size={16} />;
+    case 'shadow': return <SunDim size={16} />;
+    case 'format': return <Scaling size={16} />;
+    case 'layers': return <Layers size={16} />;
+    case 'link': return <Link size={16} />;
+    case 'animation': return <Sparkle size={16} />;
+    default: return <SlidersHorizontal size={16} />;
+  }
+};
+
 interface EditorColumnProps {
   groups: InspectorGroup[];
+  target: InspectorTarget;
   activeGroup: InspectorGroupId | null;
-  onPickGroup: (id: InspectorGroupId) => void;
+  onPickGroup: (id: InspectorGroupId, shortcut?: InspectorShortcutId) => void;
   onAdd: () => void;
   isAddShown: boolean;
   onStructure: () => void;
@@ -69,6 +89,7 @@ const Tile: React.FC<{
 
 export const EditorColumn: React.FC<EditorColumnProps> = ({
   groups,
+  target,
   activeGroup,
   onPickGroup,
   onAdd,
@@ -85,6 +106,16 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
   const [pill, setPill] = useState<{ start: number; size: number } | null>(null);
+  // The group whose parts are open under it.
+  const [expanded, setExpanded] = useState<InspectorGroupId | null>(null);
+  const groupKey = groups.map((g) => g.id + g.label).join('|');
+  useEffect(() => {
+    setExpanded(null);
+  }, [groupKey]);
+  // Showing something else in the panel (adding, the structure, Wee AI) folds them away too.
+  useEffect(() => {
+    if (!activeGroup) setExpanded(null);
+  }, [activeGroup]);
 
   // The highlight follows the group showing in the panel.
   useLayoutEffect(() => {
@@ -96,11 +127,13 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
       if (horizontal) listRef.current?.querySelector<HTMLElement>('[data-group]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       return;
     }
-    btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // Its own parts, when they are open, come into view with it.
+    const parts = expanded === activeGroup ? (btn.nextElementSibling as HTMLElement | null) : null;
+    // In the phone's bar they are centred, so the fixed buttons at its end don't cover them.
+    (parts || btn).scrollIntoView({ block: 'nearest', inline: horizontal && parts ? 'center' : 'nearest' });
     setPill(horizontal ? { start: btn.offsetLeft, size: btn.offsetWidth } : { start: btn.offsetTop, size: btn.offsetHeight });
-  }, [activeGroup, groups, horizontal]);
+  }, [activeGroup, groups, horizontal, expanded]);
 
-  const groupKey = groups.map((g) => g.id + g.label).join('|');
 
   return (
     <nav
@@ -148,12 +181,17 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
           )}
           {groups.map((g) => {
             const on = g.id === activeGroup;
+            const parts = expanded === g.id ? groupShortcuts(g, target) : [];
             return (
+              <React.Fragment key={g.id}>
               <button
-                key={g.id}
                 type="button"
                 data-group={g.id}
-                onClick={() => onPickGroup(g.id)}
+                aria-expanded={groupShortcuts(g, target).length ? expanded === g.id : undefined}
+                onClick={() => {
+                  setExpanded(expanded === g.id && on ? null : g.id);
+                  onPickGroup(g.id);
+                }}
                 title={g.title}
                 aria-pressed={on || undefined}
                 className={`group relative shrink-0 rounded-2xl flex flex-col items-center gap-1 font-semibold transition-colors cursor-pointer active:scale-95 ${
@@ -165,6 +203,31 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
                 </span>
                 <span className="leading-tight">{g.label}</span>
               </button>
+              {parts.length > 0 && (
+                <div
+                  role="group"
+                  aria-label={`أقسام ${g.title}`}
+                  className={`relative shrink-0 flex gap-0.5 rounded-2xl bg-[#0071e3]/[0.04] animate-[fade_0.2s_ease-out] ${
+                    horizontal ? 'flex-row-reverse items-center px-0.5 h-[54px]' : 'flex-col items-center py-1 w-14 mb-1'
+                  }`}
+                >
+                  {parts.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => onPickGroup(g.id, p.id)}
+                      title={p.label}
+                      className={`group shrink-0 rounded-xl flex flex-col items-center gap-0.5 text-neutral-500 hover:text-[#0071e3] hover:bg-white transition-colors cursor-pointer active:scale-95 ${
+                        horizontal ? 'w-[50px] py-0.5 text-[8.5px]' : 'w-[52px] py-1 text-[9px]'
+                      } font-semibold`}
+                    >
+                      <span className="w-6 h-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">{shortcutIcon(p.id)}</span>
+                      <span className="leading-tight truncate max-w-full">{p.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              </React.Fragment>
             );
           })}
         </div>

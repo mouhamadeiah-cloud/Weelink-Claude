@@ -5320,7 +5320,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     navbar={navbar}
                     onUpdateNavbar={onUpdateNavbar}
                     pages={pages}
-                    onAddElement={onAddElement}
                     linkCopySourceId={linkCopySourceId}
                     onStartLinkCopy={onStartLinkCopy}
                   />

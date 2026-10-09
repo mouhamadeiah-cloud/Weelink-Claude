@@ -304,12 +304,20 @@ export interface NavbarConfig {
   bgColor: string;
   textColor: string;
   isSticky: boolean;
-  // How the navbar is laid out: a strip across the top (default), a column on the side, a strip with
-  // the page names behind a hamburger icon on every device, or no navbar at all (its parts can then
-  // be placed on the slides as ordinary linked elements, see utils/navbarParts).
-  layout?: 'horizontal' | 'vertical' | 'hamburger' | 'none';
-  // 'vertical' layout: width of the side column in px (default 200).
+  // How the navbar is laid out (set by dragging it on the canvas or in its settings): a strip, a
+  // column on one side of the page, or a lone hamburger icon. Unset = strip.
+  layout?: 'horizontal' | 'vertical' | 'hamburger';
+  // Column / hamburger icon: which side of the page it sits on (default right).
+  side?: 'left' | 'right';
+  // Where on the screen it stays while the page scrolls: 0 = top, 100 = bottom. A strip at 0 is
+  // docked above the slides (and pushes them down); anywhere else it floats over them.
+  posY?: number;
+  // Column size in px: width (default 200) and height (default the visible part of the page).
   sideWidth?: number;
+  sideHeight?: number;
+  // Navbar entries shown as an icon, or an icon and their name, instead of their name only. Keyed
+  // like the parts in utils/navbarParts ('brand', 'cta', 'page-<id>', 'item-<id>').
+  partIcons?: Record<string, { icon: string; mode: 'icon' | 'icon-text' }>;
   // On phones, collapse the page names into a dropdown opened by a hamburger icon (set by "تنسيق الموبايل").
   mobileMenu?: boolean;
   // Navbar strip height/length in px (default 60 when unset)

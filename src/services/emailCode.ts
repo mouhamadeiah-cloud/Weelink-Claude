@@ -3,7 +3,7 @@
 // left as they are.
 import { User } from 'firebase/auth';
 
-const VERIFY_SINCE = Date.parse('2026-10-10T00:00:00Z');
+const VERIFY_SINCE = Date.parse('2026-10-09T00:00:00Z');
 
 export const needsEmailCode = (user: User, accountId: string) =>
   !user.emailVerified &&

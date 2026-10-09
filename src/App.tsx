@@ -1,11 +1,13 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import type { NavbarPart } from './utils/navbarParts';
 import { 
   Page, 
   Slide, 
   CanvasElement, 
   DevicePreviewMode, 
   ElementType,
-  SlideDividerShape
+  SlideDividerShape,
+  NavbarConfig,
 } from './types';
 import { ControlBar } from './components/ControlBar';
 import { EditBar, SelectionNameInput, selectionName } from './components/EditBar';
@@ -1087,6 +1089,8 @@ export default function App() {
   const [activeTableCell, setActiveTableCell] = useState<{ elementId: string; row: number; col: number } | null>(null);
   // Navbar selection (clicking the navbar in the canvas, like selecting a slide, opens navbar-specific editing)
   const [isNavbarSelected, setIsNavbarSelected] = useState<boolean>(false);
+  // A navbar part whose link is waiting to be copied onto the next element the user clicks.
+  const [linkCopySource, setLinkCopySource] = useState<NavbarPart | null>(null);
 
   // History stack for Undo / Redo
   const [history, setHistory] = useState<CanvasElement[][]>([elements]);
@@ -2233,6 +2237,11 @@ export default function App() {
   };
 
   // Add Element from Drawer
+  // The navbar is one shared header across the whole site: apply to every page, not just the current one
+  const handleUpdateNavbar = (updates: Partial<NavbarConfig>) => {
+    setPages(prev => prev.map(p => ({ ...p, navbar: { ...p.navbar, ...updates } })));
+  };
+
   const handleAddElement = (
     type: ElementType, 
     customContent?: string, 
@@ -3238,6 +3247,15 @@ export default function App() {
           onDuplicateElement={handleDuplicateElement}
           onUpdateElement={handleUpdateElementById}
           onAddElement={handleAddElement}
+          onUpdateNavbar={handleUpdateNavbar}
+          linkCopySource={isPreviewActive ? null : linkCopySource}
+          onApplyLinkCopy={(id) => {
+            if (!linkCopySource?.link) return;
+            const { linkType, linkTargetId, linkUrl } = linkCopySource.link;
+            handleUpdateElementById(id, { linkType, linkTargetId, linkUrl, contactType: undefined, contactValue: undefined });
+            setLinkCopySource(null);
+          }}
+          onCancelLinkCopy={() => setLinkCopySource(null)}
           onUpdateSlideHeight={handleUpdateSlideHeight}
           activeTableCell={activeTableCell}
           onSelectTableCell={setActiveTableCell}
@@ -3359,11 +3377,10 @@ export default function App() {
           handleAddElement(type, customContent, customStyles, extraData);
         }}
         onAddGroup={handleAddGroup}
+        linkCopySourceId={linkCopySource?.id}
+        onStartLinkCopy={setLinkCopySource}
         navbar={currentPage.navbar}
-        onUpdateNavbar={(updates) => {
-          // The navbar is one shared header across the whole site: apply to every page, not just the current one
-          setPages(pages.map(p => ({ ...p, navbar: { ...p.navbar, ...updates } })));
-        }}
+        onUpdateNavbar={handleUpdateNavbar}
         selectedElement={selectedElement}
         elements={elements}
         onSelectElement={handleSelectElement}

@@ -446,6 +446,12 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
               <div key={m.method} className="flex justify-between p-3 rounded-2xl bg-neutral-50 text-sm font-black"><span>{m.method}</span><span>{money(m.amount)}</span></div>
             ))}
             <div className="flex justify-between p-3 rounded-2xl bg-[#1d1d1f] text-white text-base font-black"><span>المجموع ({myPayments.length} دفعة)</span><span>{money(methods.reduce((s, m) => s + m.amount, 0))}</span></div>
+            {shiftTipsNow > 0 && (
+              <>
+                <div className="flex justify-between p-3 rounded-2xl bg-neutral-50 text-sm font-black"><span>منها ثمن الطلبات</span><span>{money(Math.max(0, methods.reduce((s, m) => s + m.amount, 0) - shiftTipsNow))}</span></div>
+                <div className="flex justify-between p-3 rounded-2xl bg-[#FFF4E6] text-[#A34A00] text-sm font-black"><span>منها بخشيش</span><span>{money(shiftTipsNow)}</span></div>
+              </>
+            )}
             {openingInTill > 0 && <div className="flex justify-between p-3 rounded-2xl bg-[#EBFBEE] text-[#2B8A3E] text-sm font-black"><span>النقد المتوقع في الصندوق</span><span>{money(cashExpected)}</span></div>}
           </div>
           {myOpen.length > 0 && <div className="p-3 rounded-2xl bg-[#FFF4E6] text-[#A34A00] text-xs font-bold">لديك {myOpen.length} طاولة مفتوحة: {myOpen.map((t) => tabTitle(t)).join('، ')}</div>}

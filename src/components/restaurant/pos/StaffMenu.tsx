@@ -3,6 +3,8 @@
 // the waiter asks, the cashier counts what he receives and the tips and gets a random four-digit code,
 // and the waiter types it on his tablet. That code is the signature of both devices.
 import React, { useMemo, useState } from 'react';
+import { doc, getDocFromServer, runTransaction, setDoc } from 'firebase/firestore';
+import { db } from '../../../services/firebase';
 import { ChevronLeft, FileBarChart, HandCoins, KeyRound, ListChecks, LogOut, Printer, Settings, ShieldCheck, Wallet } from 'lucide-react';
 import type { RestaurantSettings } from '../restaurantTypes';
 import { Handover, Shift, Tab, Worker, tabTitle, tabTotals, tipTotal } from '../staffTypes';
@@ -249,11 +251,71 @@ export const CashierHandoverDialog: React.FC<{ uid: string; worker: Worker; sinc
   );
 };
 
-export const SettingsDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => (
-  <Modal title="إعدادات الجهاز" onClose={onClose}>
-    <div className="p-4 rounded-2xl bg-neutral-50 text-sm font-bold text-neutral-600 leading-relaxed">إعدادات الجهاز والربط بالطابعات تُضاف في خطوة لاحقة.</div>
-  </Modal>
-);
+// Times a trip to the database: a small read and a small write (what every tap on a bill costs).
+const median = (a: number[]) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
+const verdict = (ms: number) => (ms < 150 ? ['سريع', '#2F9E44'] : ms < 400 ? ['مقبول', '#E8590C'] : ['بطيء', '#E03131']);
+
+export const SettingsDialog: React.FC<{ uid: string; deviceId: string; onClose: () => void }> = ({ uid, deviceId, onClose }) => {
+  const [running, setRunning] = useState(false);
+  const [res, setRes] = useState<{ read: number; write: number; tx: number } | null>(null);
+  const [err, setErr] = useState('');
+  const test = async () => {
+    setRunning(true);
+    setErr('');
+    setRes(null);
+    try {
+      const probe = doc(db, 'restaurants', uid, 'log', `speed_${deviceId.replace(/[^a-zA-Z0-9_-]/g, '')}`);
+      const reads: number[] = [];
+      const writes: number[] = [];
+      const txs: number[] = [];
+      for (let i = 0; i < 3; i++) {
+        let t = performance.now();
+        await getDocFromServer(doc(db, 'restaurants', uid)).catch(() => null);
+        reads.push(performance.now() - t);
+        t = performance.now();
+        await setDoc(probe, { action: 'فحص السرعة', at: new Date().toISOString(), n: i });
+        writes.push(performance.now() - t);
+        t = performance.now();
+        await runTransaction(db, async (tx) => {
+          await tx.get(probe);
+          tx.update(probe, { n: i + 10 });
+        });
+        txs.push(performance.now() - t);
+      }
+      setRes({ read: Math.round(median(reads)), write: Math.round(median(writes)), tx: Math.round(median(txs)) });
+    } catch (e) {
+      setErr(failText(e));
+    }
+    setRunning(false);
+  };
+  const row = (label: string, ms: number) => {
+    const [word, color] = verdict(ms);
+    return (
+      <div key={label} className="flex justify-between p-3 rounded-2xl bg-neutral-50 text-sm font-black">
+        <span>{label}</span>
+        <span style={{ color }}>{ms} مللي ثانية · {word}</span>
+      </div>
+    );
+  };
+  return (
+    <Modal title="إعدادات الجهاز" onClose={onClose}>
+      <div className="p-4 rounded-2xl bg-neutral-50 text-sm font-bold text-neutral-600 leading-relaxed">إعدادات الجهاز والربط بالطابعات تُضاف في خطوة لاحقة.</div>
+      <div className="space-y-2">
+        <div className="text-sm font-black">سرعة الاتصال بقاعدة البيانات</div>
+        <div className="text-xs font-bold text-neutral-500 leading-relaxed">يقيس كم يستغرق وصول الجهاز إلى فايربيس. إن كانت الأرقام فوق ٤٠٠ مللي ثانية فالبطء من الإنترنت أو بُعد الخادم، لا من البرنامج.</div>
+        {res && (
+          <div className="space-y-1.5">
+            {row('قراءة', res.read)}
+            {row('كتابة', res.write)}
+            {row('عملية دفع أو تعديل (قراءة وكتابة)', res.tx)}
+          </div>
+        )}
+        {err && <div className="p-3 rounded-2xl bg-[#FFF0F0] text-[#E03131] text-xs font-bold">{err}</div>}
+        <BigButton tone="dark" className="w-full" disabled={running} onClick={test}>{running ? 'جاري القياس…' : 'فحص السرعة'}</BigButton>
+      </div>
+    </Modal>
+  );
+};
 
 
 // ---------- The main cashier's session ----------

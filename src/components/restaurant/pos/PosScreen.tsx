@@ -238,7 +238,9 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
   const allTabs = [...openTabs.items, ...closedTabs.items];
   const myPayments = myShift ? allTabs.flatMap((t) => t.payments).filter((p) => p.shiftId === myShift.id) : [];
   const methods = byMethod(myPayments);
-  const cashExpected = methods.find((m) => m.method === CASH)?.amount || 0;
+  // The amount the main cashier opened the session with is in this worker's till.
+  const openingInTill = cashierWorker && cashDay && cashDay.openedBy === worker.name ? cashDay.openingAmount : 0;
+  const cashExpected = Math.round(((methods.find((m) => m.method === CASH)?.amount || 0) + openingInTill) * 100) / 100;
   const myOpen = openTabs.items.filter((t) => t.ownerId === worker.id);
 
   const doCloseShift = async () => {
@@ -438,11 +440,13 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
         <Modal title={`صندوق ${worker.name}`} onClose={() => setDialog('')} footer={<BigButton tone="dark" className="w-full" disabled={busy || !myShift} onClick={doCloseShift}>إغلاق الصندوق وتسليمه</BigButton>}>
           <div className="text-xs font-bold text-neutral-500">{myShift ? `مفتوح منذ ${new Date(myShift.openedAt).toLocaleTimeString('ar-SY-u-nu-latn', { hour: '2-digit', minute: '2-digit' })} على ${myShift.deviceName}` : 'جاري فتح الصندوق…'}</div>
           <div className="space-y-1.5">
+            {openingInTill > 0 && <div className="flex justify-between p-3 rounded-2xl bg-neutral-50 text-sm font-black"><span>مبلغ الافتتاح</span><span>{money(openingInTill)}</span></div>}
             {methods.length === 0 && <div className="text-sm font-bold text-neutral-400">لا توجد تحصيلات بعد.</div>}
             {methods.map((m) => (
               <div key={m.method} className="flex justify-between p-3 rounded-2xl bg-neutral-50 text-sm font-black"><span>{m.method}</span><span>{money(m.amount)}</span></div>
             ))}
             <div className="flex justify-between p-3 rounded-2xl bg-[#1d1d1f] text-white text-base font-black"><span>المجموع ({myPayments.length} دفعة)</span><span>{money(methods.reduce((s, m) => s + m.amount, 0))}</span></div>
+            {openingInTill > 0 && <div className="flex justify-between p-3 rounded-2xl bg-[#EBFBEE] text-[#2B8A3E] text-sm font-black"><span>النقد المتوقع في الصندوق</span><span>{money(cashExpected)}</span></div>}
           </div>
           {myOpen.length > 0 && <div className="p-3 rounded-2xl bg-[#FFF4E6] text-[#A34A00] text-xs font-bold">لديك {myOpen.length} طاولة مفتوحة: {myOpen.map((t) => tabTitle(t)).join('، ')}</div>}
           <label className="block space-y-1">

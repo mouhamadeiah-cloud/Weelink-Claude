@@ -1156,7 +1156,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     const join = (...parts: (string | false | undefined | null)[]) => parts.filter(Boolean).join(' · ');
     switch (id) {
       case 'content':
-        if (isNavbarSelected) return join(navbar?.brandName, navbar?.isSticky === false ? 'متحرك مع الصفحة' : 'ثابت بالأعلى');
+        if (isNavbarSelected) return join(navbar?.brandName, navbar?.isSticky === false ? 'يتحرك مع الصفحة' : 'مثبّت على الشاشة');
         if (selectedElement?.type === 'image') return selectedElement.clipPath ? 'مقصوصة بشكل' : 'صورة كاملة';
         if (selectedElement?.type === 'gallery') return `${selectedElement.galleryConfig?.items.length || 0} صور`;
         if (selectedElement) return elementDisplayName(selectedElement);
@@ -5328,10 +5328,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     <SectionHeader title="سلوك النافبار عند التمرير" />
                     <PillTabs
                       options={[
-                        { value: 'sticky', label: 'ثابت عائم في الرأس' },
-                        { value: 'scroll', label: 'متحرك مع الصفحة' },
+                        { value: 'sticky', label: 'مثبّت على الشاشة' },
+                        { value: 'scroll', label: 'يتحرك مع الصفحة' },
                       ]}
-                      value={navbar.isSticky ? 'sticky' : 'scroll'}
+                      value={navbar.isSticky !== false ? 'sticky' : 'scroll'}
                       onChange={(v) => onUpdateNavbar({ isSticky: v === 'sticky' })}
                       className="w-full"
                     />

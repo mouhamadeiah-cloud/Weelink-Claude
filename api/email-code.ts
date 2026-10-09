@@ -33,7 +33,15 @@ const json = (body: unknown, status = 200) =>
 const firebaseAdmin = () => {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) return null;
-  const app = getApps()[0] || initializeApp({ credential: cert(JSON.parse(raw)), projectId: firebaseConfig.projectId });
+  let account: object;
+  try {
+    account = JSON.parse(raw);
+  } catch {
+    // A half-pasted key must not lock new owners out of signing up.
+    console.error('FIREBASE_SERVICE_ACCOUNT is not valid JSON; paste the whole service-account file.');
+    return null;
+  }
+  const app = getApps()[0] || initializeApp({ credential: cert(account), projectId: firebaseConfig.projectId });
   const databaseId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
   return { auth: getAuth(app), db: databaseId ? getFirestore(app, databaseId) : getFirestore(app) };
 };

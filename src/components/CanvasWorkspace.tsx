@@ -27,7 +27,7 @@ import { MenuCartView } from './restaurant/store/MenuCartView';
 import { useMenuCart, menuCartCount } from './restaurant/menuCartStore';
 import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
-import type { NavbarPart } from '../utils/navbarParts';
+import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
 import { 
   Trash2, 
   Copy, 
@@ -783,18 +783,16 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // saves them when the pointer is released.
   const [navDrag, setNavDrag] = useState<Partial<NavbarConfig> | null>(null);
   const navbar: NavbarConfig = navDrag ? { ...navbarProp, ...navDrag } : navbarProp;
-  // Navbar layout: a strip (docked at the top, or floating at a height the user dragged it to), a
-  // column on the left or right side, or a lone hamburger icon. A column has no room on a phone, so
-  // there it becomes the hamburger icon. A docked strip also shows a hamburger on phones when set by
-  // "تنسيق الموبايل".
+  // Navbar layout (chosen in its settings): a strip, a column, or a lone hamburger icon. Each can be
+  // dragged anywhere on the page (navbar.posX / posY). A column has no room on a phone, so there it
+  // becomes the hamburger icon. A strip also shows a hamburger on phones when set by "تنسيق الموبايل".
   const navLayout = navbar.layout === 'vertical' && previewMode === 'mobile' ? 'hamburger' : navbar.layout === 'vertical' || navbar.layout === 'hamburger' ? navbar.layout : 'horizontal';
   const isNavVertical = navLayout === 'vertical';
   const isNavIconOnly = navLayout === 'hamburger';
-  const isNavFloatingStrip = navLayout === 'horizontal' && (navbar.posY ?? 0) > 0;
   const isNavHamburger = navLayout === 'horizontal' && previewMode === 'mobile' && !!navbar.mobileMenu;
-  const navSide = navbar.side === 'left' ? 'left' : 'right';
-  // Height the navbar takes above the slides (only a strip docked at the top takes any).
-  const navFlowHeight = navLayout === 'horizontal' && !isNavFloatingStrip ? (navbar.height ?? 60) : 0;
+  // Height the navbar takes above the slides: only a strip at the top of the screen (posY 0) pushes
+  // them down; anywhere else, and as a column or icon, it floats over them.
+  const navFlowHeight = navLayout === 'horizontal' && !navbar.posY ? (navbar.height ?? 60) : 0;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   useEffect(() => {
     if (!isNavHamburger && !isNavIconOnly) setIsNavMenuOpen(false);
@@ -2028,7 +2026,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     linkType: 'page' as const,
     linkTargetId: p.id,
   }));
-  const navCustomItems = (navbar.items || []).filter((it) => it.linkType !== 'page');
+  const navCustomItems = (navbar.items || []).filter(isUserNavItem);
   // The cart page's navbar link shows how many items the visitor has in the cart.
   const cartItems = useCart();
   const menuCartLines = useMenuCart();
@@ -2091,91 +2089,103 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // Side column: as tall as the user made it, by default the visible part of the page (never taller
   // than the page itself).
   const navSideHeight = Math.max(120, navbar.sideHeight ?? Math.min(visibleScreenHeight / scaleFactor, slidesUnscaledHeight));
-  // A floating strip, a column or the hamburger icon stays at the same place on the screen while
-  // the page scrolls: navbar.posY 0 = top of the screen, 100 = bottom.
-  const navBoxScreenHeight = isNavIconOnly ? 44 : (isNavVertical ? navSideHeight : (navbar.height ?? 60)) * scaleFactor;
+  // The navbar stays at the same place on the screen while the page scrolls: navbar.posY 0 = top of
+  // the screen, 100 = bottom. Across, navbar.posX is its left edge in % of the page width.
+  const navIconScreenSize = 44;
+  const navBoxScreenHeight = isNavIconOnly ? navIconScreenSize : (isNavVertical ? navSideHeight : (navbar.height ?? 60)) * scaleFactor;
   const navFloatTop = notchHeightUnscaled + Math.max(0, visibleScreenHeight - navBoxScreenHeight) * ((navbar.posY ?? 0) / 100);
-  const wrapNav = (nav: React.ReactNode) =>
-    isNavVertical || isNavFloatingStrip || isNavIconOnly ? (
-      // Zero-height holder: the navbar floats over the slides instead of pushing them down.
+  // Width of the navbar box in % of the page width, and its left edge (by default a strip is
+  // centered and a column or icon sits at the right edge).
+  const navBoxWidthPct = isNavIconOnly
+    ? (navIconScreenSize / Math.max(1, frameWidth * scaleFactor)) * 100
+    : isNavVertical ? ((navbar.sideWidth ?? 200) / frameWidth) * 100 : (navbar.width ?? 100);
+  const navLeftPct = Math.min(Math.max(0, 100 - navBoxWidthPct), Math.max(0, navbar.posX ?? (isNavVertical || isNavIconOnly ? 100 - navBoxWidthPct : (100 - navBoxWidthPct) / 2)));
+  // Zero-height holder: the navbar box sits in it at its position and floats over the slides; a strip
+  // at the top of the screen is followed by a spacer as tall as itself, so the slides start below it.
+  const wrapNav = (nav: React.ReactNode) => (
+    <>
       <div
         className="shrink-0 self-stretch"
-        style={{ position: 'sticky', top: `${navFloatTop}px`, height: 0, zIndex: 100000 }}
+        style={{
+          position: navFlowHeight && !navbar.isSticky ? 'relative' : 'sticky',
+          top: `${navFloatTop}px`,
+          height: 0,
+          zIndex: 100000,
+        }}
       >
         {nav}
       </div>
-    ) : nav;
+      {navFlowHeight > 0 && <div className="shrink-0" style={{ height: `${navFlowHeight}px` }} aria-hidden />}
+    </>
+  );
 
-  // Moving the navbar by dragging it on the canvas: near the left or right edge it becomes a column
-  // on that side, anywhere else a strip (docked at the top when dropped near it). The hamburger icon
-  // just moves. While dragging, `navGuide` draws the drop zones.
+  // Moving the navbar by dragging it anywhere on the page, and resizing it from any edge.
   const scalingWrapperRef = useRef<HTMLDivElement>(null);
   const navDraggedRef = useRef(false);
-  const [navGuide, setNavGuide] = useState<{ left: number; top: number; width: number; height: number; zone: 'left' | 'right' | 'top' | 'free' } | null>(null);
   const canEditNavbar = !isPreviewActive && !isPublicSite && !!onUpdateNavbar;
   const startNavMove = (e: React.PointerEvent) => {
     if (!canEditNavbar || e.button !== 0) return;
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const wr = scalingWrapperRef.current?.getBoundingClientRect();
+    const ws = workspaceRef.current?.getBoundingClientRect();
+    if (!wr || !ws) return;
     const start = { x: e.clientX, y: e.clientY };
+    const visibleTop = ws.top + workspacePad / 2 + notchHeightUnscaled;
     let latest: Partial<NavbarConfig> | null = null;
     navDraggedRef.current = false;
     const onMove = (ev: PointerEvent) => {
-      if (!latest && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 6) return;
-      const ws = workspaceRef.current?.getBoundingClientRect();
-      const wr = scalingWrapperRef.current?.getBoundingClientRect();
-      if (!ws || !wr) return;
-      const left = Math.max(ws.left, wr.left);
-      const width = Math.min(ws.right, wr.right) - left;
-      const top = ws.top + workspacePad / 2;
-      const height = ws.height - workspacePad;
-      const relX = Math.min(1, Math.max(0, (ev.clientX - left) / width));
-      const relY = Math.min(1, Math.max(0, (ev.clientY - top) / height));
-      const posY = Math.round(relY * 100);
-      let zone: 'left' | 'right' | 'top' | 'free';
-      if (navbarProp.layout === 'hamburger') {
-        zone = relX < 0.5 ? 'left' : 'right';
-        latest = { side: zone, posY };
-      } else if (previewMode !== 'mobile' && (relX < 0.12 || relX > 0.88)) {
-        zone = relX < 0.5 ? 'left' : 'right';
-        latest = { layout: 'vertical', side: zone, posY };
-      } else {
-        zone = relY < 0.06 ? 'top' : 'free';
-        latest = { layout: 'horizontal', posY: zone === 'top' ? 0 : posY };
-      }
+      const dx = ev.clientX - start.x;
+      const dy = ev.clientY - start.y;
+      if (!latest && Math.hypot(dx, dy) < 6) return;
+      const maxLeft = Math.max(1, wr.width - box.width);
+      const maxTop = Math.max(1, visibleScreenHeight - box.height);
+      const left = Math.min(maxLeft, Math.max(0, box.left - wr.left + dx));
+      const top = Math.min(maxTop, Math.max(0, box.top - visibleTop + dy));
+      // A strip brought up to the top of the screen docks there (and pushes the slides down).
+      const posY = navLayout === 'horizontal' && top < 8 ? 0 : Math.round((top / maxTop) * 1000) / 10;
+      latest = { posX: Math.round((left / wr.width) * 1000) / 10, posY };
       navDraggedRef.current = true;
       setNavDrag(latest);
-      setNavGuide({ left, top, width, height, zone });
     };
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       if (latest) onUpdateNavbar?.(latest);
       setNavDrag(null);
-      setNavGuide(null);
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
   };
-  // Resizing the navbar box by its handles: 'h' changes its height, 'w' its width (dir = which way
-  // the handle grows it on screen: -1 toward the left, 1 toward the right).
-  const startNavResize = (e: React.PointerEvent, kind: 'h' | 'w', dir: -1 | 1 = 1) => {
+  // Resizing by a handle: 'left' / 'right' move only that edge (the other one stays put), 'bottom'
+  // changes the height.
+  const startNavResize = (e: React.PointerEvent, edge: 'left' | 'right' | 'bottom') => {
     if (!canEditNavbar) return;
     e.stopPropagation();
     e.preventDefault();
     const start = { x: e.clientX, y: e.clientY };
-    const base = { height: navbar.height ?? 60, width: navbar.width ?? 100, sideWidth: navbar.sideWidth ?? 200, sideHeight: navSideHeight };
+    const base = { height: navbar.height ?? 60, width: navBoxWidthPct, left: navLeftPct, sideWidth: navbar.sideWidth ?? 200, sideHeight: navSideHeight };
+    const minPct = isNavVertical ? (100 / frameWidth) * 100 : 20;
     let latest: Partial<NavbarConfig> | null = null;
     const onMove = (ev: PointerEvent) => {
-      const dx = ((ev.clientX - start.x) / scaleFactor) * dir;
       const dy = (ev.clientY - start.y) / scaleFactor;
-      if (isNavVertical) {
-        latest = kind === 'w'
-          ? { sideWidth: Math.round(Math.min(480, Math.max(100, base.sideWidth + dx))) }
-          : { sideHeight: Math.round(Math.min(Math.max(slidesUnscaledHeight, 120), Math.max(120, base.sideHeight + dy))) };
-      } else {
-        latest = kind === 'w'
-          // The strip stays centered, so one edge moved widens it on both sides.
-          ? { width: Math.round(Math.min(100, Math.max(30, base.width + ((dx * 2) / frameWidth) * 100))) }
+      if (edge === 'bottom') {
+        latest = isNavVertical
+          ? { sideHeight: Math.round(Math.min(Math.max(slidesUnscaledHeight, 120), Math.max(120, base.sideHeight + dy))) }
           : { height: Math.round(Math.min(200, Math.max(40, base.height + dy))) };
+      } else {
+        const dPct = ((ev.clientX - start.x) / scaleFactor / frameWidth) * 100;
+        let left = base.left;
+        let width = base.width;
+        if (edge === 'left') {
+          left = Math.min(base.left + base.width - minPct, Math.max(0, base.left + dPct));
+          width = base.left + base.width - left;
+        } else {
+          width = Math.min(100 - base.left, Math.max(minPct, base.width + dPct));
+        }
+        const posX = Math.round(left * 10) / 10;
+        latest = isNavVertical
+          ? { posX, sideWidth: Math.round((width / 100) * frameWidth) }
+          : { posX, width: Math.round(width * 10) / 10 };
       }
       setNavDrag(latest);
     };
@@ -2202,6 +2212,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       </span>
     );
   };
+  const isExternalNavHref = (href?: string) => !!href && /^(https?:|mailto:|tel:)/i.test(href);
   const navItemPartId = (item: { id: string; linkType?: string; linkTargetId?: string }) =>
     item.linkType === 'page' && item.id.startsWith('page-link-') ? `page-${item.linkTargetId}` : `item-${item.id}`;
 
@@ -2217,22 +2228,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   return (
     <>
-    {navGuide && (
-      // Where the navbar lands while it is being dragged: a column at the left or right edge, a strip
-      // docked at the top, or a strip floating at the pointer's height.
-      <div className="fixed z-[999998] pointer-events-none" style={{ left: navGuide.left, top: navGuide.top, width: navGuide.width, height: navGuide.height }}>
-        {navbarProp.layout !== 'hamburger' && previewMode !== 'mobile' && (['left', 'right'] as const).map((z) => (
-          <div
-            key={z}
-            className={`absolute top-0 bottom-0 w-[12%] border-2 border-dashed rounded-xl transition-colors ${navGuide.zone === z ? 'border-[#0071e3] bg-[#0071e3]/15' : 'border-[#0071e3]/30 bg-[#0071e3]/[0.04]'}`}
-            style={{ [z]: 0 }}
-          />
-        ))}
-        {navbarProp.layout !== 'hamburger' && (
-          <div className={`absolute top-0 left-[12%] right-[12%] h-[6%] border-2 border-dashed rounded-xl transition-colors ${navGuide.zone === 'top' ? 'border-[#0071e3] bg-[#0071e3]/15' : 'border-[#0071e3]/30 bg-[#0071e3]/[0.04]'}`} />
-        )}
-      </div>
-    )}
     {linkCopySource && (
       <div dir="rtl" className="fixed top-20 left-1/2 -translate-x-1/2 z-[999999] flex items-center gap-3 bg-[#1d1d1f] text-white text-xs font-semibold ps-4 pe-1.5 py-1.5 rounded-full shadow-lg">
         <span>انقر على نص أو أيقونة أو صورة لتعمل مثل «{linkCopySource.label}»</span>
@@ -2316,7 +2311,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
         {/* 1. Navbar: a lone hamburger icon (no box), floating where the user dragged it. */}
         {isNavIconOnly && wrapNav(
-          <div className="absolute top-0" style={{ [navSide]: '12px' }} dir="rtl">
+          <div className="absolute top-0" style={{ left: `${navLeftPct}%` }} dir="rtl">
             <button
               type="button"
               onPointerDown={startNavMove}
@@ -2344,7 +2339,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             {isNavMenuOpen && (
               <div
                 className="absolute top-full mt-1 w-60 flex flex-col py-2 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.18)] border border-black/[0.06]"
-                style={{ [navSide]: 0, backgroundColor: navbar.bgColor?.includes('gradient') ? undefined : (navbar.bgColor || '#ffffff'), backgroundImage: navbar.bgColor?.includes('gradient') ? navbar.bgColor : undefined, color: navbar.textColor }}
+                style={{ [navLeftPct > 50 ? 'right' : 'left']: 0, backgroundColor: navbar.bgColor?.includes('gradient') ? undefined : (navbar.bgColor || '#ffffff'), backgroundImage: navbar.bgColor?.includes('gradient') ? navbar.bgColor : undefined, color: navbar.textColor }}
                 onClick={(e) => e.stopPropagation()}
               >
                 {navbar.showBrandName !== false && navbar.brandName && (
@@ -2359,6 +2354,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       title={item.label}
                       onClick={() => {
                         if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                        else if (isPreviewActive && isExternalNavHref(item.href)) window.open(item.href, '_blank', 'noopener,noreferrer');
                         setIsNavMenuOpen(false);
                       }}
                       className={`px-5 py-2.5 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
@@ -2398,20 +2394,17 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             onSelectNavbar?.();
           }}
           className={`shrink-0 w-full ${isNavHamburger ? 'overflow-visible' : 'overflow-hidden'} ${
-            navbar.borderStyle && navbar.borderStyle !== 'none' ? '' : (isNavVertical ? (navSide === 'right' ? 'border-l border-black/[0.06]' : 'border-r border-black/[0.06]') : 'border-b border-black/[0.06]')
+            navbar.borderStyle && navbar.borderStyle !== 'none' ? '' : (isNavVertical ? 'border-x border-black/[0.06]' : 'border-b border-black/[0.06]')
           } ${isNavbarSelected && !isPreviewActive ? 'ring-2 ring-[#0071e3]/50' : ''} ${isPreviewActive ? '' : (canEditNavbar ? 'cursor-grab' : 'cursor-pointer')}`}
           style={{
-            // A column or a floating strip sits in its zero-height holder (see wrapNav): the column
-            // pinned to the page's left or right edge, the strip centered.
-            position: isNavVertical || isNavFloatingStrip ? 'absolute' : (navbar.isSticky ? 'sticky' : 'relative'),
-            // Unscaled on purpose — see notchHeightUnscaled's comment above.
-            top: isNavVertical || isNavFloatingStrip ? 0 : `${notchHeightUnscaled}px`,
-            left: isNavFloatingStrip ? '50%' : (isNavVertical && navSide === 'left' ? 0 : undefined),
-            right: isNavVertical && navSide === 'right' ? 0 : undefined,
+            // The box sits in its zero-height holder (see wrapNav) at its position on the page.
+            position: 'absolute',
+            top: 0,
+            left: `${navLeftPct}%`,
             width: isNavVertical ? `${navbar.sideWidth ?? 200}px` : `${navWidthPx}px`,
             height: isNavVertical ? `${navSideHeight}px` : undefined,
-            transformOrigin: isNavVertical ? `top ${navSide}` : 'top center',
-            transform: isNavFloatingStrip ? `translateX(-50%) scale(${scaleFactor})` : `scale(${scaleFactor})`,
+            transformOrigin: 'top left',
+            transform: `scale(${scaleFactor})`,
             touchAction: canEditNavbar ? 'none' : undefined,
             // Z-index kept far above any slide element's (which can reach ~50+) so nothing ever floats over the navbar.
             zIndex: 100000,
@@ -2421,7 +2414,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             // here to avoid any CSS-animated lag behind the scroll.
             transition: 'background-color 150ms, border-color 150ms, box-shadow 150ms',
             // Only at 100% or below: a layer promoted while scaled up is painted blurry.
-            willChange: navbar.isSticky && !isNavVertical && !isNavFloatingStrip && scaleFactor <= 1 ? 'transform' : undefined,
+            willChange: navbar.isSticky && scaleFactor <= 1 ? 'transform' : undefined,
             borderStyle: navbar.borderStyle && navbar.borderStyle !== 'none' ? navbar.borderStyle : undefined,
             borderWidth: navbar.borderStyle && navbar.borderStyle !== 'none' ? `${navbar.borderWidth ?? 0}px` : undefined,
             borderColor: navbar.borderStyle && navbar.borderStyle !== 'none' ? (navbar.borderColor || 'transparent') : undefined,
@@ -2533,6 +2526,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       if (isPageLink) {
                         e.stopPropagation();
                         onSelectPage?.(item.linkTargetId as string);
+                      } else if (isPreviewActive && isExternalNavHref(item.href)) {
+                        window.open(item.href, '_blank', 'noopener,noreferrer');
                       }
                     }}
                     className={`${hasFrame ? 'px-2.5 py-1' : (isNavVertical ? 'py-1' : '')} ${isPageLink ? 'cursor-pointer' : 'cursor-default'}`}
@@ -2602,6 +2597,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     key={item.id}
                     onClick={() => {
                       if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                      else if (isPreviewActive && isExternalNavHref(item.href)) window.open(item.href, '_blank', 'noopener,noreferrer');
                       setIsNavMenuOpen(false);
                     }}
                     className={`px-6 py-3 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
@@ -2614,39 +2610,25 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             </div>
           )}
 
-          {/* Resize handles of the selected navbar (editor only): height at the bottom edge, width at
-              the side edge(s). */}
+          {/* Resize handles of the selected navbar (editor only): each side edge moves on its own,
+              the bottom edge changes the height. */}
           {showNavHandles && (
             <>
               <span
-                onPointerDown={(e) => startNavResize(e, 'h')}
+                onPointerDown={(e) => startNavResize(e, 'bottom')}
                 onClick={(e) => e.stopPropagation()}
                 className={`${navHandle} bottom-0.5 left-1/2 -translate-x-1/2 w-10 h-2.5 cursor-ns-resize`}
                 aria-hidden
               />
-              {isNavVertical ? (
+              {(['left', 'right'] as const).map((edge) => (
                 <span
-                  onPointerDown={(e) => startNavResize(e, 'w', navSide === 'right' ? -1 : 1)}
+                  key={edge}
+                  onPointerDown={(e) => startNavResize(e, edge)}
                   onClick={(e) => e.stopPropagation()}
-                  className={`${navHandle} top-1/2 -translate-y-1/2 w-2.5 h-10 cursor-ew-resize ${navSide === 'right' ? 'left-0.5' : 'right-0.5'}`}
+                  className={`${navHandle} top-1/2 -translate-y-1/2 w-2.5 h-8 cursor-ew-resize ${edge === 'left' ? 'left-0.5' : 'right-0.5'}`}
                   aria-hidden
                 />
-              ) : (
-                <>
-                  <span
-                    onPointerDown={(e) => startNavResize(e, 'w', -1)}
-                    onClick={(e) => e.stopPropagation()}
-                    className={`${navHandle} top-1/2 -translate-y-1/2 left-0.5 w-2.5 h-8 cursor-ew-resize`}
-                    aria-hidden
-                  />
-                  <span
-                    onPointerDown={(e) => startNavResize(e, 'w', 1)}
-                    onClick={(e) => e.stopPropagation()}
-                    className={`${navHandle} top-1/2 -translate-y-1/2 right-0.5 w-2.5 h-8 cursor-ew-resize`}
-                    aria-hidden
-                  />
-                </>
-              )}
+              ))}
             </>
           )}
         </nav>

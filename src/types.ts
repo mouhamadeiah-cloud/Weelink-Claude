@@ -304,13 +304,14 @@ export interface NavbarConfig {
   bgColor: string;
   textColor: string;
   isSticky: boolean;
-  // How the navbar is laid out (set by dragging it on the canvas or in its settings): a strip, a
-  // column on one side of the page, or a lone hamburger icon. Unset = strip.
+  // How the navbar is laid out (chosen in its settings): a strip, a column, or a lone hamburger
+  // icon. Unset = strip.
   layout?: 'horizontal' | 'vertical' | 'hamburger';
-  // Column / hamburger icon: which side of the page it sits on (default right).
-  side?: 'left' | 'right';
-  // Where on the screen it stays while the page scrolls: 0 = top, 100 = bottom. A strip at 0 is
-  // docked above the slides (and pushes them down); anywhere else it floats over them.
+  // Where the user dragged it. posY: where on the screen it stays while the page scrolls, 0 = top,
+  // 100 = bottom (a strip at 0 sits above the slides and pushes them down; anywhere else it floats
+  // over them). posX: its left edge in % of the page width (unset = a strip centered, a column or
+  // icon at the right edge).
+  posX?: number;
   posY?: number;
   // Column size in px: width (default 200) and height (default the visible part of the page).
   sideWidth?: number;

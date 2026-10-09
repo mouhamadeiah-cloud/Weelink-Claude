@@ -1,7 +1,7 @@
 // Navbar layout (strip / column / hamburger icon) and the navbar's contents: each entry's link can
 // be copied onto an element on a slide, or the entry can be shown as an icon (or an icon and its name).
 import React, { useEffect, useState } from 'react';
-import { ChevronRight, Columns2, Copy, Menu, PanelTop, Replace, Search } from 'lucide-react';
+import { ChevronRight, Columns2, Copy, Menu, PanelTop, Plus, Replace, Search, Trash2 } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { PillTabs, SectionHeader } from '../../ui/SharedControls';
 import { RightDrawerProps } from '../types';
@@ -67,6 +67,37 @@ export const NavbarLayoutSection = ({
       controller.abort();
     };
   }, [search]);
+
+  // Adding and deleting the navbar's extra buttons (page names follow the site's pages).
+  const [isAdding, setIsAdding] = useState(false);
+  const [newLabel, setNewLabel] = useState('');
+  const [newTarget, setNewTarget] = useState('url');
+  const [newUrl, setNewUrl] = useState('');
+  const addButton = () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    const pageId = newTarget.startsWith('page:') ? newTarget.slice(5) : '';
+    let url = newUrl.trim();
+    if (!pageId && !url) return;
+    if (url && !/^(https?:|mailto:|tel:)/i.test(url)) url = `https://${url}`;
+    // The "nav-" id marks a button the user added, so a page link of theirs is kept next to the
+    // automatic page names (see isUserNavItem).
+    const item = pageId
+      ? { id: `nav-${Date.now()}`, label, href: `#page-${pageId}`, linkType: 'page' as const, linkTargetId: pageId }
+      : { id: `nav-${Date.now()}`, label, href: url, linkType: 'url' as const };
+    onUpdateNavbar({ items: [...(navbar.items || []), item] });
+    setIsAdding(false);
+  };
+  const removePart = (part: NavbarPart) => {
+    const icons = { ...(navbar.partIcons || {}) };
+    delete icons[part.id];
+    if (part.kind === 'cta') {
+      onUpdateNavbar({ ctaText: '', partIcons: icons });
+    } else {
+      const itemId = part.id.slice('item-'.length);
+      onUpdateNavbar({ items: (navbar.items || []).filter((it) => it.id !== itemId), partIcons: icons });
+    }
+  };
 
   const setPartIcon = (partId: string, value: { icon: string; mode: 'icon' | 'icon-text' } | null) => {
     const next = { ...(navbar.partIcons || {}) };
@@ -155,7 +186,8 @@ export const NavbarLayoutSection = ({
             <button
               key={value}
               type="button"
-              onClick={() => onUpdateNavbar(value === 'horizontal' ? { layout: value, posY: 0 } : { layout: value })}
+              // A new layout starts at its usual place (a strip at the top, a column or icon at the right).
+              onClick={() => onUpdateNavbar({ layout: value, posX: undefined, posY: 0 })}
               aria-pressed={layout === value}
               className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[11px] font-bold transition-all ${
                 layout === value
@@ -169,8 +201,8 @@ export const NavbarLayoutSection = ({
           ))}
         </div>
         <p className="text-[10px] text-neutral-400 leading-relaxed">
-          أو اسحب النافبار في الساحة: إلى أحد الجانبين ليصبح طولياً، أو إلى الأعلى والأسفل ليبقى عرضياً. اسحب
-          مقابضه لتكبيره وتصغيره.
+          اسحب النافبار في الساحة لتحريكه إلى أي مكان: للأعلى أو الأسفل أو اليمين أو اليسار. اختره ثم اسحب
+          مقابض حوافه لتكبيره وتصغيره من أي جهة.
         </p>
       </div>
 
@@ -204,6 +236,17 @@ export const NavbarLayoutSection = ({
                     {isCopying ? 'إلغاء' : 'نسخ'}
                   </button>
                 )}
+                {(part.kind === 'cta' || part.id.startsWith('item-')) && (
+                  <button
+                    type="button"
+                    onClick={() => removePart(part)}
+                    title="حذف من النافبار"
+                    aria-label={`حذف ${part.label}`}
+                    className="p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-all"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
                 {part.kind !== 'logo' && (
                   <button
                     type="button"
@@ -219,6 +262,71 @@ export const NavbarLayoutSection = ({
             );
           })}
         </div>
+
+        {/* A new button: its name and where it leads (a page of the site, or a link). */}
+        {isAdding ? (
+          <div className="space-y-2 p-2.5 rounded-xl border border-[#0071e3]/30 bg-[#0071e3]/[0.03]">
+            <input
+              type="text"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder="اسم الزر، مثلاً: تواصل معنا"
+              className="w-full text-xs font-semibold px-3 py-2 bg-white rounded-lg border border-neutral-300 focus:border-[#0071e3] focus:outline-none"
+              autoFocus
+            />
+            <select
+              value={newTarget}
+              onChange={(e) => setNewTarget(e.target.value)}
+              className="w-full px-2.5 py-2 bg-white border border-neutral-300 rounded-lg text-xs focus:outline-none focus:border-[#0071e3]"
+            >
+              {pages.map((p) => (
+                <option key={p.id} value={`page:${p.id}`}>صفحة: {p.name}</option>
+              ))}
+              <option value="url">رابط خارجي...</option>
+            </select>
+            {newTarget === 'url' && (
+              <input
+                type="url"
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                placeholder="https://..."
+                dir="ltr"
+                className="w-full text-xs px-3 py-2 bg-white rounded-lg border border-neutral-300 focus:border-[#0071e3] focus:outline-none"
+              />
+            )}
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={addButton}
+                disabled={!newLabel.trim() || (newTarget === 'url' && !newUrl.trim())}
+                className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-[#0071e3] text-white disabled:opacity-40"
+              >
+                إضافة
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAdding(false)}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setNewLabel('');
+              setNewUrl('');
+              setNewTarget(pages[0] ? `page:${pages[0].id}` : 'url');
+              setIsAdding(true);
+            }}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-neutral-300 text-xs font-bold text-neutral-600 hover:border-[#0071e3] hover:text-[#0071e3] transition-all"
+          >
+            <Plus size={14} />
+            إضافة زر
+          </button>
+        )}
       </div>
     </div>
   );

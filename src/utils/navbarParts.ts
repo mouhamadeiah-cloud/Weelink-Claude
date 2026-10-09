@@ -1,4 +1,4 @@
-import type { LinkType, NavbarConfig, Page } from '../types';
+import type { LinkType, NavbarConfig, NavbarItem, Page } from '../types';
 
 // The navbar's contents (logo, site name, page names, extra links, the action button) as separate
 // "parts", so the user can copy a part's link onto an element on a slide, or show the part as an
@@ -17,6 +17,10 @@ export interface NavbarPart {
   link?: NavbarPartLink;
 }
 
+// The navbar's own extra links: links the user added (ids starting with "nav-"), plus any non-page
+// link. Other stored page links are stale copies of the automatic page names and are skipped.
+export const isUserNavItem = (it: NavbarItem) => it.linkType !== 'page' || it.id.startsWith('nav-');
+
 const pageLink = (pageId: string): NavbarPartLink => ({ linkType: 'page', linkTargetId: pageId, linkUrl: `#page-${pageId}` });
 
 export const getNavbarParts = (navbar: NavbarConfig, pages: Page[]): NavbarPart[] => {
@@ -27,7 +31,7 @@ export const getNavbarParts = (navbar: NavbarConfig, pages: Page[]): NavbarPart[
   // Page names come from the site's actual pages, like the navbar itself shows them.
   pages.forEach((p) => parts.push({ id: `page-${p.id}`, kind: 'link', label: p.name, link: pageLink(p.id) }));
   (navbar.items || [])
-    .filter((it) => it.linkType !== 'page')
+    .filter(isUserNavItem)
     .forEach((it) => {
       const linkType: LinkType = it.linkType || 'url';
       const linkUrl = linkType === 'slide' && it.linkTargetId ? `#slide-${it.linkTargetId}` : it.href;

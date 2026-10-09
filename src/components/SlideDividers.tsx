@@ -6,8 +6,9 @@ export interface SlideDividerOption {
   name: string;
   // Mini 2-tone preview SVG representation (as drawn in user's sketch 2)
   renderPreview: (active: boolean) => React.ReactNode;
-  // Canvas full-width SVG divider
-  renderDivider: (fillColor: string, height?: number) => React.ReactNode;
+  // Where the next slide shows through at the bottom of this slide, in a 1200×120 box stretched over
+  // the slide's width and the divider's height (none for a straight edge).
+  path?: string;
 }
 
 export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
@@ -24,7 +25,6 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <line x1="0" y1="22" x2="60" y2="22" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: () => null,
   },
   {
     id: 'wave',
@@ -36,13 +36,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <path d="M0,22 C15,14 30,30 45,22 C52,18 56,20 60,22" fill="none" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <path d="M0,0 C150,90 350,-40 500,50 C650,140 900,10 1200,40 L1200,120 L0,120 Z" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,0 C150,90 350,-40 500,50 C650,140 900,10 1200,40 L1200,120 L0,120 Z',
   },
   {
     id: 'slanted',
@@ -54,13 +48,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <line x1="0" y1="32" x2="60" y2="16" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <polygon points="0,120 1200,0 1200,120" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,120 L1200,0 L1200,120 Z',
   },
   {
     id: 'curve-down',
@@ -72,13 +60,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <path d="M0,16 Q30,34 60,16" fill="none" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <path d="M0,0 Q600,120 1200,0 L1200,120 L0,120 Z" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,0 Q600,120 1200,0 L1200,120 L0,120 Z',
   },
   {
     id: 'curve-up',
@@ -90,13 +72,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <path d="M0,30 Q30,12 60,30" fill="none" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <path d="M0,120 Q600,0 1200,120 L1200,120 L0,120 Z" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,120 Q600,0 1200,120 L1200,120 L0,120 Z',
   },
   {
     id: 'triangle',
@@ -108,13 +84,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <polyline points="0,18 30,32 60,18" fill="none" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <polygon points="0,0 600,120 1200,0 1200,120 0,120" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,0 L600,120 L1200,0 L1200,120 L0,120 Z',
   },
   {
     id: 'asymmetric-wave',
@@ -126,13 +96,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <path d="M0,28 C20,34 35,10 60,24" fill="none" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <path d="M0,70 Q400,140 700,20 T1200,60 L1200,120 L0,120 Z" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,70 Q400,140 700,20 T1200,60 L1200,120 L0,120 Z',
   },
   {
     id: 'double-wave',
@@ -144,13 +108,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <path d="M0,22 Q15,14 30,22 T60,22" fill="none" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <path d="M0,50 C150,100 250,0 400,60 C550,120 650,20 800,70 C950,120 1050,20 1200,60 L1200,120 L0,120 Z" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,50 C150,100 250,0 400,60 C550,120 650,20 800,70 C950,120 1050,20 1200,60 L1200,120 L0,120 Z',
   },
   {
     id: 'zigzag',
@@ -162,13 +120,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <polygon points="0,24 10,18 20,24 30,18 40,24 50,18 60,24 60,44 0,44" fill="#9ca3af" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <polygon points="0,60 100,0 200,60 300,0 400,60 500,0 600,60 700,0 800,60 900,0 1000,60 1100,0 1200,60 1200,120 0,120" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,60 L100,0 L200,60 L300,0 L400,60 L500,0 L600,60 L700,0 L800,60 L900,0 L1000,60 L1100,0 L1200,60 L1200,120 L0,120 Z',
   },
   {
     id: 'tilt-right',
@@ -180,13 +132,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <line x1="0" y1="16" x2="60" y2="32" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <polygon points="0,0 1200,120 0,120" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,0 L1200,120 L0,120 Z',
   },
   {
     id: 'tilt-left',
@@ -198,13 +144,7 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <line x1="0" y1="32" x2="60" y2="16" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <polygon points="0,120 1200,0 1200,120 0,120" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,120 L1200,0 L1200,120 L0,120 Z',
   },
   {
     id: 'clouds',
@@ -216,12 +156,25 @@ export const SLIDE_DIVIDER_OPTIONS: SlideDividerOption[] = [
         <path d="M0,26 Q10,14 20,24 Q30,12 40,24 Q50,14 60,26" fill="none" stroke="#6b7280" strokeWidth="1" />
       </svg>
     ),
-    renderDivider: (fillColor, height = 48) => (
-      <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-none z-10 pointer-events-none" style={{ height: `${height}px` }}>
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-full">
-          <path d="M0,50 Q150,0 300,50 Q450,0 600,50 Q750,0 900,50 Q1050,0 1200,50 L1200,120 L0,120 Z" fill={fillColor} />
-        </svg>
-      </div>
-    ),
+    path: 'M0,50 Q150,0 300,50 Q450,0 600,50 Q750,0 900,50 Q1050,0 1200,50 L1200,120 L0,120 Z',
   },
 ];
+
+// How far (unscaled px) the next slide reaches up under a shaped edge.
+export const SLIDE_DIVIDER_HEIGHT = 54;
+
+export const slideDividerPath = (shape?: SlideDividerShape) =>
+  shape && shape !== 'straight' ? SLIDE_DIVIDER_OPTIONS.find((o) => o.id === shape)?.path : undefined;
+
+// A mask that lets only the divider's shape through, stretched over the given box.
+export const slideDividerMask = (path: string): React.CSSProperties => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="${path}" fill="black"/></svg>`;
+  const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  const size = `100% ${SLIDE_DIVIDER_HEIGHT}px`;
+  return {
+    maskImage: url, WebkitMaskImage: url,
+    maskSize: size, WebkitMaskSize: size,
+    maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat',
+    maskPosition: 'top left', WebkitMaskPosition: 'top left',
+  };
+};

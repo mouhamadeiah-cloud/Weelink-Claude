@@ -98,8 +98,11 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/restaurants/$(userId)/deviceLinks/$(request.auth.uid)).data.code in staffCodes();
       }
 
+      // The conditions are the same as ever, but ordered by how few lookups they need: the restaurant's
+      // own sign-in none, a linked device two, the claimed account and the members more. Each lookup is
+      // a read inside the rules, and the tablets' every write pays for them.
       function isStaff() {
-        return canManage(userId) || isDevice();
+        return (isSignedIn() && request.auth.uid == userId) || isDevice() || canManage(userId);
       }
 
       function acceptsOrders() {

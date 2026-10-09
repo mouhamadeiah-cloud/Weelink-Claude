@@ -257,7 +257,7 @@ const verdict = (ms: number) => (ms < 150 ? ['سريع', '#2F9E44'] : ms < 400 ?
 
 export const SettingsDialog: React.FC<{ uid: string; deviceId: string; onClose: () => void }> = ({ uid, deviceId, onClose }) => {
   const [running, setRunning] = useState(false);
-  const [res, setRes] = useState<{ read: number; write: number; tx: number } | null>(null);
+  const [res, setRes] = useState<{ read: number; guarded: number; write: number; tx: number } | null>(null);
   const [err, setErr] = useState('');
   const test = async () => {
     setRunning(true);
@@ -266,12 +266,16 @@ export const SettingsDialog: React.FC<{ uid: string; deviceId: string; onClose: 
     try {
       const probe = doc(db, 'restaurants', uid, 'log', `speed_${deviceId.replace(/[^a-zA-Z0-9_-]/g, '')}`);
       const reads: number[] = [];
+      const guarded: number[] = [];
       const writes: number[] = [];
       const txs: number[] = [];
       for (let i = 0; i < 3; i++) {
         let t = performance.now();
         await getDocFromServer(doc(db, 'restaurants', uid)).catch(() => null);
         reads.push(performance.now() - t);
+        t = performance.now();
+        await getDocFromServer(probe).catch(() => null);
+        guarded.push(performance.now() - t);
         t = performance.now();
         await setDoc(probe, { action: 'فحص السرعة', at: new Date().toISOString(), n: i });
         writes.push(performance.now() - t);
@@ -282,7 +286,7 @@ export const SettingsDialog: React.FC<{ uid: string; deviceId: string; onClose: 
         });
         txs.push(performance.now() - t);
       }
-      setRes({ read: Math.round(median(reads)), write: Math.round(median(writes)), tx: Math.round(median(txs)) });
+      setRes({ read: Math.round(median(reads)), guarded: Math.round(median(guarded)), write: Math.round(median(writes)), tx: Math.round(median(txs)) });
     } catch (e) {
       setErr(failText(e));
     }
@@ -305,7 +309,8 @@ export const SettingsDialog: React.FC<{ uid: string; deviceId: string; onClose: 
         <div className="text-xs font-bold text-neutral-500 leading-relaxed">يقيس كم يستغرق وصول الجهاز إلى فايربيس. إن كانت الأرقام فوق ٤٠٠ مللي ثانية فالبطء من الإنترنت أو بُعد الخادم، لا من البرنامج.</div>
         {res && (
           <div className="space-y-1.5">
-            {row('قراءة', res.read)}
+            {row('قراءة عامة (الشبكة فقط)', res.read)}
+            {row('قراءة محمية بالقواعد', res.guarded)}
             {row('كتابة', res.write)}
             {row('عملية دفع أو تعديل (قراءة وكتابة)', res.tx)}
           </div>

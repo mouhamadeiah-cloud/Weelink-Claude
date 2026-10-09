@@ -234,7 +234,7 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
                 className={`h-11 px-5 rounded-full text-sm font-bold inline-flex items-center gap-2 cursor-pointer transition border ${tab === c.id ? 'text-white border-transparent shadow-md' : 'bg-white border-black/10 text-[#2B2118] hover:border-black/20'}`}
                 style={tab === c.id ? { backgroundColor: look.accent } : undefined}
               >
-                {c.icon && <span>{c.icon}</span>}
+                {(c as MenuCategory).image ? <img src={(c as MenuCategory).image} alt="" referrerPolicy="no-referrer" className="w-7 h-7 -mr-3 rounded-full object-cover" /> : c.icon && <span>{c.icon}</span>}
                 {c.name}
               </button>
             ))}
@@ -265,8 +265,8 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
           sections.map(({ cat, dishes: list }) => (
             <section key={cat?.id || 'all'} className="space-y-4">
               {cat && (
-                <h3 className="text-2xl font-black flex items-center gap-2" style={{ color: look.text }}>
-                  {cat.icon && <span>{cat.icon}</span>}
+                <h3 className="text-2xl font-black flex items-center gap-3" style={{ color: look.text }}>
+                  {cat.image ? <img src={cat.image} alt="" referrerPolicy="no-referrer" className="w-12 h-12 rounded-2xl object-cover shadow-sm" /> : cat.icon && <span>{cat.icon}</span>}
                   {cat.name}
                 </h3>
               )}

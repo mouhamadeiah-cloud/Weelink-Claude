@@ -278,7 +278,7 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {[{ id: '', name: 'الكل', icon: '' }, ...menu.categories].map((c) => (
-            <button key={c.id} type="button" onClick={() => { setCat(c.id); setSearch(''); }} className={`shrink-0 h-10 px-4 rounded-2xl text-sm font-black cursor-pointer ${cat === c.id && !search ? 'bg-[#1d1d1f] text-white' : 'bg-white text-neutral-600 border border-neutral-200'}`}>{c.icon ? `${c.icon} ` : ''}{c.name}</button>
+            <button key={c.id} type="button" onClick={() => { setCat(c.id); setSearch(''); }} className={`shrink-0 h-10 px-4 rounded-2xl text-sm font-black cursor-pointer inline-flex items-center gap-2 ${cat === c.id && !search ? 'bg-[#1d1d1f] text-white' : 'bg-white text-neutral-600 border border-neutral-200'}`}>{'image' in c && c.image ? <img src={c.image} alt="" referrerPolicy="no-referrer" className="w-6 h-6 rounded-full object-cover" /> : c.icon ? <span>{c.icon}</span> : null}{c.name}</button>
           ))}
         </div>
       </div>

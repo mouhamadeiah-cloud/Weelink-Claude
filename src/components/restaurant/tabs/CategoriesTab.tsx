@@ -1,4 +1,4 @@
-// أقسام المنيو (the main catalogs): add, rename, give an emoji and a photo, hide from the website,
+// أقسام المنيو (the main catalogs): add, rename, give an emoji and a photo (shown on the site's menu and the cashier's tabs), hide from the website,
 // reorder and delete. A catalog with dishes cannot be deleted until its dishes move elsewhere. Each
 // catalog lists the sub-catalogs linked to it.
 import React, { useState } from 'react';
@@ -11,14 +11,14 @@ import { RestaurantTabProps, ImagePicker } from './shared';
 const ICONS = ['🔥', '🍔', '🌯', '🍕', '🥗', '🍝', '🍗', '🥩', '🐟', '🍟', '🥙', '🍰', '🍨', '🥤', '☕', '🧃', '🍳', '🥐'];
 
 export const CategoriesTab: React.FC<RestaurantTabProps> = ({ data, update, onGoTo }) => {
-  const [draft, setDraft] = useState({ name: '', icon: '🔥' });
+  const [draft, setDraft] = useState({ name: '', icon: '🔥', image: '' });
   const [openId, setOpenId] = useState<string | null>(null);
 
   const add = () => {
     const name = draft.name.trim();
     if (!name) return;
-    update((d) => ({ ...d, categories: [...d.categories, { id: newId('cat'), name, icon: draft.icon, image: '', hidden: false, stationId: d.stations[0]?.id || '' }] }));
-    setDraft({ name: '', icon: draft.icon });
+    update((d) => ({ ...d, categories: [...d.categories, { id: newId('cat'), name, icon: draft.icon, image: draft.image, hidden: false, stationId: d.stations[0]?.id || '' }] }));
+    setDraft({ name: '', icon: draft.icon, image: '' });
   };
   const patch = (id: string, p: Partial<MenuCategory>) => update((d) => ({ ...d, categories: d.categories.map((c) => (c.id === id ? { ...c, ...p } : c)) }));
   const move = (i: number, dir: number) =>
@@ -48,6 +48,7 @@ export const CategoriesTab: React.FC<RestaurantTabProps> = ({ data, update, onGo
           </div>
           <PrimaryButton onClick={add} disabled={!draft.name.trim()}><span className="inline-flex items-center gap-1"><Plus size={14} /> أضف القسم</span></PrimaryButton>
         </div>
+        <Field label="صورة القسم (اختيارية، تظهر في المنيو وعلى تابلت الكاشير)"><ImagePicker value={draft.image} onChange={(image) => setDraft({ ...draft, image })} /></Field>
         <div className="flex flex-wrap gap-1">
           {ICONS.map((ic) => (
             <button key={ic} type="button" onClick={() => setDraft({ ...draft, icon: ic })} className={`w-9 h-9 rounded-xl text-lg cursor-pointer ${draft.icon === ic ? 'bg-[#0071e3]/10 ring-2 ring-[#0071e3]' : 'hover:bg-neutral-100'}`}>{ic}</button>
@@ -71,7 +72,9 @@ export const CategoriesTab: React.FC<RestaurantTabProps> = ({ data, update, onGo
                       <button type="button" aria-label="لأعلى" disabled={i === 0} onClick={() => move(i, -1)} className="text-neutral-400 hover:text-neutral-700 disabled:opacity-30 cursor-pointer"><ChevronUp size={16} /></button>
                       <button type="button" aria-label="لأسفل" disabled={i === data.categories.length - 1} onClick={() => move(i, 1)} className="text-neutral-400 hover:text-neutral-700 disabled:opacity-30 cursor-pointer"><ChevronDown size={16} /></button>
                     </div>
-                    <span className="text-2xl w-9 text-center">{c.icon || '🍽️'}</span>
+                    <button type="button" title="صورة القسم" onClick={() => setOpenId(c.id)} className="w-11 h-11 shrink-0 rounded-xl overflow-hidden bg-neutral-100 flex items-center justify-center text-2xl cursor-pointer">
+                      {c.image ? <img src={c.image} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : <span>{c.icon || '🍽️'}</span>}
+                    </button>
                     <input className={`${inputClass} flex-1 font-bold`} value={c.name} onChange={(e) => patch(c.id, { name: e.target.value })} aria-label="اسم القسم" />
                     <span className="text-[11px] text-neutral-400 font-bold shrink-0 hidden sm:inline">{count} طبق</span>
                     <button type="button" title={c.hidden ? 'مخفي من الموقع' : 'ظاهر في الموقع'} onClick={() => patch(c.id, { hidden: !c.hidden })} className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer ${c.hidden ? 'text-neutral-400 bg-neutral-100' : 'text-[#2F9E44] hover:bg-neutral-100'}`}>{c.hidden ? <EyeOff size={16} /> : <Eye size={16} />}</button>

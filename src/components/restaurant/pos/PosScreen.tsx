@@ -230,7 +230,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
     setTabId('');
     if (info) {
       setThanks(info);
-      window.setTimeout(() => setThanks(null), 5000);
+      window.setTimeout(() => setThanks(null), info.change > 0 ? 3500 : 1500);
     }
   };
 

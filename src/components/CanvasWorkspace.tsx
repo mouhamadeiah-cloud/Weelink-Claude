@@ -10,7 +10,7 @@ import {
   GalleryItem,
   Page
 } from '../types';
-import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
+import { SLIDE_DIVIDER_HEIGHT, slideDividerMask, slideDividerPath } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
 import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
@@ -695,6 +695,18 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
   );
 };
 
+// A slide's background (colour, gradient or photo) as drawn on its own box.
+const slideBackgroundStyle = (slide: Slide): React.CSSProperties => ({
+  backgroundColor: slide.backgroundColor?.includes('gradient') ? undefined : (slide.backgroundColor || '#ffffff'),
+  backgroundImage: slide.backgroundImage
+    ? `url("${slide.backgroundImage}")`
+    : (slide.backgroundColor?.includes('gradient') ? slide.backgroundColor : undefined),
+  backgroundSize: slide.backgroundSize || 'cover',
+  backgroundPosition: slide.backgroundPosition || 'center',
+  backgroundRepeat: slide.backgroundRepeat || (slide.backgroundSize === 'auto' ? 'repeat' : 'no-repeat'),
+  opacity: slide.backgroundOpacity ?? 1,
+});
+
 export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   previewMode,
   slides: rawSlides,
@@ -982,13 +994,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const baseWidth = previewMode === 'mobile' ? 380 : (previewMode === 'tablet' ? 768 : 1280);
 
   // Calculate dynamic scaling factor to fit workspace
-  // The full preview and the published site (desktop) show the page at its real size, never
-  // blown up: on a window wider than the page the content stays 1280px wide and centered, while
-  // the slides' backgrounds, edge-to-edge elements and the navbar stretch to the window's edges.
+  // The full preview and the published site (desktop) fill the window's width exactly as the page
+  // fills the canvas in the editor, so every element keeps its place relative to the edges.
   const isFluidDesktop = (isPublicSite || isPreviewActive) && previewMode === 'desktop';
   let scaleFactor = 1;
   if (isFluidDesktop) {
-    scaleFactor = Math.min(1, workspaceWidth / baseWidth);
+    scaleFactor = workspaceWidth / baseWidth;
   } else if (isPublicSite) {
     scaleFactor = workspaceWidth / baseWidth;
   } else if (previewMode === 'mobile') {
@@ -2822,19 +2833,16 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       />
                     );
                   } else {
+                    // Under the previous slide's shaped edge this background reaches up behind it, so
+                    // it is laid out on a box that much taller (the part above is drawn by that slide).
+                    const reachUp = slideDividerPath(slides[slideIndex - 1]?.dividerShape) ? SLIDE_DIVIDER_HEIGHT : 0;
                     return (
                       <div
                         key="bg"
-                        className="absolute inset-0 pointer-events-none transition-opacity duration-150"
+                        className="absolute inset-x-0 bottom-0 pointer-events-none transition-opacity duration-150"
                         style={{
-                          backgroundColor: slide.backgroundColor?.includes('gradient') ? undefined : (slide.backgroundColor || '#ffffff'),
-                          backgroundImage: slide.backgroundImage 
-                            ? `url("${slide.backgroundImage}")` 
-                            : (slide.backgroundColor?.includes('gradient') ? slide.backgroundColor : undefined),
-                          backgroundSize: slide.backgroundSize || 'cover',
-                          backgroundPosition: slide.backgroundPosition || 'center',
-                          backgroundRepeat: slide.backgroundRepeat || (slide.backgroundSize === 'auto' ? 'repeat' : 'no-repeat'),
-                          opacity: slide.backgroundOpacity ?? 1,
+                          ...slideBackgroundStyle(slide),
+                          top: -reachUp,
                           borderRadius: slide.borderRadius ? `${slide.borderRadius}px` : undefined,
                         }}
                       />
@@ -4690,12 +4698,27 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 })}
                 </div>
 
-                {/* SVG Slide Transition / Divider at the bottom of the slide */}
-                {slide.dividerShape && slide.dividerShape !== 'straight' && (() => {
-                  const dividerDef = SLIDE_DIVIDER_OPTIONS.find(d => d.id === slide.dividerShape);
-                  if (!dividerDef) return null;
-                  const nextSlideBg = slides[slideIndex + 1]?.backgroundColor || '#f5f5f7';
-                  return dividerDef.renderDivider(nextSlideBg, 54);
+                {/* The shaped edge: the next slide's own background shows through, laid out exactly as
+                    it is in that slide (on a box reaching up under this edge), so the two meet seamlessly. */}
+                {(() => {
+                  const path = slideDividerPath(slide.dividerShape);
+                  if (!path) return null;
+                  const next = slides[slideIndex + 1];
+                  return (
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-x-0 z-10 pointer-events-none bg-white"
+                      style={{
+                        top: slide.height - SLIDE_DIVIDER_HEIGHT,
+                        height: (next?.height ?? 0) + SLIDE_DIVIDER_HEIGHT,
+                        ...slideDividerMask(path),
+                      }}
+                    >
+                      {next && (next.backgroundColor || next.backgroundImage) && (
+                        <div className="absolute inset-0" style={slideBackgroundStyle(next)} />
+                      )}
+                    </div>
+                  );
                 })()}
 
                 {/* Active Alignment Guide Lines */}

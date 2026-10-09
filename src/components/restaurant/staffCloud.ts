@@ -122,9 +122,12 @@ const readTab = async (tx: Transaction, uid: string, tabId: string) => {
 
 const orderLineOf = (i: TabItem): OrderLine => ({ dishId: i.dishId, name: i.name, unitPrice: i.unitPrice, qty: i.qty, removed: i.removed, extras: i.extras, notes: i.notes });
 
-// The day's next number for the kitchen order of a table's unsent dishes (a takeaway keeps its own
-// number on every order). Reads only, so it goes before the transaction's first write.
-const kitchenNumber = (tx: Transaction, uid: string, t: Tab) => (t.kind !== 'takeaway' && unsentItems(t).length > 0 ? readNextNumber(tx, uid) : Promise.resolve(null));
+// The bill and the day's counter are read together (one trip to the server instead of two); the
+// counter is only used when the bill has dishes for the kitchen.
+const readTabAndNumber = async (tx: Transaction, uid: string, tabId: string): Promise<[Tab, NextNumber | null]> => {
+  const [t, counter] = await Promise.all([readTab(tx, uid, tabId), readNextNumber(tx, uid)]);
+  return [t, t.kind !== 'takeaway' && unsentItems(t).length > 0 ? counter : null];
+};
 
 // Writes the kitchen order of the bill's unsent dishes and returns the bill's items marked as sent.
 const sendUnsent = (tx: Transaction, uid: string, t: Tab, actor: Actor, next: NextNumber | null): TabItem[] => {
@@ -226,8 +229,7 @@ export const addItems = (uid: string, tabId: string, lines: OrderLine[], actor: 
 
 export const sendToKitchen = (uid: string, tabId: string, actor: Actor) =>
   runTransaction(db, async (tx) => {
-    const t = await readTab(tx, uid, tabId);
-    const seq = await kitchenNumber(tx, uid, t);
+    const [t, seq] = await readTabAndNumber(tx, uid, tabId);
     tx.update(tabDoc(uid, tabId), { items: clean(sendUnsent(tx, uid, t, actor, seq)) });
   });
 
@@ -249,8 +251,7 @@ export interface PayInput {
 // bill closes when nothing is left to pay. Returns what is left to pay.
 export const payTab = (uid: string, tabId: string, input: PayInput, actor: Actor) =>
   runTransaction(db, async (tx) => {
-    const t = await readTab(tx, uid, tabId);
-    const seq = await kitchenNumber(tx, uid, t);
+    const [t, seq] = await readTabAndNumber(tx, uid, tabId);
     const items = sendUnsent(tx, uid, t, actor, seq).map((i) => (input.items?.[i.id] ? { ...i, paidQty: Math.min(i.qty, i.paidQty + input.items[i.id]) } : i));
     const due = tabTotals(t).due;
     const amount = Math.min(due, Math.max(0, Math.round(input.amount * 100) / 100));

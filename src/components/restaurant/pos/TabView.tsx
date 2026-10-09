@@ -2,7 +2,7 @@
 // the kitchen with their state, the paid and the cancelled ones), the totals, and the menu to add
 // from. From here the bill goes to the kitchen, gets paid (all or part), moves to another table or
 // merges with it, passes to another worker, gets a discount or a note, and prints.
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Send, Wallet, MoveRight, UserRound, Percent, Printer, Minus, Plus, Trash2, Ban, Search, Users, QrCode, StickyNote, X, HandCoins } from 'lucide-react';
 import { Dish, MenuOrder, OrderLine, RestaurantAdminData, allTables, dishSubCatalogs } from '../restaurantTypes';
 import { Actor, ScreenDraft, ScreenPaid, Tab, Worker, itemTotal, openTabId, tabTitle, tabTotals, unsentItems } from '../staffTypes';
@@ -51,7 +51,7 @@ const KITCHEN_STATE: Record<string, [string, string]> = {
 
 const minutesSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
 
-export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, workers, actor, shiftId, orders, openTabs, askManager, toast, onBack, onMoved, onClosed, onDraft, onPartPaid }) => {
+export const TabView: React.FC<TabViewProps> = ({ uid, tab: serverTab, menu, worker, workers, actor, shiftId, orders, openTabs, askManager, toast, onBack, onMoved, onClosed, onDraft, onPartPaid }) => {
   const [cat, setCat] = useState('');
   const [search, setSearch] = useState('');
   const [optionsFor, setOptionsFor] = useState<Dish | null>(null);
@@ -61,6 +61,41 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
   const [discountText, setDiscountText] = useState('');
   const [discountNote, setDiscountNote] = useState('');
   const [tipText, setTipText] = useState('');
+  // Adding a dish or changing a quantity shows at once and reaches the database in the background, one
+  // edit after the other: `local` is the bill as the worker sees it until the database has caught up.
+  const [local, setLocal] = useState<Tab | null>(null);
+  const tab = local || serverTab;
+  const shown = useRef(tab);
+  shown.current = tab;
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const pending = useRef(0);
+  const edit = (fn: (t: Tab) => Partial<Tab>) => {
+    shown.current = { ...shown.current, ...fn(shown.current) };
+    setLocal(shown.current);
+    pending.current += 1;
+    queue.current = queue.current
+      .then(() => changeTab(uid, serverTab.id, fn))
+      .catch((e) => {
+        console.warn(e);
+        toast(failText(e), true);
+        setLocal(null);
+      })
+      .finally(() => {
+        pending.current -= 1;
+      });
+  };
+  // Once all the edits are written, the bill from the database takes over again.
+  useEffect(() => {
+    if (!local || pending.current > 0) return;
+    setLocal(null);
+  }, [serverTab]);
+  useEffect(() => {
+    if (!local) return;
+    const t = window.setTimeout(() => {
+      if (pending.current === 0) setLocal(null);
+    }, 2500);
+    return () => window.clearTimeout(t);
+  }, [local]);
   const currency = menu.settings.currency;
   const money = (n: number) => formatMoney(n, currency);
   const totals = tabTotals(tab);
@@ -71,6 +106,7 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
   const run = async (fn: () => Promise<unknown>, ok?: string) => {
     setBusy(true);
     try {
+      await queue.current;
       await fn();
       if (ok) toast(ok);
     } catch (e) {
@@ -87,14 +123,14 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
     return menu.dishes.filter((d) => (q ? d.name.includes(q) : !cat || d.categoryId === cat));
   }, [menu.dishes, cat, search]);
 
-  const addLine = (line: OrderLine) =>
-    run(() =>
-      changeTab(uid, tab.id, (t) => {
-        const plain = !line.removed.length && !line.extras.length && !line.notes;
-        const same = plain && t.items.find((i) => !i.sentAt && !i.voided && i.dishId === line.dishId && !i.removed.length && !i.extras.length && !i.notes);
-        return { items: same ? t.items.map((i) => (i === same ? { ...i, qty: i.qty + line.qty } : i)) : [...t.items, newItem(line, actor)] };
-      })
-    );
+  const addLine = (line: OrderLine) => {
+    const item = newItem(line, actor);
+    edit((t) => {
+      const plain = !line.removed.length && !line.extras.length && !line.notes;
+      const same = plain && t.items.find((i) => !i.sentAt && !i.voided && i.dishId === line.dishId && !i.removed.length && !i.extras.length && !i.notes);
+      return { items: same ? t.items.map((i) => (i === same ? { ...i, qty: i.qty + line.qty } : i)) : [...t.items, item] };
+    });
+  };
 
   const pickDish = (d: Dish) => {
     if (!d.available) return;
@@ -102,8 +138,12 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
     else addLine(lineOfDish(d));
   };
 
+  // A dish's quantity goes up or down by one (relative, so quick taps never overwrite each other).
+  const bumpQty = (itemId: string, by: number) =>
+    edit((t) => ({ items: t.items.flatMap((i) => (i.id !== itemId ? [i] : i.qty + by <= 0 ? [] : [{ ...i, qty: i.qty + by }])) }));
+
   const setQty = (itemId: string, qty: number) =>
-    run(() => changeTab(uid, tab.id, (t) => ({ items: qty <= 0 ? t.items.filter((i) => i.id !== itemId) : t.items.map((i) => (i.id === itemId ? { ...i, qty } : i)) })));
+    edit((t) => ({ items: qty <= 0 ? t.items.filter((i) => i.id !== itemId) : t.items.map((i) => (i.id === itemId ? { ...i, qty } : i)) }));
 
   const voidItem = async (itemId: string, name: string) => {
     const by = await askManager(`إلغاء «${name}» بعد إرساله للمطبخ`);
@@ -117,6 +157,7 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
   const pay = async (r: PayRequest) => {
     setBusy(true);
     try {
+      await queue.current;
       const res = await payTab(uid, tab.id, { amount: r.amount, method: r.method, note: r.note, items: r.items, shiftId }, actor);
       setDialog('');
       const change = r.given > res.paid ? Math.round((r.given - res.paid) * 100) / 100 : 0;
@@ -233,8 +274,8 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab, menu, worker, worker
               </div>
               {!i.voided && !i.sentAt && (
                 <div className="flex items-center gap-1 mt-2">
-                  <button type="button" aria-label="زيادة" disabled={busy} onClick={() => setQty(i.id, i.qty + 1)} className="w-9 h-9 rounded-xl bg-white border border-neutral-200 flex items-center justify-center cursor-pointer"><Plus size={14} /></button>
-                  <button type="button" aria-label="إنقاص" disabled={busy} onClick={() => setQty(i.id, i.qty - 1)} className="w-9 h-9 rounded-xl bg-white border border-neutral-200 flex items-center justify-center cursor-pointer"><Minus size={14} /></button>
+                  <button type="button" aria-label="زيادة" disabled={busy} onClick={() => bumpQty(i.id, 1)} className="w-9 h-9 rounded-xl bg-white border border-neutral-200 flex items-center justify-center cursor-pointer"><Plus size={14} /></button>
+                  <button type="button" aria-label="إنقاص" disabled={busy} onClick={() => bumpQty(i.id, -1)} className="w-9 h-9 rounded-xl bg-white border border-neutral-200 flex items-center justify-center cursor-pointer"><Minus size={14} /></button>
                   <button type="button" aria-label="حذف" disabled={busy} onClick={() => setQty(i.id, 0)} className="w-9 h-9 rounded-xl text-[#E03131] hover:bg-red-50 flex items-center justify-center cursor-pointer mr-auto"><Trash2 size={15} /></button>
                 </div>
               )}

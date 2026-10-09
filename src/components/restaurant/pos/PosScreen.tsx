@@ -415,7 +415,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
 
       {dialog === 'menu' && <MenuDialog cashier={!isWaiterDevice} pending={pendingHandovers} onClose={() => setDialog('')} onPick={(w) => setDialog(w)} />}
       {dialog === 'orders' && <SessionOrdersDialog tabs={sessionTabs} money={money} onClose={() => setDialog('')} />}
-      {dialog === 'settings' && <SettingsDialog onClose={() => setDialog('')} />}
+      {dialog === 'settings' && <SettingsDialog uid={uid} deviceId={device.id} onClose={() => setDialog('')} />}
       {dialog === 'exit' && (
         <ExitDialog
           waiter={isWaiterDevice}

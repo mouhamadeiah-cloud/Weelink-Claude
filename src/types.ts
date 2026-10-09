@@ -304,6 +304,12 @@ export interface NavbarConfig {
   bgColor: string;
   textColor: string;
   isSticky: boolean;
+  // How the navbar is laid out: a strip across the top (default), a column on the side, a strip with
+  // the page names behind a hamburger icon on every device, or no navbar at all (its parts can then
+  // be placed on the slides as ordinary linked elements, see utils/navbarParts).
+  layout?: 'horizontal' | 'vertical' | 'hamburger' | 'none';
+  // 'vertical' layout: width of the side column in px (default 200).
+  sideWidth?: number;
   // On phones, collapse the page names into a dropdown opened by a hamburger icon (set by "تنسيق الموبايل").
   mobileMenu?: boolean;
   // Navbar strip height/length in px (default 60 when unset)

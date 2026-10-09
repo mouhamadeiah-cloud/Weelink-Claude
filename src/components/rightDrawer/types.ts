@@ -1,5 +1,6 @@
 import type React from 'react';
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape } from '../../types';
+import type { NavbarPart } from '../../utils/navbarParts';
 import type { InspectorGroupId, InspectorShortcutId } from './inspectorGroups';
 
 export type DrawerSection = 
@@ -66,6 +67,9 @@ export interface RightDrawerProps {
   onAddGroup?: (containerShape: Partial<CanvasElement>, childElements: Partial<CanvasElement>[]) => void;
   navbar: NavbarConfig;
   onUpdateNavbar: (newNav: Partial<NavbarConfig>) => void;
+  // Copying a navbar part's link onto the next clicked element (see utils/navbarParts).
+  linkCopySourceId?: string;
+  onStartLinkCopy?: (part: NavbarPart | null) => void;
   isNavbarSelected?: boolean;
   selectedElement: CanvasElement | null;
   elements: CanvasElement[];

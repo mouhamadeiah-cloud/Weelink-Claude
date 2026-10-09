@@ -112,6 +112,7 @@ import { ShadowSection } from './rightDrawer/sections/ShadowSection';
 import { ColorSection } from './rightDrawer/sections/ColorSection';
 import { NavbarColorSection } from './rightDrawer/sections/NavbarColorSection';
 import { NavbarBorderSection } from './rightDrawer/sections/NavbarBorderSection';
+import { NavbarLayoutSection } from './rightDrawer/sections/NavbarLayoutSection';
 import { NavbarOpacitySection } from './rightDrawer/sections/NavbarOpacitySection';
 
 export type { DrawerSection } from './rightDrawer/types';
@@ -178,6 +179,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onToggleWeeAiChat: externalOnToggleWeeAiChat,
   navbar,
   onUpdateNavbar,
+  linkCopySourceId,
+  onStartLinkCopy,
   isNavbarSelected = false,
   dockedWidth = 0,
   sheet = false,
@@ -5313,7 +5316,16 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               {/* TOOL: Navbar settings (ترس الإعدادات) — التثبيت، الطول، اسم الموقع، وتموضع/تنسيق أسماء الصفحات */}
               {activeSection === 'navbar-settings' && navbar && (
                 <div className="space-y-6 text-right" dir="rtl">
-                  <div className="space-y-2">
+                  <NavbarLayoutSection
+                    navbar={navbar}
+                    onUpdateNavbar={onUpdateNavbar}
+                    pages={pages}
+                    onAddElement={onAddElement}
+                    linkCopySourceId={linkCopySourceId}
+                    onStartLinkCopy={onStartLinkCopy}
+                  />
+
+                                    <div className="space-y-2">
                     <SectionHeader title="سلوك النافبار عند التمرير" />
                     <PillTabs
                       options={[

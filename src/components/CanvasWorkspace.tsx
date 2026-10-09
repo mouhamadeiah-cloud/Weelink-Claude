@@ -27,6 +27,7 @@ import { MenuCartView } from './restaurant/store/MenuCartView';
 import { useMenuCart, menuCartCount } from './restaurant/menuCartStore';
 import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
+import type { NavbarPart } from '../utils/navbarParts';
 import { 
   Trash2, 
   Copy, 
@@ -82,6 +83,10 @@ interface CanvasWorkspaceProps {
   chromeHeight?: number;
   // The docked editor's bar of quick tools, drawn above the selected element.
   renderSelectionBar?: (element: CanvasElement) => React.ReactNode;
+  // A navbar part whose link the next clicked element receives (set from the navbar settings).
+  linkCopySource?: NavbarPart | null;
+  onApplyLinkCopy?: (elementId: string) => void;
+  onCancelLinkCopy?: () => void;
 }
 
 interface InteractiveCalendarWidgetProps {
@@ -718,6 +723,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   isPublicSite = false,
   chromeHeight = 104,
   renderSelectionBar,
+  linkCopySource = null,
+  onApplyLinkCopy,
+  onCancelLinkCopy,
 }) => {
   // In mobile view, elements and slides render with their phone layout ("تنسيق الموبايل") when
   // they have one. Everything below works on these resolved values, so dragging/resizing in mobile
@@ -768,8 +776,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutSlides, shopGrow, isPreviewActive]);
 
-  // Hamburger menu of the navbar on phones (navbar.mobileMenu).
-  const isNavHamburger = previewMode === 'mobile' && !!navbar.mobileMenu;
+  // Navbar layout. A side column has no room on a phone, so there it becomes a strip with a
+  // hamburger menu. The hamburger also shows on phones for a top strip set by "تنسيق الموبايل".
+  const navLayout = (navbar.layout === 'vertical' && previewMode === 'mobile') ? 'hamburger' : (navbar.layout || 'horizontal');
+  const isNavVertical = navLayout === 'vertical';
+  const isNavHidden = navLayout === 'none';
+  const isNavHamburger = navLayout === 'hamburger' || (navLayout === 'horizontal' && previewMode === 'mobile' && !!navbar.mobileMenu);
+  // Height the navbar takes above the slides (a side column or no navbar takes none).
+  const navFlowHeight = isNavHidden || isNavVertical ? 0 : (navbar.height ?? 60);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   useEffect(() => {
     if (!isNavHamburger) setIsNavMenuOpen(false);
@@ -778,6 +792,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // Workspace width observer & Scaling calculation
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(1280);
+  const [workspaceHeight, setWorkspaceHeight] = useState(800);
 
   const localScaleRef = useRef(1);
   const navbarRef = useRef<HTMLElement>(null);
@@ -877,7 +892,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   });
 
   const getSlideUnscaledTop = (targetSlideId: string) => {
-    let top = navbar.height ?? 60; // navbar height (configurable)
+    let top = navFlowHeight; // navbar height (configurable; 0 for a side column or no navbar)
     for (const s of slides) {
       if (s.id === targetSlideId) {
         return top;
@@ -940,6 +955,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     const handleResize = () => {
       if (workspaceRef.current) {
         setWorkspaceWidth(workspaceRef.current.clientWidth);
+        setWorkspaceHeight(workspaceRef.current.clientHeight);
       }
     };
     handleResize();
@@ -2040,7 +2056,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     ) : null;
   const effectiveNavItems = allPages && allPages.length > 0 ? [...navPageLinkItems, ...navCustomItems] : navbar.items;
 
-  const totalUnscaledHeight = (navbar.height ?? 60) + slides.reduce((sum, s) => sum + s.height, 0);
+  const slidesUnscaledHeight = slides.reduce((sum, s) => sum + s.height, 0);
+  const totalUnscaledHeight = navFlowHeight + slidesUnscaledHeight;
   const totalScaledHeight = totalUnscaledHeight * scaleFactor;
   // Height of the mobile device notch, which sits above the navbar as a flow sibling.
   // IMPORTANT: `position: sticky`'s `top` offset must be given in the element's own UNSCALED
@@ -2057,9 +2074,44 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // own width (navbar.width, default 100 = full-bleed). Centered automatically by the Scaling
   // Wrapper's `items-center`, so narrowing it just insets it evenly from both edges.
   const navWidthPx = frameWidth * ((navbar.width ?? 100) / 100);
+  // Side column: as tall as the visible part of the page (never taller than the page itself).
+  const workspacePad = isPublicSite || (previewMode === 'desktop' && isPreviewActive) ? 0 : (typeof window !== 'undefined' && window.innerWidth >= 640 ? 64 : 32);
+  const navSideHeight = Math.max(120, Math.min((workspaceHeight - workspacePad) / scaleFactor, slidesUnscaledHeight));
+  const wrapNav = (nav: React.ReactNode) =>
+    isNavVertical ? (
+      // Zero-height holder: the column floats over the slides' right edge instead of pushing them down.
+      <div
+        className="shrink-0 self-stretch"
+        style={{ position: navbar.isSticky ? 'sticky' : 'relative', top: `${notchHeightUnscaled}px`, height: 0, zIndex: 100000 }}
+      >
+        {nav}
+      </div>
+    ) : nav;
+
+  // Copying a navbar link onto an element: Esc cancels.
+  useEffect(() => {
+    if (!linkCopySource) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancelLinkCopy?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [linkCopySource, onCancelLinkCopy]);
 
   return (
     <>
+    {linkCopySource && (
+      <div dir="rtl" className="fixed top-20 left-1/2 -translate-x-1/2 z-[999999] flex items-center gap-3 bg-[#1d1d1f] text-white text-xs font-semibold ps-4 pe-1.5 py-1.5 rounded-full shadow-lg">
+        <span>انقر على نص أو أيقونة أو صورة لتعمل مثل «{linkCopySource.label}»</span>
+        <button
+          type="button"
+          onClick={() => onCancelLinkCopy?.()}
+          className="px-3 py-1 rounded-full bg-white/15 hover:bg-white/25 transition-all"
+        >
+          إلغاء
+        </button>
+      </div>
+    )}
     {cartToast && (
       <div dir="rtl" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999999] bg-[#2A1F1A] text-white text-sm font-semibold px-5 py-3 rounded-full shadow-lg pointer-events-none">
         ✓ أُضيف «{cartToast}» إلى السلة
@@ -2128,7 +2180,25 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           </div>
         )}
 
-        {/* 1. Navbar - Narrow Strip (نافبار وهو شريحة ضيقة) */}
+        {/* No navbar: in the editor a small tag keeps its settings reachable. */}
+        {isNavHidden && !isPreviewActive && !isPublicSite && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectElement(null);
+              onSelectNavbar?.();
+            }}
+            className={`absolute top-2 right-2 z-[100001] px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm border transition-all ${
+              isNavbarSelected ? 'bg-[#0071e3] text-white border-[#0071e3]' : 'bg-white/95 text-neutral-600 border-black/10 hover:text-[#0071e3]'
+            }`}
+          >
+            بدون نافبار · الإعدادات
+          </button>
+        )}
+
+        {/* 1. Navbar - Narrow Strip (نافبار وهو شريحة ضيقة), or a side column */}
+        {!isNavHidden && wrapNav(
         <nav
           ref={navbarRef}
           onClick={(e) => {
@@ -2138,24 +2208,27 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             onSelectNavbar?.();
           }}
           className={`shrink-0 w-full ${isNavHamburger ? 'overflow-visible' : 'overflow-hidden'} ${
-            navbar.borderStyle && navbar.borderStyle !== 'none' ? '' : 'border-b border-black/[0.06]'
+            navbar.borderStyle && navbar.borderStyle !== 'none' ? '' : (isNavVertical ? 'border-l border-black/[0.06]' : 'border-b border-black/[0.06]')
           } ${isNavbarSelected && !isPreviewActive ? 'ring-2 ring-[#0071e3]/50' : ''} ${isPreviewActive ? '' : 'cursor-pointer'}`}
           style={{
-            position: navbar.isSticky ? 'sticky' : 'relative',
+            // A side column sits in its zero-height holder (see wrapNav), pinned to the page's right edge.
+            position: isNavVertical ? 'absolute' : (navbar.isSticky ? 'sticky' : 'relative'),
             // Unscaled on purpose — see notchHeightUnscaled's comment above.
-            top: `${notchHeightUnscaled}px`,
-            width: `${navWidthPx}px`,
-            transformOrigin: 'top center',
+            top: isNavVertical ? 0 : `${notchHeightUnscaled}px`,
+            right: isNavVertical ? 0 : undefined,
+            width: isNavVertical ? `${navbar.sideWidth ?? 200}px` : `${navWidthPx}px`,
+            height: isNavVertical ? `${navSideHeight}px` : undefined,
+            transformOrigin: isNavVertical ? 'top right' : 'top center',
             transform: `scale(${scaleFactor})`,
             // Z-index kept far above any slide element's (which can reach ~50+) so nothing ever floats over the navbar.
             zIndex: 100000,
-            minHeight: `${navbar.height ?? 60}px`,
+            minHeight: isNavVertical ? undefined : `${navbar.height ?? 60}px`,
             // Only colors/shadow/border transition — position is handled natively by the browser's
             // compositor via `position: sticky` above, so `transform`/`top` are intentionally excluded
             // here to avoid any CSS-animated lag behind the scroll.
             transition: 'background-color 150ms, border-color 150ms, box-shadow 150ms',
             // Only at 100% or below: a layer promoted while scaled up is painted blurry.
-            willChange: navbar.isSticky && scaleFactor <= 1 ? 'transform' : undefined,
+            willChange: navbar.isSticky && !isNavVertical && scaleFactor <= 1 ? 'transform' : undefined,
             borderStyle: navbar.borderStyle && navbar.borderStyle !== 'none' ? navbar.borderStyle : undefined,
             borderWidth: navbar.borderStyle && navbar.borderStyle !== 'none' ? `${navbar.borderWidth ?? 0}px` : undefined,
             borderColor: navbar.borderStyle && navbar.borderStyle !== 'none' ? (navbar.borderColor || 'transparent') : undefined,
@@ -2198,8 +2271,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           )}
 
           <div
-            className="relative w-full h-full px-6 sm:px-10 flex items-center justify-between"
-            style={{ color: navbar.textColor, opacity: navbar.textOpacity ?? 1, minHeight: `${navbar.height ?? 60}px` }}
+            className={isNavVertical
+              ? 'relative w-full h-full px-4 py-6 flex flex-col items-stretch gap-5 overflow-y-auto'
+              : 'relative w-full h-full px-6 sm:px-10 flex items-center justify-between'}
+            style={{ color: navbar.textColor, opacity: navbar.textOpacity ?? 1, minHeight: isNavVertical ? undefined : `${navbar.height ?? 60}px` }}
           >
             {/* Logo / Brand Name (can be hidden entirely via navbar.showBrandName). Both the logo and
                 the name come ONLY from the user's own input (navbar.logoUrl / navbar.brandName) —
@@ -2228,7 +2303,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             ) : (
               // No brand/logo shown: leave a small visual gap (about one page-name's width) from the
               // page edge instead of butting the page names flush against it.
-              <span className="shrink-0 w-16" />
+              isNavVertical ? null : <span className="shrink-0 w-16" />
             )}
 
             {/* Nav links (page names): plain names only, no hover color/active-bold/underline marks —
@@ -2239,9 +2314,13 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 was narrower than 768px, independent of the chosen device-preview mode. */}
             {!isNavHamburger && (
             <div
-              className={`flex flex-1 items-center gap-2.5 text-xs font-medium px-4 flex-wrap ${
-                navbar.itemsAlign === 'left' ? 'justify-end' : navbar.itemsAlign === 'center' ? 'justify-center' : 'justify-start'
-              }`}
+              className={isNavVertical
+                ? `flex flex-1 flex-col gap-2 text-sm font-medium ${
+                    navbar.itemsAlign === 'left' ? 'items-end' : navbar.itemsAlign === 'center' ? 'items-center' : 'items-start'
+                  }`
+                : `flex flex-1 items-center gap-2.5 text-xs font-medium px-4 flex-wrap ${
+                    navbar.itemsAlign === 'left' ? 'justify-end' : navbar.itemsAlign === 'center' ? 'justify-center' : 'justify-start'
+                  }`}
               style={{ color: navbar.textColor }}
             >
               {effectiveNavItems.map((item) => {
@@ -2259,7 +2338,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                         onSelectPage?.(item.linkTargetId as string);
                       }
                     }}
-                    className={`${hasFrame ? 'px-2.5 py-1' : ''} ${isPageLink ? 'cursor-pointer' : 'cursor-default'}`}
+                    className={`${hasFrame ? 'px-2.5 py-1' : (isNavVertical ? 'py-1' : '')} ${isPageLink ? 'cursor-pointer' : 'cursor-default'}`}
                     style={{
                       fontFamily: navbar.itemsFontFamily || undefined,
                       backgroundColor: navbar.itemsFrameBgColor || undefined,
@@ -2288,7 +2367,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     onSelectPage?.(navbar.ctaLinkTargetId);
                   }
                 }}
-                className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95"
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95 ${isNavVertical ? 'self-center' : ''}`}
               >
                 {navbar.ctaText}
               </button>
@@ -2338,6 +2417,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             </div>
           )}
         </nav>
+        )}
 
         {/* Device Mode Wrapper Frame: the device-mockup chrome (border/rounded corners/shadow) around
             the slides. A normal FLOW sibling now (not absolutely positioned), exactly like the notch
@@ -2441,6 +2521,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       } finally {
                         setIsDroppingPhoto(false);
                       }
+                    } else if (data.type === 'navbar-part' && data.element) {
+                      // A navbar part (page name, logo, button...) placed where it was dropped.
+                      const { type, content, styles, extra } = data.element;
+                      const finalW = extra?.width || 130;
+                      const finalH = extra?.height || 36;
+                      const targetX = Math.max(0, Math.min(baseWidth - finalW, dropX - finalW / 2));
+                      const targetY = Math.max(0, Math.min(slide.height - finalH, dropY - finalH / 2));
+                      onAddElement?.(type, content, styles, { ...extra, slideId: slide.id, x: targetX, y: targetY });
                     } else if (data.type === 'graphic-item' && data.item) {
                       const item = data.item;
                       const finalW = 140;
@@ -2498,7 +2586,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   <div className="absolute inset-0 z-50 bg-[#0071e3]/10 border-2 border-dashed border-[#0071e3] rounded-inherit flex items-center justify-center pointer-events-none backdrop-blur-[1px] transition-all">
                     <div className="bg-white/95 px-4 py-2.5 rounded-2xl shadow-lg border border-[#0071e3]/20 flex items-center gap-2.5 text-xs font-bold text-[#0071e3] animate-bounce">
                       <span className="text-base">✨</span>
-                      <span>أفلت الصورة هنا لإدراجها في الشريحة</span>
+                      <span>أفلت هنا لإضافته إلى الشريحة</span>
                     </div>
                   </div>
                 )}
@@ -2680,8 +2768,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     <div
                       key={elem.id}
                       id={`canvas-elem-${elem.id}`}
-                      onMouseDown={(e) => !isPreviewActive && handleElementMouseDown(e, elem)}
-                      onTouchStart={(e) => !isPreviewActive && handleElementTouchStart(e, elem)}
+                      onMouseDown={(e) => !isPreviewActive && !linkCopySource && handleElementMouseDown(e, elem)}
+                      onTouchStart={(e) => !isPreviewActive && !linkCopySource && handleElementTouchStart(e, elem)}
                       onTouchMove={handleElementTouchMove}
                       onTouchEnd={handleElementTouchEnd}
                       onTouchCancel={handleElementTouchEnd}
@@ -2693,6 +2781,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           return;
                         }
                         e.stopPropagation();
+                        // Copying a navbar link: this element takes it and becomes a working link.
+                        if (linkCopySource) {
+                          onApplyLinkCopy?.(elem.id);
+                          return;
+                        }
                         onSelectElement(elem.id);
                         onSelectSlide(slide.id);
                       }}
@@ -2725,7 +2818,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                         ].filter(Boolean).join(' ') || undefined,
                         cursor: isPreviewActive
                           ? (elem.linkUrl || elem.cartProduct ? 'pointer' : 'default')
-                          : (elem.isLocked ? 'default' : (isDragging ? 'grabbing' : 'grab')),
+                          : linkCopySource ? 'copy' : (elem.isLocked ? 'default' : (isDragging ? 'grabbing' : 'grab')),
                         transform: elem.rotation ? `rotate(${elem.rotation}deg)` : undefined,
                         transformOrigin: 'center center',
                         ...animationStyle

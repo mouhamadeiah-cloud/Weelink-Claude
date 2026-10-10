@@ -1,8 +1,8 @@
-import {StrictMode, lazy, Suspense} from 'react';
+import {StrictMode, lazy, Suspense, useEffect, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import {siteFromLocation} from './services/sites';
+import {siteFromLocation, siteNameForHost} from './services/sites';
 
 // The restaurant's own pages open from query links (no server rewrites needed):
 // ?r=<uid> is the guests' site (with &t=<table> from a table's QR code), ?kitchen=<uid> the kitchen
@@ -22,9 +22,22 @@ const deviceUid = params.get('device');
 const orderId = params.get('order');
 const publishedSite = siteFromLocation();
 
+// Any other address is a customer's own domain only if one is connected (siteDomains); otherwise
+// it is Weelink itself, wherever it is served from (a new domain, a preview host).
+const HostGate = ({host}: {host: string}) => {
+  const [name, setName] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    siteNameForHost(host).then(setName).catch(() => setName(null));
+  }, []);
+  if (name === undefined) return null;
+  return name ? <Suspense fallback={null}><PublicSite where={{name}} /></Suspense> : <App />;
+};
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {publishedSite && !siteUid ? (
+    {publishedSite && 'host' in publishedSite && !siteUid ? (
+      <HostGate host={publishedSite.host} />
+    ) : publishedSite && !siteUid ? (
       <Suspense fallback={null}><PublicSite where={publishedSite} /></Suspense>
     ) : siteUid && orderId ? (
       <Suspense fallback={null}><OrderStatusPage uid={siteUid} orderId={orderId} k={params.get('k') || ''} /></Suspense>

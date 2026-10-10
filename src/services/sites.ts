@@ -243,6 +243,12 @@ export const siteFromLocation = (): { name: string } | { host: string } | null =
   return ours ? null : { host: host.replace(/^www\./, '') };
 };
 
+// The page's name for a customer's own domain, '' when the domain is not connected to any page.
+export const siteNameForHost = async (host: string) => {
+  const d = await getDoc(doc(db, 'siteDomains', host));
+  return d.exists() ? String(d.data().name || '') : '';
+};
+
 export const loadPublishedSite = async (where: { name: string } | { host: string }): Promise<PublishedSite | null> => {
   let name = 'name' in where ? where.name : '';
   if ('host' in where) {

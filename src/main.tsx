@@ -2,6 +2,7 @@ import {StrictMode, lazy, Suspense} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import {siteFromLocation} from './services/sites';
 
 // The restaurant's own pages open from query links (no server rewrites needed):
 // ?r=<uid> is the guests' site (with &t=<table> from a table's QR code), ?kitchen=<uid> the kitchen
@@ -9,6 +10,8 @@ import './index.css';
 // ?r=<uid>&order=<id>&k=<key> an order's status page (the link in the customer's confirmation email).
 const PublicRestaurantSite = lazy(() => import('./components/restaurant/PublicRestaurantSite').then((m) => ({default: m.PublicRestaurantSite})));
 const KitchenPage = lazy(() => import('./components/restaurant/KitchenScreen').then((m) => ({default: m.KitchenPage})));
+// A published page: <name>.testweelink.de, /?s=<name>, or a customer's own domain.
+const PublicSite = lazy(() => import('./components/publish/PublicSite').then((m) => ({default: m.PublicSite})));
 const OrderStatusPage = lazy(() => import('./components/restaurant/OrderStatusPage').then((m) => ({default: m.OrderStatusPage})));
 const DevicePage = lazy(() => import('./components/restaurant/DeviceScreen').then((m) => ({default: m.DevicePage})));
 
@@ -17,10 +20,13 @@ const siteUid = params.get('r');
 const kitchenUid = params.get('kitchen');
 const deviceUid = params.get('device');
 const orderId = params.get('order');
+const publishedSite = siteFromLocation();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {siteUid && orderId ? (
+    {publishedSite && !siteUid ? (
+      <Suspense fallback={null}><PublicSite where={publishedSite} /></Suspense>
+    ) : siteUid && orderId ? (
       <Suspense fallback={null}><OrderStatusPage uid={siteUid} orderId={orderId} k={params.get('k') || ''} /></Suspense>
     ) : siteUid ? (
       <Suspense fallback={null}><PublicRestaurantSite uid={siteUid} /></Suspense>

@@ -6,8 +6,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, UtensilsCrossed } from 'lucide-react';
 import { CanvasWorkspace } from '../CanvasWorkspace';
-import type { CanvasElement, Page } from '../../types';
-import { arrangeSlideForMobile } from '../../utils/mobileLayout';
+import { withPhoneLayouts } from '../../utils/mobileLayout';
 import { withLocalGraphics } from '../../utils/localGraphics';
 import { loadPublishedRestaurant, placeOrder, PublishedRestaurant } from './restaurantCloud';
 import { RestaurantDataContext, RestaurantOrderContext } from './store/RestaurantDataContext';
@@ -19,22 +18,6 @@ import { sendOrderConfirmation } from './orderStatus';
 
 const PHONE_MAX = 768;
 const noop = () => {};
-
-// Slides that have no phone layout yet get one, as «تنسيق الموبايل» would make it.
-const withPhoneLayouts = (pages: Page[], elements: CanvasElement[]) => {
-  const layouts = new Map<string, NonNullable<CanvasElement['mobile']>>();
-  const nextPages = pages.map((p) => ({
-    ...p,
-    slides: p.slides.map((s) => {
-      const els = elements.filter((e) => e.slideId === s.id);
-      if (!els.length || els.some((e) => e.mobile)) return s;
-      const { layouts: l, mobileHeight } = arrangeSlideForMobile(s, els);
-      l.forEach((v, k) => layouts.set(k, v));
-      return { ...s, mobileHeight };
-    }),
-  }));
-  return { pages: nextPages, elements: layouts.size ? elements.map((e) => (layouts.has(e.id) ? { ...e, mobile: layouts.get(e.id) } : e)) : elements };
-};
 
 export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
   const [site, setSite] = useState<PublishedRestaurant | null | 'loading' | 'error'>('loading');

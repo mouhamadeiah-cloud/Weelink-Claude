@@ -89,12 +89,13 @@ interface TicketProps {
 const OrderTicket: React.FC<TicketProps> = ({ o, late, lines, now, color, menu, stationColor, onToggleLine, action, onBack }) => {
   const mins = minutesSince(o.createdAt, now);
   const done = new Set(o.doneLines || []);
-  const isLate = o.status !== 'ready' && mins >= late;
+  const isLate = o.status !== 'ready' && o.status !== 'onway' && mins >= late;
   return (
     <div className={`rounded-2xl bg-[#26272b] border-2 overflow-hidden flex flex-col ${isLate ? 'kitchen-late' : ''}`} style={isLate ? undefined : { borderColor: color }}>
       <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ backgroundColor: isLate ? 'rgba(250,82,82,.25)' : `${color}26` }}>
         <span className="text-3xl font-black tabular-nums">#{o.number}</span>
         <Place o={o} menu={menu} />
+        {o.status === 'onway' && <span className="h-8 px-3 rounded-full bg-[#7048E8] text-base font-black inline-flex items-center">على الطريق</span>}
         <span className="mr-auto flex items-center gap-2 shrink-0">
           <span className="text-base font-bold text-white/60 tabular-nums" dir="ltr">{timeOf(o.createdAt)}</span>
           <span className="h-8 px-2.5 rounded-full text-lg font-black inline-flex items-center" style={{ color: isLate ? '#fff' : waitColor(mins, late), background: isLate ? '#E03131' : 'rgba(255,255,255,.08)' }}>{isLate ? `متأخر ${mins} د` : `${mins} د`}</span>
@@ -176,7 +177,7 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
   const allDone = (o: MenuOrder, lines: number[]) => lines.every((i) => (o.doneLines || []).includes(i));
 
   const open = useMemo(
-    () => live.items.filter((o) => o.status === 'new' || o.status === 'preparing' || o.status === 'ready').sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    () => live.items.filter((o) => o.status === 'new' || o.status === 'preparing' || o.status === 'ready' || o.status === 'onway').sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     [live.items]
   );
 
@@ -184,6 +185,7 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
   // its own dishes are done, even while other sections still work on theirs.
   const columnOf = (o: MenuOrder, st = activeStation): Column => {
     if (o.status === 'new') return 'new';
+    if (o.status === 'onway') return 'ready';
     if (!st) return o.status === 'ready' ? 'ready' : 'preparing';
     return o.status === 'ready' || allDone(o, linesFor(o, st)) ? 'ready' : 'preparing';
   };
@@ -245,16 +247,19 @@ export const KitchenBoard: React.FC<BoardProps> = ({ uid, live, menu, title, loc
   const actionFor = (o: MenuOrder, col: Column): TicketProps['action'] => {
     if (col === 'new') return { label: 'ابدأ التحضير', onClick: () => setStatus(o, 'preparing') };
     if (col === 'preparing') return activeStation ? { label: 'قسمي جاهز', onClick: () => finishMine(o) } : { label: 'جاهز', onClick: () => finishAll(o) };
-    if (o.status === 'ready') return { label: 'تم التسليم', onClick: () => setStatus(o, 'done') };
+    // A delivery order goes «على الطريق» first and stays here until it is delivered.
+    if (o.status === 'ready' && o.type === 'delivery') return { label: 'على الطريق', onClick: () => setStatus(o, 'onway') };
+    if (o.status === 'ready' || o.status === 'onway') return { label: 'تم التسليم', onClick: () => setStatus(o, 'done') };
     return { label: `بانتظار: ${waitingFor(o) || 'الأقسام الأخرى'}`, onClick: () => {}, disabled: true };
   };
-  const backFor = (o: MenuOrder, col: Column) => (col === 'preparing' ? () => setStatus(o, 'new') : col === 'ready' ? () => reopen(o) : undefined);
+  const backFor = (o: MenuOrder, col: Column) =>
+    o.status === 'onway' ? () => setStatus(o, 'ready') : col === 'preparing' ? () => setStatus(o, 'new') : col === 'ready' ? () => reopen(o) : undefined;
 
   // What is still to prepare on this screen, summed by dish.
   const toPrepare = useMemo(() => {
     const sums = new Map<string, number>();
     open
-      .filter((o) => o.status !== 'ready')
+      .filter((o) => o.status !== 'ready' && o.status !== 'onway')
       .forEach((o) => linesFor(o).forEach((i) => {
         if ((o.doneLines || []).includes(i)) return;
         const l = o.lines[i];

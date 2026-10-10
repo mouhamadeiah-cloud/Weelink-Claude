@@ -15,6 +15,7 @@ import { readTableFromUrl } from './tableStore';
 import type { MenuOrder } from './restaurantTypes';
 import { CustomerAccount } from '../customers/CustomerAccount';
 import { getCustomerSession } from '../customers/customerSession';
+import { sendOrderConfirmation } from './orderStatus';
 
 const PHONE_MAX = 768;
 const noop = () => {};
@@ -66,7 +67,9 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
     () => async (o: MenuOrder) => {
       try {
         const customer = getCustomerSession();
-        return await placeOrder(uid, customer ? { ...o, customerUid: customer.uid } : o);
+        const number = await placeOrder(uid, customer ? { ...o, customerUid: customer.uid } : o);
+        if (customer) sendOrderConfirmation(uid, o.id);
+        return number;
       } catch (e) {
         console.warn('Could not send the order:', e);
         return null;

@@ -164,12 +164,13 @@ export const stationOfDish = (dishId: string, data: Pick<RestaurantAdminData, 'd
   return (id && data.stations.some((s) => s.id === id) ? id : data.stations[0]?.id) || '';
 };
 
-export type OrderStatus = 'new' | 'preparing' | 'ready' | 'done' | 'cancelled';
+export type OrderStatus = 'new' | 'preparing' | 'ready' | 'onway' | 'done' | 'cancelled';
 
 export const ORDER_STATUSES: { id: OrderStatus; label: string; color: string }[] = [
   { id: 'new', label: 'جديد', color: '#E03131' },
   { id: 'preparing', label: 'قيد التحضير', color: '#E8590C' },
   { id: 'ready', label: 'جاهز', color: '#1971C2' },
+  { id: 'onway', label: 'على الطريق', color: '#7048E8' }, // a delivery order that left the restaurant
   { id: 'done', label: 'تم التسليم', color: '#2F9E44' },
   { id: 'cancelled', label: 'ملغى', color: '#868E96' },
 ];

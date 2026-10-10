@@ -1,6 +1,8 @@
 // Publishing a project as a public website.
 //   siteNames/{name}                      the page's name (its address name.testweelink.de); the doc
-//                                         id makes it unique. { owner, project, at }
+//                                         id makes it unique. { owner, project, at, title,
+//                                         description, keywords } — the last three for Weelink's
+//                                         search (searchSites).
 //   publishedSites/{owner}__{project}     the published copy: pages, elements and only the public part
 //                                         of the project's data (no costs, customers, orders,
 //                                         accounts). Changes in the editor show only after «نشر».
@@ -10,7 +12,7 @@
 //                                         api/domains.ts once the domain is added to Vercel).
 //   domainOrders/{id}                     a request to buy a domain through Weelink.
 // See firestore.rules.
-import { collection, deleteDoc, doc, getDoc, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, runTransaction, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import type { CanvasElement, Page } from '../types';
 import type { ProjectType } from '../components/shop/shopTypes';
@@ -60,6 +62,29 @@ export interface CustomDomainState {
   at: string;
 }
 
+// What Google, social media and Weelink's own search show for the page.
+export interface SiteSeo {
+  title: string;
+  description: string;
+  keywords: string[];
+}
+
+export const SEO_LIMITS = { title: 70, description: 300, keyword: 40, keywords: 15 };
+
+// The keywords as typed (separated by commas, «،» or new lines): trimmed, lower-case, no repeats.
+export const normalizeKeywords = (raw: string | string[]) => {
+  const list = (Array.isArray(raw) ? raw : raw.split(/[,،\n]/))
+    .map((k) => k.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, SEO_LIMITS.keyword))
+    .filter(Boolean);
+  return Array.from(new Set(list)).slice(0, SEO_LIMITS.keywords);
+};
+
+const cleanSeo = (seo: SiteSeo): SiteSeo => ({
+  title: seo.title.trim().slice(0, SEO_LIMITS.title),
+  description: seo.description.trim().slice(0, SEO_LIMITS.description),
+  keywords: normalizeKeywords(seo.keywords),
+});
+
 export interface PublishedSite {
   name: string;
   project: ProjectType;
@@ -71,6 +96,7 @@ export interface PublishedSite {
   hash: string; // of what was published, to tell the editor whether there are unpublished changes
   customDomain?: CustomDomainState | null;
   icon?: string; // the browser tab's icon (a small PNG data URL), '' = the name's first letter
+  seo?: SiteSeo;
 }
 
 export const readMySite = async (owner: string, project: ProjectType): Promise<PublishedSite | null> => {
@@ -94,8 +120,10 @@ export const publishSite = async (
   owner: string,
   project: ProjectType,
   name: string,
-  content: { pages: Page[]; elements: CanvasElement[]; data: any }
+  content: { pages: Page[]; elements: CanvasElement[]; data: any },
+  seo: SiteSeo
 ) => {
+  const search = cleanSeo(seo);
   const ref = doc(db, 'publishedSites', siteId(owner, project));
   const nameRef = doc(db, 'siteNames', name);
   const now = new Date().toISOString();
@@ -103,7 +131,8 @@ export const publishSite = async (
     const [taken, current] = await Promise.all([tx.get(nameRef), tx.get(ref)]);
     if (taken.exists() && (taken.data().owner !== owner || taken.data().project !== project)) throw new Error('name-taken');
     const oldName = current.exists() ? current.data().name : '';
-    if (!taken.exists()) tx.set(nameRef, { owner, project, at: now });
+    if (!taken.exists()) tx.set(nameRef, { owner, project, at: now, ...search });
+    else tx.update(nameRef, { ...search });
     if (oldName && oldName !== name) tx.delete(doc(db, 'siteNames', oldName));
     tx.set(ref, {
       name,
@@ -116,6 +145,7 @@ export const publishSite = async (
       hash: contentHash(content),
       customDomain: current.exists() ? current.data().customDomain ?? null : null,
       icon: current.exists() ? current.data().icon || '' : '',
+      seo: search,
     });
   });
 };
@@ -123,6 +153,24 @@ export const publishSite = async (
 // The browser tab's icon, changed without publishing again.
 export const setSiteIcon = (owner: string, project: ProjectType, icon: string) =>
   updateDoc(doc(db, 'publishedSites', siteId(owner, project)), { icon });
+
+// The title, description and keywords, changed without publishing again.
+export const setSiteSeo = async (owner: string, project: ProjectType, name: string, seo: SiteSeo) => {
+  const search = cleanSeo(seo);
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'publishedSites', siteId(owner, project)), { seo: search });
+  batch.update(doc(db, 'siteNames', name), { ...search });
+  await batch.commit();
+  return search;
+};
+
+// Weelink's search: published pages that have this keyword.
+export const searchSites = async (word: string) => {
+  const k = normalizeKeywords(word)[0];
+  if (!k) return [];
+  const snap = await getDocs(query(collection(db, 'siteNames'), where('keywords', 'array-contains', k), limit(20)));
+  return snap.docs.map((d) => ({ name: d.id, ...(d.data() as { owner: string; project: ProjectType; title?: string; description?: string }) }));
+};
 
 // A logo picked by the customer, as a 192×192 PNG (the image fills the square, centred).
 export const makeSiteIcon = (file: File): Promise<string> =>

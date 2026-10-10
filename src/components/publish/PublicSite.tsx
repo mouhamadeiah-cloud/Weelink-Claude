@@ -3,13 +3,10 @@
 // name opens its live site (orders, customers) as /?r=<uid> does.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { CanvasWorkspace } from '../CanvasWorkspace';
 import { withLocalGraphics } from '../../utils/localGraphics';
-import { PublishedSite, letterIcon, loadPublishedSite } from '../../services/sites';
-import { PublicRestaurantSite, withPhoneLayouts } from '../restaurant/PublicRestaurantSite';
-import { ShopDataContext, ShopUpdateContext } from '../shop/store/ShopDataContext';
-import { CarDataContext } from '../cars/store/CarDataContext';
-import { carsFromPublic, shopFromPublic } from './publicData';
+import { PublishedSite, SiteSeo, letterIcon, loadPublishedSite } from '../../services/sites';
+import { PublicRestaurantSite } from '../restaurant/PublicRestaurantSite';
+import { SiteView } from './SiteView';
 
 const PHONE_MAX = 768;
 
@@ -25,10 +22,29 @@ const setPageIcon = (href: string) => {
     document.head.appendChild(link);
   });
 };
-const noop = () => {};
-// The store's checkout records the order in the admin data; a published copy has none to write to,
-// so the order goes to the shop on WhatsApp from the thank-you screen.
-const keepNothing = () => {};
+
+// The title, description and keywords the customer wrote for Google and for sharing on social media.
+const setMeta = (attr: 'name' | 'property', key: string, value: string) => {
+  let tag = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
+  if (!value) return tag?.remove();
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute(attr, key);
+    document.head.appendChild(tag);
+  }
+  tag.content = value;
+};
+const applySeo = (seo: SiteSeo | undefined, fallbackTitle: string) => {
+  const title = seo?.title || fallbackTitle;
+  if (title) document.title = title;
+  const description = seo?.description || '';
+  setMeta('name', 'description', description);
+  setMeta('name', 'keywords', (seo?.keywords || []).join(', '));
+  setMeta('property', 'og:title', title);
+  setMeta('property', 'og:description', description);
+  setMeta('property', 'og:type', 'website');
+  setMeta('property', 'og:url', window.location.href);
+};
 
 export const PublicSite: React.FC<{ where: { name: string } | { host: string } }> = ({ where }) => {
   const [site, setSite] = useState<PublishedSite | null | 'loading' | 'error'>('loading');
@@ -40,9 +56,11 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
       .then((s) => {
         setSite(s ? { ...s, elements: (s.elements || []).map(withLocalGraphics) } : null);
         if (s?.pages?.[0]) setPageId(s.pages[0].id);
-        const title = s?.pages?.[0]?.navbar?.brandName;
-        if (title) document.title = title;
-        if (s) setPageIcon(s.icon || letterIcon(title || s.name));
+        const title = s?.pages?.[0]?.navbar?.brandName || '';
+        if (s) {
+          applySeo(s.seo, title);
+          setPageIcon(s.icon || letterIcon(s.seo?.title || title || s.name));
+        }
       })
       .catch(() => setSite('error'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -54,18 +72,14 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const view = useMemo(() => {
-    if (!site || typeof site === 'string') return null;
-    return phone ? withPhoneLayouts(site.pages || [], site.elements) : { pages: site.pages || [], elements: site.elements };
-  }, [site, phone]);
-  const shop = useMemo(() => (site && typeof site !== 'string' && site.project === 'shop' ? shopFromPublic(site.data) : null), [site]);
-  const cars = useMemo(() => (site && typeof site !== 'string' && site.project === 'cars' ? carsFromPublic(site.data) : null), [site]);
+  const ready = site && typeof site !== 'string' ? site : null;
+  const elements = useMemo(() => ready?.elements || [], [ready]);
 
   if (site === 'loading') {
     return <div className="min-h-[100dvh] flex items-center justify-center bg-white"><Loader2 size={36} className="animate-spin text-[#0071e3]" /></div>;
   }
-  if (site && typeof site !== 'string' && site.project === 'restaurant') return <PublicRestaurantSite uid={site.owner} />;
-  if (!view || !site || typeof site === 'string' || !view.pages.length) {
+  if (ready?.project === 'restaurant') return <PublicRestaurantSite uid={ready.owner} />;
+  if (!ready || !ready.pages?.length) {
     return (
       <div dir="rtl" className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 bg-[#f5f5f7] text-center p-6 font-sans">
         <span className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center text-xl font-bold">W</span>
@@ -75,40 +89,14 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
     );
   }
 
-  const page = view.pages.find((p) => p.id === pageId) || view.pages[0];
   const selectPage = (id: string) => {
     setPageId(id);
     document.querySelector('[dir="rtl"].overflow-y-auto')?.scrollTo({ top: 0 });
   };
 
   return (
-    <ShopDataContext.Provider value={shop}>
-      <ShopUpdateContext.Provider value={shop ? keepNothing : null}>
-        <CarDataContext.Provider value={cars}>
-          <div className="h-[100dvh] flex flex-col bg-white">
-            <CanvasWorkspace
-              isPublicSite
-              isPreviewActive
-              previewMode={phone ? 'mobile' : 'desktop'}
-              slides={page.slides}
-              activeSlideId={page.slides[0]?.id || ''}
-              elements={view.elements}
-              selectedElementId={null}
-              onSelectElement={noop}
-              onSelectSlide={noop}
-              onSelectPage={selectPage}
-              allPages={view.pages}
-              activePageId={page.id}
-              navbar={page.navbar}
-              onUpdateElementPosition={noop}
-              onUpdateElementSize={noop}
-              onUpdateElementContent={noop}
-              onDeleteElement={noop}
-              onDuplicateElement={noop}
-            />
-          </div>
-        </CarDataContext.Provider>
-      </ShopUpdateContext.Provider>
-    </ShopDataContext.Provider>
+    <div className="h-[100dvh]">
+      <SiteView project={ready.project} pages={ready.pages} elements={elements} data={ready.data} phone={phone} pageId={pageId} onSelectPage={selectPage} />
+    </div>
   );
 };

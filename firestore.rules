@@ -308,19 +308,33 @@ service cloud.firestore {
       return p in ['page', 'shop', 'cars', 'restaurant'];
     }
 
+    // The page's title, description and keywords (for Google and Weelink's search).
+    function isSeo(m) {
+      return (!('title' in m) || (m.title is string && m.title.size() <= 70))
+        && (!('description' in m) || (m.description is string && m.description.size() <= 300))
+        && (!('keywords' in m) || (m.keywords is list && m.keywords.size() <= 15));
+    }
+
     match /siteNames/{name} {
       allow get: if true;
+      // Weelink's search (keywords array-contains a word).
+      allow list: if request.query.limit <= 50;
       allow create: if isSiteName(name)
-        && incoming().keys().hasOnly(['owner', 'project', 'at'])
+        && incoming().keys().hasOnly(['owner', 'project', 'at', 'title', 'description', 'keywords'])
+        && isSeo(incoming())
         && isProjectKind(incoming().project)
         && incoming().at is string
         && canManage(incoming().owner);
+      allow update: if canManage(existing().owner)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'keywords'])
+        && isSeo(incoming());
       allow delete: if canManage(existing().owner);
     }
 
     match /publishedSites/{siteId} {
       allow get: if true;
-      allow create, update: if incoming().keys().hasOnly(['name', 'project', 'owner', 'pages', 'elements', 'data', 'publishedAt', 'hash', 'customDomain', 'icon'])
+      allow create, update: if incoming().keys().hasOnly(['name', 'project', 'owner', 'pages', 'elements', 'data', 'publishedAt', 'hash', 'customDomain', 'icon', 'seo'])
+        && (!('seo' in incoming()) || (incoming().seo is map && incoming().seo.keys().hasOnly(['title', 'description', 'keywords']) && isSeo(incoming().seo)))
         && (!('icon' in incoming()) || (incoming().icon is string && incoming().icon.size() <= 200000))
         && isProjectKind(incoming().project)
         && siteId == incoming().owner + '__' + incoming().project

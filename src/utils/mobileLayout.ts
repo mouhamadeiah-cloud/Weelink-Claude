@@ -1,4 +1,4 @@
-import { CanvasElement, MobileLayout, Slide } from '../types';
+import { CanvasElement, MobileLayout, Page, Slide } from '../types';
 
 /**
  * "تنسيق الموبايل" — automatic phone layout.
@@ -357,3 +357,19 @@ export const resolveMobileElement = (el: CanvasElement): CanvasElement => {
 /** Phone height of a slide: its arranged height once any of its elements has a phone layout. */
 export const resolveMobileSlideHeight = (slide: Slide, elements: CanvasElement[]) =>
   slide.mobileHeight && elements.some(el => el.slideId === slide.id && el.mobile) ? slide.mobileHeight : slide.height;
+
+// Slides that have no phone layout yet get one, as «تنسيق الموبايل» would make it.
+export const withPhoneLayouts = (pages: Page[], elements: CanvasElement[]) => {
+  const layouts = new Map<string, NonNullable<CanvasElement['mobile']>>();
+  const nextPages = pages.map((p) => ({
+    ...p,
+    slides: p.slides.map((s) => {
+      const els = elements.filter((e) => e.slideId === s.id);
+      if (!els.length || els.some((e) => e.mobile)) return s;
+      const { layouts: l, mobileHeight } = arrangeSlideForMobile(s, els);
+      l.forEach((v, k) => layouts.set(k, v));
+      return { ...s, mobileHeight };
+    }),
+  }));
+  return { pages: nextPages, elements: layouts.size ? elements.map((e) => (layouts.has(e.id) ? { ...e, mobile: layouts.get(e.id) } : e)) : elements };
+};

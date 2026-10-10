@@ -3484,6 +3484,7 @@ export default function App() {
         data={isPublishOpen ? publicDataFor(project, shopAdmin, carAdmin) : null}
         suggestedName={currentPage.navbar.brandName || ''}
         onPublishedChange={setPublishedName}
+        onArrangeForMobile={handleArrangeForMobile}
       />
     </div>
   );

@@ -2,18 +2,22 @@
 // (name.testweelink.de) while typing with a check that the name is free, publishes, and gets the
 // link with a QR code to share. Below, two wide buttons fold out: connecting a domain the customer
 // bought themselves, and buying a domain through Weelink (a request handled by the office for now).
+// Before publishing, the customer sees the page in a computer and a phone (and full size), can
+// arrange it for phones there, and writes its title, description and keywords for search.
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import {
-  CheckCircle2, ChevronDown, Copy, Download, ExternalLink, Globe, ImagePlus, Link2, Loader2, Monitor, RefreshCw, Share2, ShoppingCart, Smartphone, Trash2, X, XCircle,
+  CheckCircle2, ChevronDown, Copy, Download, ExternalLink, Globe, ImagePlus, Link2, Loader2, Maximize2, Monitor, RefreshCw, Search, Share2, ShoppingCart, Smartphone, Trash2, Wand2, X, XCircle,
 } from 'lucide-react';
 import type { CanvasElement, Page } from '../../types';
 import type { ProjectType } from '../shop/shopTypes';
 import {
-  CustomDomainState, DomainContact, NameState, PublishedSite, SITE_DOMAIN, checkDomain, checkSiteName, connectDomain, contentHash,
-  domainPrice, isValidDomain, letterIcon, makeSiteIcon, normalizeDomain, normalizeSiteName, publishSite, readMySite, removeDomain,
-  requestDomainPurchase, setSiteIcon, siteFallbackUrl, siteNameProblem, siteUrl, unpublishSite,
+  CustomDomainState, DomainContact, NameState, PublishedSite, SEO_LIMITS, SITE_DOMAIN, SiteSeo, checkDomain, checkSiteName, connectDomain,
+  contentHash, domainPrice, isValidDomain, letterIcon, makeSiteIcon, normalizeDomain, normalizeKeywords, normalizeSiteName, publishSite,
+  readMySite, removeDomain, requestDomainPurchase, setSiteIcon, setSiteSeo, siteFallbackUrl, siteNameProblem, siteUrl, unpublishSite,
 } from '../../services/sites';
+import { withLocalGraphics } from '../../utils/localGraphics';
+import { SiteView } from './SiteView';
 
 interface PublishModalProps {
   open: boolean;
@@ -25,6 +29,7 @@ interface PublishModalProps {
   data: any; // the project's public data (see publicData.ts)
   suggestedName: string;
   onPublishedChange: (name: string | null) => void;
+  onArrangeForMobile?: () => void; // the editor's «تنسيق الموبايل»
 }
 
 const input = 'w-full h-11 px-3.5 rounded-xl border border-neutral-200 bg-white text-sm text-[#1d1d1f] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/15 transition';
@@ -318,48 +323,191 @@ const IconPicker: React.FC<{ icon: string; title: string; name: string; onChange
   );
 };
 
-// ---------- How the published page looks ----------
+// ---------- How the page looks ----------
 
-// The published page in a computer screen and a phone, scaled down (the real page in a frame).
-const Previews: React.FC<{ url: string; version: string }> = ({ url, version }) => {
-  const frame = (w: number, h: number, scale: number) => (
-    <div dir="ltr" className="overflow-hidden bg-white" style={{ width: w * scale, height: h * scale }}>
-      <iframe
-        key={version}
-        src={url}
-        title="معاينة"
-        loading="lazy"
-        className="block border-0 pointer-events-none"
-        style={{ width: w, height: h, transform: `scale(${scale})`, transformOrigin: 'top left' }}
-        tabIndex={-1}
-      />
+type Device = 'desktop' | 'mobile';
+const SIZES: Record<Device, [number, number]> = { desktop: [1280, 800], mobile: [390, 844] };
+
+const ComputerFrame: React.FC<{ children: React.ReactNode; label: React.ReactNode }> = ({ children, label: l }) => (
+  <div className="flex flex-col items-center gap-1.5">
+    <div className="rounded-xl border-[6px] border-[#1d1d1f] overflow-hidden shadow-md bg-white">{children}</div>
+    <div className="w-14 h-2 rounded-b-lg bg-[#1d1d1f]" />
+    {l}
+  </div>
+);
+const PhoneFrame: React.FC<{ children: React.ReactNode; label: React.ReactNode }> = ({ children, label: l }) => (
+  <div className="flex flex-col items-center gap-1.5">
+    <div className="rounded-[18px] border-[5px] border-[#1d1d1f] overflow-hidden shadow-md bg-white">{children}</div>
+    {l}
+  </div>
+);
+const deviceLabel = (d: Device) => (
+  <span className="text-[11px] font-bold text-neutral-500 inline-flex items-center gap-1">
+    {d === 'desktop' ? <><Monitor size={12} /> كمبيوتر</> : <><Smartphone size={12} /> موبايل</>}
+  </span>
+);
+
+// A box of the device's real size, scaled down. Position: fixed parts of the page stay inside it
+// (a transformed box contains them).
+const Scaled: React.FC<{ device: Device; scale: number; children: React.ReactNode }> = ({ device, scale, children }) => {
+  const [w, h] = SIZES[device];
+  return (
+    <div dir="ltr" className="overflow-hidden" style={{ width: w * scale, height: h * scale }}>
+      <div className="pointer-events-none" style={{ width: w, height: h, transform: `scale(${scale})`, transformOrigin: 'top left' }}>{children}</div>
     </div>
   );
+};
+
+interface Draft { project: ProjectType; pages: Page[]; elements: CanvasElement[]; data: any }
+
+// The page as it is now in the editor (what «نشر» publishes): its first page in a computer and a
+// phone. A click opens it full size.
+const DraftPreviews: React.FC<{ draft: Draft; onOpen: (d: Device) => void; onArrange?: () => void; arranged: boolean }> = ({ draft, onOpen, onArrange, arranged }) => {
+  const first = draft.pages[0]?.id || '';
+  const thumb = (d: Device) => (
+    <button type="button" onClick={() => onOpen(d)} className="block cursor-zoom-in" aria-label={d === 'desktop' ? 'عرض على الكمبيوتر' : 'عرض على الموبايل'}>
+      <Scaled device={d} scale={0.25}>
+        <SiteView project={draft.project} pages={draft.pages} elements={draft.elements} data={draft.data} phone={d === 'mobile'} pageId={first} />
+      </Scaled>
+    </button>
+  );
   return (
-    <div className="flex items-end justify-center gap-4">
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="rounded-xl border-[6px] border-[#1d1d1f] overflow-hidden shadow-md">{frame(1280, 800, 0.25)}</div>
-        <div className="w-14 h-2 rounded-b-lg bg-[#1d1d1f]" />
-        <span className="text-[11px] font-bold text-neutral-500 inline-flex items-center gap-1"><Monitor size={12} /> كمبيوتر</span>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-end justify-center gap-4">
+        <ComputerFrame label={deviceLabel('desktop')}>{thumb('desktop')}</ComputerFrame>
+        <PhoneFrame label={deviceLabel('mobile')}>{thumb('mobile')}</PhoneFrame>
       </div>
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="rounded-[18px] border-[5px] border-[#1d1d1f] overflow-hidden shadow-md">{frame(390, 844, 0.25)}</div>
-        <span className="text-[11px] font-bold text-neutral-500 inline-flex items-center gap-1"><Smartphone size={12} /> موبايل</span>
+      <div className="flex flex-wrap justify-center gap-2">
+        <button type="button" onClick={() => onOpen('desktop')} className="h-9 px-3 rounded-xl border border-neutral-200 bg-white text-xs font-bold text-neutral-700 inline-flex items-center gap-1.5 cursor-pointer hover:bg-neutral-50">
+          <Maximize2 size={14} /> معاينة على الكمبيوتر
+        </button>
+        <button type="button" onClick={() => onOpen('mobile')} className="h-9 px-3 rounded-xl border border-neutral-200 bg-white text-xs font-bold text-neutral-700 inline-flex items-center gap-1.5 cursor-pointer hover:bg-neutral-50">
+          <Smartphone size={14} /> معاينة الموبايل
+        </button>
+        {onArrange && (
+          <button type="button" onClick={onArrange} className="h-9 px-3 rounded-xl bg-[#0071e3]/10 text-[#0071e3] text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer hover:bg-[#0071e3]/15">
+            <Wand2 size={14} /> تنسيق الموبايل
+          </button>
+        )}
       </div>
+      {onArrange && !arranged && (
+        <p className="text-[11px] text-neutral-500 text-center leading-relaxed">
+          لم تنسّق صفحتك للموبايل بعد، فرتّبناها تلقائياً في المعاينة. اضغط «تنسيق الموبايل» ليُحفظ الترتيب وتستطيع تعديله في المحرر.
+        </p>
+      )}
     </div>
+  );
+};
+
+// The page full size, on a computer (the whole window) or in a phone, with its pages clickable.
+const FullPreview: React.FC<{ draft: Draft; device: Device; onDevice: (d: Device) => void; onClose: () => void; onArrange?: () => void }> = ({ draft, device, onDevice, onClose, onArrange }) => {
+  const [pageId, setPageId] = useState(draft.pages[0]?.id || '');
+  const tab = (d: Device) => (
+    <button type="button" onClick={() => onDevice(d)} className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer ${device === d ? 'bg-white text-[#1d1d1f]' : 'text-white/70 hover:text-white'}`}>
+      {d === 'desktop' ? <><Monitor size={14} /> كمبيوتر</> : <><Smartphone size={14} /> موبايل</>}
+    </button>
+  );
+  const view = <SiteView project={draft.project} pages={draft.pages} elements={draft.elements} data={draft.data} phone={device === 'mobile'} pageId={pageId} onSelectPage={setPageId} />;
+  return (
+    <div className="fixed inset-0 z-[4000001] bg-[#1d1d1f] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div dir="rtl" className="h-14 shrink-0 flex items-center gap-2 px-3 font-sans">
+        <span className="text-sm font-black text-white hidden sm:block">معاينة قبل النشر</span>
+        <div className="flex gap-1 p-1 rounded-xl bg-white/10 mx-auto sm:mx-0 sm:mr-4">{tab('desktop')}{tab('mobile')}</div>
+        {device === 'mobile' && onArrange && (
+          <button type="button" onClick={onArrange} className="h-9 px-3 rounded-lg bg-[#0071e3] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
+            <Wand2 size={14} /> <span className="hidden sm:inline">تنسيق الموبايل</span>
+          </button>
+        )}
+        <button type="button" onClick={onClose} className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center cursor-pointer sm:mr-auto" aria-label="إغلاق المعاينة"><X size={18} /></button>
+      </div>
+      {device === 'desktop' ? (
+        <div className="flex-1 min-h-0 bg-white" style={{ transform: 'translateZ(0)' }}>{view}</div>
+      ) : (
+        <div className="flex-1 min-h-0 flex items-center justify-center p-3">
+          <div className="rounded-[28px] border-[8px] border-black overflow-hidden bg-white" style={{ width: 390 + 16, height: 'min(860px, 100%)', transform: 'translateZ(0)' }}>{view}</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// A restaurant's site is always live: shown as its visitors open it (in frames).
+const LivePreviews: React.FC<{ url: string }> = ({ url }) => {
+  const frame = (d: Device) => {
+    const [w, h] = SIZES[d];
+    return (
+      <div dir="ltr" className="overflow-hidden bg-white" style={{ width: w * 0.25, height: h * 0.25 }}>
+        <iframe src={url} title="معاينة" loading="lazy" tabIndex={-1} className="block border-0 pointer-events-none" style={{ width: w, height: h, transform: 'scale(0.25)', transformOrigin: 'top left' }} />
+      </div>
+    );
+  };
+  return (
+    <div className="flex flex-wrap items-end justify-center gap-4">
+      <ComputerFrame label={deviceLabel('desktop')}>{frame('desktop')}</ComputerFrame>
+      <PhoneFrame label={deviceLabel('mobile')}>{frame('mobile')}</PhoneFrame>
+    </div>
+  );
+};
+
+// ---------- Search ----------
+
+// The title, description and keywords for Google and Weelink's search, with how Google shows them.
+const SeoFields: React.FC<{ seo: SiteSeo; keywords: string; onSeo: (s: SiteSeo) => void; onKeywords: (k: string) => void; link: string }> = ({ seo, keywords, onSeo, onKeywords, link }) => {
+  const chips = normalizeKeywords(keywords);
+  return (
+    <>
+      <div>
+        <span className={label}>عنوان الصفحة في البحث</span>
+        <input className={input} maxLength={SEO_LIMITS.title} placeholder="مطعم النور - مشاوي ووجبات سريعة في حلب" value={seo.title} onChange={(e) => onSeo({ ...seo, title: e.target.value })} />
+        <div className="text-[10px] text-neutral-400 mt-0.5 text-left" dir="ltr">{seo.title.length}/{SEO_LIMITS.title}</div>
+      </div>
+      <div>
+        <span className={label}>وصف قصير</span>
+        <textarea
+          className={`${input} h-20 py-2.5 resize-none`}
+          maxLength={SEO_LIMITS.description}
+          placeholder="ماذا تقدّم، وأين أنت، ولماذا يختارك الزبون. جملتان تكفيان."
+          value={seo.description}
+          onChange={(e) => onSeo({ ...seo, description: e.target.value })}
+        />
+        <div className="text-[10px] text-neutral-400 mt-0.5 text-left" dir="ltr">{seo.description.length}/{SEO_LIMITS.description}</div>
+      </div>
+      <div>
+        <span className={label}>كلمات مفتاحية (افصل بينها بفاصلة)</span>
+        <input className={input} placeholder="مطعم، مشاوي، حلب، توصيل" value={keywords} onChange={(e) => onKeywords(e.target.value)} />
+        {chips.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {chips.map((k) => <span key={k} className="px-2.5 py-1 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-[11px] font-bold">{k}</span>)}
+          </div>
+        )}
+        <p className="text-[11px] text-neutral-500 mt-1">حتى {SEO_LIMITS.keywords} كلمة. يجدك بها الناس في بحث Weelink، وتساعد Google على فهم صفحتك.</p>
+      </div>
+      <div className="rounded-xl bg-white border border-neutral-200 p-3">
+        <div className="text-[10px] font-bold text-neutral-400 mb-1.5">هكذا قد تظهر في Google</div>
+        <div className="text-[11px] text-[#202124] truncate" dir="ltr">{link.replace('https://', '')}</div>
+        <div className="text-[15px] text-[#1a0dab] font-medium truncate">{seo.title || 'عنوان صفحتك'}</div>
+        <div className="text-xs text-[#4d5156] line-clamp-2">{seo.description || 'اكتب وصفاً قصيراً لصفحتك ليظهر هنا.'}</div>
+      </div>
+    </>
   );
 };
 
 // ---------- The window ----------
 
-export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange }) => {
+const sameSeo = (a?: SiteSeo, b?: SiteSeo) =>
+  (a?.title || '') === (b?.title || '') && (a?.description || '') === (b?.description || '') && (a?.keywords || []).join(',') === (b?.keywords || []).join(',');
+
+export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange, onArrangeForMobile }) => {
   const [site, setSite] = useState<PublishedSite | null | 'loading'>('loading');
   const [name, setName] = useState('');
   const [state, setState] = useState<NameState | 'checking' | ''>('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [qr, setQr] = useState('');
-  const [fold, setFold] = useState<'' | 'connect' | 'buy'>('');
+  const [fold, setFold] = useState<'' | 'connect' | 'buy' | 'seo'>('');
+  const [seo, setSeo] = useState<SiteSeo>({ title: '', description: '', keywords: [] });
+  const [keywords, setKeywords] = useState('');
+  const [preview, setPreview] = useState<Device | null>(null);
   // The logo picked before the first «نشر»; once published it is saved right away.
   const [draftIcon, setDraftIcon] = useState('');
 
@@ -369,6 +517,12 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     [open, project, pages, elements, data]
   );
   const hash = useMemo(() => (content ? contentHash(content) : ''), [content]);
+  // What the previews show: the editor's content as visitors will see it.
+  const draft = useMemo<Draft | null>(
+    () => (open && project !== 'restaurant' ? { project, pages, elements: elements.map(withLocalGraphics), data } : null),
+    [open, project, pages, elements, data]
+  );
+  const arranged = useMemo(() => elements.some((e) => e.mobile), [elements]);
 
   useEffect(() => {
     if (!open) return;
@@ -378,6 +532,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
       .then((s) => {
         setSite(s);
         setName(s?.name || normalizeSiteName(suggestedName));
+        setSeo(s?.seo || { title: suggestedName, description: '', keywords: [] });
+        setKeywords((s?.seo?.keywords || []).join('، '));
       })
       .catch(() => setSite(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -404,19 +560,33 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (preview) setPreview(null);
+      else onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, preview]);
 
   if (!open) return null;
+
+  const nextSeo: SiteSeo = { ...seo, keywords: normalizeKeywords(keywords) };
+  const seoChanged = !!published && !sameSeo({ ...nextSeo, title: nextSeo.title.trim(), description: nextSeo.description.trim() }, published.seo);
 
   const publish = async () => {
     if (problem || state === 'taken' || !content) return;
     setBusy(true);
     setError('');
     try {
-      await publishSite(owner, project, name, content);
+      if (published && !changed && !renaming && seoChanged && project !== 'restaurant') {
+        // Only the search texts changed: no need to publish the page again.
+        const saved = await setSiteSeo(owner, project, published.name, nextSeo);
+        setSite({ ...published, seo: saved });
+        setBusy(false);
+        return;
+      }
+      await publishSite(owner, project, name, content, nextSeo);
       if (!published && draftIcon) await setSiteIcon(owner, project, draftIcon).catch(() => {});
       const s = await readMySite(owner, project);
       setSite(s);
@@ -448,6 +618,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     setSiteIcon(owner, project, next).catch(() => setError('تعذر حفظ الأيقونة. حاول مرة أخرى.'));
   };
   const changed = !!published && project !== 'restaurant' && published.hash !== hash;
+  const arrange = onArrangeForMobile && project !== 'restaurant' ? onArrangeForMobile : undefined;
   const renaming = !!published && name !== published.name;
   const shareText = `${suggestedName ? `${suggestedName}: ` : ''}${link}`;
   const share = async () => {
@@ -483,6 +654,15 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
           <div className="py-12 flex justify-center"><Loader2 size={28} className="animate-spin text-[#0071e3]" /></div>
         ) : (
           <>
+            <section className="bg-white rounded-2xl p-4 border border-neutral-200 space-y-3">
+              <div className="text-sm font-black text-[#1d1d1f]">{published && !changed ? 'هكذا يرى الناس صفحتك' : 'هكذا ستظهر صفحتك'}</div>
+              {draft ? (
+                <DraftPreviews draft={draft} onOpen={setPreview} onArrange={arrange} arranged={arranged} />
+              ) : (
+                <LivePreviews url={`${window.location.origin}/?r=${encodeURIComponent(owner)}`} />
+              )}
+            </section>
+
             <section className="bg-white rounded-2xl p-4 space-y-3 border border-neutral-200">
               <div>
                 <span className={label}>اسم صفحتك</span>
@@ -506,7 +686,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                 </div>
               )}
               <IconPicker icon={icon} title={suggestedName} name={name} onChange={changeIcon} />
-              {changed && !renaming && (
+              <Fold icon={Search} title="الظهور في Google وبحث Weelink" hint="عنوان ووصف وكلمات مفتاحية يجدك بها الناس" open={fold === 'seo'} onToggle={() => setFold(fold === 'seo' ? '' : 'seo')}>
+                <SeoFields seo={seo} keywords={keywords} onSeo={setSeo} onKeywords={setKeywords} link={siteUrl(name || 'alnour')} />
+              </Fold>
+              {(changed || seoChanged) && !renaming && (
                 <div className="text-xs font-bold text-[#a34a00] bg-[#fff4e6] rounded-xl px-3 py-2">لديك تغييرات غير منشورة. اضغط «تحديث النشر» ليراها الناس.</div>
               )}
               {renaming && <div className="text-xs font-bold text-[#a34a00] bg-[#fff4e6] rounded-xl px-3 py-2">تغيير الاسم يغيّر الرابط، والرابط القديم يتوقف عن العمل.</div>}
@@ -518,7 +701,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                 className="w-full h-12 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-base font-black cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-2 transition"
               >
                 {busy ? <Loader2 size={18} className="animate-spin" /> : <Globe size={18} />}
-                {!published ? 'نشر الصفحة' : renaming ? 'نشر بالاسم الجديد' : project === 'restaurant' ? 'حفظ' : 'تحديث النشر'}
+                {!published ? 'نشر الصفحة' : renaming ? 'نشر بالاسم الجديد' : project === 'restaurant' ? 'حفظ' : changed ? 'تحديث النشر' : seoChanged ? 'حفظ بيانات البحث' : 'تحديث النشر'}
               </button>
               {project === 'restaurant' && <p className="text-[11px] text-neutral-500">موقع المطعم يتحدّث تلقائياً مع كل تعديل؛ النشر هنا يعطيه اسمه ورابطه.</p>}
             </section>
@@ -562,12 +745,6 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
               </section>
             )}
 
-            {published && (
-              <section className="bg-white rounded-2xl p-4 border border-neutral-200 space-y-3">
-                <div className="text-sm font-black text-[#1d1d1f]">هكذا يرى الناس صفحتك</div>
-                <Previews url={siteFallbackUrl(published.name)} version={published.publishedAt} />
-              </section>
-            )}
 
             <Fold icon={Link2} title="إضافة دومين اشتريته بنفسك" hint="مثل alnour.com، نربطه بصفحتك ونعطيك السجلات المطلوبة" open={fold === 'connect'} onToggle={() => setFold(fold === 'connect' ? '' : 'connect')}>
               <ConnectDomain owner={owner} project={project} site={published} onChange={(d) => setSite(published ? { ...published, customDomain: d } : published)} />
@@ -584,6 +761,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
           </>
         )}
       </div>
+      {preview && draft && <FullPreview draft={draft} device={preview} onDevice={setPreview} onClose={() => setPreview(null)} onArrange={arrange} />}
     </div>
   );
 };

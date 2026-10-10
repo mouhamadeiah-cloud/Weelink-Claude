@@ -2112,15 +2112,19 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     ? (navIconScreenSize / Math.max(1, frameWidth * scaleFactor)) * 100
     : isNavVertical ? ((navbar.sideWidth ?? 200) / frameWidth) * 100 : (navbar.width ?? 100);
   const navLeftPct = Math.min(Math.max(0, 100 - navBoxWidthPct), Math.max(0, navbar.posX ?? (isNavVertical || isNavIconOnly ? 100 - navBoxWidthPct : (100 - navBoxWidthPct) / 2)));
+  // Pinned (the default) keeps the navbar at its place on the screen while the page scrolls, in every
+  // layout; otherwise it stays at its place on the page and scrolls away with it.
+  const isNavPinned = navbar.isSticky !== false;
   // Zero-height holder: the navbar box sits in it at its position and floats over the slides; a strip
   // at the top of the screen is followed by a spacer as tall as itself, so the slides start below it.
+  // A relative holder already starts below the notch, so its offset leaves the notch out.
   const wrapNav = (nav: React.ReactNode) => (
     <>
       <div
         className="shrink-0 self-stretch"
         style={{
-          position: navFlowHeight && !navbar.isSticky ? 'relative' : 'sticky',
-          top: `${navFloatTop}px`,
+          position: isNavPinned ? 'sticky' : 'relative',
+          top: `${isNavPinned ? navFloatTop : navFloatTop - notchHeightUnscaled}px`,
           height: 0,
           zIndex: 100000,
         }}
@@ -2142,7 +2146,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     const ws = workspaceRef.current?.getBoundingClientRect();
     if (!wr || !ws) return;
     const start = { x: e.clientX, y: e.clientY };
-    const visibleTop = ws.top + workspacePad / 2 + notchHeightUnscaled;
+    // A pinned navbar is placed on the screen; one that scrolls with the page is placed on the page.
+    const visibleTop = isNavPinned ? ws.top + workspacePad / 2 + notchHeightUnscaled : wr.top + notchHeightUnscaled;
     let latest: Partial<NavbarConfig> | null = null;
     navDraggedRef.current = false;
     const onMove = (ev: PointerEvent) => {
@@ -2426,7 +2431,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             // here to avoid any CSS-animated lag behind the scroll.
             transition: 'background-color 150ms, border-color 150ms, box-shadow 150ms',
             // Only at 100% or below: a layer promoted while scaled up is painted blurry.
-            willChange: navbar.isSticky && scaleFactor <= 1 ? 'transform' : undefined,
+            willChange: isNavPinned && scaleFactor <= 1 ? 'transform' : undefined,
             borderStyle: navbar.borderStyle && navbar.borderStyle !== 'none' ? navbar.borderStyle : undefined,
             borderWidth: navbar.borderStyle && navbar.borderStyle !== 'none' ? `${navbar.borderWidth ?? 0}px` : undefined,
             borderColor: navbar.borderStyle && navbar.borderStyle !== 'none' ? (navbar.borderColor || 'transparent') : undefined,

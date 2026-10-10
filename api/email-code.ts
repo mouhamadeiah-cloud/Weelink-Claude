@@ -3,6 +3,7 @@
 //   POST /api/email-code  { action: 'send' }                 → { sent: true } | { skipped: true }
 //   POST /api/email-code  { action: 'verify', code: '123456' } → { verified: true }
 //   both with  Authorization: Bearer <Firebase ID token>
+//   GET  /api/email-code  → which of the settings below this deployment sees (yes/no only)
 //
 // Firebase itself only sends confirmation links, so the code is made here: it is sent through
 // Resend, its hash is kept in emailCodes/{uid} (the rules let no browser read or write that), and
@@ -60,6 +61,22 @@ const mailHtml = (code: string) => `<!doctype html>
 
 export default {
   async fetch(request: Request): Promise<Response> {
+    // GET: which settings this deployment sees (yes/no only, never their values).
+    if (request.method === 'GET') {
+      const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+      let keyIsJson = false;
+      try {
+        keyIsJson = !!raw && typeof JSON.parse(raw) === 'object';
+      } catch {
+        keyIsJson = false;
+      }
+      return json({
+        FIREBASE_SERVICE_ACCOUNT: raw ? (keyIsJson ? 'ok' : 'set, but not valid JSON') : 'missing',
+        EMAIL_FROM: process.env.EMAIL_FROM ? 'ok' : 'missing',
+        RESEND_API_KEY: process.env.RESEND_API_KEY ? 'ok' : 'missing',
+        environment: process.env.VERCEL_ENV || 'unknown',
+      });
+    }
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
     const admin = firebaseAdmin();

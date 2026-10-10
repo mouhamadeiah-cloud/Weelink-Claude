@@ -1,7 +1,8 @@
 // The guests' restaurant site at /?r=<uid> (and a table's QR code at /?r=<uid>&t=<table>): the
 // published pages, menu and settings from restaurants/{uid}, shown full-window with no editor and
 // no sign-in. Phones get the phone layout (slides without one are arranged for phones on the fly).
-// Orders go straight to the restaurant's live orders.
+// Orders go straight to the restaurant's live orders. «حسابي» lets a visitor join as the
+// restaurant's customer (see components/customers); a joined customer's orders carry their uid.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, UtensilsCrossed } from 'lucide-react';
 import { CanvasWorkspace } from '../CanvasWorkspace';
@@ -12,6 +13,9 @@ import { loadPublishedRestaurant, placeOrder, PublishedRestaurant } from './rest
 import { RestaurantDataContext, RestaurantOrderContext } from './store/RestaurantDataContext';
 import { readTableFromUrl } from './tableStore';
 import type { MenuOrder } from './restaurantTypes';
+import { CustomerAccount } from '../customers/CustomerAccount';
+import { getCustomerSession } from '../customers/customerSession';
+import { sendOrderConfirmation } from './orderStatus';
 
 const PHONE_MAX = 768;
 const noop = () => {};
@@ -62,7 +66,10 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
   const submit = useMemo(
     () => async (o: MenuOrder) => {
       try {
-        return await placeOrder(uid, o);
+        const customer = getCustomerSession();
+        const number = await placeOrder(uid, customer ? { ...o, customerUid: customer.uid } : o);
+        if (customer) sendOrderConfirmation(uid, o.id);
+        return number;
       } catch (e) {
         console.warn('Could not send the order:', e);
         return null;
@@ -95,6 +102,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
     <RestaurantDataContext.Provider value={site.admin}>
       <RestaurantOrderContext.Provider value={submit}>
         <div className="h-[100dvh] flex flex-col bg-white">
+          <CustomerAccount ownerUid={uid} pageName={site.admin.settings.name} kind="restaurant" accent="#B5562B" currency={site.admin.settings.currency} />
           <CanvasWorkspace
             isPublicSite
             isPreviewActive

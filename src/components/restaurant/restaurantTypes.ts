@@ -164,12 +164,13 @@ export const stationOfDish = (dishId: string, data: Pick<RestaurantAdminData, 'd
   return (id && data.stations.some((s) => s.id === id) ? id : data.stations[0]?.id) || '';
 };
 
-export type OrderStatus = 'new' | 'preparing' | 'ready' | 'done' | 'cancelled';
+export type OrderStatus = 'new' | 'preparing' | 'ready' | 'onway' | 'done' | 'cancelled';
 
 export const ORDER_STATUSES: { id: OrderStatus; label: string; color: string }[] = [
   { id: 'new', label: 'جديد', color: '#E03131' },
   { id: 'preparing', label: 'قيد التحضير', color: '#E8590C' },
   { id: 'ready', label: 'جاهز', color: '#1971C2' },
+  { id: 'onway', label: 'على الطريق', color: '#7048E8' }, // a delivery order that left the restaurant
   { id: 'done', label: 'تم التسليم', color: '#2F9E44' },
   { id: 'cancelled', label: 'ملغى', color: '#868E96' },
 ];
@@ -209,6 +210,8 @@ export interface MenuOrder {
   doneLines?: number[];
   // Set by the staff only: the table's bill it was added to (its money is taken there, not here).
   tabId?: string;
+  // A joined customer's order (see services/pageCustomers.ts): they can see it under «حسابي».
+  customerUid?: string;
 }
 
 export interface RestaurantAdminData {
@@ -341,6 +344,7 @@ const normalizeOrder = (raw: any): MenuOrder => ({
   subtotal: num(raw?.subtotal),
   deliveryFee: num(raw?.deliveryFee),
   total: num(raw?.total),
+  ...(str(raw?.customerUid) ? { customerUid: str(raw.customerUid) } : {}),
   ...(Array.isArray(raw?.doneLines) ? { doneLines: raw.doneLines.filter((n: unknown) => typeof n === 'number') } : {}),
   ...(typeof raw?.tabId === 'string' && raw.tabId ? { tabId: raw.tabId } : {}),
 });

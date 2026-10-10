@@ -111,8 +111,9 @@ service cloud.firestore {
       }
 
       function isValidNewOrder(data, orderId) {
-        return data.keys().hasOnly(['id', 'number', 'createdAt', 'status', 'type', 'source', 'table', 'name', 'phone', 'address', 'notes', 'lines', 'subtotal', 'deliveryFee', 'total'])
+        return data.keys().hasOnly(['id', 'number', 'createdAt', 'status', 'type', 'source', 'table', 'name', 'phone', 'address', 'notes', 'lines', 'subtotal', 'deliveryFee', 'total', 'customerUid'])
           && data.id == orderId
+          && (!('customerUid' in data) || (isSignedIn() && data.customerUid == request.auth.uid))
           && data.status == 'new'
           && data.type in ['delivery', 'pickup', 'table']
           && data.source in ['website', 'qr']
@@ -150,7 +151,8 @@ service cloud.firestore {
         allow create: if isValidId(orderId) && (
           (isValidNewOrder(request.resource.data, orderId) && acceptsOrders())
           || isStaff());
-        allow get, list, update: if isStaff();
+        allow get, list: if (isSignedIn() && resource.data.customerUid == request.auth.uid) || isStaff();
+        allow update: if isStaff();
         allow delete: if isOwner(userId);
       }
 
@@ -257,6 +259,43 @@ service cloud.firestore {
         && request.resource.data.accountId is string
         && (request.resource.data.accountId == authUid
           || canManage(request.resource.data.accountId));
+    }
+
+    // The customers of a page (see src/services/pageCustomers.ts). A customer joins with a confirmed
+    // email (the email code, or Google) and writes only their own entry; the page's owner and the
+    // members allowed to see orders read the list, and the owner may remove someone from it.
+    function isValidCustomer(data) {
+      return data.keys().hasOnly(['email', 'name', 'phone', 'address', 'marketing', 'joinedAt', 'updatedAt'])
+        && data.email == request.auth.token.email.lower()
+        && data.name is string && data.name.size() <= 100
+        && data.phone is string && data.phone.size() <= 40
+        && data.address is string && data.address.size() <= 300
+        && data.marketing is bool
+        && data.joinedAt is string && data.joinedAt.size() <= 40
+        && data.updatedAt is string && data.updatedAt.size() <= 40;
+    }
+
+    function isConfirmedUser(uid) {
+      return isSignedIn() && request.auth.uid == uid && request.auth.token.email_verified == true;
+    }
+
+    match /pageCustomers/{ownerId}/customers/{customerUid} {
+      allow get: if (isSignedIn() && request.auth.uid == customerUid) || isOwner(ownerId) || memberCan(ownerId, 'orders');
+      allow list: if isOwner(ownerId) || memberCan(ownerId, 'orders');
+      allow create: if isValidId(ownerId) && isConfirmedUser(customerUid) && isValidCustomer(incoming());
+      allow update: if isConfirmedUser(customerUid) && isValidCustomer(incoming()) && incoming().joinedAt == existing().joinedAt;
+      allow delete: if (isSignedIn() && request.auth.uid == customerUid) || isOwner(ownerId);
+    }
+
+    // The pages a customer joined, for their own weelink.de.
+    match /customerPages/{customerUid}/pages/{ownerId} {
+      allow read: if isSignedIn() && request.auth.uid == customerUid;
+      allow delete: if isSignedIn() && request.auth.uid == customerUid;
+      allow create, update: if isConfirmedUser(customerUid) && isValidId(ownerId)
+        && incoming().keys().hasOnly(['name', 'kind', 'joinedAt'])
+        && incoming().name is string && incoming().name.size() <= 100
+        && incoming().kind in ['restaurant', 'shop', 'cars']
+        && incoming().joinedAt is string && incoming().joinedAt.size() <= 40;
     }
 
     // Match statement for platform_directory onboarding steps

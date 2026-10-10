@@ -7,7 +7,7 @@
 //
 // The recipient is fixed here on the server, so this endpoint cannot be used to send mail to
 // arbitrary addresses. onboarding@resend.dev can only deliver to the Resend account owner's own
-// address; sending to customers needs a verified domain in Resend.
+// address; sending to customers needs a verified domain in Resend, set as EMAIL_FROM.
 
 import { Resend } from 'resend';
 
@@ -52,7 +52,7 @@ export default {
 
     const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
       to: OWNER_EMAIL,
       subject: 'Hello World',
       html: '<p>Congrats on sending your <strong>first email</strong>!</p>',

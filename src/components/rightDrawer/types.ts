@@ -84,7 +84,7 @@ export interface RightDrawerProps {
   onUpdateSlideDivider: (slideId: string, shape: SlideDividerShape) => void;
   onUpdateSlideBackground: (
     slideId: string, 
-    bg: { backgroundColor?: string; backgroundImage?: string; backgroundSize?: 'cover' | 'contain' | 'auto'; backgroundPosition?: string; backgroundRepeat?: string; backgroundAttachment?: 'scroll' | 'fixed' }
+    bg: { backgroundColor?: string; backgroundImage?: string; backgroundVideo?: string; backgroundSize?: 'cover' | 'contain' | 'auto'; backgroundPosition?: string; backgroundRepeat?: string; backgroundAttachment?: 'scroll' | 'fixed' }
   ) => void;
   onUpdateSlideBorder: (
     slideId: string,

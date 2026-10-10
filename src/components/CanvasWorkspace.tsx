@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { BackgroundVideo } from './BackgroundVideo';
 import {
   CanvasElement,
   Slide,
@@ -2809,8 +2810,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   </div>
                 )}
                 {/* Slide Background Layer with slide.backgroundOpacity */}
-                {Boolean(slide.backgroundColor || slide.backgroundImage) && (() => {
+                {Boolean(slide.backgroundColor || slide.backgroundImage || slide.backgroundVideo) && (() => {
                   const isFixed = slide.backgroundAttachment === 'fixed';
+                  const bgVideo = slide.backgroundVideo ? (
+                    <BackgroundVideo src={slide.backgroundVideo} poster={slide.backgroundImage} fit={slide.backgroundSize} borderRadius={slide.borderRadius} />
+                  ) : null;
                   if (isFixed) {
                     return (
                       <div
@@ -2830,7 +2834,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           opacity: slide.backgroundOpacity ?? 1,
                           borderRadius: slide.borderRadius ? `${slide.borderRadius}px` : undefined,
                         }}
-                      />
+                      >
+                        {bgVideo}
+                      </div>
                     );
                   } else {
                     // Under the previous slide's shaped edge this background reaches up behind it, so
@@ -2845,7 +2851,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           top: -reachUp,
                           borderRadius: slide.borderRadius ? `${slide.borderRadius}px` : undefined,
                         }}
-                      />
+                      >
+                        {bgVideo}
+                      </div>
                     );
                   }
                 })()}

@@ -266,6 +266,9 @@ export interface Slide {
   mobileHeight?: number;
   backgroundColor?: string;
   backgroundImage?: string;
+  // Looping, muted background video (an mp4 from the bg-videos library). backgroundImage then holds
+  // its still poster, shown while the video loads, on slow connections and in slide previews.
+  backgroundVideo?: string;
   backgroundSize?: 'cover' | 'contain' | 'auto';
   backgroundPosition?: string;
   backgroundRepeat?: string;

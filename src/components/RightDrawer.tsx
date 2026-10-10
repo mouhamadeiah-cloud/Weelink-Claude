@@ -1662,28 +1662,28 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     if (selectedElement) {
                       onUpdateElementStyles({ backgroundColor: color, backgroundImage: undefined });
                     } else if (activeSlide) {
-                      onUpdateSlideBackground(activeSlide.id, { backgroundColor: color, backgroundImage: undefined });
+                      onUpdateSlideBackground(activeSlide.id, { backgroundColor: color, backgroundImage: undefined, backgroundVideo: undefined });
                     }
                   }}
                   onApplyGradient={(gradientCss) => {
                     if (selectedElement) {
                       onUpdateElementStyles({ backgroundColor: gradientCss, backgroundImage: undefined });
                     } else if (activeSlide) {
-                      onUpdateSlideBackground(activeSlide.id, { backgroundColor: gradientCss, backgroundImage: undefined });
+                      onUpdateSlideBackground(activeSlide.id, { backgroundColor: gradientCss, backgroundImage: undefined, backgroundVideo: undefined });
                     }
                   }}
                   onApplyImage={(imageUrl, size = 'cover') => {
                     if (selectedElement) {
                       onUpdateElementStyles({ backgroundImage: imageUrl, backgroundSize: size });
                     } else if (activeSlide) {
-                      onUpdateSlideBackground(activeSlide.id, { backgroundImage: imageUrl, backgroundSize: size });
+                      onUpdateSlideBackground(activeSlide.id, { backgroundImage: imageUrl, backgroundSize: size, backgroundVideo: undefined });
                     }
                   }}
                   onRemoveImage={() => {
                     if (selectedElement) {
                       onUpdateElementStyles({ backgroundImage: undefined });
                     } else if (activeSlide) {
-                      onUpdateSlideBackground(activeSlide.id, { backgroundImage: undefined });
+                      onUpdateSlideBackground(activeSlide.id, { backgroundImage: undefined, backgroundVideo: undefined });
                     }
                   }}
                   onApplyAttachment={(attachment) => {
@@ -1692,6 +1692,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     } else if (activeSlide) {
                       onUpdateSlideBackground(activeSlide.id, { backgroundAttachment: attachment });
                     }
+                  }}
+                  currentBgVideo={selectedElement ? undefined : activeSlide?.backgroundVideo}
+                  onApplyVideo={selectedElement || !activeSlide ? undefined : (video) => {
+                    onUpdateSlideBackground(activeSlide.id, { backgroundVideo: video.src, backgroundImage: video.poster, backgroundSize: 'cover' });
+                  }}
+                  onRemoveVideo={() => {
+                    if (activeSlide) onUpdateSlideBackground(activeSlide.id, { backgroundVideo: undefined, backgroundImage: undefined });
                   }}
                 />
               )}

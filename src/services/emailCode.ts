@@ -15,7 +15,7 @@ export const needsEmailCode = (user: User, accountId: string) =>
 export type EmailCodeError = 'too_soon' | 'too_many' | 'send_failed' | 'expired' | 'wrong_code' | 'too_many_attempts' | 'network';
 
 export class EmailCodeProblem extends Error {
-  constructor(public kind: EmailCodeError, public waitSeconds = 0, public attemptsLeft = 0) {
+  constructor(public kind: EmailCodeError, public waitSeconds = 0, public attemptsLeft = 0, public detail = '') {
     super(kind);
   }
 }
@@ -34,7 +34,7 @@ const call = async (user: User, body: object) => {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const known: EmailCodeError[] = ['too_soon', 'too_many', 'send_failed', 'expired', 'wrong_code', 'too_many_attempts'];
-    throw new EmailCodeProblem(known.includes(data.error) ? data.error : 'network', data.waitSeconds || 0, data.attemptsLeft || 0);
+    throw new EmailCodeProblem(known.includes(data.error) ? data.error : 'network', data.waitSeconds || 0, data.attemptsLeft || 0, typeof data.detail === 'string' ? data.detail : '');
   }
   return data as { sent?: boolean; skipped?: boolean; verified?: boolean };
 };
@@ -56,7 +56,7 @@ export const emailCodeErrorText = (e: unknown) => {
   const p = e instanceof EmailCodeProblem ? e : new EmailCodeProblem('network');
   if (p.kind === 'too_soon') return `انتظر ${p.waitSeconds} ثانية قبل طلب رمز جديد.`;
   if (p.kind === 'too_many') return 'طلبت رموزاً كثيرة اليوم. حاول غداً.';
-  if (p.kind === 'send_failed') return 'تعذر إرسال الرمز إلى هذا البريد. تأكد من كتابته بشكل صحيح.';
+  if (p.kind === 'send_failed') return `تعذر إرسال الرمز إلى هذا البريد. تأكد من كتابته بشكل صحيح.${p.detail ? ` (${p.detail})` : ''}`;
   if (p.kind === 'expired') return 'انتهت صلاحية الرمز. اطلب رمزاً جديداً.';
   if (p.kind === 'wrong_code') return p.attemptsLeft > 0 ? `الرمز غير صحيح. بقيت ${p.attemptsLeft} محاولات.` : 'الرمز غير صحيح. اطلب رمزاً جديداً.';
   if (p.kind === 'too_many_attempts') return 'محاولات كثيرة خاطئة. اطلب رمزاً جديداً.';

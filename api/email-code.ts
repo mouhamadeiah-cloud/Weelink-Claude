@@ -3,7 +3,8 @@
 //   POST /api/email-code  { action: 'send' }                 → { sent: true } | { skipped: true }
 //   POST /api/email-code  { action: 'verify', code: '123456' } → { verified: true }
 //   both with  Authorization: Bearer <Firebase ID token>
-//   GET  /api/email-code  → which of the settings below this deployment sees (yes/no only)
+//   GET  /api/email-code  → which settings this deployment sees (no secret values) and whether
+//                           the sender's domain is verified in Resend
 //
 // Firebase itself only sends confirmation links, so the code is made here: it is sent through
 // Resend, its hash is kept in emailCodes/{uid} (the rules let no browser read or write that), and
@@ -70,9 +71,19 @@ export default {
       } catch {
         keyIsJson = false;
       }
+      // The sender is no secret (every email shows it); its domain must be verified in Resend.
+      const sender = process.env.EMAIL_FROM || '';
+      const senderDomain = (sender.match(/@([^>\s]+)/)?.[1] || '').toLowerCase();
+      let senderDomainInResend = 'unknown';
+      if (process.env.RESEND_API_KEY && senderDomain) {
+        const { data, error } = await new Resend(process.env.RESEND_API_KEY).domains.list().catch(() => ({ data: null, error: { message: 'request failed' } }));
+        const found = (data as { data?: { name: string; status: string }[] } | null)?.data?.find((d) => d.name.toLowerCase() === senderDomain);
+        senderDomainInResend = error ? `could not check: ${error.message}` : found ? found.status : 'not added';
+      }
       return json({
         FIREBASE_SERVICE_ACCOUNT: raw ? (keyIsJson ? 'ok' : 'set, but not valid JSON') : 'missing',
-        EMAIL_FROM: process.env.EMAIL_FROM ? 'ok' : 'missing',
+        EMAIL_FROM: sender ? sender : 'missing',
+        senderDomainInResend,
         RESEND_API_KEY: process.env.RESEND_API_KEY ? 'ok' : 'missing',
         environment: process.env.VERCEL_ENV || 'unknown',
       });
@@ -111,7 +122,10 @@ export default {
         subject: `${code} رمز تأكيد بريدك في Weelink`,
         html: mailHtml(code),
       });
-      if (error) return json({ error: 'send_failed', detail: error.message }, 502);
+      if (error) {
+        console.error('Resend refused the code email:', error.message);
+        return json({ error: 'send_failed', detail: error.message }, 502);
+      }
       await ref.set({ hash: hashCode(user.uid, code), sentAt: now, expiresAt: now + VALID_MS, attempts: 0, day, sendsToday: sendsToday + 1 });
       return json({ sent: true });
     }

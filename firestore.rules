@@ -298,6 +298,60 @@ service cloud.firestore {
         && incoming().joinedAt is string && incoming().joinedAt.size() <= 40;
     }
 
+    // Published pages (see src/services/sites.ts). The names and the published copies are public;
+    // only the page's owner or a management member writes them, and a name belongs to one page.
+    function isSiteName(name) {
+      return name is string && name.size() >= 3 && name.size() <= 30 && name.matches('^[a-z0-9]([a-z0-9-]*[a-z0-9])?$');
+    }
+
+    function isProjectKind(p) {
+      return p in ['page', 'shop', 'cars', 'restaurant'];
+    }
+
+    match /siteNames/{name} {
+      allow get: if true;
+      allow create: if isSiteName(name)
+        && incoming().keys().hasOnly(['owner', 'project', 'at'])
+        && isProjectKind(incoming().project)
+        && incoming().at is string
+        && canManage(incoming().owner);
+      allow delete: if canManage(existing().owner);
+    }
+
+    match /publishedSites/{siteId} {
+      allow get: if true;
+      allow create, update: if incoming().keys().hasOnly(['name', 'project', 'owner', 'pages', 'elements', 'data', 'publishedAt', 'hash', 'customDomain', 'icon'])
+        && (!('icon' in incoming()) || (incoming().icon is string && incoming().icon.size() <= 200000))
+        && isProjectKind(incoming().project)
+        && siteId == incoming().owner + '__' + incoming().project
+        && canManage(incoming().owner)
+        && getAfter(/databases/$(database)/documents/siteNames/$(incoming().name)).data.owner == incoming().owner
+        && getAfter(/databases/$(database)/documents/siteNames/$(incoming().name)).data.project == incoming().project
+        && incoming().pages is list && incoming().elements is list
+        // The custom domain is set by the server (api/domains.ts) only.
+        && (resource == null ? incoming().customDomain == null : incoming().customDomain == existing().customDomain);
+      allow delete: if canManage(existing().owner);
+    }
+
+    // A customer's own domain → the page's name. Written by the server only.
+    match /siteDomains/{host} {
+      allow get: if true;
+    }
+
+    // Requests to buy a domain through Weelink, handled by the office.
+    match /domainOrders/{orderId} {
+      allow get: if isSignedIn() && canManage(existing().owner);
+      allow create: if isSignedIn()
+        && incoming().keys().hasOnly(['owner', 'project', 'domain', 'years', 'contact', 'price', 'status', 'by', 'at'])
+        && canManage(incoming().owner)
+        && isProjectKind(incoming().project)
+        && incoming().domain is string && incoming().domain.size() <= 253
+        && incoming().years is int && incoming().years >= 1 && incoming().years <= 10
+        && incoming().contact is map && incoming().contact.keys().hasOnly(['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'zip', 'country'])
+        && incoming().status == 'requested'
+        && incoming().by == request.auth.uid;
+    }
+
     // Match statement for platform_directory onboarding steps
     match /platform_directory/{userId} {
       allow get, write: if canManage(userId) || isDemo(userId);

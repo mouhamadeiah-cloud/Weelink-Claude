@@ -21,7 +21,7 @@ const PHONE_MAX = 768;
 const noop = () => {};
 
 // Slides that have no phone layout yet get one, as «تنسيق الموبايل» would make it.
-const withPhoneLayouts = (pages: Page[], elements: CanvasElement[]) => {
+export const withPhoneLayouts = (pages: Page[], elements: CanvasElement[]) => {
   const layouts = new Map<string, NonNullable<CanvasElement['mobile']>>();
   const nextPages = pages.map((p) => ({
     ...p,

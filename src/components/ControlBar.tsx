@@ -11,7 +11,8 @@ import {
   Plus,
   LogOut,
   Loader2,
-  Wand2
+  Wand2,
+  Globe
 } from 'lucide-react';
 import { DevicePreviewMode, Page } from '../types';
 
@@ -43,6 +44,9 @@ interface ControlBarProps {
   // The project's name before the page's, with the gear of the project's settings.
   projectName?: string;
   onOpenProjectSettings?: () => void;
+  // «نشر»: opens the publish window (the page's name, its link, QR code and domain).
+  onPublish?: () => void;
+  isPublished?: boolean;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = ({
@@ -70,6 +74,8 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   onOpenProjects,
   projectName,
   onOpenProjectSettings,
+  onPublish,
+  isPublished,
 }) => {
   const [isPagesDropdownOpen, setIsPagesDropdownOpen] = useState(false);
   const [newPageName, setNewPageName] = useState('');
@@ -315,6 +321,17 @@ export const ControlBar: React.FC<ControlBarProps> = ({
 
       {/* Left side: Logo Weelink & User Auth / Cloud Sync Status */}
       <div className="flex items-center gap-3.5 flex-shrink-0">
+        {onPublish && !isPreviewActive && (
+          <button
+            type="button"
+            onClick={onPublish}
+            className="h-9 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-black shadow-sm active:scale-95 flex items-center gap-1.5 transition-all cursor-pointer"
+            title={isPublished ? 'صفحتك منشورة: الرابط ورمز QR وتحديث النشر' : 'انشر صفحتك واحصل على رابطها'}
+          >
+            <Globe size={15} strokeWidth={2.4} />
+            {isPublished ? 'منشورة' : 'نشر'}
+          </button>
+        )}
         {/* Firebase Cloud Sync Status & Auth Controls */}
         <div className="flex items-center gap-2">
           {user ? (

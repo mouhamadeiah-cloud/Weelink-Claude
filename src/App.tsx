@@ -19,6 +19,9 @@ import { ProjectSettingsSection } from './components/rightDrawer/sections/Projec
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
 import { ProjectChooser } from './components/ProjectChooser';
+import { PublishModal } from './components/publish/PublishModal';
+import { publicDataFor } from './components/publish/publicData';
+import { readMySite } from './services/sites';
 import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
 import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
@@ -269,12 +272,27 @@ export default function App() {
   const updateShopAdmin = useCallback((fn: (d: ShopAdminData) => ShopAdminData) => setShopAdmin((prev) => fn(prev)), []);
   const [hasCars, setHasCars] = useState<boolean>(false);
   const [carAdmin, setCarAdmin] = useState<CarAdminData>(createEmptyCarAdmin);
+  // «نشر»: the publish window, and the published page's name (null = not published).
+  const [isPublishOpen, setIsPublishOpen] = useState(false);
+  const [publishedName, setPublishedName] = useState<string | null>(null);
   const updateCarAdmin = useCallback((fn: (d: CarAdminData) => CarAdminData) => setCarAdmin((prev) => fn(prev)), []);
   const submitCarRequest = useCallback((r: RequestInput) => setCarAdmin((prev) => submitRequest(prev, r)), []);
   const [hasRestaurant, setHasRestaurant] = useState<boolean>(false);
   const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
   const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
   const ownerUid = activeUserUid;
+  // Whether the open project is published (the «نشر» button shows «منشورة»).
+  useEffect(() => {
+    setPublishedName(null);
+    if (!isProjectChosen || !currentUser || currentUser.isAnonymous) return;
+    let alive = true;
+    readMySite(ownerUid, project)
+      .then((s) => alive && setPublishedName(s?.name || null))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [ownerUid, project, isProjectChosen, currentUser]);
   // The owner sees everything; a management member what the owner allowed (services/members.ts).
   const [access, setAccess] = useState<Access>(OWNER_ACCESS);
   useEffect(() => {
@@ -3205,6 +3223,8 @@ export default function App() {
           onOpenProjectSettings={() => handleSelectTool('project-settings')}
           projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'restaurant' ? 'Restaurant' : undefined}
           onOpenProjects={handleOpenProjects}
+          onPublish={currentUser && !currentUser.isAnonymous ? () => setIsPublishOpen(true) : undefined}
+          isPublished={!!publishedName}
         />
 
         {/* 2. Secondary Edit Bar directly beneath (narrow screens; wide ones dock it beside the panel) */}
@@ -3454,6 +3474,17 @@ export default function App() {
 
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />
+      <PublishModal
+        open={isPublishOpen}
+        onClose={() => setIsPublishOpen(false)}
+        owner={ownerUid}
+        project={project}
+        pages={pages}
+        elements={elements}
+        data={isPublishOpen ? publicDataFor(project, shopAdmin, carAdmin) : null}
+        suggestedName={currentPage.navbar.brandName || ''}
+        onPublishedChange={setPublishedName}
+      />
     </div>
   );
 }

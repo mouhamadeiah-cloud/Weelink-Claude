@@ -1136,6 +1136,7 @@ export default function App() {
       setCopiedFormat({
         backgroundColor: currentSlide.backgroundColor,
         backgroundImage: currentSlide.backgroundImage,
+        backgroundVideo: currentSlide.backgroundVideo,
         backgroundSize: currentSlide.backgroundSize,
         backgroundPosition: currentSlide.backgroundPosition,
         backgroundRepeat: currentSlide.backgroundRepeat,
@@ -1202,6 +1203,7 @@ export default function App() {
             ...s,
             backgroundColor: copiedFormat.backgroundColor,
             backgroundImage: copiedFormat.backgroundImage,
+            backgroundVideo: copiedFormat.backgroundVideo,
             backgroundSize: copiedFormat.backgroundSize,
             backgroundPosition: copiedFormat.backgroundPosition,
             backgroundRepeat: copiedFormat.backgroundRepeat,
@@ -2916,7 +2918,7 @@ export default function App() {
 
   const handleUpdateSlideBackground = (
     slideId: string, 
-    bg: { backgroundColor?: string; backgroundImage?: string; backgroundSize?: 'cover' | 'contain' | 'auto'; backgroundPosition?: string; backgroundRepeat?: string; backgroundAttachment?: 'scroll' | 'fixed' }
+    bg: { backgroundColor?: string; backgroundImage?: string; backgroundVideo?: string; backgroundSize?: 'cover' | 'contain' | 'auto'; backgroundPosition?: string; backgroundRepeat?: string; backgroundAttachment?: 'scroll' | 'fixed' }
   ) => {
     setPages(pages.map(p => {
       if (p.id === currentPage.id) {

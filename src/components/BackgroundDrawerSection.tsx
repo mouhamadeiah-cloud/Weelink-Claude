@@ -17,6 +17,7 @@ import {
   CURATED_UNSPLASH_PHOTOS,
   UnsplashPreset 
 } from '../data/backgroundPresets';
+import { BACKGROUND_VIDEOS, BackgroundVideoPreset } from '../data/backgroundVideos';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
 
@@ -52,6 +53,10 @@ interface BackgroundDrawerSectionProps {
   onApplyImage: (imageUrl: string, size?: 'cover' | 'contain' | 'auto') => void;
   onRemoveImage: () => void;
   onApplyAttachment?: (attachment: 'scroll' | 'fixed') => void;
+  // Slides only: the «فيديو» tab picks a looping background video from the bg-videos library.
+  currentBgVideo?: string;
+  onApplyVideo?: (video: BackgroundVideoPreset) => void;
+  onRemoveVideo?: () => void;
 }
 
 export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = ({
@@ -66,11 +71,15 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
   onApplyImage,
   onRemoveImage,
   onApplyAttachment,
+  currentBgVideo,
+  onApplyVideo,
+  onRemoveVideo,
 }) => {
   // Tabs: 'color' (لون) | 'image' (الصورة) | 'gallery' (المعرض)
   // Matching user's drawing:
   // [ لون ] [ الصورة ] [ المعرض ]
-  const [activeTab, setActiveTab] = useState<'color' | 'image' | 'gallery'>('color');
+  const [activeTab, setActiveTab] = useState<'color' | 'image' | 'gallery' | 'video'>(currentBgVideo ? 'video' : 'color');
+  const [videoCategory, setVideoCategory] = useState<string>('الكل');
 
   // Custom Color State
   const [customHex, setCustomHex] = useState(
@@ -295,7 +304,29 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
         >
           مكتبة الصور
         </button>
+        {onApplyVideo && (
+          <button
+            onClick={() => setActiveTab('video')}
+            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              activeTab === 'video'
+                ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-black/[0.04]'
+                : 'text-neutral-600 hover:text-black'
+            }`}
+          >
+            فيديو
+          </button>
+        )}
       </div>
+
+      {activeTab === 'video' && onApplyVideo && (
+        <VideoLibraryTab
+          currentBgVideo={currentBgVideo}
+          category={videoCategory}
+          onCategory={setVideoCategory}
+          onApply={onApplyVideo}
+          onRemove={onRemoveVideo}
+        />
+      )}
 
       {/* ============================================================== */}
       {/* TAB 1: لون (Color Mode as in user's drawing) */}
@@ -761,7 +792,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
       )}
 
       {/* Active Image Card & Controls - Unified below the tab content for Image and Gallery tabs */}
-      {activeTab !== 'color' && currentBgImage && (
+      {(activeTab === 'image' || activeTab === 'gallery') && currentBgImage && !currentBgVideo && (
         <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/80 space-y-3 mt-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-neutral-800">
@@ -840,6 +871,106 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const VIDEO_CATEGORIES = ['الكل', ...Array.from(new Set(BACKGROUND_VIDEOS.map((v) => v.category)))];
+
+// The «فيديو» tab: the background video library as poster cards that play on hover.
+const VideoLibraryTab: React.FC<{
+  currentBgVideo?: string;
+  category: string;
+  onCategory: (c: string) => void;
+  onApply: (video: BackgroundVideoPreset) => void;
+  onRemove?: () => void;
+}> = ({ currentBgVideo, category, onCategory, onApply, onRemove }) => {
+  const list = category === 'الكل' ? BACKGROUND_VIDEOS : BACKGROUND_VIDEOS.filter((v) => v.category === category);
+  const active = BACKGROUND_VIDEOS.find((v) => v.src === currentBgVideo);
+  return (
+    <div className="space-y-3">
+      {currentBgVideo && (
+        <div className="flex items-center justify-between p-2 bg-neutral-50 rounded-xl border border-neutral-200/80">
+          <span className="text-[11px] font-semibold text-neutral-700 truncate">
+            الفيديو الحالي: {active?.title || 'فيديو'}
+          </span>
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg transition-colors cursor-pointer font-semibold shrink-0"
+            >
+              <Trash2 size={12} />
+              <span>إزالة الفيديو</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+        {VIDEO_CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => onCategory(cat)}
+            className={`text-[10px] px-2.5 py-1 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
+              category === cat
+                ? 'bg-[#0071e3] text-white shadow-xs'
+                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80 hover:text-black'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="text-[10.5px] text-neutral-500 font-medium">
+        مرّر الماوس لمعاينة الفيديو، واضغط لتطبيقه كخلفية للشريحة:
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-1">
+        {list.map((video) => {
+          const isSelected = currentBgVideo === video.src;
+          return (
+            <button
+              key={video.id}
+              type="button"
+              onClick={() => onApply(video)}
+              onMouseEnter={(e) => {
+                const v = e.currentTarget.querySelector('video');
+                if (v) { v.src = video.src; v.play().catch(() => {}); }
+              }}
+              onMouseLeave={(e) => {
+                const v = e.currentTarget.querySelector('video');
+                if (v) v.pause();
+              }}
+              className={`group relative rounded-xl overflow-hidden border aspect-video transition-all cursor-pointer text-right shadow-2xs bg-neutral-900 ${
+                isSelected
+                  ? 'border-[#0071e3] ring-2 ring-[#0071e3] ring-offset-1'
+                  : 'border-neutral-200 hover:border-neutral-300 hover:shadow-xs'
+              }`}
+            >
+              <img src={video.poster} alt={video.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+              <video muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-70 pointer-events-none" />
+              {isSelected && (
+                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#0071e3] text-white flex items-center justify-center shadow-md">
+                  <Check size={12} strokeWidth={3} />
+                </div>
+              )}
+              {video.portrait && (
+                <span className="absolute top-1.5 left-1.5 text-[8px] font-bold text-white bg-black/50 px-1.5 py-0.5 rounded-md">طولي</span>
+              )}
+              <p className="absolute bottom-1 right-1.5 left-1.5 text-[9px] font-bold text-white truncate drop-shadow-sm pointer-events-none">
+                {video.title}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-[9.5px] text-neutral-400 leading-relaxed">
+        الفيديو صامت ويتكرر. على الإنترنت البطيء تظهر صورته الثابتة بدلاً منه حتى تبقى الصفحة سريعة.
+      </p>
     </div>
   );
 };

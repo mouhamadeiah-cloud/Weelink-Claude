@@ -4,7 +4,7 @@
 // orders to that table instead (no address, no fee). «أرسل الطلب» sends the order to the live
 // orders (orders list and kitchen screen) and, when the restaurant wants it, opens WhatsApp with
 // the whole order written out.
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Minus, Plus, Trash2, ShoppingBag, CheckCircle2, Bike, Store, Armchair, Loader2, MessageCircle } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useRestaurantData, useRestaurantOrder } from './RestaurantDataContext';
@@ -13,6 +13,7 @@ import { OrderType, buildOrder } from '../restaurantTypes';
 import { currentTable } from '../tableStore';
 import { formatMoney } from '../../shop/adminUi';
 import { whatsappHref } from '../../cars/carModel';
+import { useCustomerSession } from '../../customers/customerSession';
 
 interface MenuCartViewProps {
   elem: CanvasElement;
@@ -36,6 +37,14 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
   const [error, setError] = useState('');
   const [sent, setSent] = useState<{ number: number; live: boolean; whatsapp: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const customer = useCustomerSession();
+
+  // A signed-in customer of the restaurant does not type their details again.
+  useEffect(() => {
+    if (!customer) return;
+    const p = customer.profile;
+    setF((cur) => ({ ...cur, name: cur.name || p.name, phone: cur.phone || p.phone, address: cur.address || p.address }));
+  }, [customer]);
 
   const activeType = types.includes(type) ? type : types[0] || 'pickup';
   const subtotal = menuCartSubtotal(lines);
@@ -97,7 +106,8 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
       waWindow.location.href = whatsapp;
     }
     clearMenuCart();
-    setF({ name: '', phone: '', address: '', notes: '' });
+    const p = customer?.profile;
+    setF({ name: p?.name || '', phone: p?.phone || '', address: p?.address || '', notes: '' });
     setSent({ number, live: placed !== null, whatsapp });
   };
 

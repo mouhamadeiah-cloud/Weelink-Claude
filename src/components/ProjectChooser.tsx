@@ -1,7 +1,46 @@
-// Shown after login: the user picks which project to open (or create).
-import React from 'react';
-import { FileText, ShoppingBag, CarFront, UtensilsCrossed, ArrowLeft, Loader2 } from 'lucide-react';
+// Shown after login: the user picks which project to open (or create). Below, the pages this
+// account joined as a customer (see services/pageCustomers.ts).
+import React, { useEffect, useState } from 'react';
+import { FileText, ShoppingBag, CarFront, UtensilsCrossed, ArrowLeft, Loader2, ExternalLink } from 'lucide-react';
 import { ProjectType } from './shop/shopTypes';
+import { auth } from '../services/firebase';
+import { JoinedPage, PAGE_KIND_LABELS, listJoinedPages, pageUrl } from '../services/pageCustomers';
+
+const JoinedPages: React.FC = () => {
+  const [pages, setPages] = useState<JoinedPage[]>([]);
+  useEffect(() => {
+    const uid = auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser.uid : '';
+    if (!uid) return;
+    listJoinedPages(uid).then(setPages).catch(() => setPages([]));
+  }, []);
+  if (!pages.length) return null;
+  return (
+    <div className="space-y-3">
+      <h2 className="text-base font-black text-[#1d1d1f]">صفحات اشتركت بها</h2>
+      <p className="text-xs text-neutral-500">افتح الصفحة واضغط على اسمك في أعلاها لترى طلباتك وتغيّر بياناتك.</p>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {pages.map((p) => {
+          const url = pageUrl(p.kind, p.ownerUid);
+          return (
+            <a
+              key={p.ownerUid}
+              href={url || undefined}
+              target="_blank"
+              rel="noreferrer"
+              className="bg-white rounded-2xl border border-neutral-200 p-4 flex items-center justify-between gap-3 hover:border-neutral-300 transition"
+            >
+              <div className="min-w-0">
+                <div className="text-[11px] font-bold text-neutral-400">{PAGE_KIND_LABELS[p.kind]}</div>
+                <div className="text-sm font-black text-[#1d1d1f] truncate">{p.name || 'بدون اسم'}</div>
+              </div>
+              {url && <ExternalLink size={16} className="shrink-0 text-neutral-400" />}
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 interface ProjectChooserProps {
   onChoose: (type: ProjectType) => void;
@@ -88,6 +127,8 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
             </button>
           ))}
         </div>
+
+        <JoinedPages />
       </div>
     </div>
   );

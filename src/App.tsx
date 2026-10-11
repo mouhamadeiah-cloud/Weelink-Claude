@@ -1001,7 +1001,7 @@ export default function App() {
         const initialProgress = {
           currentStep: 1,
           personalInfo: { title: 'سيد', fullName: '', birthDate: '', logoUrl: '' },
-          addressInfo: { governorate: 'دمشق', city: '', area: '', street: '', details: '', coordinates: null },
+          addressInfo: { governorate: 'دمشق', placeType: 'city', city: '', area: '', district: '', subdistrict: '', village: '', street: '', details: '', coordinates: null },
           contactInfo: { email: emailVal, whatsapp: '', phone: '', facebook: '', tiktok: '' },
           catalogInfo: { category: '', subCategory: '', specialty: '', customCategory: '', customSpecialty: '' },
           aiAnswers: {

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { db } from '../services/firebase';
 import { WeeDots } from './ui/WeeDots';
-import { SYRIAN_GOVERNORATES, areasOf, subdistrictsOf, villagesOf, useGovernoratePlaces, useOccupations } from '../utils/syriaLists';
+import { SYRIAN_GOVERNORATES, GOVERNORATE_CENTERS, addressFromPoint, areasOf, findSubdistrict, findVillage, subdistrictsOf, villagesOf, useGovernoratePlaces, useOccupations } from '../utils/syriaLists';
 import { ComboInput } from './ui/ComboInput';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { 
@@ -9,7 +9,6 @@ import {
   ChevronUp, 
   Upload, 
   MapPin, 
-  Check, 
   ArrowLeft,
   X
 } from 'lucide-react';
@@ -25,6 +24,8 @@ interface WeeAIChatProps {
   onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
 }
 
+
+const LocationPicker = lazy(() => import('./ui/LocationPicker'));
 
 const LIST_HINT = 'اختر من القائمة ليسهل على زبائنك إيجادك، أو اكتبه بنفسك.';
 
@@ -87,6 +88,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const [isWriting, setIsWriting] = useState(false);
   const [writeNote, setWriteNote] = useState<{ ok: boolean; message: string } | null>(null);
   const [gpsLoading, setGpsLoading] = useState<boolean>(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationNote, setLocationNote] = useState<{ text: string; ok: boolean } | null>(null);
+  const geocodeRun = useRef(0);
 
   // Typewriter text state
   const [typedText, setTypedText] = useState<string>('');
@@ -342,26 +347,50 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     });
   };
 
-  // GPS Coordinates Locator
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      alert("ميزة تحديد الموقع الجغرافي غير مدعومة في متصفحك.");
-      return;
+  // The pin moved (device location, drag or tap): keep the point and fill the address from it.
+  // Every field stays editable; a later pin replaces only what the map knows.
+  const fillFromPoint = async (point: { lat: number; lng: number }) => {
+    setAddressInfo(prev => ({ ...prev, coordinates: point }));
+    const run = ++geocodeRun.current;
+    setLocationNote({ text: 'جاري قراءة العنوان من الخريطة...', ok: true });
+    try {
+      const res = await fetch(`/api/geocode?lat=${point.lat}&lng=${point.lng}`);
+      const found = res.ok ? await addressFromPoint(await res.json()) : undefined;
+      if (run !== geocodeRun.current) return;
+      if (found === null) {
+        setLocationNote({ text: 'هذا الموقع خارج سوريا. حرّك الدبوس لمكانك أو اختر العنوان من القوائم.', ok: false });
+        return;
+      }
+      if (!found) throw new Error('geocode');
+      setAddressInfo(prev => ({ ...prev, ...found, street: found.street || prev.street }));
+      setLocationNote({ text: 'عبّينا العنوان من الخريطة. راجع الحقول وعدّل أي شي إذا لزم.', ok: true });
+    } catch {
+      if (run === geocodeRun.current) setLocationNote({ text: 'حفظنا موقعك، بس ما قدرنا نقرأ العنوان. اختره من القوائم تحت.', ok: false });
     }
+  };
+
+  // Opens the map on the device's location; without it, on the chosen governorate.
+  const handleGetLocation = () => {
+    setMapOpen(true);
+    const fallback = () => {
+      const [lat, lng] = GOVERNORATE_CENTERS[addressInfo.governorate] || GOVERNORATE_CENTERS['دمشق'];
+      setMapCenter(addressInfo.coordinates || { lat, lng });
+      setLocationNote({ text: 'ما قدرنا نحدد موقعك تلقائياً. اسحب الدبوس أو اضغط على مكانك بالخريطة.', ok: false });
+    };
+    if (!navigator.geolocation) return fallback();
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setAddressInfo(prev => ({
-          ...prev,
-          coordinates: { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        }));
         setGpsLoading(false);
+        const point = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setMapCenter(point);
+        fillFromPoint(point);
       },
       () => {
         setGpsLoading(false);
-        alert("يرجى السماح بصلاحية الموقع في المتصفح لتحديد إحداثياتك.");
+        fallback();
       },
-      { timeout: 7000 }
+      { timeout: 10000, enableHighAccuracy: true }
     );
   };
 
@@ -504,6 +533,29 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {/* STEP 2: العنوان */}
         {step === 2 && (
           <div className="space-y-3.5">
+            {/* Fill the address from the map: the device's location, then a pin the owner can move. */}
+            <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-100 space-y-2">
+              <button
+                type="button"
+                disabled={gpsLoading}
+                onClick={handleGetLocation}
+                className="w-full py-2 px-3 bg-[#0071e3] hover:bg-[#0077ed] disabled:opacity-60 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <MapPin size={13} />
+                <span>{gpsLoading ? 'جاري تحديد موقعك...' : mapOpen ? 'رجّع الدبوس لموقعي' : 'حدد موقعي على الخريطة'}</span>
+              </button>
+              {!mapOpen && <p className="text-[9.5px] text-neutral-500">منعبّي العنوان من موقعك، وبتقدر تعدّل أي حقل بعدين.</p>}
+              {mapOpen && mapCenter && (
+                <Suspense fallback={<div className="h-52 rounded-lg bg-neutral-100 animate-pulse" />}>
+                  <LocationPicker value={mapCenter} onPick={(p) => { setMapCenter(p); fillFromPoint(p); }} />
+                </Suspense>
+              )}
+              {mapOpen && mapCenter && <p className="text-[9.5px] text-neutral-500">اسحب الدبوس أو اضغط على مكانك بالضبط.</p>}
+              {locationNote && (
+                <p className={`text-[10px] font-bold ${locationNote.ok ? 'text-green-600' : 'text-amber-600'}`}>{locationNote.text}</p>
+              )}
+            </div>
+
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-neutral-500 block">المحافظة (إجباري) *</label>
               <select
@@ -552,7 +604,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                     value={addressInfo.subdistrict}
                     options={subdistrictsOf(places, addressInfo.district).map(s => s.name)}
                     placeholder="اختر الناحية"
-                    onChange={subdistrict => setAddressInfo(p => ({ ...p, subdistrict, village: '' }))}
+                    onChange={subdistrict => setAddressInfo(p => ({ ...p, ...(p.district ? {} : findSubdistrict(places, subdistrict)), subdistrict, village: '' }))}
                   />
                 </div>
                 <div className="space-y-1">
@@ -562,7 +614,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                     value={addressInfo.village}
                     options={villagesOf(places, addressInfo.district, addressInfo.subdistrict)}
                     placeholder="اختر القرية"
-                    onChange={village => setAddressInfo(p => ({ ...p, village }))}
+                    onChange={village => setAddressInfo(p => ({ ...p, ...findVillage(places, village, p.district, p.subdistrict), village }))}
                   />
                   <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
                 </div>
@@ -613,24 +665,6 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 rows={2}
                 className="w-full text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg"
               />
-            </div>
-
-            {/* زر موقعي من جوجل ماب */}
-            <div className="pt-1 border-t border-neutral-100 flex items-center justify-between">
-              <button
-                type="button"
-                disabled={gpsLoading}
-                onClick={handleGetLocation}
-                className="py-1.5 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-[10.5px] font-bold text-neutral-700 flex items-center gap-1.5 transition-all cursor-pointer"
-              >
-                <MapPin size={12} className="text-[#0071e3]" />
-                <span>{gpsLoading ? 'جاري التحديد...' : 'موقعي (Google Maps)'}</span>
-              </button>
-              {addressInfo.coordinates && (
-                <span className="text-[9.5px] text-green-600 font-bold flex items-center gap-1">
-                  <Check size={11} /> تم أخذ الإحداثيات
-                </span>
-              )}
             </div>
 
             <div className="flex gap-2 pt-1">

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { WeeDots } from './ui/WeeDots';
-import { SYRIAN_GOVERNORATES, areasOf, useGovernoratePlaces, useOccupations } from '../utils/syriaLists';
+import { SYRIAN_GOVERNORATES, areasOf, subdistrictsOf, villagesOf, useGovernoratePlaces, useOccupations } from '../utils/syriaLists';
+import { ComboInput } from './ui/ComboInput';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   ChevronDown, 
@@ -24,30 +25,6 @@ interface WeeAIChatProps {
   onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
 }
 
-
-// A text field that suggests from a list and still takes any typed text. A suggestion may carry a
-// note (a village's sub-district and district), shown beside it.
-const ListInput: React.FC<{
-  id: string;
-  value: string;
-  options: (string | { value: string; label: string })[];
-  placeholder?: string;
-  onChange: (v: string) => void;
-}> = ({ id, value, options, placeholder, onChange }) => (
-  <>
-    <input
-      type="text"
-      list={id}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg"
-    />
-    <datalist id={id}>
-      {options.map(o => (typeof o === 'string' ? <option key={o} value={o} /> : <option key={o.value + o.label} value={o.value} label={o.label} />))}
-    </datalist>
-  </>
-);
 
 const LIST_HINT = 'اختر من القائمة ليسهل على زبائنك إيجادك، أو اكتبه بنفسك.';
 
@@ -124,8 +101,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   const [addressInfo, setAddressInfo] = useState({
     governorate: 'دمشق',
+    placeType: 'city' as 'city' | 'rural',
     city: '',
     area: '',
+    district: '',
+    subdistrict: '',
+    village: '',
     street: '',
     details: '',
     coordinates: null as { lat: number; lng: number } | null
@@ -177,8 +158,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     });
     setAddressInfo({
       governorate: 'دمشق',
+      placeType: 'city' as 'city' | 'rural',
       city: '',
       area: '',
+      district: '',
+      subdistrict: '',
+      village: '',
       street: '',
       details: '',
       coordinates: null
@@ -215,7 +200,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   useEffect(() => {
     const applyData = (data: any) => {
       if (data.personalInfo) setPersonalInfo(data.personalInfo);
-      if (data.addressInfo) setAddressInfo({ area: '', ...data.addressInfo });
+      if (data.addressInfo) setAddressInfo({ placeType: 'city', area: '', district: '', subdistrict: '', village: '', ...data.addressInfo });
       if (data.contactInfo) setContactInfo(data.contactInfo);
       if (data.catalogInfo) setCatalogInfo(normalizeCatalog(data.catalogInfo));
       if (data.aiAnswers) setAiAnswers(data.aiAnswers);
@@ -523,7 +508,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <label className="text-[10px] font-bold text-neutral-500 block">المحافظة (إجباري) *</label>
               <select
                 value={addressInfo.governorate}
-                onChange={e => setAddressInfo(p => ({ ...p, governorate: e.target.value, city: '', area: '' }))}
+                onChange={e => setAddressInfo(p => ({ ...p, governorate: e.target.value, city: '', area: '', district: '', subdistrict: '', village: '' }))}
                 className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white"
               >
                 {SYRIAN_GOVERNORATES.map(gov => (
@@ -532,31 +517,81 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">المدينة أو القرية</label>
-              <ListInput
-                id="wee-places"
-                value={addressInfo.city}
-                options={[
-                  ...(places?.cities.map(c => c.name) || []),
-                  ...(places?.villages.map(v => ({ value: v.name, label: v.where })) || [])
-                ]}
-                placeholder={places ? 'ابدأ بالكتابة واختر من القائمة' : 'المدينة أو القرية'}
-                onChange={city => setAddressInfo(p => ({ ...p, city }))}
-              />
-            </div>
+            {/* A mixed governorate asks first whether the place is a city or in the countryside. */}
+            {(!places || places.type !== 'urban') && (
+              <div className="grid grid-cols-2 gap-1 p-1 bg-neutral-100 rounded-lg">
+                {([['city', 'مدينة'], ['rural', 'ريف']] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setAddressInfo(p => ({ ...p, placeType: id }))}
+                    className={`py-1.5 rounded-md text-xs font-bold transition-all ${addressInfo.placeType === id ? 'bg-white text-[#0071e3] shadow-sm' : 'text-neutral-500'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">الحي أو المنطقة</label>
-              <ListInput
-                id="wee-areas"
-                value={addressInfo.area}
-                options={areasOf(places, addressInfo.city)}
-                placeholder="الحي"
-                onChange={area => setAddressInfo(p => ({ ...p, area }))}
-              />
-              <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
-            </div>
+            {addressInfo.placeType === 'rural' && places?.type !== 'urban' ? (
+              <>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-neutral-500 block">المنطقة</label>
+                  <ComboInput
+                    ariaLabel="المنطقة"
+                    value={addressInfo.district}
+                    options={(places?.districts || []).map(d => d.name)}
+                    placeholder="اختر المنطقة"
+                    onChange={district => setAddressInfo(p => ({ ...p, district, subdistrict: '', village: '' }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-neutral-500 block">الناحية</label>
+                  <ComboInput
+                    ariaLabel="الناحية"
+                    value={addressInfo.subdistrict}
+                    options={subdistrictsOf(places, addressInfo.district).map(s => s.name)}
+                    placeholder="اختر الناحية"
+                    onChange={subdistrict => setAddressInfo(p => ({ ...p, subdistrict, village: '' }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-neutral-500 block">القرية</label>
+                  <ComboInput
+                    ariaLabel="القرية"
+                    value={addressInfo.village}
+                    options={villagesOf(places, addressInfo.district, addressInfo.subdistrict)}
+                    placeholder="اختر القرية"
+                    onChange={village => setAddressInfo(p => ({ ...p, village }))}
+                  />
+                  <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-neutral-500 block">المدينة</label>
+                  <ComboInput
+                    ariaLabel="المدينة"
+                    value={addressInfo.city}
+                    options={(places?.cities || []).map(c => c.name)}
+                    placeholder="اختر المدينة"
+                    onChange={city => setAddressInfo(p => ({ ...p, city, area: '' }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-neutral-500 block">الحي</label>
+                  <ComboInput
+                    ariaLabel="الحي"
+                    value={addressInfo.area}
+                    options={areasOf(places, addressInfo.city)}
+                    placeholder={areasOf(places, addressInfo.city).length ? 'اختر الحي' : 'اكتب اسم الحي'}
+                    onChange={area => setAddressInfo(p => ({ ...p, area }))}
+                  />
+                  <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
+                </div>
+              </>
+            )}
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-neutral-500 block">الشارع والرقم</label>
@@ -710,8 +745,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           <div className="space-y-3.5">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-neutral-500 block">كتالوج العمل الرئيسي *</label>
-              <ListInput
-                id="wee-catalogs"
+              <ComboInput
+                ariaLabel="كتالوج العمل الرئيسي"
                 value={catalogInfo.category}
                 options={(occupationList || []).map(c => c.name)}
                 placeholder="مثال: الطب والرعاية الصحية"
@@ -728,8 +763,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-neutral-500 block">الكتالوج الفرعي</label>
-              <ListInput
-                id="wee-subcatalogs"
+              <ComboInput
+                ariaLabel="الكتالوج الفرعي"
                 value={catalogInfo.subCategory}
                 options={(catalogEntry?.subs || []).map(s => s.name)}
                 placeholder="مثال: الأطباء"
@@ -739,8 +774,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-neutral-500 block">المهنة أو الاختصاص</label>
-              <ListInput
-                id="wee-jobs"
+              <ComboInput
+                ariaLabel="المهنة أو الاختصاص"
                 value={catalogInfo.specialty}
                 options={jobOptions}
                 placeholder="مثال: طبيب أطفال"

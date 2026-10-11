@@ -9,10 +9,14 @@ export const SYRIAN_GOVERNORATES = [
   'دمشق', 'ريف دمشق', 'حلب', 'حمص', 'حماة', 'اللاذقية', 'طرطوس', 'إدلب', 'درعا', 'السويداء', 'القنيطرة', 'دير الزور', 'الرقة', 'الحسكة',
 ];
 
+// A governorate: its cities (each with its neighbourhoods, when the list has real ones) and its
+// countryside: districts (المنطقة) → sub-districts (الناحية) → villages. Every list is sorted
+// alphabetically ignoring a leading «ال». 'urban' (دمشق) has cities only.
 export interface GovernoratePlaces {
   governorate: string;
+  type: 'urban' | 'mixed';
   cities: { name: string; areas: string[] }[];
-  villages: { name: string; where: string }[]; // where: «الناحية · المنطقة»
+  districts: { name: string; subdistricts: { name: string; villages: string[] }[] }[];
 }
 
 export interface OccupationCatalog {
@@ -63,6 +67,16 @@ export const useOccupations = (enabled = true) => {
   return list;
 };
 
-// The neighbourhoods of a city of the governorate (none for a village or a typed place).
+// The neighbourhoods of a city of the governorate (none for a typed city).
 export const areasOf = (places: GovernoratePlaces | null, city: string) =>
   places?.cities.find((c) => c.name === city.trim())?.areas || [];
+
+export const subdistrictsOf = (places: GovernoratePlaces | null, district: string) =>
+  places?.districts.find((d) => d.name === district.trim())?.subdistricts || [];
+
+// The villages of a sub-district; with no sub-district chosen, all villages of the district.
+export const villagesOf = (places: GovernoratePlaces | null, district: string, subdistrict: string) => {
+  const subs = subdistrictsOf(places, district);
+  const sub = subs.find((s) => s.name === subdistrict.trim());
+  return sub ? sub.villages : subs.flatMap((s) => s.villages);
+};

@@ -8,7 +8,7 @@ type TextKind = (typeof TEXT_KINDS)[number];
 
 export interface WeeAnswers {
   personalInfo?: { title?: string; fullName?: string };
-  addressInfo?: { governorate?: string; city?: string; area?: string; street?: string; details?: string };
+  addressInfo?: { governorate?: string; placeType?: string; city?: string; area?: string; district?: string; subdistrict?: string; village?: string; street?: string; details?: string };
   contactInfo?: { whatsapp?: string; phone?: string; facebook?: string; tiktok?: string };
   catalogInfo?: { category?: string; subCategory?: string; specialty?: string; customCategory?: string; customSpecialty?: string };
   aiAnswers?: { description?: string; motionEffects?: string; specialInstructions?: string };
@@ -36,7 +36,7 @@ export const businessFacts = (a: WeeAnswers, siteName: string): Record<string, s
     الكتالوج_الفرعي: cat.subCategory || '',
     الاختصاص: cat.customSpecialty || cat.specialty || '',
     الوصف: ai.description || '',
-    العنوان: [ad.governorate, ad.city, ad.area, ad.street].filter(Boolean).join('، '),
+    العنوان: (ad.placeType === 'rural' ? [ad.governorate, ad.district, ad.subdistrict, ad.village, ad.street] : [ad.governorate, ad.city, ad.area, ad.street]).filter(Boolean).join('، '),
     واتساب: c.whatsapp || '',
     هاتف: c.phone || '',
     طابع_الصفحة: ai.motionEffects || '',

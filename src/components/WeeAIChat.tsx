@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { WeeDots } from './ui/WeeDots';
+import { SYRIAN_GOVERNORATES, areasOf, useGovernoratePlaces, useOccupations } from '../utils/syriaLists';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   ChevronDown, 
@@ -23,48 +24,41 @@ interface WeeAIChatProps {
   onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
 }
 
-const SYRIAN_GOVERNORATES = [
-  'دمشق', 'ريف دمشق', 'حلب', 'حمص', 'حماة', 'اللاذقية', 'طرطوس', 'إدلب', 'درعا', 'السويداء', 'القنيطرة', 'دير الزور', 'الحسكة', 'الرقة'
-];
 
-const BUSINESS_CATALOG = [
-  {
-    category: 'مطاعم وكافيهات',
-    specialties: ['مطعم شرقي', 'مطعم غربي', 'وجبات سريعة', 'كافيه ومقهى', 'طبخ منزلي 🍳', 'حلويات ومخبوزات', 'غير ذلك']
-  },
-  {
-    category: 'نقل وتوصيل',
-    specialties: ['شحن بضائع', 'تكسي وأجرة', 'نقل أثاث', 'توصيل طلبات 📦', 'تأجير سيارات', 'غير ذلك']
-  },
-  {
-    category: 'خدمات طبية ورعاية صحية',
-    specialties: ['عيادة طبية', 'طبيب عام', 'أخصائي أسنان', 'صيدلية', 'مستشفى', 'رعاية منزلية', 'غير ذلك']
-  },
-  {
-    category: 'تجارة وتجزئة',
-    specialties: ['محل ملابس', 'متجر إلكتروني', 'سوبرماركت', 'مستحضرات تجميل', 'مكتبة وقرطاسية', 'غير ذلك']
-  },
-  {
-    category: 'خدمات تقنية وبرمجية',
-    specialties: ['تطوير مواقع وتطبيقات', 'تسويق رقمي', 'تصميم جرافيك', 'صيانة برمجيات', 'شبكات وأمان', 'غير ذلك']
-  },
-  {
-    category: 'تعليم وتدريب',
-    specialties: ['مدرسة خاصة', 'معهد تدريبي', 'مدرس خصوصي', 'دورات أونلاين', 'تعليم أطفال', 'غير ذلك']
-  },
-  {
-    category: 'حرف ومهن يدوية',
-    specialties: ['صيانة كهرباء', 'أعمال سباكة', 'نجارة وديكور', 'تصليح أجهزة', 'دهان وتشطيب', 'غير ذلك']
-  },
-  {
-    category: 'خدمات سياحية وعقارية',
-    specialties: ['شركة سياحة وسفر', 'مكتب عقاري', 'فندق وشقق مفروشة', 'دليل سياحي', 'غير ذلك']
-  },
-  {
-    category: 'غير ذلك',
-    specialties: ['أخرى']
-  }
-];
+// A text field that suggests from a list and still takes any typed text. A suggestion may carry a
+// note (a village's sub-district and district), shown beside it.
+const ListInput: React.FC<{
+  id: string;
+  value: string;
+  options: (string | { value: string; label: string })[];
+  placeholder?: string;
+  onChange: (v: string) => void;
+}> = ({ id, value, options, placeholder, onChange }) => (
+  <>
+    <input
+      type="text"
+      list={id}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg"
+    />
+    <datalist id={id}>
+      {options.map(o => (typeof o === 'string' ? <option key={o} value={o} /> : <option key={o.value + o.label} value={o.value} label={o.label} />))}
+    </datalist>
+  </>
+);
+
+const LIST_HINT = 'اختر من القائمة ليسهل على زبائنك إيجادك، أو اكتبه بنفسك.';
+
+// Answers saved before the lists: «غير ذلك» with the typed text beside it becomes the typed text.
+const normalizeCatalog = (c: any) => ({
+  category: (c?.category === 'غير ذلك' ? c?.customCategory : c?.category) || '',
+  subCategory: c?.subCategory || '',
+  specialty: (c?.specialty === 'غير ذلك' ? c?.customSpecialty : c?.specialty) || '',
+  customCategory: '',
+  customSpecialty: ''
+});
 
 const getConciseQuestionText = (stepNum: number, name?: string): string => {
   switch (stepNum) {
@@ -131,6 +125,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const [addressInfo, setAddressInfo] = useState({
     governorate: 'دمشق',
     city: '',
+    area: '',
     street: '',
     details: '',
     coordinates: null as { lat: number; lng: number } | null
@@ -145,11 +140,21 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   });
 
   const [catalogInfo, setCatalogInfo] = useState({
-    category: 'مطاعم وكافيهات',
-    specialty: 'طبخ منزلي 🍳',
+    category: '',
+    subCategory: '',
+    specialty: '',
     customCategory: '',
     customSpecialty: ''
   });
+  const places = useGovernoratePlaces(step === 2 ? addressInfo.governorate : '');
+  const occupationList = useOccupations(step === 4);
+  const catalogEntry = occupationList?.find(c => c.name === catalogInfo.category.trim());
+  const subEntry = catalogEntry?.subs.find(s => s.name === catalogInfo.subCategory.trim());
+  const jobOptions = subEntry
+    ? subEntry.jobs
+    : catalogEntry
+      ? catalogEntry.subs.flatMap(s => s.jobs)
+      : (occupationList || []).flatMap(c => c.subs.flatMap(s => s.jobs));
 
   const [aiAnswers, setAiAnswers] = useState({
     description: '',
@@ -173,6 +178,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     setAddressInfo({
       governorate: 'دمشق',
       city: '',
+      area: '',
       street: '',
       details: '',
       coordinates: null
@@ -185,8 +191,9 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       tiktok: ''
     });
     setCatalogInfo({
-      category: 'مطاعم وكافيهات',
-      specialty: 'طبخ منزلي 🍳',
+      category: '',
+      subCategory: '',
+      specialty: '',
       customCategory: '',
       customSpecialty: ''
     });
@@ -208,9 +215,9 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   useEffect(() => {
     const applyData = (data: any) => {
       if (data.personalInfo) setPersonalInfo(data.personalInfo);
-      if (data.addressInfo) setAddressInfo(data.addressInfo);
+      if (data.addressInfo) setAddressInfo({ area: '', ...data.addressInfo });
       if (data.contactInfo) setContactInfo(data.contactInfo);
-      if (data.catalogInfo) setCatalogInfo(data.catalogInfo);
+      if (data.catalogInfo) setCatalogInfo(normalizeCatalog(data.catalogInfo));
       if (data.aiAnswers) setAiAnswers(data.aiAnswers);
       if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep);
     };
@@ -516,7 +523,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <label className="text-[10px] font-bold text-neutral-500 block">المحافظة (إجباري) *</label>
               <select
                 value={addressInfo.governorate}
-                onChange={e => setAddressInfo(p => ({ ...p, governorate: e.target.value }))}
+                onChange={e => setAddressInfo(p => ({ ...p, governorate: e.target.value, city: '', area: '' }))}
                 className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white"
               >
                 {SYRIAN_GOVERNORATES.map(gov => (
@@ -526,14 +533,29 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">المدينة</label>
-              <input
-                type="text"
+              <label className="text-[10px] font-bold text-neutral-500 block">المدينة أو القرية</label>
+              <ListInput
+                id="wee-places"
                 value={addressInfo.city}
-                onChange={e => setAddressInfo(p => ({ ...p, city: e.target.value }))}
-                placeholder="المدينة / المنطقة"
-                className="w-full text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg"
+                options={[
+                  ...(places?.cities.map(c => c.name) || []),
+                  ...(places?.villages.map(v => ({ value: v.name, label: v.where })) || [])
+                ]}
+                placeholder={places ? 'ابدأ بالكتابة واختر من القائمة' : 'المدينة أو القرية'}
+                onChange={city => setAddressInfo(p => ({ ...p, city }))}
               />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-neutral-500 block">الحي أو المنطقة</label>
+              <ListInput
+                id="wee-areas"
+                value={addressInfo.area}
+                options={areasOf(places, addressInfo.city)}
+                placeholder="الحي"
+                onChange={area => setAddressInfo(p => ({ ...p, area }))}
+              />
+              <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
             </div>
 
             <div className="space-y-1">
@@ -687,64 +709,45 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {step === 4 && (
           <div className="space-y-3.5">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">كتالوج الأعمال الرئيسي</label>
-              <select
+              <label className="text-[10px] font-bold text-neutral-500 block">كتالوج العمل الرئيسي *</label>
+              <ListInput
+                id="wee-catalogs"
                 value={catalogInfo.category}
-                onChange={e => {
-                  const cat = e.target.value;
-                  const item = BUSINESS_CATALOG.find(c => c.category === cat);
-                  setCatalogInfo(p => ({
-                    ...p,
-                    category: cat,
-                    specialty: item ? item.specialties[0] : ''
-                  }));
+                options={(occupationList || []).map(c => c.name)}
+                placeholder="مثال: الطب والرعاية الصحية"
+                onChange={category => {
+                  const next = occupationList?.find(c => c.name === category.trim());
+                  setCatalogInfo(p => {
+                    // Choosing another catalog from the list drops a sub-catalog that is not in it.
+                    const keep = !next || next.subs.some(s => s.name === p.subCategory.trim());
+                    return { ...p, category, subCategory: keep ? p.subCategory : '', specialty: keep ? p.specialty : '' };
+                  });
                 }}
-                className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none"
-              >
-                {BUSINESS_CATALOG.map(c => (
-                  <option key={c.category} value={c.category}>{c.category}</option>
-                ))}
-              </select>
+              />
             </div>
 
-            {catalogInfo.category === 'غير ذلك' ? (
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-neutral-500 block">اكتب كتالوجك</label>
-                <input
-                  type="text"
-                  value={catalogInfo.customCategory}
-                  onChange={e => setCatalogInfo(p => ({ ...p, customCategory: e.target.value }))}
-                  placeholder="أدخل مجال عملك"
-                  className="w-full text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg"
-                />
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-neutral-500 block">الاختصاص</label>
-                <select
-                  value={catalogInfo.specialty}
-                  onChange={e => setCatalogInfo(p => ({ ...p, specialty: e.target.value }))}
-                  className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:outline-none"
-                >
-                  {(BUSINESS_CATALOG.find(c => c.category === catalogInfo.category)?.specialties || []).map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-neutral-500 block">الكتالوج الفرعي</label>
+              <ListInput
+                id="wee-subcatalogs"
+                value={catalogInfo.subCategory}
+                options={(catalogEntry?.subs || []).map(s => s.name)}
+                placeholder="مثال: الأطباء"
+                onChange={subCategory => setCatalogInfo(p => ({ ...p, subCategory }))}
+              />
+            </div>
 
-            {catalogInfo.specialty === 'غير ذلك' && catalogInfo.category !== 'غير ذلك' && (
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-neutral-500 block">اكتب اختصاصك</label>
-                <input
-                  type="text"
-                  value={catalogInfo.customSpecialty}
-                  onChange={e => setCatalogInfo(p => ({ ...p, customSpecialty: e.target.value }))}
-                  placeholder="أدخل اختصاصك بدقة"
-                  className="w-full text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg"
-                />
-              </div>
-            )}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-neutral-500 block">المهنة أو الاختصاص</label>
+              <ListInput
+                id="wee-jobs"
+                value={catalogInfo.specialty}
+                options={jobOptions}
+                placeholder="مثال: طبيب أطفال"
+                onChange={specialty => setCatalogInfo(p => ({ ...p, specialty }))}
+              />
+              <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
+            </div>
 
             <div className="flex gap-2 pt-1">
               <button
@@ -756,7 +759,13 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               </button>
               <button
                 type="button"
-                onClick={goToNextStep}
+                onClick={() => {
+                  if (!catalogInfo.category.trim()) {
+                    alert('يرجى اختيار كتالوج عملك.');
+                    return;
+                  }
+                  goToNextStep();
+                }}
                 className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي

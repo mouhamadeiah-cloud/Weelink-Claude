@@ -1,8 +1,9 @@
 // Small helpers shared by the showroom page and the admin window.
-import { Car, CAR_ACCIDENTS, CAR_PAINT, CAR_STATUSES } from './carTypes';
+import { Car, CAR_ACCIDENTS, CAR_PAINT, CAR_STATUSES, vehicleTypeLabel } from './carTypes';
 import { formatMoney } from '../shop/adminUi';
 
-export const carTitle = (c: Pick<Car, 'brand' | 'model'>) => [c.brand, c.model].filter(Boolean).join(' ') || 'سيارة بدون اسم';
+export const carTitle = (c: Pick<Car, 'brand' | 'model'> & Partial<Pick<Car, 'vehicleCategory'>>) =>
+  [c.brand, c.model].filter(Boolean).join(' ') || c.vehicleCategory || 'سيارة بدون اسم';
 
 // Each part is a bidi isolate (FSI … PDI) so a Latin trim such as "45 TFSI" keeps its order in RTL.
 const isolate = (s: string) => `\u2068${s}\u2069`;
@@ -27,6 +28,7 @@ export const carFacts = (c: Car) =>
 // The full specification table of a car, rows without a value left out.
 export const carSpecRows = (c: Car): { label: string; value: string }[] =>
   [
+    { label: 'نوع المركبة', value: vehicleTypeLabel(c) },
     { label: 'الماركة', value: c.brand },
     { label: 'الموديل', value: c.model },
     { label: 'الفئة', value: c.trim },

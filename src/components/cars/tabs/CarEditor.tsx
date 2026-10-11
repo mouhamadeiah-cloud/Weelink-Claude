@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, Store, Archive, Plus, X } from 'lucide-react';
 import {
-  Car, CarAdminData, CarDocType, emptyCar, nextStockNumber, CAR_BRANDS, CAR_BODY_TYPES, CAR_FUELS, CAR_TRANSMISSIONS, CAR_DRIVES,
+  Car, CarAdminData, CarDocType, emptyCar, nextStockNumber, VEHICLE_KINDS, VehicleKind, CAR_BODY_TYPES, CAR_FUELS, CAR_TRANSMISSIONS, CAR_DRIVES,
   CAR_SPECS, CAR_COLORS, CAR_INTERIOR_COLORS, CAR_FEATURE_GROUPS, CAR_PAINT, CAR_ACCIDENTS, CAR_BADGES, CAR_STATUSES, CAR_CURRENCIES,
 } from '../carTypes';
 import { newId } from '../../shop/shopTypes';
@@ -12,6 +12,7 @@ import { Card, Field, inputClass, textareaClass, PrimaryButton, GhostButton, Tog
 import { CarCard } from '../store/CarCard';
 import { CarImages } from './CarImages';
 import { carTitle } from '../carModel';
+import { useVehicleLists, isOther } from '../vehicleLists';
 import { carCost, syncPurchaseTx } from '../carMoney';
 import { Segmented } from './moneyUi';
 
@@ -35,11 +36,15 @@ const num = (v: string) => {
   return isFinite(n) && n > 0 ? n : 0;
 };
 
-// A text field with suggestions that still accepts any text.
-const Suggest: React.FC<{ id: string; value: string; options: string[]; placeholder?: string; onChange: (v: string) => void }> = ({ id, value, options, placeholder, onChange }) => (
+// A text field with suggestions that still accepts any text. A suggestion may carry a second name
+// (the Arabic name of a Latin brand), shown beside it in the list.
+type SuggestOption = string | { value: string; label: string };
+const Suggest: React.FC<{ id: string; value: string; options: SuggestOption[]; placeholder?: string; onChange: (v: string) => void }> = ({ id, value, options, placeholder, onChange }) => (
   <>
     <input className={inputClass} list={id} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-    <datalist id={id}>{options.map((o) => <option key={o} value={o} />)}</datalist>
+    <datalist id={id}>
+      {options.map((o) => (typeof o === 'string' ? <option key={o} value={o} /> : <option key={o.value} value={o.value} label={o.label} />))}
+    </datalist>
   </>
 );
 
@@ -79,7 +84,31 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
   }, [editingId]);
 
   const set = (changes: Partial<Car>) => setCar((c) => ({ ...c, ...changes }));
-  const models = useMemo(() => CAR_BRANDS.find((b) => b.brand === car.brand.trim())?.models || [], [car.brand]);
+  const lists = useVehicleLists();
+  const commercial = car.vehicleKind === 'commercial';
+  const category = commercial ? lists?.commercial.find((c) => c.name_ar === car.vehicleCategory) : undefined;
+  const brandKey = car.brand.trim().toLowerCase();
+  const models = useMemo(
+    () => (lists?.passenger.find((b) => b.brand.toLowerCase() === brandKey)?.models || []).filter((m) => !isOther(m)),
+    [lists, brandKey]
+  );
+  const commercialBrands = (category?.brands || []).filter((b) => !isOther(b.name_de));
+  // A passenger car needs its brand and model; «شاحنات ومعدات» its category and a brand or a model.
+  const missing = commercial
+    ? !car.vehicleCategory ? 'اختر فئة المركبة أولًا.' : !car.brand.trim() && !car.model.trim() ? 'اكتب الماركة أو الموديل أولًا.' : ''
+    : !car.brand.trim() || !car.model.trim() ? 'اكتب الماركة والموديل أولًا.' : '';
+  const setKind = (vehicleKind: VehicleKind) => {
+    if (vehicleKind === car.vehicleKind) return;
+    set({ vehicleKind, vehicleCategory: '', brand: '', model: '', bodyType: '', doors: vehicleKind === 'car' ? 4 : 0, seats: vehicleKind === 'car' ? 5 : 0 });
+  };
+  const setCategory = (name: string) => {
+    const next = lists?.commercial.find((c) => c.name_ar === name);
+    set({
+      vehicleCategory: name,
+      brand: next?.brands.some((b) => b.name_de === car.brand.trim()) ? car.brand : '',
+      bodyType: next?.types.some((t) => t.name_ar === car.bodyType) ? car.bodyType : '',
+    });
+  };
   const allFeatures = CAR_FEATURE_GROUPS.flatMap((g) => g.items);
   const customFeatures = car.features.filter((f) => !allFeatures.includes(f));
   const toggleFeature = (f: string) => set({ features: car.features.includes(f) ? car.features.filter((x) => x !== f) : [...car.features, f] });
@@ -90,8 +119,8 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
   };
 
   const goTo = (n: number) => {
-    if (n > 1 && (!car.brand.trim() || !car.model.trim())) {
-      setError('اكتب الماركة والموديل أولًا.');
+    if (n > 1 && missing) {
+      setError(missing);
       setStep(1);
       return;
     }
@@ -100,8 +129,8 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
   };
 
   const save = (published: boolean) => {
-    if (!car.brand.trim() || !car.model.trim()) {
-      setError('اكتب الماركة والموديل أولًا.');
+    if (missing) {
+      setError(missing);
       setStep(1);
       return;
     }
@@ -170,15 +199,48 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
         {step === 1 && (
           <Card title="السيارة">
             <div className="grid sm:grid-cols-2 gap-3">
-              <Field label="الماركة *"><Suggest id="car-brands" value={car.brand} options={CAR_BRANDS.map((b) => b.brand)} placeholder="مثال: كيا" onChange={(brand) => set({ brand })} /></Field>
-              <Field label="الموديل *"><Suggest id="car-models" value={car.model} options={models} placeholder="مثال: سيراتو" onChange={(model) => set({ model })} /></Field>
+              <div className="sm:col-span-2"><Field label="نوع المركبة"><Chips options={VEHICLE_KINDS} value={car.vehicleKind} onChange={setKind} /></Field></div>
+              {commercial && (
+                <div className="sm:col-span-2">
+                  <Field label="فئة المركبة *">
+                    {lists ? <Chips options={list(lists.commercial.map((c) => c.name_ar))} value={car.vehicleCategory} onChange={setCategory} /> : <div className="text-xs text-neutral-400">جاري تحميل الفئات...</div>}
+                  </Field>
+                </div>
+              )}
+              {commercial ? (
+                <>
+                  {(commercialBrands.length > 0 || car.brand) && (
+                    <Field label="الماركة" hint="إذا ما لقيتها بالقائمة اكتبها بنفسك">
+                      <Suggest id="car-brands" value={car.brand} options={commercialBrands.map((b) => ({ value: b.name_de, label: b.name_ar }))} placeholder="مثال: MAN" onChange={(brand) => set({ brand })} />
+                    </Field>
+                  )}
+                  <Field label="الموديل" hint="اكتبه يدويًا"><input className={inputClass} value={car.model} placeholder="مثال: TGX 18.510" onChange={(e) => set({ model: e.target.value })} /></Field>
+                </>
+              ) : (
+                <>
+                  <Field label="الماركة *" hint="إذا ما لقيتها بالقائمة اكتبها بنفسك">
+                    <Suggest id="car-brands" value={car.brand} options={(lists?.passenger || []).map((b) => b.brand)} placeholder="مثال: Kia" onChange={(brand) => set({ brand })} />
+                  </Field>
+                  <Field label="الموديل *" hint="إذا ما لقيته بالقائمة اكتبه بنفسك">
+                    <Suggest id="car-models" value={car.model} options={models} placeholder="مثال: Cerato" onChange={(model) => set({ model })} />
+                  </Field>
+                </>
+              )}
               <Field label="الفئة" hint="مثل: GT Line، فل كامل، ستاندر"><input className={inputClass} value={car.trim} onChange={(e) => set({ trim: e.target.value })} /></Field>
               <Field label="سنة الصنع">
                 <select className={inputClass} value={car.year} onChange={(e) => set({ year: parseInt(e.target.value, 10) })}>
                   {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                 </select>
               </Field>
-              <Field label="نوع الهيكل"><Chips options={list(CAR_BODY_TYPES)} value={car.bodyType} onChange={(bodyType) => set({ bodyType })} /></Field>
+              {commercial ? (
+                (category?.types.length || 0) > 0 && (
+                  <div className="sm:col-span-2">
+                    <Field label="نوع الهيكل"><Chips options={list(category!.types.map((t) => t.name_ar))} value={car.bodyType} onChange={(bodyType) => set({ bodyType })} /></Field>
+                  </div>
+                )
+              ) : (
+                <Field label="نوع الهيكل"><Chips options={list(CAR_BODY_TYPES)} value={car.bodyType} onChange={(bodyType) => set({ bodyType })} /></Field>
+              )}
               <Field label="الحالة"><Chips options={[{ id: 'used', label: 'مستعملة' }, { id: 'new', label: 'جديدة' }]} value={car.condition} onChange={(condition) => set({ condition })} /></Field>
               <Field label="رقم السيارة في المعرض" hint="يُملأ تلقائيًا إن تركته فارغًا"><input className={inputClass} value={car.stockNumber} placeholder={nextStockNumber(data.cars)} onChange={(e) => set({ stockNumber: e.target.value })} dir="ltr" /></Field>
             </div>

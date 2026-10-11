@@ -10,9 +10,14 @@ export type CarCondition = 'new' | 'used';
 export type CarPaint = 'original' | 'partial' | 'full';
 export type CarAccidents = 'none' | 'minor' | 'major';
 
+// سيارة ركوب، أو من «شاحنات ومعدات» (شاحنات، مقطورات، آليات بناء وزراعة، حافلات، رافعات شوكية).
+export type VehicleKind = 'car' | 'commercial';
+
 export interface Car {
   id: string;
   stockNumber: string; // the showroom's own number for the car, e.g. "A-0007"
+  vehicleKind: VehicleKind;
+  vehicleCategory: string; // «شاحنات ومعدات» only: the category's Arabic name, e.g. «شاحنات أكثر من 7.5 طن»
   brand: string;
   model: string;
   trim: string; // الفئة، e.g. "M Sport"
@@ -247,34 +252,14 @@ export const CAR_ACCIDENTS: { id: CarAccidents; label: string }[] = [
   { id: 'major', label: 'حادث سابق' },
 ];
 
-// Brands sold in Syria, with their common models (the fields also accept any other text).
-export const CAR_BRANDS: { brand: string; models: string[] }[] = [
-  { brand: 'كيا', models: ['ريو', 'سيراتو', 'بيكانتو', 'سبورتاج', 'سورينتو', 'أوبتيما', 'K5', 'سول', 'كارنفال'] },
-  { brand: 'هيونداي', models: ['أكسنت', 'إلنترا', 'سوناتا', 'توسان', 'سانتافي', 'i10', 'i20', 'كريتا', 'أزيرا'] },
-  { brand: 'تويوتا', models: ['كورولا', 'كامري', 'يارس', 'راف 4', 'لاندكروزر', 'برادو', 'هايلكس', 'أفالون', 'فورتشنر'] },
-  { brand: 'نيسان', models: ['صني', 'سنترا', 'ألتيما', 'إكس تريل', 'باترول', 'قشقاي', 'تيدا'] },
-  { brand: 'ميتسوبيشي', models: ['لانسر', 'باجيرو', 'أوتلاندر', 'ASX', 'L200'] },
-  { brand: 'مازدا', models: ['مازدا 3', 'مازدا 6', 'CX-5', 'CX-9'] },
-  { brand: 'هوندا', models: ['سيفيك', 'أكورد', 'CR-V', 'جاز'] },
-  { brand: 'شيفروليه', models: ['أفيو', 'كروز', 'ماليبو', 'كابتيفا', 'تاهو', 'سبارك'] },
-  { brand: 'سوزوكي', models: ['سويفت', 'ألتو', 'فيتارا', 'جيمني', 'سياز'] },
-  { brand: 'بيجو', models: ['206', '207', '301', '308', '508', '3008', '5008'] },
-  { brand: 'رينو', models: ['لوغان', 'سيمبول', 'كليو', 'ميغان', 'داستر'] },
-  { brand: 'فولكس فاغن', models: ['غولف', 'باسات', 'جيتا', 'تيغوان', 'بولو', 'طوارق'] },
-  { brand: 'سكودا', models: ['أوكتافيا', 'فابيا', 'سوبيرب', 'كودياك'] },
-  { brand: 'مرسيدس', models: ['C', 'E', 'S', 'A', 'GLA', 'GLC', 'GLE', 'G'] },
-  { brand: 'بي إم دبليو', models: ['الفئة 3', 'الفئة 5', 'الفئة 7', 'X1', 'X3', 'X5', 'X6'] },
-  { brand: 'أودي', models: ['A3', 'A4', 'A6', 'A8', 'Q3', 'Q5', 'Q7'] },
-  { brand: 'لكزس', models: ['ES', 'IS', 'LS', 'RX', 'NX', 'LX'] },
-  { brand: 'جيلي', models: ['إمغراند', 'كولراي', 'توغيلا', 'أوكافانغو'] },
-  { brand: 'شيري', models: ['تيغو 4', 'تيغو 7', 'تيغو 8', 'أريزو 5', 'أريزو 6'] },
-  { brand: 'إم جي', models: ['MG 5', 'MG 6', 'ZS', 'HS', 'RX5'] },
-  { brand: 'سابا', models: ['سابا', 'شاهين'] },
-  { brand: 'فورد', models: ['فوكس', 'فيوجن', 'إكسبلورر', 'إيدج', 'رينجر', 'موستانج'] },
-  { brand: 'جيب', models: ['شيروكي', 'غراند شيروكي', 'رانغلر', 'كومباس'] },
-  { brand: 'لاند روفر', models: ['رينج روفر', 'رينج روفر سبورت', 'إيفوك', 'ديفندر', 'ديسكفري'] },
-  { brand: 'بورش', models: ['كايين', 'ماكان', 'باناميرا', '911'] },
+export const VEHICLE_KINDS: { id: VehicleKind; label: string }[] = [
+  { id: 'car', label: 'سيارة ركوب' },
+  { id: 'commercial', label: 'شاحنات ومعدات' },
 ];
+
+// What kind of vehicle a car is, in words: «سيارة ركوب» or its «شاحنات ومعدات» category.
+export const vehicleTypeLabel = (c: Pick<Car, 'vehicleKind' | 'vehicleCategory'>) =>
+  c.vehicleKind === 'commercial' ? c.vehicleCategory || 'شاحنات ومعدات' : 'سيارة ركوب';
 
 export const CAR_BODY_TYPES = ['سيدان', 'هاتشباك', 'SUV', 'كروس أوفر', 'كوبيه', 'مكشوفة', 'ستيشن', 'فان', 'بيك أب', 'باص صغير'];
 export const CAR_FUELS = ['بنزين', 'ديزل', 'هايبرد', 'كهرباء', 'غاز'];
@@ -327,6 +312,8 @@ export const DEFAULT_CAR_SETTINGS: CarSettings = {
 export const emptyCar = (currency: string): Car => ({
   id: '',
   stockNumber: '',
+  vehicleKind: 'car',
+  vehicleCategory: '',
   brand: '',
   model: '',
   trim: '',
@@ -397,6 +384,8 @@ export const normalizeCar = (raw: any, currency: string): Car => {
     price: num(raw?.price),
     oldPrice: num(raw?.oldPrice),
     purchasePrice: num(raw?.purchasePrice),
+    vehicleKind: oneOf(raw?.vehicleKind, ['car', 'commercial'] as const, 'car'),
+    vehicleCategory: raw?.vehicleKind === 'commercial' ? str(raw?.vehicleCategory) : '',
     condition: oneOf(raw?.condition, ['new', 'used'] as const, 'used'),
     paint: oneOf(raw?.paint, ['original', 'partial', 'full'] as const, 'original'),
     accidents: oneOf(raw?.accidents, ['none', 'minor', 'major'] as const, 'none'),

@@ -37,7 +37,7 @@ export const CarSearchView: React.FC<CarSearchViewProps> = ({ elem, isPreviewAct
 
   const cars = useMemo(() => (admin?.cars || []).filter((c) => c.published && (c.status !== 'sold' || admin?.settings.showSold)), [admin]);
   const q = query.trim();
-  const allMatches = q ? cars.filter((c) => matchesSearch([c.brand, c.model, c.trim, String(c.year), c.bodyType, c.color, c.stockNumber], q)) : [];
+  const allMatches = q ? cars.filter((c) => matchesSearch([c.brand, c.model, c.trim, String(c.year), c.bodyType, c.vehicleCategory, c.color, c.stockNumber], q)) : [];
   const matches = allMatches.slice(0, 6);
   const showList = isPreviewActive && focused && q.length > 0;
 

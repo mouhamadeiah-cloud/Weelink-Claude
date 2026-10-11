@@ -2,9 +2,10 @@
 // shared between the search bars, the advanced search window and the showroom's car list. Kept in
 // memory for the visit only, like the text search.
 import { useSyncExternalStore } from 'react';
-import type { Car } from '../carTypes';
+import { Car, vehicleTypeLabel } from '../carTypes';
 
 export interface CarFilters {
+  vehicle: string; // «سيارة ركوب» or a «شاحنات ومعدات» category
   brand: string;
   model: string;
   yearFrom: string;
@@ -26,7 +27,7 @@ export interface CarFilters {
 }
 
 export const EMPTY_CAR_FILTERS: CarFilters = {
-  brand: '', model: '', yearFrom: '', yearTo: '', priceFrom: '', priceTo: '', kmFrom: '', kmTo: '',
+  vehicle: '', brand: '', model: '', yearFrom: '', yearTo: '', priceFrom: '', priceTo: '', kmFrom: '', kmTo: '',
   fuel: '', transmission: '', body: '', color: '', condition: '', drive: '', specs: '', maxOwners: '',
   noAccidents: false, originalPaint: false,
 };
@@ -61,6 +62,7 @@ export const carMatchesFilters = (c: Car, f: CarFilters) => {
     return (a === null || value >= a) && (b === null || value <= b);
   };
   return (
+    (!f.vehicle || vehicleTypeLabel(c) === f.vehicle) &&
     (!f.brand || c.brand === f.brand) &&
     (!f.model || c.model === f.model) &&
     between(c.year, f.yearFrom, f.yearTo) &&
@@ -85,6 +87,7 @@ export const carFilterChips = (f: CarFilters): { key: keyof CarFilters | 'year' 
   const range = (from: string, to: string, unit = '') =>
     from && to ? `${from} - ${to}${unit}` : from ? `من ${from}${unit}` : `حتى ${to}${unit}`;
   const out: { key: keyof CarFilters | 'year' | 'price' | 'km'; label: string }[] = [];
+  if (f.vehicle) out.push({ key: 'vehicle', label: f.vehicle });
   if (f.brand) out.push({ key: 'brand', label: f.brand });
   if (f.model) out.push({ key: 'model', label: f.model });
   if (f.yearFrom || f.yearTo) out.push({ key: 'year', label: `سنة ${range(f.yearFrom, f.yearTo)}` });

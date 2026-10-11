@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, SlidersHorizontal, RotateCcw } from 'lucide-react';
-import type { Car } from '../carTypes';
+import { Car, vehicleTypeLabel } from '../carTypes';
 import { CarFilters, EMPTY_CAR_FILTERS, carMatchesFilters } from './carFilterStore';
 
 interface Props {
@@ -59,8 +59,10 @@ export const CarAdvancedSearch: React.FC<Props> = ({ cars, initial, accent, font
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
 
-  const brands = useMemo(() => uniq(cars.map((c) => c.brand)), [cars]);
-  const models = useMemo(() => uniq(cars.filter((c) => !f.brand || c.brand === f.brand).map((c) => c.model)), [cars, f.brand]);
+  const vehicles = useMemo(() => uniq(cars.map(vehicleTypeLabel)), [cars]);
+  const ofVehicle = useMemo(() => cars.filter((c) => !f.vehicle || vehicleTypeLabel(c) === f.vehicle), [cars, f.vehicle]);
+  const brands = useMemo(() => uniq(ofVehicle.map((c) => c.brand)), [ofVehicle]);
+  const models = useMemo(() => uniq(ofVehicle.filter((c) => !f.brand || c.brand === f.brand).map((c) => c.model)), [ofVehicle, f.brand]);
   const years = useMemo(() => {
     const ys = cars.map((c) => c.year).filter(Boolean);
     if (!ys.length) return [];
@@ -84,6 +86,7 @@ export const CarAdvancedSearch: React.FC<Props> = ({ cars, initial, accent, font
         </header>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {vehicles.length > 1 && <Chips title="نوع المركبة" values={vehicles} value={f.vehicle} accent={accent} onPick={(vehicle) => set({ vehicle, brand: '', model: '' })} />}
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className={label} htmlFor="adv-brand">الماركة</label>

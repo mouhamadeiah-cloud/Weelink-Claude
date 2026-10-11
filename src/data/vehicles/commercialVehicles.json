@@ -1,0 +1,2400 @@
+{
+ "main_list_name": "شاحنات ومعدات",
+ "categories": [
+  {
+   "id": "transporter_lkw_bis_7_5t",
+   "name_ar": "شاحنات وفانات حتى 7.5 طن",
+   "name_de": "Transporter und Lkw bis 7,5t",
+   "brands": [
+    {
+     "name_ar": "ألجيما",
+     "name_de": "Algema"
+    },
+    {
+     "name_ar": "باركاس",
+     "name_de": "Barkas"
+    },
+    {
+     "name_ar": "بي واي دي",
+     "name_de": "BYD"
+    },
+    {
+     "name_ar": "سينترو",
+     "name_de": "Cenntro"
+    },
+    {
+     "name_ar": "ستروين",
+     "name_de": "Citroën"
+    },
+    {
+     "name_ar": "داسيا",
+     "name_de": "Dacia"
+    },
+    {
+     "name_ar": "داف",
+     "name_de": "DAF"
+    },
+    {
+     "name_ar": "دي إف إس كي",
+     "name_de": "DFSK"
+    },
+    {
+     "name_ar": "فاريسون",
+     "name_de": "Farizon"
+    },
+    {
+     "name_ar": "فيات",
+     "name_de": "Fiat"
+    },
+    {
+     "name_ar": "فورد",
+     "name_de": "Ford"
+    },
+    {
+     "name_ar": "فوسو",
+     "name_de": "FUSO"
+    },
+    {
+     "name_ar": "جي إيه سي جونو",
+     "name_de": "GAC Gonow"
+    },
+    {
+     "name_ar": "غوبيل",
+     "name_de": "Goupil"
+    },
+    {
+     "name_ar": "هاكو",
+     "name_de": "Hako"
+    },
+    {
+     "name_ar": "هانوماك",
+     "name_de": "Hanomag"
+    },
+    {
+     "name_ar": "هيونداي",
+     "name_de": "Hyundai"
+    },
+    {
+     "name_ar": "إيفور ويليامز",
+     "name_de": "Ifor Williams"
+    },
+    {
+     "name_ar": "إنترال",
+     "name_de": "Intrall"
+    },
+    {
+     "name_ar": "إيسوزو",
+     "name_de": "Isuzu"
+    },
+    {
+     "name_ar": "إيفيكو",
+     "name_de": "Iveco"
+    },
+    {
+     "name_ar": "كيا",
+     "name_de": "Kia"
+    },
+    {
+     "name_ar": "لادوغ",
+     "name_de": "Ladog"
+    },
+    {
+     "name_ar": "ماجيروس دويتز",
+     "name_de": "Magirus Deutz"
+    },
+    {
+     "name_ar": "مان",
+     "name_de": "MAN"
+    },
+    {
+     "name_ar": "ماكسوس",
+     "name_de": "Maxus"
+    },
+    {
+     "name_ar": "مازدا",
+     "name_de": "Mazda"
+    },
+    {
+     "name_ar": "مرسيدس-بنز",
+     "name_de": "Mercedes-Benz"
+    },
+    {
+     "name_ar": "ميتسوبيشي",
+     "name_de": "Mitsubishi"
+    },
+    {
+     "name_ar": "مالتي كار",
+     "name_de": "Multicar"
+    },
+    {
+     "name_ar": "نيسان",
+     "name_de": "Nissan"
+    },
+    {
+     "name_ar": "أوبل",
+     "name_de": "Opel"
+    },
+    {
+     "name_ar": "بيجو",
+     "name_de": "Peugeot"
+    },
+    {
+     "name_ar": "بياجيو",
+     "name_de": "Piaggio"
+    },
+    {
+     "name_ar": "رينو",
+     "name_de": "Renault"
+    },
+    {
+     "name_ar": "روبور",
+     "name_de": "Robur"
+    },
+    {
+     "name_ar": "روثمان",
+     "name_de": "Ruthmann"
+    },
+    {
+     "name_ar": "سايك",
+     "name_de": "SAIC"
+    },
+    {
+     "name_ar": "شميدت",
+     "name_de": "Schmidt"
+    },
+    {
+     "name_ar": "سيات",
+     "name_de": "Seat"
+    },
+    {
+     "name_ar": "سكودا",
+     "name_de": "Skoda"
+    },
+    {
+     "name_ar": "ستاير",
+     "name_de": "Steyr"
+    },
+    {
+     "name_ar": "ستريت سكوتر",
+     "name_de": "StreetScooter"
+    },
+    {
+     "name_ar": "سوزوكي",
+     "name_de": "Suzuki"
+    },
+    {
+     "name_ar": "تويوتا",
+     "name_de": "Toyota"
+    },
+    {
+     "name_ar": "تروبوس",
+     "name_de": "Tropos"
+    },
+    {
+     "name_ar": "تي واي إن-إي",
+     "name_de": "TYN-e"
+    },
+    {
+     "name_ar": "أونيموغ",
+     "name_de": "Unimog"
+    },
+    {
+     "name_ar": "فولكس فاجن",
+     "name_de": "Volkswagen"
+    },
+    {
+     "name_ar": "فولفو",
+     "name_de": "Volvo"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ],
+   "types": [
+    {
+     "name_ar": "حاوية تبادلية",
+     "name_de": "Abrollkipper"
+    },
+    {
+     "name_ar": "سيارة سحب",
+     "name_de": "Abschleppwagen"
+    },
+    {
+     "name_ar": "قلابة حاويات",
+     "name_de": "Absetzerkipper"
+    },
+    {
+     "name_ar": "رافعة شاحنات",
+     "name_de": "Autokran"
+    },
+    {
+     "name_ar": "ناقلة سيارات",
+     "name_de": "Autotransporter"
+    },
+    {
+     "name_ar": "قلابة ثلاثة اتجاهات",
+     "name_de": "Dreiseitenkipper"
+    },
+    {
+     "name_ar": "هيكل",
+     "name_de": "Fahrgestell"
+    },
+    {
+     "name_ar": "ناقلة أموال",
+     "name_de": "Geldtransporter"
+    },
+    {
+     "name_ar": "ناقلة مشروبات",
+     "name_de": "Getränke"
+    },
+    {
+     "name_ar": "ناقلة زجاج",
+     "name_de": "Glastransporter"
+    },
+    {
+     "name_ar": "منصة رفع هوائية",
+     "name_de": "Hubarbeitsbühne"
+    },
+    {
+     "name_ar": "صندوق مغلق (فان)",
+     "name_de": "Kastenwagen"
+    },
+    {
+     "name_ar": "صندوق مغلق مرتفع",
+     "name_de": "Kastenwagen hoch"
+    },
+    {
+     "name_ar": "صندوق مغلق مرتفع وطويل",
+     "name_de": "Kastenwagen hoch + lang"
+    },
+    {
+     "name_ar": "صندوق مغلق طويل",
+     "name_de": "Kastenwagen lang"
+    },
+    {
+     "name_ar": "ماكينة كنس",
+     "name_de": "Kehrmaschine"
+    },
+    {
+     "name_ar": "قلابة",
+     "name_de": "Kipper"
+    },
+    {
+     "name_ar": "صندوق (كوفير)",
+     "name_de": "Koffer"
+    },
+    {
+     "name_ar": "كومبي، ميني باص حتى 9 مقاعد",
+     "name_de": "Kombi, Kleinbus bis 9 Sitze"
+    },
+    {
+     "name_ar": "صندوق تبريد",
+     "name_de": "Kühlkoffer"
+    },
+    {
+     "name_ar": "صندوق مغلق مبرد",
+     "name_de": "Kühlkastenwagen"
+    },
+    {
+     "name_ar": "شاحنة قمامة",
+     "name_de": "Müllwagen"
+    },
+    {
+     "name_ar": "صندوق مفتوح (بريتشه)",
+     "name_de": "Pritsche"
+    },
+    {
+     "name_ar": "صندوق مفتوح + شراع",
+     "name_de": "Pritsche + Plane"
+    },
+    {
+     "name_ar": "سيارة إسعاف",
+     "name_de": "Rettungswagen"
+    },
+    {
+     "name_ar": "شاحنة شفط وضغط",
+     "name_de": "Saug- und Druckwagen"
+    },
+    {
+     "name_ar": "هيكل خزان",
+     "name_de": "Tankaufbau"
+    },
+    {
+     "name_ar": "نقل حيوانات/خيول",
+     "name_de": "Tier-/Pferdetransport"
+    },
+    {
+     "name_ar": "هيكل بيع متحرك",
+     "name_de": "Verkaufsaufbau"
+    },
+    {
+     "name_ar": "هيكل تبادلي",
+     "name_de": "Wechselfahrgestell"
+    },
+    {
+     "name_ar": "ناقلات/شاحنات أخرى حتى 7.5 طن",
+     "name_de": "Andere Transporter/Lkw bis 7,5 t"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ]
+  },
+  {
+   "id": "lkw_ueber_7_5t",
+   "name_ar": "شاحنات أكثر من 7.5 طن",
+   "name_de": "Lkw über 7,5 t",
+   "brands": [
+    {
+     "name_ar": "بي واي دي",
+     "name_de": "BYD"
+    },
+    {
+     "name_ar": "داف",
+     "name_de": "DAF"
+    },
+    {
+     "name_ar": "ديماك",
+     "name_de": "Demag"
+    },
+    {
+     "name_ar": "فاون",
+     "name_de": "Faun"
+    },
+    {
+     "name_ar": "فورد",
+     "name_de": "Ford"
+    },
+    {
+     "name_ar": "فرايت لاينر",
+     "name_de": "Freightliner"
+    },
+    {
+     "name_ar": "فوسو",
+     "name_de": "FUSO"
+    },
+    {
+     "name_ar": "جيناف",
+     "name_de": "Ginaf"
+    },
+    {
+     "name_ar": "جروف",
+     "name_de": "Grove"
+    },
+    {
+     "name_ar": "هاكو",
+     "name_de": "Hako"
+    },
+    {
+     "name_ar": "إتش إن شورلينج",
+     "name_de": "HN Schörling"
+    },
+    {
+     "name_ar": "إيفيكو",
+     "name_de": "Iveco"
+    },
+    {
+     "name_ar": "كاماز",
+     "name_de": "Kamaz"
+    },
+    {
+     "name_ar": "ليبهر",
+     "name_de": "Liebherr"
+    },
+    {
+     "name_ar": "ماك",
+     "name_de": "Mack"
+    },
+    {
+     "name_ar": "ماجيروس دويتز",
+     "name_de": "Magirus Deutz"
+    },
+    {
+     "name_ar": "مان",
+     "name_de": "MAN"
+    },
+    {
+     "name_ar": "مايلر",
+     "name_de": "Meiller"
+    },
+    {
+     "name_ar": "مرسيدس-بنز",
+     "name_de": "Mercedes-Benz"
+    },
+    {
+     "name_ar": "ميتسوبيشي",
+     "name_de": "Mitsubishi"
+    },
+    {
+     "name_ar": "نيسان",
+     "name_de": "Nissan"
+    },
+    {
+     "name_ar": "أوبل",
+     "name_de": "Opel"
+    },
+    {
+     "name_ar": "بافينجر",
+     "name_de": "Palfinger"
+    },
+    {
+     "name_ar": "بيجو",
+     "name_de": "Peugeot"
+    },
+    {
+     "name_ar": "آر بي إكسبيديشن",
+     "name_de": "RB Expedition"
+    },
+    {
+     "name_ar": "رينو",
+     "name_de": "Renault"
+    },
+    {
+     "name_ar": "روثمان",
+     "name_de": "Ruthmann"
+    },
+    {
+     "name_ar": "سكانيا",
+     "name_de": "Scania"
+    },
+    {
+     "name_ar": "شميدت",
+     "name_de": "Schmidt"
+    },
+    {
+     "name_ar": "سكودا",
+     "name_de": "Skoda"
+    },
+    {
+     "name_ar": "ستاير",
+     "name_de": "Steyr"
+    },
+    {
+     "name_ar": "تاترا",
+     "name_de": "Tatra"
+    },
+    {
+     "name_ar": "تويوتا",
+     "name_de": "Toyota"
+    },
+    {
+     "name_ar": "أونيموغ",
+     "name_de": "Unimog"
+    },
+    {
+     "name_ar": "فولكس فاجن",
+     "name_de": "Volkswagen"
+    },
+    {
+     "name_ar": "فولفو",
+     "name_de": "Volvo"
+    },
+    {
+     "name_ar": "فيزه",
+     "name_de": "Wiese"
+    },
+    {
+     "name_ar": "يانمار",
+     "name_de": "Yanmar"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ],
+   "types": [
+    {
+     "name_ar": "حاوية تبادلية",
+     "name_de": "Abrollkipper"
+    },
+    {
+     "name_ar": "سيارة سحب",
+     "name_de": "Abschleppwagen"
+    },
+    {
+     "name_ar": "قلابة حاويات",
+     "name_de": "Absetzerkipper"
+    },
+    {
+     "name_ar": "رافعة شاحنات",
+     "name_de": "Autokran"
+    },
+    {
+     "name_ar": "ناقلة سيارات",
+     "name_de": "Autotransporter"
+    },
+    {
+     "name_ar": "خلاطة خرسانة",
+     "name_de": "Betonmischer"
+    },
+    {
+     "name_ar": "مضخة خرسانة",
+     "name_de": "Betonpumpe"
+    },
+    {
+     "name_ar": "قلابة ثلاثة اتجاهات",
+     "name_de": "Dreiseitenkipper"
+    },
+    {
+     "name_ar": "هيكل",
+     "name_de": "Fahrgestell"
+    },
+    {
+     "name_ar": "ناقلة مشروبات",
+     "name_de": "Getränkewagen"
+    },
+    {
+     "name_ar": "قلابة حبوب",
+     "name_de": "Getreidekipper"
+    },
+    {
+     "name_ar": "ناقلة أخشاب",
+     "name_de": "Holztransporter"
+    },
+    {
+     "name_ar": "منصة رفع هوائية",
+     "name_de": "Hubarbeitsbühne"
+    },
+    {
+     "name_ar": "شاحنة جامبو",
+     "name_de": "Jumbo-Lkw"
+    },
+    {
+     "name_ar": "ماكينة كنس",
+     "name_de": "Kehrmaschine"
+    },
+    {
+     "name_ar": "قلابة",
+     "name_de": "Kipper"
+    },
+    {
+     "name_ar": "صندوق (كوفير)",
+     "name_de": "Koffer"
+    },
+    {
+     "name_ar": "صندوق تبريد",
+     "name_de": "Kühlkoffer"
+    },
+    {
+     "name_ar": "ناقلة أغذية",
+     "name_de": "Lebensmitteltankwagen"
+    },
+    {
+     "name_ar": "قلابة قلاب",
+     "name_de": "Muldenkipper"
+    },
+    {
+     "name_ar": "شاحنة قمامة",
+     "name_de": "Müllwagen"
+    },
+    {
+     "name_ar": "صندوق مفتوح (بريتشه)",
+     "name_de": "Pritsche"
+    },
+    {
+     "name_ar": "صندوق مفتوح + شراع",
+     "name_de": "Pritsche + Plane"
+    },
+    {
+     "name_ar": "شاحنة شفط وضغط",
+     "name_de": "Saug- und Druckwagen"
+    },
+    {
+     "name_ar": "شاحنة صهريج",
+     "name_de": "Tankwagen"
+    },
+    {
+     "name_ar": "ناقلة حيوانات/خيول",
+     "name_de": "Tier-/Pferdetransportwagen"
+    },
+    {
+     "name_ar": "هيكل بيع متحرك",
+     "name_de": "Verkaufsaufbau"
+    },
+    {
+     "name_ar": "هيكل تبادلي",
+     "name_de": "Wechselfahrgestell"
+    },
+    {
+     "name_ar": "شاحنات أخرى فوق 7.5 طن",
+     "name_de": "Andere Lkw über 7,5 t"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ]
+  },
+  {
+   "id": "sattelzuege",
+   "name_ar": "رؤوس الشاحنات",
+   "name_de": "Sattelzüge",
+   "brands": [
+    {
+     "name_ar": "دايوو",
+     "name_de": "Daewoo"
+    },
+    {
+     "name_ar": "داف",
+     "name_de": "DAF"
+    },
+    {
+     "name_ar": "فورد",
+     "name_de": "Ford"
+    },
+    {
+     "name_ar": "فرايت لاينر",
+     "name_de": "Freightliner"
+    },
+    {
+     "name_ar": "إتش آند دبليو",
+     "name_de": "H&W"
+    },
+    {
+     "name_ar": "هيدراسول",
+     "name_de": "HIDRASOL"
+    },
+    {
+     "name_ar": "إيفيكو",
+     "name_de": "Iveco"
+    },
+    {
+     "name_ar": "كينوورث",
+     "name_de": "Kenworth"
+    },
+    {
+     "name_ar": "ماك",
+     "name_de": "Mack"
+    },
+    {
+     "name_ar": "ماجيروس دويتز",
+     "name_de": "Magirus Deutz"
+    },
+    {
+     "name_ar": "مان",
+     "name_de": "MAN"
+    },
+    {
+     "name_ar": "مرسيدس-بنز",
+     "name_de": "Mercedes-Benz"
+    },
+    {
+     "name_ar": "بيتربيلت",
+     "name_de": "Peterbilt"
+    },
+    {
+     "name_ar": "رينو",
+     "name_de": "Renault"
+    },
+    {
+     "name_ar": "سكانيا",
+     "name_de": "Scania"
+    },
+    {
+     "name_ar": "أونيموغ",
+     "name_de": "Unimog"
+    },
+    {
+     "name_ar": "فولفو",
+     "name_de": "Volvo"
+    },
+    {
+     "name_ar": "فيزه",
+     "name_de": "Wiese"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ],
+   "types": []
+  },
+  {
+   "id": "anhaenger",
+   "name_ar": "مقطورات",
+   "name_de": "Anhänger",
+   "brands": [
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ],
+   "types": [
+    {
+     "name_ar": "مقطورة حاويات تبادلية",
+     "name_de": "Abrollanhänger"
+    },
+    {
+     "name_ar": "مقطورة نقل سيارات",
+     "name_de": "Autotransporter"
+    },
+    {
+     "name_ar": "مقطورة ورشة/بناء",
+     "name_de": "Bauwagen"
+    },
+    {
+     "name_ar": "مقطورة قوارب",
+     "name_de": "Bootsanhänger"
+    },
+    {
+     "name_ar": "مقطورة قلابة ثلاثية الاتجاهات",
+     "name_de": "Dreiseitenkipper"
+    },
+    {
+     "name_ar": "هيكل مقطورة",
+     "name_de": "Fahrgestell"
+    },
+    {
+     "name_ar": "مقطورة مشروبات",
+     "name_de": "Getränke"
+    },
+    {
+     "name_ar": "مقطورة نقل زجاج",
+     "name_de": "Glastransport"
+    },
+    {
+     "name_ar": "مقطورة نقل أخشاب",
+     "name_de": "Holztransporter"
+    },
+    {
+     "name_ar": "مقطورة منصة رفع هوائية",
+     "name_de": "Hubarbeitsbühne"
+    },
+    {
+     "name_ar": "مقطورة صندوق مغلق",
+     "name_de": "Koffer"
+    },
+    {
+     "name_ar": "مقطورة صندوق تبريد",
+     "name_de": "Kühlkoffer"
+    },
+    {
+     "name_ar": "مقطورة نقل مواد طويلة",
+     "name_de": "Langmaterialtransporter"
+    },
+    {
+     "name_ar": "مقطورة خزان أغذية",
+     "name_de": "Lebensmitteltank"
+    },
+    {
+     "name_ar": "مقطورة رفع أثاث",
+     "name_de": "Möbellift"
+    },
+    {
+     "name_ar": "مقطورة دراجات نارية",
+     "name_de": "Motorradanhänger"
+    },
+    {
+     "name_ar": "مقطورة سيارات ركوب",
+     "name_de": "Pkw-Anhänger"
+    },
+    {
+     "name_ar": "مقطورة منصة مسطحة",
+     "name_de": "Plattform"
+    },
+    {
+     "name_ar": "مقطورة صندوق مفتوح (بريتشه)",
+     "name_de": "Pritsche"
+    },
+    {
+     "name_ar": "مقطورة صندوق مفتوح + شراع",
+     "name_de": "Pritsche + Plane"
+    },
+    {
+     "name_ar": "مقطورة صومعة (سايلو)",
+     "name_de": "Silo"
+    },
+    {
+     "name_ar": "مقطورة هيكل خزان",
+     "name_de": "Tankaufbau"
+    },
+    {
+     "name_ar": "مقطورة منخفضة (تيف لادر)",
+     "name_de": "Tieflader"
+    },
+    {
+     "name_ar": "مقطورة نقل حيوانات/خيول",
+     "name_de": "Tier-/Pferdetransport"
+    },
+    {
+     "name_ar": "مقطورة هيكل بيع متحرك",
+     "name_de": "Verkaufsaufbau"
+    },
+    {
+     "name_ar": "مقطورة أرضية متحركة",
+     "name_de": "Walkingfloor"
+    },
+    {
+     "name_ar": "مقطورة هيكل تبادلي",
+     "name_de": "Wechselfahrgestell"
+    },
+    {
+     "name_ar": "مقطورة صندوق مفتوح تبادلي",
+     "name_de": "Wechselpritsche"
+    },
+    {
+     "name_ar": "مقطورات أخرى",
+     "name_de": "Andere Anhänger"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ]
+  },
+  {
+   "id": "auflieger",
+   "name_ar": "نصف مقطورات (مقطورات الشاحنات الكبيرة)",
+   "name_de": "Auflieger",
+   "brands": [
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ],
+   "types": [
+    {
+     "name_ar": "رافعة شاحنات",
+     "name_de": "Autokran"
+    },
+    {
+     "name_ar": "ناقلة سيارات",
+     "name_de": "Autotransporter"
+    },
+    {
+     "name_ar": "هيكل",
+     "name_de": "Fahrgestell"
+    },
+    {
+     "name_ar": "ناقلة مشروبات",
+     "name_de": "Getränke"
+    },
+    {
+     "name_ar": "ناقلة أخشاب",
+     "name_de": "Holztransporter"
+    },
+    {
+     "name_ar": "قلابة",
+     "name_de": "Kipper"
+    },
+    {
+     "name_ar": "صندوق (كوفير)",
+     "name_de": "Koffer"
+    },
+    {
+     "name_ar": "صندوق تبريد",
+     "name_de": "Kühlkoffer"
+    },
+    {
+     "name_ar": "ناقلة مواد طويلة",
+     "name_de": "Langmaterialtransporter"
+    },
+    {
+     "name_ar": "خزان أغذية",
+     "name_de": "Lebensmitteltank"
+    },
+    {
+     "name_ar": "منصة مسطحة",
+     "name_de": "Plattform"
+    },
+    {
+     "name_ar": "صندوق مفتوح (بريتشه)",
+     "name_de": "Pritsche"
+    },
+    {
+     "name_ar": "صندوق مفتوح + شراع",
+     "name_de": "Pritsche + Plane"
+    },
+    {
+     "name_ar": "صومعة (سايلو)",
+     "name_de": "Silo"
+    },
+    {
+     "name_ar": "هيكل خزان",
+     "name_de": "Tankaufbau"
+    },
+    {
+     "name_ar": "تجميد عميق",
+     "name_de": "Tiefkühl"
+    },
+    {
+     "name_ar": "منخفضة (تيف لادر)",
+     "name_de": "Tieflader"
+    },
+    {
+     "name_ar": "هيكل بيع متحرك",
+     "name_de": "Verkaufsaufbau"
+    },
+    {
+     "name_ar": "ناقلة مواشي",
+     "name_de": "Viehtransporter"
+    },
+    {
+     "name_ar": "أرضية متحركة",
+     "name_de": "Walkingfloor"
+    },
+    {
+     "name_ar": "هيكل تبادلي",
+     "name_de": "Wechselfahrgestell"
+    },
+    {
+     "name_ar": "مقطورات أخرى",
+     "name_de": "Andere Auflieger"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ]
+  },
+  {
+   "id": "baumaschinen",
+   "name_ar": "آليات ومعدات البناء",
+   "name_de": "Baumaschinen",
+   "brands": [
+    {
+     "name_ar": "إيه بي جي",
+     "name_de": "ABG"
+    },
+    {
+     "name_ar": "ألمان",
+     "name_de": "Ahlmann"
+    },
+    {
+     "name_ar": "أمان",
+     "name_de": "Ammann"
+    },
+    {
+     "name_ar": "أطلس",
+     "name_de": "Atlas"
+    },
+    {
+     "name_ar": "أطلس كوبكو",
+     "name_de": "Atlas Copco"
+    },
+    {
+     "name_ar": "أوسا",
+     "name_de": "AUSA"
+    },
+    {
+     "name_ar": "أفانت تكنو",
+     "name_de": "Avant Tecno"
+    },
+    {
+     "name_ar": "بيل",
+     "name_de": "Bell"
+    },
+    {
+     "name_ar": "بيرجمان",
+     "name_de": "Bergmann"
+    },
+    {
+     "name_ar": "بوبكات",
+     "name_de": "Bobcat"
+    },
+    {
+     "name_ar": "بوماج",
+     "name_de": "BOMAG"
+    },
+    {
+     "name_ar": "كيس",
+     "name_de": "Case"
+    },
+    {
+     "name_ar": "كاتربيلر",
+     "name_de": "CAT"
+    },
+    {
+     "name_ar": "دايوو",
+     "name_de": "Daewoo"
+    },
+    {
+     "name_ar": "ديماك",
+     "name_de": "Demag"
+    },
+    {
+     "name_ar": "ديتشي",
+     "name_de": "Dieci"
+    },
+    {
+     "name_ar": "ديتش ويتش",
+     "name_de": "Ditch Witch"
+    },
+    {
+     "name_ar": "دوسان",
+     "name_de": "Doosan"
+    },
+    {
+     "name_ar": "دريسر",
+     "name_de": "Dresser"
+    },
+    {
+     "name_ar": "ديناباك",
+     "name_de": "Dynapac"
+    },
+    {
+     "name_ar": "يوروكوماش",
+     "name_de": "Eurocomach"
+    },
+    {
+     "name_ar": "فاون",
+     "name_de": "Faun"
+    },
+    {
+     "name_ar": "فيرميك",
+     "name_de": "Fermec"
+    },
+    {
+     "name_ar": "فيات",
+     "name_de": "Fiat"
+    },
+    {
+     "name_ar": "فوكس",
+     "name_de": "Fuchs"
+    },
+    {
+     "name_ar": "فوروكاوا",
+     "name_de": "Furukawa"
+    },
+    {
+     "name_ar": "جيل",
+     "name_de": "Gehl"
+    },
+    {
+     "name_ar": "جيلماكس",
+     "name_de": "Gehlmax"
+    },
+    {
+     "name_ar": "جيني",
+     "name_de": "Genie"
+    },
+    {
+     "name_ar": "جروف",
+     "name_de": "Grove"
+    },
+    {
+     "name_ar": "هاكو",
+     "name_de": "Hako"
+    },
+    {
+     "name_ar": "هالا",
+     "name_de": "Halla"
+    },
+    {
+     "name_ar": "هام",
+     "name_de": "Hamm"
+    },
+    {
+     "name_ar": "هانيكس",
+     "name_de": "Hanix"
+    },
+    {
+     "name_ar": "هانوماك",
+     "name_de": "Hanomag"
+    },
+    {
+     "name_ar": "هولوت",
+     "name_de": "Haulotte"
+    },
+    {
+     "name_ar": "هينووا",
+     "name_de": "Hinowa"
+    },
+    {
+     "name_ar": "هيتاشي",
+     "name_de": "Hitachi"
+    },
+    {
+     "name_ar": "هيدريما",
+     "name_de": "Hydrema"
+    },
+    {
+     "name_ar": "هيونداي",
+     "name_de": "Hyundai"
+    },
+    {
+     "name_ar": "آي إتش سي",
+     "name_de": "IHC"
+    },
+    {
+     "name_ar": "آي إتش آي",
+     "name_de": "IHI"
+    },
+    {
+     "name_ar": "جي سي بي",
+     "name_de": "JCB"
+    },
+    {
+     "name_ar": "جي إل جي",
+     "name_de": "JLG"
+    },
+    {
+     "name_ar": "كيرشر",
+     "name_de": "Kaercher"
+    },
+    {
+     "name_ar": "كايزر",
+     "name_de": "Kaeser"
+    },
+    {
+     "name_ar": "كالبله",
+     "name_de": "Kälble"
+    },
+    {
+     "name_ar": "كوبيلكو",
+     "name_de": "Kobelco"
+    },
+    {
+     "name_ar": "كوماتسو",
+     "name_de": "Komatsu"
+    },
+    {
+     "name_ar": "كرامر",
+     "name_de": "Kramer"
+    },
+    {
+     "name_ar": "كروب",
+     "name_de": "Krupp"
+    },
+    {
+     "name_ar": "كوبوتا",
+     "name_de": "Kubota"
+    },
+    {
+     "name_ar": "ليبهر",
+     "name_de": "Liebherr"
+    },
+    {
+     "name_ar": "ليوغونغ",
+     "name_de": "Liugong"
+    },
+    {
+     "name_ar": "مانيتو",
+     "name_de": "Manitou"
+    },
+    {
+     "name_ar": "ميكالاك",
+     "name_de": "MECALAC"
+    },
+    {
+     "name_ar": "إم إف",
+     "name_de": "MF"
+    },
+    {
+     "name_ar": "ميشيغان",
+     "name_de": "Michigan"
+    },
+    {
+     "name_ar": "ميتسوبيشي",
+     "name_de": "Mitsubishi"
+    },
+    {
+     "name_ar": "موروكا",
+     "name_de": "Morooka"
+    },
+    {
+     "name_ar": "موكسي",
+     "name_de": "Moxy"
+    },
+    {
+     "name_ar": "مالتي كار",
+     "name_de": "Multicar"
+    },
+    {
+     "name_ar": "نوماير",
+     "name_de": "Neumeier"
+    },
+    {
+     "name_ar": "نوسون",
+     "name_de": "Neuson"
+    },
+    {
+     "name_ar": "نيو هولاند",
+     "name_de": "New Holland"
+    },
+    {
+     "name_ar": "نيفتي ليفت",
+     "name_de": "Niftylift"
+    },
+    {
+     "name_ar": "إن بي كي",
+     "name_de": "NPK"
+    },
+    {
+     "name_ar": "أو آند كي",
+     "name_de": "O & K"
+    },
+    {
+     "name_ar": "أورتهاوس",
+     "name_de": "Orthaus"
+    },
+    {
+     "name_ar": "بافينجر",
+     "name_de": "Palfinger"
+    },
+    {
+     "name_ar": "باوس",
+     "name_de": "Paus"
+    },
+    {
+     "name_ar": "بيل-جوب",
+     "name_de": "Pel-Job"
+    },
+    {
+     "name_ar": "بوتان",
+     "name_de": "Potain"
+    },
+    {
+     "name_ar": "بوتزمايستر",
+     "name_de": "Putzmeister"
+    },
+    {
+     "name_ar": "راماكس",
+     "name_de": "Rammax"
+    },
+    {
+     "name_ar": "رينو",
+     "name_de": "Renault"
+    },
+    {
+     "name_ar": "ساني",
+     "name_de": "Sany"
+    },
+    {
+     "name_ar": "سكانيا",
+     "name_de": "Scania"
+    },
+    {
+     "name_ar": "شيف",
+     "name_de": "Schaeff"
+    },
+    {
+     "name_ar": "شيفر",
+     "name_de": "Schäffer"
+    },
+    {
+     "name_ar": "سينيبوغن",
+     "name_de": "Sennebogen"
+    },
+    {
+     "name_ar": "شاتال",
+     "name_de": "Shatal"
+    },
+    {
+     "name_ar": "صنوارد",
+     "name_de": "Sunward"
+    },
+    {
+     "name_ar": "تاكيوتشي",
+     "name_de": "Takeuchi"
+    },
+    {
+     "name_ar": "تيربيرغ",
+     "name_de": "Terberg"
+    },
+    {
+     "name_ar": "تيريكس",
+     "name_de": "Terex"
+    },
+    {
+     "name_ar": "ثويتس",
+     "name_de": "Thwaites"
+    },
+    {
+     "name_ar": "أونيموغ",
+     "name_de": "Unimog"
+    },
+    {
+     "name_ar": "أبرايت",
+     "name_de": "Upright"
+    },
+    {
+     "name_ar": "فيرمير",
+     "name_de": "Vermeer"
+    },
+    {
+     "name_ar": "فوغيله",
+     "name_de": "Vögele"
+    },
+    {
+     "name_ar": "فولفو",
+     "name_de": "Volvo"
+    },
+    {
+     "name_ar": "فاكر",
+     "name_de": "Wacker"
+    },
+    {
+     "name_ar": "فيبر",
+     "name_de": "Weber"
+    },
+    {
+     "name_ar": "فايدمان",
+     "name_de": "Weidemann"
+    },
+    {
+     "name_ar": "فيرتجن",
+     "name_de": "Wirtgen"
+    },
+    {
+     "name_ar": "إكس سي إم جي",
+     "name_de": "XCMG"
+    },
+    {
+     "name_ar": "إكس روك",
+     "name_de": "Xrok"
+    },
+    {
+     "name_ar": "ياماغوتشي",
+     "name_de": "Yamaguchi"
+    },
+    {
+     "name_ar": "يانمار",
+     "name_de": "Yanmar"
+    },
+    {
+     "name_ar": "زيبلين",
+     "name_de": "Zeppelin"
+    },
+    {
+     "name_ar": "زيتلماير",
+     "name_de": "Zettelmeyer"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ],
+   "types": [
+    {
+     "name_ar": "منصة عمل هوائية",
+     "name_de": "Arbeitsbühne"
+    },
+    {
+     "name_ar": "تقنيات الأسفلت",
+     "name_de": "Asphalttechnik"
+    },
+    {
+     "name_ar": "لودر حفار",
+     "name_de": "Baggerlader"
+    },
+    {
+     "name_ar": "معدات بناء",
+     "name_de": "Baugeräte"
+    },
+    {
+     "name_ar": "مثبتات التربة",
+     "name_de": "Bodenstabilisierer"
+    },
+    {
+     "name_ar": "معدات حفر",
+     "name_de": "Bohrgerät"
+    },
+    {
+     "name_ar": "جريدر (ممهدة)",
+     "name_de": "Grader"
+    },
+    {
+     "name_ar": "حفار زحاف (جنزير)",
+     "name_de": "Kettenbagger"
+    },
+    {
+     "name_ar": "رافعة ثابتة",
+     "name_de": "Kran, stationär"
+    },
+    {
+     "name_ar": "حفار صغير/مضغوط",
+     "name_de": "Mini-/Kompaktbagger"
+    },
+    {
+     "name_ar": "حفار متحرك (على عجلات)",
+     "name_de": "Mobilbagger"
+    },
+    {
+     "name_ar": "لودر بعجلات",
+     "name_de": "Radlader"
+    },
+    {
+     "name_ar": "بلدوزر",
+     "name_de": "Raupe/Dozer"
+    },
+    {
+     "name_ar": "ملحقات أخرى",
+     "name_de": "Sonstige Anbauten"
+    },
+    {
+     "name_ar": "تقنيات الدك والضغط",
+     "name_de": "Verdichtungstechnik"
+    },
+    {
+     "name_ar": "مداحل",
+     "name_de": "Walzen"
+    },
+    {
+     "name_ar": "آليات بناء أخرى",
+     "name_de": "Andere Baumaschinen"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ]
+  },
+  {
+   "id": "busse",
+   "name_ar": "حافلات",
+   "name_de": "Busse",
+   "brands": [
+    {
+     "name_ar": "بي إم سي",
+     "name_de": "BMC"
+    },
+    {
+     "name_ar": "داف",
+     "name_de": "DAF"
+    },
+    {
+     "name_ar": "دروغمولر",
+     "name_de": "Drögmöller"
+    },
+    {
+     "name_ar": "إي أو إس",
+     "name_de": "EOS"
+    },
+    {
+     "name_ar": "إيفوباص",
+     "name_de": "Evobus"
+    },
+    {
+     "name_ar": "فيات",
+     "name_de": "Fiat"
+    },
+    {
+     "name_ar": "فورد",
+     "name_de": "Ford"
+    },
+    {
+     "name_ar": "إيكاروس",
+     "name_de": "Ikarus"
+    },
+    {
+     "name_ar": "إيريس باص",
+     "name_de": "Irisbus"
+    },
+    {
+     "name_ar": "إيريزار",
+     "name_de": "Irizar"
+    },
+    {
+     "name_ar": "إيسوزو",
+     "name_de": "Isuzu"
+    },
+    {
+     "name_ar": "إيفيكو",
+     "name_de": "Iveco"
+    },
+    {
+     "name_ar": "كينغ لونغ",
+     "name_de": "King Long"
+    },
+    {
+     "name_ar": "ماجيروس دويتز",
+     "name_de": "Magirus Deutz"
+    },
+    {
+     "name_ar": "مان",
+     "name_de": "MAN"
+    },
+    {
+     "name_ar": "مرسيدس-بنز",
+     "name_de": "Mercedes-Benz"
+    },
+    {
+     "name_ar": "نيوبلان",
+     "name_de": "Neoplan"
+    },
+    {
+     "name_ar": "أوتوكار",
+     "name_de": "Otokar"
+    },
+    {
+     "name_ar": "بيجو",
+     "name_de": "Peugeot"
+    },
+    {
+     "name_ar": "رينو",
+     "name_de": "Renault"
+    },
+    {
+     "name_ar": "روبور",
+     "name_de": "Robur"
+    },
+    {
+     "name_ar": "سكانيا",
+     "name_de": "Scania"
+    },
+    {
+     "name_ar": "سيترا",
+     "name_de": "Setra"
+    },
+    {
+     "name_ar": "سولاريس",
+     "name_de": "Solaris"
+    },
+    {
+     "name_ar": "تيمسا",
+     "name_de": "Temsa"
+    },
+    {
+     "name_ar": "تويوتا",
+     "name_de": "Toyota"
+    },
+    {
+     "name_ar": "فانهول",
+     "name_de": "Vanhool"
+    },
+    {
+     "name_ar": "في دي إل",
+     "name_de": "VDL"
+    },
+    {
+     "name_ar": "في دي إل بيرخوف",
+     "name_de": "VDL Berkhof"
+    },
+    {
+     "name_ar": "في دي إل بوفا",
+     "name_de": "VDL BOVA"
+    },
+    {
+     "name_ar": "في دي إل جونكخير",
+     "name_de": "VDL Jonckheere"
+    },
+    {
+     "name_ar": "فولكس فاجن",
+     "name_de": "Volkswagen"
+    },
+    {
+     "name_ar": "فولفو",
+     "name_de": "Volvo"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ],
+   "types": []
+  },
+  {
+   "id": "agrar",
+   "name_ar": "آليات زراعية",
+   "name_de": "Agrar",
+   "brands": [
+    {
+     "name_ar": "أكورد",
+     "name_de": "Accord"
+    },
+    {
+     "name_ar": "ألكو / ماسي فيرغسون",
+     "name_de": "Agco / Massey Ferguson"
+    },
+    {
+     "name_ar": "أمازون",
+     "name_de": "Amazone"
+    },
+    {
+     "name_ar": "أفانت تكنو",
+     "name_de": "Avant Tecno"
+    },
+    {
+     "name_ar": "بيكر",
+     "name_de": "Becker"
+    },
+    {
+     "name_ar": "بيلاروس",
+     "name_de": "Belarus"
+    },
+    {
+     "name_ar": "بيرغمان",
+     "name_de": "Bergmann"
+    },
+    {
+     "name_ar": "برانسون",
+     "name_de": "Branson"
+    },
+    {
+     "name_ar": "بوساتيس",
+     "name_de": "Busatis"
+    },
+    {
+     "name_ar": "بي في إل - فان لينجيريتش",
+     "name_de": "BvL - Van Lengerich"
+    },
+    {
+     "name_ar": "كارارو",
+     "name_de": "Carraro"
+    },
+    {
+     "name_ar": "كيس",
+     "name_de": "Case"
+    },
+    {
+     "name_ar": "كيس آي إتش",
+     "name_de": "Case IH"
+    },
+    {
+     "name_ar": "كلاس",
+     "name_de": "Claas"
+    },
+    {
+     "name_ar": "كورفوس",
+     "name_de": "Corvus"
+    },
+    {
+     "name_ar": "دويتز-فار",
+     "name_de": "Deutz-Fahr"
+    },
+    {
+     "name_ar": "دول",
+     "name_de": "Doll"
+    },
+    {
+     "name_ar": "دوكر",
+     "name_de": "Dücker"
+    },
+    {
+     "name_ar": "دوفيلسدورف",
+     "name_de": "Düvelsdorf"
+    },
+    {
+     "name_ar": "إيبرهاردت",
+     "name_de": "Eberhardt"
+    },
+    {
+     "name_ar": "آيخر",
+     "name_de": "Eicher"
+    },
+    {
+     "name_ar": "فار",
+     "name_de": "Fahr"
+    },
+    {
+     "name_ar": "فارمال",
+     "name_de": "Farmall"
+    },
+    {
+     "name_ar": "فارمتيك",
+     "name_de": "Farmtech"
+    },
+    {
+     "name_ar": "فيلا",
+     "name_de": "Fella"
+    },
+    {
+     "name_ar": "فيندت",
+     "name_de": "Fendt"
+    },
+    {
+     "name_ar": "فيات",
+     "name_de": "Fiat"
+    },
+    {
+     "name_ar": "فليجل",
+     "name_de": "Fliegl"
+    },
+    {
+     "name_ar": "فورد",
+     "name_de": "Ford"
+    },
+    {
+     "name_ar": "فورتشريت",
+     "name_de": "Fortschritt"
+    },
+    {
+     "name_ar": "فوتون",
+     "name_de": "Foton"
+    },
+    {
+     "name_ar": "فروست",
+     "name_de": "Frost"
+    },
+    {
+     "name_ar": "غاسبوردو",
+     "name_de": "Gaspardo"
+    },
+    {
+     "name_ar": "جاينت",
+     "name_de": "GIANT"
+    },
+    {
+     "name_ar": "غولدوني",
+     "name_de": "Goldoni"
+    },
+    {
+     "name_ar": "غريمي",
+     "name_de": "Grimme"
+    },
+    {
+     "name_ar": "غولدلر",
+     "name_de": "Güldner"
+    },
+    {
+     "name_ar": "غوتبورد",
+     "name_de": "Gutbrod"
+    },
+    {
+     "name_ar": "هاكو",
+     "name_de": "Hako"
+    },
+    {
+     "name_ar": "هانوماك",
+     "name_de": "Hanomag"
+    },
+    {
+     "name_ar": "هاسيا",
+     "name_de": "Hassia"
+    },
+    {
+     "name_ar": "هاوي",
+     "name_de": "HAWE"
+    },
+    {
+     "name_ar": "هيتنر",
+     "name_de": "Hittner"
+    },
+    {
+     "name_ar": "هولدر",
+     "name_de": "Holder"
+    },
+    {
+     "name_ar": "هورش",
+     "name_de": "Horsch"
+    },
+    {
+     "name_ar": "هاوارد",
+     "name_de": "Howard"
+    },
+    {
+     "name_ar": "هايماخ",
+     "name_de": "Hymach"
+    },
+    {
+     "name_ar": "آي إتش سي",
+     "name_de": "IHC"
+    },
+    {
+     "name_ar": "إيسيكي",
+     "name_de": "Iseki"
+    },
+    {
+     "name_ar": "جاكوبسن",
+     "name_de": "Jacobsen"
+    },
+    {
+     "name_ar": "جي سي بي",
+     "name_de": "JCB"
+    },
+    {
+     "name_ar": "جي إف ستول",
+     "name_de": "JF Stoll"
+    },
+    {
+     "name_ar": "جون ديري",
+     "name_de": "John Deere"
+    },
+    {
+     "name_ar": "جوسكين",
+     "name_de": "Joskin"
+    },
+    {
+     "name_ar": "كيمبر",
+     "name_de": "Kemper"
+    },
+    {
+     "name_ar": "كيرنر",
+     "name_de": "Kerner"
+    },
+    {
+     "name_ar": "كيوتي",
+     "name_de": "Kiöti"
+    },
+    {
+     "name_ar": "كوكلينغ",
+     "name_de": "Köckerling"
+    },
+    {
+     "name_ar": "كرامر",
+     "name_de": "Kramer"
+    },
+    {
+     "name_ar": "كرامب",
+     "name_de": "Krampe"
+    },
+    {
+     "name_ar": "كرون",
+     "name_de": "Krone"
+    },
+    {
+     "name_ar": "كوبوتا",
+     "name_de": "Kubota"
+    },
+    {
+     "name_ar": "كون",
+     "name_de": "KUHN"
+    },
+    {
+     "name_ar": "كفيرنيلاند",
+     "name_de": "Kverneland"
+    },
+    {
+     "name_ar": "لامبورغيني",
+     "name_de": "Lamborghini"
+    },
+    {
+     "name_ar": "لانديني",
+     "name_de": "Landini"
+    },
+    {
+     "name_ar": "لاندسبيرغ",
+     "name_de": "Landsberg"
+    },
+    {
+     "name_ar": "لانغندورف",
+     "name_de": "Langendorf"
+    },
+    {
+     "name_ar": "لانز",
+     "name_de": "Lanz"
+    },
+    {
+     "name_ar": "ليلي",
+     "name_de": "Lely"
+    },
+    {
+     "name_ar": "ليمكين",
+     "name_de": "Lemken"
+    },
+    {
+     "name_ar": "مان",
+     "name_de": "MAN"
+    },
+    {
+     "name_ar": "ماسكيو",
+     "name_de": "Maschio"
+    },
+    {
+     "name_ar": "ماسي فيرغسون",
+     "name_de": "Massey Ferguson"
+    },
+    {
+     "name_ar": "ماكونيل",
+     "name_de": "McConnel"
+    },
+    {
+     "name_ar": "مكور ميك",
+     "name_de": "McCormick"
+    },
+    {
+     "name_ar": "مينغيلي",
+     "name_de": "Mengele"
+    },
+    {
+     "name_ar": "مرسيدس-بنز",
+     "name_de": "Mercedes-Benz"
+    },
+    {
+     "name_ar": "ميتسوبيشي",
+     "name_de": "Mitsubishi"
+    },
+    {
+     "name_ar": "مالتي كار",
+     "name_de": "Multicar"
+    },
+    {
+     "name_ar": "نيو هولاند",
+     "name_de": "New Holland"
+    },
+    {
+     "name_ar": "نيمير",
+     "name_de": "Niemeyer"
+    },
+    {
+     "name_ar": "نوديت",
+     "name_de": "Nodet"
+    },
+    {
+     "name_ar": "أوهلر",
+     "name_de": "Oehler"
+    },
+    {
+     "name_ar": "بورشه",
+     "name_de": "Porsche"
+    },
+    {
+     "name_ar": "بوتينغر",
+     "name_de": "Pöttinger"
+    },
+    {
+     "name_ar": "بي زد - فيكون",
+     "name_de": "PZ-Vicon"
+    },
+    {
+     "name_ar": "رابي",
+     "name_de": "Rabe"
+    },
+    {
+     "name_ar": "راو",
+     "name_de": "Rau"
+    },
+    {
+     "name_ar": "راوخ",
+     "name_de": "Rauch"
+    },
+    {
+     "name_ar": "ريفيورمفيركه فيلس",
+     "name_de": "Reformwerke Wels"
+    },
+    {
+     "name_ar": "ريجنت",
+     "name_de": "Regent"
+    },
+    {
+     "name_ar": "رايش",
+     "name_de": "Reisch"
+    },
+    {
+     "name_ar": "رينو",
+     "name_de": "Renault"
+    },
+    {
+     "name_ar": "ساماش",
+     "name_de": "Samasz"
+    },
+    {
+     "name_ar": "سامي",
+     "name_de": "Same"
+    },
+    {
+     "name_ar": "شيفر",
+     "name_de": "Schäffer"
+    },
+    {
+     "name_ar": "شلوتر",
+     "name_de": "Schlüter"
+    },
+    {
+     "name_ar": "شميدت",
+     "name_de": "Schmidt"
+    },
+    {
+     "name_ar": "شيباورا",
+     "name_de": "Shibaura"
+    },
+    {
+     "name_ar": "ستاير",
+     "name_de": "Steyr"
+    },
+    {
+     "name_ar": "شتراوتمان",
+     "name_de": "Strautmann"
+    },
+    {
+     "name_ar": "تي بي إس لابينبروغريس",
+     "name_de": "TPS Labinprogres"
+    },
+    {
+     "name_ar": "تريوليت",
+     "name_de": "Trioliet"
+    },
+    {
+     "name_ar": "أونيموغ",
+     "name_de": "Unimog"
+    },
+    {
+     "name_ar": "فالتـرا",
+     "name_de": "Valtra"
+    },
+    {
+     "name_ar": "فيكون",
+     "name_de": "Vicon"
+    },
+    {
+     "name_ar": "فوغل أند نوت",
+     "name_de": "Vogel&Noot"
+    },
+    {
+     "name_ar": "فايدمان",
+     "name_de": "Weidemann"
+    },
+    {
+     "name_ar": "زيتور",
+     "name_de": "Zetor"
+    },
+    {
+     "name_ar": "زيغلر",
+     "name_de": "Ziegler"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ],
+   "types": [
+    {
+     "name_ar": "معالجة/حراثة التربة",
+     "name_de": "Bodenbearbeitung"
+    },
+    {
+     "name_ar": "آلة زراعة/بذارة",
+     "name_de": "Drillsmaschine"
+    },
+    {
+     "name_ar": "ناثرة سماد",
+     "name_de": "Düngerstreuer"
+    },
+    {
+     "name_ar": "آلة حصاد",
+     "name_de": "Erntemaschine"
+    },
+    {
+     "name_ar": "حراجة/غابات",
+     "name_de": "Forst"
+    },
+    {
+     "name_ar": "لودر أمامي",
+     "name_de": "Frontlader"
+    },
+    {
+     "name_ar": "آلة قش/تبن",
+     "name_de": "Heumaschine"
+    },
+    {
+     "name_ar": "تراكتور مزرعة",
+     "name_de": "Hofschlepper"
+    },
+    {
+     "name_ar": "حصادة دراس",
+     "name_de": "Mähdrescher"
+    },
+    {
+     "name_ar": "جزازة",
+     "name_de": "Mäher"
+    },
+    {
+     "name_ar": "آلة تغطية/مالش",
+     "name_de": "Mulcher"
+    },
+    {
+     "name_ar": "زراعة الفاكهة",
+     "name_de": "Obstbau"
+    },
+    {
+     "name_ar": "حماية النباتات/مبيدات",
+     "name_de": "Pflanzenschutz"
+    },
+    {
+     "name_ar": "محراث",
+     "name_de": "Pflug"
+    },
+    {
+     "name_ar": "تراكتور/قاطرة",
+     "name_de": "Schlepper"
+    },
+    {
+     "name_ar": "ملحقات أخرى",
+     "name_de": "Sonstige Anbauten"
+    },
+    {
+     "name_ar": "مركبة نقل",
+     "name_de": "Transportfahrzeug"
+    },
+    {
+     "name_ar": "مركبات زراعية أخرى",
+     "name_de": "Andere Agrarfahrzeuge"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ]
+  },
+  {
+   "id": "stapler",
+   "name_ar": "رافعات شوكية",
+   "name_de": "Stapler",
+   "brands": [
+    {
+     "name_ar": "أرتيسون",
+     "name_de": "Artison"
+    },
+    {
+     "name_ar": "أوسا",
+     "name_de": "AUSA"
+    },
+    {
+     "name_ar": "باومان",
+     "name_de": "Baumann"
+    },
+    {
+     "name_ar": "بوبكات",
+     "name_de": "Bobcat"
+    },
+    {
+     "name_ar": "بي تي",
+     "name_de": "BT"
+    },
+    {
+     "name_ar": "كاتربيلر",
+     "name_de": "CAT"
+    },
+    {
+     "name_ar": "سيزاب",
+     "name_de": "Cesab"
+    },
+    {
+     "name_ar": "كلارك",
+     "name_de": "Clark"
+    },
+    {
+     "name_ar": "كومبي ليفت",
+     "name_de": "Combilift"
+    },
+    {
+     "name_ar": "كراون",
+     "name_de": "Crown"
+    },
+    {
+     "name_ar": "دايوو",
+     "name_de": "Daewoo"
+    },
+    {
+     "name_ar": "ديتشي",
+     "name_de": "Dieci"
+    },
+    {
+     "name_ar": "دوسان",
+     "name_de": "Doosan"
+    },
+    {
+     "name_ar": "إي بي",
+     "name_de": "EP"
+    },
+    {
+     "name_ar": "فيات",
+     "name_de": "Fiat"
+    },
+    {
+     "name_ar": "هالا",
+     "name_de": "Halla"
+    },
+    {
+     "name_ar": "هانغشا",
+     "name_de": "Hangcha"
+    },
+    {
+     "name_ar": "هوبتكس",
+     "name_de": "Hubtex"
+    },
+    {
+     "name_ar": "هايستر",
+     "name_de": "Hyster"
+    },
+    {
+     "name_ar": "هيونداي",
+     "name_de": "Hyundai"
+    },
+    {
+     "name_ar": "إيريون",
+     "name_de": "Irion"
+    },
+    {
+     "name_ar": "جي سي بي",
+     "name_de": "JCB"
+    },
+    {
+     "name_ar": "يونغهاينريش",
+     "name_de": "Jungheinrich"
+    },
+    {
+     "name_ar": "كالمار",
+     "name_de": "Kalmar"
+    },
+    {
+     "name_ar": "كوماتسو",
+     "name_de": "Komatsu"
+    },
+    {
+     "name_ar": "كرامر",
+     "name_de": "Kramer"
+    },
+    {
+     "name_ar": "لانسينغ",
+     "name_de": "Lansing"
+    },
+    {
+     "name_ar": "لينده",
+     "name_de": "Linde"
+    },
+    {
+     "name_ar": "مانيتو",
+     "name_de": "Manitou"
+    },
+    {
+     "name_ar": "ماكس هولاند",
+     "name_de": "Max Holland"
+    },
+    {
+     "name_ar": "ميرلو",
+     "name_de": "Merlo"
+    },
+    {
+     "name_ar": "ميشيغان",
+     "name_de": "Michigan"
+    },
+    {
+     "name_ar": "ميتسوبيشي",
+     "name_de": "Mitsubishi"
+    },
+    {
+     "name_ar": "موفيت",
+     "name_de": "Moffett"
+    },
+    {
+     "name_ar": "نيسان",
+     "name_de": "Nissan"
+    },
+    {
+     "name_ar": "أو آند كي",
+     "name_de": "O & K"
+    },
+    {
+     "name_ar": "بافينجر",
+     "name_de": "Palfinger"
+    },
+    {
+     "name_ar": "بيمسبو",
+     "name_de": "Pimespo"
+    },
+    {
+     "name_ar": "سامبرون",
+     "name_de": "Sambron"
+    },
+    {
+     "name_ar": "شيفر",
+     "name_de": "Schäffer"
+    },
+    {
+     "name_ar": "سينيبوغن",
+     "name_de": "Sennebogen"
+    },
+    {
+     "name_ar": "زيخلشميدت",
+     "name_de": "Sichelschmidt"
+    },
+    {
+     "name_ar": "إس إم في",
+     "name_de": "SMV"
+    },
+    {
+     "name_ar": "شتاينبوك",
+     "name_de": "Steinbock"
+    },
+    {
+     "name_ar": "شتيل",
+     "name_de": "Still"
+    },
+    {
+     "name_ar": "سفتراك",
+     "name_de": "Svetruck"
+    },
+    {
+     "name_ar": "تي سي إم",
+     "name_de": "TCM"
+    },
+    {
+     "name_ar": "تيربيرغ",
+     "name_de": "Terberg"
+    },
+    {
+     "name_ar": "تيريكس",
+     "name_de": "Terex"
+    },
+    {
+     "name_ar": "تويو",
+     "name_de": "Toyo"
+    },
+    {
+     "name_ar": "تويوتا",
+     "name_de": "Toyota"
+    },
+    {
+     "name_ar": "يو إن",
+     "name_de": "UN"
+    },
+    {
+     "name_ar": "فايدمان",
+     "name_de": "Weidemann"
+    },
+    {
+     "name_ar": "فيزه",
+     "name_de": "Wiese"
+    },
+    {
+     "name_ar": "ييل",
+     "name_de": "Yale"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ],
+   "types": [
+    {
+     "name_ar": "رافعة حاويات",
+     "name_de": "Containerstapler"
+    },
+    {
+     "name_ar": "رافعة أمامية",
+     "name_de": "Frontstapler"
+    },
+    {
+     "name_ar": "رافعة للمناطق الوعرة",
+     "name_de": "Geländestapler"
+    },
+    {
+     "name_ar": "رافعة عالية الرفع",
+     "name_de": "Hochhubwagen"
+    },
+    {
+     "name_ar": "رافعة أرفف عالية",
+     "name_de": "Hochregalstapler"
+    },
+    {
+     "name_ar": "رافعة منخفضة الرفع",
+     "name_de": "Niederhubwagen"
+    },
+    {
+     "name_ar": "رافعة بعمود قابل للسحب",
+     "name_de": "Schubmaststapler"
+    },
+    {
+     "name_ar": "رافعة جانبية",
+     "name_de": "Seitenstapler"
+    },
+    {
+     "name_ar": "رافعة بذراع تلسكوبي",
+     "name_de": "Teleskoparmstapler"
+    },
+    {
+     "name_ar": "رافعات أخرى",
+     "name_de": "Andere Stapler"
+    },
+    {
+     "name_ar": "غير ذلك",
+     "name_de": "Andere"
+    }
+   ]
+  }
+ ]
+}

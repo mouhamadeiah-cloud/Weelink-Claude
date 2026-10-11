@@ -77,7 +77,7 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
   const searching = textSearch || chips.length > 0;
   const filtered = useMemo(() => {
     let list = cars.filter((c) => (!brand || c.brand === brand) && (!body || c.bodyType === body));
-    if (textSearch) list = list.filter((c) => matchesSearch([c.brand, c.model, c.trim, String(c.year), c.bodyType, c.color, c.stockNumber], query));
+    if (textSearch) list = list.filter((c) => matchesSearch([c.brand, c.model, c.trim, String(c.year), c.bodyType, c.vehicleCategory, c.color, c.stockNumber], query));
     if (chips.length) list = list.filter((c) => carMatchesFilters(c, advFilters));
     const sorted = [...list];
     if (sort === 'price-asc') sorted.sort((a, b) => (a.price || Infinity) - (b.price || Infinity));

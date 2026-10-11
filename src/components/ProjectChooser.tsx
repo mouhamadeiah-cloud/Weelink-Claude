@@ -48,9 +48,10 @@ interface ProjectChooserProps {
   hasCars: boolean;
   hasRestaurant: boolean;
   loadingType: ProjectType | null;
+  onHome?: () => void; // back to Weelink's home page
 }
 
-export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasShop, hasCars, hasRestaurant, loadingType }) => {
+export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasShop, hasCars, hasRestaurant, loadingType, onHome }) => {
   const cards: { type: ProjectType; title: string; subtitle: string; desc: string; icon: React.ElementType; accent: string; cta: string }[] = [
     {
       type: 'page',
@@ -92,6 +93,15 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] flex flex-col items-center justify-center px-5 py-12 font-sans" dir="rtl">
+      {onHome && (
+        <button
+          type="button"
+          onClick={onHome}
+          className="fixed top-3 right-3 z-20 bg-white border border-neutral-200 rounded-full px-3.5 py-1.5 text-xs font-bold text-neutral-700 shadow-sm"
+        >
+          → الرئيسية
+        </button>
+      )}
       <div className="w-full max-w-6xl space-y-8">
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2">

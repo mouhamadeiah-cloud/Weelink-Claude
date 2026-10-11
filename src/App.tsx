@@ -19,6 +19,7 @@ import { ProjectSettingsSection } from './components/rightDrawer/sections/Projec
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
 import { ProjectChooser } from './components/ProjectChooser';
+import { HomePage } from './components/home/HomePage';
 import { PublishModal } from './components/publish/PublishModal';
 import { publicDataFor } from './components/publish/publicData';
 import { readMySite } from './services/sites';
@@ -258,6 +259,12 @@ export default function App() {
   const [isFirebaseLoading, setIsFirebaseLoading] = useState<boolean>(true);
   const [isSavingCloud, setIsSavingCloud] = useState<boolean>(false);
   const [isAuthActive, setIsAuthActive] = useState<boolean>(true);
+  // Weelink opens on its home page (search for visitors, the way in for owners). What the sign-in
+  // screen leads to: 'account' = straight to the person's own page, 'build' = choosing what to build.
+  const [isHomeActive, setIsHomeActive] = useState<boolean>(true);
+  const afterSignInRef = useRef<'account' | 'build'>('account');
+  // What the signed-in account owns, from the last workspace load (decides where «صفحتي» goes).
+  const ownedRef = useRef({ page: false, shop: false, cars: false, restaurant: false });
   const [isChatActive, setIsChatActive] = useState<boolean>(true);
   const [isCanvasLoading, setIsCanvasLoading] = useState<boolean>(false);
   // The account whose workspace is open (see services/accounts.ts); 'mouhamadeiah' while signed out.
@@ -418,6 +425,7 @@ export default function App() {
     let shopExists = false;
     let carsExist = false;
     let restaurantExists = false;
+    let pageHasContent = false;
     try {
       shopExists = !!localStorage.getItem(`${PROJECT_STORAGE.shop.localPrefix}pages_${userId}`);
       carsExist = !!localStorage.getItem(`${PROJECT_STORAGE.cars.localPrefix}pages_${userId}`);
@@ -436,6 +444,7 @@ export default function App() {
         const cloudPages: Page[] = normalizeLegacyNavbarDefaults(Array.isArray(data.pages) ? data.pages : []);
         if (cloudPages.length > 0) {
           const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
+          pageHasContent = cloudElements.length > 0;
           setProject('page');
           setPages(cloudPages);
           setElements(cloudElements);
@@ -454,6 +463,7 @@ export default function App() {
     setHasShop(shopExists);
     setHasCars(carsExist);
     setHasRestaurant(restaurantExists);
+    ownedRef.current = { page: pageHasContent, shop: shopExists, cars: carsExist, restaurant: restaurantExists };
     setActivePageId('page-home');
     projectReadyRef.current = true;
 
@@ -882,22 +892,47 @@ export default function App() {
     }, { merge: true }).catch((e) => console.warn("Cloud save failed while switching projects:", e));
   };
 
-  const handleChooseProject = async (type: ProjectType) => {
+  const handleChooseProject = async (type: ProjectType, targetUserId: string = activeUserUid) => {
     if (projectLoading) return;
     setProjectLoading(type);
     try {
-      const targetUserId = activeUserUid;
-      if (type !== project) {
+      if (type !== project || targetUserId !== activeUserUid) {
         flushProjectSave();
         if (type === 'shop') await loadShopWorkspace(targetUserId);
         else if (type === 'cars') await loadCarsWorkspace(targetUserId);
         else if (type === 'restaurant') await loadRestaurantWorkspace(targetUserId);
         else await loadUserWorkspace(targetUserId);
       }
+      try {
+        localStorage.setItem(`weelink_last_project_${targetUserId}`, type);
+      } catch {
+        // storage unavailable: «صفحتي» just asks again next time
+      }
       setIsProjectChosen(true);
     } finally {
       setProjectLoading(null);
     }
+  };
+
+  // «صفحتي»: the project this account last opened, or its only one; the chooser when that is unclear
+  // (several projects, or none yet).
+  const openMyPage = (accountId: string) => {
+    const owned = ownedRef.current;
+    const kinds = (['shop', 'cars', 'restaurant'] as const).filter((k) => owned[k]);
+    let last: string | null = null;
+    try {
+      last = localStorage.getItem(`weelink_last_project_${accountId}`);
+    } catch {
+      last = null;
+    }
+    let target: ProjectType | null = null;
+    if (last === 'page' ? owned.page : kinds.some((k) => k === last)) target = last as ProjectType;
+    else if (kinds.length === 1 && !owned.page) target = kinds[0];
+    else if (kinds.length === 0 && owned.page) target = 'page';
+    setIsHomeActive(false);
+    setIsAuthActive(false);
+    setIsProjectChosen(false);
+    if (target) handleChooseProject(target, accountId);
   };
 
   const handleOpenProjects = () => {
@@ -1022,8 +1057,10 @@ export default function App() {
         console.error("Error setting up local storage layout:", err);
       }
     } else {
-      // Existing user: fetch their page
-      loadUserWorkspace(userUid);
+      // Existing user: fetch their page, then open it when they came for their account.
+      loadUserWorkspace(userUid).then(() => {
+        if (afterSignInRef.current === 'account') openMyPage(userUid);
+      });
     }
     setIsSavingCloud(false);
     isInitialLoadComplete.current = true;
@@ -1095,6 +1132,7 @@ export default function App() {
         setHasRestaurant(false);
         setRestaurantAdmin(createEmptyRestaurantAdmin());
         setIsAuthActive(true);
+        setIsHomeActive(true);
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
       }
@@ -3060,18 +3098,50 @@ export default function App() {
     );
   }
 
+  if (isHomeActive) {
+    return (
+      <HomePage
+        user={currentUser}
+        onAccount={() => {
+          afterSignInRef.current = 'account';
+          setIsHomeActive(false);
+          setIsAuthActive(true);
+        }}
+        onBuild={() => {
+          afterSignInRef.current = 'build';
+          setIsHomeActive(false);
+          setIsAuthActive(!currentUser);
+          setIsProjectChosen(false);
+        }}
+        onOpenMyPage={() => openMyPage(activeUserUid)}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   if (isAuthActive) {
     return (
-      <StandardAuth
-        onLoginWithGoogle={handleLogin}
-        onAuthSuccess={handleAuthSuccess}
-      />
+      <>
+        <StandardAuth
+          onLoginWithGoogle={handleLogin}
+          onAuthSuccess={handleAuthSuccess}
+        />
+        <button
+          type="button"
+          onClick={() => setIsHomeActive(true)}
+          className="fixed top-3 right-3 z-[60] bg-white/90 backdrop-blur border border-neutral-200 rounded-full px-3.5 py-1.5 text-xs font-bold text-neutral-700 shadow-sm"
+          dir="rtl"
+        >
+          → الرئيسية
+        </button>
+      </>
     );
   }
 
   if (!isProjectChosen) {
     return (
       <ProjectChooser
+        onHome={() => setIsHomeActive(true)}
         onChoose={handleChooseProject}
         hasShop={hasShop}
         hasCars={hasCars}

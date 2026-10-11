@@ -8,9 +8,9 @@ type TextKind = (typeof TEXT_KINDS)[number];
 
 export interface WeeAnswers {
   personalInfo?: { title?: string; fullName?: string };
-  addressInfo?: { governorate?: string; city?: string; street?: string; details?: string };
+  addressInfo?: { governorate?: string; city?: string; area?: string; street?: string; details?: string };
   contactInfo?: { whatsapp?: string; phone?: string; facebook?: string; tiktok?: string };
-  catalogInfo?: { category?: string; specialty?: string; customCategory?: string; customSpecialty?: string };
+  catalogInfo?: { category?: string; subCategory?: string; specialty?: string; customCategory?: string; customSpecialty?: string };
   aiAnswers?: { description?: string; motionEffects?: string; specialInstructions?: string };
 }
 
@@ -33,9 +33,10 @@ export const businessFacts = (a: WeeAnswers, siteName: string): Record<string, s
     اسم_الموقع: siteName,
     صاحب_العمل: [p.title, p.fullName].filter(Boolean).join(' '),
     التصنيف: cat.customCategory || cat.category || '',
+    الكتالوج_الفرعي: cat.subCategory || '',
     الاختصاص: cat.customSpecialty || cat.specialty || '',
     الوصف: ai.description || '',
-    العنوان: [ad.governorate, ad.city, ad.street].filter(Boolean).join('، '),
+    العنوان: [ad.governorate, ad.city, ad.area, ad.street].filter(Boolean).join('، '),
     واتساب: c.whatsapp || '',
     هاتف: c.phone || '',
     طابع_الصفحة: ai.motionEffects || '',

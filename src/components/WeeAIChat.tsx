@@ -1444,17 +1444,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  // Finishing only saves the answers: the page is built when the owner presses «ابن صفحتي».
+                  finishedRef.current = true;
                   setStep(13);
                   saveProgress(13);
-                  if (onCompleteChat) {
-                    onCompleteChat({
-                      personalInfo,
-                      addressInfo,
-                      contactInfo,
-                      catalogInfo,
-                      aiAnswers
-                    });
-                  }
                 }}
                 className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5"
               >
@@ -1480,8 +1473,11 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers })}
                 className="w-full py-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
               >
-                {isGuest ? 'اعمل حسابك لتنحفظ صفحتك' : 'ابن صفحتي'}
+                ابن صفحتي
               </button>
+            )}
+            {embedded && onCompleteChat && isGuest && (
+              <p className="text-[10px] text-neutral-400 font-semibold">رح نطلب منك تعمل حساب أولاً لتنحفظ صفحتك.</p>
             )}
             <button
               type="button"

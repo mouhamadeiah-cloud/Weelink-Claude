@@ -1,13 +1,14 @@
 // What kind of business a page is, as three levels of names: catalog → sub-catalog → items.
 //   'shop'        Eyad's store categories (src/data/shopCategories.json, from onlineshops.json)
 //   'restaurant'  Eyad's restaurant categories (src/data/restaurantCategories.json), two levels
+//   'cars'        kinds of car showroom and their makes (src/data/carCategories.json), two levels
 //   'jobs'        the occupations (src/data/occupations.json) for free pages and other trades
 // The owner picks them in Wee AI; on «نشر» they become the page's first search keywords, and the
 // home page's searches filter by them. Each list loads only when it is needed.
 import { useEffect, useState } from 'react';
 import type { ProjectType } from '../components/shop/shopTypes';
 
-export type CategorySource = 'shop' | 'restaurant' | 'jobs';
+export type CategorySource = 'shop' | 'restaurant' | 'cars' | 'jobs';
 
 export interface CategoryNode {
   name: string;
@@ -15,12 +16,16 @@ export interface CategoryNode {
 }
 
 export const categorySourceOf = (kind: ProjectType | undefined): CategorySource =>
-  kind === 'shop' ? 'shop' : kind === 'restaurant' ? 'restaurant' : 'jobs';
+  kind === 'shop' ? 'shop' : kind === 'restaurant' ? 'restaurant' : kind === 'cars' ? 'cars' : 'jobs';
 
 const loaders: Record<CategorySource, () => Promise<CategoryNode[]>> = {
   shop: () => import('../data/shopCategories.json').then((m) => (m.default || m) as unknown as CategoryNode[]),
   restaurant: () =>
     import('../data/restaurantCategories.json').then((m) =>
+      ((m.default || m) as unknown as { name: string; subs: string[] }[]).map((c) => ({ name: c.name, subs: c.subs.map((s) => ({ name: s, items: [] })) }))
+    ),
+  cars: () =>
+    import('../data/carCategories.json').then((m) =>
       ((m.default || m) as unknown as { name: string; subs: string[] }[]).map((c) => ({ name: c.name, subs: c.subs.map((s) => ({ name: s, items: [] })) }))
     ),
   jobs: () =>

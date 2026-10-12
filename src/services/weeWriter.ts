@@ -22,6 +22,7 @@ export interface WeeAnswers {
     galleryImages?: string[];
     heroBgImage?: string;
     services?: { name: string; price: string }[];
+    features?: string[];
   };
 }
 
@@ -60,6 +61,7 @@ export const businessFacts = (a: WeeAnswers, siteName: string): Record<string, s
     طابع_الصفحة: ai.motionEffects || '',
     ملاحظات: ai.specialInstructions || '',
     الخدمات: serviceLines(ai.services),
+    المزايا: (ai.features || []).slice(0, 12).join('، '),
   };
   return Object.fromEntries(Object.entries(facts).filter(([, v]) => v && v.trim()));
 };

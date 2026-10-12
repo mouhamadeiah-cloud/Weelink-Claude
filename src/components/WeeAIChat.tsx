@@ -57,9 +57,34 @@ const PAGE_NAME_LABEL: Record<ProjectType, string> = {
 // The work step's three lists, named for each kind of page.
 const CATALOG_LABELS = {
   jobs: { category: 'كتالوج العمل الرئيسي *', sub: 'الكتالوج الفرعي', item: 'المهنة أو الاختصاص', ex: ['مثال: الطب والرعاية الصحية', 'مثال: الأطباء', 'مثال: طبيب أطفال'], need: 'يرجى اختيار كتالوج عملك.' },
-  shop: { category: 'نوع المتجر *', sub: 'القسم', item: 'التخصص', ex: ['مثال: إلكترونيات وتقنية', 'مثال: الهواتف الذكية', 'مثال: آيفون'], need: 'يرجى اختيار نوع متجرك.' },
-  restaurant: { category: 'نوع المطعم *', sub: 'التصنيف', item: '', ex: ['مثال: مطاعم متخصصة', 'مثال: مشاوي', ''], need: 'يرجى اختيار نوع مطعمك.' },
+  shop: { category: 'شو نوع المنتجات اللي بتبيعها؟ *', sub: 'القسم', item: 'التخصص (إذا في)', ex: ['مثال: إلكترونيات وتقنية', 'مثال: الهواتف الذكية', 'مثال: آيفون'], need: 'يرجى اختيار نوع منتجاتك.' },
+  restaurant: { category: 'نوع المطعم *', sub: 'المطبخ أو الأكلة الأساسية', item: '', ex: ['مثال: مطاعم متخصصة', 'مثال: مشاوي', ''], need: 'يرجى اختيار نوع مطعمك.' },
+  cars: { category: 'نوع المعرض *', sub: 'الماركة الأساسية', item: '', ex: ['مثال: سيارات مستعملة', 'مثال: تويوتا', ''], need: 'يرجى اختيار نوع معرضك.' },
 } as const;
+
+// What makes a store, restaurant or showroom worth choosing: the owner ticks what is true, and the
+// page says it (a free page lists its services and prices instead).
+const FEATURE_CHOICES: Partial<Record<ProjectType, string[]>> = {
+  restaurant: ['توصيل للبيت', 'طلبات سفري', 'جلسات عائلية', 'حجز طاولات', 'حفلات ومناسبات', 'جلسات خارجية', 'فطور صباحي', 'مفتوح لوقت متأخر'],
+  shop: ['توصيل لكل المحافظات', 'الدفع عند الاستلام', 'إرجاع وتبديل', 'كفالة على المنتجات', 'منتجات أصلية', 'أسعار جملة', 'عروض أسبوعية', 'تغليف هدايا'],
+  cars: ['تقسيط', 'فحص فني قبل البيع', 'كفالة', 'تبديل سيارتك', 'شراء سيارتك', 'تسجيل ونقل ملكية', 'توصيل السيارة', 'تجربة قيادة'],
+};
+
+// What the description is asked to say, by kind of page.
+const DESCRIPTION_HINT: Record<ProjectType, string> = {
+  page: 'اكتب وصفاً باختصار لخدماتك ونشاطك هنا...',
+  restaurant: 'مثال: مطعم مشاوي على الفحم بحمص من 1998، أشهر أطباقنا الشيش طاووق والكباب الحلبي، وعنا صالة عائلية.',
+  shop: 'مثال: متجر ألبسة أطفال من عمر يوم لـ 12 سنة، ماركات تركية، وأسعار مناسبة.',
+  cars: 'مثال: معرض سيارات مستعملة مفحوصة بحماة، أغلبها تويوتا وهيونداي، ومنقبل التقسيط.',
+};
+
+// The questions in the words of each kind of page (Eyad, 12 Oct: a restaurant is asked about its
+// food, a store about what it sells, not about a profession).
+const KIND_QUESTIONS: Partial<Record<ProjectType, Record<number, string>>> = {
+  restaurant: { 1: 'عرّفنا على مطعمك:', 4: 'شو نوع مطعمك؟', 5: 'اوصف مطعمك: مطبخكم، أشهر أطباقكم، وشو بيميزكم:' },
+  shop: { 1: 'عرّفنا على متجرك:', 4: 'شو نوع المنتجات اللي بتبيعها؟', 5: 'اوصف متجرك: شو بتبيع، لمين، وشو بيميزكم:' },
+  cars: { 1: 'عرّفنا على معرضك:', 4: 'شو نوع سيارات معرضك؟', 5: 'اوصف معرضك: نوع السيارات، الماركات، وخدماتكم:' },
+};
 
 
 const LocationPicker = lazy(() => import('./ui/LocationPicker'));
@@ -75,7 +100,9 @@ const normalizeCatalog = (c: any) => ({
   customSpecialty: ''
 });
 
-const getConciseQuestionText = (stepNum: number, name?: string): string => {
+const getConciseQuestionText = (stepNum: number, name?: string, kind?: ProjectType): string => {
+  const own = kind && KIND_QUESTIONS[kind]?.[stepNum];
+  if (own) return own;
   switch (stepNum) {
     case 1:
       return "يرجى تعبئة المعلومات الشخصية لمالك الصفحة:";
@@ -232,6 +259,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     motionEffects: 'صفحة هادئة وجادة',
     specialInstructions: '',
     services: [] as { name: string; price: string }[],
+    features: [] as string[],
   });
 
   const resetToBlankDefaults = () => {
@@ -279,6 +307,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       motionEffects: 'صفحة هادئة وجادة',
       specialInstructions: '',
       services: [],
+      features: [],
     });
     setStep(1);
   };
@@ -286,11 +315,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   // Load existing progress: Firebase first (source of truth across devices), LocalStorage as offline fallback
   useEffect(() => {
     const applyData = (data: any) => {
-      if (data.personalInfo) setPersonalInfo({ pageName: '', ...data.personalInfo });
+      // Answers given for another kind of page keep the owner's own details (name, address,
+      // contacts, look), not what that business was: its name, kind, description and offer.
+      const otherKind = !!pageKind && !!data.pageKind && data.pageKind !== pageKind;
+      if (data.personalInfo) setPersonalInfo({ pageName: '', ...data.personalInfo, ...(otherKind ? { pageName: '' } : {}) });
       if (data.addressInfo) setAddressInfo({ placeType: 'city', area: '', district: '', subdistrict: '', village: '', ...data.addressInfo });
       if (data.contactInfo) setContactInfo(data.contactInfo);
-      if (data.catalogInfo) setCatalogInfo(normalizeCatalog(data.catalogInfo));
-      if (data.aiAnswers) setAiAnswers({ services: [], ...data.aiAnswers });
+      if (data.catalogInfo && !otherKind) setCatalogInfo(normalizeCatalog(data.catalogInfo));
+      if (data.aiAnswers) setAiAnswers({ services: [], features: [], ...data.aiAnswers, ...(otherKind ? { description: '', services: [], features: [], specialInstructions: '' } : {}) });
       finishedRef.current = data.currentStep >= 13;
       if (fromStart) setStep(1);
       else if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep);
@@ -328,7 +360,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // Typewriter effect on step / question change
   useEffect(() => {
-    const question = getConciseQuestionText(step, personalInfo.fullName);
+    const question = getConciseQuestionText(step, personalInfo.fullName, pageKind);
     setTypedText('');
     let i = 0;
     const interval = setInterval(() => {
@@ -524,11 +556,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           done={step >= 13}
           rows={[
             ['اسم الصفحة', personalInfo.pageName || personalInfo.fullName],
-            ['العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
+            [pageKind === 'restaurant' ? 'نوع المطعم' : pageKind === 'shop' ? 'المنتجات' : pageKind === 'cars' ? 'نوع المعرض' : 'العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.subCategory, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
             ['الوصف', aiAnswers.description],
             ['الألوان', (aiAnswers.colorPalette || '').startsWith('مخصص') ? 'لون مخصص' : aiAnswers.colorPalette],
             ['طابع الصفحة', aiAnswers.motionEffects],
             ['الخدمات', (aiAnswers.services || []).filter((r: { name: string }) => r.name?.trim()).map((r: { name: string }) => r.name).join('، ')],
+            ['المزايا', (aiAnswers.features || []).join('، ')],
           ]}
           onEdit={onEditAnswers}
         />
@@ -576,13 +609,13 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 type="text"
                 value={personalInfo.fullName}
                 onChange={e => setPersonalInfo(p => ({ ...p, fullName: e.target.value }))}
-                placeholder="أدخل الاسم أو اسم الشركة"
+                placeholder={pageKind && pageKind !== 'page' ? 'اسم صاحب العمل أو الشركة' : 'أدخل الاسم أو اسم الشركة'}
                 className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
               />
             </div>
 
-            {/* تاريخ الميلاد */}
-            <div className="space-y-1">
+            {/* تاريخ الميلاد: لصفحة شخصية فقط */}
+            {(!pageKind || pageKind === 'page') && <div className="space-y-1">
               <label className="text-[10px] font-bold text-neutral-400 block">تاريخ الميلاد (يمكن تخطيه)</label>
               <input
                 type="date"
@@ -590,7 +623,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 onChange={e => setPersonalInfo(p => ({ ...p, birthDate: e.target.value }))}
                 className="w-full text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
               />
-            </div>
+            </div>}
 
             {/* صورة اللوغو (رفع من الجهاز أو رابط) */}
             <div className="space-y-1.5 pt-1">
@@ -966,7 +999,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <textarea
               value={aiAnswers.description}
               onChange={e => setAiAnswers(p => ({ ...p, description: e.target.value }))}
-              placeholder="اكتب وصفاً باختصار لخدماتك ونشاطك هنا..."
+              placeholder={DESCRIPTION_HINT[pageKind || 'page']}
               rows={4}
               className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
             />
@@ -1011,6 +1044,28 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   </button>
                 )}
                 <p className="text-[10px] text-neutral-400">الخدمة بلا سعر بتظهر «حسب الطلب». ما منكتب أي سعر ما كتبته.</p>
+              </div>
+            )}
+            {/* المزايا: للمطعم والمتجر والمعرض (أسعارهم من الإدارة) */}
+            {pageKind && FEATURE_CHOICES[pageKind] && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-500 block">شو بتقدموا كمان؟ (اختر اللي بينطبق)</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {FEATURE_CHOICES[pageKind]!.map((f) => {
+                    const on = (aiAnswers.features || []).includes(f);
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => setAiAnswers(p => ({ ...p, features: on ? (p.features || []).filter(x => x !== f) : [...(p.features || []), f] }))}
+                        className={`px-2.5 py-1 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${on ? 'bg-black text-white border-black' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:border-neutral-300'}`}
+                      >
+                        {f}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
             <div className="flex gap-2">

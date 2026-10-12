@@ -331,6 +331,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       if (!isGuest) {
         hostAnswerImages(data).then((hosted) => {
           if (hosted === data) return;
+          // Saved straight away: the full-size copies are what filled the browser storage.
+          try { localStorage.setItem('weelink_chat_progress_' + userId, JSON.stringify(hosted)); } catch (e) { console.warn('Silent local save failed:', e); }
+          setDoc(doc(db, 'platform_directory', userId), { ...hosted, updatedAt: serverTimestamp() }, { merge: true })
+            .catch((err) => console.warn('Silent cloud save failed:', err));
           if (hosted.personalInfo) setPersonalInfo(p => ({ ...p, logoUrl: hosted.personalInfo.logoUrl || '' }));
           if (hosted.aiAnswers) setAiAnswers(p => ({ ...p, heroBgImage: hosted.aiAnswers.heroBgImage || '', galleryImages: hosted.aiAnswers.galleryImages || [] }));
         }).catch(() => {});
@@ -339,6 +343,15 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
     const loadProgress = async () => {
       if (!userId) return;
+      // The browser's own copy can hold full-size photos even when the cloud copy is fine: shrink it too.
+      if (!isGuest) {
+        try {
+          const local = JSON.parse(localStorage.getItem('weelink_chat_progress_' + userId) || 'null');
+          if (local) hostAnswerImages(local).then((hosted) => {
+            if (hosted !== local) localStorage.setItem('weelink_chat_progress_' + userId, JSON.stringify(hosted));
+          }).catch(() => {});
+        } catch { /* unreadable copy: the cloud one is used */ }
+      }
 
       try {
         if (isGuest) throw new Error('guest');

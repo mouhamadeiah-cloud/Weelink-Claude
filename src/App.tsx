@@ -42,7 +42,7 @@ import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Eye, FileText, FolderTree, LayoutTemplate, Loader2, MousePointer2, Plus, Redo2, Settings, SlidersHorizontal, Store, Undo2 } from 'lucide-react';
 import { applyPageTexts, businessFacts, pageTextItems, requestPageTexts, type WeeAnswers } from './services/weeWriter';
-import { KIND_OF_PROJECT, buildPageFromPlan, buildProfile, pageAssets, requestPagePlan } from './services/pageBuilder';
+import { KIND_OF_PROJECT, buildPageFromPlan, emptyMainPage, buildProfile, pageAssets, requestPagePlan } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
@@ -274,7 +274,10 @@ export default function App() {
   // The kind the start page opens on (from «عدّل إجاباتي» in the editor), else the kinds.
   const [startKind, setStartKind] = useState<ProjectType | null>(null);
   // A page to build as soon as its kind is open in the editor: the questions just finished.
-  const autoBuildRef = useRef<{ kind: ProjectType; answers: WeeAnswers } | null>(null);
+  // The kind whose questions just finished: the editor opens on it with an empty page and Wee AI's panel.
+  const afterQuestionsRef = useRef<ProjectType | null>(null);
+  // The project just loaded had nothing saved and started from its template.
+  const freshProjectRef = useRef(false);
   // What the build after the questions is doing, shown over the editor.
   const [buildNotice, setBuildNotice] = useState<{ busy: boolean; ok?: boolean; message: string } | null>(null);
   const [hasBuildBackup, setHasBuildBackup] = useState(false);
@@ -538,6 +541,7 @@ export default function App() {
     } catch (e) {
       console.warn("Could not read the local shop cache:", e);
     }
+    freshProjectRef.current = shopPages.length === 0;
     if (shopPages.length === 0) {
       const template = getOnlineShopTemplate({ liveProducts: true });
       shopPages = template.pages;
@@ -604,6 +608,7 @@ export default function App() {
     } catch (e) {
       console.warn("Could not read the local car showroom cache:", e);
     }
+    freshProjectRef.current = carPages.length === 0;
     if (carPages.length === 0) {
       const template = getCarShowroomTemplate();
       carPages = template.pages;
@@ -668,6 +673,7 @@ export default function App() {
     } catch (e) {
       console.warn("Could not read the local restaurant cache:", e);
     }
+    freshProjectRef.current = restPages.length === 0;
     if (restPages.length === 0) {
       const template = getRestaurantTemplate();
       restPages = template.pages;
@@ -1131,20 +1137,16 @@ export default function App() {
     setIsProjectChosen(false);
     moveGuestAnswers(accountId, auth.currentUser?.email || '').then((saved) => {
       const open = saved || kind;
-      // The answers just moved to the account: the page is built from them once its kind is open.
-      try {
-        const answers = JSON.parse(localStorage.getItem(`weelink_chat_progress_${accountId}`) || 'null');
-        if (answers?.currentStep >= 13) autoBuildRef.current = { kind: open, answers };
-      } catch {
-        // no answers on this device: the owner builds from the panel
-      }
+      // The answers just moved to the account: the editor opens on an empty page, and the owner
+      // chooses there to design it themselves or press «ابن صفحتي».
+      afterQuestionsRef.current = open;
       handleChooseProject(open, accountId);
     });
   };
 
-  // The questions finished on the start page: open the kind, then build it.
-  const openAndBuild = async (kind: ProjectType, answers: WeeAnswers) => {
-    autoBuildRef.current = { kind, answers };
+  // The questions finished on the start page: open the kind on an empty page (nothing is built yet).
+  const openAfterQuestions = async (kind: ProjectType) => {
+    afterQuestionsRef.current = kind;
     setIsAuthActive(false);
     await handleChooseProject(kind);
     setIsStartActive(false);
@@ -1311,19 +1313,26 @@ export default function App() {
     return { ok: true, message: 'رجعت صفحتك متل ما كانت قبل ما يبنيها Wee AI.' };
   };
 
-  // The build the questions asked for, once their kind is open in the editor.
+  // Right after the questions, once their kind is open in the editor: a project that had nothing
+  // saved starts on an empty main page (not the ready template), and Wee AI's panel shows the answers
+  // with «ابن صفحتي». The owner decides there to design the page themselves or let Wee AI build it.
   useEffect(() => {
-    const job = autoBuildRef.current;
-    if (!job || !isProjectChosen || projectLoading || isStartActive || project !== job.kind) return;
-    autoBuildRef.current = null;
-    setBuildNotice({ busy: true, message: 'Wee AI عم يبني صفحتك من إجاباتك…' });
-    // After this render, so the page just loaded is the one built on.
-    window.setTimeout(async () => {
-      const note = await handleBuildPage(job.answers, true);
-      setBuildNotice({ busy: false, ok: note.ok, message: note.ok ? `${note.message}` : `${note.message} بتقدر تجرّب من جديد من «ابن صفحتي» بلوحة Wee AI.` });
-      setIsChatActive(true);
-      setIsRightDrawerOpen(true);
-    }, 0);
+    const kind = afterQuestionsRef.current;
+    if (!kind || !isProjectChosen || projectLoading || isStartActive || project !== kind) return;
+    afterQuestionsRef.current = null;
+    if (freshProjectRef.current && kind !== 'page') {
+      const blank = emptyMainPage(KIND_OF_PROJECT[kind], pagesRef.current, elementsRef.current, activePageId);
+      setPages(blank.pages);
+      setElements(blank.elements);
+      setHistory([blank.elements]);
+      setHistoryIndex(0);
+      setActivePageId(blank.pageId);
+      setActiveSlideId(blank.slideId);
+      setSelectedElementId(null);
+    }
+    setBuildNotice({ busy: false, ok: true, message: 'انحفظت إجاباتك. صمّم صفحتك بإيدك، أو اكبس «ابن صفحتي» من لوحة Wee AI وهو بيبنيها من إجاباتك.' });
+    setIsChatActive(true);
+    setIsRightDrawerOpen(true);
   }, [isProjectChosen, projectLoading, isStartActive, project]);
 
   const handleUndo = () => {
@@ -3328,7 +3337,7 @@ export default function App() {
           setStartKind(null);
           setIsHomeActive(true);
         }}
-        onBuild={openAndBuild}
+        onBuild={openAfterQuestions}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
           pendingBuildRef.current = kind;

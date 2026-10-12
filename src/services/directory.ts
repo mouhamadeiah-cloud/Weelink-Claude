@@ -5,6 +5,7 @@
 import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { searchSites, siteFallbackUrl } from './sites';
+import { categoryKeyword } from '../utils/businessCategories';
 import { loadPublishedRestaurant, restaurantSiteUrl } from '../components/restaurant/restaurantCloud';
 import type { ProjectType } from '../components/shop/shopTypes';
 import type { Intent } from './homeActivity';
@@ -44,6 +45,15 @@ export const entryUrl = (e: DirectoryEntry) => (e.project === 'restaurant' ? res
 export const listByKind = async (kind: ProjectType, n = 24): Promise<DirectoryEntry[]> => {
   const snap = await getDocs(query(collection(db, 'siteNames'), where('project', '==', kind), limit(n)));
   return snap.docs.map((d) => toEntry(d.id, d.data()));
+};
+
+// The pages of one kind filed under a category: on «نشر» a page's catalog names become its first
+// keywords (see withCategoryKeywords), so this is a keyword search kept to that kind.
+export const listByCategory = async (kind: ProjectType, name: string): Promise<DirectoryEntry[]> => {
+  const k = categoryKeyword(name);
+  if (!k) return [];
+  const snap = await getDocs(query(collection(db, 'siteNames'), where('keywords', 'array-contains', k), limit(50)));
+  return snap.docs.filter((d) => d.data()?.project === kind).map((d) => toEntry(d.id, d.data()));
 };
 
 // The pages whose keywords hold any of the first three words typed.

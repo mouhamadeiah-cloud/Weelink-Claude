@@ -6022,6 +6022,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           onToggleCollapse={toggleWeeAiChat}
           onStepChange={onStepChange}
           onWriteTexts={onWriteTexts}
+          pageKind={isShopProject ? 'shop' : isRestaurantProject ? 'restaurant' : isCarProject ? 'cars' : 'page'}
         />
 
         {/* All the text effects: beside the panel, or over it on a phone's sheet. */}

@@ -20,6 +20,8 @@ import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
 import { ProjectChooser } from './components/ProjectChooser';
 import { HomePage } from './components/home/HomePage';
+import { StartPage } from './components/onboarding/StartPage';
+import { moveGuestAnswers } from './services/guestAnswers';
 import { PublishModal } from './components/publish/PublishModal';
 import { publicDataFor } from './components/publish/publicData';
 import { readMySite } from './services/sites';
@@ -263,6 +265,10 @@ export default function App() {
   // screen leads to: 'account' = straight to the person's own page, 'build' = choosing what to build.
   const [isHomeActive, setIsHomeActive] = useState<boolean>(true);
   const afterSignInRef = useRef<'account' | 'build'>('account');
+  // «اعمل صفحتك»: the kind of page picked before the questions, then the questions answered as a guest.
+  const [isStartActive, setIsStartActive] = useState<boolean>(false);
+  // The kind a guest answered Wee AI for: after signing up, the answers move to the account and it opens.
+  const pendingBuildRef = useRef<ProjectType | null>(null);
   // What the signed-in account owns, from the last workspace load (decides where «صفحتي» goes).
   const ownedRef = useRef({ page: false, shop: false, cars: false, restaurant: false });
   const [isChatActive, setIsChatActive] = useState<boolean>(true);
@@ -1059,14 +1065,25 @@ export default function App() {
     } else {
       // Existing user: fetch their page, then open it when they came for their account.
       loadUserWorkspace(userUid).then(() => {
-        if (afterSignInRef.current === 'account') openMyPage(userUid);
+        if (pendingBuildRef.current) openGuestBuild(userUid);
+        else if (afterSignInRef.current === 'account') openMyPage(userUid);
       });
     }
+    if (isNewUser && pendingBuildRef.current) openGuestBuild(userUid);
     setIsSavingCloud(false);
     isInitialLoadComplete.current = true;
     setIsAuthActive(false); // Hide login screen, go straight to builder/chat!
     // A phone sees its page first; the panel waits behind the bar at the bottom.
     setIsRightDrawerOpen(window.innerWidth >= 1024);
+  };
+
+  // The guest's Wee AI answers move to the account they just made, and the kind they were for opens.
+  const openGuestBuild = (accountId: string) => {
+    const kind = pendingBuildRef.current;
+    pendingBuildRef.current = null;
+    if (!kind) return;
+    setIsProjectChosen(false);
+    moveGuestAnswers(accountId, auth.currentUser?.email || '').then((saved) => handleChooseProject(saved || kind, accountId));
   };
 
   const handleCompleteChat = (collectedData: any) => {
@@ -3104,17 +3121,41 @@ export default function App() {
         user={currentUser}
         onAccount={() => {
           afterSignInRef.current = 'account';
+          pendingBuildRef.current = null;
           setIsHomeActive(false);
           setIsAuthActive(true);
         }}
         onBuild={() => {
           afterSignInRef.current = 'build';
           setIsHomeActive(false);
-          setIsAuthActive(!currentUser);
-          setIsProjectChosen(false);
+          setIsStartActive(true);
         }}
         onOpenMyPage={() => openMyPage(activeUserUid)}
         onLogout={handleLogout}
+      />
+    );
+  }
+
+  if (isStartActive) {
+    return (
+      <StartPage
+        user={currentUser}
+        loadingType={projectLoading}
+        onHome={() => {
+          setIsStartActive(false);
+          setIsHomeActive(true);
+        }}
+        onOpen={async (kind) => {
+          setIsAuthActive(false);
+          await handleChooseProject(kind);
+          setIsStartActive(false);
+        }}
+        onSignUp={(kind) => {
+          afterSignInRef.current = 'build';
+          pendingBuildRef.current = kind;
+          setIsStartActive(false);
+          setIsAuthActive(true);
+        }}
       />
     );
   }

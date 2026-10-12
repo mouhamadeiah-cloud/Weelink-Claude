@@ -10,7 +10,8 @@ import {
 import { SYRIAN_GOVERNORATES } from '../../utils/syriaLists';
 import { normalizeArabic } from '../ui/ComboInput';
 import { Intent, RecentPage, bumpIntent, favoriteIntent, listRecent, readHomePlace, recordVisit, saveHomePlace } from '../../services/homeActivity';
-import { DirectoryEntry, DishOffer, INTENT_KIND, entryUrl, listByKind, restaurantOffers, searchDirectory } from '../../services/directory';
+import { DirectoryEntry, DishOffer, INTENT_KIND, entryUrl, listByCategory, listByKind, restaurantOffers, searchDirectory } from '../../services/directory';
+import { categorySourceOf, useCategories } from '../../utils/businessCategories';
 import { JoinedPage, listJoinedPages, pageUrl } from '../../services/pageCustomers';
 import { FOOD_PHOTOS, foodPhoto } from '../restaurant/restaurantTypes';
 import type { ProjectType } from '../shop/shopTypes';
@@ -92,11 +93,24 @@ interface HomePageProps {
   onLogout: () => void;
 }
 
+const Chip: React.FC<{ on: boolean; onClick: () => void; small?: boolean; children: React.ReactNode }> = ({ on, onClick, small, children }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`shrink-0 whitespace-nowrap rounded-full border font-bold transition ${small ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'} ${
+      on ? 'bg-[#1c1a17] border-[#1c1a17] text-white' : 'bg-[#f6f3ee] border-black/10 text-[#5b5348] hover:border-[#c2410c]'
+    }`}
+  >
+    {children}
+  </button>
+);
+
 export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPage, onBuild, onLogout }) => {
   const uid = user?.uid || null;
   const [place, setPlace] = useState(readHomePlace);
   const [text, setText] = useState('');
-  const [active, setActive] = useState<{ intent: Intent | null; query: string } | null>(null);
+  // A search: one of the four (narrowed to a category and its sub-category when picked), or typed words.
+  const [active, setActive] = useState<{ intent: Intent | null; query: string; category?: string; sub?: string } | null>(null);
   const [results, setResults] = useState<DirectoryEntry[] | null>(null);
   const [offers, setOffers] = useState<DishOffer[]>([]);
   const [failed, setFailed] = useState(false);
@@ -132,7 +146,12 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
     setResults(null);
     setOffers([]);
     setFailed(false);
-    const load = active.intent ? listByKind(INTENT_KIND[active.intent]) : searchDirectory(active.query);
+    const filter = active.sub || active.category;
+    const load = active.intent
+      ? filter
+        ? listByCategory(INTENT_KIND[active.intent], filter)
+        : listByKind(INTENT_KIND[active.intent])
+      : searchDirectory(active.query);
     load
       .then(async (list) => {
         if (!alive) return;
@@ -174,6 +193,11 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
 
   const orderedIntents = favorite ? [...INTENTS].sort((a, b) => Number(b.id === favorite) - Number(a.id === favorite)) : INTENTS;
   const activeIntent = active?.intent ? INTENTS.find((i) => i.id === active.intent) : null;
+  // The categories of the open search (Eyad's shop and restaurant lists, the occupations for services).
+  const catKind = active?.intent && active.intent !== 'cars' ? INTENT_KIND[active.intent] : undefined;
+  const categories = useCategories(categorySourceOf(catKind), !!catKind);
+  const activeCategory = active?.category ? categories?.find((c) => c.name === active.category) : undefined;
+  const pickCategory = (category?: string, sub?: string) => active?.intent && setActive({ intent: active.intent, query: '', category, sub });
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#f6f3ee] text-[#1c1a17]" style={{ fontFamily: BODY_FONT }}>
@@ -342,6 +366,24 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
               </h2>
               <button type="button" onClick={() => setActive(null)} aria-label="إغلاق النتائج" className="w-8 h-8 rounded-full bg-[#f6f3ee] flex items-center justify-center"><X size={16} /></button>
             </div>
+            {catKind && categories && (
+              <div className="space-y-2">
+                <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+                  <Chip on={!active?.category} onClick={() => pickCategory()}>الكل</Chip>
+                  {categories.map((c) => (
+                    <Chip key={c.name} on={active?.category === c.name} onClick={() => pickCategory(c.name)}>{c.name}</Chip>
+                  ))}
+                </div>
+                {activeCategory && activeCategory.subs.length > 0 && (
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+                    <Chip small on={!active?.sub} onClick={() => pickCategory(activeCategory.name)}>كل {activeCategory.name}</Chip>
+                    {activeCategory.subs.map((s) => (
+                      <Chip small key={s.name} on={active?.sub === s.name} onClick={() => pickCategory(activeCategory.name, s.name)}>{s.name}</Chip>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {place && <p className="text-[11px] text-[#8a8073]">الترتيب حسب المدينة والحي بيجي مع دليل المواقع بالمرحلة الجاية.</p>}
             {offers.length > 0 && (
               <div>

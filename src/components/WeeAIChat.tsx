@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { db } from '../services/firebase';
 import { WeeDots } from './ui/WeeDots';
-import { SYRIAN_GOVERNORATES, GOVERNORATE_CENTERS, addressFromPoint, areasOf, findSubdistrict, findVillage, subdistrictsOf, villagesOf, useGovernoratePlaces, useOccupations } from '../utils/syriaLists';
+import { SYRIAN_GOVERNORATES, GOVERNORATE_CENTERS, addressFromPoint, areasOf, findSubdistrict, findVillage, subdistrictsOf, villagesOf, useGovernoratePlaces } from '../utils/syriaLists';
+import { categorySourceOf, useCategories } from '../utils/businessCategories';
+import type { ProjectType } from './shop/shopTypes';
 import { ComboInput } from './ui/ComboInput';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { 
@@ -22,7 +24,23 @@ interface WeeAIChatProps {
   onStepChange?: (stepNum: number) => void;
   // Wee AI writes the page's texts from these answers; resolves to a message to show the owner.
   onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
+  // The kind of page being built: its work step offers the store or restaurant categories instead
+  // of the occupations. Saved with the answers.
+  pageKind?: ProjectType;
+  // Fills its own box (the start page) instead of sitting under the control panel's tabs.
+  embedded?: boolean;
 }
+
+// Answers given before signing up are kept on this device under this id, then moved to the new
+// account (see App.tsx).
+export const WEE_GUEST_ID = 'guest';
+
+// The work step's three lists, named for each kind of page.
+const CATALOG_LABELS = {
+  jobs: { category: 'كتالوج العمل الرئيسي *', sub: 'الكتالوج الفرعي', item: 'المهنة أو الاختصاص', ex: ['مثال: الطب والرعاية الصحية', 'مثال: الأطباء', 'مثال: طبيب أطفال'], need: 'يرجى اختيار كتالوج عملك.' },
+  shop: { category: 'نوع المتجر *', sub: 'القسم', item: 'التخصص', ex: ['مثال: إلكترونيات وتقنية', 'مثال: الهواتف الذكية', 'مثال: آيفون'], need: 'يرجى اختيار نوع متجرك.' },
+  restaurant: { category: 'نوع المطعم *', sub: 'التصنيف', item: '', ex: ['مثال: مطاعم متخصصة', 'مثال: مشاوي', ''], need: 'يرجى اختيار نوع مطعمك.' },
+} as const;
 
 
 const LocationPicker = lazy(() => import('./ui/LocationPicker'));
@@ -76,8 +94,13 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   isCollapsed: externalIsCollapsed,
   onToggleCollapse: externalOnToggleCollapse,
   onStepChange,
-  onWriteTexts
+  onWriteTexts,
+  pageKind,
+  embedded
 }) => {
+  const isGuest = userId === WEE_GUEST_ID;
+  const catalogSource = categorySourceOf(pageKind);
+  const labels = CATALOG_LABELS[catalogSource];
   // Local collapsed state if not externally controlled
   const [internalCollapsed, setInternalCollapsed] = useState<boolean>(false);
   const isCollapsed = externalIsCollapsed !== undefined ? externalIsCollapsed : internalCollapsed;
@@ -133,14 +156,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     customSpecialty: ''
   });
   const places = useGovernoratePlaces(step === 2 ? addressInfo.governorate : '');
-  const occupationList = useOccupations(step === 4);
+  const occupationList = useCategories(catalogSource, step === 4);
   const catalogEntry = occupationList?.find(c => c.name === catalogInfo.category.trim());
   const subEntry = catalogEntry?.subs.find(s => s.name === catalogInfo.subCategory.trim());
   const jobOptions = subEntry
-    ? subEntry.jobs
+    ? subEntry.items
     : catalogEntry
-      ? catalogEntry.subs.flatMap(s => s.jobs)
-      : (occupationList || []).flatMap(c => c.subs.flatMap(s => s.jobs));
+      ? catalogEntry.subs.flatMap(s => s.items)
+      : (occupationList || []).flatMap(c => c.subs.flatMap(s => s.items));
 
   const [aiAnswers, setAiAnswers] = useState({
     description: '',
@@ -216,13 +239,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       if (!userId) return;
 
       try {
+        if (isGuest) throw new Error('guest');
         const snap = await getDoc(doc(db, 'platform_directory', userId));
         if (snap.exists()) {
           applyData(snap.data());
           return;
         }
       } catch (err) {
-        console.warn("Error loading chat progress from Firebase, falling back to local cache:", err);
+        if (!isGuest) console.warn("Error loading chat progress from Firebase, falling back to local cache:", err);
       }
 
       // Fallback: local cache (offline, or before first cloud sync)
@@ -273,6 +297,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       contactInfo,
       catalogInfo,
       aiAnswers,
+      ...(pageKind ? { pageKind } : {}),
       currentStep: nextStep,
       updatedAt: new Date().toISOString()
     };
@@ -281,6 +306,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     } catch (e) {
       console.warn("Silent local save failed:", e);
     }
+    if (isGuest) return;
     // Live upload to Firebase so progress/step follows the user across devices and sessions
     setDoc(doc(db, 'platform_directory', userId), {
       ...dataToSave,
@@ -402,7 +428,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   // IF EXPANDED: Positioned exactly below top drag handle/headers (64px offset) so handle remains free!
   return (
     <div 
-      className="absolute top-[64px] left-0 right-0 bottom-0 z-30 bg-white flex flex-col overflow-hidden text-right select-none font-sans"
+      className={`absolute ${embedded ? 'top-0' : 'top-[64px]'} left-0 right-0 bottom-0 z-30 bg-white flex flex-col overflow-hidden text-right select-none font-sans`}
       dir="rtl"
     >
       {/* Dynamic Typewriter Active Question Header */}
@@ -778,12 +804,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {step === 4 && (
           <div className="space-y-3.5">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">كتالوج العمل الرئيسي *</label>
+              <label className="text-[10px] font-bold text-neutral-500 block">{labels.category}</label>
               <ComboInput
-                ariaLabel="كتالوج العمل الرئيسي"
+                ariaLabel={labels.category}
                 value={catalogInfo.category}
                 options={(occupationList || []).map(c => c.name)}
-                placeholder="مثال: الطب والرعاية الصحية"
+                placeholder={labels.ex[0]}
                 onChange={category => {
                   const next = occupationList?.find(c => c.name === category.trim());
                   setCatalogInfo(p => {
@@ -796,27 +822,30 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">الكتالوج الفرعي</label>
+              <label className="text-[10px] font-bold text-neutral-500 block">{labels.sub}</label>
               <ComboInput
-                ariaLabel="الكتالوج الفرعي"
+                ariaLabel={labels.sub}
                 value={catalogInfo.subCategory}
                 options={(catalogEntry?.subs || []).map(s => s.name)}
-                placeholder="مثال: الأطباء"
+                placeholder={labels.ex[1]}
                 onChange={subCategory => setCatalogInfo(p => ({ ...p, subCategory }))}
               />
+              {!labels.item && <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>}
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">المهنة أو الاختصاص</label>
-              <ComboInput
-                ariaLabel="المهنة أو الاختصاص"
-                value={catalogInfo.specialty}
-                options={jobOptions}
-                placeholder="مثال: طبيب أطفال"
-                onChange={specialty => setCatalogInfo(p => ({ ...p, specialty }))}
-              />
-              <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
-            </div>
+            {labels.item && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-neutral-500 block">{labels.item}</label>
+                <ComboInput
+                  ariaLabel={labels.item}
+                  value={catalogInfo.specialty}
+                  options={jobOptions}
+                  placeholder={labels.ex[2]}
+                  onChange={specialty => setCatalogInfo(p => ({ ...p, specialty }))}
+                />
+                <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
+              </div>
+            )}
 
             <div className="flex gap-2 pt-1">
               <button
@@ -830,7 +859,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 type="button"
                 onClick={() => {
                   if (!catalogInfo.category.trim()) {
-                    alert('يرجى اختيار كتالوج عملك.');
+                    alert(labels.need);
                     return;
                   }
                   goToNextStep();
@@ -1253,6 +1282,15 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <p className="text-[11px] text-neutral-500 leading-relaxed font-semibold">
               تم جمع وحفظ كامل معلوماتك ومواصفات موقعك السحابي.
             </p>
+            {isGuest && onCompleteChat && (
+              <button
+                type="button"
+                onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers })}
+                className="w-full py-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+              >
+                اعمل حسابك لتنحفظ صفحتك
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setStep(1)}
@@ -1265,8 +1303,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
       </div>
 
-      {/* Wee AI writes the texts of the page from the answers above */}
-      <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0 space-y-2">
+      {/* Wee AI writes the texts of the page from the answers above (after signing up) */}
+      {!isGuest && <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0 space-y-2">
         {writeNote && (
           <p role="status" className={`text-[11px] font-semibold leading-relaxed ${writeNote.ok ? 'text-green-700' : 'text-rose-600'}`}>
             {writeNote.message}
@@ -1298,7 +1336,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           <span>{isWriting ? 'Wee AI عم يكتب نصوصك…' : 'اكتب نصوص صفحتي'}</span>
         </button>
         {step < 13 && <p className="text-[10px] text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيكتب Wee AI نصوص صفحتك.</p>}
-      </div>
+      </div>}
 
     </div>
   );

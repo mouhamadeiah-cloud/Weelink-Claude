@@ -129,7 +129,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               </span>
               <h1 className="text-3xl sm:text-5xl font-bold leading-tight" style={{ fontFamily: HEAD_FONT }}>شو بدك تعمل؟</h1>
               <p className="text-sm sm:text-base opacity-90 max-w-xl leading-relaxed">
-                {signedIn ? 'اختر نوع صفحتك وجاوب على كم سؤال، وWee AI بيبنيها إلك. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع صفحتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
+                {signedIn ? 'اختر نوع صفحتك وجاوب على كم سؤال، وبعدين بتصممها بإيدك أو بيبنيها إلك Wee AI. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع صفحتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
               </p>
               {!signedIn && (
                 <ol className="flex flex-wrap gap-2">

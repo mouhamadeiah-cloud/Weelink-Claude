@@ -527,6 +527,20 @@ export interface BuildInput {
 }
 export type BuildResult = { ok: false; message: string } | { ok: true; pages: Page[]; elements: CanvasElement[]; pageId: string; firstSlideId: string; sections: number };
 
+/** The page Wee AI would build (a store's home page, else the open page) emptied to one white slide. */
+export const emptyMainPage = (kind: BuildKind, pages: Page[], elements: CanvasElement[], activePageId: string) => {
+  const home = HOME_PAGE[kind];
+  const page = pages.find((p) => p.id === (home && pages.some((x) => x.id === home) ? home : activePageId)) || pages[0];
+  const old = new Set(page.slides.map((sl) => sl.id));
+  const slide: Slide = { id: `${page.id}-blank-${Date.now().toString(36)}`, name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' };
+  return {
+    pages: pages.map((p) => (p.id === page.id ? { ...p, slides: [slide] } : p)),
+    elements: elements.filter((el) => !old.has(el.slideId)),
+    pageId: page.id,
+    slideId: slide.id,
+  };
+};
+
 /** The page built from a checked plan: the target page's slides replaced, the rest of the site recoloured for a store. */
 export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q: string) => Promise<string | null> = photoFinder()): Promise<BuildResult> => {
   const { kind, answers, pages } = input;

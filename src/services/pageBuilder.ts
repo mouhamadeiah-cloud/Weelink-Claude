@@ -96,6 +96,25 @@ export const pageAssets = (a: WeeAnswers) => ({
 
 export type PlanResult = { ok: true; plan: Plan } | { ok: false; message: string };
 
+// What went wrong, in words the owner can act on, with the server's code for whoever fixes it.
+const failureMessage = (status: number, data: { reason?: string; detail?: string }) => {
+  const reason = data.reason || (status === 504 ? 'timeout' : `http_${status}`);
+  const detail = data.detail ? ` ${data.detail}` : '';
+  const words: Record<string, string> = {
+    timeout: 'Wee AI أخد وقت أطول من المسموح وانقطع الطلب.',
+    bad_json: 'Wee AI رد بجواب ناقص أو مكسور.',
+    empty: 'Wee AI ما رد بشي.',
+    network: 'الخادم ما قدر يوصل لـ Wee AI.',
+    gemini_400: 'Wee AI رفض الطلب.',
+    gemini_403: 'مفتاح Wee AI على الخادم مرفوض.',
+    gemini_404: 'نموذج Wee AI المطلوب غير موجود.',
+    gemini_429: 'خلص رصيد Wee AI المسموح هلق.',
+    check: 'جواب Wee AI ما مر من الفحص.',
+  };
+  const lead = words[reason] || (reason.startsWith('gemini_5') ? 'خدمة Wee AI واقعة هلق.' : 'ما قدر Wee AI يبني الصفحة هالمرة.');
+  return `${lead} جرّب مرة ثانية بعد شوي. (السبب للدعم: ${reason}${detail})`;
+};
+
 export const requestPagePlan = async (kind: BuildKind, profile: Record<string, string>, assets: ReturnType<typeof pageAssets>): Promise<PlanResult> => {
   const user = auth.currentUser;
   if (!user) return { ok: false, message: 'سجّل الدخول أولاً حتى يبني Wee AI صفحتك.' };
@@ -110,7 +129,7 @@ export const requestPagePlan = async (kind: BuildKind, profile: Record<string, s
     if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
     if (data.error === 'no_profile') return { ok: false, message: 'اكتب وصف عملك أو اختر تصنيفه بالأسئلة أولاً.' };
     if (res.status === 401) return { ok: false, message: 'انتهت جلسة الدخول. سجّل الدخول من جديد وجرّب مرة ثانية.' };
-    return { ok: false, message: 'ما قدر Wee AI يبني الصفحة هالمرة. جرّب بعد شوي.' };
+    return { ok: false, message: failureMessage(res.status, data) };
   } catch {
     return { ok: false, message: 'ما في اتصال بالإنترنت أو الخادم ما رد. جرّب بعد شوي.' };
   }

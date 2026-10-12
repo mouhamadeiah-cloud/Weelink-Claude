@@ -169,7 +169,11 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
   const owners = ownersNumbers(profile);
   const motion = /حرك/.test(profile['الحركة'] || '') && !/هادئ/.test(profile['الحركة'] || '');
   const hasServices = !!profile['الخدمات'];
-  const pool = SECTIONS[kind].filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true));
+  const description = profile['الوصف'] || '';
+  // «من نحن» tells the owner's own description (Eyad, 12 Oct), so it is on every page that has one.
+  const pool = SECTIONS[kind]
+    .filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true))
+    .map((s) => (s.id === 'about' && description ? { ...s, required: true } : s));
   const answered: any[] = Array.isArray(raw?.sections) ? raw.sections : [];
 
   // The AI's order, each section once; then any required one it left out.
@@ -200,6 +204,9 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
     }
     // A section the AI left out still opens with its name.
     if (!given && spec.slots.title) slots.title = section.name;
+    // «من نحن» without its text says the owner's description as they wrote it.
+    const story = spec.slots.text ? 'text' : spec.slots.sub ? 'sub' : null;
+    if (section.id === 'about' && story && description && !slots[story]) slots[story] = cleanText(description, spec.slots[story].max || 240);
     const icons: Record<string, string> = {};
     for (const [key, value] of pairs(given?.icons, 'value')) {
       if (specOf(spec, key)?.kind === 'icon' && ICONS.has(value.trim())) icons[key] = value.trim();
@@ -329,13 +336,43 @@ const RESPONSE_SCHEMA = {
   required: ['palette', 'fonts', 'sections'],
 };
 
-const askGemini = async (ai: GoogleGenAI, prompt: string) => {
-  const result = await ai.models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: { systemInstruction: SYSTEM, temperature: 0.9, responseMimeType: 'application/json', responseJsonSchema: RESPONSE_SCHEMA },
-  });
-  return JSON.parse(result.text || '{}');
+// The function's time on Vercel (vercel.json maxDuration 60s): Gemini gets most of it, and a second
+// try only when the first failed fast enough to leave room for one.
+const BUDGET_MS = 52_000;
+
+// Why a build failed, as the client shows it: a short code, never a key or the prompt.
+class BuildFailure extends Error {
+  constructor(public reason: string, public detail = '') {
+    super(reason);
+  }
+}
+
+const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number) => {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), ms);
+  let text: string;
+  try {
+    const result = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: { systemInstruction: SYSTEM, temperature: 0.9, responseMimeType: 'application/json', responseJsonSchema: RESPONSE_SCHEMA, abortSignal: abort.signal },
+    });
+    text = result.text || '';
+    if (!text) throw new BuildFailure('empty', String(result.candidates?.[0]?.finishReason || result.promptFeedback?.blockReason || ''));
+  } catch (err: any) {
+    if (err instanceof BuildFailure) throw err;
+    if (abort.signal.aborted) throw new BuildFailure('timeout');
+    const status = Number(err?.status) || 0;
+    // Gemini's own message (quota, model or schema problems) says what to fix; it never holds the key.
+    throw new BuildFailure(status ? `gemini_${status}` : 'network', String(err?.message || '').slice(0, 300));
+  } finally {
+    clearTimeout(timer);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new BuildFailure('bad_json', text.slice(-120));
+  }
 };
 
 export const buildPrompt = (kind: Kind, profile: Record<string, string>, assets: Assets) =>
@@ -373,18 +410,24 @@ export default {
     if (!profile['الوصف'] && !profile['التصنيف'] && !profile['الاختصاص']) return json({ error: 'no_profile' }, 400);
 
     const prompt = buildPrompt(kind, profile, assets);
+    const started = Date.now();
     try {
       const ai = new GoogleGenAI({ apiKey });
       let raw: any;
       try {
-        raw = await askGemini(ai, prompt);
-      } catch {
-        raw = await askGemini(ai, prompt); // one more try after a broken answer
+        raw = await askGemini(ai, prompt, BUDGET_MS);
+      } catch (err) {
+        // One more try after a broken answer, when there is time left for it.
+        const left = BUDGET_MS - (Date.now() - started);
+        if (!(err instanceof BuildFailure) || !['bad_json', 'empty', 'network', 'gemini_500', 'gemini_503'].includes(err.reason) || left < 20_000) throw err;
+        raw = await askGemini(ai, prompt, left);
       }
+      console.log(`build-page: ${kind} planned in ${Date.now() - started} ms`);
       return json({ plan: checkPlan(raw, kind, profile, assets) });
     } catch (err) {
-      console.error('build-page failed:', err);
-      return json({ error: 'ai_failed' }, 502);
+      const failure = err instanceof BuildFailure ? err : new BuildFailure('check', String((err as Error)?.message || '').slice(0, 200));
+      console.error(`build-page failed after ${Date.now() - started} ms:`, failure.reason, failure.detail);
+      return json({ error: 'ai_failed', reason: failure.reason, detail: failure.detail }, 502);
     }
   },
 };

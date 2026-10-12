@@ -117,6 +117,9 @@ export interface RightDrawerProps {
   onStepChange?: (stepNum: number) => void;
   // Wee AI writing the page's texts from the owner's answers.
   onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
+  // «ابن صفحتي»: Wee AI building the page from the answers, and bringing the old page back.
+  onBuildPage?: (answers: any) => Promise<{ ok: boolean; message: string }>;
+  onRestorePage?: () => { ok: boolean; message: string };
   isWeeAiChatCollapsed?: boolean;
   onToggleWeeAiChat?: () => void;
   // Docked beside the workspace on a wide screen (its width in px): it then stays open while the

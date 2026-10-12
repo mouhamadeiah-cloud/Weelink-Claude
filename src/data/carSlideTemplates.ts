@@ -6,7 +6,7 @@
 import { CAR_PAGE_IDS, CAR_PHOTOS, CAR_HEADING_FONT, CAR_BODY_FONT, carPhoto } from './carShowroomTemplate';
 import { groupFrame, INVISIBLE_GROUP_STYLES } from '../utils/templateGroups';
 
-const C = {
+export const CAR_SLIDE_COLORS = {
   ink: '#121316',
   body: '#4A4D55',
   muted: '#8A8D96',
@@ -14,6 +14,7 @@ const C = {
   light: '#F4F4F5',
   line: 'rgba(18,19,22,0.08)',
 };
+const C = CAR_SLIDE_COLORS;
 const WHATSAPP_NUMBER = '963991234567';
 
 type Box = { x: number; y: number; width: number; height: number };

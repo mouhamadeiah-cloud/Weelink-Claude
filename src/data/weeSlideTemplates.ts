@@ -10,7 +10,7 @@ import { groupTemplateCards } from '../utils/templateGroups';
 type Box = { x: number; y: number; width: number; height: number };
 type Styles = Record<string, unknown>;
 
-interface Look {
+export interface Look {
   bg: string;
   card: string;
   line: string;
@@ -25,6 +25,9 @@ interface Look {
 const KITCHEN: Look = { bg: '#FDF8F6', card: '#FFFFFF', line: '#EDD5BE', ink: '#44281D', muted: '#7A5D50', accent: '#9A3412', soft: '#F6E6DC', head: 'El Messiri', body: 'Tajawal' };
 const LAW: Look = { bg: '#090D16', card: '#131B2E', line: '#1F2D4D', ink: '#E2E8F0', muted: '#94A3B8', accent: '#06B6D4', soft: '#0F2A3A', head: 'Amiri', body: 'IBM Plex Sans Arabic' };
 const PAINTER: Look = { bg: '#F0FDFA', card: '#FFFFFF', line: '#99F6E4', ink: '#134E4A', muted: '#4B7A76', accent: '#0D9488', soft: '#DDF4EF', head: 'Alexandria', body: 'Almarai' };
+
+// The three looks the designs come in, for recolouring a design to the owner's palette.
+export const WEE_LOOKS = { kitchen: KITCHEN, law: LAW, painter: PAINTER };
 
 const WHATSAPP_GREEN = '#1F9D55';
 const GOLD = '#D4AF37';
@@ -75,8 +78,8 @@ const line = (box: Box, kind: string, color: string) => {
 
 const icon = (box: Box, name: string, color: string, styles: Styles = {}) => el('icon', 'أيقونة', box, `iconify:${name}`, { color, ...styles });
 
-const caption = (L: Look, box: Box, value: string, styles: Styles = {}) =>
-  text(L, box, value, 15, { color: '#FFFFFF', fontWeight: 'bold', textShadowIntensity: 12, textShadowColor: 'rgba(0,0,0,0.75)', textShadowPosition: 'bottom', ...styles }, 'caption');
+const caption = (L: Look, box: Box, value: string, aiSlot: string, styles: Styles = {}) =>
+  text(L, box, value, 15, { color: '#FFFFFF', fontWeight: 'bold', textShadowIntensity: 12, textShadowColor: 'rgba(0,0,0,0.75)', textShadowPosition: 'bottom', ...styles }, aiSlot);
 
 // Three cards from the right edge of a 1088-wide column starting at x 96.
 const thirds = [840, 472, 104];
@@ -153,7 +156,7 @@ const HERO: (() => WeeSlide)[] = [
       ...['معاينة مجانية', 'ألوان مضمونة', 'تنظيف بعد الشغل'].map((chip, i) =>
         on(el('badge', 'نقطة قصيرة', { x: 1184 - 132 - i * 142, y: 396, width: 132, height: 34 }, chip, {
           backgroundColor: P_.card, color: P_.ink, borderColor: P_.line, borderWidth: 1, borderRadius: 9999, fontSize: 13, fontWeight: 'bold', fontFamily: P_.body,
-        }, slot('chips')), 238 - i * 109, 612, 102, 32, 0.85)),
+        }, slot(`chips.${i}`)), 238 - i * 109, 612, 102, 32, 0.85)),
       on(button(P_, { x: 994, y: 452, width: 190, height: 54 }, 'اطلب معاينة'), 186, 662, 154, 48),
       on(whatsapp(P_, { x: 790, y: 452, width: 190, height: 54 }), 20, 662, 154, 48),
       on(shape('ظل الصورة', { x: 124, y: 104, width: 470, height: 470 }, { backgroundColor: 'rgba(13,148,136,0.16)', borderRadius: 28 }), 34, 44, 306, 250),
@@ -206,8 +209,8 @@ const ABOUT: (() => WeeSlide)[] = [
       on(text(K_, { x: 576, y: 248, width: 608, height: 128 }, 'بلّشت أم سليم تطبخ لجيرانها من سنين، وصار المطبخ اليوم يطبخ كل يوم لعائلات وموظفين بالحي. منستعمل خضرة السوق الطازة وزيت الزيتون البلدي، ومنطبخ بكميات صغيرة لحتى يضل الطعم متل البيت.', 17, {}, 'text'), 20, 470, 320, 210),
       on(el('divider', 'خط فاصل', { x: 576, y: 400, width: 608, height: 2 }, '', { borderColor: K_.line, borderWidth: 1 }), 20, 692, 320, 2),
       ...[['12', 'سنة طبخ'], ['40', 'وجبة يومياً'], ['3', 'أحياء منوصّلها']].flatMap(([n, label], i) => [
-        on(heading(K_, { x: 1064 - i * 150, y: 420, width: 120, height: 52 }, n, 42, { color: K_.accent, fontFamily: K_.head, animation: 'slide-up', animationTrigger: 'once' }, 'facts'), 240 - i * 110, 708, 100, 50),
-        on(text(K_, { x: 1064 - i * 150, y: 474, width: 120, height: 26 }, label, 14, { color: K_.ink }, 'facts'), 240 - i * 110, 758, 100, 26),
+        on(heading(K_, { x: 1064 - i * 150, y: 420, width: 120, height: 52 }, n, 42, { color: K_.accent, fontFamily: K_.head, animation: 'slide-up', animationTrigger: 'once' }, `facts.${i}.number`), 240 - i * 110, 708, 100, 50),
+        on(text(K_, { x: 1064 - i * 150, y: 474, width: 120, height: 26 }, label, 14, { color: K_.ink }, `facts.${i}.label`), 240 - i * 110, 758, 100, 26),
       ]),
     ],
   }),
@@ -261,8 +264,8 @@ const ABOUT: (() => WeeSlide)[] = [
             }), 20, y, 320, 156),
             on(shape('خلفية الأيقونة', { x: x + 258, y: 258, width: 48, height: 48 }, { backgroundColor: P_.soft, borderRadius: 14 }), 272, y + 20, 48, 48),
             on(icon({ x: x + 270, y: 270, width: 24, height: 24 }, ic, P_.accent, { animation: 'float', animationTrigger: 'loop' }), 284, y + 32, 24, 24),
-            on(heading(P_, { x: x + 30, y: 324, width: 276, height: 34 }, title, 22, {}, 'points'), 40, y + 26, 220, 36),
-            on(text(P_, { x: x + 30, y: 362, width: 276, height: 64 }, body, 15, {}, 'points'), 40, y + 76, 280, 66),
+            on(heading(P_, { x: x + 30, y: 324, width: 276, height: 34 }, title, 22, {}, `points.${i}.title`), 40, y + 26, 220, 36),
+            on(text(P_, { x: x + 30, y: 362, width: 276, height: 64 }, body, 15, {}, `points.${i}.text`), 40, y + 76, 280, 66),
           ];
         }),
       ],
@@ -297,10 +300,10 @@ const PRICES: (() => WeeSlide)[] = [
         const y = 180 + (i % 4) * 86;
         const my = 146 + i * 92; // the row's top on phones
         return [
-          on(heading(K_, { x: x + 332, y, width: 180, height: 30 }, name, 19, { fontFamily: K_.body }, 'items'), 160, my, 180, 30),
+          on(heading(K_, { x: x + 332, y, width: 180, height: 30 }, name, 19, { fontFamily: K_.body }, `items.${i}.name`), 160, my, 180, 30),
           offPhone(line({ x: x + 126, y: y + 12, width: 200, height: 8 }, 'line-dotted', 'rgba(68,40,29,0.28)')),
-          on(text(K_, { x, y, width: 120, height: 30 }, `${price} ل.س`, 17, { color: K_.accent, fontWeight: 'bold', textAlign: 'left' }, 'items'), 20, my, 136, 30),
-          on(text(K_, { x: x + 212, y: y + 32, width: 300, height: 24 }, desc, 14, {}, 'items'), 40, my + 34, 300, 26),
+          on(text(K_, { x, y, width: 120, height: 30 }, `${price} ل.س`, 17, { color: K_.accent, fontWeight: 'bold', textAlign: 'left' }, `items.${i}.price`), 20, my, 136, 30),
+          on(text(K_, { x: x + 212, y: y + 32, width: 300, height: 24 }, desc, 14, {}, `items.${i}.desc`), 40, my + 34, 300, 26),
           on(el('divider', 'خط فاصل', { x, y: y + 66, width: 512, height: 2 }, '', { borderColor: K_.line, borderWidth: 1 }), 20, my + 72, 320, 2),
         ];
       }),
@@ -336,12 +339,12 @@ const PRICES: (() => WeeSlide)[] = [
           return [
             on(shape('بطاقة باقة', { x, y: 170, width: 336, height: 420 }, { backgroundColor: L_.card, backgroundOpacity: 0.55, borderRadius: 24, ...card }), 20, my, 320, cardHeight(features)),
             ...(hot ? [on(el('badge', 'شارة', { x: x + 196, y: 196, width: 110, height: 28 }, 'الأكثر طلباً', { backgroundColor: L_.accent, color: '#04121A', borderRadius: 9999, fontSize: 12, fontWeight: 'bold', fontFamily: L_.body }), 40, my + 26, 110, 28)] : []),
-            on(heading(L_, { x: x + 30, y: 232, width: 276, height: 36 }, name, 24, { fontFamily: L_.body }, 'packages'), 40, my + 22, 280, 36),
-            on(heading(L_, { x: x + 30, y: 274, width: 276, height: 50 }, price, 38, { color: L_.accent, fontFamily: L_.body }, 'packages'), 40, my + 62, 280, 50),
-            on(text(L_, { x: x + 30, y: 326, width: 276, height: 24 }, `ل.س ${unit}`, 14, {}, 'packages'), 40, my + 112, 280, 24),
+            on(heading(L_, { x: x + 30, y: 232, width: 276, height: 36 }, name, 24, { fontFamily: L_.body }, `packages.${i}.name`), 40, my + 22, 280, 36),
+            on(heading(L_, { x: x + 30, y: 274, width: 276, height: 50 }, price, 38, { color: L_.accent, fontFamily: L_.body }, `packages.${i}.price`), 40, my + 62, 280, 50),
+            on(text(L_, { x: x + 30, y: 326, width: 276, height: 24 }, `ل.س ${unit}`, 14, {}, `packages.${i}.unit`), 40, my + 112, 280, 24),
             ...features.flatMap((f, j) => [
               on(icon({ x: x + 288, y: 374 + j * 36, width: 18, height: 18 }, 'mdi:check-circle-outline', L_.accent), 302, my + 152 + j * 34, 18, 18),
-              on(text(L_, { x: x + 30, y: 368 + j * 36, width: 252, height: 30 }, f, 15, { color: L_.ink }, 'packages'), 40, my + 146 + j * 34, 256, 30),
+              on(text(L_, { x: x + 30, y: 368 + j * 36, width: 252, height: 30 }, f, 15, { color: L_.ink }, `packages.${i}.features.${j}`), 40, my + 146 + j * 34, 256, 30),
             ]),
           ];
         }),
@@ -373,11 +376,11 @@ const PRICES: (() => WeeSlide)[] = [
             on(shape('بطاقة مجموعة', { x, y: 190, width: 532, height: 292 }, { backgroundColor: P_.card, borderColor: P_.line, borderWidth: 1, borderRadius: 20, shadow: 'md' }), 20, my, 320, 292),
             on(shape('رأس المجموعة', { x, y: 190, width: 532, height: 56 }, { backgroundColor: P_.accent, borderRadius: 20 }), 20, my, 320, 56),
             on(shape('رأس المجموعة', { x, y: 226, width: 532, height: 20 }, { backgroundColor: P_.accent }), 20, my + 36, 320, 20),
-            on(heading(P_, { x: x + 26, y: 202, width: 480, height: 32 }, title, 20, { color: '#FFFFFF', fontFamily: P_.body }, 'groups'), 40, my + 12, 280, 32),
+            on(heading(P_, { x: x + 26, y: 202, width: 480, height: 32 }, title, 20, { color: '#FFFFFF', fontFamily: P_.body }, `groups.${g}.name`), 40, my + 12, 280, 32),
             ...rows.flatMap(([name, price], r) => [
               ...(r ? [on(el('divider', 'خط فاصل', { x, y: 246 + r * 58, width: 532, height: 2 }, '', { borderColor: P_.line, borderWidth: 1 }), 20, my + 56 + r * 58, 320, 2)] : []),
-              on(text(P_, { x: x + 226, y: 260 + r * 58, width: 280, height: 30 }, name, 16, { color: P_.ink }, 'groups'), 160, my + 70 + r * 58, 160, 30),
-              on(text(P_, { x: x + 26, y: 260 + r * 58, width: 180, height: 30 }, `${price} ل.س`, 16, { color: P_.ink, fontWeight: 'bold', textAlign: 'left' }, 'groups'), 36, my + 70 + r * 58, 124, 30),
+              on(text(P_, { x: x + 226, y: 260 + r * 58, width: 280, height: 30 }, name, 16, { color: P_.ink }, `groups.${g}.rows.${r}.name`), 160, my + 70 + r * 58, 160, 30),
+              on(text(P_, { x: x + 26, y: 260 + r * 58, width: 180, height: 30 }, `${price} ل.س`, 16, { color: P_.ink, fontWeight: 'bold', textAlign: 'left' }, `groups.${g}.rows.${r}.price`), 36, my + 70 + r * 58, 124, 30),
             ]),
           ];
         }),
@@ -406,9 +409,9 @@ const GALLERY: (() => WeeSlide)[] = [
       backgroundColor: K_.bg,
       elements: [
         on(heading(K_, { x: 96, y: 70, width: 1088, height: 60 }, 'من مطبخنا', 42, {}, 'title'), 20, 40, 320, 60),
-        ...items.flatMap(([img, cap, box, m]) => [
-          on(image(box, photo(img), { borderRadius: 18, animation: 'scale-up', animationTrigger: 'hover' }, {}, 'photos'), m.x, m.y, m.width, m.height),
-          on(caption(K_, { x: box.x + 16, y: box.y + box.height - 42, width: box.width - 32, height: 28 }, cap), m.x + 10, m.y + m.height - 38, m.width - 20, 28, 0.9),
+        ...items.flatMap(([img, cap, box, m], i) => [
+          on(image(box, photo(img), { borderRadius: 18, animation: 'scale-up', animationTrigger: 'hover' }, {}, `photos.${i}`), m.x, m.y, m.width, m.height),
+          on(caption(K_, { x: box.x + 16, y: box.y + box.height - 42, width: box.width - 32, height: 28 }, cap, `caption.${i}`), m.x + 10, m.y + m.height - 38, m.width - 20, 28, 0.9),
         ]),
       ],
     };
@@ -432,8 +435,8 @@ const GALLERY: (() => WeeSlide)[] = [
           const mx = i === 4 ? 103 : i % 2 ? 20 : 186;
           const my = 130 + Math.floor(i / 2) * 240; // where the arch's curve starts
           return [
-            on(image({ x, y: 160, width: 204, height: 300 }, photo(img), { imageFilter: 'technicolor' }, { clipPath: 'clip-shape-arch-classic' }, 'photos'), mx, my - 66, 154, 260),
-            on(text(P_, { x, y: 470, width: 204, height: 28 }, cap, 15, { color: P_.ink, fontWeight: 'bold', textAlign: 'center' }, 'caption'), mx, my + 202, 154, 28),
+            on(image({ x, y: 160, width: 204, height: 300 }, photo(img), { imageFilter: 'technicolor' }, { clipPath: 'clip-shape-arch-classic' }, `photos.${i}`), mx, my - 66, 154, 260),
+            on(text(P_, { x, y: 470, width: 204, height: 28 }, cap, 15, { color: P_.ink, fontWeight: 'bold', textAlign: 'center' }, `caption.${i}`), mx, my + 202, 154, 28),
           ];
         }),
       ],
@@ -458,8 +461,8 @@ const GALLERY: (() => WeeSlide)[] = [
       elements: [
         on(heading(L_, { x: 96, y: 70, width: 1088, height: 60 }, 'من المكتب', 42, {}, 'title'), 20, 40, 320, 60),
         ...items.flatMap(([img, cap, box], i) => [
-          on(image(box, photo(img), { borderRadius: 16, borderWidth: 8, borderStyle: 'solid', borderColor: L_.line, imageFilter: 'grayscale', animation: 'scale-up', animationTrigger: 'hover' }, {}, 'photos'), 20, 120 + i * 232, 320, 180),
-          on(text(L_, { x: box.x, y: box.y + box.height + 10, width: box.width, height: 26 }, cap, 15, { color: L_.ink, fontWeight: 'bold' }, 'caption'), 20, 306 + i * 232, 320, 26),
+          on(image(box, photo(img), { borderRadius: 16, borderWidth: 8, borderStyle: 'solid', borderColor: L_.line, imageFilter: 'grayscale', animation: 'scale-up', animationTrigger: 'hover' }, {}, `photos.${i}`), 20, 120 + i * 232, 320, 180),
+          on(text(L_, { x: box.x, y: box.y + box.height + 10, width: box.width, height: 26 }, cap, 15, { color: L_.ink, fontWeight: 'bold' }, `caption.${i}`), 20, 306 + i * 232, 320, 26),
         ]),
       ],
     };
@@ -498,8 +501,8 @@ const CONTACT: (() => WeeSlide)[] = [
           return [
             on(shape('خلفية الأيقونة', { x: 1100, y, width: 44, height: 44 }, { backgroundColor: K_.soft, borderRadius: 12 }), 280, my, 44, 44),
             on(icon({ x: 1110, y: y + 10, width: 24, height: 24 }, ic, K_.accent), 290, my + 10, 24, 24),
-            on(text(K_, { x: 704, y: y - 4, width: 384, height: 20 }, label, 13, {}, key), 36, my - 4, 236, 20),
-            on(text(K_, { x: 704, y: y + 18, width: 384, height: 28 }, value, 17, { color: K_.ink, fontWeight: 'bold' }, key), 36, my + 18, 236, i === 2 ? 56 : 30),
+            on(text(K_, { x: 704, y: y - 4, width: 384, height: 20 }, label, 13, {}, `${key}.label`), 36, my - 4, 236, 20),
+            on(text(K_, { x: 704, y: y + 18, width: 384, height: 28 }, value, 17, { color: K_.ink, fontWeight: 'bold' }, `${key}.value`), 36, my + 18, 236, i === 2 ? 56 : 30),
           ];
         }),
       ],
@@ -518,7 +521,7 @@ const CONTACT: (() => WeeSlide)[] = [
       on(text(P_, { x: 240, y: 162, width: 800, height: 32 }, 'منجي لعندك ومنعطيك السعر بنفس اليوم.', 19, { color: 'rgba(255,255,255,0.92)', textAlign: 'center' }, 'sub'), 20, 114, 320, 76),
       on(button(P_, { x: 648, y: 222, width: 170, height: 54 }, 'اتصل', { backgroundColor: '#FFFFFF', color: P_.accent }, 'phone'), 186, 204, 154, 52),
       on(whatsapp(P_, { x: 462, y: 222, width: 170, height: 54 }, { animation: 'pulse', animationTrigger: 'loop' }), 20, 204, 154, 52),
-      on(text(P_, { x: 96, y: 304, width: 1088, height: 28 }, 'حلب، الفرقان، قرب دوار الصخرة  ·  كل يوم ما عدا الجمعة، 8 الصبح لـ 5 المسا', 15, { color: 'rgba(255,255,255,0.9)', textAlign: 'center' }, 'address'), 20, 276, 320, 92),
+      on(text(P_, { x: 96, y: 304, width: 1088, height: 28 }, 'حلب، الفرقان، قرب دوار الصخرة  ·  كل يوم ما عدا الجمعة، 8 الصبح لـ 5 المسا', 15, { color: 'rgba(255,255,255,0.9)', textAlign: 'center' }, 'address.value'), 20, 276, 320, 92),
     ],
   }),
 
@@ -552,7 +555,7 @@ const CONTACT: (() => WeeSlide)[] = [
           ['mdi:clock-outline', 'من الأحد للخميس، 10 الصبح لـ 4 العصر', 'hours'],
         ] as const).flatMap(([ic, value, key], i) => [
           on(icon({ x: 1160, y: 334 + i * 44, width: 24, height: 24 }, ic, L_.accent), 316, 182 + i * 52, 24, 24),
-          on(text(L_, { x: 736, y: 330 + i * 44, width: 412, height: 30 }, value, 16, { color: L_.ink, fontWeight: 'bold' }, key), 20, 176 + i * 52, 288, 36),
+          on(text(L_, { x: 736, y: 330 + i * 44, width: 412, height: 30 }, value, 16, { color: L_.ink, fontWeight: 'bold' }, `${key}.value`), 20, 176 + i * 52, 288, 36),
         ]),
       ],
     };

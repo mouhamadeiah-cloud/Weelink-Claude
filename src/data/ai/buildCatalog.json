@@ -1,0 +1,1776 @@
+{
+ "sections": {
+  "free": [
+   {
+    "id": "intro",
+    "name": "مدخل",
+    "required": true,
+    "templates": [
+     "hero.cover",
+     "hero.split",
+     "hero.band"
+    ]
+   },
+   {
+    "id": "about",
+    "name": "من نحن",
+    "required": true,
+    "templates": [
+     "about.story",
+     "about.quote",
+     "about.points"
+    ]
+   },
+   {
+    "id": "prices",
+    "name": "الأسعار",
+    "required": true,
+    "templates": [
+     "prices.list",
+     "prices.cards",
+     "prices.groups"
+    ]
+   },
+   {
+    "id": "gallery",
+    "name": "المعرض",
+    "required": true,
+    "templates": [
+     "gallery.mosaic",
+     "gallery.strip",
+     "gallery.frames"
+    ]
+   },
+   {
+    "id": "contact",
+    "name": "تواصل",
+    "required": true,
+    "templates": [
+     "contact.card",
+     "contact.band",
+     "contact.form"
+    ]
+   },
+   {
+    "id": "privacy",
+    "name": "الشروط والخصوصية",
+    "required": true,
+    "templates": [
+     "legal.columns",
+     "legal.accordion"
+    ]
+   }
+  ],
+  "restaurant": [
+   {
+    "id": "intro",
+    "name": "مدخل",
+    "required": true,
+    "templates": [
+     "rest.front",
+     "hero.cover",
+     "hero.split",
+     "hero.band"
+    ]
+   },
+   {
+    "id": "ticker",
+    "name": "شريط نص متحرك",
+    "required": false,
+    "templates": [
+     "rest.ticker"
+    ]
+   },
+   {
+    "id": "featured",
+    "name": "أطباق مميزة",
+    "required": true,
+    "templates": [
+     "rest.featured",
+     "rest.featuredStrip",
+     "rest.featuredShake",
+     "rest.menuBig"
+    ]
+   },
+   {
+    "id": "about",
+    "name": "من نحن",
+    "required": false,
+    "templates": [
+     "about.story",
+     "about.quote",
+     "about.points"
+    ]
+   },
+   {
+    "id": "why",
+    "name": "لماذا نحن",
+    "required": false,
+    "templates": [
+     "rest.why"
+    ]
+   },
+   {
+    "id": "gallery",
+    "name": "المعرض",
+    "required": false,
+    "templates": [
+     "gallery.mosaic",
+     "gallery.strip",
+     "gallery.frames"
+    ]
+   },
+   {
+    "id": "order",
+    "name": "اطلب الآن",
+    "required": false,
+    "templates": [
+     "rest.order"
+    ]
+   },
+   {
+    "id": "contact",
+    "name": "تواصل",
+    "required": false,
+    "templates": [
+     "contact.card",
+     "contact.band",
+     "contact.form"
+    ]
+   }
+  ],
+  "shop": [
+   {
+    "id": "intro",
+    "name": "مدخل",
+    "required": true,
+    "templates": [
+     "shop.front",
+     "shop.twoPhotos",
+     "hero.cover",
+     "hero.split",
+     "hero.band"
+    ]
+   },
+   {
+    "id": "ticker",
+    "name": "شريط نص متحرك",
+    "required": false,
+    "templates": [
+     "shop.ticker"
+    ]
+   },
+   {
+    "id": "search",
+    "name": "بحث في المتجر",
+    "required": false,
+    "templates": [
+     "shop.searchSimple",
+     "shop.searchBg"
+    ]
+   },
+   {
+    "id": "featured",
+    "name": "منتجات مميزة",
+    "required": true,
+    "templates": [
+     "shop.zigzag",
+     "shop.small",
+     "shop.featuredStrip",
+     "shop.featuredShake",
+     "shop.moving"
+    ]
+   },
+   {
+    "id": "about",
+    "name": "من نحن",
+    "required": false,
+    "templates": [
+     "about.story",
+     "about.quote",
+     "about.points"
+    ]
+   },
+   {
+    "id": "gallery",
+    "name": "المعرض",
+    "required": false,
+    "templates": [
+     "gallery.mosaic",
+     "gallery.strip",
+     "gallery.frames"
+    ]
+   },
+   {
+    "id": "contact",
+    "name": "تواصل",
+    "required": false,
+    "templates": [
+     "contact.card",
+     "contact.band",
+     "contact.form"
+    ]
+   }
+  ],
+  "cars": [
+   {
+    "id": "intro",
+    "name": "مدخل",
+    "required": true,
+    "templates": [
+     "cars.front",
+     "cars.frontSearch",
+     "hero.cover",
+     "hero.split",
+     "hero.band"
+    ]
+   },
+   {
+    "id": "ticker",
+    "name": "شريط نص متحرك",
+    "required": false,
+    "templates": [
+     "cars.ticker"
+    ]
+   },
+   {
+    "id": "featured",
+    "name": "سيارات مميزة",
+    "required": true,
+    "templates": [
+     "cars.featured",
+     "cars.strip",
+     "cars.shake",
+     "cars.big"
+    ]
+   },
+   {
+    "id": "why",
+    "name": "لماذا نحن",
+    "required": false,
+    "templates": [
+     "cars.why"
+    ]
+   },
+   {
+    "id": "about",
+    "name": "من نحن",
+    "required": false,
+    "templates": [
+     "cars.about",
+     "about.story",
+     "about.quote",
+     "about.points"
+    ]
+   },
+   {
+    "id": "numbers",
+    "name": "أرقامنا",
+    "required": false,
+    "templates": [
+     "cars.numbers"
+    ]
+   },
+   {
+    "id": "request",
+    "name": "اطلب سيارتك",
+    "required": false,
+    "templates": [
+     "cars.request"
+    ]
+   },
+   {
+    "id": "contact",
+    "name": "تواصل",
+    "required": false,
+    "templates": [
+     "contact.card",
+     "contact.band",
+     "contact.form"
+    ]
+   }
+  ]
+ },
+ "templates": {
+  "hero.cover": {
+   "name": "مدخل بصورة كاملة",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 30
+    },
+    "title": {
+     "kind": "text",
+     "max": 28
+    },
+    "sub": {
+     "kind": "text",
+     "max": 109
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 18
+    },
+    "background": {
+     "kind": "image"
+    }
+   }
+  },
+  "hero.split": {
+   "name": "مدخل نص وصورة",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 30
+    },
+    "title": {
+     "kind": "text",
+     "max": 38
+    },
+    "sub": {
+     "kind": "text",
+     "max": 95
+    },
+    "chips.0": {
+     "kind": "text",
+     "max": 30
+    },
+    "chips.1": {
+     "kind": "text",
+     "max": 30
+    },
+    "chips.2": {
+     "kind": "text",
+     "max": 30
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 18
+    },
+    "image": {
+     "kind": "image"
+    },
+    "background": {
+     "kind": "image"
+    }
+   }
+  },
+  "hero.band": {
+   "name": "مدخل شريط صورة وبطاقة",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 30
+    },
+    "title": {
+     "kind": "text",
+     "max": 48
+    },
+    "sub": {
+     "kind": "text",
+     "max": 91
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 18
+    },
+    "background": {
+     "kind": "image"
+    }
+   }
+  },
+  "about.story": {
+   "name": "من نحن قصة وصورة",
+   "slots": {
+    "image": {
+     "kind": "image"
+    },
+    "eyebrow": {
+     "kind": "text",
+     "max": 30
+    },
+    "title": {
+     "kind": "text",
+     "max": 29
+    },
+    "text": {
+     "kind": "text",
+     "max": 255
+    },
+    "facts.0.number": {
+     "kind": "text",
+     "max": 6
+    },
+    "facts.0.label": {
+     "kind": "text",
+     "max": 40
+    },
+    "facts.1.number": {
+     "kind": "text",
+     "max": 6
+    },
+    "facts.1.label": {
+     "kind": "text",
+     "max": 40
+    },
+    "facts.2.number": {
+     "kind": "text",
+     "max": 6
+    },
+    "facts.2.label": {
+     "kind": "text",
+     "max": 40
+    }
+   }
+  },
+  "about.quote": {
+   "name": "من نحن جملة صاحب العمل",
+   "slots": {
+    "quote": {
+     "kind": "text",
+     "max": 60
+    },
+    "text": {
+     "kind": "text",
+     "max": 168
+    },
+    "avatar": {
+     "kind": "image"
+    },
+    "owner": {
+     "kind": "text",
+     "max": 16
+    },
+    "role": {
+     "kind": "text",
+     "max": 40
+    }
+   }
+  },
+  "about.points": {
+   "name": "من نحن ثلاث نقاط",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 30
+    },
+    "title": {
+     "kind": "text",
+     "max": 32
+    },
+    "text": {
+     "kind": "text",
+     "max": 67
+    },
+    "points.0.title": {
+     "kind": "text",
+     "max": 17
+    },
+    "points.0.text": {
+     "kind": "text",
+     "max": 53
+    },
+    "points.1.title": {
+     "kind": "text",
+     "max": 16
+    },
+    "points.1.text": {
+     "kind": "text",
+     "max": 48
+    },
+    "points.2.title": {
+     "kind": "text",
+     "max": 16
+    },
+    "points.2.text": {
+     "kind": "text",
+     "max": 41
+    }
+   }
+  },
+  "prices.list": {
+   "name": "أسعار قائمة بنقاط",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "items.0.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "items.0.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "items.0.desc": {
+     "kind": "text",
+     "max": 40
+    },
+    "items.1.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "items.1.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "items.1.desc": {
+     "kind": "text",
+     "max": 40
+    },
+    "items.2.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "items.2.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "items.2.desc": {
+     "kind": "text",
+     "max": 40
+    },
+    "items.3.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "items.3.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "items.3.desc": {
+     "kind": "text",
+     "max": 40
+    },
+    "items.4.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "items.4.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "items.4.desc": {
+     "kind": "text",
+     "max": 40
+    },
+    "items.5.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "items.5.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "items.5.desc": {
+     "kind": "text",
+     "max": 40
+    },
+    "items.6.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "items.6.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "items.6.desc": {
+     "kind": "text",
+     "max": 40
+    },
+    "items.7.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "items.7.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "items.7.desc": {
+     "kind": "text",
+     "max": 40
+    },
+    "note": {
+     "kind": "text",
+     "max": 59
+    }
+   }
+  },
+  "prices.cards": {
+   "name": "أسعار ثلاث باقات",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "packages.0.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "packages.0.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "packages.0.unit": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.0.features.0": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.0.features.1": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.0.features.2": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.1.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "packages.1.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "packages.1.unit": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.1.features.0": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.1.features.1": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.1.features.2": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.1.features.3": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.2.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "packages.2.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "packages.2.unit": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.2.features.0": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.2.features.1": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.2.features.2": {
+     "kind": "text",
+     "max": 40
+    },
+    "packages.2.features.3": {
+     "kind": "text",
+     "max": 40
+    }
+   }
+  },
+  "prices.groups": {
+   "name": "أسعار مجموعتان",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "groups.0.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "groups.0.rows.0.name": {
+     "kind": "text",
+     "max": 40
+    },
+    "groups.0.rows.0.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "groups.0.rows.1.name": {
+     "kind": "text",
+     "max": 40
+    },
+    "groups.0.rows.1.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "groups.0.rows.2.name": {
+     "kind": "text",
+     "max": 40
+    },
+    "groups.0.rows.2.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "groups.0.rows.3.name": {
+     "kind": "text",
+     "max": 40
+    },
+    "groups.0.rows.3.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "groups.1.name": {
+     "kind": "text",
+     "max": 16
+    },
+    "groups.1.rows.0.name": {
+     "kind": "text",
+     "max": 40
+    },
+    "groups.1.rows.0.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "groups.1.rows.1.name": {
+     "kind": "text",
+     "max": 40
+    },
+    "groups.1.rows.1.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "groups.1.rows.2.name": {
+     "kind": "text",
+     "max": 40
+    },
+    "groups.1.rows.2.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "groups.1.rows.3.name": {
+     "kind": "text",
+     "max": 40
+    },
+    "groups.1.rows.3.price": {
+     "kind": "text",
+     "max": 14
+    },
+    "note": {
+     "kind": "text",
+     "max": 62
+    }
+   }
+  },
+  "gallery.mosaic": {
+   "name": "معرض فسيفساء",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "photos.0": {
+     "kind": "image"
+    },
+    "caption.0": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.1": {
+     "kind": "image"
+    },
+    "caption.1": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.2": {
+     "kind": "image"
+    },
+    "caption.2": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.3": {
+     "kind": "image"
+    },
+    "caption.3": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.4": {
+     "kind": "image"
+    },
+    "caption.4": {
+     "kind": "text",
+     "max": 40
+    }
+   }
+  },
+  "gallery.strip": {
+   "name": "معرض أقواس",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "photos.0": {
+     "kind": "image"
+    },
+    "caption.0": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.1": {
+     "kind": "image"
+    },
+    "caption.1": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.2": {
+     "kind": "image"
+    },
+    "caption.2": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.3": {
+     "kind": "image"
+    },
+    "caption.3": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.4": {
+     "kind": "image"
+    },
+    "caption.4": {
+     "kind": "text",
+     "max": 40
+    }
+   }
+  },
+  "gallery.frames": {
+   "name": "معرض إطارات",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "photos.0": {
+     "kind": "image"
+    },
+    "caption.0": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.1": {
+     "kind": "image"
+    },
+    "caption.1": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.2": {
+     "kind": "image"
+    },
+    "caption.2": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.3": {
+     "kind": "image"
+    },
+    "caption.3": {
+     "kind": "text",
+     "max": 40
+    },
+    "photos.4": {
+     "kind": "image"
+    },
+    "caption.4": {
+     "kind": "text",
+     "max": 40
+    }
+   }
+  },
+  "contact.card": {
+   "name": "تواصل معلومات وخريطة",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "sub": {
+     "kind": "text",
+     "max": 50
+    }
+   }
+  },
+  "contact.band": {
+   "name": "تواصل شريط ملون",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "sub": {
+     "kind": "text",
+     "max": 50
+    },
+    "phone": {
+     "kind": "button",
+     "max": 18
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 18
+    }
+   }
+  },
+  "contact.form": {
+   "name": "تواصل نموذج رسالة",
+   "slots": {
+    "send": {
+     "kind": "button",
+     "max": 18
+    },
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "sub": {
+     "kind": "text",
+     "max": 45
+    }
+   }
+  },
+  "legal.columns": {
+   "name": "الشروط والخصوصية عمودان",
+   "slots": {}
+  },
+  "legal.accordion": {
+   "name": "الشروط والخصوصية أسئلة",
+   "slots": {}
+  },
+  "rest.front": {
+   "name": "واجهة المطعم",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 35
+    },
+    "sub": {
+     "kind": "text",
+     "max": 95
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    },
+    "background": {
+     "kind": "image"
+    }
+   }
+  },
+  "rest.featured": {
+   "name": "أطباق مميزة",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 21
+    },
+    "sub": {
+     "kind": "text",
+     "max": 40
+    }
+   }
+  },
+  "rest.featuredStrip": {
+   "name": "شريط أطباق مميزة متحرك",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 21
+    }
+   }
+  },
+  "rest.featuredShake": {
+   "name": "أطباق مميزة بحركة اهتزاز",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 21
+    },
+    "sub": {
+     "kind": "text",
+     "max": 40
+    }
+   }
+  },
+  "rest.ticker": {
+   "name": "شريط نص متحرك",
+   "slots": {
+    "ticker": {
+     "kind": "text",
+     "max": 234
+    }
+   }
+  },
+  "rest.menuSections": {
+   "name": "المنيو كاملًا بأقسام",
+   "slots": {}
+  },
+  "rest.menuRows": {
+   "name": "منيو بصفوف",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    }
+   }
+  },
+  "rest.menuBig": {
+   "name": "أطباق بصور كبيرة",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    }
+   }
+  },
+  "rest.menuOne": {
+   "name": "قسم واحد من المنيو",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    }
+   }
+  },
+  "rest.cart": {
+   "name": "سلة الطلب",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    }
+   }
+  },
+  "rest.why": {
+   "name": "لماذا نحن",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 22
+    },
+    "points.0.title": {
+     "kind": "text",
+     "max": 17
+    },
+    "points.0.text": {
+     "kind": "text",
+     "max": 41
+    },
+    "points.1.title": {
+     "kind": "text",
+     "max": 16
+    },
+    "points.1.text": {
+     "kind": "text",
+     "max": 40
+    },
+    "points.2.title": {
+     "kind": "text",
+     "max": 16
+    },
+    "points.2.text": {
+     "kind": "text",
+     "max": 43
+    },
+    "points.3.title": {
+     "kind": "text",
+     "max": 16
+    },
+    "points.3.text": {
+     "kind": "text",
+     "max": 49
+    }
+   }
+  },
+  "rest.order": {
+   "name": "اطلب الآن",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 21
+    },
+    "sub": {
+     "kind": "text",
+     "max": 62
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    },
+    "background": {
+     "kind": "image"
+    }
+   }
+  },
+  "shop.front": {
+   "name": "ابدأ - واجهة المتجر",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 30
+    },
+    "title": {
+     "kind": "text",
+     "max": 32
+    },
+    "sub": {
+     "kind": "text",
+     "max": 130
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 18
+    },
+    "background": {
+     "kind": "image"
+    }
+   }
+  },
+  "shop.twoPhotos": {
+   "name": "ابدأ - صورتان",
+   "slots": {
+    "image": {
+     "kind": "image"
+    },
+    "eyebrow": {
+     "kind": "text",
+     "max": 30
+    },
+    "title": {
+     "kind": "text",
+     "max": 32
+    },
+    "sub": {
+     "kind": "text",
+     "max": 99
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    }
+   }
+  },
+  "shop.zigzag": {
+   "name": "منتجات - زجزاج",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 18
+    },
+    "sub": {
+     "kind": "text",
+     "max": 49
+    }
+   }
+  },
+  "shop.wide": {
+   "name": "منتجات - بطاقة عرضية",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "sub": {
+     "kind": "text",
+     "max": 67
+    }
+   }
+  },
+  "shop.small": {
+   "name": "منتجات - بطاقات صغيرة",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 18
+    }
+   }
+  },
+  "shop.large": {
+   "name": "منتجات - بطاقات كبيرة",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "sub": {
+     "kind": "text",
+     "max": 67
+    }
+   }
+  },
+  "shop.searchSimple": {
+   "name": "ابحث في المتجر - بسيط",
+   "slots": {}
+  },
+  "shop.searchBg": {
+   "name": "ابحث في المتجر - بخلفية",
+   "slots": {
+    "background": {
+     "kind": "image"
+    }
+   }
+  },
+  "shop.featuredStrip": {
+   "name": "شريط منتجات مميزة متحرك",
+   "slots": {}
+  },
+  "shop.moving": {
+   "name": "منتجات بحركة",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 18
+    },
+    "sub": {
+     "kind": "text",
+     "max": 49
+    }
+   }
+  },
+  "shop.featuredShake": {
+   "name": "منتجات مميزة بحركة اهتزاز",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 18
+    },
+    "sub": {
+     "kind": "text",
+     "max": 49
+    }
+   }
+  },
+  "shop.ticker": {
+   "name": "شريط نص متحرك",
+   "slots": {
+    "ticker": {
+     "kind": "text",
+     "max": 175
+    }
+   }
+  },
+  "shop.cart2": {
+   "name": "سلة - بطاقتان",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 18
+    },
+    "sub": {
+     "kind": "text",
+     "max": 59
+    }
+   }
+  },
+  "shop.cartDark": {
+   "name": "سلة - داكنة",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 16
+    },
+    "sub": {
+     "kind": "text",
+     "max": 49
+    }
+   }
+  },
+  "cars.front": {
+   "name": "واجهة المعرض",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 30
+    },
+    "title": {
+     "kind": "text",
+     "max": 32
+    },
+    "sub": {
+     "kind": "text",
+     "max": 108
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 18
+    },
+    "background": {
+     "kind": "image"
+    }
+   }
+  },
+  "cars.frontSearch": {
+   "name": "واجهة مع بحث",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 20
+    },
+    "sub": {
+     "kind": "text",
+     "max": 50
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    },
+    "background": {
+     "kind": "image"
+    }
+   }
+  },
+  "cars.featured": {
+   "name": "سيارات مميزة",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 17
+    },
+    "sub": {
+     "kind": "text",
+     "max": 45
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    }
+   }
+  },
+  "cars.all": {
+   "name": "كل السيارات مع تصفية",
+   "slots": {}
+  },
+  "cars.rows": {
+   "name": "سيارات بصفوف عرضية",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 18
+    }
+   }
+  },
+  "cars.big": {
+   "name": "سيارات بصور كبيرة",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 25
+    }
+   }
+  },
+  "cars.strip": {
+   "name": "شريط سيارات مميزة متحرك",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 20
+    }
+   }
+  },
+  "cars.shake": {
+   "name": "سيارات مميزة بحركة اهتزاز",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 17
+    },
+    "sub": {
+     "kind": "text",
+     "max": 45
+    }
+   }
+  },
+  "cars.ticker": {
+   "name": "شريط نص متحرك",
+   "slots": {
+    "ticker": {
+     "kind": "text",
+     "max": 192
+    }
+   }
+  },
+  "cars.searchBar": {
+   "name": "شريط بحث",
+   "slots": {}
+  },
+  "cars.why": {
+   "name": "لماذا نحن",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 24
+    },
+    "points.0.title": {
+     "kind": "text",
+     "max": 18
+    },
+    "points.0.text": {
+     "kind": "text",
+     "max": 63
+    },
+    "points.1.title": {
+     "kind": "text",
+     "max": 16
+    },
+    "points.1.text": {
+     "kind": "text",
+     "max": 52
+    },
+    "points.2.title": {
+     "kind": "text",
+     "max": 16
+    },
+    "points.2.text": {
+     "kind": "text",
+     "max": 50
+    },
+    "points.3.title": {
+     "kind": "text",
+     "max": 20
+    },
+    "points.3.text": {
+     "kind": "text",
+     "max": 48
+    }
+   }
+  },
+  "cars.about": {
+   "name": "من نحن",
+   "slots": {
+    "image": {
+     "kind": "image"
+    },
+    "eyebrow": {
+     "kind": "text",
+     "max": 30
+    },
+    "title": {
+     "kind": "text",
+     "max": 45
+    },
+    "sub": {
+     "kind": "text",
+     "max": 161
+    },
+    "cta": {
+     "kind": "button",
+     "max": 18
+    }
+   }
+  },
+  "cars.numbers": {
+   "name": "أرقامنا",
+   "slots": {
+    "facts.0.number": {
+     "kind": "text",
+     "max": 6
+    },
+    "facts.0.label": {
+     "kind": "text",
+     "max": 40
+    },
+    "facts.1.number": {
+     "kind": "text",
+     "max": 6
+    },
+    "facts.1.label": {
+     "kind": "text",
+     "max": 40
+    },
+    "facts.2.number": {
+     "kind": "text",
+     "max": 6
+    },
+    "facts.2.label": {
+     "kind": "text",
+     "max": 40
+    }
+   }
+  },
+  "cars.request": {
+   "name": "اطلب سيارتك",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 38
+    },
+    "sub": {
+     "kind": "text",
+     "max": 41
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 18
+    },
+    "background": {
+     "kind": "image"
+    }
+   }
+  }
+ },
+ "fonts": {
+  "messiri-tajawal": {
+   "head": "El Messiri",
+   "body": "Tajawal"
+  },
+  "amiri-plex": {
+   "head": "Amiri",
+   "body": "IBM Plex Sans Arabic"
+  },
+  "alexandria-almarai": {
+   "head": "Alexandria",
+   "body": "Almarai"
+  },
+  "cairo-cairo": {
+   "head": "Cairo",
+   "body": "Cairo"
+  }
+ },
+ "palettes": {
+  "apple-classic": {
+   "name": "أبل كلاسيك",
+   "colors": [
+    "#fbfbfd",
+    "#ffffff",
+    "#e5e5ea",
+    "#1d1d1f",
+    "#0071e3"
+   ]
+  },
+  "modern-azure": {
+   "name": "سماوي عصري",
+   "colors": [
+    "#f0f9ff",
+    "#ffffff",
+    "#bae6fd",
+    "#0c4a6e",
+    "#0284c7"
+   ]
+  },
+  "oasis-emerald": {
+   "name": "زمرد الواحة",
+   "colors": [
+    "#f0fdf4",
+    "#ffffff",
+    "#bbf7d0",
+    "#14532d",
+    "#059669"
+   ]
+  },
+  "desert-najd": {
+   "name": "نجد الصحراوي",
+   "colors": [
+    "#fefce8",
+    "#ffffff",
+    "#fef08a",
+    "#713f12",
+    "#ca8a04"
+   ]
+  },
+  "coral-sunset": {
+   "name": "شفق وردي",
+   "colors": [
+    "#fff1f2",
+    "#ffffff",
+    "#fecdd3",
+    "#881337",
+    "#e11d48"
+   ]
+  },
+  "royal-violet": {
+   "name": "بنفسج ملكي",
+   "colors": [
+    "#faf5ff",
+    "#ffffff",
+    "#e9d5ff",
+    "#581c87",
+    "#7c3aed"
+   ]
+  },
+  "tech-indigo": {
+   "name": "نيلي تقني",
+   "colors": [
+    "#eef2ff",
+    "#ffffff",
+    "#c7d2fe",
+    "#312e81",
+    "#4f46e5"
+   ]
+  },
+  "modern-charcoal": {
+   "name": "فحم مودرن (داكن)",
+   "colors": [
+    "#18181b",
+    "#27272a",
+    "#3f3f46",
+    "#f4f4f5",
+    "#38bdf8"
+   ]
+  },
+  "midnight-dark": {
+   "name": "ليل داكن",
+   "colors": [
+    "#0f172a",
+    "#1e293b",
+    "#334155",
+    "#f8fafc",
+    "#38bdf8"
+   ]
+  },
+  "arabic-moka": {
+   "name": "قهوة عربية",
+   "colors": [
+    "#fdf8f6",
+    "#ffffff",
+    "#edd5be",
+    "#44281d",
+    "#9a3412"
+   ]
+  },
+  "coastal-turquoise": {
+   "name": "فيروزي ساحلي",
+   "colors": [
+    "#f0fdfa",
+    "#ffffff",
+    "#99f6e4",
+    "#134e4a",
+    "#0d9488"
+   ]
+  },
+  "islamic-gold": {
+   "name": "ذهب إسلامي",
+   "colors": [
+    "#faf8f0",
+    "#ffffff",
+    "#e9dfb5",
+    "#45380d",
+    "#d97706"
+   ]
+  },
+  "clean-monochrome": {
+   "name": "رمادي نقي",
+   "colors": [
+    "#f9fafb",
+    "#ffffff",
+    "#e5e7eb",
+    "#111827",
+    "#4b5563"
+   ]
+  },
+  "calm-mint": {
+   "name": "نعناعي هادئ",
+   "colors": [
+    "#ecfdf5",
+    "#ffffff",
+    "#a7f3d0",
+    "#064e3b",
+    "#10b981"
+   ]
+  },
+  "warm-amber": {
+   "name": "عنبر دافئ",
+   "colors": [
+    "#fffbeb",
+    "#ffffff",
+    "#fde68a",
+    "#78350f",
+    "#d97706"
+   ]
+  },
+  "ruby-crimson": {
+   "name": "ياقوت أحمر",
+   "colors": [
+    "#fdf2f2",
+    "#ffffff",
+    "#fbcfe8",
+    "#701a75",
+    "#db2777"
+   ]
+  },
+  "slate-stone": {
+   "name": "حجر طبيعي",
+   "colors": [
+    "#f8fafc",
+    "#ffffff",
+    "#cbd5e1",
+    "#0f172a",
+    "#64748b"
+   ]
+  },
+  "levantine-olive": {
+   "name": "زيتوني شامي",
+   "colors": [
+    "#f7fee7",
+    "#ffffff",
+    "#d9f99d",
+    "#365314",
+    "#65a30d"
+   ]
+  },
+  "andalusian-clay": {
+   "name": "فخار أندلسي",
+   "colors": [
+    "#fff7ed",
+    "#ffffff",
+    "#fed7aa",
+    "#7c2d12",
+    "#ea580c"
+   ]
+  },
+  "neon-aurora": {
+   "name": "أورورا نيون (داكن)",
+   "colors": [
+    "#090d16",
+    "#131b2e",
+    "#1f2d4d",
+    "#e2e8f0",
+    "#06b6d4"
+   ]
+  }
+ }
+}

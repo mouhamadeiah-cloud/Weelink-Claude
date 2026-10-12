@@ -5,6 +5,7 @@ import { SYRIAN_GOVERNORATES, GOVERNORATE_CENTERS, addressFromPoint, areasOf, fi
 import { categorySourceOf, useCategories } from '../utils/businessCategories';
 import type { ProjectType } from './shop/shopTypes';
 import { ComboInput } from './ui/ComboInput';
+import { WEE_COLOR_CHOICES } from '../data/weeColorChoices';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   ChevronDown, 
@@ -24,6 +25,9 @@ interface WeeAIChatProps {
   onStepChange?: (stepNum: number) => void;
   // Wee AI writes the page's texts from these answers; resolves to a message to show the owner.
   onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
+  // «ابن صفحتي»: Wee AI builds the page's slides from the answers; the old page can be brought back.
+  onBuildPage?: (answers: any) => Promise<{ ok: boolean; message: string }>;
+  onRestorePage?: () => { ok: boolean; message: string };
   // The kind of page being built: its work step offers the store or restaurant categories instead
   // of the occupations. Saved with the answers.
   pageKind?: ProjectType;
@@ -95,6 +99,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   onToggleCollapse: externalOnToggleCollapse,
   onStepChange,
   onWriteTexts,
+  onBuildPage,
+  onRestorePage,
   pageKind,
   embedded
 }) => {
@@ -110,6 +116,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const [step, setStep] = useState<number>(1);
   const [isWriting, setIsWriting] = useState(false);
   const [writeNote, setWriteNote] = useState<{ ok: boolean; message: string } | null>(null);
+  const [isBuilding, setIsBuilding] = useState(false);
+  const [canRestore, setCanRestore] = useState(false);
   const [gpsLoading, setGpsLoading] = useState<boolean>(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
@@ -911,13 +919,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {step === 6 && (
           <div className="space-y-3.5">
             <div className="grid grid-cols-2 gap-2">
-              {[
-                { name: 'الأزرق الكلاسيكي الكوني', colors: ['#0071e3', '#f5f5f7'] },
-                { name: 'الأسود الفخم والرمادي', colors: ['#1d1d1f', '#86868b'] },
-                { name: 'الأخضر العشبي الزمردي', colors: ['#34c759', '#e8f5e9'] },
-                { name: 'الذهبي الفاخر الداكن', colors: ['#b89047', '#1a1a1a'] },
-                { name: 'الوردي الرقيق اللطيف', colors: ['#ff2d55', '#fff0f3'] }
-              ].map(pal => (
+              {WEE_COLOR_CHOICES.map(pal => (
                 <button
                   key={pal.name}
                   type="button"
@@ -1303,7 +1305,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
       </div>
 
-      {/* Wee AI writes the texts of the page from the answers above (after signing up) */}
+      {/* Wee AI builds the page, or writes its texts, from the answers above (after signing up) */}
       {!isGuest && <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0 space-y-2">
         {writeNote && (
           <p role="status" className={`text-[11px] font-semibold leading-relaxed ${writeNote.ok ? 'text-green-700' : 'text-rose-600'}`}>
@@ -1312,7 +1314,46 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
         <button
           type="button"
-          disabled={!onWriteTexts || step < 13 || isWriting}
+          disabled={!onBuildPage || step < 13 || isBuilding || isWriting}
+          onClick={async () => {
+            if (!onBuildPage) return;
+            setIsBuilding(true);
+            setWriteNote(null);
+            try {
+              const note = await onBuildPage({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers });
+              setWriteNote(note);
+              if (note.ok) setCanRestore(true);
+            } finally {
+              setIsBuilding(false);
+            }
+          }}
+          className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+            step < 13 || !onBuildPage
+              ? 'text-neutral-400 bg-neutral-100 border border-neutral-200 cursor-not-allowed'
+              : 'text-white bg-gradient-to-l from-violet-600 to-[#0071e3] hover:brightness-110 cursor-pointer disabled:cursor-wait shadow-[0_6px_16px_rgba(79,70,229,0.25)]'
+          }`}
+          title={step < 13 ? 'جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك' : 'Wee AI يصمم صفحتك من الشرائح الجاهزة بألوانك ونصوصك وصورك'}
+        >
+          <span className={`rounded-full p-0.5 flex ${step < 13 || !onBuildPage ? '' : 'bg-white'}`}>
+            <WeeDots size={16} busy={isBuilding} />
+          </span>
+          <span>{isBuilding ? 'Wee AI عم يبني صفحتك…' : 'ابن صفحتي'}</span>
+        </button>
+        {canRestore && onRestorePage && !isBuilding && (
+          <button
+            type="button"
+            onClick={() => {
+              setWriteNote(onRestorePage());
+              setCanRestore(false);
+            }}
+            className="w-full text-[11px] font-semibold text-neutral-500 hover:text-neutral-800 underline underline-offset-2 cursor-pointer"
+          >
+            رجّع صفحتي متل ما كانت
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={!onWriteTexts || step < 13 || isWriting || isBuilding}
           onClick={async () => {
             if (!onWriteTexts) return;
             setIsWriting(true);
@@ -1326,16 +1367,16 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
             step < 13 || !onWriteTexts
               ? 'text-neutral-400 bg-neutral-100 border border-neutral-200 cursor-not-allowed'
-              : 'text-white bg-gradient-to-l from-violet-600 to-[#0071e3] hover:brightness-110 cursor-pointer disabled:cursor-wait shadow-[0_6px_16px_rgba(79,70,229,0.25)]'
+              : 'text-neutral-800 bg-white border border-neutral-200 hover:border-neutral-300 cursor-pointer disabled:cursor-wait'
           }`}
           title={step < 13 ? 'جاوب على الأسئلة أولاً، وبعدها بيكتب Wee AI نصوص صفحتك' : 'Wee AI يكتب العناوين والفقرات والأزرار من معلوماتك'}
         >
-          <span className={`rounded-full p-0.5 flex ${step < 13 || !onWriteTexts ? '' : 'bg-white'}`}>
+          <span className="rounded-full p-0.5 flex">
             <WeeDots size={16} busy={isWriting} />
           </span>
           <span>{isWriting ? 'Wee AI عم يكتب نصوصك…' : 'اكتب نصوص صفحتي'}</span>
         </button>
-        {step < 13 && <p className="text-[10px] text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيكتب Wee AI نصوص صفحتك.</p>}
+        {step < 13 && <p className="text-[10px] text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك أو يكتب نصوصها.</p>}
       </div>}
 
     </div>

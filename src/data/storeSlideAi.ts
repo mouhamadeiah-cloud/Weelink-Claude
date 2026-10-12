@@ -31,26 +31,33 @@ interface Named {
   aiSlot?: string;
 }
 
-const slotFor = (el: Named, seen: Set<string>, body?: Body): string | undefined => {
-  if (el.type === 'image') return 'image';
+// Why-us cards and figures are numbered in page order: points.0.title, points.0.text, …;
+// facts.0.number, facts.0.label, ….
+const slotFor = (el: Named, seen: Set<string>, body: Body | undefined, count: { heading: number; paragraph: number }): string | undefined => {
+  if (el.type === 'image') return seen.has('image') ? undefined : 'image';
   if (el.type === 'badge' || (el.type === 'button' && !el.linkType)) return 'eyebrow';
   if (el.type === 'button') return el.contactType === 'whatsapp' ? 'whatsapp' : 'cta';
   if (el.type !== 'heading' && el.type !== 'paragraph') return undefined;
-  if (body === 'ticker' || body === 'facts') return body;
+  if (body === 'ticker') return 'ticker';
+  if (body === 'facts') return el.type === 'heading' ? `facts.${count.heading++}.number` : `facts.${count.paragraph++}.label`;
   // Why-us slides: the first heading is the title, the rest are the cards' titles and sentences.
-  if (body === 'points') return el.type === 'heading' && !seen.has('title') ? 'title' : 'points';
+  if (body === 'points') {
+    if (el.type === 'heading' && !seen.has('title')) return 'title';
+    return el.type === 'heading' ? `points.${count.heading++}.title` : `points.${count.paragraph++}.text`;
+  }
   const first = el.type === 'heading' ? 'title' : 'sub';
   return seen.has(first) ? undefined : first;
 };
 
 /** The ready slide with its AI id and slot names. */
-export const withStoreSlideNames = <T extends { elements: Named[] }>(kind: Kind, index: number, slide: T): T & { aiTemplate?: string } => {
-  const entry = IDS[kind][index];
+export const withStoreSlideNames = <T extends { elements: Named[] }>(kind: string, index: number, slide: T): T & { aiTemplate?: string } => {
+  const entry = IDS[kind as Kind]?.[index];
   if (!entry) return slide;
   const [aiTemplate, body] = entry;
   const seen = new Set<string>();
+  const count = { heading: 0, paragraph: 0 };
   const elements = slide.elements.map((el) => {
-    const aiSlot = slotFor(el, seen, body);
+    const aiSlot = slotFor(el, seen, body, count);
     if (!aiSlot) return el;
     seen.add(aiSlot);
     return { ...el, aiSlot };

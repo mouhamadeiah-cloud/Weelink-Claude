@@ -125,7 +125,11 @@ export const requestPagePlan = async (kind: BuildKind, profile: Record<string, s
       body: JSON.stringify({ kind, profile, assets }),
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok && Array.isArray(data.plan?.sections)) return { ok: true, plan: data.plan };
+    if (res.ok && Array.isArray(data.plan?.sections)) {
+      // The tokens this build used, for working out its cost (browser console).
+      if (data.usage) console.info('Wee AI build tokens:', data.usage);
+      return { ok: true, plan: data.plan };
+    }
     if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
     if (data.error === 'no_profile') return { ok: false, message: 'اكتب وصف عملك أو اختر تصنيفه بالأسئلة أولاً.' };
     if (res.status === 401) return { ok: false, message: 'انتهت جلسة الدخول. سجّل الدخول من جديد وجرّب مرة ثانية.' };

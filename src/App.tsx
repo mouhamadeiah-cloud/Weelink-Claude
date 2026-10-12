@@ -53,6 +53,7 @@ import { withLocalGraphics } from './utils/localGraphics';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
+import { hostAnswerImages, hostLargeImages, largeInlineImages, replaceImages } from './utils/answerImages';
 import { isSigningIn, resolveAccountId, takeInviteProblem } from './services/accounts';
 import { Access, OWNER_ACCESS, loadAccess } from './services/members';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -800,6 +801,24 @@ export default function App() {
     return () => clearTimeout(delayDebounceFn);
   }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid, project]);
 
+  // 3b. Full-size photos inside the page (from older Wee AI builds) move to Firebase Storage: kept
+  // inline they overflowed the browser storage and made the design too big for Firestore to save.
+  const hostingImagesRef = useRef(false);
+  useEffect(() => {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || hostingImagesRef.current || !auth.currentUser) return;
+    const large = largeInlineImages([pages, elements]);
+    if (!large.size) return;
+    hostingImagesRef.current = true;
+    hostLargeImages(large)
+      .then((links) => {
+        if (!links.size) return;
+        setPages((prev) => replaceImages(prev, links));
+        setElements((prev) => replaceImages(prev, links));
+      })
+      .catch((e) => console.warn('Could not move the page photos to storage:', e))
+      .finally(() => { hostingImagesRef.current = false; });
+  }, [pages, elements, isFirebaseLoading]);
+
   // 4. Debounced save of the shop's admin data (catalogs, warehouse, orders...).
   useEffect(() => {
     if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'shop') {
@@ -1250,7 +1269,7 @@ export default function App() {
   // the new colours and fonts. Undo works on elements only, so the page as it was is kept here
   // and «رجّع صفحتي متل ما كانت» brings it back.
   const builtBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; activePageId: string } | null>(null);
-  const handleBuildPage = async (answers: WeeAnswers, auto = false) => {
+  const handleBuildPage = async (given: WeeAnswers, auto = false) => {
     const kind = KIND_OF_PROJECT[project];
     const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
     const siteName = page.navbar.brandName || PROJECT_KIND_LABEL[project];
@@ -1259,6 +1278,8 @@ export default function App() {
     if (!auto && !window.confirm(`Wee AI رح يصمم ${target} من جديد من معلوماتك ويستبدل الشرائح الموجودة. بتقدر ترجع الصفحة القديمة بعدين. نكمل؟`)) {
       return { ok: false, message: 'ما تغير شي بصفحتك.' };
     }
+    // The owner's photos go into the page as links, never as full-size inline images.
+    const answers = await hostAnswerImages(given);
     const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers));
     if (!result.ok) return { ok: false, message: result.message };
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };

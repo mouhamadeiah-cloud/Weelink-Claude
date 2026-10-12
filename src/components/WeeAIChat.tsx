@@ -6,6 +6,7 @@ import { categorySourceOf, useCategories } from '../utils/businessCategories';
 import type { ProjectType } from './shop/shopTypes';
 import { ComboInput } from './ui/ComboInput';
 import { WEE_COLOR_CHOICES } from '../data/weeColorChoices';
+import { hostAnswerImages, hostImage, shrinkPickedImage } from '../utils/answerImages';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   ChevronDown, 
@@ -326,6 +327,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       finishedRef.current = data.currentStep >= 13;
       if (fromStart) setStep(1);
       else if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep);
+      // Photos saved full size by older versions move to Firebase Storage (the next save keeps their links).
+      if (!isGuest) {
+        hostAnswerImages(data).then((hosted) => {
+          if (hosted === data) return;
+          if (hosted.personalInfo) setPersonalInfo(p => ({ ...p, logoUrl: hosted.personalInfo.logoUrl || '' }));
+          if (hosted.aiAnswers) setAiAnswers(p => ({ ...p, heroBgImage: hosted.aiAnswers.heroBgImage || '', galleryImages: hosted.aiAnswers.galleryImages || [] }));
+        }).catch(() => {});
+      }
     };
 
     const loadProgress = async () => {
@@ -427,42 +436,32 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     setStep(prevStep);
   };
 
-  // Helper: Read image file directly from user device as data URL
+  // Helper: a photo from the device, shrunk (a phone photo is several MB) and, once signed in,
+  // kept in Firebase Storage so the answers hold only its link.
+  const pickImage = async (file: File, kind: 'logo' | 'photo') => {
+    const small = await shrinkPickedImage(file, kind);
+    return isGuest ? small : hostImage(small, kind);
+  };
   const handleDeviceImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
-    onLoaded: (dataUrl: string) => void
+    onLoaded: (url: string) => void,
+    kind: 'logo' | 'photo' = 'photo'
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        onLoaded(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    pickImage(file, kind).then(onLoaded).catch((err) => console.warn('Could not read the image:', err));
   };
 
   // Helper: Gallery files (multiple or single)
   const handleGalleryFilesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    const arrayFiles = Array.from(files);
-
-    arrayFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setAiAnswers(prev => {
-            if (prev.galleryImages.length >= 5) return prev;
-            return {
-              ...prev,
-              galleryImages: [...prev.galleryImages, reader.result as string]
-            };
-          });
-        }
-      };
-      reader.readAsDataURL(file);
+    Array.from(files).slice(0, 5).forEach(file => {
+      pickImage(file, 'photo')
+        .then(url => setAiAnswers(prev => (
+          prev.galleryImages.length >= 5 ? prev : { ...prev, galleryImages: [...prev.galleryImages, url] }
+        )))
+        .catch((err) => console.warn('Could not read the image:', err));
     });
   };
 
@@ -635,7 +634,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={e => handleDeviceImageUpload(e, url => setPersonalInfo(p => ({ ...p, logoUrl: url })))}
+                    onChange={e => handleDeviceImageUpload(e, url => setPersonalInfo(p => ({ ...p, logoUrl: url })), 'logo')}
                     className="hidden"
                   />
                 </label>
@@ -1274,7 +1273,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={e => handleDeviceImageUpload(e, url => setPersonalInfo(p => ({ ...p, logoUrl: url })))}
+                  onChange={e => handleDeviceImageUpload(e, url => setPersonalInfo(p => ({ ...p, logoUrl: url })), 'logo')}
                   className="hidden"
                 />
               </label>

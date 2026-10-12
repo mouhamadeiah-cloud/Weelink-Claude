@@ -4151,7 +4151,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   )}
                                   {lineType === 'line-glow' && (
                                     <svg viewBox="0 0 100 12" width="100%" height="100%" preserveAspectRatio="none">
-                                      <filter id={`line-glow-filter-${elem.id}`} x="-10%" y="-10%" width="120%" height="120%">
+                                      <filter id={`line-glow-filter-${elem.id}`} filterUnits="userSpaceOnUse" x="-10" y="0" width="120" height="12">
                                         <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
                                         <feMerge>
                                           <feMergeNode in="coloredBlur"/>
@@ -4179,7 +4179,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   {lineType === 'line-gradient' && (
                                     <svg viewBox="0 0 100 10" width="100%" height="100%" preserveAspectRatio="none">
                                       <defs>
-                                        <linearGradient id={`line-grad-grad-${elem.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <linearGradient id={`line-grad-grad-${elem.id}`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="0">
                                           <stop offset="0%" stopColor={strokeColor}/>
                                           <stop offset="50%" stopColor={strokeColor} stopOpacity="0.45"/>
                                           <stop offset="100%" stopColor={strokeColor} stopOpacity="0.08"/>

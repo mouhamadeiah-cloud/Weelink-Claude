@@ -125,6 +125,8 @@ export interface CanvasElement {
   width: number;
   height: number;
   rotation?: number; // Rotation in degrees around center (0 - 360)
+  // The part of a ready design this element fills (title, sub, cta, photos…), for the AI page build.
+  aiSlot?: string;
   // Phone layout; when absent the element shows at its desktop position in mobile view.
   mobile?: MobileLayout;
   content: string;
@@ -274,6 +276,8 @@ export interface Slide {
   backgroundRepeat?: string;
   backgroundAttachment?: 'scroll' | 'fixed';
   dividerShape?: SlideDividerShape;
+  // The ready design the slide came from (weeSlideTemplates, e.g. 'hero.cover'), for the AI page build.
+  aiTemplate?: string;
   borderColor?: string;
   borderWidth?: number;
   borderRadius?: number;

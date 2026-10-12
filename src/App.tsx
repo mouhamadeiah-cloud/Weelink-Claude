@@ -42,6 +42,7 @@ import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Eye, FileText, FolderTree, LayoutTemplate, Loader2, MousePointer2, Plus, Redo2, Settings, SlidersHorizontal, Store, Undo2 } from 'lucide-react';
 import { applyPageTexts, businessFacts, pageTextItems, requestPageTexts, type WeeAnswers } from './services/weeWriter';
+import { KIND_OF_PROJECT, buildPageFromPlan, buildProfile, pageAssets, requestPagePlan } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
@@ -1203,6 +1204,48 @@ export default function App() {
     if (!changed) return { ok: false, message: 'ما رجع Wee AI بنصوص جديدة. جرّب مرة ثانية.' };
     pushToHistoryRef.current(next);
     return { ok: true, message: `كتب Wee AI ${changed} نص بصفحة «${page.name}». إذا ما عجبوك اكبس تراجع (${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}+Z).` };
+  };
+
+  // «ابن صفحتي»: Wee AI designs the page from the owner's answers (ready slides in the owner's
+  // palette, texts, photos and links) and replaces the page's slides; a store's other pages take
+  // the new colours and fonts. Undo works on elements only, so the page as it was is kept here
+  // and «رجّع صفحتي متل ما كانت» brings it back.
+  const builtBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; activePageId: string } | null>(null);
+  const handleBuildPage = async (answers: WeeAnswers) => {
+    const kind = KIND_OF_PROJECT[project];
+    const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
+    const siteName = page.navbar.brandName || PROJECT_KIND_LABEL[project];
+    const target = kind === 'free' ? `شرائح صفحة «${page.name}»` : 'شرائح الصفحة الرئيسية';
+    if (!window.confirm(`Wee AI رح يصمم ${target} من جديد من معلوماتك ويستبدل الشرائح الموجودة. بتقدر ترجع الصفحة القديمة بعدين. نكمل؟`)) {
+      return { ok: false, message: 'ما تغير شي بصفحتك.' };
+    }
+    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers));
+    if (!result.ok) return { ok: false, message: result.message };
+    const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
+    const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId });
+    if (!built.ok) return { ok: false, message: built.message };
+    builtBackupRef.current = before;
+    setPages(built.pages);
+    setElements(built.elements);
+    setHistory([built.elements]);
+    setHistoryIndex(0);
+    setActivePageId(built.pageId);
+    setActiveSlideId(built.firstSlideId);
+    setSelectedElementId(null);
+    return { ok: true, message: `بنى Wee AI ${built.sections} أقسام لصفحتك. عدّل أي شي بدك ياه، أو اكبس «رجّع صفحتي متل ما كانت».` };
+  };
+  const handleRestoreBuiltPage = () => {
+    const backup = builtBackupRef.current;
+    if (!backup) return { ok: false, message: 'ما في صفحة قديمة محفوظة.' };
+    builtBackupRef.current = null;
+    setPages(backup.pages);
+    setElements(backup.elements);
+    setHistory([backup.elements]);
+    setHistoryIndex(0);
+    setActivePageId(backup.activePageId);
+    setActiveSlideId(backup.pages.find((p) => p.id === backup.activePageId)?.slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    return { ok: true, message: 'رجعت صفحتك متل ما كانت قبل ما يبنيها Wee AI.' };
   };
 
   const handleUndo = () => {
@@ -3556,6 +3599,8 @@ export default function App() {
         onCompleteChat={handleCompleteChat}
         onStepChange={handleStepChange}
         onWriteTexts={handleWriteTexts}
+        onBuildPage={handleBuildPage}
+        onRestorePage={handleRestoreBuiltPage}
         isWeeAiChatCollapsed={!isChatActive}
         onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
         dockedWidth={isDocked && !isSheet ? dockedPanelWidth : 0}

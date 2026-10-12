@@ -5,13 +5,14 @@
 // Texts are the shop template's own and images come from the platform library (public/Library).
 // Coordinates are already on the 1280-wide canvas.
 
-const C = {
+export const SHOP_SLIDE_COLORS = {
   ink: '#2A1F1A',
   body: '#5A4C42',
   muted: '#8A7B70',
   accent: '#B4532A',
   cream: '#FBF6EF',
 };
+const C = SHOP_SLIDE_COLORS;
 const HEADING_FONT = 'El Messiri';
 const BODY_FONT = 'IBM Plex Sans Arabic';
 const WHATSAPP_NUMBER = '963991234567';

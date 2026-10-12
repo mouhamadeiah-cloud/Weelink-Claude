@@ -7,11 +7,21 @@ const TEXT_KINDS = ['heading', 'paragraph', 'button', 'badge'] as const;
 type TextKind = (typeof TEXT_KINDS)[number];
 
 export interface WeeAnswers {
-  personalInfo?: { title?: string; fullName?: string };
+  personalInfo?: { title?: string; fullName?: string; logoUrl?: string };
   addressInfo?: { governorate?: string; placeType?: string; city?: string; area?: string; district?: string; subdistrict?: string; village?: string; street?: string; details?: string };
   contactInfo?: { whatsapp?: string; phone?: string; facebook?: string; tiktok?: string };
   catalogInfo?: { category?: string; subCategory?: string; specialty?: string; customCategory?: string; customSpecialty?: string };
-  aiAnswers?: { description?: string; motionEffects?: string; specialInstructions?: string };
+  aiAnswers?: {
+    description?: string;
+    motionEffects?: string;
+    specialInstructions?: string;
+    colorPalette?: string;
+    customColor?: string;
+    dividerStyle?: string;
+    wantsGallery?: boolean;
+    galleryImages?: string[];
+    heroBgImage?: string;
+  };
 }
 
 const plain = (html: string) =>

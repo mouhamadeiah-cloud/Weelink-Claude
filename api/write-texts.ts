@@ -8,10 +8,14 @@
 // frontend code. Only signed-in Weelink users can call it (their Firebase token is checked), and
 // the size of each request is capped, so the endpoint cannot be used as a free general chatbot.
 
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, type ThinkingLevel } from '@google/genai';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+// A fixed model, not «latest», so a newer and dearer Flash never comes in on its own (Eyad, 12 Oct).
+// Both can be changed in Vercel without code: GEMINI_MODEL, and GEMINI_THINKING (minimal, low,
+// medium, high), how long the model thinks before answering; thinking is paid as output.
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+const THINKING = (process.env.GEMINI_THINKING || 'low').toUpperCase() as ThinkingLevel;
 const MAX_ITEMS = 60;
 const MAX_FIELD = 600;
 
@@ -108,6 +112,7 @@ export default {
         config: {
           systemInstruction: SYSTEM,
           temperature: 0.7,
+          thinkingConfig: { thinkingLevel: THINKING },
           responseMimeType: 'application/json',
           responseJsonSchema: {
             type: 'object',

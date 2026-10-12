@@ -347,7 +347,17 @@ class BuildFailure extends Error {
   }
 }
 
-const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number) => {
+// Tokens each Gemini call used, for the cost of a build: input (and how much of it came from the
+// cache), the answer, and the model's thinking.
+type Usage = { promptTokenCount?: number; cachedContentTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number };
+const sumUsage = (calls: Usage[]) => ({
+  calls: calls.length,
+  input: calls.reduce((n, u) => n + (u.promptTokenCount || 0), 0),
+  cached: calls.reduce((n, u) => n + (u.cachedContentTokenCount || 0), 0),
+  output: calls.reduce((n, u) => n + (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0), 0),
+});
+
+const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number, usage: Usage[]) => {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), ms);
   let text: string;
@@ -358,6 +368,7 @@ const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number) => {
       config: { systemInstruction: SYSTEM, temperature: 0.9, responseMimeType: 'application/json', responseJsonSchema: RESPONSE_SCHEMA, abortSignal: abort.signal },
     });
     text = result.text || '';
+    usage.push(result.usageMetadata || {});
     if (!text) throw new BuildFailure('empty', String(result.candidates?.[0]?.finishReason || result.promptFeedback?.blockReason || ''));
   } catch (err: any) {
     if (err instanceof BuildFailure) throw err;
@@ -375,17 +386,19 @@ const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number) => {
   }
 };
 
+// What is the same for every build comes first and the owner's card last: Gemini reuses (caches) a
+// prompt's unchanged beginning, which makes a build faster and its repeated part cheaper.
 export const buildPrompt = (kind: Kind, profile: Record<string, string>, assets: Assets) =>
   [
-    `نوع الصفحة: ${kind}`,
-    `بطاقة صاحب العمل (profile):\n${JSON.stringify(profile, null, 1)}`,
-    `assets (صور صاحب العمل المتوفرة): ${JSON.stringify({ heroBg: assets.heroBg, galleryCount: assets.gallery, logo: assets.logo })}`,
     `palettes: ${JSON.stringify(Object.fromEntries(Object.entries(PALETTES).map(([id, p]) => [id, `${p.name} ${p.colors.join(' ')}`])))}`,
     `fonts: ${JSON.stringify(FONTS)}`,
     `icons: ${JSON.stringify([...ICONS])}`,
     `listMax: ${LIST_MAX}`,
-    `الكتالوج (الأقسام المتاحة لهذه الصفحة؛ لكل شريحة مثال خاناتها: رقم = حد الأحرف لنص، button:حد = زر، image = صورة؛ و lists = قوائم تختار عدد عناصرها):\n${JSON.stringify(catalogFor(kind, !!profile['الخدمات'], assets))}`,
     `مثال على شكل الرد وجودته لعيادة أسنان (تعلّم منه الأسلوب، لا تنسخه، ولا تستعمل أسماءه أو نصوصه):\n${JSON.stringify(EXAMPLE)}`,
+    `نوع الصفحة: ${kind}`,
+    `الكتالوج (الأقسام المتاحة لهذه الصفحة؛ لكل شريحة مثال خاناتها: رقم = حد الأحرف لنص، button:حد = زر، image = صورة؛ و lists = قوائم تختار عدد عناصرها):\n${JSON.stringify(catalogFor(kind, !!profile['الخدمات'], assets))}`,
+    `assets (صور صاحب العمل المتوفرة): ${JSON.stringify({ heroBg: assets.heroBg, galleryCount: assets.gallery, logo: assets.logo })}`,
+    `بطاقة صاحب العمل (profile):\n${JSON.stringify(profile, null, 1)}`,
     'صمّم الآن صفحة هذا العمل بالذات. اختر الأقسام التي يحتاجها فعلاً وبترتيب يقنع زائره، وأعد JSON فقط.',
   ].join('\n\n');
 
@@ -411,19 +424,21 @@ export default {
 
     const prompt = buildPrompt(kind, profile, assets);
     const started = Date.now();
+    const usage: Usage[] = [];
     try {
       const ai = new GoogleGenAI({ apiKey });
       let raw: any;
       try {
-        raw = await askGemini(ai, prompt, BUDGET_MS);
+        raw = await askGemini(ai, prompt, BUDGET_MS, usage);
       } catch (err) {
         // One more try after a broken answer, when there is time left for it.
         const left = BUDGET_MS - (Date.now() - started);
         if (!(err instanceof BuildFailure) || !['bad_json', 'empty', 'network', 'gemini_500', 'gemini_503'].includes(err.reason) || left < 20_000) throw err;
-        raw = await askGemini(ai, prompt, left);
+        raw = await askGemini(ai, prompt, left, usage);
       }
-      console.log(`build-page: ${kind} planned in ${Date.now() - started} ms`);
-      return json({ plan: checkPlan(raw, kind, profile, assets) });
+      const tokens = sumUsage(usage);
+      console.log(`build-page: ${kind} planned in ${Date.now() - started} ms, tokens ${JSON.stringify(tokens)}`);
+      return json({ plan: checkPlan(raw, kind, profile, assets), usage: tokens });
     } catch (err) {
       const failure = err instanceof BuildFailure ? err : new BuildFailure('check', String((err as Error)?.message || '').slice(0, 200));
       console.error(`build-page failed after ${Date.now() - started} ms:`, failure.reason, failure.detail);

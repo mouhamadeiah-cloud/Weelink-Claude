@@ -5,6 +5,8 @@
 // colours, fonts and editor effects: a home kitchen (warm light), a law office (very dark) and a
 // painter (light turquoise). Coordinates are on the 1280-wide canvas.
 
+import { groupTemplateCards } from '../utils/templateGroups';
+
 type Box = { x: number; y: number; width: number; height: number };
 type Styles = Record<string, unknown>;
 
@@ -337,7 +339,10 @@ const PRICES: (() => WeeSlide)[] = [
             on(heading(L_, { x: x + 30, y: 232, width: 276, height: 36 }, name, 24, { fontFamily: L_.body }, 'packages'), 40, my + 22, 280, 36),
             on(heading(L_, { x: x + 30, y: 274, width: 276, height: 50 }, price, 38, { color: L_.accent, fontFamily: L_.body }, 'packages'), 40, my + 62, 280, 50),
             on(text(L_, { x: x + 30, y: 326, width: 276, height: 24 }, `ل.س ${unit}`, 14, {}, 'packages'), 40, my + 112, 280, 24),
-            ...features.map((f, j) => on(text(L_, { x: x + 30, y: 368 + j * 36, width: 276, height: 30 }, `✓  ${f}`, 15, { color: L_.ink }, 'packages'), 40, my + 146 + j * 34, 280, 30)),
+            ...features.flatMap((f, j) => [
+              on(icon({ x: x + 288, y: 374 + j * 36, width: 18, height: 18 }, 'mdi:check-circle-outline', L_.accent), 302, my + 152 + j * 34, 18, 18),
+              on(text(L_, { x: x + 30, y: 368 + j * 36, width: 252, height: 30 }, f, 15, { color: L_.ink }, 'packages'), 40, my + 146 + j * 34, 256, 30),
+            ]),
           ];
         }),
       ],
@@ -601,26 +606,31 @@ const LEGAL: (() => WeeSlide)[] = [
         on(el('badge', 'تبويب', { x: 1024, y: 140, width: 160, height: 36 }, 'شروط الاستخدام', { backgroundColor: L_.ink, color: L_.bg, borderRadius: 9999, fontSize: 14, fontWeight: 'bold', fontFamily: L_.body }), 184, 112, 156, 36),
         on(el('badge', 'تبويب', { x: 852, y: 140, width: 160, height: 36 }, 'سياسة الخصوصية', { backgroundColor: L_.card, color: L_.ink, borderColor: L_.line, borderWidth: 1, borderRadius: 9999, fontSize: 14, fontWeight: 'bold', fontFamily: L_.body }), 20, 112, 156, 36),
         on(shape('سؤال مفتوح', { x: 304, y: 196, width: 880, height: 112 }, { backgroundColor: L_.card, borderColor: L_.line, borderWidth: 1, borderRadius: 14 }), 20, 164, 320, 150),
-        on(heading(L_, { x: 330, y: 212, width: 828, height: 30 }, `▾  ${questions[0]}`, 17, { fontFamily: L_.body }), 36, 176, 288, 30),
+        on(icon({ x: 1136, y: 215, width: 22, height: 22 }, 'mdi:chevron-down', L_.accent), 302, 180, 22, 22),
+        on(heading(L_, { x: 330, y: 212, width: 798, height: 30 }, questions[0], 17, { fontFamily: L_.body }), 36, 176, 258, 30),
         on(text(L_, { x: 330, y: 248, width: 828, height: 48 }, TERMS[0], 15), 36, 210, 288, 96),
         ...questions.slice(1).flatMap((q, i) => [
           on(shape('سؤال', { x: 304, y: 322 + i * 70, width: 880, height: 58 }, { backgroundColor: L_.card, borderColor: L_.line, borderWidth: 1, borderRadius: 14 }), 20, 330 + i * 68, 320, 56),
-          on(heading(L_, { x: 330, y: 336 + i * 70, width: 828, height: 30 }, `◂  ${q}`, 17, { fontFamily: L_.body }), 36, 343 + i * 68, 288, 30),
+          on(icon({ x: 1136, y: 340 + i * 70, width: 22, height: 22 }, 'mdi:chevron-left', L_.muted), 302, 347 + i * 68, 22, 22),
+          on(heading(L_, { x: 330, y: 336 + i * 70, width: 798, height: 30 }, q, 17, { fontFamily: L_.body }), 36, 343 + i * 68, 258, 30),
         ]),
       ],
     };
   },
 ];
 
-// Ready-slide categories the designs open, first in their category's list.
-export const WEE_SLIDES: Record<string, (() => WeeSlide)[]> = {
-  intro: HERO,
-  about: ABOUT,
-  prices: PRICES,
-  gallery: GALLERY,
-  contact: CONTACT,
-  privacy: LEGAL,
+// Cards, frames and question boxes arrive as groups with what lies on them (the constitution's
+// grouping rule); icon backgrounds and header strips inside a card stay plain shapes.
+const CARD_NAMES = ['بطاقة', 'إطار', 'سؤال'];
+const grouped = (make: () => WeeSlide) => (): WeeSlide => {
+  const slide = make();
+  return { ...slide, elements: groupTemplateCards(slide.elements as any[], (e) => CARD_NAMES.some((n) => e.name?.startsWith(n))) };
 };
+
+// Ready-slide categories the designs open, first in their category's list.
+export const WEE_SLIDES: Record<string, (() => WeeSlide)[]> = Object.fromEntries(
+  Object.entries({ intro: HERO, about: ABOUT, prices: PRICES, gallery: GALLERY, contact: CONTACT, privacy: LEGAL }).map(([id, list]) => [id, list.map(grouped)]),
+);
 
 export const weeSlideCount = (categoryId: string) => WEE_SLIDES[categoryId]?.length || 0;
 

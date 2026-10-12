@@ -71,6 +71,7 @@ import { SHOP_SLIDE_COUNT, getShopSlidePayload } from './shopSlideTemplates';
 import { groupTemplateCards } from '../utils/templateGroups';
 import { CAR_SLIDE_COUNT, getCarSlidePayload } from './carSlideTemplates';
 import { REST_SLIDE_COUNT, getRestaurantSlidePayload } from './restaurantSlideTemplates';
+import { withStoreSlideNames } from './storeSlideAi';
 import { WEE_SLIDES, weeSlideCount } from './weeSlideTemplates';
 
 export const READY_SLIDE_CATEGORIES = [
@@ -266,7 +267,7 @@ const getOlderSlidePayload = (categoryId: string, index: number, catName: string
   // Cards in the shop and showroom slides arrive as groups (moved, copied and phone-arranged together).
   if (categoryId === 'shop' || categoryId === 'cars' || categoryId === 'restaurant') {
     const payload = categoryId === 'shop' ? getShopSlidePayload(index) : categoryId === 'cars' ? getCarSlidePayload(index) : getRestaurantSlidePayload(index);
-    return { ...payload, elements: groupTemplateCards(payload.elements as any[]) };
+    return withStoreSlideNames(categoryId, index, { ...payload, elements: groupTemplateCards(payload.elements as any[]) });
   }
   const title = `${catName} - نموذج ${index + 1}`;
   const height = 580; // slightly taller to accommodate gorgeous overlapping layouts!

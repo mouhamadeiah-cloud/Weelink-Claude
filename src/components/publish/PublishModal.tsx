@@ -17,6 +17,9 @@ import {
   readMySite, removeDomain, requestDomainPurchase, setSiteIcon, setSiteSeo, siteFallbackUrl, siteNameProblem, siteUrl, unpublishSite,
 } from '../../services/sites';
 import { withLocalGraphics } from '../../utils/localGraphics';
+import { categorySourceOf, withCategoryKeywords } from '../../utils/businessCategories';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import { SiteView } from './SiteView';
 
 interface PublishModalProps {
@@ -534,6 +537,17 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
         setName(s?.name || normalizeSiteName(suggestedName));
         setSeo(s?.seo || { title: suggestedName, description: '', keywords: [] });
         setKeywords((s?.seo?.keywords || []).join('، '));
+        // The kind of business picked in Wee AI leads the keywords, so the home page's category
+        // filters find the page.
+        getDoc(doc(db, 'platform_directory', owner))
+          .then((snap) => {
+            const d = snap.data();
+            if (!d?.catalogInfo || categorySourceOf(d.pageKind || 'page') !== categorySourceOf(project)) return;
+            const own = s?.seo?.keywords || [];
+            const next = withCategoryKeywords(d.catalogInfo, own);
+            if (next.join() !== own.join()) setKeywords(next.join('، '));
+          })
+          .catch(() => {});
       })
       .catch(() => setSite(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps

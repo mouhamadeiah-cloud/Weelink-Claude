@@ -22,6 +22,7 @@ import { ProjectChooser } from './components/ProjectChooser';
 import { HomePage } from './components/home/HomePage';
 import { StartPage } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
+import { readCatalogAnswer, sampleRestaurantAdmin, sampleShopAdmin } from './services/sampleItems';
 import { PublishModal } from './components/publish/PublishModal';
 import { publicDataFor } from './components/publish/publicData';
 import { readMySite } from './services/sites';
@@ -536,6 +537,12 @@ export default function App() {
       ({ pages: shopPages, elements: shopElements } = withCheckoutLayout(shopPages, shopElements));
       ({ pages: shopPages, elements: shopElements } = withTemplateGroups(shopPages, shopElements));
     }
+    // A first shop opens with ten example products of the store type picked in Wee AI.
+    if (!admin) {
+      const answer = readCatalogAnswer(userId, 'shop');
+      if (answer) admin = await sampleShopAdmin(answer, createEmptyShopAdmin()).catch(() => null);
+      if (seq !== loadSeqRef.current) return;
+    }
     setProject('shop');
     setPages(shopPages);
     setElements(shopElements);
@@ -655,7 +662,12 @@ export default function App() {
       const template = getRestaurantTemplate();
       restPages = template.pages;
       restElements = template.elements;
-      if (!admin) admin = exampleRestaurantAdmin();
+      if (!admin) {
+        // Ten example dishes of the kind picked in Wee AI, else the general example menu.
+        const answer = readCatalogAnswer(userId, 'restaurant');
+        admin = (answer && (await sampleRestaurantAdmin(answer).catch(() => null))) || exampleRestaurantAdmin();
+        if (seq !== loadSeqRef.current) return;
+      }
     }
     setProject('restaurant');
     setPages(restPages);

@@ -296,3 +296,18 @@
 @media (prefers-reduced-motion: reduce) {
   [style*="fx-"] { animation: none !important; }
 }
+
+/* The start page («اعمل صفحتك»): cards rise in one after another, the photo slowly drifts. */
+@keyframes wl-rise {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wl-drift {
+  from { transform: scale(1.08) translate3d(0, 0, 0); }
+  to { transform: scale(1.18) translate3d(-2%, -2%, 0); }
+}
+.wl-rise { animation: wl-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.wl-drift { animation: wl-drift 18s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) {
+  .wl-rise, .wl-drift { animation: none !important; }
+}

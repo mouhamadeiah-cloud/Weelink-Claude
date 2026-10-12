@@ -283,7 +283,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // Silently trigger canvas loading loop simulation on step changes
   useEffect(() => {
-    if (step > 1) {
+    if (step > 1 || embedded) {
       onStepChange?.(step);
     }
   }, [step]);

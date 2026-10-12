@@ -17,13 +17,17 @@
 // Usage limits (once per free page, 5 a day on paid pages) come with the subscriptions phase: every
 // account today is a test account with unlimited use.
 
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, type ThinkingLevel } from '@google/genai';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
 import designer from '../src/data/ai/weelinkDesigner.json' with { type: 'json' };
 import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+// A fixed model, not «latest», so a newer and dearer Flash never comes in on its own (Eyad, 12 Oct).
+// Both can be changed in Vercel without code: GEMINI_MODEL, and GEMINI_THINKING (minimal, low,
+// medium, high), how long the model thinks before answering; thinking is paid as output.
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+const THINKING = (process.env.GEMINI_THINKING || 'low').toUpperCase() as ThinkingLevel;
 const MAX_FIELD = 1200;
 
 type Kind = 'free' | 'restaurant' | 'shop' | 'cars';
@@ -365,7 +369,7 @@ const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number, usage: Usa
     const result = await ai.models.generateContent({
       model: MODEL,
       contents: prompt,
-      config: { systemInstruction: SYSTEM, temperature: 0.9, responseMimeType: 'application/json', responseJsonSchema: RESPONSE_SCHEMA, abortSignal: abort.signal },
+      config: { systemInstruction: SYSTEM, temperature: 0.9, thinkingConfig: { thinkingLevel: THINKING }, responseMimeType: 'application/json', responseJsonSchema: RESPONSE_SCHEMA, abortSignal: abort.signal },
     });
     text = result.text || '';
     usage.push(result.usageMetadata || {});

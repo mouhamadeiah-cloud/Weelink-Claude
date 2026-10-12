@@ -169,7 +169,11 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
   const owners = ownersNumbers(profile);
   const motion = /حرك/.test(profile['الحركة'] || '') && !/هادئ/.test(profile['الحركة'] || '');
   const hasServices = !!profile['الخدمات'];
-  const pool = SECTIONS[kind].filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true));
+  const description = profile['الوصف'] || '';
+  // «من نحن» tells the owner's own description (Eyad, 12 Oct), so it is on every page that has one.
+  const pool = SECTIONS[kind]
+    .filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true))
+    .map((s) => (s.id === 'about' && description ? { ...s, required: true } : s));
   const answered: any[] = Array.isArray(raw?.sections) ? raw.sections : [];
 
   // The AI's order, each section once; then any required one it left out.
@@ -200,6 +204,9 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
     }
     // A section the AI left out still opens with its name.
     if (!given && spec.slots.title) slots.title = section.name;
+    // «من نحن» without its text says the owner's description as they wrote it.
+    const story = spec.slots.text ? 'text' : spec.slots.sub ? 'sub' : null;
+    if (section.id === 'about' && story && description && !slots[story]) slots[story] = cleanText(description, spec.slots[story].max || 240);
     const icons: Record<string, string> = {};
     for (const [key, value] of pairs(given?.icons, 'value')) {
       if (specOf(spec, key)?.kind === 'icon' && ICONS.has(value.trim())) icons[key] = value.trim();

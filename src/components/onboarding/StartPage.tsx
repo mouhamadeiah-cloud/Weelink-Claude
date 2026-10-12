@@ -7,8 +7,8 @@ import React, { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { ArrowLeft, CarFront, Check, FileText, Loader2, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
+import { PlanPicker } from './PlanPicker';
 import { guestKindOf, readGuestAnswers, setGuestKind } from '../../services/guestAnswers';
-import { FOOD_PHOTOS, foodPhoto } from '../restaurant/restaurantTypes';
 import { CAR_PHOTOS, carPhoto } from '../../data/carShowroomTemplate';
 import type { ProjectType } from '../shop/shopTypes';
 
@@ -19,6 +19,7 @@ const HERO = photo('1522071820081-009f0129c71c', 1600);
 const STEPS = ['اختار نوع صفحتك', 'جاوب على أسئلة Wee AI', 'اعمل حسابك وصفحتك جاهزة'];
 const QUESTION_COUNT = 12;
 
+// Photos of running the business, unlike the home page's search and order cards (Eyad, 12 Oct).
 const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; icon: React.ElementType; accent: string; image: string }[] = [
   {
     type: 'page',
@@ -27,7 +28,7 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
     perks: ['خدماتك وأسعارك', 'عنوانك على الخريطة', 'واتساب واتصال مباشر'],
     icon: FileText,
     accent: '#0071e3',
-    image: photo('1504307651254-35680f356dfd'),
+    image: photo('1454165804606-c3d57bc86b40'),
   },
   {
     type: 'shop',
@@ -36,7 +37,7 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
     perks: ['سلة وطلب من الموبايل', 'مستودع وحسابات', 'عروض بالواجهة'],
     icon: ShoppingBag,
     accent: '#7c3aed',
-    image: photo('1441986300917-64674bd600d8'),
+    image: photo('1460925895917-afdab827c52f'),
   },
   {
     type: 'restaurant',
@@ -45,7 +46,7 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
     perks: ['منيو بالصور', 'الطلبات للمطبخ لحظياً', 'طاولات QR'],
     icon: UtensilsCrossed,
     accent: '#c2410c',
-    image: foodPhoto(FOOD_PHOTOS.grill, 1200),
+    image: photo('1517248135467-4c7edcad34c4'),
   },
   {
     type: 'cars',
@@ -54,7 +55,7 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
     perks: ['بحث متقدم للزوار', 'طلبات تجربة', 'مصاريف وربح كل سيارة'],
     icon: CarFront,
     accent: '#C8102E',
-    image: carPhoto(CAR_PHOTOS.showroom, 1200),
+    image: carPhoto(CAR_PHOTOS.dark, 1200),
   },
 ];
 
@@ -183,6 +184,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </section>
         </main>
       ) : (
+        <>
         <main key="chat" className="max-w-6xl mx-auto px-4 py-4 sm:py-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:gap-6 lg:items-start space-y-3 lg:space-y-0">
           {/* The chosen kind's photo: a banner on a phone, a tall panel beside the questions on a wide screen */}
           <aside className="wl-rise relative rounded-3xl overflow-hidden text-white h-36 lg:h-[calc(100dvh-7rem)] lg:sticky lg:top-20 lg:order-2">
@@ -232,6 +234,8 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
             />
           </div>
         </main>
+        <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} accent={chosen.accent} />
+        </>
       )}
     </div>
   );

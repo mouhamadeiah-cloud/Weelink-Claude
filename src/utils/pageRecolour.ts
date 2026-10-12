@@ -130,6 +130,7 @@ export interface RecolourScene {
   look: SourceLook;
   to: TargetColours;
   onPhoto: boolean; // the slide has a photo or video behind it
+  whiteIsInk?: boolean; // white letters on this slide sit on its background (a section turned dark)
 }
 
 const mapColour = (found: string, use: Use, scene: RecolourScene) => {
@@ -149,8 +150,9 @@ const mapColour = (found: string, use: Use, scene: RecolourScene) => {
   if (dist(rgb, WHITE) < 4) {
     if (alpha < 1) return found;
     if (use === 'fill') role = 'card';
-    // White letters straight on a dark design's background, not on a photo.
-    else if (use === 'text' && scene.look.dark && !scene.onPhoto) role = 'ink';
+    // White letters straight on a design's background (not on a photo or a coloured band) follow
+    // the text colour: a dark design on a light page, or a light one turned dark.
+    else if (use === 'text' && !scene.onPhoto && (scene.look.dark || scene.whiteIsInk)) role = 'ink';
     else return found;
   } else role = roleOf(rgb, scene.look);
   if (!role) return found;
@@ -187,4 +189,37 @@ export const recolourDeep = <T>(value: T, scene: RecolourScene, use: Use = 'othe
     else out[k] = recolourDeep(v, scene, USE_OF[k] || use);
   }
   return out as T;
+};
+
+/**
+ * The page's colours from the owner's own choice (Wee AI step 6): the accent, and the choice's second
+ * colour as the page background when it is light, or a dark page when it is dark. Text, lines and
+ * cards come from the accent's own hue, so the whole page is the owner's colour.
+ */
+export const ownerPalette = (accent: string, second?: string): [string, string, string, string, string] => {
+  if (second && luminance(second) < 0.06) {
+    const bg = second;
+    return [bg, mix(bg, '#ffffff', 0.06), mix(bg, '#ffffff', 0.14), mix(accent, '#ffffff', 0.9), accent];
+  }
+  const bg = second && luminance(second) > 0.8 ? second : mix(accent, '#ffffff', 0.95);
+  return [bg, '#ffffff', mix(accent, '#ffffff', 0.78), mix(accent, '#000000', 0.82), accent];
+};
+
+/** A section's colours for its tone: the page's own (light), the accent faintly (tint), or dark. */
+export const toneColours = (to: TargetColours, tone: 'light' | 'tint' | 'dark' | undefined): TargetColours => {
+  if (tone === 'tint') return { ...to, bg: to.soft, soft: mix(to.accent, to.bg, 0.72) };
+  if (tone !== 'dark') return to;
+  const deep = luminance(to.deep) < 0.02 ? to.deep : mix(to.deep, '#000000', 0.25);
+  const pale = luminance(to.pale) > 0.7 ? to.pale : '#F5F5F4';
+  return {
+    bg: deep,
+    card: mix(deep, pale, 0.07),
+    line: mix(deep, pale, 0.16),
+    ink: pale,
+    muted: mix(pale, deep, 0.3),
+    accent: to.accent,
+    soft: mix(to.accent, deep, 0.78),
+    deep,
+    pale,
+  };
 };

@@ -33,11 +33,26 @@ interface WeeAIChatProps {
   pageKind?: ProjectType;
   // Fills its own box (the start page) instead of sitting under the control panel's tabs.
   embedded?: boolean;
+  // The questions live on the start page (Eyad, 12 Oct): in the editor the panel shows the answers
+  // and the build buttons, and this opens the questions again.
+  onEditAnswers?: () => void;
+  // The start page walks through the questions from the first one, the answers already filled in.
+  fromStart?: boolean;
+  // The page was built in this visit and can still be brought back as it was.
+  restoreAvailable?: boolean;
 }
 
 // Answers given before signing up are kept on this device under this id, then moved to the new
 // account (see App.tsx).
 export const WEE_GUEST_ID = 'guest';
+
+// The name asked in the first step: the title of the page and of its navbar.
+const PAGE_NAME_LABEL: Record<ProjectType, string> = {
+  page: 'اسم صفحتك أو نشاطك',
+  shop: 'اسم المتجر',
+  restaurant: 'اسم المطعم',
+  cars: 'اسم المعرض',
+};
 
 // The work step's three lists, named for each kind of page.
 const CATALOG_LABELS = {
@@ -91,6 +106,33 @@ const getConciseQuestionText = (stepNum: number, name?: string): string => {
   }
 };
 
+// The answers in short, in the editor's panel; the questions themselves are on the start page.
+const AnswersSummary: React.FC<{ done: boolean; rows: [string, string | undefined][]; onEdit: () => void }> = ({ done, rows, onEdit }) => (
+  <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs text-neutral-800">
+    {done ? (
+      <dl className="rounded-xl border border-neutral-200 divide-y divide-neutral-100 bg-white">
+        {rows.filter(([, v]) => v && v.trim()).map(([k, v]) => (
+          <div key={k} className="px-3 py-2 space-y-0.5">
+            <dt className="text-[10px] font-bold text-neutral-400">{k}</dt>
+            <dd className="text-[11px] font-semibold text-neutral-800 leading-relaxed line-clamp-3">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    ) : (
+      <p className="text-[11px] text-neutral-500 leading-relaxed font-semibold">
+        أسئلة Wee AI صارت بصفحة البداية: اسم صفحتك، شغلك، وصفها، ألوانها وخدماتك. جاوب عليها وبعدها بيبني Wee AI صفحتك منها.
+      </p>
+    )}
+    <button
+      type="button"
+      onClick={onEdit}
+      className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${done ? 'text-neutral-800 bg-white border border-neutral-200 hover:border-neutral-300' : 'text-white bg-[#0071e3] hover:bg-[#0077ed]'}`}
+    >
+      {done ? 'عدّل إجاباتي' : 'جاوب على الأسئلة'}
+    </button>
+  </div>
+);
+
 export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   userId,
   userEmail,
@@ -102,8 +144,13 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   onBuildPage,
   onRestorePage,
   pageKind,
-  embedded
+  embedded,
+  onEditAnswers,
+  fromStart,
+  restoreAvailable
 }) => {
+  // Answers finished once stay finished while the owner walks through them again.
+  const finishedRef = useRef(false);
   const isGuest = userId === WEE_GUEST_ID;
   const catalogSource = categorySourceOf(pageKind);
   const labels = CATALOG_LABELS[catalogSource];
@@ -131,6 +178,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const [personalInfo, setPersonalInfo] = useState({
     title: 'سيد',
     fullName: '',
+    pageName: '',
     birthDate: '',
     logoUrl: ''
   });
@@ -182,12 +230,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     galleryImages: [] as string[],
     heroBgImage: '',
     motionEffects: 'صفحة هادئة وجادة',
-    specialInstructions: ''
+    specialInstructions: '',
+    services: [] as { name: string; price: string }[],
   });
 
   const resetToBlankDefaults = () => {
     setPersonalInfo({
       title: 'سيد',
+      pageName: '',
       fullName: '',
       birthDate: '',
       logoUrl: ''
@@ -227,7 +277,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       galleryImages: [],
       heroBgImage: '',
       motionEffects: 'صفحة هادئة وجادة',
-      specialInstructions: ''
+      specialInstructions: '',
+      services: [],
     });
     setStep(1);
   };
@@ -235,12 +286,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   // Load existing progress: Firebase first (source of truth across devices), LocalStorage as offline fallback
   useEffect(() => {
     const applyData = (data: any) => {
-      if (data.personalInfo) setPersonalInfo(data.personalInfo);
+      if (data.personalInfo) setPersonalInfo({ pageName: '', ...data.personalInfo });
       if (data.addressInfo) setAddressInfo({ placeType: 'city', area: '', district: '', subdistrict: '', village: '', ...data.addressInfo });
       if (data.contactInfo) setContactInfo(data.contactInfo);
       if (data.catalogInfo) setCatalogInfo(normalizeCatalog(data.catalogInfo));
-      if (data.aiAnswers) setAiAnswers(data.aiAnswers);
-      if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep);
+      if (data.aiAnswers) setAiAnswers({ services: [], ...data.aiAnswers });
+      finishedRef.current = data.currentStep >= 13;
+      if (fromStart) setStep(1);
+      else if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep);
     };
 
     const loadProgress = async () => {
@@ -306,7 +359,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       catalogInfo,
       aiAnswers,
       ...(pageKind ? { pageKind } : {}),
-      currentStep: nextStep,
+      currentStep: finishedRef.current ? 13 : nextStep,
       updatedAt: new Date().toISOString()
     };
     try {
@@ -449,7 +502,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           <div className="space-y-0.5 text-right">
             <div className="text-[9px] font-black text-neutral-400 select-none tracking-wider">مساعدك الشخصي (wee ai)</div>
             <h4 className="font-bold text-neutral-800 text-[11px] leading-relaxed min-h-[2.5em] transition-all">
-              {typedText}
+              {onEditAnswers ? (step >= 13 ? 'هي إجاباتك. Wee AI بيبني صفحتك منها.' : 'جاوب على أسئلة Wee AI أولاً، وبعدها بيبني صفحتك.') : typedText}
             </h4>
           </div>
         </div>
@@ -465,7 +518,21 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         </button>
       </div>
 
-      {/* Main Form Fields Content */}
+      {/* In the editor: the answers in short, and the way back to the questions */}
+      {onEditAnswers ? (
+        <AnswersSummary
+          done={step >= 13}
+          rows={[
+            ['اسم الصفحة', personalInfo.pageName || personalInfo.fullName],
+            ['العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
+            ['الوصف', aiAnswers.description],
+            ['الألوان', (aiAnswers.colorPalette || '').startsWith('مخصص') ? 'لون مخصص' : aiAnswers.colorPalette],
+            ['طابع الصفحة', aiAnswers.motionEffects],
+            ['الخدمات', (aiAnswers.services || []).filter((r: { name: string }) => r.name?.trim()).map((r: { name: string }) => r.name).join('، ')],
+          ]}
+          onEdit={onEditAnswers}
+        />
+      ) : (
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs text-neutral-800">
         
         {/* STEP 1: معلومات شخصية */}
@@ -487,6 +554,19 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   {opt}
                 </button>
               ))}
+            </div>
+
+            {/* اسم الصفحة: عنوان المدخل واسم شريط التنقل */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-neutral-500 block">{PAGE_NAME_LABEL[pageKind || 'page']}</label>
+              <input
+                type="text"
+                value={personalInfo.pageName || ''}
+                onChange={e => setPersonalInfo(p => ({ ...p, pageName: e.target.value }))}
+                placeholder={pageKind === 'restaurant' ? 'مثال: مطعم بيت جدي' : pageKind === 'shop' ? 'مثال: متجر لمسة' : pageKind === 'cars' ? 'مثال: معرض الشام للسيارات' : 'مثال: عيادة د. سلمى للأسنان'}
+                className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
+              />
+              <p className="text-[10px] text-neutral-400">هو عنوان صفحتك. إذا تركته فاضي بيصير اسمك هو العنوان.</p>
             </div>
 
             {/* الاسم الكامل */}
@@ -890,6 +970,49 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               rows={4}
               className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
             />
+            {/* الخدمات وأسعارها: قسم الأسعار في الصفحة (المتجر والمطعم والمعرض أسعارهم من الإدارة) */}
+            {(!pageKind || pageKind === 'page') && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-500 block">خدماتك وأسعارها (اختياري، حتى 8)</label>
+                {(aiAnswers.services || []).map((row, i) => (
+                  <div key={i} className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={row.name}
+                      onChange={e => setAiAnswers(p => ({ ...p, services: (p.services || []).map((r, j) => (j === i ? { ...r, name: e.target.value } : r)) }))}
+                      placeholder="اسم الخدمة"
+                      className="flex-1 min-w-0 text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={row.price}
+                      onChange={e => setAiAnswers(p => ({ ...p, services: (p.services || []).map((r, j) => (j === i ? { ...r, price: e.target.value } : r)) }))}
+                      placeholder="السعر (اختياري)"
+                      className="w-28 text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      aria-label="احذف الخدمة"
+                      onClick={() => setAiAnswers(p => ({ ...p, services: (p.services || []).filter((_, j) => j !== i) }))}
+                      className="px-2 text-neutral-400 hover:text-rose-600 text-sm"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {(aiAnswers.services || []).length < 8 && (
+                  <button
+                    type="button"
+                    onClick={() => setAiAnswers(p => ({ ...p, services: [...(p.services || []), { name: '', price: '' }] }))}
+                    className="w-full py-1.5 border border-dashed border-neutral-300 rounded-lg text-[11px] font-bold text-neutral-600 hover:bg-neutral-50"
+                  >
+                    + أضف خدمة
+                  </button>
+                )}
+                <p className="text-[10px] text-neutral-400">الخدمة بلا سعر بتظهر «حسب الطلب». ما منكتب أي سعر ما كتبته.</p>
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1284,13 +1407,13 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <p className="text-[11px] text-neutral-500 leading-relaxed font-semibold">
               تم جمع وحفظ كامل معلوماتك ومواصفات موقعك السحابي.
             </p>
-            {isGuest && onCompleteChat && (
+            {embedded && onCompleteChat && (
               <button
                 type="button"
                 onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers })}
                 className="w-full py-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
               >
-                اعمل حسابك لتنحفظ صفحتك
+                {isGuest ? 'اعمل حسابك لتنحفظ صفحتك' : 'ابن صفحتي'}
               </button>
             )}
             <button
@@ -1304,9 +1427,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
       </div>
+      )}
 
       {/* Wee AI builds the page, or writes its texts, from the answers above (after signing up) */}
-      {!isGuest && <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0 space-y-2">
+      {!isGuest && !embedded && <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0 space-y-2">
         {writeNote && (
           <p role="status" className={`text-[11px] font-semibold leading-relaxed ${writeNote.ok ? 'text-green-700' : 'text-rose-600'}`}>
             {writeNote.message}
@@ -1339,7 +1463,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           </span>
           <span>{isBuilding ? 'Wee AI عم يبني صفحتك…' : 'ابن صفحتي'}</span>
         </button>
-        {canRestore && onRestorePage && !isBuilding && (
+        {(canRestore || restoreAvailable) && onRestorePage && !isBuilding && (
           <button
             type="button"
             onClick={() => {
@@ -1376,7 +1500,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           </span>
           <span>{isWriting ? 'Wee AI عم يكتب نصوصك…' : 'اكتب نصوص صفحتي'}</span>
         </button>
-        {step < 13 && <p className="text-[10px] text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك أو يكتب نصوصها.</p>}
+        {step < 13 && !onEditAnswers && <p className="text-[10px] text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك أو يكتب نصوصها.</p>}
       </div>}
 
     </div>

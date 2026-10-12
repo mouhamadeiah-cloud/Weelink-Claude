@@ -1,10 +1,12 @@
 {
+ "listMax": 8,
  "sections": {
   "free": [
    {
     "id": "intro",
     "name": "مدخل",
     "required": true,
+    "place": "first",
     "templates": [
      "hero.cover",
      "hero.split",
@@ -14,7 +16,8 @@
    {
     "id": "about",
     "name": "من نحن",
-    "required": true,
+    "required": false,
+    "place": "any",
     "templates": [
      "about.story",
      "about.quote",
@@ -22,9 +25,41 @@
     ]
    },
    {
+    "id": "services",
+    "name": "خدماتنا",
+    "required": false,
+    "place": "any",
+    "templates": [
+     "about.points",
+     "rest.why",
+     "cars.why"
+    ]
+   },
+   {
+    "id": "why",
+    "name": "لماذا نحن",
+    "required": false,
+    "place": "any",
+    "templates": [
+     "rest.why",
+     "cars.why",
+     "about.points"
+    ]
+   },
+   {
+    "id": "numbers",
+    "name": "أرقامنا",
+    "required": false,
+    "place": "any",
+    "templates": [
+     "cars.numbers"
+    ]
+   },
+   {
     "id": "prices",
     "name": "الأسعار",
-    "required": true,
+    "required": false,
+    "place": "any",
     "templates": [
      "prices.list",
      "prices.cards",
@@ -32,9 +67,19 @@
     ]
    },
    {
+    "id": "ticker",
+    "name": "شريط نص متحرك",
+    "required": false,
+    "place": "any",
+    "templates": [
+     "rest.ticker"
+    ]
+   },
+   {
     "id": "gallery",
     "name": "المعرض",
-    "required": true,
+    "required": false,
+    "place": "any",
     "templates": [
      "gallery.mosaic",
      "gallery.strip",
@@ -45,6 +90,7 @@
     "id": "contact",
     "name": "تواصل",
     "required": true,
+    "place": "last",
     "templates": [
      "contact.card",
      "contact.band",
@@ -55,6 +101,7 @@
     "id": "privacy",
     "name": "الشروط والخصوصية",
     "required": true,
+    "place": "last",
     "templates": [
      "legal.columns",
      "legal.accordion"
@@ -66,6 +113,7 @@
     "id": "intro",
     "name": "مدخل",
     "required": true,
+    "place": "first",
     "templates": [
      "rest.front",
      "hero.cover",
@@ -77,6 +125,7 @@
     "id": "ticker",
     "name": "شريط نص متحرك",
     "required": false,
+    "place": "any",
     "templates": [
      "rest.ticker"
     ]
@@ -85,6 +134,7 @@
     "id": "featured",
     "name": "أطباق مميزة",
     "required": true,
+    "place": "any",
     "templates": [
      "rest.featured",
      "rest.featuredStrip",
@@ -96,6 +146,7 @@
     "id": "about",
     "name": "من نحن",
     "required": false,
+    "place": "any",
     "templates": [
      "about.story",
      "about.quote",
@@ -106,14 +157,17 @@
     "id": "why",
     "name": "لماذا نحن",
     "required": false,
+    "place": "any",
     "templates": [
-     "rest.why"
+     "rest.why",
+     "about.points"
     ]
    },
    {
     "id": "gallery",
     "name": "المعرض",
     "required": false,
+    "place": "any",
     "templates": [
      "gallery.mosaic",
      "gallery.strip",
@@ -124,6 +178,7 @@
     "id": "order",
     "name": "اطلب الآن",
     "required": false,
+    "place": "any",
     "templates": [
      "rest.order"
     ]
@@ -132,6 +187,7 @@
     "id": "contact",
     "name": "تواصل",
     "required": false,
+    "place": "last",
     "templates": [
      "contact.card",
      "contact.band",
@@ -144,6 +200,7 @@
     "id": "intro",
     "name": "مدخل",
     "required": true,
+    "place": "first",
     "templates": [
      "shop.front",
      "shop.twoPhotos",
@@ -156,6 +213,7 @@
     "id": "ticker",
     "name": "شريط نص متحرك",
     "required": false,
+    "place": "any",
     "templates": [
      "shop.ticker"
     ]
@@ -164,6 +222,7 @@
     "id": "search",
     "name": "بحث في المتجر",
     "required": false,
+    "place": "any",
     "templates": [
      "shop.searchSimple",
      "shop.searchBg"
@@ -173,6 +232,7 @@
     "id": "featured",
     "name": "منتجات مميزة",
     "required": true,
+    "place": "any",
     "templates": [
      "shop.zigzag",
      "shop.small",
@@ -185,6 +245,7 @@
     "id": "about",
     "name": "من نحن",
     "required": false,
+    "place": "any",
     "templates": [
      "about.story",
      "about.quote",
@@ -192,9 +253,21 @@
     ]
    },
    {
+    "id": "why",
+    "name": "لماذا نحن",
+    "required": false,
+    "place": "any",
+    "templates": [
+     "about.points",
+     "rest.why",
+     "cars.why"
+    ]
+   },
+   {
     "id": "gallery",
     "name": "المعرض",
     "required": false,
+    "place": "any",
     "templates": [
      "gallery.mosaic",
      "gallery.strip",
@@ -205,6 +278,7 @@
     "id": "contact",
     "name": "تواصل",
     "required": false,
+    "place": "last",
     "templates": [
      "contact.card",
      "contact.band",
@@ -217,6 +291,7 @@
     "id": "intro",
     "name": "مدخل",
     "required": true,
+    "place": "first",
     "templates": [
      "cars.front",
      "cars.frontSearch",
@@ -229,6 +304,7 @@
     "id": "ticker",
     "name": "شريط نص متحرك",
     "required": false,
+    "place": "any",
     "templates": [
      "cars.ticker"
     ]
@@ -237,6 +313,7 @@
     "id": "featured",
     "name": "سيارات مميزة",
     "required": true,
+    "place": "any",
     "templates": [
      "cars.featured",
      "cars.strip",
@@ -248,14 +325,17 @@
     "id": "why",
     "name": "لماذا نحن",
     "required": false,
+    "place": "any",
     "templates": [
-     "cars.why"
+     "cars.why",
+     "about.points"
     ]
    },
    {
     "id": "about",
     "name": "من نحن",
     "required": false,
+    "place": "any",
     "templates": [
      "cars.about",
      "about.story",
@@ -267,6 +347,7 @@
     "id": "numbers",
     "name": "أرقامنا",
     "required": false,
+    "place": "any",
     "templates": [
      "cars.numbers"
     ]
@@ -275,6 +356,7 @@
     "id": "request",
     "name": "اطلب سيارتك",
     "required": false,
+    "place": "any",
     "templates": [
      "cars.request"
     ]
@@ -283,6 +365,7 @@
     "id": "contact",
     "name": "تواصل",
     "required": false,
+    "place": "last",
     "templates": [
      "contact.card",
      "contact.band",
@@ -297,69 +380,66 @@
    "slots": {
     "eyebrow": {
      "kind": "text",
-     "max": 30
+     "max": 40
     },
     "title": {
      "kind": "text",
-     "max": 28
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 109
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "whatsapp": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "background": {
      "kind": "image"
     }
-   }
+   },
+   "lists": {}
   },
   "hero.split": {
    "name": "مدخل نص وصورة",
    "slots": {
     "eyebrow": {
      "kind": "text",
-     "max": 30
+     "max": 40
     },
     "title": {
      "kind": "text",
-     "max": 38
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 95
-    },
-    "chips.0": {
-     "kind": "text",
-     "max": 30
-    },
-    "chips.1": {
-     "kind": "text",
-     "max": 30
-    },
-    "chips.2": {
-     "kind": "text",
-     "max": 30
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "whatsapp": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "image": {
      "kind": "image"
     },
     "background": {
      "kind": "image"
+    }
+   },
+   "lists": {
+    "chips": {
+     "count": 3,
+     "fields": {
+      "": 32
+     }
     }
    }
   },
@@ -368,28 +448,29 @@
    "slots": {
     "eyebrow": {
      "kind": "text",
-     "max": 30
+     "max": 40
     },
     "title": {
      "kind": "text",
-     "max": 48
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 91
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "whatsapp": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "background": {
      "kind": "image"
     }
-   }
+   },
+   "lists": {}
   },
   "about.story": {
    "name": "من نحن قصة وصورة",
@@ -399,39 +480,24 @@
     },
     "eyebrow": {
      "kind": "text",
-     "max": 30
+     "max": 40
     },
     "title": {
      "kind": "text",
-     "max": 29
+     "max": 60
     },
     "text": {
      "kind": "text",
-     "max": 255
-    },
-    "facts.0.number": {
-     "kind": "text",
-     "max": 6
-    },
-    "facts.0.label": {
-     "kind": "text",
-     "max": 40
-    },
-    "facts.1.number": {
-     "kind": "text",
-     "max": 6
-    },
-    "facts.1.label": {
-     "kind": "text",
-     "max": 40
-    },
-    "facts.2.number": {
-     "kind": "text",
-     "max": 6
-    },
-    "facts.2.label": {
-     "kind": "text",
-     "max": 40
+     "max": 520
+    }
+   },
+   "lists": {
+    "facts": {
+     "count": 3,
+     "fields": {
+      "number": 8,
+      "label": 40
+     }
     }
    }
   },
@@ -440,63 +506,50 @@
    "slots": {
     "quote": {
      "kind": "text",
-     "max": 60
+     "max": 220
     },
     "text": {
      "kind": "text",
-     "max": 168
+     "max": 520
     },
     "avatar": {
      "kind": "image"
     },
     "owner": {
      "kind": "text",
-     "max": 16
+     "max": 40
     },
     "role": {
      "kind": "text",
-     "max": 40
+     "max": 50
     }
-   }
+   },
+   "lists": {}
   },
   "about.points": {
    "name": "من نحن ثلاث نقاط",
    "slots": {
     "eyebrow": {
      "kind": "text",
-     "max": 30
+     "max": 40
     },
     "title": {
      "kind": "text",
-     "max": 32
+     "max": 60
     },
     "text": {
      "kind": "text",
-     "max": 67
-    },
-    "points.0.title": {
-     "kind": "text",
-     "max": 17
-    },
-    "points.0.text": {
-     "kind": "text",
-     "max": 53
-    },
-    "points.1.title": {
-     "kind": "text",
-     "max": 16
-    },
-    "points.1.text": {
-     "kind": "text",
-     "max": 48
-    },
-    "points.2.title": {
-     "kind": "text",
-     "max": 16
-    },
-    "points.2.text": {
-     "kind": "text",
-     "max": 41
+     "max": 520
+    }
+   },
+   "lists": {
+    "points": {
+     "count": 3,
+     "fields": {
+      "title": 40,
+      "text": 180,
+      "icon": "icon"
+     }
     }
    }
   },
@@ -505,107 +558,21 @@
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
-    },
-    "items.0.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "items.0.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "items.0.desc": {
-     "kind": "text",
-     "max": 40
-    },
-    "items.1.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "items.1.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "items.1.desc": {
-     "kind": "text",
-     "max": 40
-    },
-    "items.2.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "items.2.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "items.2.desc": {
-     "kind": "text",
-     "max": 40
-    },
-    "items.3.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "items.3.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "items.3.desc": {
-     "kind": "text",
-     "max": 40
-    },
-    "items.4.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "items.4.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "items.4.desc": {
-     "kind": "text",
-     "max": 40
-    },
-    "items.5.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "items.5.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "items.5.desc": {
-     "kind": "text",
-     "max": 40
-    },
-    "items.6.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "items.6.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "items.6.desc": {
-     "kind": "text",
-     "max": 40
-    },
-    "items.7.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "items.7.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "items.7.desc": {
-     "kind": "text",
-     "max": 40
+     "max": 60
     },
     "note": {
      "kind": "text",
-     "max": 59
+     "max": 120
+    }
+   },
+   "lists": {
+    "items": {
+     "count": 8,
+     "fields": {
+      "name": 40,
+      "price": 20,
+      "desc": 100
+     }
     }
    }
   },
@@ -614,87 +581,61 @@
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
-    },
-    "packages.0.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "packages.0.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "packages.0.unit": {
-     "kind": "text",
-     "max": 40
+     "max": 60
     },
     "packages.0.features.0": {
      "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.0.features.1": {
      "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.0.features.2": {
      "kind": "text",
-     "max": 40
-    },
-    "packages.1.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "packages.1.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "packages.1.unit": {
-     "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.1.features.0": {
      "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.1.features.1": {
      "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.1.features.2": {
      "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.1.features.3": {
      "kind": "text",
-     "max": 40
-    },
-    "packages.2.name": {
-     "kind": "text",
-     "max": 16
-    },
-    "packages.2.price": {
-     "kind": "text",
-     "max": 14
-    },
-    "packages.2.unit": {
-     "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.2.features.0": {
      "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.2.features.1": {
      "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.2.features.2": {
      "kind": "text",
-     "max": 40
+     "max": 50
     },
     "packages.2.features.3": {
      "kind": "text",
-     "max": 40
+     "max": 50
+    }
+   },
+   "lists": {
+    "packages": {
+     "count": 3,
+     "fields": {
+      "name": 40,
+      "price": 20,
+      "unit": 20
+     }
     }
    }
   },
@@ -703,11 +644,11 @@
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "groups.0.name": {
      "kind": "text",
-     "max": 16
+     "max": 40
     },
     "groups.0.rows.0.name": {
      "kind": "text",
@@ -715,7 +656,7 @@
     },
     "groups.0.rows.0.price": {
      "kind": "text",
-     "max": 14
+     "max": 20
     },
     "groups.0.rows.1.name": {
      "kind": "text",
@@ -723,7 +664,7 @@
     },
     "groups.0.rows.1.price": {
      "kind": "text",
-     "max": 14
+     "max": 20
     },
     "groups.0.rows.2.name": {
      "kind": "text",
@@ -731,7 +672,7 @@
     },
     "groups.0.rows.2.price": {
      "kind": "text",
-     "max": 14
+     "max": 20
     },
     "groups.0.rows.3.name": {
      "kind": "text",
@@ -739,11 +680,11 @@
     },
     "groups.0.rows.3.price": {
      "kind": "text",
-     "max": 14
+     "max": 20
     },
     "groups.1.name": {
      "kind": "text",
-     "max": 16
+     "max": 40
     },
     "groups.1.rows.0.name": {
      "kind": "text",
@@ -751,7 +692,7 @@
     },
     "groups.1.rows.0.price": {
      "kind": "text",
-     "max": 14
+     "max": 20
     },
     "groups.1.rows.1.name": {
      "kind": "text",
@@ -759,7 +700,7 @@
     },
     "groups.1.rows.1.price": {
      "kind": "text",
-     "max": 14
+     "max": 20
     },
     "groups.1.rows.2.name": {
      "kind": "text",
@@ -767,7 +708,7 @@
     },
     "groups.1.rows.2.price": {
      "kind": "text",
-     "max": 14
+     "max": 20
     },
     "groups.1.rows.3.name": {
      "kind": "text",
@@ -775,20 +716,21 @@
     },
     "groups.1.rows.3.price": {
      "kind": "text",
-     "max": 14
+     "max": 20
     },
     "note": {
      "kind": "text",
-     "max": 62
+     "max": 120
     }
-   }
+   },
+   "lists": {}
   },
   "gallery.mosaic": {
    "name": "معرض فسيفساء",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "photos.0": {
      "kind": "image"
@@ -825,14 +767,15 @@
      "kind": "text",
      "max": 40
     }
-   }
+   },
+   "lists": {}
   },
   "gallery.strip": {
    "name": "معرض أقواس",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "photos.0": {
      "kind": "image"
@@ -869,14 +812,15 @@
      "kind": "text",
      "max": 40
     }
-   }
+   },
+   "lists": {}
   },
   "gallery.frames": {
    "name": "معرض إطارات",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "photos.0": {
      "kind": "image"
@@ -913,209 +857,203 @@
      "kind": "text",
      "max": 40
     }
-   }
+   },
+   "lists": {}
   },
   "contact.card": {
    "name": "تواصل معلومات وخريطة",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 50
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "contact.band": {
    "name": "تواصل شريط ملون",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 50
+     "max": 240
     },
     "phone": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "whatsapp": {
      "kind": "button",
-     "max": 18
+     "max": 24
     }
-   }
+   },
+   "lists": {}
   },
   "contact.form": {
    "name": "تواصل نموذج رسالة",
    "slots": {
     "send": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 45
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "legal.columns": {
    "name": "الشروط والخصوصية عمودان",
-   "slots": {}
+   "slots": {},
+   "lists": {}
   },
   "legal.accordion": {
    "name": "الشروط والخصوصية أسئلة",
-   "slots": {}
+   "slots": {},
+   "lists": {}
   },
   "rest.front": {
    "name": "واجهة المطعم",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 35
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 95
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "background": {
      "kind": "image"
     }
-   }
+   },
+   "lists": {}
   },
   "rest.featured": {
    "name": "أطباق مميزة",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 21
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 40
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "rest.featuredStrip": {
    "name": "شريط أطباق مميزة متحرك",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 21
+     "max": 60
     }
-   }
+   },
+   "lists": {}
   },
   "rest.featuredShake": {
    "name": "أطباق مميزة بحركة اهتزاز",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 21
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 40
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "rest.ticker": {
    "name": "شريط نص متحرك",
    "slots": {
     "ticker": {
      "kind": "text",
-     "max": 234
+     "max": 160
     }
-   }
+   },
+   "lists": {}
   },
   "rest.menuSections": {
    "name": "المنيو كاملًا بأقسام",
-   "slots": {}
+   "slots": {},
+   "lists": {}
   },
   "rest.menuRows": {
    "name": "منيو بصفوف",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     }
-   }
+   },
+   "lists": {}
   },
   "rest.menuBig": {
    "name": "أطباق بصور كبيرة",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     }
-   }
+   },
+   "lists": {}
   },
   "rest.menuOne": {
    "name": "قسم واحد من المنيو",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     }
-   }
+   },
+   "lists": {}
   },
   "rest.cart": {
    "name": "سلة الطلب",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     }
-   }
+   },
+   "lists": {}
   },
   "rest.why": {
    "name": "لماذا نحن",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 22
-    },
-    "points.0.title": {
-     "kind": "text",
-     "max": 17
-    },
-    "points.0.text": {
-     "kind": "text",
-     "max": 41
-    },
-    "points.1.title": {
-     "kind": "text",
-     "max": 16
-    },
-    "points.1.text": {
-     "kind": "text",
-     "max": 40
-    },
-    "points.2.title": {
-     "kind": "text",
-     "max": 16
-    },
-    "points.2.text": {
-     "kind": "text",
-     "max": 43
-    },
-    "points.3.title": {
-     "kind": "text",
-     "max": 16
-    },
-    "points.3.text": {
-     "kind": "text",
-     "max": 49
+     "max": 60
+    }
+   },
+   "lists": {
+    "points": {
+     "count": 4,
+     "fields": {
+      "title": 40,
+      "text": 180,
+      "icon": "icon"
+     }
     }
    }
   },
@@ -1124,48 +1062,50 @@
    "slots": {
     "title": {
      "kind": "text",
-     "max": 21
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 62
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "background": {
      "kind": "image"
     }
-   }
+   },
+   "lists": {}
   },
   "shop.front": {
    "name": "ابدأ - واجهة المتجر",
    "slots": {
     "eyebrow": {
      "kind": "text",
-     "max": 30
+     "max": 40
     },
     "title": {
      "kind": "text",
-     "max": 32
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 130
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "whatsapp": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "background": {
      "kind": "image"
     }
-   }
+   },
+   "lists": {}
   },
   "shop.twoPhotos": {
    "name": "ابدأ - صورتان",
@@ -1175,73 +1115,79 @@
     },
     "eyebrow": {
      "kind": "text",
-     "max": 30
+     "max": 40
     },
     "title": {
      "kind": "text",
-     "max": 32
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 99
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     }
-   }
+   },
+   "lists": {}
   },
   "shop.zigzag": {
    "name": "منتجات - زجزاج",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 18
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 49
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "shop.wide": {
    "name": "منتجات - بطاقة عرضية",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 67
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "shop.small": {
    "name": "منتجات - بطاقات صغيرة",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 18
+     "max": 60
     }
-   }
+   },
+   "lists": {}
   },
   "shop.large": {
    "name": "منتجات - بطاقات كبيرة",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 67
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "shop.searchSimple": {
    "name": "ابحث في المتجر - بسيط",
-   "slots": {}
+   "slots": {},
+   "lists": {}
   },
   "shop.searchBg": {
    "name": "ابحث في المتجر - بخلفية",
@@ -1249,233 +1195,228 @@
     "background": {
      "kind": "image"
     }
-   }
+   },
+   "lists": {}
   },
   "shop.featuredStrip": {
    "name": "شريط منتجات مميزة متحرك",
-   "slots": {}
+   "slots": {},
+   "lists": {}
   },
   "shop.moving": {
    "name": "منتجات بحركة",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 18
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 49
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "shop.featuredShake": {
    "name": "منتجات مميزة بحركة اهتزاز",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 18
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 49
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "shop.ticker": {
    "name": "شريط نص متحرك",
    "slots": {
     "ticker": {
      "kind": "text",
-     "max": 175
+     "max": 160
     }
-   }
+   },
+   "lists": {}
   },
   "shop.cart2": {
    "name": "سلة - بطاقتان",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 18
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 59
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "shop.cartDark": {
    "name": "سلة - داكنة",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 16
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 49
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "cars.front": {
    "name": "واجهة المعرض",
    "slots": {
     "eyebrow": {
      "kind": "text",
-     "max": 30
+     "max": 40
     },
     "title": {
      "kind": "text",
-     "max": 32
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 108
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "whatsapp": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "background": {
      "kind": "image"
     }
-   }
+   },
+   "lists": {}
   },
   "cars.frontSearch": {
    "name": "واجهة مع بحث",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 20
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 50
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "background": {
      "kind": "image"
     }
-   }
+   },
+   "lists": {}
   },
   "cars.featured": {
    "name": "سيارات مميزة",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 17
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 45
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     }
-   }
+   },
+   "lists": {}
   },
   "cars.all": {
    "name": "كل السيارات مع تصفية",
-   "slots": {}
+   "slots": {},
+   "lists": {}
   },
   "cars.rows": {
    "name": "سيارات بصفوف عرضية",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 18
+     "max": 60
     }
-   }
+   },
+   "lists": {}
   },
   "cars.big": {
    "name": "سيارات بصور كبيرة",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 25
+     "max": 60
     }
-   }
+   },
+   "lists": {}
   },
   "cars.strip": {
    "name": "شريط سيارات مميزة متحرك",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 20
+     "max": 60
     }
-   }
+   },
+   "lists": {}
   },
   "cars.shake": {
    "name": "سيارات مميزة بحركة اهتزاز",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 17
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 45
+     "max": 240
     }
-   }
+   },
+   "lists": {}
   },
   "cars.ticker": {
    "name": "شريط نص متحرك",
    "slots": {
     "ticker": {
      "kind": "text",
-     "max": 192
+     "max": 160
     }
-   }
+   },
+   "lists": {}
   },
   "cars.searchBar": {
    "name": "شريط بحث",
-   "slots": {}
+   "slots": {},
+   "lists": {}
   },
   "cars.why": {
    "name": "لماذا نحن",
    "slots": {
     "title": {
      "kind": "text",
-     "max": 24
-    },
-    "points.0.title": {
-     "kind": "text",
-     "max": 18
-    },
-    "points.0.text": {
-     "kind": "text",
-     "max": 63
-    },
-    "points.1.title": {
-     "kind": "text",
-     "max": 16
-    },
-    "points.1.text": {
-     "kind": "text",
-     "max": 52
-    },
-    "points.2.title": {
-     "kind": "text",
-     "max": 16
-    },
-    "points.2.text": {
-     "kind": "text",
-     "max": 50
-    },
-    "points.3.title": {
-     "kind": "text",
-     "max": 20
-    },
-    "points.3.text": {
-     "kind": "text",
-     "max": 48
+     "max": 60
+    }
+   },
+   "lists": {
+    "points": {
+     "count": 4,
+     "fields": {
+      "title": 40,
+      "text": 180,
+      "icon": "icon"
+     }
     }
    }
   },
@@ -1487,48 +1428,33 @@
     },
     "eyebrow": {
      "kind": "text",
-     "max": 30
+     "max": 40
     },
     "title": {
      "kind": "text",
-     "max": 45
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 161
+     "max": 240
     },
     "cta": {
      "kind": "button",
-     "max": 18
+     "max": 24
     }
-   }
+   },
+   "lists": {}
   },
   "cars.numbers": {
    "name": "أرقامنا",
-   "slots": {
-    "facts.0.number": {
-     "kind": "text",
-     "max": 6
-    },
-    "facts.0.label": {
-     "kind": "text",
-     "max": 40
-    },
-    "facts.1.number": {
-     "kind": "text",
-     "max": 6
-    },
-    "facts.1.label": {
-     "kind": "text",
-     "max": 40
-    },
-    "facts.2.number": {
-     "kind": "text",
-     "max": 6
-    },
-    "facts.2.label": {
-     "kind": "text",
-     "max": 40
+   "slots": {},
+   "lists": {
+    "facts": {
+     "count": 3,
+     "fields": {
+      "number": 8,
+      "label": 40
+     }
     }
    }
   },
@@ -1537,20 +1463,21 @@
    "slots": {
     "title": {
      "kind": "text",
-     "max": 38
+     "max": 60
     },
     "sub": {
      "kind": "text",
-     "max": 41
+     "max": 240
     },
     "whatsapp": {
      "kind": "button",
-     "max": 18
+     "max": 24
     },
     "background": {
      "kind": "image"
     }
-   }
+   },
+   "lists": {}
   }
  },
  "fonts": {

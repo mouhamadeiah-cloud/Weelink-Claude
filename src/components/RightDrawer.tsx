@@ -177,6 +177,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onWriteTexts,
   onBuildPage,
   onRestorePage,
+  onEditAnswers,
+  restoreAvailable,
   isWeeAiChatCollapsed: externalIsWeeAiChatCollapsed,
   onToggleWeeAiChat: externalOnToggleWeeAiChat,
   navbar,
@@ -6026,6 +6028,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           onWriteTexts={onWriteTexts}
           onBuildPage={onBuildPage}
           onRestorePage={onRestorePage}
+          onEditAnswers={onEditAnswers}
+          restoreAvailable={restoreAvailable}
           pageKind={isShopProject ? 'shop' : isRestaurantProject ? 'restaurant' : isCarProject ? 'cars' : 'page'}
         />
 

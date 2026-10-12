@@ -120,6 +120,9 @@ export interface RightDrawerProps {
   // «ابن صفحتي»: Wee AI building the page from the answers, and bringing the old page back.
   onBuildPage?: (answers: any) => Promise<{ ok: boolean; message: string }>;
   onRestorePage?: () => { ok: boolean; message: string };
+  // The questions are on the start page: this opens them again.
+  onEditAnswers?: () => void;
+  restoreAvailable?: boolean;
   isWeeAiChatCollapsed?: boolean;
   onToggleWeeAiChat?: () => void;
   // Docked beside the workspace on a wide screen (its width in px): it then stays open while the

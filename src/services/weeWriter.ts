@@ -7,7 +7,7 @@ const TEXT_KINDS = ['heading', 'paragraph', 'button', 'badge'] as const;
 type TextKind = (typeof TEXT_KINDS)[number];
 
 export interface WeeAnswers {
-  personalInfo?: { title?: string; fullName?: string; logoUrl?: string };
+  personalInfo?: { title?: string; fullName?: string; pageName?: string; logoUrl?: string };
   addressInfo?: { governorate?: string; placeType?: string; city?: string; area?: string; district?: string; subdistrict?: string; village?: string; street?: string; details?: string };
   contactInfo?: { whatsapp?: string; phone?: string; facebook?: string; tiktok?: string };
   catalogInfo?: { category?: string; subCategory?: string; specialty?: string; customCategory?: string; customSpecialty?: string };
@@ -21,6 +21,7 @@ export interface WeeAnswers {
     wantsGallery?: boolean;
     galleryImages?: string[];
     heroBgImage?: string;
+    services?: { name: string; price: string }[];
   };
 }
 
@@ -32,6 +33,12 @@ const plain = (html: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+// The owner's services as «name: price» lines (a service without a price says so).
+export const ownerServices = (rows: { name: string; price: string }[] | undefined) =>
+  (rows || []).map((r) => ({ name: (r.name || '').trim(), price: (r.price || '').trim() })).filter((r) => r.name).slice(0, 8);
+const serviceLines = (rows: { name: string; price: string }[] | undefined) =>
+  ownerServices(rows).map((r) => `${r.name}: ${r.price || 'حسب الطلب'}`).join('؛ ');
+
 // What the owner told Wee AI, as the few facts the writer needs.
 export const businessFacts = (a: WeeAnswers, siteName: string): Record<string, string> => {
   const p = a.personalInfo || {};
@@ -40,7 +47,8 @@ export const businessFacts = (a: WeeAnswers, siteName: string): Record<string, s
   const cat = a.catalogInfo || {};
   const ai = a.aiAnswers || {};
   const facts: Record<string, string> = {
-    اسم_الموقع: siteName,
+    اسم_الصفحة: (p.pageName || '').trim(),
+    اسم_الموقع: (p.pageName || '').trim() || siteName,
     صاحب_العمل: [p.title, p.fullName].filter(Boolean).join(' '),
     التصنيف: cat.customCategory || cat.category || '',
     الكتالوج_الفرعي: cat.subCategory || '',
@@ -51,6 +59,7 @@ export const businessFacts = (a: WeeAnswers, siteName: string): Record<string, s
     هاتف: c.phone || '',
     طابع_الصفحة: ai.motionEffects || '',
     ملاحظات: ai.specialInstructions || '',
+    الخدمات: serviceLines(ai.services),
   };
   return Object.fromEntries(Object.entries(facts).filter(([, v]) => v && v.trim()));
 };

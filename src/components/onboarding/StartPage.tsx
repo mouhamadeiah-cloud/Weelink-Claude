@@ -1,8 +1,9 @@
-// «اعمل صفحتك»: the visitor picks the kind of page first, then answers Wee AI's questions without an
-// account. Signing up comes at the end, and the answers move to the new account
-// (services/guestAnswers.ts). A signed-in owner skips the questions here: the kind opens straight
-// in the editor, where Wee AI waits in the panel.
-import React, { useState } from 'react';
+// «اعمل صفحتك»: everyone picks the kind of page first, then answers Wee AI's questions here (Eyad,
+// 12 Oct: one way in for all). A visitor answers without an account and signs up at the end; the
+// answers move to the new account (services/guestAnswers.ts). A signed-in owner answers under their
+// account, with their earlier answers filled in, and the editor opens and builds the page.
+// The browser's back button goes from the questions back to the kinds.
+import React, { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { ArrowLeft, CarFront, Check, FileText, Loader2, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
@@ -59,26 +60,43 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
 
 interface StartPageProps {
   user: User | null;
+  // The account the answers belong to (a team member's is the owner's).
+  accountId: string;
+  // Opens straight on this kind's questions (from «عدّل إجاباتي» in the editor).
+  initialKind?: ProjectType | null;
   onHome: () => void;
-  // A signed-in owner picked a kind: open it.
-  onOpen: (kind: ProjectType) => void;
+  // A signed-in owner finished the questions: open this kind and build it from the answers.
+  onBuild: (kind: ProjectType, answers: any) => void;
   // A guest finished the questions: sign up, then open this kind.
   onSignUp: (kind: ProjectType) => void;
   loadingType?: ProjectType | null;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, onHome, onOpen, onSignUp, loadingType }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, loadingType }) => {
   const signedIn = !!user && !user.isAnonymous;
-  const [kind, setKind] = useState<ProjectType | null>(null);
+  const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
   const [step, setStep] = useState(1);
   const saved = signedIn ? null : guestKindOf(readGuestAnswers());
 
+  // The questions are a step of their own in the browser's history: back returns to the kinds.
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      if (e.state?.screen === 'start') setKind(e.state.kind || null);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
   const choose = (type: ProjectType) => {
-    if (signedIn) return onOpen(type);
-    setGuestKind(type);
+    if (!signedIn) setGuestKind(type);
     setStep(1);
     setKind(type);
+    window.history.pushState({ screen: 'start', kind: type }, '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const backToKinds = () => {
+    if (window.history.state?.screen === 'start' && window.history.state.kind) window.history.back();
+    else setKind(null);
   };
 
   const chosen = KINDS.find((k) => k.type === kind);
@@ -88,7 +106,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, onHome, onOpen, onSi
     <div className="min-h-screen bg-[#f6f3ee] text-[#1c1a17]" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic', 'Readex Pro', sans-serif" }}>
       <header className="sticky top-0 z-30 bg-[#f6f3ee]/85 backdrop-blur border-b border-black/5">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <button type="button" onClick={kind ? () => setKind(null) : onHome} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5b5348] hover:text-[#c2410c] transition">
+          <button type="button" onClick={kind ? backToKinds : onHome} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5b5348] hover:text-[#c2410c] transition">
             → {kind ? 'نوع الصفحة' : 'الرئيسية'}
           </button>
           <div className="flex-1" />
@@ -111,7 +129,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, onHome, onOpen, onSi
               </span>
               <h1 className="text-3xl sm:text-5xl font-bold leading-tight" style={{ fontFamily: HEAD_FONT }}>شو بدك تعمل؟</h1>
               <p className="text-sm sm:text-base opacity-90 max-w-xl leading-relaxed">
-                {signedIn ? 'اختر نوع الصفحة لتفتحها في المحرر.' : 'اختر نوع صفحتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
+                {signedIn ? 'اختر نوع صفحتك وجاوب على كم سؤال، وWee AI بيبنيها إلك. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع صفحتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
               </p>
               {!signedIn && (
                 <ol className="flex flex-wrap gap-2">
@@ -141,7 +159,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, onHome, onOpen, onSi
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/5" />
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500" style={{ background: `linear-gradient(to top, ${k.accent}cc, transparent 70%)` }} />
                 {saved === k.type && (
-                  <span className="absolute top-3 right-3 bg-white text-[#c2410c] text-[11px] font-bold rounded-full px-2.5 py-1 shadow">كمّل من حيث وقفت</span>
+                  <span className="absolute top-3 right-3 bg-white text-[#c2410c] text-[11px] font-bold rounded-full px-2.5 py-1 shadow">إجاباتك محفوظة</span>
                 )}
                 <span className="relative p-5 w-full space-y-2">
                   <span className="w-11 h-11 rounded-2xl flex items-center justify-center mb-1 shadow-lg" style={{ backgroundColor: k.accent }}>
@@ -156,7 +174,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, onHome, onOpen, onSi
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold pt-1">
                     {loadingType === k.type ? <Loader2 size={14} className="animate-spin" /> : null}
-                    {signedIn ? 'افتح' : 'ابدأ'}
+                    ابدأ
                     <ArrowLeft size={14} className="transition group-hover:-translate-x-1.5" />
                   </span>
                 </span>
@@ -198,16 +216,18 @@ export const StartPage: React.FC<StartPageProps> = ({ user, onHome, onOpen, onSi
           <div className="wl-rise relative h-[calc(100dvh-14rem)] lg:h-[calc(100dvh-7rem)] min-h-[440px] rounded-3xl overflow-hidden border border-black/10 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.08)] lg:order-1" style={{ animationDelay: '120ms' }}>
             <WeeAIChat
               key={chosen.type}
-              userId={WEE_GUEST_ID}
-              userEmail=""
+              userId={signedIn ? accountId : WEE_GUEST_ID}
+              userEmail={signedIn ? user?.email || "" : ""}
               pageKind={chosen.type}
               embedded
+              fromStart
               isCollapsed={false}
-              onToggleCollapse={() => setKind(null)}
+              onToggleCollapse={backToKinds}
               onStepChange={setStep}
-              onCompleteChat={() => {
+              onCompleteChat={(answers) => {
                 setStep(QUESTION_COUNT + 1);
-                onSignUp(chosen.type);
+                if (signedIn) onBuild(chosen.type, answers);
+                else onSignUp(chosen.type);
               }}
             />
           </div>

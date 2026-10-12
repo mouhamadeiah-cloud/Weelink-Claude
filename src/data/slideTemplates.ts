@@ -71,6 +71,7 @@ import { SHOP_SLIDE_COUNT, getShopSlidePayload } from './shopSlideTemplates';
 import { groupTemplateCards } from '../utils/templateGroups';
 import { CAR_SLIDE_COUNT, getCarSlidePayload } from './carSlideTemplates';
 import { REST_SLIDE_COUNT, getRestaurantSlidePayload } from './restaurantSlideTemplates';
+import { WEE_SLIDES, weeSlideCount } from './weeSlideTemplates';
 
 export const READY_SLIDE_CATEGORIES = [
   { id: 'intro', name: 'مدخل', desc: 'الترحيب بالزوار وجذب الانتباه', icon: '🚀' },
@@ -251,10 +252,17 @@ export const customizeElementsForIndex = (elements: any[], categoryId: string, i
 };
 
 // How many ready slides a category offers.
+// The approved designs of weeSlideTemplates come first in their categories.
 export const slideTemplateCount = (categoryId: string) =>
-  categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : categoryId === 'restaurant' ? REST_SLIDE_COUNT : 10;
+  categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : categoryId === 'restaurant' ? REST_SLIDE_COUNT : weeSlideCount(categoryId) + 10;
 
 export const getSlideTemplatePayload = (categoryId: string, index: number, catName: string) => {
+  const wee = weeSlideCount(categoryId);
+  if (index < wee) return WEE_SLIDES[categoryId][index]();
+  return getOlderSlidePayload(categoryId, index - wee, catName);
+};
+
+const getOlderSlidePayload = (categoryId: string, index: number, catName: string) => {
   // Cards in the shop and showroom slides arrive as groups (moved, copied and phone-arranged together).
   if (categoryId === 'shop' || categoryId === 'cars' || categoryId === 'restaurant') {
     const payload = categoryId === 'shop' ? getShopSlidePayload(index) : categoryId === 'cars' ? getCarSlidePayload(index) : getRestaurantSlidePayload(index);

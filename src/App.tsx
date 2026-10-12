@@ -2715,13 +2715,17 @@ export default function App() {
     setActiveSlideId(newSlideId);
   };
 
-  const handleAddSlideTemplate = (template: { name: string; height: number; backgroundColor: string; backgroundImage?: string; backgroundOpacity?: number; backgroundAttachment?: 'scroll' | 'fixed'; elements: any[] }) => {
+  const handleAddSlideTemplate = (template: { name: string; height: number; backgroundColor: string; backgroundImage?: string; backgroundVideo?: string; backgroundOpacity?: number; backgroundAttachment?: 'scroll' | 'fixed'; dividerShape?: string; aiTemplate?: string; mobileHeight?: number; elements: any[] }) => {
     const newSlideId = `slide-${Date.now()}`;
     const newSlide: Slide = {
       id: newSlideId,
       name: template.name,
       height: template.height,
       backgroundColor: template.backgroundColor,
+      ...(template.backgroundVideo ? { backgroundVideo: template.backgroundVideo } : {}),
+      ...(template.dividerShape ? { dividerShape: template.dividerShape as Slide['dividerShape'] } : {}),
+      ...(template.aiTemplate ? { aiTemplate: template.aiTemplate } : {}),
+      ...(template.mobileHeight ? { mobileHeight: template.mobileHeight } : {}),
       ...(template.backgroundImage ? {
         backgroundImage: template.backgroundImage,
         backgroundSize: 'cover',

@@ -16,7 +16,7 @@ const HEAD_FONT = "'Readex Pro', 'IBM Plex Sans Arabic', sans-serif";
 const photo = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`;
 
 const HERO = photo('1522071820081-009f0129c71c', 1600);
-const STEPS = ['اختار نوع صفحتك', 'جاوب على أسئلة Wee AI', 'اعمل حسابك وصفحتك جاهزة'];
+const STEPS = ['اختار نوع صفحتك', 'اختار باقتك', 'جاوب على أسئلة Wee AI', 'اعمل حسابك وصفحتك جاهزة'];
 const QUESTION_COUNT = 12;
 
 // Photos of running the business, unlike the home page's search and order cards (Eyad, 12 Oct).
@@ -76,13 +76,19 @@ interface StartPageProps {
 export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, loadingType }) => {
   const signedIn = !!user && !user.isAnonymous;
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
+  // After the kind come its packages, then the questions (Eyad, 12 Oct). Editing the answers from
+  // the editor opens straight on the questions.
+  const [stage, setStage] = useState<'plans' | 'questions'>(initialKind ? 'questions' : 'plans');
   const [step, setStep] = useState(1);
   const saved = signedIn ? null : guestKindOf(readGuestAnswers());
 
   // The questions are a step of their own in the browser's history: back returns to the kinds.
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
-      if (e.state?.screen === 'start') setKind(e.state.kind || null);
+      if (e.state?.screen === 'start') {
+        setKind(e.state.kind || null);
+        setStage(e.state.stage === 'questions' ? 'questions' : 'plans');
+      }
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -92,11 +98,19 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
     if (!signedIn) setGuestKind(type);
     setStep(1);
     setKind(type);
-    window.history.pushState({ screen: 'start', kind: type }, '');
+    setStage('plans');
+    window.history.pushState({ screen: 'start', kind: type, stage: 'plans' }, '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const backToKinds = () => {
+  const startQuestions = () => {
+    setStage('questions');
+    window.history.pushState({ screen: 'start', kind, stage: 'questions' }, '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  // One step back: from the questions to the packages, from the packages to the kinds.
+  const stepBack = () => {
     if (window.history.state?.screen === 'start' && window.history.state.kind) window.history.back();
+    else if (stage === 'questions' && !initialKind) setStage('plans');
     else setKind(null);
   };
 
@@ -107,8 +121,8 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
     <div className="min-h-screen bg-[#f6f3ee] text-[#1c1a17]" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic', 'Readex Pro', sans-serif" }}>
       <header className="sticky top-0 z-30 bg-[#f6f3ee]/85 backdrop-blur border-b border-black/5">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <button type="button" onClick={kind ? backToKinds : onHome} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5b5348] hover:text-[#c2410c] transition">
-            → {kind ? 'نوع الصفحة' : 'الرئيسية'}
+          <button type="button" onClick={kind ? stepBack : onHome} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5b5348] hover:text-[#c2410c] transition">
+            → {!kind ? 'الرئيسية' : stage === 'questions' && !initialKind ? 'الباقات' : 'نوع الصفحة'}
           </button>
           <div className="flex-1" />
           <span className="flex items-center gap-2">
@@ -130,7 +144,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               </span>
               <h1 className="text-3xl sm:text-5xl font-bold leading-tight" style={{ fontFamily: HEAD_FONT }}>شو بدك تعمل؟</h1>
               <p className="text-sm sm:text-base opacity-90 max-w-xl leading-relaxed">
-                {signedIn ? 'اختر نوع صفحتك وجاوب على كم سؤال، وبعدين بتصممها بإيدك أو بيبنيها إلك Wee AI. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع صفحتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
+                {signedIn ? 'اختر نوع صفحتك وباقتك وجاوب على كم سؤال، وبعدين بتصممها بإيدك أو بيبنيها إلك Wee AI. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع صفحتك وباقتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
               </p>
               {!signedIn && (
                 <ol className="flex flex-wrap gap-2">
@@ -183,8 +197,9 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
             ))}
           </section>
         </main>
+      ) : stage === 'plans' ? (
+        <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} accent={chosen.accent} title={chosen.title} onPicked={startQuestions} />
       ) : (
-        <>
         <main key="chat" className="max-w-6xl mx-auto px-4 py-4 sm:py-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:gap-6 lg:items-start space-y-3 lg:space-y-0">
           {/* The chosen kind's photo: a banner on a phone, a tall panel beside the questions on a wide screen */}
           <aside className="wl-rise relative rounded-3xl overflow-hidden text-white h-36 lg:h-[calc(100dvh-7rem)] lg:sticky lg:top-20 lg:order-2">
@@ -224,7 +239,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               embedded
               fromStart
               isCollapsed={false}
-              onToggleCollapse={backToKinds}
+              onToggleCollapse={stepBack}
               onStepChange={setStep}
               onCompleteChat={(answers) => {
                 setStep(QUESTION_COUNT + 1);
@@ -234,8 +249,6 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
             />
           </div>
         </main>
-        <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} accent={chosen.accent} />
-        </>
       )}
     </div>
   );

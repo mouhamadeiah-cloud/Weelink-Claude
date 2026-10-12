@@ -6,7 +6,7 @@
 // icons and lines that belonged to it.
 import { auth } from './firebase';
 import type { CanvasElement, Page, Slide } from '../types';
-import { businessFacts, type WeeAnswers } from './weeWriter';
+import { businessFacts, ownerServices, type WeeAnswers } from './weeWriter';
 import { trackUnsplashDownload } from './unsplashService';
 import { WEE_COLOR_CHOICES } from '../data/weeColorChoices';
 import { WEE_SLIDE_BY_ID } from '../data/weeSlideTemplates';
@@ -15,7 +15,9 @@ import { STORE_SLIDE_IDS } from '../data/storeSlideAi';
 import { TWENTY_PAGE_PALETTES } from '../data/palettes';
 import { REST_PAGE_IDS } from '../data/restaurantTemplate';
 import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
-import { lookOf, recolourDeep, targetColours, textOn, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
+import { lookOf, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
+import { fitTexts, fitTextsPhone, listItems, reflowList, type FlexEl } from '../utils/flexLayout';
+import { arrangeSlideForMobile } from '../utils/mobileLayout';
 import type { ProjectType } from '../components/shop/shopTypes';
 
 export type BuildKind = 'free' | 'restaurant' | 'shop' | 'cars';
@@ -25,15 +27,18 @@ export const KIND_OF_PROJECT: Record<ProjectType, BuildKind> = { page: 'free', r
 export interface PlannedSection {
   section: string;
   template: string;
-  slots: Record<string, string>;
+  tone: 'light' | 'tint' | 'dark';
+  slots: Record<string, string>; // single slots and list items (points.3.title …)
+  icons: Record<string, string>; // points.0.icon → mdi:…
   links: Record<string, string>;
   images: Record<string, string>;
-  motion: boolean;
+  entrance: string; // an editor animation, or 'none'
 }
 export interface Plan {
   palette: string;
   fonts: string;
   accentColor?: string;
+  motion: boolean;
   sections: PlannedSection[];
 }
 
@@ -57,12 +62,16 @@ const PAGE_TARGETS: Record<string, string[]> = {
 };
 const HOME_PAGE: Record<BuildKind, string | null> = { free: null, restaurant: REST_PAGE_IDS.home, shop: 'shop-page-home', cars: CAR_PAGE_IDS.home };
 
-/** The owner's colour as a hex: the custom one, or the first colour of the named choice. */
-const ownersColour = (a: WeeAnswers) => {
+// The owner's colour choice (Wee AI step 6): a named choice gives its accent and second colour,
+// «مخصص» the colour picked by hand. Nothing when the owner left the question.
+const ownersChoice = (a: WeeAnswers): { accent: string; second?: string } | null => {
   const ai = a.aiAnswers || {};
-  const custom = /#[0-9a-f]{6}/i.exec(`${ai.customColor || ''} ${ai.colorPalette || ''}`)?.[0];
-  if (custom) return custom;
-  return WEE_COLOR_CHOICES.find((c) => c.name === ai.colorPalette)?.colors[0] || '';
+  if ((ai.colorPalette || '').startsWith('مخصص')) {
+    const custom = /#[0-9a-f]{6}/i.exec(`${ai.colorPalette} ${ai.customColor || ''}`)?.[0];
+    return custom ? { accent: custom } : null;
+  }
+  const named = WEE_COLOR_CHOICES.find((c) => c.name === ai.colorPalette);
+  return named ? { accent: named.colors[0], second: named.colors[1] } : null;
 };
 
 /** What the server and Gemini get: the facts the writer uses plus the look the owner asked for. */
@@ -70,7 +79,7 @@ export const buildProfile = (a: WeeAnswers, siteName: string): Record<string, st
   const ai = a.aiAnswers || {};
   const extra: Record<string, string> = {
     اللون_المفضل: ai.colorPalette || '',
-    اللون_المفضل_رمز: ownersColour(a),
+    اللون_المفضل_رمز: ownersChoice(a)?.accent || '',
     الفواصل: ai.dividerStyle || '',
     الحركة: ai.motionEffects || '',
   };
@@ -149,6 +158,8 @@ interface Context {
   contactIndex: number;
   photo: (query: string) => Promise<string | null>;
   fallbackQuery?: string; // the AI's first photo search, for a photo it left without one
+  services: { name: string; price: string }[]; // the owner's own, for the price section
+  title: string; // the page's name, or the owner's
 }
 
 const inside = (outer: Draft, inner: Draft) =>
@@ -190,16 +201,97 @@ const imageFor = async (ref: string | undefined, ctx: Context): Promise<string |
   return ctx.photo(ref);
 };
 
+// ---------- The flexible plan as an example slide's slots ----------
+
+const LIST_SLOT = /^(chips|facts|points|items|packages)\.(\d+)(?=\.|$)/;
+const ON_REQUEST = 'حسب الطلب';
+// A price the owner wrote as a bare number gets the Syrian pound; words stay as written.
+const priceText = (p: string) => (!p ? ON_REQUEST : /^[\d٠-٩][\d٠-٩.,،\s]*$/.test(p) ? `${p} ل.س` : p);
+
+/** The owner's services and prices as the price section's rows (the AI writes only their descriptions). */
+const withServices = (section: PlannedSection, rows: { name: string; price: string }[], templateKeys: string[]) => {
+  if (section.section !== 'prices' || !rows.length) return section;
+  const slots = { ...section.slots };
+  const list = templateKeys.some((k) => k.startsWith('items.')) ? 'items' : templateKeys.some((k) => k.startsWith('packages.')) ? 'packages' : null;
+  if (list) {
+    for (const k of Object.keys(slots)) if (LIST_SLOT.exec(k)?.[1] === list && +LIST_SLOT.exec(k)![2] >= rows.length) delete slots[k];
+    rows.forEach((r, i) => {
+      slots[`${list}.${i}.name`] = r.name;
+      slots[`${list}.${i}.price`] = priceText(r.price);
+    });
+    return { ...section, slots };
+  }
+  // A grouped list: the rows filled in order, the groups left without a row go.
+  const rowKeys = templateKeys.filter((k) => /^groups\.\d+\.rows\.\d+\.name$/.test(k));
+  rowKeys.forEach((k, i) => {
+    const r = rows[i];
+    slots[k] = r?.name || '';
+    slots[k.replace(/name$/, 'price')] = r ? priceText(r.price) : '';
+  });
+  const groups = new Set(rowKeys.map((k) => k.split('.')[1]));
+  for (const g of groups) if (!rowKeys.some((k, i) => k.split('.')[1] === g && rows[i])) slots[`groups.${g}.name`] = '';
+  return { ...section, slots };
+};
+
+/** The list items the AI filled, numbered from 0 with no gaps, and how many each list has. */
+const compactLists = (section: PlannedSection) => {
+  // An item counts when it has text, and its name, title or figure when it has one of those.
+  const HEAD = /^[a-z]+\.\d+\.(name|title|number)$/;
+  const itemKey = (k: string) => k.split('.').slice(0, 2).join('.');
+  const heads = Object.entries(section.slots).filter(([k]) => HEAD.test(k));
+  const headless = new Set(heads.map(([k]) => itemKey(k)).filter((item) => !heads.some(([k, v]) => itemKey(k) === item && v.trim())));
+  const used = new Map<string, number[]>();
+  for (const [k, v] of Object.entries(section.slots)) {
+    const m = LIST_SLOT.exec(k);
+    if (!m || !v.trim() || headless.has(`${m[1]}.${m[2]}`)) continue;
+    const list = used.get(m[1]) || [];
+    if (!list.includes(+m[2])) list.push(+m[2]);
+    used.set(m[1], list);
+  }
+  used.forEach((list) => list.sort((a, b) => a - b));
+  const rename = (k: string) => {
+    const m = LIST_SLOT.exec(k);
+    if (!m) return k;
+    const j = (used.get(m[1]) || []).indexOf(+m[2]);
+    return j < 0 ? null : k.replace(LIST_SLOT, `${m[1]}.${j}`);
+  };
+  const move = (rec: Record<string, string>) =>
+    Object.fromEntries(Object.entries(rec).map(([k, v]) => [rename(k), v] as const).filter((e): e is [string, string] => e[0] !== null));
+  return { slots: move(section.slots), icons: move(section.icons), counts: new Map([...used].map(([k, v]) => [k, v.length])) };
+};
+
+const ANIMATED = /^(fade|slide-up|slide-left|slide-right|scale-up)$/;
+
 /** One planned section as a slide and its elements. */
-const buildSlide = async (section: PlannedSection, index: number, ctx: Context, to: TargetColours, fonts: { head: string; body: string }) => {
-  const ready = readySlide(section.template);
+const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, page: TargetColours, fonts: { head: string; body: string }, motion: boolean) => {
+  const ready = readySlide(planned.template);
   if (!ready) return null;
   const slideId = ctx.slideIds[index];
-  const { elements: drafts, aiTemplate, name, height, mobileHeight, backgroundColor, backgroundImage, backgroundVideo, backgroundOpacity, backgroundAttachment } = ready;
-  const look = lookOf(aiTemplate, ctx.kind, drafts);
+  const { aiTemplate, name, backgroundColor, backgroundImage, backgroundVideo, backgroundOpacity, backgroundAttachment } = ready;
+  let height: number = ready.height;
+  const templateKeys = ready.elements.map((e) => e.aiSlot).filter(Boolean) as string[];
+  const section = withServices(planned, ctx.services, templateKeys);
+  const { slots, icons, counts } = compactLists(section);
+  // The page's name heads its first section (Eyad: the name is the page's title).
+  if (section.section === 'intro' && templateKeys.includes('title') && ctx.title) slots.title = ctx.title;
+
+  // Each list with as many items as the AI wrote, on the example's grid.
+  let els = ready.elements.map((e) => ({ ...e, styles: { ...e.styles } })) as (Draft & FlexEl)[];
+  // The example's own phone layout is kept and moved with the desktop one; a slide without one
+  // gets one arranged at the end.
+  let mobileHeight: number | undefined = ready.mobileHeight && els.every((e) => e.mobile) ? ready.mobileHeight : undefined;
+  const lists = new Set(templateKeys.map((k) => LIST_SLOT.exec(k)?.[1]).filter(Boolean) as string[]);
+  for (const list of lists) {
+    const flowed = reflowList(els, list, counts.get(list) || 0, height, mobileHeight);
+    els = flowed.els as (Draft & FlexEl)[];
+    height = flowed.height;
+    mobileHeight = flowed.mobileHeight;
+  }
+
+  const look = lookOf(aiTemplate, ctx.kind, els);
   const removed = new Set<number>();
-  const els: Draft[] = drafts.map((e) => ({ ...e }));
-  const value = (k: string) => (section.slots[k] || '').trim();
+  const filled = new Set<number>();
+  const value = (k: string) => (slots[k] || '').trim();
   const facts = ctx.facts;
   const systemValue: Record<string, string> = { phone: facts['هاتف'] || '', whatsapp: facts['واتساب'] || '', address: facts['العنوان'] || '', hours: '' };
 
@@ -211,7 +303,10 @@ const buildSlide = async (section: PlannedSection, index: number, ctx: Context, 
     if (sys) {
       const v = systemValue[sys[1]];
       if (!v) removed.add(i);
-      else if (sys[2] === 'value') el.content = escapeHtml(v);
+      else if (sys[2] === 'value') {
+        el.content = escapeHtml(v);
+        filled.add(i);
+      }
       continue;
     }
     if (key === 'map') {
@@ -246,11 +341,23 @@ const buildSlide = async (section: PlannedSection, index: number, ctx: Context, 
       removed.add(i);
       continue;
     }
-    if (text) el.content = escapeHtml(text);
+    if (text) {
+      el.content = escapeHtml(text);
+      filled.add(i);
+    }
     if (el.type === 'button' && key !== 'eyebrow') {
       const link = resolveLink(section.links[key], ctx);
       if (key !== 'send') Object.assign(el, link || defaultLink(el, index, ctx));
     }
+  }
+
+  // Each card's icon as the AI chose it for that card.
+  for (const list of lists) {
+    listItems(els, list).forEach((item, n) => {
+      const chosen = icons[`${list}.${n}.icon`];
+      const iconAt = item.members.find((m) => els[m].type === 'icon');
+      if (chosen && iconAt !== undefined) els[iconAt].content = `iconify:${chosen}`;
+    });
   }
 
   // A list item without its name or title goes whole.
@@ -279,33 +386,55 @@ const buildSlide = async (section: PlannedSection, index: number, ctx: Context, 
     if (slotted.length && slotted.every((i) => removed.has(i))) [c, ...on].forEach((i) => removed.add(i));
   });
 
-  // Fonts: the design's heading font becomes the chosen heading font, every other font the text font.
-  const headFont = els.find((e) => e.type === 'heading' && e.styles?.fontFamily)?.styles.fontFamily || look.head;
-  const scene: RecolourScene = { look, to, onPhoto: !!(backgroundImage || backgroundVideo) };
+  // Texts at their own length: a box grows to fit and pushes down what is under it.
   const kept = els.filter((_, i) => !removed.has(i));
-  const elements: CanvasElement[] = kept.map((draft, j) => {
+  const grew = new Set(kept.filter((el) => filled.has(els.indexOf(el))));
+  const fitted = fitTexts(kept, height, grew);
+  height = fitted.height;
+  if (mobileHeight !== undefined) {
+    // The phone view of the same texts, from the boxes before the desktop fit.
+    const phone = fitTextsPhone(kept, mobileHeight, grew);
+    mobileHeight = phone.mobileHeight;
+    fitted.els.forEach((el, i) => (el.mobile = phone.els[i].mobile));
+  }
+
+  // The section's tone: the page's colours, a faint accent, or dark. A photo section keeps the
+  // page's own, its photo is its tone.
+  const onPhoto = !!(backgroundImage || backgroundVideo) && (backgroundOpacity ?? 1) >= 0.5;
+  const to = onPhoto ? page : toneColours(page, section.tone);
+  const headFont = fitted.els.find((e) => e.type === 'heading' && e.styles?.fontFamily)?.styles.fontFamily || look.head;
+  const scene: RecolourScene = { look, to, onPhoto };
+  const firstButton = fitted.els.findIndex((e) => e.type === 'button');
+  const elements: CanvasElement[] = fitted.els.map((draft, j) => {
     let el = recolourDeep(draft, scene) as Draft;
     const styles = { ...el.styles };
     if (styles.fontFamily) styles.fontFamily = styles.fontFamily === headFont ? fonts.head : fonts.body;
     if ((el.type === 'button' || el.type === 'badge') && styles.backgroundColor?.toLowerCase() === to.accent.toLowerCase()) styles.color = textOn(to.accent);
-    if (!section.motion && (styles.animationTrigger === 'once' || styles.animationTrigger === 'loop')) {
-      delete styles.animation;
-      delete styles.animationTrigger;
+    if (!motion) {
+      if (styles.animationTrigger === 'once' || styles.animationTrigger === 'loop') {
+        delete styles.animation;
+        delete styles.animationTrigger;
+      }
+    } else if (section.section === 'intro' && j === firstButton) {
+      // The page's main call to action keeps pulsing on a lively page.
+      Object.assign(styles, { animation: 'pulse', animationTrigger: 'loop', animationDuration: 2 });
+    } else if (ANIMATED.test(section.entrance) && styles.animationTrigger !== 'loop' && !el.isGroupContainer && el.width < 1280 * 0.7) {
+      Object.assign(styles, { animation: section.entrance, animationTrigger: 'once', animationDuration: 0.8 });
     }
     el = { ...el, styles };
     return { ...el, id: `${slideId}-el-${j}`, slideId } as CanvasElement;
   });
 
-  // A faint photo wash fades the slide colour with it, to near white: on a dark palette it goes.
+  // A faint photo wash fades the slide colour with it, to near white: on a dark section it goes.
   const wash = (backgroundOpacity ?? 1) < 0.5;
   const dropWash = wash && to.deep === to.bg;
   const bgUrl = dropWash ? null : await imageFor(section.images.background, ctx);
   const divider = DIVIDERS[ctx.answers.aiAnswers?.dividerStyle || ''];
-  const slide: Slide = {
+  let slide: Slide = {
     id: slideId,
     name,
     height,
-    ...(mobileHeight ? { mobileHeight } : {}),
+    ...(mobileHeight !== undefined ? { mobileHeight } : {}),
     backgroundColor: recolourDeep(backgroundColor, scene, 'fill'),
     aiTemplate,
     ...(divider ? { dividerShape: divider } : ready.dividerShape ? { dividerShape: ready.dividerShape } : {}),
@@ -320,7 +449,24 @@ const buildSlide = async (section: PlannedSection, index: number, ctx: Context, 
         }
       : {}),
   };
+  // The phone layout follows the new desktop one.
+  if (mobileHeight === undefined) {
+    const { layouts, mobileHeight } = arrangeSlideForMobile(slide, elements.map((e) => ({ ...e, mobile: undefined })));
+    slide = { ...slide, mobileHeight };
+    return { slide, elements: elements.map((e) => ({ ...e, mobile: layouts.get(e.id) })) };
+  }
   return { slide, elements };
+};
+
+// Photos in the page's mood (Eyad: a calm page gets calm photos, a lively one vivid photos): the
+// mood's words are added to a search that lacks them, and the plain search is the fallback.
+const moodPhoto = (photo: (q: string) => Promise<string | null>, motion: boolean) => {
+  const mood = motion ? 'vibrant' : 'soft light';
+  return async (query: string) => {
+    const q = query.trim();
+    if (/vibrant|vivid|bold|soft|muted|calm|minimal|dynamic/i.test(q)) return photo(q);
+    return (await photo(`${q} ${mood}`)) || photo(q);
+  };
 };
 
 // Unsplash photos for the AI's English searches, a different photo each time a search repeats.
@@ -363,8 +509,13 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
   const { kind, answers, pages } = input;
   const home = HOME_PAGE[kind];
   const page = pages.find((p) => p.id === (home && pages.some((x) => x.id === home) ? home : input.activePageId)) || pages[0];
+  // The owner's colours are the page's (Eyad: the chosen colours are the page colours); the AI's
+  // palette only when the owner chose none.
+  const choice = ownersChoice(answers);
+  const ownColours = choice ? ownerPalette(choice.accent, choice.second) : null;
   const palette = TWENTY_PAGE_PALETTES.find((p) => p.id === plan.palette) || TWENTY_PAGE_PALETTES[0];
-  const to = targetColours(palette.colors, plan.accentColor);
+  const colors = ownColours || palette.colors;
+  const to = targetColours(colors, choice ? choice.accent : plan.accentColor);
   const fonts = FONT_PAIRS[plan.fonts] || FONT_PAIRS['messiri-tajawal'];
   const stamp = Date.now().toString(36);
   const ctx: Context = {
@@ -374,13 +525,15 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
     slideIds: plan.sections.map((_, i) => `slide-ai-${stamp}-${i}`),
     pageIds: new Set(pages.map((p) => p.id)),
     contactIndex: plan.sections.findIndex((s) => s.section === 'contact' || s.section === 'order' || s.section === 'request'),
-    photo,
+    photo: moodPhoto(photo, plan.motion),
     fallbackQuery: plan.sections.flatMap((s) => Object.values(s.images)).find((ref) => !ref.startsWith('user:')),
+    services: ownerServices(answers.aiAnswers?.services),
+    title: (answers.personalInfo?.pageName || '').trim() || [answers.personalInfo?.title, answers.personalInfo?.fullName].filter(Boolean).join(' ').trim(),
   };
 
   const built: { slide: Slide; elements: CanvasElement[] }[] = [];
   for (let i = 0; i < plan.sections.length; i++) {
-    const b = await buildSlide(plan.sections[i], i, ctx, to, fonts);
+    const b = await buildSlide(plan.sections[i], i, ctx, to, fonts, plan.motion);
     if (b) built.push(b);
   }
   if (!built.length) return { ok: false, message: 'ما قدر Wee AI يبني الصفحة هالمرة. جرّب مرة ثانية.' };
@@ -394,13 +547,19 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
 
   const nextPages = pages.map((p) => {
     // The navbar in the page's own card and text colours, on every page so they match.
-    const navbar = { ...(restyle ? recolourDeep(p.navbar, sceneFor(undefined, [], false)) : p.navbar), bgColor: to.card, textColor: to.ink, ...(logo ? { logoUrl: logo } : {}) };
-    if (p.id === page.id) return { ...p, slides: built.map((b) => b.slide), navbar, colorPalette: palette.colors };
+    const navbar = {
+      ...(restyle ? recolourDeep(p.navbar, sceneFor(undefined, [], false)) : p.navbar),
+      bgColor: to.card,
+      textColor: to.ink,
+      ...(logo ? { logoUrl: logo } : {}),
+      ...(ctx.title ? { brandName: ctx.title } : {}),
+    };
+    if (p.id === page.id) return { ...p, slides: built.map((b) => b.slide), navbar, colorPalette: colors };
     if (!restyle) return { ...p, navbar };
     return {
       ...p,
       navbar,
-      colorPalette: palette.colors,
+      colorPalette: colors,
       slides: p.slides.map((s) => ({ ...s, backgroundColor: s.backgroundColor && recolourDeep(s.backgroundColor, sceneFor(s.aiTemplate, [], !!s.backgroundImage), 'fill') })),
     };
   });

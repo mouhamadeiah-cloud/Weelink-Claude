@@ -16,42 +16,70 @@ type Kind = 'free' | 'restaurant' | 'shop' | 'cars';
 const SYSTEM_SLOTS = /^(phone|whatsapp|address|hours)\.(label|value)$|^(map|form)$/;
 const IMAGE_SLOTS = /^(image|avatar|photos\.\d+)$/;
 
-const plain = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-
-// Room for a little more text than the design shows, within what its box holds.
-const limitFor = (path: string, type: string, current: string) => {
-  const leaf = path.split('.').pop() || path;
-  if (leaf === 'price') return 14;
-  if (leaf === 'number') return 6;
-  if (type === 'button') return 18;
-  if (type === 'badge' || path === 'eyebrow') return 30;
-  const room = Math.round(current.length * 1.4);
-  const least = type === 'heading' ? 16 : 40;
-  return Math.max(least, Math.min(260, room));
+// Generous room: the builder grows a box (and moves what is under it) to fit a longer text, so the
+// limits only keep texts to a sensible length for their part of the design.
+const LIMITS: Record<string, number> = {
+  title: 60, eyebrow: 40, sub: 240, text: 520, note: 120, quote: 220, owner: 40, role: 50, ticker: 160,
+  name: 40, desc: 100, price: 20, unit: 20, number: 8, label: 40, features: 50, caption: 40, chips: 32,
 };
+// A list item's parts are shorter than the section's own.
+const LIST_LIMITS: Record<string, number> = { title: 40, text: 180, name: 40, desc: 100, price: 20, unit: 20, number: 8, label: 40, '': 32 };
+const limitFor = (path: string, type: string) => {
+  if (type === 'button') return 24;
+  const list = /^(?:chips|facts|points|items|packages)\.\d+(?:\.([a-z]+))?$/.exec(path);
+  if (list) return LIST_LIMITS[list[1] || ''] ?? 60;
+  const parts = path.split('.').filter((p) => !/^\d+$/.test(p));
+  return LIMITS[parts[parts.length - 1]] ?? LIMITS[parts[0]] ?? (type === 'heading' ? 60 : 200);
+};
+
+// Lists the AI may make longer or shorter (the builder lays out the items like the example's):
+// chips.N, facts.N.number, points.N.title … One level only; packages' features and price groups'
+// rows keep the example's number of places.
+const LIST = /^(chips|facts|points|items|packages)\.(\d+)(?:\.([a-z]+))?$/;
+const LIST_MAX = 8;
 
 interface SlotSpec {
   max?: number;
   kind: 'text' | 'button' | 'image';
 }
+interface ListSpec {
+  count: number; // in the example
+  fields: Record<string, number | 'icon'>; // field ('' for a bare chip) → its character limit
+}
 
 const describe = (slide: { name: string; elements: any[]; backgroundImage?: string; backgroundVideo?: string }) => {
   const slots: Record<string, SlotSpec> = {};
+  const lists: Record<string, ListSpec> = {};
   for (const el of slide.elements) {
     const path: string | undefined = el.aiSlot;
     if (!path || SYSTEM_SLOTS.test(path)) continue;
+    const list = LIST.exec(path);
+    if (list) {
+      const [, name, index, field = ''] = list;
+      const spec = (lists[name] ||= { count: 0, fields: {} });
+      spec.count = Math.max(spec.count, +index + 1);
+      spec.fields[field] = limitFor(path, el.type);
+      continue;
+    }
     if (IMAGE_SLOTS.test(path) || el.type === 'image') {
       slots[path] = { kind: 'image' };
       continue;
     }
     const kind = el.type === 'button' ? 'button' : 'text';
-    slots[path] = { kind, max: limitFor(path, el.type, plain(el.content || '')) };
+    slots[path] = { kind, max: limitFor(path, el.type) };
+  }
+  // A card with one icon on it: the AI picks the icon.
+  for (const [name, spec] of Object.entries(lists)) {
+    const first = slide.elements.filter((e) => (e.aiSlot || '').startsWith(`${name}.0`));
+    const card = slide.elements.find((c) => c.isGroupContainer && first.length && first.every((e) => e.x >= c.x && e.y >= c.y && e.x + e.width <= c.x + c.width && e.y + e.height <= c.y + c.height));
+    const icons = card ? slide.elements.filter((e) => e.type === 'icon' && e.x >= card.x && e.y >= card.y && e.x + e.width <= card.x + card.width && e.y + e.height <= card.y + card.height) : [];
+    if (icons.length === 1) spec.fields.icon = 'icon';
   }
   if (slide.backgroundImage || slide.backgroundVideo) slots.background = { kind: 'image' };
-  return { name: slide.name, slots };
+  return { name: slide.name, slots, lists };
 };
 
-const templates: Record<string, { name: string; slots: Record<string, SlotSpec> }> = {};
+const templates: Record<string, ReturnType<typeof describe>> = {};
 for (const [id, make] of Object.entries(WEE_SLIDE_BY_ID)) templates[id] = describe(make());
 for (const [kind, ids] of Object.entries(STORE_SLIDE_IDS)) {
   ids.forEach((id, i) => {
@@ -65,46 +93,58 @@ const GALLERY = ['gallery.mosaic', 'gallery.strip', 'gallery.frames'];
 const CONTACT = ['contact.card', 'contact.band', 'contact.form'];
 const LEGAL = ['legal.columns', 'legal.accordion'];
 
-// Each page type's sections in page order: the templates the AI picks from, and whether the
-// section must be on the page. The paid types build their home page; their menu, products, cart
+const PRICES = ['prices.list', 'prices.cards', 'prices.groups'];
+const SERVICES = ['about.points', 'rest.why', 'cars.why'];
+
+// Each page type's sections: the example slides the AI picks from, whether the section must be on
+// the page, and where it may stand ('first' and 'last' are fixed; the others follow the AI's order).
+// Prices appear only when the owner listed services, and the gallery only with the owner's photos
+// (checked in api/build-page.ts). The paid types build their home page; their menu, products, cart
 // and contact pages stay as they are.
-const sections: Record<Kind, { id: string; name: string; required: boolean; templates: string[] }[]> = {
+type Place = 'first' | 'last' | 'any';
+const S = (id: string, name: string, templates: string[], required = false, place: Place = 'any') => ({ id, name, required, place, templates });
+const sections: Record<Kind, ReturnType<typeof S>[]> = {
   free: [
-    { id: 'intro', name: 'مدخل', required: true, templates: HERO },
-    { id: 'about', name: 'من نحن', required: true, templates: ABOUT },
-    { id: 'prices', name: 'الأسعار', required: true, templates: ['prices.list', 'prices.cards', 'prices.groups'] },
-    { id: 'gallery', name: 'المعرض', required: true, templates: GALLERY },
-    { id: 'contact', name: 'تواصل', required: true, templates: CONTACT },
-    { id: 'privacy', name: 'الشروط والخصوصية', required: true, templates: LEGAL },
+    S('intro', 'مدخل', HERO, true, 'first'),
+    S('about', 'من نحن', ABOUT),
+    S('services', 'خدماتنا', SERVICES),
+    S('why', 'لماذا نحن', ['rest.why', 'cars.why', 'about.points']),
+    S('numbers', 'أرقامنا', ['cars.numbers']),
+    S('prices', 'الأسعار', PRICES),
+    S('ticker', 'شريط نص متحرك', ['rest.ticker']),
+    S('gallery', 'المعرض', GALLERY),
+    S('contact', 'تواصل', CONTACT, true, 'last'),
+    S('privacy', 'الشروط والخصوصية', LEGAL, true, 'last'),
   ],
   restaurant: [
-    { id: 'intro', name: 'مدخل', required: true, templates: ['rest.front', ...HERO] },
-    { id: 'ticker', name: 'شريط نص متحرك', required: false, templates: ['rest.ticker'] },
-    { id: 'featured', name: 'أطباق مميزة', required: true, templates: ['rest.featured', 'rest.featuredStrip', 'rest.featuredShake', 'rest.menuBig'] },
-    { id: 'about', name: 'من نحن', required: false, templates: ABOUT },
-    { id: 'why', name: 'لماذا نحن', required: false, templates: ['rest.why'] },
-    { id: 'gallery', name: 'المعرض', required: false, templates: GALLERY },
-    { id: 'order', name: 'اطلب الآن', required: false, templates: ['rest.order'] },
-    { id: 'contact', name: 'تواصل', required: false, templates: CONTACT },
+    S('intro', 'مدخل', ['rest.front', ...HERO], true, 'first'),
+    S('ticker', 'شريط نص متحرك', ['rest.ticker']),
+    S('featured', 'أطباق مميزة', ['rest.featured', 'rest.featuredStrip', 'rest.featuredShake', 'rest.menuBig'], true),
+    S('about', 'من نحن', ABOUT),
+    S('why', 'لماذا نحن', ['rest.why', 'about.points']),
+    S('gallery', 'المعرض', GALLERY),
+    S('order', 'اطلب الآن', ['rest.order']),
+    S('contact', 'تواصل', CONTACT, false, 'last'),
   ],
   shop: [
-    { id: 'intro', name: 'مدخل', required: true, templates: ['shop.front', 'shop.twoPhotos', ...HERO] },
-    { id: 'ticker', name: 'شريط نص متحرك', required: false, templates: ['shop.ticker'] },
-    { id: 'search', name: 'بحث في المتجر', required: false, templates: ['shop.searchSimple', 'shop.searchBg'] },
-    { id: 'featured', name: 'منتجات مميزة', required: true, templates: ['shop.zigzag', 'shop.small', 'shop.featuredStrip', 'shop.featuredShake', 'shop.moving'] },
-    { id: 'about', name: 'من نحن', required: false, templates: ABOUT },
-    { id: 'gallery', name: 'المعرض', required: false, templates: GALLERY },
-    { id: 'contact', name: 'تواصل', required: false, templates: CONTACT },
+    S('intro', 'مدخل', ['shop.front', 'shop.twoPhotos', ...HERO], true, 'first'),
+    S('ticker', 'شريط نص متحرك', ['shop.ticker']),
+    S('search', 'بحث في المتجر', ['shop.searchSimple', 'shop.searchBg']),
+    S('featured', 'منتجات مميزة', ['shop.zigzag', 'shop.small', 'shop.featuredStrip', 'shop.featuredShake', 'shop.moving'], true),
+    S('about', 'من نحن', ABOUT),
+    S('why', 'لماذا نحن', SERVICES),
+    S('gallery', 'المعرض', GALLERY),
+    S('contact', 'تواصل', CONTACT, false, 'last'),
   ],
   cars: [
-    { id: 'intro', name: 'مدخل', required: true, templates: ['cars.front', 'cars.frontSearch', ...HERO] },
-    { id: 'ticker', name: 'شريط نص متحرك', required: false, templates: ['cars.ticker'] },
-    { id: 'featured', name: 'سيارات مميزة', required: true, templates: ['cars.featured', 'cars.strip', 'cars.shake', 'cars.big'] },
-    { id: 'why', name: 'لماذا نحن', required: false, templates: ['cars.why'] },
-    { id: 'about', name: 'من نحن', required: false, templates: ['cars.about', ...ABOUT] },
-    { id: 'numbers', name: 'أرقامنا', required: false, templates: ['cars.numbers'] },
-    { id: 'request', name: 'اطلب سيارتك', required: false, templates: ['cars.request'] },
-    { id: 'contact', name: 'تواصل', required: false, templates: CONTACT },
+    S('intro', 'مدخل', ['cars.front', 'cars.frontSearch', ...HERO], true, 'first'),
+    S('ticker', 'شريط نص متحرك', ['cars.ticker']),
+    S('featured', 'سيارات مميزة', ['cars.featured', 'cars.strip', 'cars.shake', 'cars.big'], true),
+    S('why', 'لماذا نحن', ['cars.why', 'about.points']),
+    S('about', 'من نحن', ['cars.about', ...ABOUT]),
+    S('numbers', 'أرقامنا', ['cars.numbers']),
+    S('request', 'اطلب سيارتك', ['cars.request']),
+    S('contact', 'تواصل', CONTACT, false, 'last'),
   ],
 };
 
@@ -121,5 +161,5 @@ const fonts = {
 };
 const palettes = Object.fromEntries(TWENTY_PAGE_PALETTES.map((p) => [p.id, { name: p.name, colors: p.colors }]));
 
-writeFileSync(new URL('../src/data/ai/buildCatalog.json', import.meta.url), JSON.stringify({ sections, templates, fonts, palettes }, null, 1) + '\n');
+writeFileSync(new URL('../src/data/ai/buildCatalog.json', import.meta.url), JSON.stringify({ listMax: LIST_MAX, sections, templates, fonts, palettes }, null, 1) + '\n');
 console.log(`Wrote ${Object.keys(templates).length} templates.`);

@@ -267,8 +267,16 @@ export default function App() {
   // screen leads to: 'account' = straight to the person's own page, 'build' = choosing what to build.
   const [isHomeActive, setIsHomeActive] = useState<boolean>(true);
   const afterSignInRef = useRef<'account' | 'build'>('account');
-  // «اعمل صفحتك»: the kind of page picked before the questions, then the questions answered as a guest.
+  // «اعمل صفحتك»: the kind of page picked before the questions, then Wee AI's questions. Everyone
+  // answers them there (Eyad, 12 Oct); the editor's panel only shows the answers and builds.
   const [isStartActive, setIsStartActive] = useState<boolean>(false);
+  // The kind the start page opens on (from «عدّل إجاباتي» in the editor), else the kinds.
+  const [startKind, setStartKind] = useState<ProjectType | null>(null);
+  // A page to build as soon as its kind is open in the editor: the questions just finished.
+  const autoBuildRef = useRef<{ kind: ProjectType; answers: WeeAnswers } | null>(null);
+  // What the build after the questions is doing, shown over the editor.
+  const [buildNotice, setBuildNotice] = useState<{ busy: boolean; ok?: boolean; message: string } | null>(null);
+  const [hasBuildBackup, setHasBuildBackup] = useState(false);
   // The kind a guest answered Wee AI for: after signing up, the answers move to the account and it opens.
   const pendingBuildRef = useRef<ProjectType | null>(null);
   // What the signed-in account owns, from the last workspace load (decides where «صفحتي» goes).
@@ -1044,7 +1052,13 @@ export default function App() {
       setElements(finalElements);
       setHistory([finalElements]);
       setHistoryIndex(0);
-      setIsChatActive(true);
+      setIsChatActive(false);
+      // A new account answers Wee AI's questions on the start page, then the editor builds its page.
+      if (!pendingBuildRef.current) {
+        setStartKind(null);
+        setIsHomeActive(false);
+        setIsStartActive(true);
+      }
 
       // Save to localStorage
       try {
@@ -1096,7 +1110,32 @@ export default function App() {
     pendingBuildRef.current = null;
     if (!kind) return;
     setIsProjectChosen(false);
-    moveGuestAnswers(accountId, auth.currentUser?.email || '').then((saved) => handleChooseProject(saved || kind, accountId));
+    moveGuestAnswers(accountId, auth.currentUser?.email || '').then((saved) => {
+      const open = saved || kind;
+      // The answers just moved to the account: the page is built from them once its kind is open.
+      try {
+        const answers = JSON.parse(localStorage.getItem(`weelink_chat_progress_${accountId}`) || 'null');
+        if (answers?.currentStep >= 13) autoBuildRef.current = { kind: open, answers };
+      } catch {
+        // no answers on this device: the owner builds from the panel
+      }
+      handleChooseProject(open, accountId);
+    });
+  };
+
+  // The questions finished on the start page: open the kind, then build it.
+  const openAndBuild = async (kind: ProjectType, answers: WeeAnswers) => {
+    autoBuildRef.current = { kind, answers };
+    setIsAuthActive(false);
+    await handleChooseProject(kind);
+    setIsStartActive(false);
+  };
+
+  // «عدّل إجاباتي»: back to the questions of the open kind.
+  const openQuestions = () => {
+    flushProjectSave();
+    setStartKind(project);
+    setIsStartActive(true);
   };
 
   const handleCompleteChat = (collectedData: any) => {
@@ -1211,12 +1250,13 @@ export default function App() {
   // the new colours and fonts. Undo works on elements only, so the page as it was is kept here
   // and «رجّع صفحتي متل ما كانت» brings it back.
   const builtBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; activePageId: string } | null>(null);
-  const handleBuildPage = async (answers: WeeAnswers) => {
+  const handleBuildPage = async (answers: WeeAnswers, auto = false) => {
     const kind = KIND_OF_PROJECT[project];
     const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
     const siteName = page.navbar.brandName || PROJECT_KIND_LABEL[project];
     const target = kind === 'free' ? `شرائح صفحة «${page.name}»` : 'شرائح الصفحة الرئيسية';
-    if (!window.confirm(`Wee AI رح يصمم ${target} من جديد من معلوماتك ويستبدل الشرائح الموجودة. بتقدر ترجع الصفحة القديمة بعدين. نكمل؟`)) {
+    // Right after the questions the owner asked for the build: no question then, the old page is kept.
+    if (!auto && !window.confirm(`Wee AI رح يصمم ${target} من جديد من معلوماتك ويستبدل الشرائح الموجودة. بتقدر ترجع الصفحة القديمة بعدين. نكمل؟`)) {
       return { ok: false, message: 'ما تغير شي بصفحتك.' };
     }
     const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers));
@@ -1225,6 +1265,7 @@ export default function App() {
     const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId });
     if (!built.ok) return { ok: false, message: built.message };
     builtBackupRef.current = before;
+    setHasBuildBackup(true);
     setPages(built.pages);
     setElements(built.elements);
     setHistory([built.elements]);
@@ -1238,6 +1279,7 @@ export default function App() {
     const backup = builtBackupRef.current;
     if (!backup) return { ok: false, message: 'ما في صفحة قديمة محفوظة.' };
     builtBackupRef.current = null;
+    setHasBuildBackup(false);
     setPages(backup.pages);
     setElements(backup.elements);
     setHistory([backup.elements]);
@@ -1247,6 +1289,21 @@ export default function App() {
     setSelectedElementId(null);
     return { ok: true, message: 'رجعت صفحتك متل ما كانت قبل ما يبنيها Wee AI.' };
   };
+
+  // The build the questions asked for, once their kind is open in the editor.
+  useEffect(() => {
+    const job = autoBuildRef.current;
+    if (!job || !isProjectChosen || projectLoading || isStartActive || project !== job.kind) return;
+    autoBuildRef.current = null;
+    setBuildNotice({ busy: true, message: 'Wee AI عم يبني صفحتك من إجاباتك…' });
+    // After this render, so the page just loaded is the one built on.
+    window.setTimeout(async () => {
+      const note = await handleBuildPage(job.answers, true);
+      setBuildNotice({ busy: false, ok: note.ok, message: note.ok ? `${note.message}` : `${note.message} بتقدر تجرّب من جديد من «ابن صفحتي» بلوحة Wee AI.` });
+      setIsChatActive(true);
+      setIsRightDrawerOpen(true);
+    }, 0);
+  }, [isProjectChosen, projectLoading, isStartActive, project]);
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -3166,6 +3223,47 @@ export default function App() {
     }));
   };
 
+  // The browser's back button walks back through Weelink's screens (home, the start page and its
+  // questions, sign-in, the projects, the editor) instead of leaving the site: each screen is an
+  // entry in the browser's history.
+  const screen = isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'chooser' : 'editor';
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  const poppedRef = useRef(false);
+  const goToScreenRef = useRef<(target: string, kind?: ProjectType | null) => void>(() => {});
+  goToScreenRef.current = (target, kind) => {
+    const signedIn = !!currentUser && !currentUser.isAnonymous;
+    const to = !signedIn && (target === 'chooser' || target === 'editor') ? 'home' : signedIn && target === 'auth' ? 'home' : target;
+    if (screenRef.current === 'editor' && to !== 'editor') flushProjectSave();
+    setIsHomeActive(to === 'home');
+    setIsStartActive(to === 'start');
+    if (to === 'start') setStartKind(kind || null);
+    if (to === 'auth') setIsAuthActive(true);
+    else if (signedIn) setIsAuthActive(false);
+    if (to === 'chooser') setIsProjectChosen(false);
+    if (to === 'editor') setIsProjectChosen(projectReadyRef.current);
+  };
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const target = e.state?.screen;
+      if (!target || target === screenRef.current) return;
+      poppedRef.current = true;
+      goToScreenRef.current(target, e.state.kind);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  useEffect(() => {
+    if (isFirebaseLoading) return;
+    const current = window.history.state?.screen;
+    if (poppedRef.current || !current) {
+      poppedRef.current = false;
+      if (current !== screen) window.history.replaceState({ screen }, '');
+      return;
+    }
+    if (current !== screen) window.history.pushState({ screen }, '');
+  }, [screen, isFirebaseLoading]);
+
   if (isFirebaseLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center font-sans">
@@ -3186,6 +3284,7 @@ export default function App() {
         }}
         onBuild={() => {
           afterSignInRef.current = 'build';
+          setStartKind(null);
           setIsHomeActive(false);
           setIsStartActive(true);
         }}
@@ -3198,17 +3297,17 @@ export default function App() {
   if (isStartActive) {
     return (
       <StartPage
+        key={startKind || 'kinds'}
         user={currentUser}
+        accountId={activeUserUid}
+        initialKind={startKind}
         loadingType={projectLoading}
         onHome={() => {
           setIsStartActive(false);
+          setStartKind(null);
           setIsHomeActive(true);
         }}
-        onOpen={async (kind) => {
-          setIsAuthActive(false);
-          await handleChooseProject(kind);
-          setIsStartActive(false);
-        }}
+        onBuild={openAndBuild}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
           pendingBuildRef.current = kind;
@@ -3275,6 +3374,16 @@ export default function App() {
   };
   return (
     <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col antialiased selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
+      {/* The build after the questions: working, then what came of it */}
+      {buildNotice && (
+        <div dir="rtl" role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[99999] max-w-[92vw] w-[26rem] bg-white border border-neutral-200 shadow-[0_16px_40px_rgba(0,0,0,0.18)] rounded-2xl px-4 py-3 flex items-start gap-3 text-xs font-semibold text-neutral-800">
+          {buildNotice.busy ? <Loader2 size={16} className="animate-spin text-[#0071e3] shrink-0 mt-0.5" /> : <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${buildNotice.ok ? 'bg-green-500' : 'bg-rose-500'}`} />}
+          <p className="flex-1 leading-relaxed">{buildNotice.message}</p>
+          {!buildNotice.busy && (
+            <button type="button" onClick={() => setBuildNotice(null)} className="text-neutral-400 hover:text-neutral-800 font-bold" aria-label="إغلاق">✕</button>
+          )}
+        </div>
+      )}
       {/* Modal for Firebase Domain Authorization Guidance */}
       {authErrorModal && (
         <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
@@ -3601,6 +3710,8 @@ export default function App() {
         onWriteTexts={handleWriteTexts}
         onBuildPage={handleBuildPage}
         onRestorePage={handleRestoreBuiltPage}
+        onEditAnswers={openQuestions}
+        restoreAvailable={hasBuildBackup}
         isWeeAiChatCollapsed={!isChatActive}
         onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
         dockedWidth={isDocked && !isSheet ? dockedPanelWidth : 0}

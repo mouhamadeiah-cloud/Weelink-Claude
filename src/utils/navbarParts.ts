@@ -17,9 +17,10 @@ export interface NavbarPart {
   link?: NavbarPartLink;
 }
 
-// The navbar's own extra links: links the user added (ids starting with "nav-"), plus any non-page
-// link. Other stored page links are stale copies of the automatic page names and are skipped.
-export const isUserNavItem = (it: NavbarItem) => it.linkType !== 'page' || it.id.startsWith('nav-');
+// The navbar's own extra links: links the user added («إضافة زر» gives them "nav-<time>" ids), plus
+// any non-page link. Other stored page links (like the store templates' "nav-rest-menu") are copies
+// of the automatic page names and are skipped, or every page would show twice.
+export const isUserNavItem = (it: NavbarItem) => it.linkType !== 'page' || /^nav-\d+$/.test(it.id);
 
 const pageLink = (pageId: string): NavbarPartLink => ({ linkType: 'page', linkTargetId: pageId, linkUrl: `#page-${pageId}` });
 

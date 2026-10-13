@@ -2,12 +2,12 @@
 // (name.testweelink.de) while typing with a check that the name is free, publishes, and gets the
 // link with a QR code to share. Below, two wide buttons fold out: connecting a domain the customer
 // bought themselves, and buying a domain through Weelink (a request handled by the office for now).
-// Before publishing, the customer sees the page in a computer and a phone (and full size), can
-// arrange it for phones there, and writes its title, description and keywords for search.
+// Before publishing, the customer sees the page in a computer and a phone (and full size, phones
+// arranged automatically), and writes its title, description and keywords for search.
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import {
-  CheckCircle2, ChevronDown, Copy, Download, ExternalLink, Globe, ImagePlus, Link2, Loader2, Maximize2, Monitor, RefreshCw, Search, Share2, ShoppingCart, Smartphone, Trash2, Wand2, X, XCircle,
+  CheckCircle2, ChevronDown, Copy, Download, ExternalLink, Globe, ImagePlus, Link2, Loader2, Maximize2, Monitor, RefreshCw, Search, Share2, ShoppingCart, Smartphone, Trash2, X, XCircle,
 } from 'lucide-react';
 import type { CanvasElement, Page } from '../../types';
 import type { ProjectType } from '../shop/shopTypes';
@@ -32,7 +32,6 @@ interface PublishModalProps {
   data: any; // the project's public data (see publicData.ts)
   suggestedName: string;
   onPublishedChange: (name: string | null) => void;
-  onArrangeForMobile?: () => void; // the editor's «تنسيق الموبايل»
 }
 
 const input = 'w-full h-11 px-3.5 rounded-xl border border-neutral-200 bg-white text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition';
@@ -365,7 +364,7 @@ interface Draft { project: ProjectType; pages: Page[]; elements: CanvasElement[]
 
 // The page as it is now in the editor (what «نشر» publishes): its first page in a computer and a
 // phone. A click opens it full size.
-const DraftPreviews: React.FC<{ draft: Draft; onOpen: (d: Device) => void; onArrange?: () => void; arranged: boolean }> = ({ draft, onOpen, onArrange, arranged }) => {
+const DraftPreviews: React.FC<{ draft: Draft; onOpen: (d: Device) => void }> = ({ draft, onOpen }) => {
   const first = draft.pages[0]?.id || '';
   const thumb = (d: Device) => (
     <button type="button" onClick={() => onOpen(d)} className="block cursor-zoom-in" aria-label={d === 'desktop' ? 'عرض على الكمبيوتر' : 'عرض على الموبايل'}>
@@ -387,23 +386,13 @@ const DraftPreviews: React.FC<{ draft: Draft; onOpen: (d: Device) => void; onArr
         <button type="button" onClick={() => onOpen('mobile')} className="h-9 px-3 rounded-xl border border-neutral-200 bg-white text-xs font-bold text-neutral-700 inline-flex items-center gap-1.5 cursor-pointer hover:bg-neutral-50">
           <Smartphone size={14} /> معاينة الموبايل
         </button>
-        {onArrange && (
-          <button type="button" onClick={onArrange} className="h-9 px-3 rounded-xl bg-brand/10 text-brand text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer hover:bg-brand/15">
-            <Wand2 size={14} /> تنسيق الموبايل
-          </button>
-        )}
       </div>
-      {onArrange && !arranged && (
-        <p className="text-xs text-neutral-500 text-center leading-relaxed">
-          لم تنسّق صفحتك للموبايل بعد، فرتّبناها تلقائياً في المعاينة. اضغط «تنسيق الموبايل» ليُحفظ الترتيب وتستطيع تعديله في المحرر.
-        </p>
-      )}
     </div>
   );
 };
 
 // The page full size, on a computer (the whole window) or in a phone, with its pages clickable.
-const FullPreview: React.FC<{ draft: Draft; device: Device; onDevice: (d: Device) => void; onClose: () => void; onArrange?: () => void }> = ({ draft, device, onDevice, onClose, onArrange }) => {
+const FullPreview: React.FC<{ draft: Draft; device: Device; onDevice: (d: Device) => void; onClose: () => void }> = ({ draft, device, onDevice, onClose }) => {
   const [pageId, setPageId] = useState(draft.pages[0]?.id || '');
   const tab = (d: Device) => (
     <button type="button" onClick={() => onDevice(d)} className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer ${device === d ? 'bg-white text-ink' : 'text-white/70 hover:text-white'}`}>
@@ -416,11 +405,6 @@ const FullPreview: React.FC<{ draft: Draft; device: Device; onDevice: (d: Device
       <div dir="rtl" className="h-14 shrink-0 flex items-center gap-2 px-3 font-sans">
         <span className="text-sm font-black text-white hidden sm:block">معاينة قبل النشر</span>
         <div className="flex gap-1 p-1 rounded-xl bg-white/10 mx-auto sm:mx-0 sm:mr-4">{tab('desktop')}{tab('mobile')}</div>
-        {device === 'mobile' && onArrange && (
-          <button type="button" onClick={onArrange} className="h-9 px-3 rounded-lg bg-brand text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
-            <Wand2 size={14} /> <span className="hidden sm:inline">تنسيق الموبايل</span>
-          </button>
-        )}
         <button type="button" onClick={onClose} className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center cursor-pointer sm:mr-auto" aria-label="إغلاق المعاينة"><X size={18} /></button>
       </div>
       {device === 'desktop' ? (
@@ -500,7 +484,7 @@ const SeoFields: React.FC<{ seo: SiteSeo; keywords: string; onSeo: (s: SiteSeo) 
 const sameSeo = (a?: SiteSeo, b?: SiteSeo) =>
   (a?.title || '') === (b?.title || '') && (a?.description || '') === (b?.description || '') && (a?.keywords || []).join(',') === (b?.keywords || []).join(',');
 
-export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange, onArrangeForMobile }) => {
+export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange }) => {
   const [site, setSite] = useState<PublishedSite | null | 'loading'>('loading');
   const [name, setName] = useState('');
   const [state, setState] = useState<NameState | 'checking' | ''>('');
@@ -525,7 +509,6 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     () => (open && project !== 'restaurant' ? { project, pages, elements: elements.map(withLocalGraphics), data } : null),
     [open, project, pages, elements, data]
   );
-  const arranged = useMemo(() => elements.some((e) => e.mobile), [elements]);
 
   useEffect(() => {
     if (!open) return;
@@ -632,7 +615,6 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     setSiteIcon(owner, project, next).catch(() => setError('تعذر حفظ الأيقونة. حاول مرة أخرى.'));
   };
   const changed = !!published && project !== 'restaurant' && published.hash !== hash;
-  const arrange = onArrangeForMobile && project !== 'restaurant' ? onArrangeForMobile : undefined;
   const renaming = !!published && name !== published.name;
   const shareText = `${suggestedName ? `${suggestedName}: ` : ''}${link}`;
   const share = async () => {
@@ -671,7 +653,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
             <section className="bg-white rounded-2xl p-4 border border-neutral-200 space-y-3">
               <div className="text-sm font-black text-ink">{published && !changed ? 'هكذا يرى الناس صفحتك' : 'هكذا ستظهر صفحتك'}</div>
               {draft ? (
-                <DraftPreviews draft={draft} onOpen={setPreview} onArrange={arrange} arranged={arranged} />
+                <DraftPreviews draft={draft} onOpen={setPreview} />
               ) : (
                 <LivePreviews url={`${window.location.origin}/?r=${encodeURIComponent(owner)}`} />
               )}
@@ -775,7 +757,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
           </>
         )}
       </div>
-      {preview && draft && <FullPreview draft={draft} device={preview} onDevice={setPreview} onClose={() => setPreview(null)} onArrange={arrange} />}
+      {preview && draft && <FullPreview draft={draft} device={preview} onDevice={setPreview} onClose={() => setPreview(null)} />}
     </div>
   );
 };

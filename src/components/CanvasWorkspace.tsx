@@ -14,7 +14,7 @@ import {
 import { SLIDE_DIVIDER_HEIGHT, slideDividerMask, slideDividerPath } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
-import { resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
+import { MOBILE_CANVAS_WIDTH, resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
 import { LottiePlayer } from './LottiePlayer';
 import { getTextEffectStyles } from '../utils/textEffects';
 import { addToCart, useCart } from '../utils/cartStore';
@@ -1076,7 +1076,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     };
   }, []);
 
-  const baseWidth = previewMode === 'mobile' ? 380 : (previewMode === 'tablet' ? 768 : 1280);
+  // The phone frame is 380 wide with a 10px border round the 360-wide phone page; the published
+  // phone view has no frame, so its page is the 360 the phone layout is drawn on.
+  const baseWidth = previewMode === 'mobile' ? (isPublicSite ? MOBILE_CANVAS_WIDTH : 380) : (previewMode === 'tablet' ? 768 : 1280);
+  const pageWidth = previewMode === 'mobile' ? MOBILE_CANVAS_WIDTH : baseWidth;
 
   // Calculate dynamic scaling factor to fit workspace
   // The full preview and the published site (desktop) fill the window's width exactly as the page
@@ -3009,7 +3012,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                 )}
 
                 {/* Render Freegrid Elements inside this slide */}
-                <div className="relative h-full mx-auto" style={{ width: `${baseWidth}px` }}>
+                <div className="relative h-full mx-auto" style={{ width: `${pageWidth}px` }}>
                   {slideElements.map((elem, idx) => {
                   // Edge-to-edge elements (e.g. a photo overlay) keep reaching the window's edges.
                   const spansPage = bleed > 0 && elem.x <= 0 && elem.x + elem.width >= baseWidth;

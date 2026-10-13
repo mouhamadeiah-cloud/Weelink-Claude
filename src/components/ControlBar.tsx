@@ -11,8 +11,10 @@ import {
   Plus,
   LogOut,
   Loader2,
-  Wand2,
-  Globe
+  Globe,
+  CloudUpload,
+  CloudCheck,
+  CloudOff
 } from 'lucide-react';
 import { DevicePreviewMode, Page } from '../types';
 
@@ -27,7 +29,6 @@ interface ControlBarProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
-  onArrangeForMobile?: () => void;
   onTogglePreview?: () => void;
   isPreviewActive?: boolean;
   onOpenPageSettings?: () => void;
@@ -36,7 +37,7 @@ interface ControlBarProps {
   onLogout: () => void;
   isSaving: boolean;
   onOpenWorkspaceHub?: () => void;
-  onManualSave?: () => void;
+  onManualSave?: () => Promise<boolean>; // resolves once the cloud has it
   // Shown after the weelink logo, e.g. "Shops" for an Online Shop project.
   projectLabel?: string;
   // Opens the project chooser (clicking the logo).
@@ -60,7 +61,6 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   canRedo,
   onUndo,
   onRedo,
-  onArrangeForMobile,
   onTogglePreview,
   isPreviewActive,
   onOpenPageSettings,
@@ -80,6 +80,17 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   const [isPagesDropdownOpen, setIsPagesDropdownOpen] = useState(false);
   const [newPageName, setNewPageName] = useState('');
   const [isAddingPage, setIsAddingPage] = useState(false);
+
+  // The cloud button's answer after a save: «انحفظ» or «ما انحفظ» for a few seconds.
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
+  const saveNow = async () => {
+    if (!onManualSave) return;
+    setSaveState('saving');
+    // Offline, Firebase keeps the write and sends it later; the button stops waiting after 10s.
+    const ok = await Promise.race([onManualSave(), new Promise<boolean>((r) => setTimeout(() => r(false), 10000))]);
+    setSaveState(ok ? 'saved' : 'failed');
+    setTimeout(() => setSaveState('idle'), 3000);
+  };
 
   const handleCreatePage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -290,17 +301,6 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           >
             <Redo2 size={16} strokeWidth={2.1} />
           </button>
-          {onArrangeForMobile && !isPreviewActive && (
-            <button
-              onClick={onArrangeForMobile}
-              className="h-8 px-2 rounded-lg flex items-center justify-center gap-1 text-neutral-700 hover:text-brand hover:bg-white active:scale-95 transition-all"
-              title="تنسيق الموبايل: ترتيب العناصر تلقائياً لشاشات الهاتف دون تغيير تصميم الكمبيوتر"
-              aria-label="تنسيق الموبايل"
-            >
-              <Smartphone size={15} strokeWidth={2.1} />
-              <Wand2 size={13} strokeWidth={2.1} />
-            </button>
-          )}
         </div>
 
         {/* 4. Eye icon for Fullscreen Preview (voll screen) */}
@@ -332,62 +332,53 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             {isPublished ? 'منشورة' : 'نشر'}
           </button>
         )}
-        {/* Firebase Cloud Sync Status & Auth Controls */}
-        <div className="flex items-center gap-2">
-          {user ? (
-            <div className="flex items-center gap-2 bg-neutral-100 border border-neutral-200/60 rounded-xl p-1 pr-2.5">
-              <div className="flex flex-col text-right">
-                <span className="text-xs font-bold text-neutral-800 leading-tight truncate max-w-[100px]">
-                  {user.isAnonymous ? 'مستخدم زائر ☁️' : (user.displayName || 'مستخدم السحاب')}
-                </span>
-                <span className="text-xs text-emerald-600 font-medium flex items-center gap-0.5 leading-none">
-                  {isSaving ? (
-                    <>
-                      <Loader2 size={8} className="animate-spin text-blue-600" />
-                      <span className="text-blue-600">جاري الحفظ...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="w-1 h-1 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                      <span>متزامن ومحفوظ</span>
-                    </>
-                  )}
-                </span>
-              </div>
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || ''}
-                  className="w-7 h-7 rounded-lg border border-black/[0.08]"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold font-sans">
-                  {user.isAnonymous ? 'A' : (user.displayName ? user.displayName[0] : 'U')}
-                </div>
-              )}
-              
-              {user.isAnonymous ? (
-                <button
-                  type="button"
-                  onClick={onLogin}
-                  className="h-7 px-2 text-xs font-bold bg-brand text-white hover:bg-brand-hover rounded-lg flex items-center gap-1 shadow-2xs transition-all cursor-pointer mr-1 active:scale-95"
-                  title="ربط المشروع بحساب Google لحفظ دائم"
-                >
-                  <span>حفظ بـ Google</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="w-7 h-7 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all cursor-pointer"
-                  title="تسجيل الخروج من الحساب السحابي"
-                >
-                  <LogOut size={13} />
-                </button>
-              )}
-            </div>
-          ) : null}
-        </div>
+        {/* The cloud: saves the page to the cloud now (it also saves itself after every change) */}
+        {user && (
+          <div className="flex items-center gap-1 bg-neutral-100/80 p-0.5 rounded-xl border border-black/[0.05]">
+            {onManualSave && (
+              <button
+                type="button"
+                onClick={saveNow}
+                disabled={isSaving || saveState === 'saving'}
+                className={`h-8 px-2 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer hover:bg-white active:scale-95 ${saveState === 'failed' ? 'text-red-600' : saveState === 'saved' ? 'text-emerald-600' : 'text-neutral-700 hover:text-brand'}`}
+                title="احفظ صفحتك على السحابة هلق (بتنحفظ لحالها كمان بعد كل تعديل)"
+                aria-label="حفظ على السحابة"
+              >
+                {isSaving || saveState === 'saving' ? (
+                  <Loader2 size={16} className="animate-spin text-brand" />
+                ) : saveState === 'saved' ? (
+                  <CloudCheck size={16} strokeWidth={2.1} />
+                ) : saveState === 'failed' ? (
+                  <CloudOff size={16} strokeWidth={2.1} />
+                ) : (
+                  <CloudUpload size={16} strokeWidth={2.1} />
+                )}
+                {saveState === 'saved' && <span>انحفظ</span>}
+                {saveState === 'failed' && <span>ما انحفظ</span>}
+              </button>
+            )}
+            {user.isAnonymous ? (
+              <button
+                type="button"
+                onClick={onLogin}
+                className="h-8 px-2 text-xs font-bold bg-brand text-white hover:bg-brand-hover rounded-lg flex items-center gap-1 transition-all cursor-pointer active:scale-95"
+                title="ربط المشروع بحساب Google لحفظ دائم"
+              >
+                حفظ بـ Google
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all cursor-pointer"
+                title="تسجيل الخروج"
+                aria-label="تسجيل الخروج"
+              >
+                <LogOut size={14} />
+              </button>
+            )}
+          </div>
+        )}
 
         <button
           type="button"

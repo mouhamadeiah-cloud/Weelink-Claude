@@ -156,11 +156,11 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
               >
                 <span className="text-neutral-400">{h.catalog.name_ar}</span>
                 <ChevronLeft size={12} className="text-neutral-300" />
-                <span className={h.item ? 'text-neutral-400' : 'font-bold text-[#1d1d1f]'}>{h.sub.name_ar}</span>
+                <span className={h.item ? 'text-neutral-400' : 'font-bold text-ink'}>{h.sub.name_ar}</span>
                 {h.item && (
                   <>
                     <ChevronLeft size={12} className="text-neutral-300" />
-                    <span className="font-bold text-[#1d1d1f]">{h.item.name_ar}</span>
+                    <span className="font-bold text-ink">{h.item.name_ar}</span>
                   </>
                 )}
               </button>

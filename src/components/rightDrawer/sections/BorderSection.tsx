@@ -117,7 +117,7 @@ export const BorderSection = ({
             onClick={() => setBorderTarget('element')}
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               borderTarget === 'element' 
-                ? 'bg-white text-[#0071e3] shadow-xs' 
+                ? 'bg-white text-brand shadow-xs' 
                 : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -127,7 +127,7 @@ export const BorderSection = ({
             onClick={() => setBorderTarget('slide')}
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               borderTarget === 'slide' 
-                ? 'bg-white text-[#0071e3] shadow-xs' 
+                ? 'bg-white text-brand shadow-xs' 
                 : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -136,8 +136,8 @@ export const BorderSection = ({
         </div>
       )}
 
-      <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
-        <span className="text-[11px] font-bold text-[#0071e3]">
+      <div className="bg-brand/5 border border-brand/10 p-2.5 rounded-xl text-center">
+        <span className="text-xs font-bold text-brand">
           {isTargetElement 
             ? `تعديل إطار العنصر: ${elementDisplayName(selectedElement)}` 
             : `تعديل إطار الشريحة: ${activeSlide?.name || 'الشريحة الحالية'}`}
@@ -148,7 +148,7 @@ export const BorderSection = ({
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
           <span className="text-neutral-700 font-bold">سمك الإطار:</span>
-          <span className="font-mono text-[#0071e3] font-bold">{activeBorderWidth}px</span>
+          <span className="font-mono text-brand font-bold">{activeBorderWidth}px</span>
         </div>
         <input
           type="range"
@@ -156,7 +156,7 @@ export const BorderSection = ({
           max="20"
           value={activeBorderWidth}
           onChange={(e) => updateWidth(Number(e.target.value))}
-          className="w-full accent-[#0071e3]"
+          className="w-full accent-brand"
         />
       </div>
 
@@ -164,7 +164,7 @@ export const BorderSection = ({
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
           <span className="text-neutral-700 font-bold">تدوير الحواف:</span>
-          <span className="font-mono text-[#0071e3] font-bold">{activeBorderRadius}px</span>
+          <span className="font-mono text-brand font-bold">{activeBorderRadius}px</span>
         </div>
         <input
           type="range"
@@ -172,7 +172,7 @@ export const BorderSection = ({
           max="100"
           value={activeBorderRadius}
           onChange={(e) => updateRadius(Number(e.target.value))}
-          className="w-full accent-[#0071e3]"
+          className="w-full accent-brand"
         />
       </div>
 
@@ -193,9 +193,9 @@ export const BorderSection = ({
               <button
                 key={`border-style-${item.id}`}
                 onClick={() => updateStyle(item.id)}
-                className={`py-2 px-1 rounded-xl border text-[10.5px] font-semibold text-center transition-all cursor-pointer ${
+                className={`py-2 px-1 rounded-xl border text-xs font-semibold text-center transition-all cursor-pointer ${
                   isSelected
-                    ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] ring-1 ring-[#0071e3]'
+                    ? 'border-brand bg-brand/10 text-brand ring-1 ring-brand'
                     : 'border-neutral-200 hover:bg-neutral-50 text-neutral-600'
                 }`}
               >
@@ -221,7 +221,7 @@ export const BorderSection = ({
                 key={`border-color-std-${hex}`}
                 onClick={() => updateColor(hex)}
                 className={`w-5.5 h-5.5 rounded-full border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-3xs flex items-center justify-center ${
-                  isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                  isSelected ? 'ring-2 ring-brand scale-110 z-10' : ''
                 }`}
                 style={{ backgroundColor: hex }}
                 title={hex}
@@ -251,7 +251,7 @@ export const BorderSection = ({
             value={activeBorderColor}
             onChange={(e) => updateColor(e.target.value)}
             placeholder="اختر لوناً"
-            className="flex-1 text-[10px] px-1.5 py-0.5 bg-white rounded border border-neutral-200 font-mono text-left"
+            className="flex-1 text-xs px-1.5 py-0.5 bg-white rounded border border-neutral-200 font-mono text-left"
             dir="ltr"
           />
         </div>
@@ -263,7 +263,7 @@ export const BorderSection = ({
           <span className="text-xs font-bold text-neutral-800">
             معرض ٢٠ شكلاً وتصميماً ملهماً للإطارات:
           </span>
-          <span className="text-[9.5px] text-neutral-400">
+          <span className="text-xs text-neutral-400">
             (تطبيق بنقرة واحدة)
           </span>
         </div>
@@ -280,16 +280,16 @@ export const BorderSection = ({
                   onClick={() => applyPreset(preset.style)}
                   className={`p-2 rounded-xl border text-right transition-all cursor-pointer relative group flex flex-col gap-1 ${
                     isCurrent 
-                      ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]' 
+                      ? 'border-brand bg-brand/10 ring-1 ring-brand' 
                       : 'border-neutral-200 hover:border-neutral-300 bg-white hover:bg-neutral-50/50'
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-[10px] font-bold text-neutral-700">
+                    <span className="text-xs font-bold text-neutral-700">
                       {preset.label}
                     </span>
                     {isCurrent && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#0071e3] flex items-center justify-center shrink-0">
+                      <span className="w-2.5 h-2.5 rounded-full bg-brand flex items-center justify-center shrink-0">
                         <Check size={8} className="text-white" strokeWidth={3} />
                       </span>
                     )}

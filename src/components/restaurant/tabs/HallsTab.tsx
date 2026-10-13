@@ -54,7 +54,7 @@ export const HallsTab: React.FC<RestaurantTabProps> = ({ data, update, onGoTo })
         <span className="inline-flex items-center gap-1.5"><Armchair size={15} /> {halls.length} صالة</span>
         <span className="inline-flex items-center gap-1.5"><Armchair size={15} /> {total} طاولة</span>
         <span className="inline-flex items-center gap-1.5"><Users size={15} /> {allTables(halls).reduce((n, t) => n + t.seats, 0)} مقعد</span>
-        <button type="button" onClick={() => onGoTo('tables')} className="mr-auto text-[#0071e3] cursor-pointer">رموز QR للطاولات</button>
+        <button type="button" onClick={() => onGoTo('tables')} className="mr-auto text-brand cursor-pointer">رموز QR للطاولات</button>
       </div>
 
       <Card title="صالة جديدة">
@@ -84,11 +84,11 @@ export const HallsTab: React.FC<RestaurantTabProps> = ({ data, update, onGoTo })
                     <input className="flex-1 min-w-0 h-8 px-2 rounded-lg border border-neutral-200 bg-white text-sm font-black" value={t.name} maxLength={20} aria-label="اسم الطاولة" onChange={(e) => patchTable(h.id, t.id, { name: e.target.value })} />
                     <button type="button" aria-label="حذف الطاولة" onClick={() => removeTable(h.id, t.id)} className="w-7 h-7 rounded-lg text-neutral-400 hover:text-[#E03131] hover:bg-red-50 flex items-center justify-center cursor-pointer"><Trash2 size={13} /></button>
                   </div>
-                  <label className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-500">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-neutral-500">
                     <Users size={13} /> مقاعد
                     <input className="w-14 h-7 px-1.5 rounded-lg border border-neutral-200 bg-white text-xs font-bold" type="number" min={0} max={40} value={t.seats || ''} placeholder="0" onChange={(e) => patchTable(h.id, t.id, { seats: Math.max(0, Math.min(40, parseInt(e.target.value, 10) || 0)) })} />
                   </label>
-                  {isDuplicate(t.name) && <div className="text-[10px] font-bold text-[#E03131]">هذا الاسم مكرر</div>}
+                  {isDuplicate(t.name) && <div className="text-xs font-bold text-[#E03131]">هذا الاسم مكرر</div>}
                 </div>
               ))}
             </div>
@@ -101,7 +101,7 @@ export const HallsTab: React.FC<RestaurantTabProps> = ({ data, update, onGoTo })
           </div>
         </Card>
       ))}
-      <p className="text-[11px] text-neutral-400 leading-relaxed">أسماء الطاولات تظهر في شاشة الكاشير وعلى تذاكر المطبخ وفي رموز QR. يجب أن يكون اسم كل طاولة مختلفًا في كل الصالات.</p>
+      <p className="text-xs text-neutral-400 leading-relaxed">أسماء الطاولات تظهر في شاشة الكاشير وعلى تذاكر المطبخ وفي رموز QR. يجب أن يكون اسم كل طاولة مختلفًا في كل الصالات.</p>
     </div>
   );
 };

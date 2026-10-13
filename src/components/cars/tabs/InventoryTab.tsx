@@ -12,7 +12,7 @@ import { CarTabProps } from './CarEditor';
 
 const Stat: React.FC<{ label: string; value: string; color?: string }> = ({ label, value, color }) => (
   <div className="bg-white border border-neutral-200 rounded-2xl p-3">
-    <div className="text-[10px] font-bold text-neutral-400">{label}</div>
+    <div className="text-xs font-bold text-neutral-400">{label}</div>
     <div className="text-lg font-black" style={{ color }}>{value}</div>
   </div>
 );
@@ -80,7 +80,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
                 key={s.id}
                 type="button"
                 onClick={() => setFilter(s.id)}
-                className={`h-10 px-3 rounded-xl text-xs font-bold border cursor-pointer ${filter === s.id ? 'bg-[#1d1d1f] text-white border-[#1d1d1f]' : 'bg-white text-neutral-600 border-neutral-200'}`}
+                className={`h-10 px-3 rounded-xl text-xs font-bold border cursor-pointer ${filter === s.id ? 'bg-ink text-white border-ink' : 'bg-white text-neutral-600 border-neutral-200'}`}
               >
                 {s.label}
               </button>
@@ -103,16 +103,16 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
                       {c.images[0] ? <img src={c.images[0]} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : <ImageOff size={18} />}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-black text-[#1d1d1f] truncate">{carTitle(c)} · {carSubtitle(c)}</div>
-                      <div className="text-[11px] text-neutral-500 truncate">
+                      <div className="text-sm font-black text-ink truncate">{carTitle(c)} · {carSubtitle(c)}</div>
+                      <div className="text-xs text-neutral-500 truncate">
                         {[c.stockNumber, c.condition === 'new' ? 'جديدة' : formatKm(c.mileage), c.color].filter(Boolean).join(' · ')}
                       </div>
                       <div className="text-xs font-bold mt-0.5">
                         {c.sale ? <>بيعت بـ {formatMoney(c.sale.price, c.currency)}</> : c.price > 0 ? formatMoney(c.price, c.currency) : <span className="text-neutral-400">بدون سعر</span>}
-                        {margin !== 0 && <span className={`mr-2 text-[11px] ${margin > 0 ? 'text-green-600' : 'text-red-500'}`}>{c.sale ? 'ربح' : 'ربح متوقع'} {formatMoney(margin, c.currency)}</span>}
-                        {owed > 0 && <span className="mr-2 text-[11px] text-[#f29900]">متبقٍ على المشتري {formatMoney(owed, c.currency)}</span>}
+                        {margin !== 0 && <span className={`mr-2 text-xs ${margin > 0 ? 'text-green-600' : 'text-red-500'}`}>{c.sale ? 'ربح' : 'ربح متوقع'} {formatMoney(margin, c.currency)}</span>}
+                        {owed > 0 && <span className="mr-2 text-xs text-[#f29900]">متبقٍ على المشتري {formatMoney(owed, c.currency)}</span>}
                         {c.reservation && (
-                          <span className="mr-2 text-[11px] text-[#f29900]">
+                          <span className="mr-2 text-xs text-[#f29900]">
                             محجوزة{data.customers.find((x) => x.id === c.reservation!.customerId)?.name ? ` لـ ${data.customers.find((x) => x.id === c.reservation!.customerId)!.name}` : ''}{c.reservation.deposit > 0 ? ` · عربون ${formatMoney(c.reservation.deposit, c.currency)}` : ''}
                           </span>
                         )}

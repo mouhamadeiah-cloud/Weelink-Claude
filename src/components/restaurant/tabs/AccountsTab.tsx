@@ -101,7 +101,7 @@ export const AccountsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }) =>
 
       <div className="flex flex-wrap items-center gap-1.5">
         {PERIODS.map((p) => (
-          <button key={p.id} type="button" onClick={() => setPeriod(p.id)} className={`h-8 px-3 rounded-full text-xs font-bold border cursor-pointer ${period === p.id ? 'bg-[#1d1d1f] border-[#1d1d1f] text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>{p.label}</button>
+          <button key={p.id} type="button" onClick={() => setPeriod(p.id)} className={`h-8 px-3 rounded-full text-xs font-bold border cursor-pointer ${period === p.id ? 'bg-ink border-ink text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>{p.label}</button>
         ))}
         {period === 'range' && (
           <span className="inline-flex items-center gap-1.5">
@@ -178,7 +178,7 @@ export const AccountsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }) =>
                 <span className="w-1.5 h-9 rounded-full shrink-0" style={{ backgroundColor: e.kind === 'income' ? '#2F9E44' : '#E03131' }} />
                 <div className="flex-1 min-w-0">
                   <div className="font-black truncate">{e.category || 'بدون تصنيف'}{e.note ? <span className="font-bold text-neutral-500"> · {e.note}</span> : null}</div>
-                  <div className="text-[11px] text-neutral-400 font-bold">{e.date} · {e.method} · {SOURCE_LABEL[e.source]}</div>
+                  <div className="text-xs text-neutral-400 font-bold">{e.date} · {e.method} · {SOURCE_LABEL[e.source]}</div>
                 </div>
                 <span className="font-black shrink-0" style={{ color: e.kind === 'income' ? '#2F9E44' : '#E03131' }}>{e.kind === 'income' ? '+' : '−'}{formatMoney(e.amount, currency)}</span>
                 <button type="button" aria-label="حذف" onClick={() => remove(e)} className="w-8 h-8 rounded-full text-neutral-400 hover:text-[#E03131] hover:bg-red-50 flex items-center justify-center cursor-pointer"><Trash2 size={15} /></button>

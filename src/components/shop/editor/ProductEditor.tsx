@@ -241,9 +241,9 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
               <button
                 type="button"
                 onClick={() => goTo(i + 1)}
-                className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-[11px] font-bold transition cursor-pointer ${step === i + 1 ? 'bg-[#1d1d1f] text-white' : step > i + 1 ? 'bg-white text-[#1d1d1f] border border-neutral-200' : 'bg-white text-neutral-400 border border-neutral-200'}`}
+                className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${step === i + 1 ? 'bg-ink text-white' : step > i + 1 ? 'bg-white text-ink border border-neutral-200' : 'bg-white text-neutral-400 border border-neutral-200'}`}
               >
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === i + 1 ? 'bg-white text-[#1d1d1f]' : 'bg-neutral-100'}`}>{i + 1}</span>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${step === i + 1 ? 'bg-white text-ink' : 'bg-neutral-100'}`}>{i + 1}</span>
                 {label}
               </button>
             </React.Fragment>
@@ -275,10 +275,10 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
                     key={g.id}
                     type="button"
                     onClick={() => set({ galleryLayout: g.id })}
-                    className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition cursor-pointer ${p.galleryLayout === g.id ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'}`}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition cursor-pointer ${p.galleryLayout === g.id ? 'border-brand bg-blue-50 text-brand' : 'border-neutral-200 text-neutral-400 hover:border-neutral-300'}`}
                   >
                     <GalleryLayoutIcon layout={g.id} />
-                    <span className="text-[10px] font-bold text-center leading-tight">{g.label}</span>
+                    <span className="text-xs font-bold text-center leading-tight">{g.label}</span>
                   </button>
                 ))}
               </div>
@@ -310,7 +310,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
               </Field>
             </div>
             {pct > 0 && (
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#ff3b30]"><Percent size={12} /> خصم {pct}% عن السعر الأصلي</div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#ff3b30]"><Percent size={12} /> خصم {pct}% عن السعر الأصلي</div>
             )}
 
             <Field label="سعر خاص عند شراء كمية أكبر">
@@ -351,7 +351,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
         )}
 
         {step === 4 && (
-          <Card title="المواصفات والمخزون" actions={isEdit ? <span className="text-[10px] text-neutral-400">مرتبط بالمستودع</span> : undefined}>
+          <Card title="المواصفات والمخزون" actions={isEdit ? <span className="text-xs text-neutral-400">مرتبط بالمستودع</span> : undefined}>
             <OptionsEditor
               options={p.options}
               variants={p.variants}
@@ -379,7 +379,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
 
         {step === 6 && (
           <>
-            <Card title="منتجات مرتبطة" actions={<span className="text-[10px] text-neutral-400">تظهر أسفل البطاقة العائمة، حتى 5</span>}>
+            <Card title="منتجات مرتبطة" actions={<span className="text-xs text-neutral-400">تظهر أسفل البطاقة العائمة، حتى 5</span>}>
               <RelatedProductsPicker
                 productId={p.id}
                 selected={p.relatedIds}
@@ -400,7 +400,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
                 <Warehouse size={16} /> المستودع فقط
               </GhostButton>
             </div>
-            <ul className="text-[11px] text-neutral-400 leading-relaxed list-disc pr-4 space-y-0.5">
+            <ul className="text-xs text-neutral-400 leading-relaxed list-disc pr-4 space-y-0.5">
               <li><b>معاً:</b> يظهر في صفحة المتجر وتُحسب كميته في المستودع، ويُخصم منها عند كل طلب.</li>
               <li><b>المتجر فقط:</b> يظهر في المتجر دون حساب كمية، مناسب لما يُصنع حسب الطلب.</li>
               <li><b>المستودع فقط:</b> يُحفظ دون أن يظهر للزبائن، ويمكنك عرضه لاحقاً من المستودع.</li>
@@ -412,7 +412,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
       </div>
 
       <aside className="lg:sticky lg:top-0 space-y-2">
-        <div className="text-[11px] font-bold text-neutral-400">هكذا يظهر في المتجر</div>
+        <div className="text-xs font-bold text-neutral-400">هكذا يظهر في المتجر</div>
         {p.display === 'slide' ? (
           <ProductSlide product={preview} />
         ) : (
@@ -423,33 +423,33 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           </div>
         )}
         <div>
-          <div className="text-[11px] font-bold text-neutral-500 mb-1">طريقة الإدراج في المتجر</div>
+          <div className="text-xs font-bold text-neutral-500 mb-1">طريقة الإدراج في المتجر</div>
           <div className="grid grid-cols-2 gap-1.5">
             {DISPLAYS.map((d) => (
               <button
                 key={d.id}
                 type="button"
                 onClick={() => set({ display: d.id })}
-                className={`h-9 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${p.display === d.id ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
+                className={`h-9 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${p.display === d.id ? 'border-brand bg-blue-50 text-brand' : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
               >
                 <d.icon size={14} /> {d.label}
               </button>
             ))}
           </div>
           {p.display === 'slide' && (
-            <p className="mt-1 text-[10px] text-neutral-400 leading-relaxed">يظهر المنتج بعرض الصف كاملاً: الصورة الأساسية خلفية، والاسم والسعر والزر في شريط أسفلها.</p>
+            <p className="mt-1 text-xs text-neutral-400 leading-relaxed">يظهر المنتج بعرض الصف كاملاً: الصورة الأساسية خلفية، والاسم والسعر والزر في شريط أسفلها.</p>
           )}
         </div>
         {p.display === 'card' && (
           <div>
-            <div className="text-[11px] font-bold text-neutral-500 mb-1">حجم البطاقة</div>
+            <div className="text-xs font-bold text-neutral-500 mb-1">حجم البطاقة</div>
             <div className="grid grid-cols-3 gap-1.5">
               {CARD_SIZES.map((size) => (
                 <button
                   key={size}
                   type="button"
                   onClick={() => set({ cardSize: size })}
-                  className={`h-8 rounded-xl border text-xs font-bold transition cursor-pointer ${p.cardSize === size ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
+                  className={`h-8 rounded-xl border text-xs font-bold transition cursor-pointer ${p.cardSize === size ? 'border-brand bg-blue-50 text-brand' : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
                 >
                   {size}%
                 </button>
@@ -462,7 +462,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
         </div>
         <CardStyleSettings value={p.cardStyle} onChange={(cardStyle) => set({ cardStyle })} />
         {preview.options.some((o) => o.values.length) && (
-          <div className="text-[10px] text-neutral-400 leading-relaxed">
+          <div className="text-xs text-neutral-400 leading-relaxed">
             {preview.options.filter((o) => o.values.length).map((o) => `${o.name}: ${o.values.map((v) => v.label).join('، ')}`).join(' · ')}
           </div>
         )}

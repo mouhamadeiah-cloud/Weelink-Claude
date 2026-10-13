@@ -37,7 +37,7 @@ export const AddProductTab: React.FC<AdminTabProps> = ({ data, update }) => {
             type="button"
             onClick={() => { setMode(m.id); setPicked(null); }}
             className={`flex-1 sm:flex-none h-9 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-              mode === m.id ? 'bg-white text-[#0071e3] shadow-sm' : 'text-neutral-500'
+              mode === m.id ? 'bg-white text-brand shadow-sm' : 'text-neutral-500'
             }`}
           >
             <m.icon size={14} />
@@ -75,19 +75,19 @@ export const AddProductTab: React.FC<AdminTabProps> = ({ data, update }) => {
                   key={p.id}
                   type="button"
                   onClick={() => setPicked(p)}
-                  className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-[#fbfbfd] hover:border-[#0071e3] text-right cursor-pointer transition"
+                  className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-[#fbfbfd] hover:border-brand text-right cursor-pointer transition"
                 >
                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-neutral-200 shrink-0">
                     {p.images[0] && <img src={p.images[0]} alt="" className="w-full h-full object-cover" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-[#1d1d1f] truncate">{p.name}</div>
-                    <div className="text-[10px] text-neutral-400 truncate">
+                    <div className="text-sm font-bold text-ink truncate">{p.name}</div>
+                    <div className="text-xs text-neutral-400 truncate">
                       {formatMoney(p.price, p.currency)} · {tracksStock(p) ? `المخزون ${totalStock(p)}` : 'بدون مخزون'}
                       {p.variants.length > 0 && ` · ${p.variants.filter((v) => v.stock > 0).length} تركيبة متوفرة`}
                     </div>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 ${p.published ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-500'}`}>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-lg shrink-0 ${p.published ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-500'}`}>
                     {p.published && tracksStock(p) ? 'المتجر والمستودع' : p.published ? 'المتجر فقط' : 'المستودع فقط'}
                   </span>
                 </button>

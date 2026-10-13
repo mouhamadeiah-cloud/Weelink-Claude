@@ -50,11 +50,11 @@ export const AnimationSection = ({
   return (
     <div className="space-y-4 text-right animate-fade" dir="rtl">
       {/* Header info */}
-      <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-3 rounded-xl">
-        <span className="text-[11px] font-bold text-[#0071e3] block mb-1">
+      <div className="bg-brand/5 border border-brand/10 p-3 rounded-xl">
+        <span className="text-xs font-bold text-brand block mb-1">
           لوحة الحركات والأنيميشن التفاعلي:
         </span>
-        <p className="text-[10px] text-neutral-500 leading-relaxed">
+        <p className="text-xs text-neutral-500 leading-relaxed">
           اختر نمط الحركة والسرعة والحدث المناسب لتنشيط وتحريك العناصر والشرائط الإخبارية على الصفحة.
         </p>
       </div>
@@ -76,9 +76,9 @@ export const AnimationSection = ({
                 key={trig.id}
                 type="button"
                 onClick={() => onUpdateElementStyles({ animationTrigger: trig.id as any })}
-                className={`py-2 px-1 rounded-lg text-[10px] font-extrabold text-center transition-all cursor-pointer ${
+                className={`py-2 px-1 rounded-lg text-xs font-extrabold text-center transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-black/[0.04]'
+                    ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]'
                     : 'text-neutral-600 hover:text-black hover:bg-white/45'
                 }`}
               >
@@ -94,7 +94,7 @@ export const AnimationSection = ({
         <div className="space-y-1.5 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
           <div className="flex justify-between items-center text-xs">
             <span className="font-bold text-neutral-700">مدة وسرعة الحركة:</span>
-            <span className="font-mono text-[#0071e3] font-bold bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+            <span className="font-mono text-brand font-bold bg-brand/10 px-2 py-0.5 rounded-md">
               {currentDuration} ثانية
             </span>
           </div>
@@ -105,9 +105,9 @@ export const AnimationSection = ({
             step="0.1"
             value={currentDuration}
             onChange={(e) => onUpdateElementStyles({ animationDuration: Number(e.target.value) })}
-            className="w-full accent-[#0071e3] h-1.5 bg-neutral-200 rounded-lg cursor-pointer"
+            className="w-full accent-brand h-1.5 bg-neutral-200 rounded-lg cursor-pointer"
           />
-          <div className="flex justify-between text-[9px] text-neutral-400 font-mono">
+          <div className="flex justify-between text-xs text-neutral-400 font-mono">
             <span>0.3ث (سريع)</span>
             <span>10ث</span>
             <span>20ث (بطيء)</span>
@@ -135,17 +135,17 @@ export const AnimationSection = ({
                 }}
                 className={`p-2 rounded-xl border text-right transition-all cursor-pointer flex flex-col gap-1.5 relative group ${
                   isSelected
-                    ? 'border-[#0071e3] bg-[#0071e3]/5 shadow-sm ring-1 ring-[#0071e3]'
+                    ? 'border-brand bg-brand/5 shadow-sm ring-1 ring-brand'
                     : 'border-neutral-200 hover:border-neutral-300 bg-white hover:bg-neutral-50/50'
                 }`}
               >
                 {/* Title & select indicator */}
                 <div className="flex items-center justify-between w-full">
-                  <span className="text-[11px] font-bold text-neutral-800">
+                  <span className="text-xs font-bold text-neutral-800">
                     {animItem.name}
                   </span>
                   {isSelected && (
-                    <div className="w-3.5 h-3.5 rounded-full bg-[#0071e3] text-white flex items-center justify-center shrink-0">
+                    <div className="w-3.5 h-3.5 rounded-full bg-brand text-white flex items-center justify-center shrink-0">
                       <Check size={9} strokeWidth={3} />
                     </div>
                   )}
@@ -156,18 +156,18 @@ export const AnimationSection = ({
                   {/* Background gray element container */}
                   <div className="w-11/12 h-6 bg-neutral-200/40 rounded border border-dashed border-neutral-300 flex items-center justify-between px-1.5">
                     {/* white core animated block */}
-                    <div className="w-5 h-3 bg-white rounded shadow-3xs border border-neutral-200 flex items-center justify-center text-[7px] text-neutral-400 font-bold shrink-0">
+                    <div className="w-6 h-5 bg-white rounded shadow-3xs border border-neutral-200 flex items-center justify-center text-xs text-neutral-400 font-bold shrink-0">
                       ▫️
                     </div>
                     {/* Motion explanation arrows */}
-                    <span className="text-[9px] font-mono text-[#0071e3] font-bold shrink-0">
+                    <span className="text-xs font-mono text-brand font-bold shrink-0">
                       {animItem.arrow}
                     </span>
                   </div>
                 </div>
 
                 {/* Description */}
-                <span className="text-[9px] text-neutral-400 font-medium truncate">
+                <span className="text-xs text-neutral-400 font-medium truncate">
                   {animItem.desc}
                 </span>
               </button>

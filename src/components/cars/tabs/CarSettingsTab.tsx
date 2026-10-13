@@ -16,7 +16,7 @@ export const CarSettingsTab: React.FC<CarTabProps> = ({ data, update }) => {
         <Field label="العملة الافتراضية" hint="عملة السيارات الجديدة؛ لكل سيارة أن تختار عملتها">
           <div className="flex gap-1.5">
             {CAR_CURRENCIES.map((c) => (
-              <button key={c} type="button" onClick={() => set({ currency: c })} className={`h-10 min-w-[56px] px-3 rounded-xl border text-sm font-bold cursor-pointer ${s.currency === c ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 bg-white text-neutral-600'}`}>
+              <button key={c} type="button" onClick={() => set({ currency: c })} className={`h-10 min-w-[56px] px-3 rounded-xl border text-sm font-bold cursor-pointer ${s.currency === c ? 'border-brand bg-blue-50 text-brand' : 'border-neutral-200 bg-white text-neutral-600'}`}>
                 {c}
               </button>
             ))}
@@ -33,7 +33,7 @@ export const CarSettingsTab: React.FC<CarTabProps> = ({ data, update }) => {
           <Field label="العنوان"><input className={inputClass} value={s.address} onChange={(e) => set({ address: e.target.value })} /></Field>
           <Field label="أوقات الدوام"><input className={inputClass} value={s.workingHours} placeholder="يوميًا من 9 صباحًا حتى 9 مساءً" onChange={(e) => set({ workingHours: e.target.value })} /></Field>
         </div>
-        <p className="text-[11px] text-neutral-400 leading-relaxed">يستخدم زرّا «استفسر عبر واتساب» و«اتصل بنا» في صفحة كل سيارة هذين الرقمين، وترسل رسالة واتساب اسم السيارة ورقمها تلقائيًا.</p>
+        <p className="text-xs text-neutral-400 leading-relaxed">يستخدم زرّا «استفسر عبر واتساب» و«اتصل بنا» في صفحة كل سيارة هذين الرقمين، وترسل رسالة واتساب اسم السيارة ورقمها تلقائيًا.</p>
         <div className="rounded-xl border border-neutral-200 px-3 py-1.5">
           <Toggle checked={s.acceptRequests} onChange={(acceptRequests) => set({ acceptRequests })} label="إظهار «احجز تجربة قيادة» و«اطلب السيارة» في صفحة كل سيارة" />
         </div>

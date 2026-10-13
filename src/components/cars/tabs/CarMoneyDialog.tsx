@@ -31,7 +31,7 @@ const dateText = (d: string) => (d ? formatDate(`${d}T12:00:00`) : '');
 
 const Row: React.FC<{ label: string; value: string; strong?: boolean; color?: string }> = ({ label, value, strong, color }) => (
   <div className={`flex justify-between gap-3 py-1.5 text-xs ${strong ? 'border-t border-neutral-200 mt-1 pt-2.5' : ''}`}>
-    <span className={strong ? 'font-black text-[#1d1d1f]' : 'font-bold text-neutral-500'}>{label}</span>
+    <span className={strong ? 'font-black text-ink' : 'font-bold text-neutral-500'}>{label}</span>
     <span className={`font-black ${strong ? 'text-sm' : ''}`} style={{ color }}>{value}</span>
   </div>
 );
@@ -168,14 +168,14 @@ export const CarMoneyDialog: React.FC<Props> = ({ data, update, carId, onClose, 
 
   return createPortal(
     <div className="fixed inset-0 z-[1000002] bg-black/30 flex items-center justify-center p-2 sm:p-6" onMouseDown={onClose}>
-      <div dir="rtl" className="w-full max-w-4xl max-h-full bg-[#f5f5f7] rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.35)] flex flex-col overflow-hidden text-right font-sans" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-label="الملف المالي للسيارة">
+      <div dir="rtl" className="w-full max-w-4xl max-h-full bg-bg rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.35)] flex flex-col overflow-hidden text-right font-sans" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-label="الملف المالي للسيارة">
         <header className="flex items-center gap-3 px-4 sm:px-6 h-16 bg-white border-b border-neutral-200 shrink-0">
           <div className="w-12 h-9 rounded-lg overflow-hidden bg-neutral-100 shrink-0">
             {car.images[0] && <img src={car.images[0]} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-black text-[#1d1d1f] truncate">{carTitle(car)} · {carSubtitle(car)}</div>
-            <div className="text-[10px] text-neutral-400 font-bold">{car.stockNumber} · الملف المالي</div>
+            <div className="text-sm font-black text-ink truncate">{carTitle(car)} · {carSubtitle(car)}</div>
+            <div className="text-xs text-neutral-400 font-bold">{car.stockNumber} · الملف المالي</div>
           </div>
           <button type="button" onClick={onClose} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق"><X size={18} /></button>
         </header>
@@ -186,9 +186,9 @@ export const CarMoneyDialog: React.FC<Props> = ({ data, update, carId, onClose, 
             {!sold && car.reservation && (
               <Card title="محجوزة">
                 <div className="grid sm:grid-cols-3 gap-2">
-                  <div className="rounded-xl bg-[#f5f5f7] p-3"><div className="text-[10px] font-bold text-neutral-400">محجوزة لـ</div><div className="text-sm font-black truncate">{heldBy?.name || '—'}</div></div>
-                  <div className="rounded-xl bg-[#f5f5f7] p-3"><div className="text-[10px] font-bold text-neutral-400">العربون</div><div className="text-sm font-black text-[#34a853]">{m(deposit)}</div></div>
-                  <div className="rounded-xl bg-[#f5f5f7] p-3"><div className="text-[10px] font-bold text-neutral-400">تاريخ الحجز</div><div className="text-sm font-black">{dateText(car.reservation.date)}</div></div>
+                  <div className="rounded-xl bg-bg p-3"><div className="text-xs font-bold text-neutral-400">محجوزة لـ</div><div className="text-sm font-black truncate">{heldBy?.name || '—'}</div></div>
+                  <div className="rounded-xl bg-bg p-3"><div className="text-xs font-bold text-neutral-400">العربون</div><div className="text-sm font-black text-[#34a853]">{m(deposit)}</div></div>
+                  <div className="rounded-xl bg-bg p-3"><div className="text-xs font-bold text-neutral-400">تاريخ الحجز</div><div className="text-sm font-black">{dateText(car.reservation.date)}</div></div>
                 </div>
                 {car.reservation.note && <div className="text-xs text-neutral-600">{car.reservation.note}</div>}
                 <div className="flex flex-wrap items-end gap-2">
@@ -207,7 +207,7 @@ export const CarMoneyDialog: React.FC<Props> = ({ data, update, carId, onClose, 
                 </div>
                 {buyerPicker('الزبون')}
                 <Field label="ملاحظة"><input className={inputClass} value={res.note} placeholder="مثال: الحجز حتى نهاية الأسبوع" onChange={(e) => setRes({ ...res, note: e.target.value })} /></Field>
-                {saleError && <div className="text-[11px] text-red-600 font-bold">{saleError}</div>}
+                {saleError && <div className="text-xs text-red-600 font-bold">{saleError}</div>}
                 <PrimaryButton onClick={confirmReserve} className="w-full h-11 flex items-center justify-center gap-1.5 !bg-[#f29900] hover:!bg-[#d98900]"><CalendarClock size={16} /> تأكيد الحجز</PrimaryButton>
               </Card>
             ) : !sold ? (
@@ -220,7 +220,7 @@ export const CarMoneyDialog: React.FC<Props> = ({ data, update, carId, onClose, 
                 <Field label="استلمنا المبلغ في"><Segmented label="استلمنا المبلغ في" options={accountOptions} value={sale.account} onChange={(account) => setSale({ ...sale, account })} /></Field>
                 {buyerPicker('المشتري')}
                 <Field label="ملاحظة"><input className={inputClass} value={sale.note} placeholder="مثال: البيع مع نقل الملكية" onChange={(e) => setSale({ ...sale, note: e.target.value })} /></Field>
-                {saleError && <div className="text-[11px] text-red-600 font-bold">{saleError}</div>}
+                {saleError && <div className="text-xs text-red-600 font-bold">{saleError}</div>}
                 <PrimaryButton onClick={confirmSale} className="w-full h-11 flex items-center justify-center gap-1.5 !bg-[#34a853] hover:!bg-[#2d9047]"><BadgeCheck size={16} /> تأكيد البيع</PrimaryButton>
               </Card>
             ) : (
@@ -229,12 +229,12 @@ export const CarMoneyDialog: React.FC<Props> = ({ data, update, carId, onClose, 
                 actions={<GhostButton onClick={cancelSale} className="flex items-center gap-1 text-red-500"><Undo2 size={13} /> إلغاء البيع</GhostButton>}
               >
                 <div className="grid sm:grid-cols-3 gap-2">
-                  <div className="rounded-xl bg-[#f5f5f7] p-3"><div className="text-[10px] font-bold text-neutral-400">سعر البيع</div><div className="text-sm font-black">{m(car.sale!.price)}</div></div>
-                  <div className="rounded-xl bg-[#f5f5f7] p-3"><div className="text-[10px] font-bold text-neutral-400">المدفوع</div><div className="text-sm font-black text-[#34a853]">{m(salePaid(car))}</div></div>
-                  <div className="rounded-xl bg-[#f5f5f7] p-3"><div className="text-[10px] font-bold text-neutral-400">المتبقي على المشتري</div><div className={`text-sm font-black ${remaining > 0 ? 'text-[#f29900]' : 'text-neutral-400'}`}>{m(remaining)}</div></div>
+                  <div className="rounded-xl bg-bg p-3"><div className="text-xs font-bold text-neutral-400">سعر البيع</div><div className="text-sm font-black">{m(car.sale!.price)}</div></div>
+                  <div className="rounded-xl bg-bg p-3"><div className="text-xs font-bold text-neutral-400">المدفوع</div><div className="text-sm font-black text-[#34a853]">{m(salePaid(car))}</div></div>
+                  <div className="rounded-xl bg-bg p-3"><div className="text-xs font-bold text-neutral-400">المتبقي على المشتري</div><div className={`text-sm font-black ${remaining > 0 ? 'text-[#f29900]' : 'text-neutral-400'}`}>{m(remaining)}</div></div>
                 </div>
                 <div className="text-xs text-neutral-600">
-                  بيعت في {dateText(car.sale!.date)}{buyerOf ? <> إلى <b className="text-[#1d1d1f]">{buyerOf.name}</b>{buyerOf.phone ? ` · ${buyerOf.phone}` : ''}</> : ''}{car.sale!.note ? ` · ${car.sale!.note}` : ''}
+                  بيعت في {dateText(car.sale!.date)}{buyerOf ? <> إلى <b className="text-ink">{buyerOf.name}</b>{buyerOf.phone ? ` · ${buyerOf.phone}` : ''}</> : ''}{car.sale!.note ? ` · ${car.sale!.note}` : ''}
                 </div>
                 <div className="space-y-1.5">
                   {car.sale!.payments.map((p, i) => (
@@ -262,7 +262,7 @@ export const CarMoneyDialog: React.FC<Props> = ({ data, update, carId, onClose, 
               <div className="flex flex-wrap gap-1.5">
                 {EXPENSE_CATEGORIES.map((c) => (
                   <button key={c} type="button" onClick={() => setExp({ ...exp, category: c })} aria-pressed={exp.category === c}
-                    className={`h-8 px-3 rounded-full border text-[11px] font-bold cursor-pointer ${exp.category === c ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 bg-white text-neutral-600'}`}>{c}</button>
+                    className={`h-8 px-3 rounded-full border text-xs font-bold cursor-pointer ${exp.category === c ? 'border-brand bg-blue-50 text-brand' : 'border-neutral-200 bg-white text-neutral-600'}`}>{c}</button>
                 ))}
               </div>
               <div className="flex flex-wrap items-end gap-2">
@@ -276,7 +276,7 @@ export const CarMoneyDialog: React.FC<Props> = ({ data, update, carId, onClose, 
                 </Field>
                 <PrimaryButton onClick={addExpense} className="flex items-center gap-1"><Plus size={14} /> إضافة مصروف</PrimaryButton>
               </div>
-              {expError && <div className="text-[11px] text-red-600 font-bold">{expError}</div>}
+              {expError && <div className="text-xs text-red-600 font-bold">{expError}</div>}
               {car.expenses.length > 0 && (
                 <div className="space-y-1.5">
                   {car.expenses.map((e) => (
@@ -317,12 +317,12 @@ export const CarMoneyDialog: React.FC<Props> = ({ data, update, carId, onClose, 
                 <div className="space-y-1.5">
                   {CAR_DOC_TYPES.map((t) => (
                     <button key={t.id} type="button" onClick={() => onNewDocument(t.id, car.id)} className="w-full h-10 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-bold flex items-center gap-2 cursor-pointer">
-                      <Plus size={14} className="text-[#0071e3]" />
+                      <Plus size={14} className="text-brand" />
                       <span className="flex-1 text-right">{t.label}</span>
                     </button>
                   ))}
                   {data.documents.filter((x) => x.carId === car.id).map((x) => (
-                    <button key={x.id} type="button" onClick={() => onOpenDocument?.(x.id)} className="w-full h-9 px-3 rounded-xl bg-white/60 hover:bg-white text-[11px] font-bold text-neutral-600 flex items-center gap-2 cursor-pointer">
+                    <button key={x.id} type="button" onClick={() => onOpenDocument?.(x.id)} className="w-full h-9 px-3 rounded-xl bg-white/60 hover:bg-white text-xs font-bold text-neutral-600 flex items-center gap-2 cursor-pointer">
                       <FileText size={13} className="text-neutral-400" />
                       <span className="flex-1 text-right truncate">{CAR_DOC_TYPES.find((t) => t.id === x.type)!.label}</span>
                       <span dir="ltr" className="text-neutral-400">{x.number}</span>
@@ -332,7 +332,7 @@ export const CarMoneyDialog: React.FC<Props> = ({ data, update, carId, onClose, 
                 </div>
               </Card>
             )}
-            <p className="text-[10px] text-neutral-400 leading-relaxed flex gap-1.5">
+            <p className="text-xs text-neutral-400 leading-relaxed flex gap-1.5">
               <Wallet size={13} className="shrink-0" />
               <span>
                 ما يُدفع من الصندوق أو البنك يُسجَّل في «الحسابات» تلقائيًا. سعر الشراء {car.purchaseAccount === 'none' ? 'غير مسجل في الحسابات؛ اختر من أين دُفع في «إضافة سيارة ← السعر والشراء».' : `مسجل من ${accountLabel(car.purchaseAccount)}.`}

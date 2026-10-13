@@ -31,17 +31,17 @@ export const ProjectSettingsSection = ({ name, onRename, kindLabel, siteUrl }: P
           type="text"
           value={name}
           onChange={(e) => onRename(e.target.value)}
-          className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:bg-white focus:outline-none transition-all"
+          className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-brand focus:bg-white focus:outline-none transition-all"
           placeholder="اسم المشروع..."
         />
-        <p className="text-[10.5px] text-neutral-500">يظهر في النافبار على كل صفحات الموقع. نوع المشروع: {kindLabel}.</p>
+        <p className="text-xs text-neutral-500">يظهر في النافبار على كل صفحات الموقع. نوع المشروع: {kindLabel}.</p>
       </div>
 
       <div className="space-y-1.5 pt-3 border-t border-neutral-200">
         <label className="text-xs font-bold text-neutral-800 block">رابط الموقع:</label>
         {siteUrl ? (
           <div className="flex items-center gap-1.5">
-            <div className="flex-1 min-w-0 text-[11px] font-mono text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-2.5 py-2 truncate" dir="ltr">
+            <div className="flex-1 min-w-0 text-xs font-mono text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-2.5 py-2 truncate" dir="ltr">
               {siteUrl}
             </div>
             <button
@@ -63,7 +63,7 @@ export const ProjectSettingsSection = ({ name, onRename, kindLabel, siteUrl }: P
             </a>
           </div>
         ) : (
-          <p className="text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2">يظهر رابط الموقع هنا بعد نشره.</p>
+          <p className="text-xs text-neutral-500 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2">يظهر رابط الموقع هنا بعد نشره.</p>
         )}
       </div>
 
@@ -71,12 +71,12 @@ export const ProjectSettingsSection = ({ name, onRename, kindLabel, siteUrl }: P
         <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
           <Rocket size={14} />
           <span>النشر</span>
-          <span className="mr-auto text-[10px] font-bold bg-neutral-100 rounded-full px-2 py-0.5">قريباً</span>
+          <span className="mr-auto text-xs font-bold bg-neutral-100 rounded-full px-2 py-0.5">قريباً</span>
         </div>
         <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
           <Globe size={14} />
           <span>الدومين الخاص</span>
-          <span className="mr-auto text-[10px] font-bold bg-neutral-100 rounded-full px-2 py-0.5">قريباً</span>
+          <span className="mr-auto text-xs font-bold bg-neutral-100 rounded-full px-2 py-0.5">قريباً</span>
         </div>
       </div>
     </div>

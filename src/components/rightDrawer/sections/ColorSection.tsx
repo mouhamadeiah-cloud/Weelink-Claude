@@ -27,8 +27,8 @@ export const ColorSection = ({
       {(selectedElement?.type === 'image' || selectedElement?.type === 'gallery') ? (
         <div className="space-y-4">
           {/* Header */}
-          <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
-            <span className="text-[11px] font-bold text-[#0071e3]">
+          <div className="bg-brand/5 border border-brand/10 p-2.5 rounded-xl text-center">
+            <span className="text-xs font-bold text-brand">
               {selectedElement.type === 'gallery' ? 'تعديل ألوان وفلاتر صور المعرض: ' : 'تعديل ألوان وفلاتر الصورة: '}
               {elementDisplayName(selectedElement)}
             </span>
@@ -40,7 +40,7 @@ export const ColorSection = ({
               <span className="text-xs font-bold text-neutral-800">
                 فلاتر وتأثيرات الألوان الجاهزة:
               </span>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-xs text-neutral-400">
                 (فلاتر بصرية)
               </span>
             </div>
@@ -62,15 +62,15 @@ export const ColorSection = ({
                     key={filterOpt.id}
                     type="button"
                     onClick={() => onUpdateElementStyles({ imageFilter: filterOpt.id === 'none' ? undefined : filterOpt.id })}
-                    className={`p-2 rounded-xl border text-[11px] font-semibold text-right transition-all flex items-center gap-2 cursor-pointer ${
+                    className={`p-2 rounded-xl border text-xs font-semibold text-right transition-all flex items-center gap-2 cursor-pointer ${
                       isSelected
-                        ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] ring-1 ring-[#0071e3]'
+                        ? 'border-brand bg-brand/10 text-brand ring-1 ring-brand'
                         : 'border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700'
                     }`}
                   >
                     <span className="text-sm select-none">{filterOpt.preview}</span>
                     <span className="truncate">{filterOpt.name}</span>
-                    {isSelected && <Check size={12} className="text-[#0071e3] mr-auto shrink-0" />}
+                    {isSelected && <Check size={12} className="text-brand mr-auto shrink-0" />}
                   </button>
                 );
               })}
@@ -83,7 +83,7 @@ export const ColorSection = ({
               <span className="text-xs font-bold text-neutral-800">
                 تغيير ألوان الصورة من الـ 50 لوناً الأساسية:
               </span>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-xs text-neutral-400">
                 (صبغ وتلوين دمج)
               </span>
             </div>
@@ -98,7 +98,7 @@ export const ColorSection = ({
                       type="button"
                       onClick={() => onUpdateElementStyles({ imageTintColor: hex })}
                       className={`w-5.5 h-5.5 rounded-full border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-3xs flex items-center justify-center ${
-                        isSelected ? 'ring-2 ring-[#0071e3] ring-offset-1 scale-110 z-10' : ''
+                        isSelected ? 'ring-2 ring-brand ring-offset-1 scale-110 z-10' : ''
                       }`}
                       style={{ backgroundColor: hex }}
                       title={`تلوين: ${hex}`}
@@ -134,7 +134,7 @@ export const ColorSection = ({
               <div className="space-y-1.5 pt-1 border-t border-neutral-200/80">
                 <div className="flex justify-between text-xs">
                   <span className="text-neutral-700 font-bold">كثافة صبغ الألوان:</span>
-                  <span className="font-mono text-[#0071e3] font-bold">{styles.imageTintOpacity ?? 50}%</span>
+                  <span className="font-mono text-brand font-bold">{styles.imageTintOpacity ?? 50}%</span>
                 </div>
                 <input
                   type="range"
@@ -142,7 +142,7 @@ export const ColorSection = ({
                   max="100"
                   value={styles.imageTintOpacity ?? 50}
                   onChange={(e) => onUpdateElementStyles({ imageTintOpacity: Number(e.target.value) })}
-                  className="w-full accent-[#0071e3]"
+                  className="w-full accent-brand"
                 />
               </div>
 
@@ -164,9 +164,9 @@ export const ColorSection = ({
                         key={blend.id}
                         type="button"
                         onClick={() => onUpdateElementStyles({ imageTintBlendMode: blend.id })}
-                        className={`py-1.5 px-0.5 rounded-lg border text-[10px] font-semibold text-center transition-all cursor-pointer ${
+                        className={`py-1.5 px-0.5 rounded-lg border text-xs font-semibold text-center transition-all cursor-pointer ${
                           isSelected
-                            ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] ring-1 ring-[#0071e3]'
+                            ? 'border-brand bg-brand/10 text-brand ring-1 ring-brand'
                             : 'border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600'
                         }`}
                       >
@@ -187,7 +187,7 @@ export const ColorSection = ({
               <span className="text-xs font-bold text-neutral-800">
                 ألوان سريعة:
               </span>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-xs text-neutral-400">
                 (أبيض، أسود، أزرق…)
               </span>
             </div>
@@ -207,7 +207,7 @@ export const ColorSection = ({
                         item.border ? 'border border-neutral-300' : 'border border-black/15'
                       } ${
                         isSelected 
-                          ? 'ring-2 ring-[#0071e3] ring-offset-2 scale-105 shadow-xs' 
+                          ? 'ring-2 ring-brand ring-offset-2 scale-105 shadow-xs' 
                           : 'shadow-2xs'
                       }`}
                       style={{
@@ -221,12 +221,12 @@ export const ColorSection = ({
                       {isSelected && (
                         <Check 
                           size={14} 
-                          className={item.value === '#18181b' ? 'text-white' : 'text-[#0071e3]'} 
+                          className={item.value === '#18181b' ? 'text-white' : 'text-brand'} 
                           strokeWidth={2.8}
                         />
                       )}
                     </div>
-                    <span className="text-[9.5px] font-medium text-neutral-600 truncate max-w-[48px]">
+                    <span className="text-xs font-medium text-neutral-600 truncate max-w-[48px]">
                       {item.name}
                     </span>
                   </button>
@@ -241,7 +241,7 @@ export const ColorSection = ({
               <span className="text-xs font-bold text-neutral-800">
                 ألوان أساسية:
               </span>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-xs text-neutral-400">
                 (ألوان صلبة دقيقة)
               </span>
             </div>
@@ -255,7 +255,7 @@ export const ColorSection = ({
                       key={`element-fifty-${idx}-${hex}`}
                       onClick={() => onUpdateElementStyles({ color: hex })}
                       className={`w-6 h-6 rounded-full border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-3xs flex items-center justify-center ${
-                        isSelected ? 'ring-2 ring-[#0071e3] ring-offset-1 scale-110 z-10' : ''
+                        isSelected ? 'ring-2 ring-brand ring-offset-1 scale-110 z-10' : ''
                       }`}
                       style={{ backgroundColor: hex }}
                       title={`لون ${idx + 1}: ${hex}`}
@@ -282,14 +282,14 @@ export const ColorSection = ({
           <span className="text-xs font-bold text-neutral-800">
             تدرجات لونية للنص:
           </span>
-          <span className="text-[10px] text-neutral-400">
+          <span className="text-xs text-neutral-400">
             (تلوّن حروف النص بتدرج)
           </span>
         </div>
 
         {/* الصف العلوي: باستيل ناعم */}
         <div className="p-2 bg-neutral-50 rounded-2xl border border-neutral-200/60 space-y-1">
-          <div className="text-[10px] font-semibold text-neutral-500 mb-1">
+          <div className="text-xs font-semibold text-neutral-500 mb-1">
             باستيل ناعم متعدد النغمات:
           </div>
           <div className="grid grid-cols-7 gap-1.5 justify-items-center">
@@ -300,7 +300,7 @@ export const ColorSection = ({
                   key={`element-pastel-${grad.id}`}
                   onClick={() => onUpdateElementStyles({ color: grad.value })}
                   className={`w-7 h-7 rounded-full border border-black/10 shadow-3xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${
-                    isSelected ? 'ring-2 ring-[#0071e3] ring-offset-2 scale-110 z-10' : ''
+                    isSelected ? 'ring-2 ring-brand ring-offset-2 scale-110 z-10' : ''
                   }`}
                   style={{ background: grad.value }}
                   title={grad.name}
@@ -327,9 +327,9 @@ export const ColorSection = ({
             <button
               key={`element-filter-${filterTab.id}`}
               onClick={() => setElementGradientCategory(filterTab.id)}
-              className={`text-[9.5px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
+              className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                 elementGradientCategory === filterTab.id
-                  ? 'bg-[#0071e3] text-white shadow-2xs'
+                  ? 'bg-brand text-white shadow-2xs'
                   : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80 hover:text-black'
               }`}
             >
@@ -350,7 +350,7 @@ export const ColorSection = ({
                     key={`element-grad-${grad.id}`}
                     onClick={() => onUpdateElementStyles({ color: grad.value })}
                     className={`w-7 h-7 rounded-full border border-black/10 shadow-2xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${
-                      isSelected ? 'ring-2 ring-[#0071e3] ring-offset-2 scale-110 z-10' : 'hover:z-10'
+                      isSelected ? 'ring-2 ring-brand ring-offset-2 scale-110 z-10' : 'hover:z-10'
                     }`}
                     style={{ background: grad.value }}
                     title={grad.name}

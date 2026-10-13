@@ -54,12 +54,12 @@ export const TextEffectTile: React.FC<TileProps> = ({ def, styles, selected, onP
       aria-label={def.name}
       title={def.name}
       className={`group flex flex-col items-stretch gap-1 rounded-xl p-1 text-center transition-all cursor-pointer ${
-        selected ? 'ring-2 ring-[#0071e3] bg-[#0071e3]/5' : 'hover:bg-neutral-100'
+        selected ? 'ring-2 ring-brand bg-brand/5' : 'hover:bg-neutral-100'
       }`}
     >
       <span
         className={`flex items-center justify-center rounded-lg overflow-hidden border border-black/5 ${size === 'lg' ? 'h-16' : 'h-12'} ${
-          def.dark ? 'bg-[#111827]' : 'bg-[#f5f5f7]'
+          def.dark ? 'bg-[#111827]' : 'bg-bg'
         }`}
       >
         <span
@@ -69,7 +69,7 @@ export const TextEffectTile: React.FC<TileProps> = ({ def, styles, selected, onP
           {fx?.inline ? <span style={fx.inline}>{word}</span> : word}
         </span>
       </span>
-      <span className={`text-[10px] truncate ${selected ? 'font-bold text-[#0071e3]' : 'text-neutral-600'}`}>{def.name}</span>
+      <span className={`text-xs truncate ${selected ? 'font-bold text-brand' : 'text-neutral-600'}`}>{def.name}</span>
     </button>
   );
 };
@@ -101,12 +101,12 @@ export const TextEffectsPicker: React.FC<PickerProps> = ({ styles, onChange, onS
           type="button"
           onClick={() => onChange({ textEffect: undefined })}
           aria-pressed={!current}
-          className={`flex flex-col items-stretch gap-1 rounded-xl p-1 transition-all cursor-pointer ${!current ? 'ring-2 ring-[#0071e3] bg-[#0071e3]/5' : 'hover:bg-neutral-100'}`}
+          className={`flex flex-col items-stretch gap-1 rounded-xl p-1 transition-all cursor-pointer ${!current ? 'ring-2 ring-brand bg-brand/5' : 'hover:bg-neutral-100'}`}
         >
           <span className="h-12 rounded-lg border border-dashed border-neutral-300 bg-white flex items-center justify-center text-neutral-400">
             <X size={16} />
           </span>
-          <span className={`text-[10px] ${!current ? 'font-bold text-[#0071e3]' : 'text-neutral-600'}`}>بدون</span>
+          <span className={`text-xs ${!current ? 'font-bold text-brand' : 'text-neutral-600'}`}>بدون</span>
         </button>
         {shown.map((def) => (
           <TextEffectTile key={def.id} def={def} styles={styles} selected={current?.id === def.id} onPick={() => onChange(pickPatch(def.id))} />
@@ -131,7 +131,7 @@ const ColorRow: React.FC<{ label: string; value: string; onPick: (v: string) => 
   <label className="flex items-center justify-between gap-2 text-[12px] font-medium text-neutral-700">
     <span>{label}</span>
     <span className="flex items-center gap-2">
-      <span className="font-mono text-[10.5px] text-neutral-400" dir="ltr">{value}</span>
+      <span className="font-mono text-xs text-neutral-400" dir="ltr">{value}</span>
       <input type="color" value={value} onChange={(e) => onPick(e.target.value)} className="w-8 h-8 rounded-lg border border-neutral-200 cursor-pointer bg-white p-0.5" />
     </span>
   </label>
@@ -145,7 +145,7 @@ const TextEffectControls: React.FC<{ def: TextEffectDef; styles: ElementStyles; 
   const intensity = styles.textEffectIntensity ?? 50;
   return (
     <div className="space-y-3 rounded-xl bg-neutral-50 border border-neutral-200 p-3">
-      <div className="text-[11px] font-bold text-neutral-500">{def.name}</div>
+      <div className="text-xs font-bold text-neutral-500">{def.name}</div>
       {ownColor && (
         <ColorRow label={def.id === 'hollow' || def.id === 'hollow-shadow' ? 'لون الإطار' : 'لون التأثير'} value={styles.textEffectColor || ownColor} onPick={(v) => onChange({ textEffectColor: v })} />
       )}
@@ -165,7 +165,7 @@ const TextEffectControls: React.FC<{ def: TextEffectDef; styles: ElementStyles; 
                   onClick={() => onChange({ textEffectImage: url })}
                   aria-label={`صورة ${i + 1}`}
                   aria-pressed={on}
-                  className={`h-10 rounded-lg bg-cover bg-center cursor-pointer ${on ? 'ring-2 ring-[#0071e3]' : 'ring-1 ring-black/10'}`}
+                  className={`h-10 rounded-lg bg-cover bg-center cursor-pointer ${on ? 'ring-2 ring-brand' : 'ring-1 ring-black/10'}`}
                   style={{ backgroundImage: `url("${url.replace('w=800', 'w=160')}")` }}
                 />
               );
@@ -176,7 +176,7 @@ const TextEffectControls: React.FC<{ def: TextEffectDef; styles: ElementStyles; 
       <label className="block space-y-1.5">
         <span className="flex items-center justify-between text-[12px] font-medium text-neutral-700">
           <span>{def.group === 'motion' ? 'السرعة' : 'القوة'}</span>
-          <span className="text-[10.5px] text-neutral-400">{intensity}%</span>
+          <span className="text-xs text-neutral-400">{intensity}%</span>
         </span>
         <input
           type="range"
@@ -184,7 +184,7 @@ const TextEffectControls: React.FC<{ def: TextEffectDef; styles: ElementStyles; 
           max={100}
           value={intensity}
           onChange={(e) => onChange({ textEffectIntensity: Number(e.target.value) })}
-          className="w-full accent-[#0071e3] cursor-pointer"
+          className="w-full accent-brand cursor-pointer"
         />
       </label>
     </div>
@@ -200,10 +200,10 @@ interface GalleryProps {
 // Every effect, by group, in the panel beside the control panel.
 export const TextEffectsGallery: React.FC<GalleryProps> = ({ styles, onChange, onClose }) => (
   <div className="h-full flex flex-col bg-[#fbfbfd] text-right" dir="rtl">
-    <div className="h-12 px-3 bg-[#f5f5f7] border-b border-neutral-200 flex items-center justify-between shrink-0">
+    <div className="h-12 px-3 bg-bg border-b border-neutral-200 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-2">
         <span className="text-xs font-black text-neutral-800">تأثيرات النص</span>
-        <span className="text-[10px] text-[#0071e3] font-bold bg-[#0071e3]/5 border border-[#0071e3]/10 px-1.5 py-0.5 rounded-full">{TEXT_EFFECTS.length} تأثير</span>
+        <span className="text-xs text-brand font-bold bg-brand/5 border border-brand/10 px-1.5 py-0.5 rounded-full">{TEXT_EFFECTS.length} تأثير</span>
       </div>
       <button
         type="button"
@@ -215,10 +215,10 @@ export const TextEffectsGallery: React.FC<GalleryProps> = ({ styles, onChange, o
       </button>
     </div>
     <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
-      <p className="text-[10.5px] text-neutral-500 leading-relaxed -mt-0.5">اضغط على تأثير ليتطبق على النص المختار. لونه وقوته بتغيّرهم من لوحة التحكم.</p>
+      <p className="text-xs text-neutral-500 leading-relaxed -mt-0.5">اضغط على تأثير ليتطبق على النص المختار. لونه وقوته بتغيّرهم من لوحة التحكم.</p>
       {TEXT_EFFECT_GROUPS.map((g) => (
         <div key={g.id} className="space-y-2">
-          <div className="flex items-center gap-2 text-[11px] font-bold text-neutral-500">
+          <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
             <span>{g.name}</span>
             <span className="flex-1 h-px bg-neutral-200" />
           </div>

@@ -404,7 +404,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
             <div>
               <h2 className="text-base font-bold text-neutral-900 flex items-center gap-1.5">
                 تكاملات Google Workspace
-                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">اتصال مباشر</span>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">اتصال مباشر</span>
               </h2>
               <p className="text-xs text-neutral-500 mt-0.5">اربط جميع خدمات Google لصفحة WeLink الخاصة بك</p>
             </div>
@@ -433,7 +433,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                 <div className="text-xs font-bold text-neutral-800 leading-tight">
                   متصل بـ: {currentUser.displayName || 'حساب Google'}
                 </div>
-                <div className="text-[10px] text-neutral-500 leading-none mt-0.5">{currentUser.email}</div>
+                <div className="text-xs text-neutral-500 leading-none mt-0.5">{currentUser.email}</div>
               </div>
             </div>
           ) : (
@@ -448,7 +448,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
               <button
                 type="button"
                 onClick={handleDisconnect}
-                className="text-[11px] font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/70 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer select-none"
+                className="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/70 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer select-none"
               >
                 <LogOut size={12} />
                 <span>قطع اتصال الحساب</span>
@@ -458,7 +458,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                 type="button"
                 onClick={handleConnect}
                 disabled={isLoading}
-                className="text-xs font-bold bg-[#0071e3] hover:bg-[#0077ed] text-white px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 select-none"
+                className="text-xs font-bold bg-brand hover:bg-brand-hover text-white px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 select-none"
               >
                 <Chrome size={13} />
                 <span>ربط وتفويض الحساب بـ Google ⚡</span>
@@ -549,7 +549,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
               </button>
 
               {/* Summary Banner inside tabs */}
-              <div className="mt-auto p-2.5 bg-blue-50/50 border border-blue-100 rounded-xl text-[10px] text-blue-800 leading-normal font-medium">
+              <div className="mt-auto p-2.5 bg-blue-50/50 border border-blue-100 rounded-xl text-xs text-blue-800 leading-normal font-medium">
                 <Sparkles size={12} className="inline mr-1 text-blue-600" />
                 تكامل WeLink يربط صفحاتك تلقائياً بقاعدة بياناتك وخدمات قوقل في آن واحد!
               </div>
@@ -577,7 +577,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">عنوان الحدث</label>
+                        <label className="text-xs font-bold text-neutral-500">عنوان الحدث</label>
                         <input
                           type="text"
                           value={newEventTitle}
@@ -587,7 +587,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">البريد الإلكتروني للضيف (اختياري)</label>
+                        <label className="text-xs font-bold text-neutral-500">البريد الإلكتروني للضيف (اختياري)</label>
                         <input
                           type="email"
                           value={newEventAttendees}
@@ -600,7 +600,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">تاريخ ووقت البدء</label>
+                        <label className="text-xs font-bold text-neutral-500">تاريخ ووقت البدء</label>
                         <input
                           type="datetime-local"
                           value={newEventStart}
@@ -609,7 +609,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">تاريخ ووقت الانتهاء</label>
+                        <label className="text-xs font-bold text-neutral-500">تاريخ ووقت الانتهاء</label>
                         <input
                           type="datetime-local"
                           value={newEventEnd}
@@ -655,7 +655,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                           <div key={event.id} className="bg-white border border-neutral-100 rounded-xl p-3 shadow-xs flex items-center justify-between gap-3 text-right">
                             <div className="flex-1">
                               <div className="text-xs font-bold text-neutral-800">{event.summary}</div>
-                              <div className="text-[10px] text-neutral-500 mt-1">
+                              <div className="text-xs text-neutral-500 mt-1">
                                 📅 البدء: {new Date(event.start?.dateTime || event.start?.date).toLocaleString('ar-EG')}
                               </div>
                               {event.hangoutLink && (
@@ -663,7 +663,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                                   href={event.hangoutLink} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md hover:bg-emerald-100/60"
+                                  className="mt-1.5 inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md hover:bg-emerald-100/60"
                                 >
                                   <Video size={10} />
                                   <span>انضمام لاجتماع Google Meet 🟢</span>
@@ -711,14 +711,14 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                     </div>
 
                     {sheetId && (
-                      <div className="text-[10px] text-gray-500 bg-white border border-neutral-100 p-2.5 rounded-xl break-all">
+                      <div className="text-xs text-gray-500 bg-white border border-neutral-100 p-2.5 rounded-xl break-all">
                         <span className="font-bold text-neutral-700">الملف المرتبط الحالي:</span> {sheetId}
                         <div className="mt-1 flex justify-end">
                           <a 
                             href={`https://docs.google.com/spreadsheets/d/${sheetId}/edit`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-[#0071e3] hover:underline font-bold"
+                            className="text-brand hover:underline font-bold"
                           >
                             عرض وتعديل في Google Sheets ↗
                           </a>
@@ -735,7 +735,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                         <button
                           type="button"
                           onClick={handleSyncToSheet}
-                          className="bg-[#0071e3] hover:bg-[#0077ed] text-white text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all shadow-xs active:scale-95"
+                          className="bg-brand hover:bg-brand-hover text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all shadow-xs active:scale-95"
                         >
                           <ArrowLeftRight size={11} />
                           <span>تصدير ومزامنة للجدول 📤</span>
@@ -753,9 +753,9 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                           <div key={i} className="flex justify-between items-center text-xs p-2 bg-neutral-50 rounded-lg hover:bg-neutral-100/75 border border-neutral-100">
                             <div>
                               <span className="font-bold text-neutral-800">{lead.name}</span>
-                              <span className="text-[10px] text-neutral-500 mr-2 font-mono">({lead.email})</span>
+                              <span className="text-xs text-neutral-500 mr-2 font-mono">({lead.email})</span>
                             </div>
-                            <div className="text-[10px] text-neutral-400">{lead.date}</div>
+                            <div className="text-xs text-neutral-400">{lead.date}</div>
                           </div>
                         ))}
                       </div>
@@ -772,7 +772,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                     <h3 className="text-xs font-bold text-neutral-800 border-b border-neutral-100 pb-2">✉️ صياغة وإرسال بريد إلكتروني فوري عبر Gmail:</h3>
                     
                     <div>
-                      <label className="text-[10px] font-bold text-neutral-500">المرسل إليه (إيميل العميل)</label>
+                      <label className="text-xs font-bold text-neutral-500">المرسل إليه (إيميل العميل)</label>
                       <input
                         type="email"
                         required
@@ -784,7 +784,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-neutral-500">عنوان الرسالة</label>
+                      <label className="text-xs font-bold text-neutral-500">عنوان الرسالة</label>
                       <input
                         type="text"
                         required
@@ -796,7 +796,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-neutral-500">نص الرسالة</label>
+                      <label className="text-xs font-bold text-neutral-500">نص الرسالة</label>
                       <textarea
                         required
                         rows={4}
@@ -834,8 +834,8 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                           return (
                             <div key={msg.id} className="bg-white border border-neutral-100 rounded-xl p-3 shadow-xs text-right">
                               <div className="text-xs font-bold text-neutral-800">{subject}</div>
-                              <div className="text-[10px] text-neutral-500 mt-1">المرسل: {from}</div>
-                              <div className="text-[9px] text-neutral-400 mt-0.5">{msg.snippet}</div>
+                              <div className="text-xs text-neutral-500 mt-1">المرسل: {from}</div>
+                              <div className="text-xs text-neutral-400 mt-0.5">{msg.snippet}</div>
                             </div>
                           );
                         })}
@@ -854,7 +854,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                     
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">الاسم الأول</label>
+                        <label className="text-xs font-bold text-neutral-500">الاسم الأول</label>
                         <input
                           type="text"
                           required
@@ -865,7 +865,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">اسم العائلة</label>
+                        <label className="text-xs font-bold text-neutral-500">اسم العائلة</label>
                         <input
                           type="text"
                           required
@@ -879,7 +879,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">البريد الإلكتروني</label>
+                        <label className="text-xs font-bold text-neutral-500">البريد الإلكتروني</label>
                         <input
                           type="email"
                           value={contactEmail}
@@ -889,7 +889,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">رقم الجوال</label>
+                        <label className="text-xs font-bold text-neutral-500">رقم الجوال</label>
                         <input
                           type="tel"
                           value={contactPhone}
@@ -923,12 +923,12 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                           <div key={idx} className="flex justify-between items-center text-xs p-2.5 bg-neutral-50 border border-neutral-100 rounded-xl">
                             <div>
                               <span className="font-bold text-neutral-800">{lead.name}</span>
-                              <span className="text-[10px] text-neutral-500 mr-2 font-mono">({lead.email})</span>
+                              <span className="text-xs text-neutral-500 mr-2 font-mono">({lead.email})</span>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleSyncLeadToContact(lead)}
-                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all"
+                              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-lg transition-all"
                             >
                               إضافة لجهات الاتصال ➕
                             </button>
@@ -957,7 +957,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                         <p>1. تأكد من تفعيل الدردشة عبر زيارة الرابط: <a href="https://chat.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold inline-flex items-center gap-0.5">Chat.google.com ↗</a></p>
                         <p>2. إذا كنت تستخدم بريد مؤسسي (Google Workspace)، اطلب من مدير النظام تمكين Google Chat للمستخدمين.</p>
                       </div>
-                      <p className="text-[11px] text-neutral-500">
+                      <p className="text-xs text-neutral-500">
                         💡 <strong>ملاحظة هامة:</strong> بقية الخدمات وتكاملات WeLink (كالتقويم والاجتماعات، جداول Google Sheets ومزامنة المسجلين، بريد Gmail، وجهات الاتصال) <strong>تعمل بالكامل وبأعلى كفاءة</strong> ولا تتأثر مطلقاً بهذا التعطيل!
                       </p>
                     </div>
@@ -967,7 +967,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                       <h3 className="text-xs font-bold text-neutral-800 border-b border-neutral-100 pb-2">💬 إرسال إشعارات وتنبيهات لمساحات Google Chat:</h3>
                       
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">اختر مساحة المحادثة (Active Space)</label>
+                        <label className="text-xs font-bold text-neutral-500">اختر مساحة المحادثة (Active Space)</label>
                         {spaces.length === 0 ? (
                           <div className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl p-3 mt-1 font-medium">
                             ⚠️ لم نجد مساحات دردشة نشطة في تطبيق Google Chat بحسابك حتى الآن. يرجى إنشاء مساحة في Chat.google.com أولاً.
@@ -986,7 +986,7 @@ export const WorkspaceHub: React.FC<WorkspaceHubProps> = ({ isOpen, onClose }) =
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-neutral-500">نص التنبيه المراد إرساله للمساحة</label>
+                        <label className="text-xs font-bold text-neutral-500">نص التنبيه المراد إرساله للمساحة</label>
                         <textarea
                           required
                           rows={3}

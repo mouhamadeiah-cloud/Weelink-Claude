@@ -32,12 +32,12 @@ export const LottieTile: React.FC<TileProps> = ({ def, selected, onPick, size = 
     aria-pressed={selected}
     aria-label={def.name}
     title={def.name}
-    className={`flex flex-col items-stretch gap-1 rounded-xl p-1 text-center transition-all cursor-pointer ${selected ? 'ring-2 ring-[#0071e3] bg-[#0071e3]/5' : 'hover:bg-neutral-100'}`}
+    className={`flex flex-col items-stretch gap-1 rounded-xl p-1 text-center transition-all cursor-pointer ${selected ? 'ring-2 ring-brand bg-brand/5' : 'hover:bg-neutral-100'}`}
   >
-    <span className={`block rounded-lg overflow-hidden border border-black/5 bg-[#f5f5f7] ${size === 'lg' ? 'h-20 p-1.5' : 'h-14 p-1'}`}>
+    <span className={`block rounded-lg overflow-hidden border border-black/5 bg-bg ${size === 'lg' ? 'h-20 p-1.5' : 'h-14 p-1'}`}>
       <LottiePlayer animationId={def.id} color={selected ? color : undefined} color2={selected ? color2 : undefined} />
     </span>
-    <span className={`text-[10px] truncate ${selected ? 'font-bold text-[#0071e3]' : 'text-neutral-600'}`}>{def.name}</span>
+    <span className={`text-xs truncate ${selected ? 'font-bold text-brand' : 'text-neutral-600'}`}>{def.name}</span>
   </button>
 );
 
@@ -45,7 +45,7 @@ const ColorRow: React.FC<{ label: string; value: string; onPick: (v: string) => 
   <label className="flex items-center justify-between gap-2 text-[12px] font-medium text-neutral-700">
     <span>{label}</span>
     <span className="flex items-center gap-2">
-      <span className="font-mono text-[10.5px] text-neutral-400" dir="ltr">{value}</span>
+      <span className="font-mono text-xs text-neutral-400" dir="ltr">{value}</span>
       <input type="color" value={value} onChange={(e) => onPick(e.target.value)} className="w-8 h-8 rounded-lg border border-neutral-200 cursor-pointer bg-white p-0.5" />
     </span>
   </label>
@@ -99,7 +99,7 @@ export const LottieSettings: React.FC<SettingsProps> = ({ element, onChange, onS
 
         <div className="space-y-1.5">
           <div className="text-[12px] font-medium text-neutral-700">متى بتتحرك</div>
-          <div role="radiogroup" aria-label="متى بتتحرك" className="grid grid-cols-3 gap-1 rounded-xl bg-neutral-100 p-1 text-[11.5px] font-bold">
+          <div role="radiogroup" aria-label="متى بتتحرك" className="grid grid-cols-3 gap-1 rounded-xl bg-neutral-100 p-1 text-xs font-bold">
             {TRIGGERS.map(([id, label]) => (
               <button
                 key={id}
@@ -107,7 +107,7 @@ export const LottieSettings: React.FC<SettingsProps> = ({ element, onChange, onS
                 role="radio"
                 aria-checked={trigger === id}
                 onClick={() => onChange({ lottieTrigger: id })}
-                className={`h-8 rounded-lg transition-colors cursor-pointer ${trigger === id ? 'bg-white text-[#0071e3] shadow-sm' : 'text-neutral-500 hover:text-neutral-800'}`}
+                className={`h-8 rounded-lg transition-colors cursor-pointer ${trigger === id ? 'bg-white text-brand shadow-sm' : 'text-neutral-500 hover:text-neutral-800'}`}
               >
                 {label}
               </button>
@@ -117,13 +117,13 @@ export const LottieSettings: React.FC<SettingsProps> = ({ element, onChange, onS
 
         <label className="flex items-center justify-between text-[12px] font-medium text-neutral-700 cursor-pointer">
           <span>تكرار الحركة</span>
-          <input type="checkbox" checked={element.lottieLoop !== false} onChange={(e) => onChange({ lottieLoop: e.target.checked })} className="w-4 h-4 accent-[#0071e3] cursor-pointer" />
+          <input type="checkbox" checked={element.lottieLoop !== false} onChange={(e) => onChange({ lottieLoop: e.target.checked })} className="w-4 h-4 accent-brand cursor-pointer" />
         </label>
 
         <label className="block space-y-1.5">
           <span className="flex items-center justify-between text-[12px] font-medium text-neutral-700">
             <span>السرعة</span>
-            <span className="text-[10.5px] text-neutral-400" dir="ltr">{speed.toFixed(2).replace(/\.?0+$/, '')}×</span>
+            <span className="text-xs text-neutral-400" dir="ltr">{speed.toFixed(2).replace(/\.?0+$/, '')}×</span>
           </span>
           <input
             type="range"
@@ -132,14 +132,14 @@ export const LottieSettings: React.FC<SettingsProps> = ({ element, onChange, onS
             step={0.25}
             value={speed}
             onChange={(e) => onChange({ lottieSpeed: Number(e.target.value) })}
-            className="w-full accent-[#0071e3] cursor-pointer"
+            className="w-full accent-brand cursor-pointer"
           />
         </label>
       </div>
 
       <div className="space-y-1.5 rounded-xl border border-neutral-200 p-3">
         <div className="text-[12px] font-medium text-neutral-700">رسمة من LottieFiles أو غيره</div>
-        <p className="text-[10.5px] text-neutral-500 leading-relaxed">الصق رابط ملف Lottie (‏.json) بيبدأ بـ https، وبتظهر بدل رسمتنا. ألوانها بتضل متل ما هي.</p>
+        <p className="text-xs text-neutral-500 leading-relaxed">الصق رابط ملف Lottie (‏.json) بيبدأ بـ https، وبتظهر بدل رسمتنا. ألوانها بتضل متل ما هي.</p>
         <div className="flex gap-1.5">
           <input
             type="url"
@@ -147,13 +147,13 @@ export const LottieSettings: React.FC<SettingsProps> = ({ element, onChange, onS
             value={urlDraft}
             onChange={(e) => setUrlDraft(e.target.value)}
             placeholder="https://…/animation.json"
-            className="flex-1 min-w-0 h-8 px-2 rounded-lg border border-neutral-300 text-[11px] font-mono focus:outline-none focus:border-[#0071e3]"
+            className="flex-1 min-w-0 h-8 px-2 rounded-lg border border-neutral-300 text-xs font-mono focus:outline-none focus:border-brand"
           />
           <button
             type="button"
             disabled={!urlOk}
             onClick={() => onChange({ lottieUrl: urlDraft.trim() })}
-            className="h-8 px-3 rounded-lg bg-[#0071e3] text-white text-[11px] font-bold disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            className="h-8 px-3 rounded-lg bg-brand text-white text-xs font-bold disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           >
             استخدام
           </button>
@@ -165,7 +165,7 @@ export const LottieSettings: React.FC<SettingsProps> = ({ element, onChange, onS
               setUrlDraft('');
               onChange({ lottieUrl: undefined });
             }}
-            className="text-[10.5px] font-bold text-red-600 hover:underline cursor-pointer"
+            className="text-xs font-bold text-red-600 hover:underline cursor-pointer"
           >
             إزالة الرابط والرجوع لرسومنا
           </button>
@@ -186,10 +186,10 @@ export const LottieGallery: React.FC<GalleryProps> = ({ element, onChange, onClo
   const selectedId = element.lottieUrl ? undefined : element.lottieId;
   return (
     <div className="h-full flex flex-col bg-[#fbfbfd] text-right" dir="rtl">
-      <div className="h-12 px-3 bg-[#f5f5f7] border-b border-neutral-200 flex items-center justify-between shrink-0">
+      <div className="h-12 px-3 bg-bg border-b border-neutral-200 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-black text-neutral-800">رسوم متحركة</span>
-          <span className="text-[10px] text-[#0071e3] font-bold bg-[#0071e3]/5 border border-[#0071e3]/10 px-1.5 py-0.5 rounded-full">{LOTTIE_ANIMATIONS.length} رسمة</span>
+          <span className="text-xs text-brand font-bold bg-brand/5 border border-brand/10 px-1.5 py-0.5 rounded-full">{LOTTIE_ANIMATIONS.length} رسمة</span>
         </div>
         <button
           type="button"
@@ -201,10 +201,10 @@ export const LottieGallery: React.FC<GalleryProps> = ({ element, onChange, onClo
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
-        <p className="text-[10.5px] text-neutral-500 leading-relaxed -mt-0.5">اضغط على رسمة لتحطها مكان المختارة. لونها وسرعتها بتغيّرهم من لوحة التحكم.</p>
+        <p className="text-xs text-neutral-500 leading-relaxed -mt-0.5">اضغط على رسمة لتحطها مكان المختارة. لونها وسرعتها بتغيّرهم من لوحة التحكم.</p>
         {LOTTIE_GROUPS.map((g) => (
           <div key={g.id} className="space-y-2">
-            <div className="flex items-center gap-2 text-[11px] font-bold text-neutral-500">
+            <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
               <span>{g.name}</span>
               <span className="flex-1 h-px bg-neutral-200" />
             </div>

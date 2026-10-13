@@ -135,7 +135,7 @@ export const PhotoBrowserPanel: React.FC<PhotoBrowserPanelProps> = ({ anchor, in
         }`}
         style={style}
       >
-        <header className="shrink-0 space-y-2.5 border-b border-neutral-200 bg-[#f5f5f7] p-3">
+        <header className="shrink-0 space-y-2.5 border-b border-neutral-200 bg-bg p-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-black text-neutral-900">صور Unsplash</span>
             <button
@@ -154,7 +154,7 @@ export const PhotoBrowserPanel: React.FC<PhotoBrowserPanelProps> = ({ anchor, in
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="ابحث: قهوة، بيتزا، بحر، مكتب…"
-              className="w-full rounded-xl border border-neutral-300 bg-white py-2.5 pr-9 pl-3 text-[13px] placeholder:text-neutral-400 focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] focus:outline-none"
+              className="w-full rounded-xl border border-neutral-300 bg-white py-2.5 pr-9 pl-3 text-[13px] placeholder:text-neutral-400 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
             />
             <Search size={16} className="absolute top-1/2 right-3 -translate-y-1/2 text-neutral-400" />
           </div>
@@ -164,15 +164,15 @@ export const PhotoBrowserPanel: React.FC<PhotoBrowserPanelProps> = ({ anchor, in
                 key={c.id}
                 type="button"
                 onClick={() => setCategory(c.id)}
-                className={`cursor-pointer rounded-full px-3 py-1 text-[11.5px] font-bold transition-colors ${
-                  category === c.id ? 'bg-[#0071e3] text-white' : 'bg-white text-neutral-700 ring-1 ring-neutral-200 hover:bg-neutral-100'
+                className={`cursor-pointer rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+                  category === c.id ? 'bg-brand text-white' : 'bg-white text-neutral-700 ring-1 ring-neutral-200 hover:bg-neutral-100'
                 }`}
               >
                 {c.label}
               </button>
             ))}
           </div>
-          {!live && !loading && <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800">{notLiveMessage(error)}</p>}
+          {!live && !loading && <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800">{notLiveMessage(error)}</p>}
         </header>
 
         <div ref={gridRef} className="flex-1 overflow-y-auto p-3">
@@ -192,7 +192,7 @@ export const PhotoBrowserPanel: React.FC<PhotoBrowserPanelProps> = ({ anchor, in
                   type="button"
                   onClick={() => onPick(photo)}
                   disabled={!!pickingId}
-                  className="group relative aspect-[4/3] cursor-pointer overflow-hidden rounded-xl border border-neutral-200 transition-all hover:border-[#0071e3] hover:shadow-md disabled:cursor-wait"
+                  className="group relative aspect-[4/3] cursor-pointer overflow-hidden rounded-xl border border-neutral-200 transition-all hover:border-brand hover:shadow-md disabled:cursor-wait"
                   style={{ backgroundColor: photo.color || '#e5e5ea' }}
                   title={photo.title}
                 >
@@ -204,10 +204,10 @@ export const PhotoBrowserPanel: React.FC<PhotoBrowserPanelProps> = ({ anchor, in
                   ) : (
                     <span className="absolute inset-0 flex flex-col items-center justify-between bg-black/40 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100">
                       <span />
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#0071e3] shadow-sm">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-brand shadow-sm">
                         <Plus size={15} strokeWidth={3} />
                       </span>
-                      <span className="w-full truncate text-[10px] font-medium">{photo.photographer}</span>
+                      <span className="w-full truncate text-xs font-medium">{photo.photographer}</span>
                     </span>
                   )}
                 </button>
@@ -220,7 +220,7 @@ export const PhotoBrowserPanel: React.FC<PhotoBrowserPanelProps> = ({ anchor, in
               type="button"
               onClick={loadMore}
               disabled={loadingMore}
-              className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white py-2.5 text-xs font-bold text-neutral-800 hover:border-[#0071e3] hover:text-[#0071e3] disabled:opacity-60"
+              className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white py-2.5 text-xs font-bold text-neutral-800 hover:border-brand hover:text-brand disabled:opacity-60"
             >
               {loadingMore ? <RefreshCw size={13} className="animate-spin" /> : null}
               {loadingMore ? 'جاري التحميل…' : 'صور أكثر'}
@@ -228,9 +228,9 @@ export const PhotoBrowserPanel: React.FC<PhotoBrowserPanelProps> = ({ anchor, in
           )}
         </div>
 
-        <footer className="shrink-0 border-t border-neutral-200 px-3 py-2 text-center text-[10.5px] text-neutral-500">
+        <footer className="shrink-0 border-t border-neutral-200 px-3 py-2 text-center text-xs text-neutral-500">
           الصور من{' '}
-          <a href="https://unsplash.com?utm_source=weelink&utm_medium=referral" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 font-semibold text-neutral-700 hover:text-[#0071e3]">
+          <a href="https://unsplash.com?utm_source=weelink&utm_medium=referral" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 font-semibold text-neutral-700 hover:text-brand">
             Unsplash <ExternalLink size={10} />
           </a>
           ، اضغط على صورة لإضافتها

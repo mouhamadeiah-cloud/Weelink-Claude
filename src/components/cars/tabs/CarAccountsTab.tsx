@@ -39,9 +39,9 @@ const dateText = (d: string) => (d ? formatDate(`${d}T12:00:00`) : '');
 
 const Stat: React.FC<{ label: string; value: string; color?: string; sub?: string }> = ({ label, value, color, sub }) => (
   <div className="flex-1 min-w-[120px] bg-white border border-neutral-200 rounded-2xl p-3">
-    <div className="text-[10px] font-bold text-neutral-400 truncate">{label}</div>
+    <div className="text-xs font-bold text-neutral-400 truncate">{label}</div>
     <div className="text-base font-black truncate" style={{ color }}>{value}</div>
-    {sub && <div className="text-[10px] text-neutral-400 font-bold truncate">{sub}</div>}
+    {sub && <div className="text-xs text-neutral-400 font-bold truncate">{sub}</div>}
   </div>
 );
 
@@ -195,14 +195,14 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
 
   const txIcon = (t: CarTransaction) =>
     t.kind === 'transfer' ? <ArrowLeftRight size={14} /> : t.kind === 'in' ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />;
-  const txColor = (t: CarTransaction) => (t.kind === 'transfer' ? 'bg-blue-50 text-[#0071e3]' : t.kind === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
+  const txColor = (t: CarTransaction) => (t.kind === 'transfer' ? 'bg-blue-50 text-brand' : t.kind === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
 
   return (
     <div className="space-y-4">
       <div className="flex border-b border-neutral-200" role="tablist" aria-label="أقسام الحسابات">
         {([['money', 'الصندوق والبنك'], ['profit', 'ربح السيارات']] as const).map(([id, label]) => (
           <button key={id} type="button" role="tab" aria-selected={section === id} onClick={() => setSection(id)}
-            className={`h-10 px-4 -mb-px border-b-2 text-xs font-black transition cursor-pointer ${section === id ? 'border-[#0071e3] text-[#0071e3]' : 'border-transparent text-neutral-500 hover:text-[#1d1d1f]'}`}>
+            className={`h-10 px-4 -mb-px border-b-2 text-xs font-black transition cursor-pointer ${section === id ? 'border-brand text-brand' : 'border-transparent text-neutral-500 hover:text-ink'}`}>
             {label}
           </button>
         ))}
@@ -211,15 +211,15 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
       <div className="flex flex-wrap items-center gap-2">
         {currencies.length > 1 && <Segmented label="العملة" options={currencies.map((c) => ({ id: c, label: c }))} value={currency} onChange={setCurrency} />}
         <div className="flex items-center gap-1.5 mr-auto">
-          <button type="button" onClick={() => print(false)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"><Printer size={13} /> طباعة A4</button>
-          <button type="button" onClick={() => print(true)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"><FileDown size={13} /> تصدير PDF</button>
+          <button type="button" onClick={() => print(false)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer size={13} /> طباعة A4</button>
+          <button type="button" onClick={() => print(true)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer"><FileDown size={13} /> تصدير PDF</button>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {RANGES.map((r) => (
           <button key={r.id} type="button" onClick={() => setRange(r.id)}
-            className={`h-8 px-3 rounded-full text-[11px] font-bold border transition cursor-pointer ${range === r.id ? 'bg-[#1d1d1f] border-[#1d1d1f] text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>
+            className={`h-8 px-3 rounded-full text-xs font-bold border transition cursor-pointer ${range === r.id ? 'bg-ink border-ink text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>
             {r.label}
           </button>
         ))}
@@ -251,7 +251,7 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
               <div className="flex flex-wrap gap-1.5">
                 {(entry.kind === 'in' ? MANUAL_IN_CATEGORIES : MANUAL_OUT_CATEGORIES).map((c) => (
                   <button key={c} type="button" aria-pressed={entry.category === c} onClick={() => setEntry({ ...entry, category: c })}
-                    className={`h-8 px-3 rounded-full border text-[11px] font-bold cursor-pointer ${entry.category === c ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 bg-white text-neutral-600'}`}>{c}</button>
+                    className={`h-8 px-3 rounded-full border text-xs font-bold cursor-pointer ${entry.category === c ? 'border-brand bg-blue-50 text-brand' : 'border-neutral-200 bg-white text-neutral-600'}`}>{c}</button>
                 ))}
               </div>
             )}
@@ -266,7 +266,7 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
               <Field label="التاريخ"><input type="date" className={`${inputFitClass} w-40`} value={entry.date} onChange={(e) => setEntry({ ...entry, date: e.target.value })} /></Field>
               <PrimaryButton onClick={addEntry} className="flex items-center gap-1"><Plus size={14} /> إضافة</PrimaryButton>
             </div>
-            {entryError && <div className="text-[11px] text-red-600 font-bold">{entryError}</div>}
+            {entryError && <div className="text-xs text-red-600 font-bold">{entryError}</div>}
           </Card>
 
           <Card
@@ -287,12 +287,12 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
                     <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${txColor(t)}`}>{txIcon(t)}</span>
                     <div className="flex-1 min-w-0">
                       <div className="truncate font-bold">{txText(t)}</div>
-                      <div className="text-[10px] text-neutral-400 font-bold">
+                      <div className="text-xs text-neutral-400 font-bold">
                         {t.kind === 'transfer' ? `من ${accountLabel(t.account)} إلى ${accountLabel(t.toAccount || 'bank')}` : accountLabel(t.account)} · {TX_SOURCE_LABELS[t.source]}
                       </div>
                     </div>
                     <span className="text-neutral-400 shrink-0">{dateText(t.date)}</span>
-                    <span className={`font-black shrink-0 ${t.kind === 'in' ? 'text-emerald-600' : t.kind === 'out' ? 'text-amber-600' : 'text-[#0071e3]'}`}>{m(t.kind === 'out' ? -t.amount : t.amount)}</span>
+                    <span className={`font-black shrink-0 ${t.kind === 'in' ? 'text-emerald-600' : t.kind === 'out' ? 'text-amber-600' : 'text-brand'}`}>{m(t.kind === 'out' ? -t.amount : t.amount)}</span>
                     {canRemoveTx(data, t) ? (
                       <button type="button" onClick={() => window.confirm('حذف هذا القيد؟') && update((d) => removeTx(d, t.id))} aria-label="حذف القيد" className="text-neutral-300 hover:text-red-500 cursor-pointer"><Trash2 size={13} /></button>
                     ) : (
@@ -302,7 +302,7 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
                 ))}
               </div>
             )}
-            <p className="text-[10px] text-neutral-400 leading-relaxed">قيود السيارات (الشراء والمصاريف والبيع والدفعات) تتعدل أو تُحذف من الملف المالي للسيارة في «المخزون».</p>
+            <p className="text-xs text-neutral-400 leading-relaxed">قيود السيارات (الشراء والمصاريف والبيع والدفعات) تتعدل أو تُحذف من الملف المالي للسيارة في «المخزون».</p>
           </Card>
         </>
       )}
@@ -324,7 +324,7 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="text-[10px] text-neutral-400 font-bold">
+                    <tr className="text-xs text-neutral-400 font-bold">
                       <th className="text-right py-2 px-2">السيارة</th>
                       <th className="text-right py-2 px-2">تاريخ البيع</th>
                       <th className="text-left py-2 px-2">الكلفة</th>

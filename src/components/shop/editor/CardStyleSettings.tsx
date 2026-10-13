@@ -17,7 +17,7 @@ const ColorRow: React.FC<{ label: string; value: string; fallback: string; onCha
     <span>{label}</span>
     <span className="flex items-center gap-1.5">
       {value && (
-        <button type="button" onClick={() => onChange('')} className="text-[10px] text-neutral-400 hover:text-neutral-600 cursor-pointer">
+        <button type="button" onClick={() => onChange('')} className="text-xs text-neutral-400 hover:text-neutral-600 cursor-pointer">
           افتراضي
         </button>
       )}
@@ -62,7 +62,7 @@ export const CardStyleSettings: React.FC<{ value: CardStyle; onChange: (v: CardS
                   key={c.id}
                   type="button"
                   onClick={() => set({ corners: c.id })}
-                  className={`h-8 rounded-lg border text-[11px] font-bold cursor-pointer transition ${st.corners === c.id ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
+                  className={`h-8 rounded-lg border text-xs font-bold cursor-pointer transition ${st.corners === c.id ? 'border-brand bg-blue-50 text-brand' : 'border-neutral-200 text-neutral-500 hover:border-neutral-300'}`}
                 >
                   {c.label}
                 </button>

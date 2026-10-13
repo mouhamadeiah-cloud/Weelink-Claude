@@ -37,11 +37,11 @@ export const PageCustomersList: React.FC<{ ownerUid: string; isOwner: boolean; s
       <Card title={`زبائن الموقع (${items.length})`}>
         <p className="text-xs text-neutral-500 leading-relaxed">
           يشترك الزائر من زر «سجّل كزبون» في أعلى موقعك، بحساب Weelink أو Google بعد تأكيد بريده. يرى هنا طلباته ويحفظ بياناته فلا يكتبها في كل طلب.
-          {siteUrl ? <> رابط موقعك: <a href={siteUrl} target="_blank" rel="noreferrer" dir="ltr" className="text-[#0071e3] font-bold">{siteUrl}</a></> : null}
+          {siteUrl ? <> رابط موقعك: <a href={siteUrl} target="_blank" rel="noreferrer" dir="ltr" className="text-brand font-bold">{siteUrl}</a></> : null}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <input className={`${inputClass} flex-1 min-w-[180px]`} placeholder="بحث بالاسم أو البريد أو الهاتف" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <GhostButton onClick={() => setOnlyOffers(!onlyOffers)} className={onlyOffers ? '!border-[#0071e3] !text-[#0071e3]' : ''}>
+          <GhostButton onClick={() => setOnlyOffers(!onlyOffers)} className={onlyOffers ? '!border-brand !text-brand' : ''}>
             <span className="inline-flex items-center gap-1.5"><Mail size={14} /> الموافقون على العروض ({offerEmails.length})</span>
           </GhostButton>
           <GhostButton onClick={copyEmails} disabled={!offerEmails.length}>
@@ -59,9 +59,9 @@ export const PageCustomersList: React.FC<{ ownerUid: string; isOwner: boolean; s
             {shown.map((c) => (
               <div key={c.uid} className="py-3 flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-0.5 text-xs">
-                  <div className="text-sm font-black text-[#1d1d1f] flex items-center gap-2">
+                  <div className="text-sm font-black text-ink flex items-center gap-2">
                     {c.name || 'بدون اسم'}
-                    {c.marketing && <span className="px-2 h-5 rounded-full bg-[#34c759]/15 text-[#248A3D] text-[10px] font-bold inline-flex items-center">يقبل العروض</span>}
+                    {c.marketing && <span className="px-2 h-5 rounded-full bg-[#34c759]/15 text-[#248A3D] text-xs font-bold inline-flex items-center">يقبل العروض</span>}
                   </div>
                   <div className="text-neutral-500" dir="ltr" style={{ textAlign: 'right' }}>{c.email}</div>
                   <div className="text-neutral-500">{[c.phone, c.address].filter(Boolean).join(' · ')}</div>

@@ -70,7 +70,7 @@ export const RelatedProductsPicker: React.FC<RelatedProductsPickerProps> = ({ pr
       )}
 
       {full ? (
-        <p className="text-[11px] text-neutral-400">وصلت إلى الحد الأقصى ({MAX_RELATED} منتجات).</p>
+        <p className="text-xs text-neutral-400">وصلت إلى الحد الأقصى ({MAX_RELATED} منتجات).</p>
       ) : (
         <>
           <Field label="بالرقم">
@@ -105,7 +105,7 @@ export const RelatedProductsPicker: React.FC<RelatedProductsPickerProps> = ({ pr
           </Field>
         </>
       )}
-      {error && <p className="text-[11px] font-bold text-red-500">{error}</p>}
+      {error && <p className="text-xs font-bold text-red-500">{error}</p>}
     </div>
   );
 };

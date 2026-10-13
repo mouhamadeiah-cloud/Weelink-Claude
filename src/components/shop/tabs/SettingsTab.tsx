@@ -37,7 +37,7 @@ const WalletStep: React.FC<{
   return (
     <Card title={meta.label}>
       {!walletsEnabled && (
-        <p className="text-[11px] text-amber-600 font-bold">المحافظ الإلكترونية معطّلة في «عام»، فلن تظهر هذه المحفظة للزبون حتى تفعّلها هناك.</p>
+        <p className="text-xs text-amber-600 font-bold">المحافظ الإلكترونية معطّلة في «عام»، فلن تظهر هذه المحفظة للزبون حتى تفعّلها هناك.</p>
       )}
       <Toggle label={`تفعيل ${meta.label}`} checked={wallet.enabled} onChange={(enabled) => onChange({ enabled })} />
       {wallet.enabled && (
@@ -115,9 +115,9 @@ export const SettingsTab: React.FC<AdminTabProps> = ({ data, update }) => {
             <button
               type="button"
               onClick={() => setStep(i + 1)}
-              className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-[11px] font-bold transition cursor-pointer ${step === i + 1 ? 'bg-[#1d1d1f] text-white' : step > i + 1 ? 'bg-white text-[#1d1d1f] border border-neutral-200' : 'bg-white text-neutral-400 border border-neutral-200'}`}
+              className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${step === i + 1 ? 'bg-ink text-white' : step > i + 1 ? 'bg-white text-ink border border-neutral-200' : 'bg-white text-neutral-400 border border-neutral-200'}`}
             >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === i + 1 ? 'bg-white text-[#1d1d1f]' : 'bg-neutral-100'}`}>{i + 1}</span>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${step === i + 1 ? 'bg-white text-ink' : 'bg-neutral-100'}`}>{i + 1}</span>
               {label}
             </button>
           </React.Fragment>
@@ -137,10 +137,10 @@ export const SettingsTab: React.FC<AdminTabProps> = ({ data, update }) => {
           <Toggle label="تفعيل الدفع عند الاستلام" checked={s.payments.cash} onChange={(cash) => setPay({ cash })} />
           <Toggle label="تفعيل المحافظ الإلكترونية" checked={s.payments.walletsEnabled} onChange={(walletsEnabled) => setPay({ walletsEnabled })} />
           {s.payments.walletsEnabled && (
-            <p className="text-[11px] text-neutral-500 leading-relaxed">اضبط كل محفظة في الخطوات التالية: سيريتل كاش، شام كاش، MTN كاش.</p>
+            <p className="text-xs text-neutral-500 leading-relaxed">اضبط كل محفظة في الخطوات التالية: سيريتل كاش، شام كاش، MTN كاش.</p>
           )}
           {!s.payments.cash && !s.payments.walletsEnabled && (
-            <p className="text-[11px] text-amber-600 font-bold">فعّل وسيلة دفع واحدة على الأقل، وإلا يُعرض الدفع عند الاستلام.</p>
+            <p className="text-xs text-amber-600 font-bold">فعّل وسيلة دفع واحدة على الأقل، وإلا يُعرض الدفع عند الاستلام.</p>
           )}
         </Card>
       )}
@@ -178,10 +178,10 @@ export const SettingsTab: React.FC<AdminTabProps> = ({ data, update }) => {
                     role="radio"
                     aria-checked={s.delivery.feeMode === m.id}
                     onClick={() => setDelivery({ feeMode: m.id })}
-                    className={`text-right p-2.5 rounded-xl border transition cursor-pointer ${s.delivery.feeMode === m.id ? 'border-[#0071e3] bg-blue-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
+                    className={`text-right p-2.5 rounded-xl border transition cursor-pointer ${s.delivery.feeMode === m.id ? 'border-brand bg-blue-50' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}
                   >
-                    <div className={`text-xs font-bold ${s.delivery.feeMode === m.id ? 'text-[#0071e3]' : 'text-[#1d1d1f]'}`}>{m.label}</div>
-                    <div className="text-[10px] text-neutral-500 leading-relaxed mt-0.5">{m.hint}</div>
+                    <div className={`text-xs font-bold ${s.delivery.feeMode === m.id ? 'text-brand' : 'text-ink'}`}>{m.label}</div>
+                    <div className="text-xs text-neutral-500 leading-relaxed mt-0.5">{m.hint}</div>
                   </button>
                 ))}
               </div>
@@ -217,7 +217,7 @@ export const SettingsTab: React.FC<AdminTabProps> = ({ data, update }) => {
               <Field label="قالب البريد" hint="يُستبدل {رقم_الطلب} برقم الطلب. يُستخدم القالب نفسه لرسالة واتساب.">
                 <textarea className={textareaClass} value={s.orderConfirmationMessage} onChange={(e) => set({ orderConfirmationMessage: e.target.value })} />
               </Field>
-              <p className="text-[10px] text-amber-600 font-bold leading-relaxed">
+              <p className="text-xs text-amber-600 font-bold leading-relaxed">
                 الإرسال الفعلي للبريد يبدأ بعد ربط نطاق (Domain) خاص بالمنصة في خدمة البريد. القالب محفوظ وجاهز لذلك.
               </p>
             </>
@@ -248,7 +248,7 @@ export const SettingsTab: React.FC<AdminTabProps> = ({ data, update }) => {
           <Field label="Webhook URL" hint="الرابط الذي يرسل إليه شام كاش إشعار الدفع.">
             <input className={inputClass} value={s.api.webhookUrl} onChange={(e) => set({ api: { ...s.api, webhookUrl: e.target.value } })} dir="ltr" placeholder="https://" />
           </Field>
-          <p className="text-[10px] text-amber-600 font-bold leading-relaxed">
+          <p className="text-xs text-amber-600 font-bold leading-relaxed">
             حتى يتم الربط، يؤكد التاجر الدفعات يدوياً من صفحة الطلبات: «بانتظار تأكيد الدفع».
           </p>
         </Card>

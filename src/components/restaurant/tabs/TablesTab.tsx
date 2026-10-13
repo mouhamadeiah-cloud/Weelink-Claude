@@ -75,21 +75,21 @@ export const TablesTab: React.FC<RestaurantTabProps> = ({ data, ownerUid, onGoTo
         <LinkRow url={siteUrl} />
         <div className="flex items-center gap-4">
           <QrImage text={siteUrl} size={120} label="رمز موقع المطعم" />
-          <p className="text-[11px] text-neutral-400 leading-relaxed">يمكن للزبون أيضًا تثبيت الموقع على شاشة هاتفه من قائمة المتصفح («إضافة إلى الشاشة الرئيسية») ليصبح تطبيق طلب.</p>
+          <p className="text-xs text-neutral-400 leading-relaxed">يمكن للزبون أيضًا تثبيت الموقع على شاشة هاتفه من قائمة المتصفح («إضافة إلى الشاشة الرئيسية») ليصبح تطبيق طلب.</p>
         </div>
       </Card>
 
       <Card title="الكاشير وشاشة المطبخ">
         <p className="text-xs text-neutral-500 leading-relaxed">
           يعمل الكاشير وشاشة المطبخ على أجهزة المطعم، كل جهاز بكوده.{' '}
-          <button type="button" onClick={() => onGoTo('devices')} className="font-bold text-[#0071e3] cursor-pointer">الأجهزة والأكواد</button>
+          <button type="button" onClick={() => onGoTo('devices')} className="font-bold text-brand cursor-pointer">الأجهزة والأكواد</button>
         </p>
       </Card>
 
       <Card title="رموز QR للطاولات" actions={tables.length > 0 ? <GhostButton onClick={() => printTables(data.settings.name || 'مطعمنا', ownerUid, tables)}><span className="inline-flex items-center gap-1"><Printer size={14} /> اطبع كل الرموز</span></GhostButton> : undefined}>
         <p className="text-xs text-neutral-500 leading-relaxed">
           كل طاولة لها رمز خاص. الطلب منه يصل باسم الطاولة، بلا عنوان ولا رسوم توصيل.{' '}
-          <button type="button" onClick={() => onGoTo('halls')} className="font-bold text-[#0071e3] cursor-pointer">تعديل الصالات والطاولات</button>
+          <button type="button" onClick={() => onGoTo('halls')} className="font-bold text-brand cursor-pointer">تعديل الصالات والطاولات</button>
         </p>
         {tables.length === 0 && <EmptyState text="لا توجد طاولات بعد. أضفها من «الصالات والطاولات»." />}
         {data.halls.filter((h) => h.tables.length > 0).map((h) => (
@@ -97,7 +97,7 @@ export const TablesTab: React.FC<RestaurantTabProps> = ({ data, ownerUid, onGoTo
             <div className="text-sm font-black text-neutral-700 inline-flex items-center gap-1.5"><Armchair size={15} /> {h.name}</div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
               {h.tables.filter((t) => t.name.trim()).map((t) => (
-                <a key={t.id} href={restaurantSiteUrl(ownerUid, t.name)} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 p-3 rounded-2xl border border-neutral-200 bg-white hover:border-[#0071e3]">
+                <a key={t.id} href={restaurantSiteUrl(ownerUid, t.name)} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 p-3 rounded-2xl border border-neutral-200 bg-white hover:border-brand">
                   <QrImage text={restaurantSiteUrl(ownerUid, t.name)} size={110} label={`رمز طاولة ${t.name}`} />
                   <span className="text-sm font-black">طاولة {t.name}</span>
                 </a>

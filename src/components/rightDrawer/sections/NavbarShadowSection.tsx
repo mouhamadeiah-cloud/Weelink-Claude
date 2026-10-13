@@ -54,14 +54,14 @@ export const NavbarShadowSection = ({
 
   return (
     <div className="space-y-4 text-right" dir="rtl">
-      <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
-        <span className="text-[11px] font-bold text-[#0071e3]">تعديل ظل النافبار</span>
+      <div className="bg-brand/5 border border-brand/10 p-2.5 rounded-xl text-center">
+        <span className="text-xs font-bold text-brand">تعديل ظل النافبار</span>
       </div>
 
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
           <span className="text-neutral-700 font-bold">درجة وشدة الظل:</span>
-          <span className="font-mono text-[#0071e3] font-bold">{activeShadowIntensity}px</span>
+          <span className="font-mono text-brand font-bold">{activeShadowIntensity}px</span>
         </div>
         <input
           type="range"
@@ -69,9 +69,9 @@ export const NavbarShadowSection = ({
           max="50"
           value={activeShadowIntensity}
           onChange={(e) => updateShadowIntensity(Number(e.target.value))}
-          className="w-full accent-[#0071e3] cursor-pointer"
+          className="w-full accent-brand cursor-pointer"
         />
-        <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+        <div className="flex justify-between text-xs text-neutral-400 font-mono">
           <span>إيقاف (0px)</span>
           <span>متوسط (25px)</span>
           <span>شديد (50px)</span>
@@ -82,7 +82,7 @@ export const NavbarShadowSection = ({
         <span className="text-xs font-bold text-neutral-800 block">لون الظل الخارجي:</span>
 
         <div className="space-y-1">
-          <span className="text-[10px] text-neutral-400 font-semibold block">ألوان الصفحة الافتراضية:</span>
+          <span className="text-xs text-neutral-400 font-semibold block">ألوان الصفحة الافتراضية:</span>
           <div className="flex gap-2 p-1.5 bg-neutral-50 rounded-xl border border-neutral-200/65">
             {customColors.map((hex, idx) => {
               const isSelected = activeShadowColor.toLowerCase() === hex.toLowerCase();
@@ -91,7 +91,7 @@ export const NavbarShadowSection = ({
                   key={`navbar-shadow-palette-color-${idx}-${hex}`}
                   onClick={() => updateShadowColor(hex)}
                   className={`w-7 h-7 rounded-full border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-3xs flex items-center justify-center ${
-                    isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                    isSelected ? 'ring-2 ring-brand scale-110 z-10' : ''
                   }`}
                   style={{ backgroundColor: hex }}
                   title={`لون الصفحة ${idx + 1}: ${hex}`}
@@ -107,8 +107,8 @@ export const NavbarShadowSection = ({
 
         <div className="space-y-1">
           <div className="flex justify-between items-center">
-            <span className="text-[10px] text-neutral-400 font-semibold block">الخمسون لوناً الأساسية:</span>
-            <span className="text-[9px] text-neutral-400 font-mono" dir="ltr">50 basic colors</span>
+            <span className="text-xs text-neutral-400 font-semibold block">الخمسون لوناً الأساسية:</span>
+            <span className="text-xs text-neutral-400 font-mono" dir="ltr">50 basic colors</span>
           </div>
           <div className="p-2 bg-neutral-50 rounded-2xl border border-neutral-200/70 max-h-40 overflow-y-auto pr-1">
             <div className="grid grid-cols-10 gap-1.5">
@@ -119,7 +119,7 @@ export const NavbarShadowSection = ({
                     key={`navbar-shadow-basic-color-${idx}-${hex}`}
                     onClick={() => updateShadowColor(hex)}
                     className={`w-5 h-5 rounded-md border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-4xs flex items-center justify-center ${
-                      isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                      isSelected ? 'ring-2 ring-brand scale-110 z-10' : ''
                     }`}
                     style={{ backgroundColor: hex }}
                     title={hex}
@@ -146,7 +146,7 @@ export const NavbarShadowSection = ({
             value={activeShadowColor}
             onChange={(e) => updateShadowColor(e.target.value)}
             placeholder="اختر لوناً حراً"
-            className="flex-1 text-[11px] px-2 py-1 bg-white rounded-md border border-neutral-200 font-mono text-left"
+            className="flex-1 text-xs px-2 py-1 bg-white rounded-md border border-neutral-200 font-mono text-left"
             dir="ltr"
           />
         </div>
@@ -154,7 +154,7 @@ export const NavbarShadowSection = ({
 
       <div className="space-y-2 pt-1">
         <span className="text-xs font-bold text-neutral-800 block">توجيه اتجاه وزاوية الظل:</span>
-        <p className="text-[10px] text-neutral-500 leading-tight">
+        <p className="text-xs text-neutral-500 leading-tight">
           انقر على المربع لتوجيه الظل في الاتجاه المرغوب. تبرز المعاينات شكل الظل الخارجي المطبق على مربع رمادي افتراضي:
         </p>
 
@@ -170,17 +170,17 @@ export const NavbarShadowSection = ({
                   key={`navbar-shadow-dir-${cell.id}`}
                   onClick={() => updateShadowPosition(cell.id)}
                   className={`relative aspect-square rounded-xl p-1 transition-all flex flex-col items-center justify-center cursor-pointer border-2 bg-white ${
-                    isSelected ? 'border-[#0071e3] bg-[#0071e3]/5 shadow-xs scale-105 z-10' : 'border-transparent hover:border-neutral-300'
+                    isSelected ? 'border-brand bg-brand/5 shadow-xs scale-105 z-10' : 'border-transparent hover:border-neutral-300'
                   }`}
                   title={cell.name}
                 >
                   <div className="w-9 h-9 rounded-lg bg-neutral-300 transition-all flex items-center justify-center border border-neutral-300/40" style={{ boxShadow: boxPreviewShadow }}>
                     {isSelected ? (
-                      <span className="w-4 h-4 rounded-full bg-[#0071e3] text-white flex items-center justify-center font-bold shadow-4xs shrink-0 z-20">
+                      <span className="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center font-bold shadow-4xs shrink-0 z-20">
                         <Check size={10} strokeWidth={3} />
                       </span>
                     ) : (
-                      <span className="text-[8.5px] font-bold text-neutral-500/80 pointer-events-none select-none z-10">
+                      <span className="text-xs font-bold text-neutral-500/80 pointer-events-none select-none z-10">
                         {cell.label}
                       </span>
                     )}

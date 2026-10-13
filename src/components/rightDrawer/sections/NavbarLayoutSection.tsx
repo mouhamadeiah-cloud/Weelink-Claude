@@ -119,7 +119,7 @@ export const NavbarLayoutSection = ({
               setReplacing(null);
               setSearch('');
             }}
-            className="flex items-center gap-1 text-xs font-bold text-[#0071e3] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1 text-xs font-bold text-brand bg-brand/10 hover:bg-brand/15 px-2.5 py-1.5 rounded-lg transition-colors"
           >
             <ChevronRight size={15} strokeWidth={2.4} />
             رجوع
@@ -147,10 +147,10 @@ export const NavbarLayoutSection = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="ابحث بالإنجليزية (home, cart, phone...)"
-            className="w-full text-xs font-semibold px-3 py-2.5 pr-8 bg-white rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:outline-none transition-all text-right"
+            className="w-full text-xs font-semibold px-3 py-2.5 pr-8 bg-white rounded-xl border border-neutral-300 focus:border-brand focus:outline-none transition-all text-right"
           />
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
-            {isSearching ? <div className="w-4 h-4 border-2 border-neutral-300 border-t-[#0071e3] rounded-full animate-spin" /> : <Search size={14} />}
+            {isSearching ? <div className="w-4 h-4 border-2 border-neutral-300 border-t-brand rounded-full animate-spin" /> : <Search size={14} />}
           </div>
         </div>
 
@@ -165,7 +165,7 @@ export const NavbarLayoutSection = ({
                 title={name.split(':').pop()}
                 onClick={() => setPartIcon(replacing.id, { icon: name, mode })}
                 className={`aspect-square rounded-xl border flex items-center justify-center text-2xl transition-all active:scale-95 ${
-                  current?.icon === name ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3]' : 'border-neutral-200 text-neutral-700 hover:border-[#0071e3] hover:text-[#0071e3]'
+                  current?.icon === name ? 'border-brand bg-brand/10 text-brand' : 'border-neutral-200 text-neutral-700 hover:border-brand hover:text-brand'
                 }`}
               >
                 <Icon icon={name} />
@@ -189,9 +189,9 @@ export const NavbarLayoutSection = ({
               // A new layout starts at its usual place (a strip at the top, a column or icon at the right).
               onClick={() => onUpdateNavbar({ layout: value, posX: undefined, posY: 0 })}
               aria-pressed={layout === value}
-              className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[11px] font-bold transition-all ${
+              className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-xs font-bold transition-all ${
                 layout === value
-                  ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3]'
+                  ? 'border-brand bg-brand/10 text-brand'
                   : 'border-neutral-200 text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50'
               }`}
             >
@@ -200,7 +200,7 @@ export const NavbarLayoutSection = ({
             </button>
           ))}
         </div>
-        <p className="text-[10px] text-neutral-400 leading-relaxed">
+        <p className="text-xs text-neutral-400 leading-relaxed">
           اسحب النافبار في الساحة لتحريكه إلى أي مكان: للأعلى أو الأسفل أو اليمين أو اليسار. اختره ثم اسحب
           مقابض حوافه لتكبيره وتصغيره من أي جهة.
         </p>
@@ -208,7 +208,7 @@ export const NavbarLayoutSection = ({
 
       <div className="space-y-2 pt-2 border-t border-black/[0.06]">
         <SectionHeader title="محتويات النافبار" />
-        {parts.length === 0 && <p className="text-[11px] text-neutral-400">لا توجد محتويات في النافبار بعد.</p>}
+        {parts.length === 0 && <p className="text-xs text-neutral-400">لا توجد محتويات في النافبار بعد.</p>}
         <div className="space-y-1.5">
           {parts.map((part) => {
             const isCopying = linkCopySourceId === part.id;
@@ -217,7 +217,7 @@ export const NavbarLayoutSection = ({
               <div
                 key={part.id}
                 className={`flex items-center gap-2 p-2 rounded-xl border bg-white ${
-                  isCopying ? 'border-[#0071e3] ring-2 ring-[#0071e3]/20' : 'border-neutral-200'
+                  isCopying ? 'border-brand ring-2 ring-brand/20' : 'border-neutral-200'
                 }`}
               >
                 {partIcon && <Icon icon={partIcon.icon} className="text-lg text-neutral-600 shrink-0" />}
@@ -228,8 +228,8 @@ export const NavbarLayoutSection = ({
                     onClick={() => onStartLinkCopy(isCopying ? null : part)}
                     title="انسخ الوظيفة ثم انقر على نص أو أيقونة في الشريحة"
                     aria-pressed={isCopying}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-                      isCopying ? 'bg-[#0071e3] text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      isCopying ? 'bg-brand text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
                     }`}
                   >
                     <Copy size={12} />
@@ -252,7 +252,7 @@ export const NavbarLayoutSection = ({
                     type="button"
                     onClick={() => setReplacing(part)}
                     title="عرضه كأيقونة أو أيقونة ونص"
-                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-bold bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20 transition-all"
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold bg-brand/10 text-brand hover:bg-brand/20 transition-all"
                   >
                     <Replace size={12} />
                     استبدال
@@ -265,19 +265,19 @@ export const NavbarLayoutSection = ({
 
         {/* A new button: its name and where it leads (a page of the site, or a link). */}
         {isAdding ? (
-          <div className="space-y-2 p-2.5 rounded-xl border border-[#0071e3]/30 bg-[#0071e3]/[0.03]">
+          <div className="space-y-2 p-2.5 rounded-xl border border-brand/30 bg-brand/[0.03]">
             <input
               type="text"
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="اسم الزر، مثلاً: تواصل معنا"
-              className="w-full text-xs font-semibold px-3 py-2 bg-white rounded-lg border border-neutral-300 focus:border-[#0071e3] focus:outline-none"
+              className="w-full text-xs font-semibold px-3 py-2 bg-white rounded-lg border border-neutral-300 focus:border-brand focus:outline-none"
               autoFocus
             />
             <select
               value={newTarget}
               onChange={(e) => setNewTarget(e.target.value)}
-              className="w-full px-2.5 py-2 bg-white border border-neutral-300 rounded-lg text-xs focus:outline-none focus:border-[#0071e3]"
+              className="w-full px-2.5 py-2 bg-white border border-neutral-300 rounded-lg text-xs focus:outline-none focus:border-brand"
             >
               {pages.map((p) => (
                 <option key={p.id} value={`page:${p.id}`}>صفحة: {p.name}</option>
@@ -291,7 +291,7 @@ export const NavbarLayoutSection = ({
                 onChange={(e) => setNewUrl(e.target.value)}
                 placeholder="https://..."
                 dir="ltr"
-                className="w-full text-xs px-3 py-2 bg-white rounded-lg border border-neutral-300 focus:border-[#0071e3] focus:outline-none"
+                className="w-full text-xs px-3 py-2 bg-white rounded-lg border border-neutral-300 focus:border-brand focus:outline-none"
               />
             )}
             <div className="flex gap-1.5">
@@ -299,7 +299,7 @@ export const NavbarLayoutSection = ({
                 type="button"
                 onClick={addButton}
                 disabled={!newLabel.trim() || (newTarget === 'url' && !newUrl.trim())}
-                className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-[#0071e3] text-white disabled:opacity-40"
+                className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-brand text-white disabled:opacity-40"
               >
                 إضافة
               </button>
@@ -321,7 +321,7 @@ export const NavbarLayoutSection = ({
               setNewTarget(pages[0] ? `page:${pages[0].id}` : 'url');
               setIsAdding(true);
             }}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-neutral-300 text-xs font-bold text-neutral-600 hover:border-[#0071e3] hover:text-[#0071e3] transition-all"
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-neutral-300 text-xs font-bold text-neutral-600 hover:border-brand hover:text-brand transition-all"
           >
             <Plus size={14} />
             إضافة زر

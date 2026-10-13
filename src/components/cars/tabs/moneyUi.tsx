@@ -18,7 +18,7 @@ export function Segmented<T extends string>({ options, value, onChange, label }:
           role="radio"
           aria-checked={value === o.id}
           onClick={() => onChange(o.id)}
-          className={`h-8 px-3 rounded-lg text-[11px] font-bold transition cursor-pointer ${value === o.id ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-neutral-500'}`}
+          className={`h-8 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${value === o.id ? 'bg-white text-ink shadow-sm' : 'text-neutral-500'}`}
         >
           {o.label}
         </button>
@@ -50,7 +50,7 @@ export const CustomerFields: React.FC<{ value: CustomerDraft; onChange: (v: Cust
             <div className="flex gap-1.5">
               {CUSTOMER_ROLES.map((r) => (
                 <button key={r.id} type="button" aria-pressed={value.roles.includes(r.id)} onClick={() => toggleRole(r.id)}
-                  className={`h-9 px-3 rounded-xl border text-xs font-bold cursor-pointer ${value.roles.includes(r.id) ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 bg-white text-neutral-600'}`}>
+                  className={`h-9 px-3 rounded-xl border text-xs font-bold cursor-pointer ${value.roles.includes(r.id) ? 'border-brand bg-blue-50 text-brand' : 'border-neutral-200 bg-white text-neutral-600'}`}>
                   {r.label}
                 </button>
               ))}

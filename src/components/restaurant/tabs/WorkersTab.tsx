@@ -94,7 +94,7 @@ export const WorkersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
           </Field>
           <PrimaryButton onClick={add} disabled={!draft.name.trim()}><span className="inline-flex items-center gap-1"><Plus size={14} /> أضف وأنشئ رقمه السري</span></PrimaryButton>
         </div>
-        <p className="text-[11px] text-neutral-400">{WORKER_ROLES.find((r) => r.id === draft.role)?.hint} يدخل العامل برقمه على جهاز الكاشير أو التابلت، فيُفتح صندوقه باسمه.</p>
+        <p className="text-xs text-neutral-400">{WORKER_ROLES.find((r) => r.id === draft.role)?.hint} يدخل العامل برقمه على جهاز الكاشير أو التابلت، فيُفتح صندوقه باسمه.</p>
       </Card>
 
       <Card title={`العمال (${data.workers.length})`}>
@@ -105,9 +105,9 @@ export const WorkersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
             {data.workers.map((w) => (
               <div key={w.id} className={`p-3 rounded-2xl border space-y-2 ${w.active ? 'bg-white border-neutral-200' : 'bg-neutral-50 border-neutral-200 opacity-70'}`}>
                 <div className="flex items-center gap-2">
-                  <UserRound size={18} className={w.role === 'manager' ? 'text-[#C2255C]' : 'text-[#0071e3]'} />
+                  <UserRound size={18} className={w.role === 'manager' ? 'text-[#C2255C]' : 'text-brand'} />
                   <input className="flex-1 min-w-0 h-8 px-2 rounded-lg border border-transparent hover:border-neutral-200 text-sm font-black bg-transparent" value={w.name} onChange={(e) => patch(w.id, { name: e.target.value })} aria-label="اسم العامل" />
-                  <span className={`h-6 px-2 rounded-full text-[10px] font-black inline-flex items-center ${w.active ? 'bg-[#EBFBEE] text-[#2F9E44]' : 'bg-neutral-200 text-neutral-500'}`}>{w.active ? 'يعمل' : 'موقوف'}</span>
+                  <span className={`h-6 px-2 rounded-full text-xs font-black inline-flex items-center ${w.active ? 'bg-[#EBFBEE] text-[#2F9E44]' : 'bg-neutral-200 text-neutral-500'}`}>{w.active ? 'يعمل' : 'موقوف'}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <select className="h-8 px-2 rounded-lg border border-neutral-200 bg-white text-xs font-bold" value={w.role} onChange={(e) => patch(w.id, { role: e.target.value as WorkerRole })}>
@@ -116,8 +116,8 @@ export const WorkersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
                   <input className="flex-1 min-w-[120px] h-8 px-2 rounded-lg border border-neutral-200 text-xs font-bold" dir="ltr" inputMode="tel" placeholder="الهاتف" value={w.phone} onChange={(e) => patch(w.id, { phone: e.target.value })} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-neutral-400">الرقم السري</span>
-                  <span className="text-2xl font-black tracking-[0.3em] text-[#1d1d1f]" dir="ltr">{w.pin}</span>
+                  <span className="text-xs font-bold text-neutral-400">الرقم السري</span>
+                  <span className="text-2xl font-black tracking-[0.3em] text-ink" dir="ltr">{w.pin}</span>
                   <div className="mr-auto flex gap-1">
                     <button type="button" title="رقم جديد" onClick={() => window.confirm(`رقم سري جديد لـ ${w.name}؟`) && patch(w.id, { pin: newWorkerPin(data.workers) })} className="w-8 h-8 rounded-lg hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer"><RefreshCw size={14} /></button>
                     <button type="button" title={w.active ? 'إيقاف' : 'تشغيل'} onClick={() => patch(w.id, { active: !w.active })} className="w-8 h-8 rounded-lg hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer"><Power size={14} /></button>
@@ -128,16 +128,16 @@ export const WorkersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
             ))}
           </div>
         )}
-        <p className="text-[11px] text-neutral-400 leading-relaxed">الأجهزة تقرأ قائمة العمال كل دقيقة، فالعامل الجديد أو الرقم الجديد يعمل بعد دقيقة على الأكثر.</p>
+        <p className="text-xs text-neutral-400 leading-relaxed">الأجهزة تقرأ قائمة العمال كل دقيقة، فالعامل الجديد أو الرقم الجديد يعمل بعد دقيقة على الأكثر.</p>
       </Card>
 
-      <div className="sticky -top-3 sm:-top-6 z-10 -mx-1 px-1 py-2 bg-[#f5f5f7] flex flex-wrap items-center gap-2">
+      <div className="sticky -top-3 sm:-top-6 z-10 -mx-1 px-1 py-2 bg-bg flex flex-wrap items-center gap-2">
         <CalendarDays size={18} className="text-neutral-500" />
         <span className="text-sm font-black">الحركة ليوم</span>
         <select className={selectClass} value={back} onChange={(e) => setBack(Number(e.target.value))} aria-label="اليوم">
           {Array.from({ length: DAYS }, (_, i) => <option key={i} value={i}>{dayLabel(i)}</option>)}
         </select>
-        <span className="text-[11px] font-bold text-neutral-400">آخر {DAYS} أيام</span>
+        <span className="text-xs font-bold text-neutral-400">آخر {DAYS} أيام</span>
       </div>
 
       <Card title={`حركة ${isToday ? 'اليوم' : dayLabel(back)} · ${money(total)}`}>
@@ -153,8 +153,8 @@ export const WorkersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
               {groups(key).map((g) => (
                 <div key={g.name} className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center justify-between text-sm font-black"><span>{g.name}</span><span>{money(g.total)}</span></div>
-                  <div className="text-[11px] font-bold text-neutral-500 mt-0.5">{g.methods.map((m) => `${m.method} ${money(m.amount)}`).join(' · ')} · {g.count} دفعة</div>
-                  {key === 'workerName' && isToday && <div className="text-[11px] font-bold text-[#D9480F]">{openTabs.items.filter((t) => t.ownerName === g.name).length || ''}{openTabs.items.some((t) => t.ownerName === g.name) ? ' طاولة مفتوحة' : ''}</div>}
+                  <div className="text-xs font-bold text-neutral-500 mt-0.5">{g.methods.map((m) => `${m.method} ${money(m.amount)}`).join(' · ')} · {g.count} دفعة</div>
+                  {key === 'workerName' && isToday && <div className="text-xs font-bold text-[#D9480F]">{openTabs.items.filter((t) => t.ownerName === g.name).length || ''}{openTabs.items.some((t) => t.ownerName === g.name) ? ' طاولة مفتوحة' : ''}</div>}
                 </div>
               ))}
             </div>
@@ -169,21 +169,21 @@ export const WorkersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
           <div className="space-y-4">
             {sessionWorkers.map((g) => (
               <div key={g.id} className="space-y-2">
-                <div className="text-sm font-black inline-flex items-center gap-1.5"><UserRound size={15} /> {g.name} <span className="h-6 px-2 rounded-full bg-neutral-100 text-[11px] inline-flex items-center">{g.list.length === 1 ? 'جلسة واحدة' : g.list.length === 2 ? 'جلستان' : `${g.list.length} ${g.list.length <= 10 ? 'جلسات' : 'جلسة'}`}</span></div>
+                <div className="text-sm font-black inline-flex items-center gap-1.5"><UserRound size={15} /> {g.name} <span className="h-6 px-2 rounded-full bg-neutral-100 text-xs inline-flex items-center">{g.list.length === 1 ? 'جلسة واحدة' : g.list.length === 2 ? 'جلستان' : `${g.list.length} ${g.list.length <= 10 ? 'جلسات' : 'جلسة'}`}</span></div>
                 {g.list.map((x, n) => {
                   const w = sessionWork(x);
                   const live = !x.endedAt && isToday && !sessions.items.some((y) => y.workerId === x.workerId && y.startedAt > x.startedAt);
                   return (
                     <div key={x.id} className="p-3 rounded-2xl border border-neutral-200 bg-white space-y-1.5 text-xs font-bold">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-[#1d1d1f] text-white text-[11px] font-black inline-flex items-center justify-center">{n + 1}</span>
+                        <span className="w-6 h-6 rounded-full bg-ink text-white text-xs font-black inline-flex items-center justify-center">{n + 1}</span>
                         <LogIn size={14} className="text-neutral-400" />
                         <span className="text-sm font-black tabular-nums">من {clock(x.startedAt)} {live ? 'حتى الآن' : `إلى ${clock(x.endedAt || sessionEnd(x))}`}</span>
                         <span className="text-neutral-500">{x.deviceName}</span>
                         <span className={`mr-auto h-6 px-2 rounded-full inline-flex items-center ${live ? 'bg-[#EBFBEE] text-[#2F9E44]' : x.endedAt ? 'bg-neutral-100 text-neutral-600' : 'bg-[#FFF4E6] text-[#D9480F]'}`}>{live ? 'داخل الآن' : x.endReason || 'خرج بدون قفل'}</span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-neutral-600">
-                        <span>حصّل <b className="text-[#1d1d1f]">{money(w.total)}</b>{w.paid.length ? ` (${w.paid.length} دفعة${byMethod(w.paid).length > 1 ? ': ' + byMethod(w.paid).map((m) => `${m.method} ${money(m.amount)}`).join('، ') : ''})` : ''}</span>
+                        <span>حصّل <b className="text-ink">{money(w.total)}</b>{w.paid.length ? ` (${w.paid.length} دفعة${byMethod(w.paid).length > 1 ? ': ' + byMethod(w.paid).map((m) => `${m.method} ${money(m.amount)}`).join('، ') : ''})` : ''}</span>
                         <span>فتح {w.opened.length} {w.opened.length === 1 ? 'طاولة' : 'طاولات'}</span>
                         <span>أضاف {w.dishes} صنف</span>
                       </div>
@@ -233,7 +233,7 @@ export const WorkersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
           <div className="space-y-1.5">
             {dayLog.map((e) => (
               <div key={e.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-neutral-50 text-xs font-bold">
-                <span className="h-6 px-2 rounded-full bg-[#1d1d1f] text-white inline-flex items-center">{e.action}</span>
+                <span className="h-6 px-2 rounded-full bg-ink text-white inline-flex items-center">{e.action}</span>
                 <span className="flex-1 min-w-[160px]">{e.detail}</span>
                 <span className="text-neutral-500">{e.workerName}{e.approvedBy && e.approvedBy !== e.workerName ? ` · بموافقة ${e.approvedBy}` : ''} · {e.deviceName} · {time(e.at)}</span>
               </div>

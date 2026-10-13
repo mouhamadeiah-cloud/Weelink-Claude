@@ -55,9 +55,9 @@ export const SubCatalogsTab: React.FC<RestaurantTabProps> = ({ data, update, onG
             <div className="grid sm:grid-cols-2 gap-2">
               {TYPES.map((t) => (
                 <button key={t.id} type="button" onClick={() => setForm({ ...form, type: t.id })}
-                  className={`text-right p-3 rounded-2xl border-2 cursor-pointer transition ${form.type === t.id ? 'border-[#0071e3] bg-[#0071e3]/5' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}>
-                  <div className="flex items-center gap-2 text-sm font-black"><t.icon size={16} className={form.type === t.id ? 'text-[#0071e3]' : 'text-neutral-400'} />{t.label}</div>
-                  <div className="text-[11px] text-neutral-500 mt-1 leading-relaxed">{t.hint}</div>
+                  className={`text-right p-3 rounded-2xl border-2 cursor-pointer transition ${form.type === t.id ? 'border-brand bg-brand/5' : 'border-neutral-200 bg-white hover:border-neutral-300'}`}>
+                  <div className="flex items-center gap-2 text-sm font-black"><t.icon size={16} className={form.type === t.id ? 'text-brand' : 'text-neutral-400'} />{t.label}</div>
+                  <div className="text-xs text-neutral-500 mt-1 leading-relaxed">{t.hint}</div>
                 </button>
               ))}
             </div>
@@ -114,22 +114,22 @@ export const SubCatalogsTab: React.FC<RestaurantTabProps> = ({ data, update, onG
             return (
               <div key={s.id} className="bg-white border border-neutral-200 rounded-2xl p-4 space-y-3">
                 <div className="flex items-start gap-2">
-                  <t.icon size={18} className="text-[#0071e3] mt-0.5" />
+                  <t.icon size={18} className="text-brand mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-black truncate">{s.name}</div>
-                    <div className="text-[11px] text-neutral-400 font-bold">{t.label} · {s.items.length} عنصر</div>
+                    <div className="text-xs text-neutral-400 font-bold">{t.label} · {s.items.length} عنصر</div>
                   </div>
                   <GhostButton onClick={() => { setForm(s); setItem({ name: '', price: '' }); }}>تعديل</GhostButton>
                   <button type="button" aria-label="حذف" onClick={() => remove(s.id)} className="w-9 h-9 rounded-xl text-[#E03131] hover:bg-red-50 flex items-center justify-center cursor-pointer"><Trash2 size={16} /></button>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {s.items.map((i) => (
-                    <span key={i.id} className="h-6 px-2 rounded-full bg-neutral-100 text-[11px] font-bold inline-flex items-center">{i.name}{s.type === 'extras' && i.price > 0 ? ` +${formatMoney(i.price, currency)}` : ''}</span>
+                    <span key={i.id} className="h-6 px-2 rounded-full bg-neutral-100 text-xs font-bold inline-flex items-center">{i.name}{s.type === 'extras' && i.price > 0 ? ` +${formatMoney(i.price, currency)}` : ''}</span>
                   ))}
                 </div>
-                <div className="text-[11px] font-bold text-neutral-500 flex flex-wrap items-center gap-1">
+                <div className="text-xs font-bold text-neutral-500 flex flex-wrap items-center gap-1">
                   <span>مربوط بـ:</span>
-                  {cats.length ? cats.map((c) => <span key={c.id} className="h-6 px-2 rounded-full bg-[#0071e3]/10 text-[#0071e3] inline-flex items-center">{c.icon} {c.name}</span>) : <span className="text-[#E8590C]">لا قسم بعد</span>}
+                  {cats.length ? cats.map((c) => <span key={c.id} className="h-6 px-2 rounded-full bg-brand/10 text-brand inline-flex items-center">{c.icon} {c.name}</span>) : <span className="text-[#E8590C]">لا قسم بعد</span>}
                 </div>
               </div>
             );
@@ -137,7 +137,7 @@ export const SubCatalogsTab: React.FC<RestaurantTabProps> = ({ data, update, onG
         </div>
       )}
       {data.categories.length === 0 && (
-        <button type="button" onClick={() => onGoTo('categories')} className="text-xs font-bold text-[#0071e3] cursor-pointer">أضف أقسام المنيو أولًا</button>
+        <button type="button" onClick={() => onGoTo('categories')} className="text-xs font-bold text-brand cursor-pointer">أضف أقسام المنيو أولًا</button>
       )}
     </div>
   );

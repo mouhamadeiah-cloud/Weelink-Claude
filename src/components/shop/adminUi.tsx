@@ -18,7 +18,7 @@ export const Card: React.FC<{ title?: string; actions?: React.ReactNode; childre
   <section className="bg-white border border-neutral-200 rounded-2xl p-4 sm:p-5 space-y-4">
     {(title || actions) && (
       <div className="flex items-center justify-between gap-3">
-        {title && <h3 className="text-sm font-black text-[#1d1d1f]">{title}</h3>}
+        {title && <h3 className="text-sm font-black text-ink">{title}</h3>}
         {actions}
       </div>
     )}
@@ -30,26 +30,26 @@ export const Card: React.FC<{ title?: string; actions?: React.ReactNode; childre
 // picker), and a wrapping label would forward clicks to the first one.
 export const Field: React.FC<{ label: string; hint?: string; children: React.ReactNode }> = ({ label, hint, children }) => (
   <div className="block space-y-1.5" role="group" aria-label={label}>
-    <span className="block text-[11px] font-bold text-neutral-600">{label}</span>
+    <span className="block text-xs font-bold text-neutral-600">{label}</span>
     {children}
-    {hint && <span className="block text-[10px] text-neutral-400 leading-relaxed">{hint}</span>}
+    {hint && <span className="block text-xs text-neutral-400 leading-relaxed">{hint}</span>}
   </div>
 );
 
 export const inputClass =
-  'w-full h-10 px-3 rounded-xl border border-neutral-200 bg-white text-sm text-[#1d1d1f] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/15 transition';
+  'w-full h-10 px-3 rounded-xl border border-neutral-200 bg-white text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition';
 
 // The same field without full width, for fields given their own width (w-28, w-40…).
 export const inputFitClass = inputClass.replace('w-full ', '');
 
 export const textareaClass =
-  'w-full min-h-[84px] p-3 rounded-xl border border-neutral-200 bg-white text-sm text-[#1d1d1f] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/15 transition leading-relaxed';
+  'w-full min-h-[84px] p-3 rounded-xl border border-neutral-200 bg-white text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition leading-relaxed';
 
 export const PrimaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ className = '', ...props }) => (
   <button
     type="button"
     {...props}
-    className={`h-10 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition active:scale-95 cursor-pointer ${className}`}
+    className={`h-10 px-4 rounded-xl bg-brand hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition active:scale-95 cursor-pointer ${className}`}
   />
 );
 
@@ -69,7 +69,7 @@ export const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void
     onClick={() => onChange(!checked)}
     className="flex items-center justify-between w-full gap-3 py-1 cursor-pointer"
   >
-    <span className="text-sm font-bold text-[#1d1d1f]">{label}</span>
+    <span className="text-sm font-bold text-ink">{label}</span>
     <span className={`relative w-10 h-6 rounded-full transition ${checked ? 'bg-[#34c759]' : 'bg-neutral-300'}`}>
       <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${checked ? 'right-0.5' : 'right-[18px]'}`} />
     </span>

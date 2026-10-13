@@ -30,7 +30,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
   }, [value]);
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden focus-within:border-[#0071e3] focus-within:ring-2 focus-within:ring-[#0071e3]/15">
+    <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15">
       <div className="flex flex-wrap gap-0.5 p-1.5 border-b border-neutral-100 bg-neutral-50">
         {TOOLS.map((t) => (
           <button
@@ -39,7 +39,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
             title={t.label}
             aria-label={t.label}
             onMouseDown={(e) => { e.preventDefault(); t.run(); if (ref.current) onChange(ref.current.innerHTML); }}
-            className="w-8 h-8 rounded-lg text-neutral-600 hover:bg-white hover:text-[#0071e3] flex items-center justify-center cursor-pointer"
+            className="w-8 h-8 rounded-lg text-neutral-600 hover:bg-white hover:text-brand flex items-center justify-center cursor-pointer"
           >
             <t.icon size={15} />
           </button>
@@ -52,7 +52,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
         dir="rtl"
         data-placeholder={placeholder}
         onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)}
-        className="product-rich-text min-h-[200px] max-h-[420px] overflow-y-auto p-3 text-sm text-[#1d1d1f] leading-relaxed outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-400"
+        className="product-rich-text min-h-[200px] max-h-[420px] overflow-y-auto p-3 text-sm text-ink leading-relaxed outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-400"
       />
     </div>
   );

@@ -57,7 +57,7 @@ function Chips<T extends string | number>({ options, value, onChange }: { option
           key={String(o.id)}
           type="button"
           onClick={() => onChange(o.id)}
-          className={`h-9 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${value === o.id ? 'border-[#0071e3] bg-blue-50 text-[#0071e3]' : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'}`}
+          className={`h-9 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${value === o.id ? 'border-brand bg-blue-50 text-brand' : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'}`}
         >
           {o.label}
         </button>
@@ -176,7 +176,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
     <div className="grid lg:grid-cols-[1fr_300px] gap-5 items-start">
       <div className="space-y-4 min-w-0">
         {existing && (
-          <div className="flex items-center justify-between gap-2 rounded-xl bg-blue-50 border border-blue-100 px-3 py-2 text-xs font-bold text-[#0071e3]">
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-blue-50 border border-blue-100 px-3 py-2 text-xs font-bold text-brand">
             <span>تعديل: {carTitle(existing)} {existing.year || ''} · {existing.stockNumber}</span>
             <button type="button" onClick={() => onEdit(null)} className="flex items-center gap-1 cursor-pointer"><X size={13} /> سيارة جديدة</button>
           </div>
@@ -187,9 +187,9 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
               key={s}
               type="button"
               onClick={() => goTo(i + 1)}
-              className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-[11px] font-bold transition cursor-pointer ${step === i + 1 ? 'bg-[#1d1d1f] text-white' : step > i + 1 ? 'bg-white text-[#1d1d1f] border border-neutral-200' : 'bg-white text-neutral-400 border border-neutral-200'}`}
+              className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${step === i + 1 ? 'bg-ink text-white' : step > i + 1 ? 'bg-white text-ink border border-neutral-200' : 'bg-white text-neutral-400 border border-neutral-200'}`}
             >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === i + 1 ? 'bg-white text-[#1d1d1f]' : 'bg-neutral-100'}`}>{i + 1}</span>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${step === i + 1 ? 'bg-white text-ink' : 'bg-neutral-100'}`}>{i + 1}</span>
               {s}
             </button>
           ))}
@@ -272,15 +272,15 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
 
         {step === 3 && (
           <>
-            <Card title="التجهيزات" actions={<span className="text-[10px] text-neutral-400">{car.features.length} مختارة</span>}>
+            <Card title="التجهيزات" actions={<span className="text-xs text-neutral-400">{car.features.length} مختارة</span>}>
               {CAR_FEATURE_GROUPS.map((g) => (
                 <div key={g.title} className="space-y-1.5">
-                  <div className="text-[11px] font-bold text-neutral-500">{g.title}</div>
+                  <div className="text-xs font-bold text-neutral-500">{g.title}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {g.items.map((f) => {
                       const on = car.features.includes(f);
                       return (
-                        <button key={f} type="button" onClick={() => toggleFeature(f)} aria-pressed={on} className={`h-8 px-3 rounded-full border text-xs font-bold transition cursor-pointer ${on ? 'border-[#0071e3] bg-[#0071e3] text-white' : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'}`}>
+                        <button key={f} type="button" onClick={() => toggleFeature(f)} aria-pressed={on} className={`h-8 px-3 rounded-full border text-xs font-bold transition cursor-pointer ${on ? 'border-brand bg-brand text-white' : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'}`}>
                           {f}
                         </button>
                       );
@@ -289,10 +289,10 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
                 </div>
               ))}
               <div className="space-y-1.5">
-                <div className="text-[11px] font-bold text-neutral-500">تجهيزات أخرى</div>
+                <div className="text-xs font-bold text-neutral-500">تجهيزات أخرى</div>
                 <div className="flex flex-wrap gap-1.5">
                   {customFeatures.map((f) => (
-                    <span key={f} className="h-8 pr-3 pl-1.5 rounded-full bg-[#0071e3] text-white text-xs font-bold flex items-center gap-1">
+                    <span key={f} className="h-8 pr-3 pl-1.5 rounded-full bg-brand text-white text-xs font-bold flex items-center gap-1">
                       {f}
                       <button type="button" onClick={() => toggleFeature(f)} className="w-5 h-5 rounded-full hover:bg-white/20 flex items-center justify-center cursor-pointer" aria-label={`حذف ${f}`}><X size={11} /></button>
                     </span>
@@ -338,9 +338,9 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
                 <Toggle checked={car.showPrice} onChange={(showPrice) => set({ showPrice })} label="إظهار السعر في المعرض" />
                 <Toggle checked={car.negotiable} onChange={(negotiable) => set({ negotiable })} label="قابل للتفاوض" />
               </div>
-              {!car.showPrice && <p className="text-[11px] text-neutral-400">يرى الزبون «السعر عند التواصل» بدل السعر.</p>}
+              {!car.showPrice && <p className="text-xs text-neutral-400">يرى الزبون «السعر عند التواصل» بدل السعر.</p>}
             </Card>
-            <Card title="الشراء" actions={<span className="text-[10px] text-neutral-400">لا يظهر للزبون</span>}>
+            <Card title="الشراء" actions={<span className="text-xs text-neutral-400">لا يظهر للزبون</span>}>
               <div className="grid sm:grid-cols-2 gap-3">
                 <Field label="سعر الشراء"><input className={inputClass} inputMode="decimal" value={car.purchasePrice || ''} onChange={(e) => set({ purchasePrice: num(e.target.value) })} dir="ltr" /></Field>
                 <Field label="تاريخ الشراء"><input type="date" className={inputClass} value={car.purchaseDate} onChange={(e) => set({ purchaseDate: e.target.value })} /></Field>
@@ -383,7 +383,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
                 ) : (
                   <>
                     <Chips options={CAR_STATUSES.filter((s) => s.id === 'available' || s.id === 'preparing').map((s) => ({ id: s.id, label: s.label }))} value={car.status} onChange={(status) => set({ status })} />
-                    <p className="text-[10px] text-neutral-400">الحجز بعربون والبيع من «المخزون» ← «تم البيع».</p>
+                    <p className="text-xs text-neutral-400">الحجز بعربون والبيع من «المخزون» ← «تم البيع».</p>
                   </>
                 )}
               </Field>
@@ -413,7 +413,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
       </div>
 
       <aside className="lg:sticky lg:top-0 space-y-2">
-        <div className="text-[11px] font-bold text-neutral-400">هكذا تظهر في المعرض</div>
+        <div className="text-xs font-bold text-neutral-400">هكذا تظهر في المعرض</div>
         <CarCard car={preview} look={{ accent: '#C8102E', cardBg: '#FFFFFF', text: '#1d1d1f', radius: 22, font: "'IBM Plex Sans Arabic', sans-serif" }} onOpen={() => {}} />
       </aside>
     </div>

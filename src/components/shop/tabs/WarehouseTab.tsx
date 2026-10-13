@@ -133,8 +133,8 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
           { label: 'قيمة المخزون', value: formatMoney(stockValue, currency) },
         ].map((s) => (
           <div key={s.label} className="bg-white border border-neutral-200 rounded-2xl p-3">
-            <div className="text-[10px] font-bold text-neutral-400">{s.label}</div>
-            <div className="text-base sm:text-lg font-black text-[#1d1d1f] mt-1 truncate">{s.value}</div>
+            <div className="text-xs font-bold text-neutral-400">{s.label}</div>
+            <div className="text-base sm:text-lg font-black text-ink mt-1 truncate">{s.value}</div>
           </div>
         ))}
       </div>
@@ -181,7 +181,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
               </select>
             </div>
             {filtering && (
-              <div className="flex items-center gap-2 text-[11px] text-neutral-500">
+              <div className="flex items-center gap-2 text-xs text-neutral-500">
                 <span>{list.length} من {data.products.length} منتج</span>
                 <button
                   type="button"
@@ -205,8 +205,8 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
                     {p.images[0] && <img src={p.images[0]} alt="" className="w-full h-full object-cover" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold text-[#1d1d1f] truncate">{p.name}</div>
-                    <div className="text-[10px] text-neutral-400 truncate">
+                    <div className="text-sm font-bold text-ink truncate">{p.name}</div>
+                    <div className="text-xs text-neutral-400 truncate">
                       {formatMoney(p.price, p.currency || currency)}
                       {p.catalogIds.length > 0 && ` · ${p.catalogIds.map(catalogName).filter(Boolean).join('، ')}`}
                     </div>
@@ -217,18 +217,18 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
                       {p.stock}
                     </div>
                   ) : (
-                    <div className="text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-50 text-[#0071e3]" title="يُباع من المتجر دون حساب كمية">بدون مخزون</div>
+                    <div className="text-xs font-bold px-2 py-1 rounded-lg bg-blue-50 text-brand" title="يُباع من المتجر دون حساب كمية">بدون مخزون</div>
                   )}
                   <button
                     type="button"
                     onClick={() => togglePublished(p)}
-                    className={`h-8 px-2 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer ${p.published ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-500'}`}
+                    className={`h-8 px-2 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer ${p.published ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-500'}`}
                     title={p.published ? 'معروض في صفحة المتجر. اضغط للإخفاء' : 'محفوظ في المستودع فقط. اضغط للعرض في المتجر'}
                   >
                     {p.published ? <Eye size={12} /> : <EyeOff size={12} />}
                     <span className="hidden sm:inline">{p.published ? 'في المتجر' : 'مخفي'}</span>
                   </button>
-                  <button type="button" disabled={!tracksStock(p)} onClick={() => setRestock({ id: p.id, qty: '', cost: '', variant: '' })} className="disabled:opacity-25 disabled:pointer-events-none w-8 h-8 rounded-lg text-[#0071e3] hover:bg-blue-50 flex items-center justify-center cursor-pointer" aria-label="إضافة كمية" title="إضافة كمية للمخزون">
+                  <button type="button" disabled={!tracksStock(p)} onClick={() => setRestock({ id: p.id, qty: '', cost: '', variant: '' })} className="disabled:opacity-25 disabled:pointer-events-none w-8 h-8 rounded-lg text-brand hover:bg-blue-50 flex items-center justify-center cursor-pointer" aria-label="إضافة كمية" title="إضافة كمية للمخزون">
                     <PackagePlus size={15} />
                   </button>
                   <button type="button" onClick={() => setEditing(p)} className="w-8 h-8 rounded-lg text-neutral-500 hover:bg-neutral-100 flex items-center justify-center cursor-pointer" aria-label="تعديل">
@@ -241,7 +241,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
                 {p.variants.length > 0 && tracksStock(p) && (
                   <div className="flex flex-wrap gap-1">
                     {p.variants.map((v) => (
-                      <span key={variantLabel(v.values)} className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${v.stock <= 0 ? 'bg-neutral-100 text-neutral-400 line-through' : v.stock <= LOW_STOCK ? 'bg-amber-50 text-amber-600' : 'bg-white border border-neutral-100 text-neutral-600'}`}>
+                      <span key={variantLabel(v.values)} className={`text-xs font-bold px-2 py-0.5 rounded-md ${v.stock <= 0 ? 'bg-neutral-100 text-neutral-400 line-through' : v.stock <= LOW_STOCK ? 'bg-amber-50 text-amber-600' : 'bg-white border border-neutral-100 text-neutral-600'}`}>
                         {variantLabel(v.values)}: {v.stock}
                       </span>
                     ))}

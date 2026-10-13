@@ -107,7 +107,7 @@ export const LightingSection = ({
             onClick={() => setLightingTarget('element')}
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               lightingTarget === 'element' 
-                ? 'bg-white text-[#0071e3] shadow-xs' 
+                ? 'bg-white text-brand shadow-xs' 
                 : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -117,7 +117,7 @@ export const LightingSection = ({
             onClick={() => setLightingTarget('slide')}
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               lightingTarget === 'slide' 
-                ? 'bg-white text-[#0071e3] shadow-xs' 
+                ? 'bg-white text-brand shadow-xs' 
                 : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -126,8 +126,8 @@ export const LightingSection = ({
         </div>
       )}
 
-      <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
-        <span className="text-[11px] font-bold text-[#0071e3]">
+      <div className="bg-brand/5 border border-brand/10 p-2.5 rounded-xl text-center">
+        <span className="text-xs font-bold text-brand">
           {isTargetElement 
             ? `تعديل إضاءة العنصر: ${elementDisplayName(selectedElement)}` 
             : `تعديل إضاءة الشريحة: ${activeSlide?.name || 'الشريحة الحالية'}`}
@@ -148,7 +148,7 @@ export const LightingSection = ({
             step="5"
             value={activeBrightness}
             onChange={(e) => onUpdateElementStyles({ brightness: Number(e.target.value) })}
-            className="w-full accent-[#0071e3]"
+            className="w-full accent-brand"
           />
         </div>
       )}
@@ -157,7 +157,7 @@ export const LightingSection = ({
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
           <span className="text-neutral-700 font-bold">شدة ومدى الإضاءة الداخلية:</span>
-          <span className="font-mono text-[#0071e3] font-bold">{activeLightIntensity}px</span>
+          <span className="font-mono text-brand font-bold">{activeLightIntensity}px</span>
         </div>
         <input
           type="range"
@@ -165,9 +165,9 @@ export const LightingSection = ({
           max="50"
           value={activeLightIntensity}
           onChange={(e) => updateLightIntensity(Number(e.target.value))}
-          className="w-full accent-[#0071e3] cursor-pointer"
+          className="w-full accent-brand cursor-pointer"
         />
-        <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+        <div className="flex justify-between text-xs text-neutral-400 font-mono">
           <span>إيقاف (0px)</span>
           <span>متوسط (25px)</span>
           <span>شديد (50px)</span>
@@ -182,7 +182,7 @@ export const LightingSection = ({
 
         {/* أ. ألوان الصفحة الافتراضية */}
         <div className="space-y-1">
-          <span className="text-[10px] text-neutral-400 font-semibold block">
+          <span className="text-xs text-neutral-400 font-semibold block">
             ألوان الصفحة الافتراضية:
           </span>
           <div className="flex gap-2 p-1.5 bg-neutral-50 rounded-xl border border-neutral-200/65">
@@ -193,7 +193,7 @@ export const LightingSection = ({
                   key={`light-palette-color-${idx}-${hex}`}
                   onClick={() => updateLightColor(hex)}
                   className={`w-7 h-7 rounded-full border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-3xs flex items-center justify-center ${
-                    isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                    isSelected ? 'ring-2 ring-brand scale-110 z-10' : ''
                   }`}
                   style={{ backgroundColor: hex }}
                   title={`لون الصفحة ${idx + 1}: ${hex}`}
@@ -214,10 +214,10 @@ export const LightingSection = ({
         {/* ب. الخمسين لون الأساسية */}
         <div className="space-y-1">
           <div className="flex justify-between items-center">
-            <span className="text-[10px] text-neutral-400 font-semibold block">
+            <span className="text-xs text-neutral-400 font-semibold block">
               الخمسون لوناً الأساسية:
             </span>
-            <span className="text-[9px] text-neutral-400 font-mono" dir="ltr">50 basic colors</span>
+            <span className="text-xs text-neutral-400 font-mono" dir="ltr">50 basic colors</span>
           </div>
           <div className="p-2 bg-neutral-50 rounded-2xl border border-neutral-200/70 max-h-40 overflow-y-auto pr-1">
             <div className="grid grid-cols-10 gap-1.5">
@@ -228,7 +228,7 @@ export const LightingSection = ({
                     key={`light-basic-color-${idx}-${hex}`}
                     onClick={() => updateLightColor(hex)}
                     className={`w-5 h-5 rounded-md border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-4xs flex items-center justify-center ${
-                      isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                      isSelected ? 'ring-2 ring-brand scale-110 z-10' : ''
                     }`}
                     style={{ backgroundColor: hex }}
                     title={hex}
@@ -260,7 +260,7 @@ export const LightingSection = ({
             value={activeLightColor}
             onChange={(e) => updateLightColor(e.target.value)}
             placeholder="اختر لوناً حراً"
-            className="flex-1 text-[11px] px-2 py-1 bg-white rounded-md border border-neutral-200 font-mono text-left"
+            className="flex-1 text-xs px-2 py-1 bg-white rounded-md border border-neutral-200 font-mono text-left"
             dir="ltr"
           />
         </div>
@@ -271,7 +271,7 @@ export const LightingSection = ({
         <span className="text-xs font-bold text-neutral-800 block">
           توجيه اتجاه وزاوية الإضاءة الداخلية:
         </span>
-        <p className="text-[10px] text-neutral-500 leading-tight">
+        <p className="text-xs text-neutral-500 leading-tight">
           انقر على المربع لتوجيه الإضاءة في الاتجاه المرغوب. تبرز المعاينات شكل الإضاءة الداخلية المطبقة على مربع رمادي افتراضي:
         </p>
 
@@ -289,7 +289,7 @@ export const LightingSection = ({
                   onClick={() => updateLightPosition(cell.id)}
                   className={`relative aspect-square rounded-xl p-1 transition-all flex flex-col items-center justify-center cursor-pointer border-2 bg-white ${
                     isSelected
-                      ? 'border-[#0071e3] bg-[#0071e3]/5 shadow-xs scale-105 z-10'
+                      ? 'border-brand bg-brand/5 shadow-xs scale-105 z-10'
                       : 'border-transparent hover:border-neutral-300'
                   }`}
                   title={cell.name}
@@ -305,11 +305,11 @@ export const LightingSection = ({
                     />
 
                     {isSelected ? (
-                      <span className="w-4 h-4 rounded-full bg-[#0071e3] text-white flex items-center justify-center font-bold shadow-4xs shrink-0 z-20">
+                      <span className="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center font-bold shadow-4xs shrink-0 z-20">
                         <Check size={10} strokeWidth={3} />
                       </span>
                     ) : (
-                      <span className="text-[8.5px] font-bold text-[#1d1d1f] pointer-events-none select-none z-10 bg-white/40 px-1 rounded-sm">
+                      <span className="text-xs font-bold text-ink pointer-events-none select-none z-10 bg-white/40 px-1 rounded-sm">
                         {cell.label}
                       </span>
                     )}

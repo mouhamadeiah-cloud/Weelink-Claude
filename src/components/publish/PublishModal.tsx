@@ -35,8 +35,8 @@ interface PublishModalProps {
   onArrangeForMobile?: () => void; // the editor's «تنسيق الموبايل»
 }
 
-const input = 'w-full h-11 px-3.5 rounded-xl border border-neutral-200 bg-white text-sm text-[#1d1d1f] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/15 transition';
-const label = 'block text-[11px] font-bold text-neutral-500 mb-1';
+const input = 'w-full h-11 px-3.5 rounded-xl border border-neutral-200 bg-white text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition';
+const label = 'block text-xs font-bold text-neutral-500 mb-1';
 
 const domainErrorText = (e: string) =>
   e === 'not_configured'
@@ -50,12 +50,12 @@ const domainErrorText = (e: string) =>
 
 // A wide button that folds its fields out below it.
 const Fold: React.FC<{ icon: React.ElementType; title: string; hint: string; open: boolean; onToggle: () => void; children: React.ReactNode }> = ({ icon: Icon, title, hint, open, onToggle, children }) => (
-  <div className={`rounded-2xl border transition ${open ? 'border-[#0071e3]/40 bg-[#0071e3]/[0.03]' : 'border-neutral-200 bg-white'}`}>
+  <div className={`rounded-2xl border transition ${open ? 'border-brand/40 bg-brand/[0.03]' : 'border-neutral-200 bg-white'}`}>
     <button type="button" onClick={onToggle} className="w-full flex items-center gap-3 p-4 text-right cursor-pointer" aria-expanded={open}>
-      <span className="w-10 h-10 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0"><Icon size={19} /></span>
+      <span className="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center shrink-0"><Icon size={19} /></span>
       <span className="flex-1 min-w-0">
-        <span className="block text-sm font-black text-[#1d1d1f]">{title}</span>
-        <span className="block text-[11px] text-neutral-500">{hint}</span>
+        <span className="block text-sm font-black text-ink">{title}</span>
+        <span className="block text-xs text-neutral-500">{hint}</span>
       </span>
       <ChevronDown size={18} className={`text-neutral-400 transition ${open ? 'rotate-180' : ''}`} />
     </button>
@@ -127,19 +127,19 @@ const ConnectDomain: React.FC<{ owner: string; project: ProjectType; site: Publi
         <div className="flex gap-2">
           <input className={input} dir="ltr" placeholder="alnour.com" value={domain} onChange={(e) => setDomain(e.target.value)} disabled={!!current} />
           {!current && (
-            <button type="button" onClick={connect} disabled={busy || !site} className="h-11 px-4 shrink-0 rounded-xl bg-[#0071e3] text-white text-sm font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5">
+            <button type="button" onClick={connect} disabled={busy || !site} className="h-11 px-4 shrink-0 rounded-xl bg-brand text-white text-sm font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5">
               {busy && <Loader2 size={15} className="animate-spin" />} ربط
             </button>
           )}
         </div>
-        {!site && <p className="text-[11px] text-neutral-500 mt-1">انشر صفحتك أولاً، ثم اربط الدومين.</p>}
+        {!site && <p className="text-xs text-neutral-500 mt-1">انشر صفحتك أولاً، ثم اربط الدومين.</p>}
       </div>
 
       {current && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-bold">
             {current.status === 'active' ? (
-              <><CheckCircle2 size={18} className="text-[#34c759]" /> الدومين يعمل: <a href={`https://${current.name}`} target="_blank" rel="noreferrer" dir="ltr" className="text-[#0071e3]">{current.name}</a></>
+              <><CheckCircle2 size={18} className="text-[#34c759]" /> الدومين يعمل: <a href={`https://${current.name}`} target="_blank" rel="noreferrer" dir="ltr" className="text-brand">{current.name}</a></>
             ) : (
               <><Loader2 size={16} className="animate-spin text-[#f29900]" /> بانتظار إعداد السجلات عند شركة الدومين</>
             )}
@@ -160,12 +160,12 @@ const ConnectDomain: React.FC<{ owner: string; project: ProjectType; site: Publi
                   </div>
                 ))}
               </div>
-              {current.message && <p className="text-[11px] text-neutral-500">{current.message}</p>}
+              {current.message && <p className="text-xs text-neutral-500">{current.message}</p>}
             </>
           )}
           <div className="flex flex-wrap gap-2">
             {current.status !== 'active' && (
-              <button type="button" onClick={check} disabled={busy} className="h-9 px-3 rounded-xl bg-[#0071e3] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+              <button type="button" onClick={check} disabled={busy} className="h-9 px-3 rounded-xl bg-brand text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
                 {busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} فحص الربط
               </button>
             )}
@@ -254,7 +254,7 @@ const BuyDomain: React.FC<{ owner: string; project: ProjectType; suggested: stri
             {quote.available ? `متاح${quote.price !== null ? ` · ${quote.price}$ للسنة` : ''}` : 'غير متاح، جرّب اسماً آخر.'}
           </p>
         )}
-        {note && <p className="text-[11px] text-neutral-500 mt-1.5">{note}</p>}
+        {note && <p className="text-xs text-neutral-500 mt-1.5">{note}</p>}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
@@ -277,9 +277,9 @@ const BuyDomain: React.FC<{ owner: string; project: ProjectType; suggested: stri
         <div><span className={label}>المدينة *</span><input className={input} autoComplete="address-level2" value={contact.city} onChange={set('city')} /></div>
         <div><span className={label}>الرمز البريدي</span><input className={input} dir="ltr" autoComplete="postal-code" value={contact.zip} onChange={set('zip')} /></div>
       </div>
-      <p className="text-[11px] text-neutral-500 leading-relaxed">تُسجَّل هذه البيانات عند شركة الدومين كصاحب الدومين. الدفع عن طريق المكتب، ونشتري الدومين ونربطه بصفحتك.</p>
+      <p className="text-xs text-neutral-500 leading-relaxed">تُسجَّل هذه البيانات عند شركة الدومين كصاحب الدومين. الدفع عن طريق المكتب، ونشتري الدومين ونربطه بصفحتك.</p>
       {error && <p className="text-xs font-bold text-[#c2410c]">{error}</p>}
-      <button type="button" onClick={send} disabled={busy} className="w-full h-11 rounded-xl bg-[#1d1d1f] text-white text-sm font-black cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-2">
+      <button type="button" onClick={send} disabled={busy} className="w-full h-11 rounded-xl bg-ink text-white text-sm font-black cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-2">
         {busy && <Loader2 size={15} className="animate-spin" />} اطلب شراء الدومين
       </button>
     </>
@@ -320,7 +320,7 @@ const IconPicker: React.FC<{ icon: string; title: string; name: string; onChange
           </button>
         )}
       </div>
-      <p className="text-[11px] text-neutral-500 mt-1">تظهر أيضاً عندما يضيف الزائر صفحتك إلى شاشة هاتفه. صورة مربعة أفضل.</p>
+      <p className="text-xs text-neutral-500 mt-1">تظهر أيضاً عندما يضيف الزائر صفحتك إلى شاشة هاتفه. صورة مربعة أفضل.</p>
       {error && <p className="text-xs font-bold text-[#c2410c] mt-1">{error}</p>}
     </div>
   );
@@ -333,19 +333,19 @@ const SIZES: Record<Device, [number, number]> = { desktop: [1280, 800], mobile: 
 
 const ComputerFrame: React.FC<{ children: React.ReactNode; label: React.ReactNode }> = ({ children, label: l }) => (
   <div className="flex flex-col items-center gap-1.5">
-    <div className="rounded-xl border-[6px] border-[#1d1d1f] overflow-hidden shadow-md bg-white">{children}</div>
-    <div className="w-14 h-2 rounded-b-lg bg-[#1d1d1f]" />
+    <div className="rounded-xl border-[6px] border-ink overflow-hidden shadow-md bg-white">{children}</div>
+    <div className="w-14 h-2 rounded-b-lg bg-ink" />
     {l}
   </div>
 );
 const PhoneFrame: React.FC<{ children: React.ReactNode; label: React.ReactNode }> = ({ children, label: l }) => (
   <div className="flex flex-col items-center gap-1.5">
-    <div className="rounded-[18px] border-[5px] border-[#1d1d1f] overflow-hidden shadow-md bg-white">{children}</div>
+    <div className="rounded-[18px] border-[5px] border-ink overflow-hidden shadow-md bg-white">{children}</div>
     {l}
   </div>
 );
 const deviceLabel = (d: Device) => (
-  <span className="text-[11px] font-bold text-neutral-500 inline-flex items-center gap-1">
+  <span className="text-xs font-bold text-neutral-500 inline-flex items-center gap-1">
     {d === 'desktop' ? <><Monitor size={12} /> كمبيوتر</> : <><Smartphone size={12} /> موبايل</>}
   </span>
 );
@@ -388,13 +388,13 @@ const DraftPreviews: React.FC<{ draft: Draft; onOpen: (d: Device) => void; onArr
           <Smartphone size={14} /> معاينة الموبايل
         </button>
         {onArrange && (
-          <button type="button" onClick={onArrange} className="h-9 px-3 rounded-xl bg-[#0071e3]/10 text-[#0071e3] text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer hover:bg-[#0071e3]/15">
+          <button type="button" onClick={onArrange} className="h-9 px-3 rounded-xl bg-brand/10 text-brand text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer hover:bg-brand/15">
             <Wand2 size={14} /> تنسيق الموبايل
           </button>
         )}
       </div>
       {onArrange && !arranged && (
-        <p className="text-[11px] text-neutral-500 text-center leading-relaxed">
+        <p className="text-xs text-neutral-500 text-center leading-relaxed">
           لم تنسّق صفحتك للموبايل بعد، فرتّبناها تلقائياً في المعاينة. اضغط «تنسيق الموبايل» ليُحفظ الترتيب وتستطيع تعديله في المحرر.
         </p>
       )}
@@ -406,18 +406,18 @@ const DraftPreviews: React.FC<{ draft: Draft; onOpen: (d: Device) => void; onArr
 const FullPreview: React.FC<{ draft: Draft; device: Device; onDevice: (d: Device) => void; onClose: () => void; onArrange?: () => void }> = ({ draft, device, onDevice, onClose, onArrange }) => {
   const [pageId, setPageId] = useState(draft.pages[0]?.id || '');
   const tab = (d: Device) => (
-    <button type="button" onClick={() => onDevice(d)} className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer ${device === d ? 'bg-white text-[#1d1d1f]' : 'text-white/70 hover:text-white'}`}>
+    <button type="button" onClick={() => onDevice(d)} className={`h-9 px-3 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer ${device === d ? 'bg-white text-ink' : 'text-white/70 hover:text-white'}`}>
       {d === 'desktop' ? <><Monitor size={14} /> كمبيوتر</> : <><Smartphone size={14} /> موبايل</>}
     </button>
   );
   const view = <SiteView project={draft.project} pages={draft.pages} elements={draft.elements} data={draft.data} phone={device === 'mobile'} pageId={pageId} onSelectPage={setPageId} />;
   return (
-    <div className="fixed inset-0 z-[4000001] bg-[#1d1d1f] flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[4000001] bg-ink flex flex-col" onClick={(e) => e.stopPropagation()}>
       <div dir="rtl" className="h-14 shrink-0 flex items-center gap-2 px-3 font-sans">
         <span className="text-sm font-black text-white hidden sm:block">معاينة قبل النشر</span>
         <div className="flex gap-1 p-1 rounded-xl bg-white/10 mx-auto sm:mx-0 sm:mr-4">{tab('desktop')}{tab('mobile')}</div>
         {device === 'mobile' && onArrange && (
-          <button type="button" onClick={onArrange} className="h-9 px-3 rounded-lg bg-[#0071e3] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
+          <button type="button" onClick={onArrange} className="h-9 px-3 rounded-lg bg-brand text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
             <Wand2 size={14} /> <span className="hidden sm:inline">تنسيق الموبايل</span>
           </button>
         )}
@@ -462,7 +462,7 @@ const SeoFields: React.FC<{ seo: SiteSeo; keywords: string; onSeo: (s: SiteSeo) 
       <div>
         <span className={label}>عنوان الصفحة في البحث</span>
         <input className={input} maxLength={SEO_LIMITS.title} placeholder="مطعم النور - مشاوي ووجبات سريعة في حلب" value={seo.title} onChange={(e) => onSeo({ ...seo, title: e.target.value })} />
-        <div className="text-[10px] text-neutral-400 mt-0.5 text-left" dir="ltr">{seo.title.length}/{SEO_LIMITS.title}</div>
+        <div className="text-xs text-neutral-400 mt-0.5 text-left" dir="ltr">{seo.title.length}/{SEO_LIMITS.title}</div>
       </div>
       <div>
         <span className={label}>وصف قصير</span>
@@ -473,21 +473,21 @@ const SeoFields: React.FC<{ seo: SiteSeo; keywords: string; onSeo: (s: SiteSeo) 
           value={seo.description}
           onChange={(e) => onSeo({ ...seo, description: e.target.value })}
         />
-        <div className="text-[10px] text-neutral-400 mt-0.5 text-left" dir="ltr">{seo.description.length}/{SEO_LIMITS.description}</div>
+        <div className="text-xs text-neutral-400 mt-0.5 text-left" dir="ltr">{seo.description.length}/{SEO_LIMITS.description}</div>
       </div>
       <div>
         <span className={label}>كلمات مفتاحية (افصل بينها بفاصلة)</span>
         <input className={input} placeholder="مطعم، مشاوي، حلب، توصيل" value={keywords} onChange={(e) => onKeywords(e.target.value)} />
         {chips.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
-            {chips.map((k) => <span key={k} className="px-2.5 py-1 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-[11px] font-bold">{k}</span>)}
+            {chips.map((k) => <span key={k} className="px-2.5 py-1 rounded-full bg-brand/10 text-brand text-xs font-bold">{k}</span>)}
           </div>
         )}
-        <p className="text-[11px] text-neutral-500 mt-1">حتى {SEO_LIMITS.keywords} كلمة. يجدك بها الناس في بحث Weelink، وتساعد Google على فهم صفحتك.</p>
+        <p className="text-xs text-neutral-500 mt-1">حتى {SEO_LIMITS.keywords} كلمة. يجدك بها الناس في بحث Weelink، وتساعد Google على فهم صفحتك.</p>
       </div>
       <div className="rounded-xl bg-white border border-neutral-200 p-3">
-        <div className="text-[10px] font-bold text-neutral-400 mb-1.5">هكذا قد تظهر في Google</div>
-        <div className="text-[11px] text-[#202124] truncate" dir="ltr">{link.replace('https://', '')}</div>
+        <div className="text-xs font-bold text-neutral-400 mb-1.5">هكذا قد تظهر في Google</div>
+        <div className="text-xs text-[#202124] truncate" dir="ltr">{link.replace('https://', '')}</div>
         <div className="text-[15px] text-[#1a0dab] font-medium truncate">{seo.title || 'عنوان صفحتك'}</div>
         <div className="text-xs text-[#4d5156] line-clamp-2">{seo.description || 'اكتب وصفاً قصيراً لصفحتك ليظهر هنا.'}</div>
       </div>
@@ -652,24 +652,24 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
 
   return (
     <div className="fixed inset-0 z-[4000000] bg-black/40 backdrop-blur-[2px] flex items-end sm:items-center justify-center" onClick={onClose}>
-      <div dir="rtl" className="w-full sm:max-w-xl max-h-[94dvh] overflow-y-auto bg-[#f5f5f7] rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 font-sans" onClick={(e) => e.stopPropagation()}>
+      <div dir="rtl" className="w-full sm:max-w-xl max-h-[94dvh] overflow-y-auto bg-bg rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 font-sans" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="w-10 h-10 rounded-xl bg-[#0071e3] text-white flex items-center justify-center"><Globe size={20} /></span>
+            <span className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center"><Globe size={20} /></span>
             <div>
-              <div className="text-lg font-black text-[#1d1d1f]">نشر صفحتك</div>
-              <div className="text-[11px] text-neutral-500">{published ? 'صفحتك منشورة ويستطيع أي أحد فتحها' : 'اختر اسماً لصفحتك واحصل على رابطها'}</div>
+              <div className="text-lg font-black text-ink">نشر صفحتك</div>
+              <div className="text-xs text-neutral-500">{published ? 'صفحتك منشورة ويستطيع أي أحد فتحها' : 'اختر اسماً لصفحتك واحصل على رابطها'}</div>
             </div>
           </div>
           <button type="button" onClick={onClose} className="w-9 h-9 rounded-full bg-black/5 flex items-center justify-center cursor-pointer" aria-label="إغلاق"><X size={18} /></button>
         </div>
 
         {site === 'loading' ? (
-          <div className="py-12 flex justify-center"><Loader2 size={28} className="animate-spin text-[#0071e3]" /></div>
+          <div className="py-12 flex justify-center"><Loader2 size={28} className="animate-spin text-brand" /></div>
         ) : (
           <>
             <section className="bg-white rounded-2xl p-4 border border-neutral-200 space-y-3">
-              <div className="text-sm font-black text-[#1d1d1f]">{published && !changed ? 'هكذا يرى الناس صفحتك' : 'هكذا ستظهر صفحتك'}</div>
+              <div className="text-sm font-black text-ink">{published && !changed ? 'هكذا يرى الناس صفحتك' : 'هكذا ستظهر صفحتك'}</div>
               {draft ? (
                 <DraftPreviews draft={draft} onOpen={setPreview} onArrange={arrange} arranged={arranged} />
               ) : (
@@ -680,10 +680,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
             <section className="bg-white rounded-2xl p-4 space-y-3 border border-neutral-200">
               <div>
                 <span className={label}>اسم صفحتك</span>
-                <div className="flex items-stretch rounded-xl border border-neutral-200 focus-within:border-[#0071e3] focus-within:ring-2 focus-within:ring-[#0071e3]/15 overflow-hidden" dir="ltr">
+                <div className="flex items-stretch rounded-xl border border-neutral-200 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15 overflow-hidden" dir="ltr">
                   <span className="px-3 flex items-center text-sm text-neutral-400 bg-neutral-50 border-r border-neutral-200">https://</span>
                   <input
-                    className="flex-1 min-w-0 h-11 px-2 text-sm font-bold text-[#1d1d1f] outline-none"
+                    className="flex-1 min-w-0 h-11 px-2 text-sm font-bold text-ink outline-none"
                     placeholder="alnour"
                     value={name}
                     onChange={(e) => setName(normalizeSiteName(e.target.value))}
@@ -692,11 +692,11 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                   />
                   <span className="px-3 flex items-center text-sm font-bold text-neutral-500 bg-neutral-50 border-l border-neutral-200">.{SITE_DOMAIN}</span>
                 </div>
-                <div className="text-[11px] font-bold mt-1.5 min-h-[16px]">{nameStatus}</div>
+                <div className="text-xs font-bold mt-1.5 min-h-[16px]">{nameStatus}</div>
               </div>
               {name && !problem && (
                 <div className="text-xs text-neutral-500">
-                  سيكون رابط صفحتك: <span dir="ltr" className="font-black text-[#0071e3]">{siteUrl(name).replace('https://', '')}</span>
+                  سيكون رابط صفحتك: <span dir="ltr" className="font-black text-brand">{siteUrl(name).replace('https://', '')}</span>
                 </div>
               )}
               <IconPicker icon={icon} title={suggestedName} name={name} onChange={changeIcon} />
@@ -712,12 +712,12 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                 type="button"
                 onClick={publish}
                 disabled={busy || !!problem || state === 'taken' || state === 'checking'}
-                className="w-full h-12 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-base font-black cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-2 transition"
+                className="w-full h-12 rounded-xl bg-brand hover:bg-brand-hover text-white text-base font-black cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-2 transition"
               >
                 {busy ? <Loader2 size={18} className="animate-spin" /> : <Globe size={18} />}
                 {!published ? 'نشر الصفحة' : renaming ? 'نشر بالاسم الجديد' : project === 'restaurant' ? 'حفظ' : changed ? 'تحديث النشر' : seoChanged ? 'حفظ بيانات البحث' : 'تحديث النشر'}
               </button>
-              {project === 'restaurant' && <p className="text-[11px] text-neutral-500">موقع المطعم يتحدّث تلقائياً مع كل تعديل؛ النشر هنا يعطيه اسمه ورابطه.</p>}
+              {project === 'restaurant' && <p className="text-xs text-neutral-500">موقع المطعم يتحدّث تلقائياً مع كل تعديل؛ النشر هنا يعطيه اسمه ورابطه.</p>}
             </section>
 
             {published && (
@@ -725,14 +725,14 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                 <div className="flex flex-col sm:flex-row gap-4 items-center">
                   {qr && <img src={qr} alt="رمز QR لصفحتك" className="w-36 h-36 rounded-xl border border-neutral-100 shrink-0" />}
                   <div className="flex-1 min-w-0 space-y-2 w-full">
-                    <a href={link} target="_blank" rel="noreferrer" dir="ltr" className="flex items-center gap-1.5 text-base font-black text-[#0071e3] break-all">
+                    <a href={link} target="_blank" rel="noreferrer" dir="ltr" className="flex items-center gap-1.5 text-base font-black text-brand break-all">
                       <ExternalLink size={16} className="shrink-0" /> {link.replace('https://', '')}
                     </a>
                     {published.customDomain?.status === 'active' && (
-                      <a href={`https://${published.customDomain.name}`} target="_blank" rel="noreferrer" dir="ltr" className="block text-sm font-bold text-[#0071e3]">{published.customDomain.name}</a>
+                      <a href={`https://${published.customDomain.name}`} target="_blank" rel="noreferrer" dir="ltr" className="block text-sm font-bold text-brand">{published.customDomain.name}</a>
                     )}
-                    <div className="text-[11px] text-neutral-500">
-                      إذا لم يفتح الرابط بعد، استعمل: <a href={siteFallbackUrl(published.name)} target="_blank" rel="noreferrer" dir="ltr" className="text-[#0071e3] font-bold break-all">{siteFallbackUrl(published.name).replace(/^https?:\/\//, '')}</a>
+                    <div className="text-xs text-neutral-500">
+                      إذا لم يفتح الرابط بعد، استعمل: <a href={siteFallbackUrl(published.name)} target="_blank" rel="noreferrer" dir="ltr" className="text-brand font-bold break-all">{siteFallbackUrl(published.name).replace(/^https?:\/\//, '')}</a>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <CopyButton text={link} label="نسخ الرابط" />
@@ -755,7 +755,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                   <a href={`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(suggestedName)}`} target="_blank" rel="noreferrer" className="h-10 rounded-xl bg-[#229ED9] text-white text-xs font-bold flex items-center justify-center">تيليغرام</a>
                   <a href={`https://x.com/intent/post?url=${encodeURIComponent(link)}&text=${encodeURIComponent(suggestedName)}`} target="_blank" rel="noreferrer" className="h-10 rounded-xl bg-black text-white text-xs font-bold flex items-center justify-center">X</a>
                 </div>
-                <p className="text-[11px] text-neutral-500">لإنستغرام وتيك توك: نزّل رمز QR أو انسخ الرابط وضعه في البايو.</p>
+                <p className="text-xs text-neutral-500">لإنستغرام وتيك توك: نزّل رمز QR أو انسخ الرابط وضعه في البايو.</p>
               </section>
             )}
 

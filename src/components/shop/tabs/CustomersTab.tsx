@@ -63,27 +63,27 @@ export const CustomersTab: React.FC<AdminTabProps> = ({ data, update }) => {
               return (
                 <div key={c.id} className="rounded-xl border border-neutral-100 bg-[#fbfbfd]">
                   <div className="flex items-center gap-3 p-2.5">
-                    <div className="w-9 h-9 rounded-full bg-blue-100 text-[#0071e3] flex items-center justify-center text-sm font-black shrink-0">{c.name[0]}</div>
+                    <div className="w-9 h-9 rounded-full bg-blue-100 text-brand flex items-center justify-center text-sm font-black shrink-0">{c.name[0]}</div>
                     <button type="button" onClick={() => setOpenId(open ? null : c.id)} className="flex-1 min-w-0 text-right cursor-pointer">
-                      <div className="text-sm font-bold text-[#1d1d1f] truncate">{c.name}</div>
-                      <div className="text-[10px] text-neutral-400 truncate" dir="auto">{[c.phone, c.email].filter(Boolean).join(' · ') || '—'}</div>
+                      <div className="text-sm font-bold text-ink truncate">{c.name}</div>
+                      <div className="text-xs text-neutral-400 truncate" dir="auto">{[c.phone, c.email].filter(Boolean).join(' · ') || '—'}</div>
                     </button>
                     <div className="text-left shrink-0">
-                      <div className="text-xs font-black text-[#1d1d1f]">{formatMoney(spentBy(c.id), currency)}</div>
-                      <div className="text-[10px] text-neutral-400">{orders.length} طلب</div>
+                      <div className="text-xs font-black text-ink">{formatMoney(spentBy(c.id), currency)}</div>
+                      <div className="text-xs text-neutral-400">{orders.length} طلب</div>
                     </div>
                     <ChevronDown size={15} className={`text-neutral-400 transition ${open ? 'rotate-180' : ''}`} />
                   </div>
                   {open && (
                     <div className="border-t border-neutral-100 p-3 space-y-2">
-                      {c.address && <p className="text-[11px] text-neutral-500">العنوان: {c.address}</p>}
+                      {c.address && <p className="text-xs text-neutral-500">العنوان: {c.address}</p>}
                       {orders.length === 0 ? (
-                        <p className="text-[11px] text-neutral-400">لا توجد مشتريات بعد.</p>
+                        <p className="text-xs text-neutral-400">لا توجد مشتريات بعد.</p>
                       ) : (
                         orders.map((o) => {
                           const st = ORDER_STATUSES.find((s) => s.id === o.status);
                           return (
-                            <div key={o.id} className="flex items-center justify-between text-[11px] bg-white rounded-lg p-2 border border-neutral-100">
+                            <div key={o.id} className="flex items-center justify-between text-xs bg-white rounded-lg p-2 border border-neutral-100">
                               <span className="font-bold">طلب #{o.number} · {formatDate(o.createdAt)}</span>
                               <span className="text-neutral-500 truncate mx-2">{o.items.map((i) => `${i.name}${i.variant ? ` (${i.variant})` : ''} × ${i.qty}`).join('، ')}</span>
                               <span className="font-black shrink-0" style={{ color: st?.color }}>{formatMoney(o.total, currency)}</span>
@@ -91,7 +91,7 @@ export const CustomersTab: React.FC<AdminTabProps> = ({ data, update }) => {
                           );
                         })
                       )}
-                      <button type="button" onClick={() => remove(c)} className="text-[11px] font-bold text-red-500 flex items-center gap-1 cursor-pointer">
+                      <button type="button" onClick={() => remove(c)} className="text-xs font-bold text-red-500 flex items-center gap-1 cursor-pointer">
                         <Trash2 size={12} /> حذف الزبون
                       </button>
                     </div>

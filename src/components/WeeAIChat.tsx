@@ -141,20 +141,20 @@ const AnswersSummary: React.FC<{ done: boolean; rows: [string, string | undefine
       <dl className="rounded-xl border border-neutral-200 divide-y divide-neutral-100 bg-white">
         {rows.filter(([, v]) => v && v.trim()).map(([k, v]) => (
           <div key={k} className="px-3 py-2 space-y-0.5">
-            <dt className="text-[10px] font-bold text-neutral-400">{k}</dt>
-            <dd className="text-[11px] font-semibold text-neutral-800 leading-relaxed line-clamp-3">{v}</dd>
+            <dt className="text-xs font-bold text-neutral-400">{k}</dt>
+            <dd className="text-xs font-semibold text-neutral-800 leading-relaxed line-clamp-3">{v}</dd>
           </div>
         ))}
       </dl>
     ) : (
-      <p className="text-[11px] text-neutral-500 leading-relaxed font-semibold">
+      <p className="text-xs text-neutral-500 leading-relaxed font-semibold">
         أسئلة Wee AI صارت بصفحة البداية: اسم صفحتك، شغلك، وصفها، ألوانها وخدماتك. جاوب عليها وبعدها بيبني Wee AI صفحتك منها.
       </p>
     )}
     <button
       type="button"
       onClick={onEdit}
-      className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${done ? 'text-neutral-800 bg-white border border-neutral-200 hover:border-neutral-300' : 'text-white bg-[#0071e3] hover:bg-[#0077ed]'}`}
+      className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${done ? 'text-neutral-800 bg-white border border-neutral-200 hover:border-neutral-300' : 'text-white bg-brand hover:bg-brand-hover'}`}
     >
       {done ? 'عدّل إجاباتي' : 'جاوب على الأسئلة'}
     </button>
@@ -540,12 +540,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       <div className="flex items-start justify-between gap-2.5 p-3 bg-[#fbfbfd] border-b border-neutral-150 shrink-0">
         <div className="flex items-start gap-2.5">
           {/* Slowly Pulsing Glow Icon Avatar */}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#0071e3] to-cyan-500 shadow-[0_0_12px_rgba(0,113,227,0.35)] flex items-center justify-center text-white text-xs shrink-0 animate-pulse">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand to-cyan-500 shadow-[0_0_12px_rgba(0,113,227,0.35)] flex items-center justify-center text-white text-xs shrink-0 animate-pulse">
             🤖
           </div>
           <div className="space-y-0.5 text-right">
-            <div className="text-[9px] font-black text-neutral-400 select-none tracking-wider">مساعدك الشخصي (wee ai)</div>
-            <h4 className="font-bold text-neutral-800 text-[11px] leading-relaxed min-h-[2.5em] transition-all">
+            <div className="text-xs font-black text-neutral-400 select-none tracking-wider">مساعدك الشخصي (wee ai)</div>
+            <h4 className="font-bold text-neutral-800 text-xs leading-relaxed min-h-[2.5em] transition-all">
               {onEditAnswers ? (step >= 13 ? 'هي إجاباتك. Wee AI بيبني صفحتك منها.' : 'جاوب على أسئلة Wee AI أولاً، وبعدها بيبني صفحتك.') : typedText}
             </h4>
           </div>
@@ -603,7 +603,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
             {/* اسم الصفحة: عنوان المدخل واسم شريط التنقل */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">{PAGE_NAME_LABEL[pageKind || 'page']}</label>
+              <label className="text-xs font-bold text-neutral-500 block">{PAGE_NAME_LABEL[pageKind || 'page']}</label>
               <input
                 type="text"
                 value={personalInfo.pageName || ''}
@@ -611,12 +611,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 placeholder={pageKind === 'restaurant' ? 'مثال: مطعم بيت جدي' : pageKind === 'shop' ? 'مثال: متجر لمسة' : pageKind === 'cars' ? 'مثال: معرض الشام للسيارات' : 'مثال: عيادة د. سلمى للأسنان'}
                 className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
               />
-              <p className="text-[10px] text-neutral-400">هو عنوان صفحتك. إذا تركته فاضي بيصير اسمك هو العنوان.</p>
+              <p className="text-xs text-neutral-400">هو عنوان صفحتك. إذا تركته فاضي بيصير اسمك هو العنوان.</p>
             </div>
 
             {/* الاسم الكامل */}
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">الاسم الكامل *</label>
+              <label className="text-xs font-bold text-neutral-500 block">الاسم الكامل *</label>
               <input
                 type="text"
                 value={personalInfo.fullName}
@@ -628,7 +628,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
             {/* تاريخ الميلاد: لصفحة شخصية فقط */}
             {(!pageKind || pageKind === 'page') && <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-400 block">تاريخ الميلاد (يمكن تخطيه)</label>
+              <label className="text-xs font-bold text-neutral-400 block">تاريخ الميلاد (يمكن تخطيه)</label>
               <input
                 type="date"
                 value={personalInfo.birthDate}
@@ -639,9 +639,9 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
             {/* صورة اللوغو (رفع من الجهاز أو رابط) */}
             <div className="space-y-1.5 pt-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">صورة اللوغو (غير إجباري)</label>
+              <label className="text-xs font-bold text-neutral-500 block">صورة اللوغو (غير إجباري)</label>
               <div className="flex items-center gap-2">
-                <label className="flex-1 py-2 px-2.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-[10.5px] font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
+                <label className="flex-1 py-2 px-2.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
                   <Upload size={13} />
                   <span>رفع من الجهاز</span>
                   <input
@@ -657,7 +657,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                     <button
                       type="button"
                       onClick={() => setPersonalInfo(p => ({ ...p, logoUrl: '' }))}
-                      className="absolute inset-0 bg-black/50 text-white flex items-center justify-center text-[10px]"
+                      className="absolute inset-0 bg-black/50 text-white flex items-center justify-center text-xs"
                     >
                       <X size={10} />
                     </button>
@@ -669,7 +669,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 value={personalInfo.logoUrl}
                 onChange={e => setPersonalInfo(p => ({ ...p, logoUrl: e.target.value }))}
                 placeholder="أو ضع رابط الشعار المباشر هنا"
-                className="w-full text-[10.5px] py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none font-mono text-left"
+                className="w-full text-xs py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none font-mono text-left"
               />
             </div>
 
@@ -682,7 +682,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 }
                 goToNextStep();
               }}
-              className="w-full py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <span>متابعة</span>
             </button>
@@ -698,25 +698,25 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 type="button"
                 disabled={gpsLoading}
                 onClick={handleGetLocation}
-                className="w-full py-2 px-3 bg-[#0071e3] hover:bg-[#0077ed] disabled:opacity-60 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                className="w-full py-2 px-3 bg-brand hover:bg-brand-hover disabled:opacity-60 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 <MapPin size={13} />
                 <span>{gpsLoading ? 'جاري تحديد موقعك...' : mapOpen ? 'رجّع الدبوس لموقعي' : 'حدد موقعي على الخريطة'}</span>
               </button>
-              {!mapOpen && <p className="text-[9.5px] text-neutral-500">منعبّي العنوان من موقعك، وبتقدر تعدّل أي حقل بعدين.</p>}
+              {!mapOpen && <p className="text-xs text-neutral-500">منعبّي العنوان من موقعك، وبتقدر تعدّل أي حقل بعدين.</p>}
               {mapOpen && mapCenter && (
                 <Suspense fallback={<div className="h-52 rounded-lg bg-neutral-100 animate-pulse" />}>
                   <LocationPicker value={mapCenter} onPick={(p) => { setMapCenter(p); fillFromPoint(p); }} />
                 </Suspense>
               )}
-              {mapOpen && mapCenter && <p className="text-[9.5px] text-neutral-500">اسحب الدبوس أو اضغط على مكانك بالضبط.</p>}
+              {mapOpen && mapCenter && <p className="text-xs text-neutral-500">اسحب الدبوس أو اضغط على مكانك بالضبط.</p>}
               {locationNote && (
-                <p className={`text-[10px] font-bold ${locationNote.ok ? 'text-green-600' : 'text-amber-600'}`}>{locationNote.text}</p>
+                <p className={`text-xs font-bold ${locationNote.ok ? 'text-green-600' : 'text-amber-600'}`}>{locationNote.text}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">المحافظة (إجباري) *</label>
+              <label className="text-xs font-bold text-neutral-500 block">المحافظة (إجباري) *</label>
               <select
                 value={addressInfo.governorate}
                 onChange={e => setAddressInfo(p => ({ ...p, governorate: e.target.value, city: '', area: '', district: '', subdistrict: '', village: '' }))}
@@ -736,7 +736,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                     key={id}
                     type="button"
                     onClick={() => setAddressInfo(p => ({ ...p, placeType: id }))}
-                    className={`py-1.5 rounded-md text-xs font-bold transition-all ${addressInfo.placeType === id ? 'bg-white text-[#0071e3] shadow-sm' : 'text-neutral-500'}`}
+                    className={`py-1.5 rounded-md text-xs font-bold transition-all ${addressInfo.placeType === id ? 'bg-white text-brand shadow-sm' : 'text-neutral-500'}`}
                   >
                     {label}
                   </button>
@@ -747,7 +747,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             {addressInfo.placeType === 'rural' && places?.type !== 'urban' ? (
               <>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-neutral-500 block">المنطقة</label>
+                  <label className="text-xs font-bold text-neutral-500 block">المنطقة</label>
                   <ComboInput
                     ariaLabel="المنطقة"
                     value={addressInfo.district}
@@ -757,7 +757,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-neutral-500 block">الناحية</label>
+                  <label className="text-xs font-bold text-neutral-500 block">الناحية</label>
                   <ComboInput
                     ariaLabel="الناحية"
                     value={addressInfo.subdistrict}
@@ -767,7 +767,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-neutral-500 block">القرية</label>
+                  <label className="text-xs font-bold text-neutral-500 block">القرية</label>
                   <ComboInput
                     ariaLabel="القرية"
                     value={addressInfo.village}
@@ -775,13 +775,13 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                     placeholder="اختر القرية"
                     onChange={village => setAddressInfo(p => ({ ...p, ...findVillage(places, village, p.district, p.subdistrict), village }))}
                   />
-                  <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
+                  <p className="text-xs text-neutral-400">{LIST_HINT}</p>
                 </div>
               </>
             ) : (
               <>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-neutral-500 block">المدينة</label>
+                  <label className="text-xs font-bold text-neutral-500 block">المدينة</label>
                   <ComboInput
                     ariaLabel="المدينة"
                     value={addressInfo.city}
@@ -791,7 +791,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-neutral-500 block">الحي</label>
+                  <label className="text-xs font-bold text-neutral-500 block">الحي</label>
                   <ComboInput
                     ariaLabel="الحي"
                     value={addressInfo.area}
@@ -799,13 +799,13 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                     placeholder={areasOf(places, addressInfo.city).length ? 'اختر الحي' : 'اكتب اسم الحي'}
                     onChange={area => setAddressInfo(p => ({ ...p, area }))}
                   />
-                  <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
+                  <p className="text-xs text-neutral-400">{LIST_HINT}</p>
                 </div>
               </>
             )}
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">الشارع والرقم</label>
+              <label className="text-xs font-bold text-neutral-500 block">الشارع والرقم</label>
               <input
                 type="text"
                 value={addressInfo.street}
@@ -816,7 +816,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">تفصيل العنوان</label>
+              <label className="text-xs font-bold text-neutral-500 block">تفصيل العنوان</label>
               <textarea
                 value={addressInfo.details}
                 onChange={e => setAddressInfo(p => ({ ...p, details: e.target.value }))}
@@ -843,7 +843,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   }
                   goToNextStep();
                 }}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -855,7 +855,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {step === 3 && (
           <div className="space-y-3.5">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-400 block">الإيميل الافتراضي</label>
+              <label className="text-xs font-bold text-neutral-400 block">الإيميل الافتراضي</label>
               <input
                 type="email"
                 readOnly
@@ -865,7 +865,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">رقم واتساب (إجباري) *</label>
+              <label className="text-xs font-bold text-neutral-500 block">رقم واتساب (إجباري) *</label>
               <input
                 type="tel"
                 value={contactInfo.whatsapp}
@@ -876,7 +876,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-400 block">رقم الهاتف (غير إجباري)</label>
+              <label className="text-xs font-bold text-neutral-400 block">رقم الهاتف (غير إجباري)</label>
               <input
                 type="tel"
                 value={contactInfo.phone}
@@ -887,7 +887,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-400 block">حساب فيسبوك (غير إجباري)</label>
+              <label className="text-xs font-bold text-neutral-400 block">حساب فيسبوك (غير إجباري)</label>
               <input
                 type="url"
                 value={contactInfo.facebook}
@@ -898,7 +898,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-400 block">حساب Tiktok (غير إجباري)</label>
+              <label className="text-xs font-bold text-neutral-400 block">حساب Tiktok (غير إجباري)</label>
               <input
                 type="url"
                 value={contactInfo.tiktok}
@@ -925,7 +925,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   }
                   goToNextStep();
                 }}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -937,7 +937,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {step === 4 && (
           <div className="space-y-3.5">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">{labels.category}</label>
+              <label className="text-xs font-bold text-neutral-500 block">{labels.category}</label>
               <ComboInput
                 ariaLabel={labels.category}
                 value={catalogInfo.category}
@@ -955,7 +955,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-neutral-500 block">{labels.sub}</label>
+              <label className="text-xs font-bold text-neutral-500 block">{labels.sub}</label>
               <ComboInput
                 ariaLabel={labels.sub}
                 value={catalogInfo.subCategory}
@@ -963,12 +963,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 placeholder={labels.ex[1]}
                 onChange={subCategory => setCatalogInfo(p => ({ ...p, subCategory }))}
               />
-              {!labels.item && <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>}
+              {!labels.item && <p className="text-xs text-neutral-400">{LIST_HINT}</p>}
             </div>
 
             {labels.item && (
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-neutral-500 block">{labels.item}</label>
+                <label className="text-xs font-bold text-neutral-500 block">{labels.item}</label>
                 <ComboInput
                   ariaLabel={labels.item}
                   value={catalogInfo.specialty}
@@ -976,7 +976,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   placeholder={labels.ex[2]}
                   onChange={specialty => setCatalogInfo(p => ({ ...p, specialty }))}
                 />
-                <p className="text-[9.5px] text-neutral-400">{LIST_HINT}</p>
+                <p className="text-xs text-neutral-400">{LIST_HINT}</p>
               </div>
             )}
 
@@ -997,7 +997,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   }
                   goToNextStep();
                 }}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -1018,7 +1018,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             {/* الخدمات وأسعارها: قسم الأسعار في الصفحة (المتجر والمطعم والمعرض أسعارهم من الإدارة) */}
             {(!pageKind || pageKind === 'page') && (
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-500 block">خدماتك وأسعارها (اختياري، حتى 8)</label>
+                <label className="text-xs font-bold text-neutral-500 block">خدماتك وأسعارها (اختياري، حتى 8)</label>
                 {(aiAnswers.services || []).map((row, i) => (
                   <div key={i} className="flex gap-1.5">
                     <input
@@ -1050,18 +1050,18 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   <button
                     type="button"
                     onClick={() => setAiAnswers(p => ({ ...p, services: [...(p.services || []), { name: '', price: '' }] }))}
-                    className="w-full py-1.5 border border-dashed border-neutral-300 rounded-lg text-[11px] font-bold text-neutral-600 hover:bg-neutral-50"
+                    className="w-full py-1.5 border border-dashed border-neutral-300 rounded-lg text-xs font-bold text-neutral-600 hover:bg-neutral-50"
                   >
                     + أضف خدمة
                   </button>
                 )}
-                <p className="text-[10px] text-neutral-400">الخدمة بلا سعر بتظهر «حسب الطلب». ما منكتب أي سعر ما كتبته.</p>
+                <p className="text-xs text-neutral-400">الخدمة بلا سعر بتظهر «حسب الطلب». ما منكتب أي سعر ما كتبته.</p>
               </div>
             )}
             {/* المزايا: للمطعم والمتجر والمعرض (أسعارهم من الإدارة) */}
             {pageKind && FEATURE_CHOICES[pageKind] && (
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-500 block">شو بتقدموا كمان؟ (اختر اللي بينطبق)</label>
+                <label className="text-xs font-bold text-neutral-500 block">شو بتقدموا كمان؟ (اختر اللي بينطبق)</label>
                 <div className="flex flex-wrap gap-1.5">
                   {FEATURE_CHOICES[pageKind]!.map((f) => {
                     const on = (aiAnswers.features || []).includes(f);
@@ -1071,7 +1071,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                         type="button"
                         aria-pressed={on}
                         onClick={() => setAiAnswers(p => ({ ...p, features: on ? (p.features || []).filter(x => x !== f) : [...(p.features || []), f] }))}
-                        className={`px-2.5 py-1 rounded-full border text-[11px] font-bold transition-all cursor-pointer ${on ? 'bg-black text-white border-black' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:border-neutral-300'}`}
+                        className={`px-2.5 py-1 rounded-full border text-xs font-bold transition-all cursor-pointer ${on ? 'bg-black text-white border-black' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:border-neutral-300'}`}
                       >
                         {f}
                       </button>
@@ -1097,7 +1097,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   }
                   goToNextStep();
                 }}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -1118,7 +1118,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                     aiAnswers.colorPalette === pal.name ? 'border-black bg-neutral-50 shadow-xs' : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                 >
-                  <span className="text-[10px] font-bold text-neutral-800">{pal.name}</span>
+                  <span className="text-xs font-bold text-neutral-800">{pal.name}</span>
                   <div className="flex gap-1">
                     {pal.colors.map((c, i) => (
                       <span key={i} className="w-3.5 h-3.5 rounded-full border border-neutral-300" style={{ backgroundColor: c }} />
@@ -1130,7 +1130,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
             {/* تخصيص لون من المتصفح */}
             <div className="pt-2 border-t border-neutral-100 flex items-center justify-between">
-              <span className="text-[10.5px] font-bold text-neutral-600">أو حدد لوناً مخصصاً:</span>
+              <span className="text-xs font-bold text-neutral-600">أو حدد لوناً مخصصاً:</span>
               <input
                 type="color"
                 value={aiAnswers.customColor}
@@ -1150,7 +1150,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <button
                 type="button"
                 onClick={goToNextStep}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -1192,7 +1192,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <button
                 type="button"
                 onClick={goToNextStep}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -1226,7 +1226,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
             {aiAnswers.wantsGallery && (
               <div className="space-y-2 pt-2 border-t border-neutral-100">
-                <label className="w-full py-2 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-[10.5px] font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
+                <label className="w-full py-2 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
                   <Upload size={13} />
                   <span>رفع حتى 5 صور من الجهاز</span>
                   <input
@@ -1246,7 +1246,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                         <button
                           type="button"
                           onClick={() => setAiAnswers(p => ({ ...p, galleryImages: p.galleryImages.filter((_, idx) => idx !== i) }))}
-                          className="absolute inset-0 bg-black/40 text-white flex items-center justify-center text-[9px]"
+                          className="absolute inset-0 bg-black/40 text-white flex items-center justify-center text-xs"
                         >
                           <X size={11} />
                         </button>
@@ -1268,7 +1268,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <button
                 type="button"
                 onClick={goToNextStep}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -1294,7 +1294,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               {personalInfo.logoUrl && (
                 <div className="flex items-center gap-2 p-2 bg-neutral-50 rounded-lg border border-neutral-200">
                   <img src={personalInfo.logoUrl} alt="Logo" className="w-8 h-8 rounded object-cover" />
-                  <span className="text-[10px] text-green-600 font-bold">✓ تم تحديد اللوغو</span>
+                  <span className="text-xs text-green-600 font-bold">✓ تم تحديد اللوغو</span>
                 </div>
               )}
 
@@ -1318,7 +1318,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <button
                 type="button"
                 onClick={goToNextStep}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -1347,7 +1347,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   <button
                     type="button"
                     onClick={() => setAiAnswers(p => ({ ...p, heroBgImage: '' }))}
-                    className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded text-[10px]"
+                    className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded text-xs"
                   >
                     <X size={12} />
                   </button>
@@ -1374,7 +1374,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <button
                 type="button"
                 onClick={goToNextStep}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -1414,7 +1414,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <button
                 type="button"
                 onClick={goToNextStep}
-                className="flex-1 py-2 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
               </button>
@@ -1465,14 +1465,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               ✓
             </div>
             <h4 className="font-bold text-neutral-900 text-xs">اكتملت جميع الإجابات بنجاح</h4>
-            <p className="text-[11px] text-neutral-500 leading-relaxed font-semibold">
+            <p className="text-xs text-neutral-500 leading-relaxed font-semibold">
               تم جمع وحفظ كامل معلوماتك ومواصفات موقعك السحابي.
             </p>
             {embedded && onCompleteChat && (
               <button
                 type="button"
                 onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers })}
-                className="w-full py-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-bold rounded-lg transition-all"
+                className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 {isGuest ? 'اعمل حسابك لتنحفظ صفحتك' : 'افتح صفحتي بالمحرر'}
               </button>
@@ -1480,7 +1480,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="text-[10px] text-[#0071e3] hover:underline font-bold"
+              className="text-xs text-brand hover:underline font-bold"
             >
               مراجعة الإجابات من البداية
             </button>
@@ -1493,7 +1493,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       {/* Wee AI builds the page, or writes its texts, from the answers above (after signing up) */}
       {!isGuest && !embedded && <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0 space-y-2">
         {writeNote && (
-          <p role="status" className={`text-[11px] font-semibold leading-relaxed ${writeNote.ok ? 'text-green-700' : 'text-rose-600'}`}>
+          <p role="status" className={`text-xs font-semibold leading-relaxed ${writeNote.ok ? 'text-green-700' : 'text-rose-600'}`}>
             {writeNote.message}
           </p>
         )}
@@ -1515,7 +1515,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
             step < 13 || !onBuildPage
               ? 'text-neutral-400 bg-neutral-100 border border-neutral-200 cursor-not-allowed'
-              : 'text-white bg-gradient-to-l from-violet-600 to-[#0071e3] hover:brightness-110 cursor-pointer disabled:cursor-wait shadow-[0_6px_16px_rgba(79,70,229,0.25)]'
+              : 'text-white bg-gradient-to-l from-violet-600 to-brand hover:brightness-110 cursor-pointer disabled:cursor-wait shadow-[0_6px_16px_rgba(79,70,229,0.25)]'
           }`}
           title={step < 13 ? 'جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك' : 'Wee AI يصمم صفحتك من الشرائح الجاهزة بألوانك ونصوصك وصورك'}
         >
@@ -1531,7 +1531,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               setWriteNote(onRestorePage());
               setCanRestore(false);
             }}
-            className="w-full text-[11px] font-semibold text-neutral-500 hover:text-neutral-800 underline underline-offset-2 cursor-pointer"
+            className="w-full text-xs font-semibold text-neutral-500 hover:text-neutral-800 underline underline-offset-2 cursor-pointer"
           >
             رجّع صفحتي متل ما كانت
           </button>
@@ -1561,7 +1561,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           </span>
           <span>{isWriting ? 'Wee AI عم يكتب نصوصك…' : 'اكتب نصوص صفحتي'}</span>
         </button>
-        {step < 13 && !onEditAnswers && <p className="text-[10px] text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك أو يكتب نصوصها.</p>}
+        {step < 13 && !onEditAnswers && <p className="text-xs text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك أو يكتب نصوصها.</p>}
       </div>}
 
     </div>

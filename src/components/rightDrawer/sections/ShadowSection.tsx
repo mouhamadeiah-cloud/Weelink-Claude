@@ -120,7 +120,7 @@ export const ShadowSection = ({
             onClick={() => setShadowTarget('element')}
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               shadowTarget === 'element' 
-                ? 'bg-white text-[#0071e3] shadow-xs' 
+                ? 'bg-white text-brand shadow-xs' 
                 : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -130,7 +130,7 @@ export const ShadowSection = ({
             onClick={() => setShadowTarget('slide')}
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               shadowTarget === 'slide' 
-                ? 'bg-white text-[#0071e3] shadow-xs' 
+                ? 'bg-white text-brand shadow-xs' 
                 : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -148,7 +148,7 @@ export const ShadowSection = ({
               role="radio"
               aria-checked={shadowOn === k}
               onClick={() => setShadowOn(k)}
-              className={`h-8 rounded-lg transition-colors cursor-pointer ${shadowOn === k ? 'bg-white text-[#0071e3] shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
+              className={`h-8 rounded-lg transition-colors cursor-pointer ${shadowOn === k ? 'bg-white text-brand shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
             >
               {label}
             </button>
@@ -156,8 +156,8 @@ export const ShadowSection = ({
         </div>
       )}
 
-      <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl text-center">
-        <span className="text-[11px] font-bold text-[#0071e3]">
+      <div className="bg-brand/5 border border-brand/10 p-2.5 rounded-xl text-center">
+        <span className="text-xs font-bold text-brand">
           {onLetters
             ? `تعديل ظل حروف: ${elementDisplayName(selectedElement)}`
             : isTargetElement 
@@ -170,7 +170,7 @@ export const ShadowSection = ({
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs">
           <span className="text-neutral-700 font-bold">درجة وشدة الظل:</span>
-          <span className="font-mono text-[#0071e3] font-bold">{activeShadowIntensity}px</span>
+          <span className="font-mono text-brand font-bold">{activeShadowIntensity}px</span>
         </div>
         <input
           type="range"
@@ -178,9 +178,9 @@ export const ShadowSection = ({
           max="50"
           value={activeShadowIntensity}
           onChange={(e) => updateShadowIntensity(Number(e.target.value))}
-          className="w-full accent-[#0071e3] cursor-pointer"
+          className="w-full accent-brand cursor-pointer"
         />
-        <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+        <div className="flex justify-between text-xs text-neutral-400 font-mono">
           <span>إيقاف (0px)</span>
           <span>متوسط (25px)</span>
           <span>شديد (50px)</span>
@@ -195,7 +195,7 @@ export const ShadowSection = ({
 
         {/* أ. ألوان الصفحة الافتراضية */}
         <div className="space-y-1">
-          <span className="text-[10px] text-neutral-400 font-semibold block">
+          <span className="text-xs text-neutral-400 font-semibold block">
             ألوان الصفحة الافتراضية:
           </span>
           <div className="flex gap-2 p-1.5 bg-neutral-50 rounded-xl border border-neutral-200/65">
@@ -206,7 +206,7 @@ export const ShadowSection = ({
                   key={`shadow-palette-color-${idx}-${hex}`}
                   onClick={() => updateShadowColor(hex)}
                   className={`w-7 h-7 rounded-full border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-3xs flex items-center justify-center ${
-                    isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                    isSelected ? 'ring-2 ring-brand scale-110 z-10' : ''
                   }`}
                   style={{ backgroundColor: hex }}
                   title={`لون الصفحة ${idx + 1}: ${hex}`}
@@ -227,10 +227,10 @@ export const ShadowSection = ({
         {/* ب. الخمسين لون الأساسية */}
         <div className="space-y-1">
           <div className="flex justify-between items-center">
-            <span className="text-[10px] text-neutral-400 font-semibold block">
+            <span className="text-xs text-neutral-400 font-semibold block">
               الخمسون لوناً الأساسية:
             </span>
-            <span className="text-[9px] text-neutral-400 font-mono" dir="ltr">50 basic colors</span>
+            <span className="text-xs text-neutral-400 font-mono" dir="ltr">50 basic colors</span>
           </div>
           <div className="p-2 bg-neutral-50 rounded-2xl border border-neutral-200/70 max-h-40 overflow-y-auto pr-1">
             <div className="grid grid-cols-10 gap-1.5">
@@ -241,7 +241,7 @@ export const ShadowSection = ({
                     key={`shadow-basic-color-${idx}-${hex}`}
                     onClick={() => updateShadowColor(hex)}
                     className={`w-5 h-5 rounded-md border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-4xs flex items-center justify-center ${
-                      isSelected ? 'ring-2 ring-[#0071e3] scale-110 z-10' : ''
+                      isSelected ? 'ring-2 ring-brand scale-110 z-10' : ''
                     }`}
                     style={{ backgroundColor: hex }}
                     title={hex}
@@ -273,7 +273,7 @@ export const ShadowSection = ({
             value={activeShadowColor}
             onChange={(e) => updateShadowColor(e.target.value)}
             placeholder="اختر لوناً حراً"
-            className="flex-1 text-[11px] px-2 py-1 bg-white rounded-md border border-neutral-200 font-mono text-left"
+            className="flex-1 text-xs px-2 py-1 bg-white rounded-md border border-neutral-200 font-mono text-left"
             dir="ltr"
           />
         </div>
@@ -284,7 +284,7 @@ export const ShadowSection = ({
         <span className="text-xs font-bold text-neutral-800 block">
           توجيه اتجاه وزاوية الظل:
         </span>
-        <p className="text-[10px] text-neutral-500 leading-tight">
+        <p className="text-xs text-neutral-500 leading-tight">
           {onLetters
             ? 'انقر على المربع لتوجيه ظل الحروف في الاتجاه المرغوب:'
             : 'انقر على المربع لتوجيه الظل في الاتجاه المرغوب. تبرز المعاينات شكل الظل الخارجي المطبق على مربع رمادي افتراضي:'}
@@ -306,7 +306,7 @@ export const ShadowSection = ({
                   onClick={() => updateShadowPosition(cell.id)}
                   className={`relative aspect-square rounded-xl p-1 transition-all flex flex-col items-center justify-center cursor-pointer border-2 bg-white ${
                     isSelected
-                      ? 'border-[#0071e3] bg-[#0071e3]/5 shadow-xs scale-105 z-10'
+                      ? 'border-brand bg-brand/5 shadow-xs scale-105 z-10'
                       : 'border-transparent hover:border-neutral-300'
                   }`}
                   title={cell.name}
@@ -317,11 +317,11 @@ export const ShadowSection = ({
                   >
                     {onLetters && <span className="text-[22px] font-black leading-none text-neutral-700 pointer-events-none" style={{ textShadow: letterPreview }}>أ</span>}
                     {isSelected ? (
-                      <span className="w-4 h-4 rounded-full bg-[#0071e3] text-white flex items-center justify-center font-bold shadow-4xs shrink-0 z-20">
+                      <span className="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center font-bold shadow-4xs shrink-0 z-20">
                         <Check size={10} strokeWidth={3} />
                       </span>
                     ) : onLetters ? null : (
-                      <span className="text-[8.5px] font-bold text-neutral-500/80 pointer-events-none select-none z-10">
+                      <span className="text-xs font-bold text-neutral-500/80 pointer-events-none select-none z-10">
                         {cell.label}
                       </span>
                     )}

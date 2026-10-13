@@ -71,17 +71,17 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
     <section className="rounded-2xl bg-white border border-neutral-200 p-4 space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 text-xs font-bold text-neutral-500 ml-auto"><CalendarDays size={15} /> المواعيد</div>
-        <div className="flex gap-1 bg-[#f5f5f7] rounded-xl p-1">
+        <div className="flex gap-1 bg-bg rounded-xl p-1">
           {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setView(t.id)}
-              className={`h-8 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer ${view === t.id ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-neutral-500'}`}
+              className={`h-8 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer ${view === t.id ? 'bg-white text-ink shadow-sm' : 'text-neutral-500'}`}
             >
               {t.label}
               {groups[t.id].length > 0 && t.id !== 'past' && (
-                <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] flex items-center justify-center ${t.id === 'new' ? 'bg-[#ff3b30] text-white' : 'bg-neutral-200 text-neutral-600'}`}>{groups[t.id].length}</span>
+                <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-xs flex items-center justify-center ${t.id === 'new' ? 'bg-[#ff3b30] text-white' : 'bg-neutral-200 text-neutral-600'}`}>{groups[t.id].length}</span>
               )}
             </button>
           ))}
@@ -93,7 +93,7 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
       ) : rows === 'error' ? (
         <div className="text-xs text-neutral-500">ما قدرنا نقرأ المواعيد هلق. جرّب بعد شوي.</div>
       ) : groups[view].length === 0 ? (
-        <div className="rounded-xl bg-[#f5f5f7] p-4 text-xs text-neutral-500 leading-relaxed">
+        <div className="rounded-xl bg-bg p-4 text-xs text-neutral-500 leading-relaxed">
           {view === 'new'
             ? list.length === 0
               ? 'ما في مواعيد بعد. أضف «حجز مواعيد» لصفحتك من «إضافة»، وبيوصلك إيميل مع كل حجز جديد.'
@@ -108,24 +108,24 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
             const phoneDigits = b.phone.replace(/[^\d+]/g, '');
             return (
               <li key={b.id} className="rounded-xl border border-neutral-200 p-3 flex flex-wrap gap-3 items-start">
-                <div className="w-24 shrink-0 rounded-lg bg-[#f5f5f7] py-2 text-center">
-                  <div className="text-[11px] font-black text-[#0071e3] leading-tight">{dateLabel(b.date)}</div>
-                  <div className="text-[10px] font-bold text-neutral-600 mt-1" dir="rtl">{b.slot}</div>
+                <div className="w-24 shrink-0 rounded-lg bg-bg py-2 text-center">
+                  <div className="text-xs font-black text-brand leading-tight">{dateLabel(b.date)}</div>
+                  <div className="text-xs font-bold text-neutral-600 mt-1" dir="rtl">{b.slot}</div>
                 </div>
                 <div className="flex-1 min-w-[180px] space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-black text-[#1d1d1f]">{b.name}</span>
-                    <span className={`text-[10px] font-bold border rounded-full px-2 py-0.5 ${STATUS[b.status]?.cls || ''}`}>{STATUS[b.status]?.label || b.status}</span>
-                    <span className="text-[10px] font-bold text-neutral-500">{MEETING[b.meetingType] || ''}</span>
+                    <span className="text-sm font-black text-ink">{b.name}</span>
+                    <span className={`text-xs font-bold border rounded-full px-2 py-0.5 ${STATUS[b.status]?.cls || ''}`}>{STATUS[b.status]?.label || b.status}</span>
+                    <span className="text-xs font-bold text-neutral-500">{MEETING[b.meetingType] || ''}</span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-bold">
                     {b.phone && <a href={`tel:${phoneDigits}`} className="text-neutral-600 flex items-center gap-1" dir="ltr"><Phone size={12} />{b.phone}</a>}
                     {b.phone && <a href={`https://wa.me/${phoneDigits.replace(/^\+/, '')}`} target="_blank" rel="noreferrer" className="text-emerald-700 flex items-center gap-1"><MessageCircle size={12} />واتساب</a>}
                     {b.email && <a href={`mailto:${b.email}`} className="text-neutral-600 flex items-center gap-1" dir="ltr"><Mail size={12} />{b.email}</a>}
                   </div>
-                  {b.address && <div className="text-[11px] text-neutral-500">{b.address}</div>}
-                  {b.desc && <div className="text-[11px] text-neutral-600 leading-relaxed">{b.desc}</div>}
-                  {failed === b.id && <div className="text-[11px] font-bold text-red-600">ما زبط. تأكد من الإنترنت وجرّب مرة ثانية.</div>}
+                  {b.address && <div className="text-xs text-neutral-500">{b.address}</div>}
+                  {b.desc && <div className="text-xs text-neutral-600 leading-relaxed">{b.desc}</div>}
+                  {failed === b.id && <div className="text-xs font-bold text-red-600">ما زبط. تأكد من الإنترنت وجرّب مرة ثانية.</div>}
                 </div>
                 {!isPast(b) && (
                   <div className="flex gap-1.5 shrink-0">
@@ -134,12 +134,12 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
                     ) : (
                       <>
                         {b.status === 'new' && (
-                          <button type="button" onClick={() => act(b, 'confirmed')} className="h-8 px-3 rounded-lg bg-[#0071e3] text-white text-xs font-bold flex items-center gap-1 cursor-pointer">
+                          <button type="button" onClick={() => act(b, 'confirmed')} className="h-8 px-3 rounded-lg bg-brand text-white text-xs font-bold flex items-center gap-1 cursor-pointer">
                             <CalendarCheck2 size={14} /> تأكيد
                           </button>
                         )}
                         {b.status === 'confirmed' && (
-                          <button type="button" onClick={() => act(b, 'done')} className="h-8 px-3 rounded-lg bg-[#1d1d1f] text-white text-xs font-bold flex items-center gap-1 cursor-pointer">
+                          <button type="button" onClick={() => act(b, 'done')} className="h-8 px-3 rounded-lg bg-ink text-white text-xs font-bold flex items-center gap-1 cursor-pointer">
                             <Check size={14} /> منجز
                           </button>
                         )}

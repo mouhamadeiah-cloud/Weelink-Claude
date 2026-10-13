@@ -107,7 +107,7 @@ export const SelectionNameInput: React.FC<{ name: string; onRename: (name: strin
       }}
       title={disabled ? name : 'اسم العنصر أو الشريحة (اضغط Enter للحفظ)'}
       placeholder="اسم العنصر..."
-      className={`text-xs font-semibold text-[#1d1d1f] bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white px-2.5 py-1.5 rounded-lg border border-transparent focus:border-[#0071e3] focus:outline-none transition-all truncate text-right disabled:hover:bg-neutral-100/80 ${className}`}
+      className={`text-xs font-semibold text-ink bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white px-2.5 py-1.5 rounded-lg border border-transparent focus:border-brand focus:outline-none transition-all truncate text-right disabled:hover:bg-neutral-100/80 ${className}`}
     />
   );
 };
@@ -262,7 +262,7 @@ export const EditBar: React.FC<EditBarProps> = ({
           icon: (
             <span className="font-sans font-bold leading-none tracking-tight flex items-baseline">
               <span className="text-[13px]">a</span>
-              <span className="text-[11px] font-extrabold text-[#0071e3]">A</span>
+              <span className="text-xs font-extrabold text-brand">A</span>
             </span>
           ),
           section: 'fontFamily',
@@ -369,9 +369,9 @@ export const EditBar: React.FC<EditBarProps> = ({
         : t.tone === 'amber' && t.on
           ? 'bg-amber-500/15 text-amber-600'
           : active
-            ? 'bg-[#0071e3]/15 text-[#0071e3] ring-1 ring-[#0071e3]/40'
+            ? 'bg-brand/15 text-brand ring-1 ring-brand/40'
             : t.tone === 'accent'
-              ? 'text-[#0071e3] hover:bg-[#0071e3]/10'
+              ? 'text-brand hover:bg-brand/10'
               : 'text-neutral-600 hover:text-black hover:bg-black/[0.05]';
     return (
       <button
@@ -404,11 +404,11 @@ export const EditBar: React.FC<EditBarProps> = ({
       >
         {popover.id === 'clip' ? (
           <>
-            <div className="text-[11px] font-bold text-emerald-700 px-2 py-1">قص الحواف الفني</div>
+            <div className="text-xs font-bold text-emerald-700 px-2 py-1">قص الحواف الفني</div>
             <PopoverOption label="🔲 بدون قص (مستطيل طبيعي)" on={!el.clipPath} onPick={() => onUpdateElement(el.id, { clipPath: undefined })} />
             {CLIP_GROUPS.map((g) => (
               <div key={g.label} className="mt-1">
-                <div className="text-[10px] font-bold text-neutral-400 px-2 pt-1.5 pb-0.5">{g.label}</div>
+                <div className="text-xs font-bold text-neutral-400 px-2 pt-1.5 pb-0.5">{g.label}</div>
                 {g.options.map(([value, label]) => (
                   <PopoverOption key={value} label={label} on={el.clipPath === value} onPick={() => onUpdateElement(el.id, { clipPath: value })} />
                 ))}
@@ -417,7 +417,7 @@ export const EditBar: React.FC<EditBarProps> = ({
           </>
         ) : (
           <>
-            <div className="text-[11px] font-bold text-neutral-500 px-2 py-1">شكل الصورة</div>
+            <div className="text-xs font-bold text-neutral-500 px-2 py-1">شكل الصورة</div>
             {MASK_SHAPES.map((m) => (
               <PopoverOption key={m.id} label={m.name} on={(el.content || 'circle') === m.id} onPick={() => onUpdateElement(el.id, { content: m.id })} />
             ))}
@@ -442,7 +442,7 @@ export const EditBar: React.FC<EditBarProps> = ({
               type="button"
               onClick={onTogglePanel}
               className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
-                isPanelOpen ? 'text-neutral-600 hover:text-black hover:bg-black/[0.05]' : 'text-[#0071e3] bg-[#0071e3]/10 hover:bg-[#0071e3]/15'
+                isPanelOpen ? 'text-neutral-600 hover:text-black hover:bg-black/[0.05]' : 'text-brand bg-brand/10 hover:bg-brand/15'
               }`}
               title={isPanelOpen ? 'إخفاء لوحة التحكم' : 'إظهار لوحة التحكم'}
               aria-label={isPanelOpen ? 'إخفاء لوحة التحكم' : 'إظهار لوحة التحكم'}
@@ -493,7 +493,7 @@ const PopoverOption: React.FC<{ label: string; on: boolean; onPick: () => void }
     type="button"
     onClick={onPick}
     className={`w-full text-right px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
-      on ? 'bg-[#0071e3] text-white' : 'text-neutral-700 hover:bg-neutral-100'
+      on ? 'bg-brand text-white' : 'text-neutral-700 hover:bg-neutral-100'
     }`}
   >
     {label}

@@ -76,9 +76,9 @@ export const SignaturePad: React.FC<Props> = ({ label, value, onChange, disabled
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold text-neutral-600">{label}</span>
+        <span className="text-xs font-bold text-neutral-600">{label}</span>
         {!disabled && (value || drew.current) && (
-          <button type="button" onClick={clear} className="text-[11px] font-bold text-neutral-500 hover:text-red-500 flex items-center gap-1 cursor-pointer"><Eraser size={12} /> مسح</button>
+          <button type="button" onClick={clear} className="text-xs font-bold text-neutral-500 hover:text-red-500 flex items-center gap-1 cursor-pointer"><Eraser size={12} /> مسح</button>
         )}
       </div>
       {value && !editing ? (
@@ -95,7 +95,7 @@ export const SignaturePad: React.FC<Props> = ({ label, value, onChange, disabled
           onPointerLeave={up}
         />
       )}
-      {!value && !disabled && <p className="text-[10px] text-neutral-400">وقّع داخل المربع بالإصبع أو بالقلم أو بالماوس.</p>}
+      {!value && !disabled && <p className="text-xs text-neutral-400">وقّع داخل المربع بالإصبع أو بالقلم أو بالماوس.</p>}
     </div>
   );
 };

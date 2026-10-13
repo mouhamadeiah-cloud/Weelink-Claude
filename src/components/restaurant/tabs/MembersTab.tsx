@@ -14,7 +14,7 @@ const PermToggles: React.FC<{ perms: Perms; onChange: (p: Perms) => void }> = ({
     {PERMS.map((p) => (
       <div key={p.id}>
         <Toggle checked={perms[p.id]} onChange={(v) => onChange({ ...perms, [p.id]: v })} label={p.label} />
-        <div className="text-[11px] text-neutral-400 font-bold -mt-0.5 mb-1">{p.hint}</div>
+        <div className="text-xs text-neutral-400 font-bold -mt-0.5 mb-1">{p.hint}</div>
       </div>
     ))}
   </div>
@@ -101,8 +101,8 @@ export const MembersTab: React.FC<RestaurantTabProps> = ({ ownerUid }) => {
               <div key={i.code} className="flex flex-wrap items-center gap-2 p-3 rounded-2xl border border-neutral-200">
                 <div className="flex-1 min-w-[180px]">
                   <div className="text-sm font-black">{i.name || i.email}</div>
-                  <div className="text-[11px] text-neutral-400 font-bold" dir="ltr">{i.email}</div>
-                  <div className="text-[11px] text-neutral-500 font-bold mt-0.5">{permSummary(i.perms)}</div>
+                  <div className="text-xs text-neutral-400 font-bold" dir="ltr">{i.email}</div>
+                  <div className="text-xs text-neutral-500 font-bold mt-0.5">{permSummary(i.perms)}</div>
                 </div>
                 <GhostButton onClick={() => navigator.clipboard?.writeText(inviteUrl(ownerUid, i.code)).catch(() => {})}>نسخ الرابط</GhostButton>
                 <GhostButton onClick={() => deleteInvite(ownerUid, i.code).catch(() => {})} className="text-[#E03131]">
@@ -125,7 +125,7 @@ export const MembersTab: React.FC<RestaurantTabProps> = ({ ownerUid }) => {
                   <div className="w-9 h-9 rounded-xl bg-neutral-100 text-neutral-500 flex items-center justify-center"><Users size={16} /></div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-black truncate">{m.name || m.email}</div>
-                    <div className="text-[11px] text-neutral-400 font-bold truncate" dir="ltr">{m.email}</div>
+                    <div className="text-xs text-neutral-400 font-bold truncate" dir="ltr">{m.email}</div>
                   </div>
                   <GhostButton
                     className="text-[#E03131]"

@@ -116,7 +116,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, c
             aria-label="ابحث"
             className="flex-1 h-full bg-transparent text-[15px] text-neutral-900 placeholder:text-neutral-400 outline-none"
           />
-          <kbd className="text-[10px] font-mono text-neutral-400 border border-neutral-200 rounded-md px-1.5 py-0.5">Esc</kbd>
+          <kbd className="text-xs font-mono text-neutral-400 border border-neutral-200 rounded-md px-1.5 py-0.5">Esc</kbd>
         </div>
         <div ref={listRef} role="listbox" className="max-h-[52vh] overflow-y-auto p-1.5">
           {results.length === 0 && <div className="py-10 text-center text-sm text-neutral-400">ما في نتائج. جرّب كلمة تانية.</div>}
@@ -124,7 +124,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, c
             const showSection = !query.trim() && (i === 0 || results[i - 1].section !== c.section);
             return (
               <React.Fragment key={c.id}>
-                {showSection && <div className="px-3 pt-2.5 pb-1 text-[11px] font-bold text-neutral-400">{c.section}</div>}
+                {showSection && <div className="px-3 pt-2.5 pb-1 text-xs font-bold text-neutral-400">{c.section}</div>}
                 <button
                   type="button"
                   role="option"
@@ -132,21 +132,21 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose, c
                   data-index={i}
                   onMouseMove={() => setActive(i)}
                   onClick={() => run(c)}
-                  className={`w-full flex items-center gap-3 px-3 h-11 rounded-xl text-right cursor-pointer transition-colors ${i === active ? 'bg-[#0071e3]/10' : ''}`}
+                  className={`w-full flex items-center gap-3 px-3 h-11 rounded-xl text-right cursor-pointer transition-colors ${i === active ? 'bg-brand/10' : ''}`}
                 >
-                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${i === active ? 'bg-[#0071e3] text-white' : 'bg-neutral-100 text-neutral-600'}`}>
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${i === active ? 'bg-brand text-white' : 'bg-neutral-100 text-neutral-600'}`}>
                     {c.icon || <Search size={14} />}
                   </span>
                   <span className="flex-1 min-w-0 truncate text-[13.5px] font-semibold text-neutral-900">{c.title}</span>
-                  {c.hint && <kbd className="text-[10.5px] font-mono text-neutral-400">{c.hint}</kbd>}
-                  {query.trim() && <span className="text-[11px] text-neutral-400 shrink-0">{c.section}</span>}
-                  {i === active && <CornerDownLeft size={14} className="text-[#0071e3] shrink-0" />}
+                  {c.hint && <kbd className="text-xs font-mono text-neutral-400">{c.hint}</kbd>}
+                  {query.trim() && <span className="text-xs text-neutral-400 shrink-0">{c.section}</span>}
+                  {i === active && <CornerDownLeft size={14} className="text-brand shrink-0" />}
                 </button>
               </React.Fragment>
             );
           })}
         </div>
-        <div className="flex items-center gap-3 px-4 h-9 border-t border-neutral-100 text-[11px] text-neutral-400">
+        <div className="flex items-center gap-3 px-4 h-9 border-t border-neutral-100 text-xs text-neutral-400">
           <span>↑ ↓ للتنقل</span>
           <span>Enter للفتح</span>
         </div>

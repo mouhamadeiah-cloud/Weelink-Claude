@@ -3492,11 +3492,11 @@ export default function App() {
   return (
     <BookingPageContext.Provider value={bookingPage}>
     <RatingsSlideContext.Provider value={ratingsSlide}>
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col antialiased selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
+    <div className="min-h-screen bg-bg text-ink flex flex-col antialiased selection:bg-brand/15 selection:text-brand">
       {/* The build after the questions: working, then what came of it */}
       {buildNotice && (
         <div dir="rtl" role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[99999] max-w-[92vw] w-[26rem] bg-white border border-neutral-200 shadow-[0_16px_40px_rgba(0,0,0,0.18)] rounded-2xl px-4 py-3 flex items-start gap-3 text-xs font-semibold text-neutral-800">
-          {buildNotice.busy ? <Loader2 size={16} className="animate-spin text-[#0071e3] shrink-0 mt-0.5" /> : <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${buildNotice.ok ? 'bg-green-500' : 'bg-rose-500'}`} />}
+          {buildNotice.busy ? <Loader2 size={16} className="animate-spin text-brand shrink-0 mt-0.5" /> : <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${buildNotice.ok ? 'bg-green-500' : 'bg-rose-500'}`} />}
           <p className="flex-1 leading-relaxed">{buildNotice.message}</p>
           {!buildNotice.busy && (
             <button type="button" onClick={() => setBuildNotice(null)} className="text-neutral-400 hover:text-neutral-800 font-bold" aria-label="إغلاق">✕</button>
@@ -3527,7 +3527,7 @@ export default function App() {
 
                 {/* Dev Domain */}
                 <div className="mb-2">
-                  <div className="text-[10px] text-gray-600 font-bold mb-1">1. نطاق المحرر الحالي (Dev):</div>
+                  <div className="text-xs text-gray-600 font-bold mb-1">1. نطاق المحرر الحالي (Dev):</div>
                   <div className="flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-lg p-2 text-xs font-mono text-gray-800 break-all select-all">
                     <span>ais-dev-s7v6hg2ymnenfiwu6if6oo-430862877888.europe-west2.run.app</span>
                     <button
@@ -3536,7 +3536,7 @@ export default function App() {
                         navigator.clipboard.writeText('ais-dev-s7v6hg2ymnenfiwu6if6oo-430862877888.europe-west2.run.app');
                         alert('تم نسخ نطاق المحرر (Dev) بنجاح!');
                       }}
-                      className="shrink-0 bg-[#0071e3] hover:bg-[#0077ed] text-white px-2.5 py-1 rounded-md text-[11px] font-sans transition-all cursor-pointer"
+                      className="shrink-0 bg-brand hover:bg-brand-hover text-white px-2.5 py-1 rounded-md text-xs font-sans transition-all cursor-pointer"
                     >
                       نسخ
                     </button>
@@ -3545,7 +3545,7 @@ export default function App() {
 
                 {/* Pre Domain */}
                 <div className="mb-3">
-                  <div className="text-[10px] text-gray-600 font-bold mb-1">2. نطاق المعاينة والنشر (Live):</div>
+                  <div className="text-xs text-gray-600 font-bold mb-1">2. نطاق المعاينة والنشر (Live):</div>
                   <div className="flex items-center justify-between gap-2 bg-white border border-gray-200 rounded-lg p-2 text-xs font-mono text-gray-800 break-all select-all">
                     <span>ais-pre-s7v6hg2ymnenfiwu6if6oo-430862877888.europe-west2.run.app</span>
                     <button
@@ -3554,14 +3554,14 @@ export default function App() {
                         navigator.clipboard.writeText('ais-pre-s7v6hg2ymnenfiwu6if6oo-430862877888.europe-west2.run.app');
                         alert('تم نسخ نطاق المعاينة (Live) بنجاح!');
                       }}
-                      className="shrink-0 bg-[#0071e3] hover:bg-[#0077ed] text-white px-2.5 py-1 rounded-md text-[11px] font-sans transition-all cursor-pointer"
+                      className="shrink-0 bg-brand hover:bg-brand-hover text-white px-2.5 py-1 rounded-md text-xs font-sans transition-all cursor-pointer"
                     >
                       نسخ
                     </button>
                   </div>
                 </div>
                 
-                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 space-y-1">
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 space-y-1">
                   <p className="font-bold">⚠️ ملاحظة مهمة جداً:</p>
                   <p>تأكد من حرف <strong>h</strong> في كلمة <strong>s7v6hg</strong> (وليست lg).</p>
                 </div>
@@ -3572,7 +3572,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setAuthErrorModal(null)}
-                className="w-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-sm font-semibold py-2.5 rounded-xl transition-all shadow-sm active:scale-98 cursor-pointer"
+                className="w-full bg-brand hover:bg-brand-hover text-white text-sm font-semibold py-2.5 rounded-xl transition-all shadow-sm active:scale-98 cursor-pointer"
               >
                 حسناً، فهمت
               </button>
@@ -3694,7 +3694,7 @@ export default function App() {
         </RestaurantDataContext.Provider>
         {isCanvasLoading && (
           <div className="absolute inset-0 bg-white/75 backdrop-blur-xs z-50 flex flex-col items-center justify-center select-none text-right font-sans">
-            <Loader2 className="w-9 h-9 text-[#0071e3] animate-spin mb-3" />
+            <Loader2 className="w-9 h-9 text-brand animate-spin mb-3" />
             <span className="text-xs font-black text-neutral-600 animate-pulse">جاري تحميل وتحديث البيانات في ساحة العمليات...</span>
           </div>
         )}

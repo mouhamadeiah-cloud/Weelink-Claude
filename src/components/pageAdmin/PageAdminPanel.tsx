@@ -60,15 +60,15 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
 
   return (
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-[1000001] bg-black/30 backdrop-blur-[2px] flex items-center justify-center p-2 sm:p-6" onMouseDown={onClose}>
-      <div dir="rtl" className="w-full max-w-4xl max-h-full bg-[#f5f5f7] rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.35)] flex flex-col overflow-hidden text-right font-sans" onMouseDown={(e) => e.stopPropagation()}>
+      <div dir="rtl" className="w-full max-w-4xl max-h-full bg-bg rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.35)] flex flex-col overflow-hidden text-right font-sans" onMouseDown={(e) => e.stopPropagation()}>
         <header className="flex items-center gap-3 px-4 sm:px-6 h-16 bg-white border-b border-neutral-200 shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-[#0071e3] text-white flex items-center justify-center"><BarChart3 size={18} /></div>
+          <div className="w-9 h-9 rounded-xl bg-brand text-white flex items-center justify-center"><BarChart3 size={18} /></div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-black text-[#1d1d1f] truncate">إدارة الصفحة{pageName ? ` · ${pageName}` : ''}</div>
-            <div className="text-[10px] text-neutral-400 font-bold">Weelink</div>
+            <div className="text-sm font-black text-ink truncate">إدارة الصفحة{pageName ? ` · ${pageName}` : ''}</div>
+            <div className="text-xs text-neutral-400 font-bold">Weelink</div>
           </div>
           {onEditPage && (
-            <button type="button" onClick={() => { onClose(); onEditPage(); }} className="h-9 px-3 rounded-xl bg-[#1d1d1f] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+            <button type="button" onClick={() => { onClose(); onEditPage(); }} className="h-9 px-3 rounded-xl bg-ink text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
               <PencilLine size={14} /> تعديل الصفحة
             </button>
           )}
@@ -81,7 +81,7 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
           {!published && (
             <div className="rounded-2xl bg-[#fff8e6] border border-[#f5d48a] p-4 flex flex-wrap items-center gap-3 text-xs font-bold text-[#7a5a00]">
               <span className="flex-1 min-w-[200px]">صفحتك لسا مش منشورة. الزوار والتواصل بيبلشوا ينعدّوا من بعد ما تنشرها.</span>
-              {onPublish && <button type="button" onClick={() => { onClose(); onPublish(); }} className="h-9 px-4 rounded-xl bg-[#1d1d1f] text-white cursor-pointer">نشر الصفحة</button>}
+              {onPublish && <button type="button" onClick={() => { onClose(); onPublish(); }} className="h-9 px-4 rounded-xl bg-ink text-white cursor-pointer">نشر الصفحة</button>}
             </div>
           )}
 
@@ -103,9 +103,9 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
                 ) : (
                   <div className="grid grid-cols-3 gap-2 text-center">
                     {[['اليوم', 1], ['آخر 7 أيام', 7], ['آخر 30 يوم', 30]].map(([label, n]) => (
-                      <div key={label as string} className="rounded-xl bg-[#f5f5f7] py-2.5">
-                        <div className="text-xl font-black text-[#1d1d1f]">{fmt(sum(rows, c.key, n as number))}</div>
-                        <div className="text-[10px] font-bold text-neutral-500">{label}</div>
+                      <div key={label as string} className="rounded-xl bg-bg py-2.5">
+                        <div className="text-xl font-black text-ink">{fmt(sum(rows, c.key, n as number))}</div>
+                        <div className="text-xs font-bold text-neutral-500">{label}</div>
                       </div>
                     ))}
                   </div>
@@ -119,7 +119,7 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
               <div className="text-xs font-bold text-neutral-500">الزوار بآخر 30 يوم</div>
               <div className="h-28 flex items-end gap-[3px]" dir="ltr">
                 {rows.map((r) => (
-                  <div key={r.day} title={`${r.day}: ${r.visits}`} className="flex-1 rounded-t bg-[#0071e3]" style={{ height: `${Math.max(2, (r.visits / max) * 100)}%`, opacity: r.visits ? 1 : 0.15 }} />
+                  <div key={r.day} title={`${r.day}: ${r.visits}`} className="flex-1 rounded-t bg-brand" style={{ height: `${Math.max(2, (r.visits / max) * 100)}%`, opacity: r.visits ? 1 : 0.15 }} />
                 ))}
               </div>
             </section>
@@ -129,12 +129,12 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
             <div className="flex items-center gap-2 text-xs font-bold text-neutral-500"><Sparkles size={15} /> خدمات بتقدر تضيفها لصفحتك</div>
             <ul className="grid sm:grid-cols-3 gap-2">
               {SERVICES.map((s) => (
-                <li key={s.title} className="rounded-xl bg-[#f5f5f7] p-3 space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm font-black text-[#1d1d1f]">
-                    <s.icon size={16} className="text-[#0071e3]" /> {s.title}
-                    {s.soon && <span className="mr-auto text-[10px] font-bold text-[#0071e3] bg-white rounded-full px-2 py-0.5">قريباً</span>}
+                <li key={s.title} className="rounded-xl bg-bg p-3 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-black text-ink">
+                    <s.icon size={16} className="text-brand" /> {s.title}
+                    {s.soon && <span className="mr-auto text-xs font-bold text-brand bg-white rounded-full px-2 py-0.5">قريباً</span>}
                   </div>
-                  <p className="text-[11px] leading-relaxed text-neutral-600">{s.line}</p>
+                  <p className="text-xs leading-relaxed text-neutral-600">{s.line}</p>
                 </li>
               ))}
             </ul>

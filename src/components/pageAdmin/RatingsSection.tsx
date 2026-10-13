@@ -27,7 +27,7 @@ const RatingActions: React.FC<{ owner: string; r: Rating; reply: typeof replyToR
   if (!mode) {
     return (
       <div className="flex gap-1.5 pt-1">
-        <button type="button" onClick={() => { setWords(r.reply?.text || ''); setMode('reply'); }} className="h-8 px-3 rounded-lg bg-[#0071e3]/10 text-[#0071e3] text-xs font-bold flex items-center gap-1 cursor-pointer">
+        <button type="button" onClick={() => { setWords(r.reply?.text || ''); setMode('reply'); }} className="h-8 px-3 rounded-lg bg-brand/10 text-brand text-xs font-bold flex items-center gap-1 cursor-pointer">
           <MessageSquareReply size={13} /> {r.reply?.text ? 'تعديل الرد' : 'رد'}
         </button>
         {r.reported ? (
@@ -49,11 +49,11 @@ const RatingActions: React.FC<{ owner: string; r: Rating; reply: typeof replyToR
         maxLength={800}
         autoFocus
         placeholder={mode === 'reply' ? 'اكتب ردّك. بيظهر تحت التقييم، وبيوصل لصاحبه بالإيميل.' : 'ليش هذا التقييم مخالف؟ (مسيء، كاذب، مش زبون...) فريق Weelink بيراجعه.'}
-        className="w-full text-sm px-3 py-2 rounded-xl border border-neutral-200 bg-[#f5f5f7] focus:bg-white focus:outline-none focus:border-neutral-400 resize-none"
+        className="w-full text-sm px-3 py-2 rounded-xl border border-neutral-200 bg-bg focus:bg-white focus:outline-none focus:border-neutral-400 resize-none"
       />
-      {error && <div className="text-[11px] font-bold text-red-600">{error}</div>}
+      {error && <div className="text-xs font-bold text-red-600">{error}</div>}
       <div className="flex gap-1.5">
-        <button type="button" disabled={busy || (mode === 'report' && !words.trim())} onClick={save} className="h-8 px-3 rounded-lg bg-[#1d1d1f] text-white text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50">
+        <button type="button" disabled={busy || (mode === 'report' && !words.trim())} onClick={save} className="h-8 px-3 rounded-lg bg-ink text-white text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50">
           {busy && <Loader2 size={13} className="animate-spin" />}
           {mode === 'reply' ? (words.trim() ? 'نشر الرد' : 'حذف الرد') : 'إرسال الإبلاغ'}
         </button>
@@ -83,18 +83,18 @@ export const RatingsSection: React.FC<RatingsSectionProps> = ({ owner, project, 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2 text-xs font-bold text-neutral-500 ml-auto"><Star size={15} /> التقييمات</div>
         {summary.count > 0 && (
-          <div className="flex items-center gap-2 text-sm font-black text-[#1d1d1f]">
+          <div className="flex items-center gap-2 text-sm font-black text-ink">
             {fmt1(summary.average)} <Stars value={summary.average} size={13} />
-            <span className="text-[11px] font-bold text-neutral-400">({summary.count.toLocaleString('ar-SY')})</span>
+            <span className="text-xs font-bold text-neutral-400">({summary.count.toLocaleString('ar-SY')})</span>
           </div>
         )}
-        {unanswered > 0 && <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 rounded-full px-2 py-0.5">{unanswered.toLocaleString('ar-SY')} بدون رد</span>}
+        {unanswered > 0 && <span className="text-xs font-bold text-brand bg-brand/10 rounded-full px-2 py-0.5">{unanswered.toLocaleString('ar-SY')} بدون رد</span>}
       </div>
 
       {slide && !slide.has && (
         <div className="rounded-xl bg-[#fff8e6] border border-[#f5d48a] p-3 flex flex-wrap items-center gap-3 text-xs font-bold text-[#7a5a00]">
           <span className="flex-1 min-w-[200px]">صفحتك ما فيها شريحة التقييمات. زبائنك ما بيقدروا يقيّموك بدونها.</span>
-          <button type="button" onClick={slide.add} className="h-9 px-3 rounded-xl bg-[#1d1d1f] text-white flex items-center gap-1 cursor-pointer"><Plus size={14} /> أضف شريحة التقييمات</button>
+          <button type="button" onClick={slide.add} className="h-9 px-3 rounded-xl bg-ink text-white flex items-center gap-1 cursor-pointer"><Plus size={14} /> أضف شريحة التقييمات</button>
         </div>
       )}
 
@@ -103,7 +103,7 @@ export const RatingsSection: React.FC<RatingsSectionProps> = ({ owner, project, 
       ) : rows === 'error' ? (
         <div className="text-xs text-neutral-500">ما قدرنا نقرأ التقييمات هلق. جرّب بعد شوي.</div>
       ) : rows.length === 0 ? (
-        <div className="rounded-xl bg-[#f5f5f7] p-4 text-xs text-neutral-500 leading-relaxed">ما في تقييمات بعد. بس يقيّمك حدا بيوصلك إيميل، وفيك ترد عليه من هون.</div>
+        <div className="rounded-xl bg-bg p-4 text-xs text-neutral-500 leading-relaxed">ما في تقييمات بعد. بس يقيّمك حدا بيوصلك إيميل، وفيك ترد عليه من هون.</div>
       ) : (
         <ul className="max-h-[420px] overflow-y-auto">
           {rows.map((r) => (

@@ -58,7 +58,7 @@ export const CarCustomersTab: React.FC<CarTabProps> = ({ data, update, onOpenDoc
           actions={<button type="button" onClick={() => setEditing(null)} aria-label="إغلاق" className="w-8 h-8 rounded-lg hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer"><X size={16} /></button>}
         >
           <CustomerFields value={editing.draft} onChange={(draft) => setEditing({ ...editing, draft })} />
-          {error && <div className="text-[11px] text-red-600 font-bold">{error}</div>}
+          {error && <div className="text-xs text-red-600 font-bold">{error}</div>}
           <div className="flex gap-2">
             <PrimaryButton onClick={save}>حفظ الزبون</PrimaryButton>
             <GhostButton onClick={() => setEditing(null)} className="h-10">إلغاء</GhostButton>
@@ -78,7 +78,7 @@ export const CarCustomersTab: React.FC<CarTabProps> = ({ data, update, onOpenDoc
           <div className="flex flex-wrap gap-1">
             {filters.map((f) => (
               <button key={f.id} type="button" onClick={() => setRole(f.id)}
-                className={`h-10 px-3 rounded-xl text-xs font-bold border cursor-pointer ${role === f.id ? 'bg-[#1d1d1f] text-white border-[#1d1d1f]' : 'bg-white text-neutral-600 border-neutral-200'}`}>
+                className={`h-10 px-3 rounded-xl text-xs font-bold border cursor-pointer ${role === f.id ? 'bg-ink text-white border-ink' : 'bg-white text-neutral-600 border-neutral-200'}`}>
                 {f.label}
               </button>
             ))}
@@ -96,10 +96,10 @@ export const CarCustomersTab: React.FC<CarTabProps> = ({ data, update, onOpenDoc
               return (
                 <div key={c.id} className="rounded-2xl border border-neutral-200 p-3 space-y-2">
                   <div className="flex items-start gap-2">
-                    <div className="w-9 h-9 rounded-full bg-[#1d1d1f] text-white flex items-center justify-center text-sm font-black shrink-0">{c.name.trim().charAt(0) || '؟'}</div>
+                    <div className="w-9 h-9 rounded-full bg-ink text-white flex items-center justify-center text-sm font-black shrink-0">{c.name.trim().charAt(0) || '؟'}</div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-black text-[#1d1d1f] truncate">{c.name}</div>
-                      <div className="text-[11px] text-neutral-500 truncate">{[c.phone && <span key="p" dir="ltr">{c.phone}</span>, c.city].filter(Boolean).reduce<React.ReactNode[]>((a, x, i) => (i ? [...a, ' · ', x] : [x]), [])}</div>
+                      <div className="text-sm font-black text-ink truncate">{c.name}</div>
+                      <div className="text-xs text-neutral-500 truncate">{[c.phone && <span key="p" dir="ltr">{c.phone}</span>, c.city].filter(Boolean).reduce<React.ReactNode[]>((a, x, i) => (i ? [...a, ' · ', x] : [x]), [])}</div>
                     </div>
                     <div className="flex gap-1 shrink-0">
                       {wa && <a href={wa} target="_blank" rel="noopener noreferrer" aria-label="واتساب" className="w-8 h-8 rounded-lg border border-neutral-200 text-[#25d366] hover:bg-green-50 flex items-center justify-center"><MessageCircle size={14} /></a>}
@@ -110,11 +110,11 @@ export const CarCustomersTab: React.FC<CarTabProps> = ({ data, update, onOpenDoc
                   </div>
                   {c.roles.length > 0 && (
                     <div className="flex gap-1">
-                      {c.roles.map((r) => <span key={r} className="px-2 py-0.5 rounded-full bg-neutral-100 text-[10px] font-bold text-neutral-600">{CUSTOMER_ROLES.find((x) => x.id === r)?.label}</span>)}
+                      {c.roles.map((r) => <span key={r} className="px-2 py-0.5 rounded-full bg-neutral-100 text-xs font-bold text-neutral-600">{CUSTOMER_ROLES.find((x) => x.id === r)?.label}</span>)}
                     </div>
                   )}
                   {cars.length > 0 && (
-                    <div className="text-[11px] text-neutral-600 space-y-0.5">
+                    <div className="text-xs text-neutral-600 space-y-0.5">
                       {cars.map((car) => (
                         <div key={car.id} className="flex justify-between gap-2">
                           <span className="truncate">اشترى {carTitle(car)} {car.year || ''}</span>
@@ -124,20 +124,20 @@ export const CarCustomersTab: React.FC<CarTabProps> = ({ data, update, onOpenDoc
                     </div>
                   )}
                   {Object.keys(owed).length > 0 && (
-                    <div className="rounded-lg bg-amber-50 text-[#b06f00] px-2 py-1 text-[11px] font-bold">
+                    <div className="rounded-lg bg-amber-50 text-[#b06f00] px-2 py-1 text-xs font-bold">
                       متبقٍ عليه: {Object.entries(owed).map(([cur, n]) => formatMoney(n, cur)).join(' + ')}
                     </div>
                   )}
                   {data.documents.some((x) => x.customerId === c.id) && (
                     <div className="flex flex-wrap gap-1">
                       {data.documents.filter((x) => x.customerId === c.id).map((x) => (
-                        <button key={x.id} type="button" onClick={() => onOpenDocument?.(x.id)} className="h-7 px-2 rounded-lg bg-blue-50 text-[#0071e3] text-[10px] font-bold flex items-center gap-1 cursor-pointer">
+                        <button key={x.id} type="button" onClick={() => onOpenDocument?.(x.id)} className="h-7 px-2 rounded-lg bg-blue-50 text-brand text-xs font-bold flex items-center gap-1 cursor-pointer">
                           <FileText size={11} /> {CAR_DOC_TYPES.find((t) => t.id === x.type)!.label} <span dir="ltr">{x.number}</span>
                         </button>
                       ))}
                     </div>
                   )}
-                  {c.notes && <p className="text-[11px] text-neutral-500 leading-relaxed">{c.notes}</p>}
+                  {c.notes && <p className="text-xs text-neutral-500 leading-relaxed">{c.notes}</p>}
                 </div>
               );
             })}

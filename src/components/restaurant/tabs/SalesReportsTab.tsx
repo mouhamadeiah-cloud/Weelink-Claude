@@ -37,7 +37,7 @@ export const SalesReportsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }
       <CloudNotice error={days.error} />
       <div className="flex flex-wrap gap-2">
         {PERIODS.map((p) => (
-          <button key={p.id} type="button" onClick={() => setPeriod(p.id)} className={`h-9 px-3 rounded-xl text-xs font-black cursor-pointer ${period === p.id ? 'bg-[#1d1d1f] text-white' : 'bg-neutral-100 text-neutral-600'}`}>{p.label}</button>
+          <button key={p.id} type="button" onClick={() => setPeriod(p.id)} className={`h-9 px-3 rounded-xl text-xs font-black cursor-pointer ${period === p.id ? 'bg-ink text-white' : 'bg-neutral-100 text-neutral-600'}`}>{p.label}</button>
         ))}
       </div>
 
@@ -46,10 +46,10 @@ export const SalesReportsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-            <div className="p-3 rounded-2xl bg-[#1d1d1f] text-white"><div className="text-[10px] font-bold text-white/60">المبيعات</div><div className="text-sm font-black mt-0.5">{money(sum.sales)}</div></div>
-            <div className="p-3 rounded-2xl bg-[#F4FCF5] text-[#2B8A3E]"><div className="text-[10px] font-bold">البخشيش</div><div className="text-sm font-black mt-0.5">{money(sum.tips)}</div></div>
-            <div className="p-3 rounded-2xl bg-neutral-100"><div className="text-[10px] font-bold text-neutral-500">فواتير</div><div className="text-sm font-black mt-0.5">{sum.bills}</div></div>
-            <div className="p-3 rounded-2xl bg-neutral-100"><div className="text-[10px] font-bold text-neutral-500">جلسات</div><div className="text-sm font-black mt-0.5">{sorted.length}</div></div>
+            <div className="p-3 rounded-2xl bg-ink text-white"><div className="text-xs font-bold text-white/60">المبيعات</div><div className="text-sm font-black mt-0.5">{money(sum.sales)}</div></div>
+            <div className="p-3 rounded-2xl bg-[#F4FCF5] text-[#2B8A3E]"><div className="text-xs font-bold">البخشيش</div><div className="text-sm font-black mt-0.5">{money(sum.tips)}</div></div>
+            <div className="p-3 rounded-2xl bg-neutral-100"><div className="text-xs font-bold text-neutral-500">فواتير</div><div className="text-sm font-black mt-0.5">{sum.bills}</div></div>
+            <div className="p-3 rounded-2xl bg-neutral-100"><div className="text-xs font-bold text-neutral-500">جلسات</div><div className="text-sm font-black mt-0.5">{sorted.length}</div></div>
           </div>
 
           <Card title="الأطباق المباعة بالعدد">
@@ -68,7 +68,7 @@ export const SalesReportsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }
               {sum.workers.map((w) => (
                 <div key={w.workerId} className="p-3 rounded-xl bg-neutral-50 text-sm space-y-0.5">
                   <div className="flex justify-between font-black"><span>{w.name}</span><span>{money(w.collected)}</span></div>
-                  <div className="text-[11px] font-bold text-neutral-500">نقدي {money(w.cash)} · بخشيش {money(w.tips)} · فواتير {w.bills} · سلّم للكاشير {money(w.handedCash)}</div>
+                  <div className="text-xs font-bold text-neutral-500">نقدي {money(w.cash)} · بخشيش {money(w.tips)} · فواتير {w.bills} · سلّم للكاشير {money(w.handedCash)}</div>
                 </div>
               ))}
             </div>
@@ -81,7 +81,7 @@ export const SalesReportsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }
                   <button type="button" onClick={() => setOpenId(openId === d.id ? '' : d.id)} className="w-full p-3 flex items-center gap-2 text-right cursor-pointer">
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-black">{when(d.openedAt)} ← {when(d.closedAt)}</div>
-                      <div className="text-[11px] font-bold text-neutral-500">أغلقها {d.closedBy} · الدرج: واجب {money(d.expectedDrawer)}، موجود {money(d.counted)}</div>
+                      <div className="text-xs font-bold text-neutral-500">أغلقها {d.closedBy} · الدرج: واجب {money(d.expectedDrawer)}، موجود {money(d.counted)}</div>
                     </div>
                     <span className="text-sm font-black">{money(d.report?.sales || 0)}</span>
                   </button>

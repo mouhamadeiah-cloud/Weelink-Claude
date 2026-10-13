@@ -54,7 +54,7 @@ export const ImageSlots: React.FC<ImageSlotsProps> = ({ slots, onChange }) => {
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-neutral-500 leading-relaxed flex items-center gap-1">
+      <p className="text-xs text-neutral-500 leading-relaxed flex items-center gap-1">
         <GripVertical size={13} className="text-neutral-400 shrink-0" />
         رتّب ظهور الصور بسحب الصورة إلى خانة أخرى، أو بالأسهم تحتها. الصورة الأولى هي الرئيسية في المتجر.
       </p>
@@ -70,7 +70,7 @@ export const ImageSlots: React.FC<ImageSlotsProps> = ({ slots, onChange }) => {
               draggable={!!src}
               onDragStart={() => setDragFrom(i)}
               onDragEnd={() => setDragFrom(null)}
-              className={`relative aspect-square rounded-xl overflow-hidden border ${src ? 'border-neutral-200 bg-neutral-100 cursor-grab' : 'border-dashed border-neutral-300'} ${i === 0 && src ? 'ring-2 ring-[#0071e3]/40' : ''}`}
+              className={`relative aspect-square rounded-xl overflow-hidden border ${src ? 'border-neutral-200 bg-neutral-100 cursor-grab' : 'border-dashed border-neutral-300'} ${i === 0 && src ? 'ring-2 ring-brand/40' : ''}`}
             >
               {src ? (
                 <>
@@ -80,16 +80,16 @@ export const ImageSlots: React.FC<ImageSlotsProps> = ({ slots, onChange }) => {
                     <X size={11} />
                   </button>
                   {i === 0 && (
-                    <span className="absolute bottom-1 right-1 px-1.5 h-4 rounded-full bg-[#0071e3] text-white text-[8px] font-bold flex items-center gap-0.5"><Star size={8} /> الرئيسية</span>
+                    <span className="absolute bottom-1 right-1 px-1.5 h-5 rounded-full bg-brand text-white text-xs font-bold flex items-center gap-0.5"><Star size={10} /> الرئيسية</span>
                   )}
                 </>
               ) : (
-                <button type="button" onClick={() => pick(i)} disabled={busy !== null} className="w-full h-full flex flex-col items-center justify-center gap-0.5 text-neutral-400 hover:text-[#0071e3] cursor-pointer">
+                <button type="button" onClick={() => pick(i)} disabled={busy !== null} className="w-full h-full flex flex-col items-center justify-center gap-0.5 text-neutral-400 hover:text-brand cursor-pointer">
                   {busy === i ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
                 </button>
               )}
             </div>
-            <div className="flex items-center justify-between text-[10px] font-bold text-neutral-500">
+            <div className="flex items-center justify-between text-xs font-bold text-neutral-500">
               <button type="button" onClick={() => swap(i, i - 1)} disabled={i === 0 || !src} className="w-5 h-5 rounded-md bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center disabled:opacity-0 cursor-pointer" aria-label="تقديم الصورة"><ChevronRight size={12} /></button>
               <span className="truncate">{SLOT_LABELS[i]}</span>
               <button type="button" onClick={() => swap(i, i + 1)} disabled={i === slots.length - 1 || !src} className="w-5 h-5 rounded-md bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center disabled:opacity-0 cursor-pointer" aria-label="تأخير الصورة"><ChevronLeft size={12} /></button>

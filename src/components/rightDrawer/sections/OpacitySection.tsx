@@ -92,7 +92,7 @@ export const OpacitySection = ({
             onClick={() => setOpacityTarget('element')}
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               opacityTarget === 'element' 
-                ? 'bg-white text-[#0071e3] shadow-xs' 
+                ? 'bg-white text-brand shadow-xs' 
                 : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -102,7 +102,7 @@ export const OpacitySection = ({
             onClick={() => setOpacityTarget('slide')}
             className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               opacityTarget === 'slide' 
-                ? 'bg-white text-[#0071e3] shadow-xs' 
+                ? 'bg-white text-brand shadow-xs' 
                 : 'text-neutral-500 hover:text-neutral-800'
             }`}
           >
@@ -118,12 +118,12 @@ export const OpacitySection = ({
           onClick={() => setOpacityPart('element')}
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             effectivePart === 'element'
-              ? 'bg-white text-[#0071e3] shadow-sm ring-1 ring-black/[0.04]'
+              ? 'bg-white text-brand shadow-sm ring-1 ring-black/[0.04]'
               : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50/50'
           }`}
         >
           <span>العنصر</span>
-          <span className="text-[10px] text-neutral-400 font-normal">
+          <span className="text-xs text-neutral-400 font-normal">
             {isTargetElement ? '(النص والمحتوى)' : '(المحتوى)'}
           </span>
         </button>
@@ -141,13 +141,13 @@ export const OpacitySection = ({
             !currentHasBg
               ? 'opacity-40 cursor-not-allowed bg-neutral-200/40 text-neutral-400'
               : effectivePart === 'background'
-                ? 'bg-white text-[#0071e3] shadow-sm ring-1 ring-black/[0.04] cursor-pointer'
+                ? 'bg-white text-brand shadow-sm ring-1 ring-black/[0.04] cursor-pointer'
                 : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50/50 cursor-pointer'
           }`}
         >
           <span>الخلفية</span>
           {!currentHasBg && (
-            <span className="text-[9.5px] px-1 py-0.2 bg-neutral-300/60 rounded text-neutral-500 font-normal">
+            <span className="text-xs px-1 py-0.2 bg-neutral-300/60 rounded text-neutral-500 font-normal">
               معطل
             </span>
           )}
@@ -156,13 +156,13 @@ export const OpacitySection = ({
 
       {/* تنبيه تعطيل خيار الخلفية إذا لم تكن هناك خلفية */}
       {!currentHasBg && (
-        <div className="p-2.5 bg-amber-50/90 border border-amber-200/80 rounded-xl text-[11px] text-amber-800 flex items-start gap-2 animate-fadeIn">
+        <div className="p-2.5 bg-amber-50/90 border border-amber-200/80 rounded-xl text-xs text-amber-800 flex items-start gap-2 animate-fadeIn">
           <span className="text-amber-500 text-sm shrink-0">ℹ️</span>
           <div className="leading-tight">
-            <p className="font-bold text-[11px]">
+            <p className="font-bold text-xs">
               {isTargetElement ? 'العنصر بدون خلفية (شفافة)' : 'الشريحة بدون خلفية'}
             </p>
-            <p className="text-[10px] text-amber-700/85 mt-0.5">
+            <p className="text-xs text-amber-700/85 mt-0.5">
               تم تعطيل خيار شفافية الخلفية لعدم وجود لون أو صورة خلفية. يمكنك تعيين خلفية من قسم «تعديل الخلفية» لتفعيله.
             </p>
           </div>
@@ -170,18 +170,18 @@ export const OpacitySection = ({
       )}
 
       {/* بطاقة معلومات النمط النشط وقيمة الشفافية */}
-      <div className="bg-[#0071e3]/5 border border-[#0071e3]/10 p-2.5 rounded-xl">
+      <div className="bg-brand/5 border border-brand/10 p-2.5 rounded-xl">
         <div className="flex justify-between items-center text-xs">
-          <span className="font-bold text-[#0071e3]">
+          <span className="font-bold text-brand">
             {effectivePart === 'element'
               ? (isTargetElement ? 'شفافية العنصر نفسه (النص/المحتوى)' : 'شفافية عناصر ومحتوى الشريحة')
               : (isTargetElement ? 'شفافية خلفية العنصر' : 'شفافية خلفية الشريحة')}
           </span>
-          <span className="font-mono text-[#0071e3] font-extrabold text-sm">
+          <span className="font-mono text-brand font-extrabold text-sm">
             {Math.round(currentOpacity * 100)}%
           </span>
         </div>
-        <p className="text-[10px] text-neutral-500 mt-1">
+        <p className="text-xs text-neutral-500 mt-1">
           {effectivePart === 'element'
             ? 'تطبيق الشفافية على النص أو المحتوى مع بقاء الخلفية واضحة كما هي.'
             : 'تطبيق الشفافية على لون أو صورة الخلفية فقط مع بقاء النص واضحاً ومقروءاً.'}
@@ -197,9 +197,9 @@ export const OpacitySection = ({
           step="0.05"
           value={currentOpacity}
           onChange={(e) => handleOpacityChange(Number(e.target.value))}
-          className="w-full accent-[#0071e3] cursor-pointer"
+          className="w-full accent-brand cursor-pointer"
         />
-        <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+        <div className="flex justify-between text-xs text-neutral-400 font-mono">
           <span>0% (شفاف)</span>
           <span>50%</span>
           <span>100% (معتم)</span>
@@ -208,7 +208,7 @@ export const OpacitySection = ({
 
       {/* أزرار سريعة للنسب المئوية */}
       <div className="space-y-1.5 pt-1">
-        <span className="text-[11px] font-semibold text-neutral-600 block">
+        <span className="text-xs font-semibold text-neutral-600 block">
           نسب جاهزة وسريعة:
         </span>
         <div className="grid grid-cols-5 gap-1.5">
@@ -220,7 +220,7 @@ export const OpacitySection = ({
                 onClick={() => handleOpacityChange(val)}
                 className={`py-1.5 rounded-xl border text-xs font-mono transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-[#0071e3] text-white border-[#0071e3] font-bold shadow-xs'
+                    ? 'bg-brand text-white border-brand font-bold shadow-xs'
                     : 'border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700'
                 }`}
               >

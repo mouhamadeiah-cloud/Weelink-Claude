@@ -1029,9 +1029,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
   const getElementIcon = (type: ElementType) => {
     switch (type) {
-      case 'heading': return <Type size={12} className="text-[#0071e3]" />;
+      case 'heading': return <Type size={12} className="text-brand" />;
       case 'paragraph': return <AlignLeft size={12} className="text-neutral-500" />;
-      case 'button': return <Square size={12} className="text-[#0071e3]" />;
+      case 'button': return <Square size={12} className="text-brand" />;
       case 'card': return <CreditCard size={12} className="text-purple-500" />;
       case 'image': return <ImageIcon size={12} className="text-emerald-500" />;
       case 'input': return <FormInput size={12} className="text-amber-500" />;
@@ -1216,12 +1216,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           <span className="text-xs font-bold text-neutral-800">
             أمثلة تداخل الشرائح:
           </span>
-          <span className="text-[10px] text-neutral-400">
+          <span className="text-xs text-neutral-400">
             (تداخل الشريحة النشطة)
           </span>
         </div>
 
-        <div className="text-[10.5px] text-neutral-500 font-medium">
+        <div className="text-xs text-neutral-500 font-medium">
           مربعات صغيرة بلونين توضح طريقة تداخل الشريحة الحالية مع الشريحة التي تليها (12 خياراً):
         </div>
 
@@ -1236,7 +1236,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 onClick={() => onUpdateSlideDivider(activeSlide.id, divOpt.id)}
                 className={`flex flex-col items-center gap-1.5 p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
                   isSelected
-                    ? 'border-[#0071e3] bg-[#0071e3]/5 ring-2 ring-[#0071e3]/40 shadow-xs'
+                    ? 'border-brand bg-brand/5 ring-2 ring-brand/40 shadow-xs'
                     : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
                 }`}
                 title={divOpt.name}
@@ -1246,8 +1246,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                   {divOpt.renderPreview(isSelected)}
                 </div>
 
-                <span className={`text-[9.5px] truncate w-full ${
-                  isSelected ? 'font-bold text-[#0071e3]' : 'text-neutral-600'
+                <span className={`text-xs truncate w-full ${
+                  isSelected ? 'font-bold text-brand' : 'text-neutral-600'
                 }`}>
                   {divOpt.name}
                 </span>
@@ -1266,7 +1266,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         key={key}
         type="button"
         onClick={pick}
-        className={`w-full h-9 text-right px-3 text-xs rounded-[10px] font-medium transition-colors cursor-pointer ${on ? 'bg-[#0071e3] text-white' : 'text-neutral-700 hover:bg-neutral-100'}`}
+        className={`w-full h-9 text-right px-3 text-xs rounded-[10px] font-medium transition-colors cursor-pointer ${on ? 'bg-brand text-white' : 'text-neutral-700 hover:bg-neutral-100'}`}
       >
         {label}
       </button>
@@ -1277,7 +1277,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           <button
             type="button"
             onClick={() => onSelectSection('add-image')}
-            className="w-full h-9 rounded-[10px] bg-[#0071e3] hover:bg-[#0062c4] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="w-full h-9 rounded-[10px] bg-brand hover:bg-brand-hover text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
             <ImageIcon size={14} />
             تبديل الصورة
@@ -1287,7 +1287,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {option('بدون قص (مستطيل طبيعي)', !el.clipPath, () => onUpdateElement({ clipPath: undefined }), 'none')}
             {CLIP_GROUPS.map((g) => (
               <div key={g.label}>
-                <div className="text-[10px] font-bold text-neutral-400 px-2 pt-2 pb-0.5">{g.label}</div>
+                <div className="text-xs font-bold text-neutral-400 px-2 pt-2 pb-0.5">{g.label}</div>
                 {g.options.map(([value, label]) => option(label, el.clipPath === value, () => onUpdateElement({ clipPath: value }), value))}
               </div>
             ))}
@@ -1311,7 +1311,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           type="button"
           onClick={onToggleGroupContainer}
           className={`w-full h-9 rounded-[10px] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-            el.isGroupContainer ? 'bg-[#0071e3]/10 text-[#0071e3]' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
+            el.isGroupContainer ? 'bg-brand/10 text-brand' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
           }`}
           title="العناصر اللي بتنسحب فوق الشكل بتنضم إليه وبتتحرك معه"
         >
@@ -1369,7 +1369,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           role="radio"
                           aria-checked={glowSide === side}
                           onClick={() => setGlowSide(side)}
-                          className={`h-8 rounded-lg transition-colors cursor-pointer ${glowSide === side ? 'bg-white text-[#0071e3] shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
+                          className={`h-8 rounded-lg transition-colors cursor-pointer ${glowSide === side ? 'bg-white text-brand shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
                         >
                           {label}
                         </button>
@@ -1413,7 +1413,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       type="text"
                       value={currentPage.name}
                       onChange={(e) => onUpdatePage({ name: e.target.value })}
-                      className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:bg-white focus:outline-none transition-all"
+                      className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-brand focus:bg-white focus:outline-none transition-all"
                       placeholder="اسم الصفحة..."
                     />
                   </div>
@@ -1424,7 +1424,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       <span className="text-xs font-bold text-neutral-800">
                         ألوان الصفحة:
                       </span>
-                      <span className="text-[10px] text-neutral-400">
+                      <span className="text-xs text-neutral-400">
                         (خلفية، صناديق، إطارات، نصوص، براند)
                       </span>
                     </div>
@@ -1435,7 +1435,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         onClick={() => setPageColorMode('default')}
                         className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
                           pageColorMode === 'default'
-                            ? 'bg-white text-[#0071e3] shadow-xs'
+                            ? 'bg-white text-brand shadow-xs'
                             : 'text-neutral-600 hover:text-black'
                         }`}
                       >
@@ -1445,7 +1445,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         onClick={() => setPageColorMode('custom')}
                         className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
                           pageColorMode === 'custom'
-                            ? 'bg-white text-[#0071e3] shadow-xs'
+                            ? 'bg-white text-brand shadow-xs'
                             : 'text-neutral-600 hover:text-black'
                         }`}
                       >
@@ -1456,7 +1456,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     {/* MODE A: افتراضي - 20 خيار لألوان متناسقة كل خيار فيه 5 ألوان */}
                     {pageColorMode === 'default' && (
                       <div className="space-y-2 pt-1">
-                        <div className="text-[10.5px] text-neutral-500 font-medium leading-relaxed">
+                        <div className="text-xs text-neutral-500 font-medium leading-relaxed">
                           اختر مجموعة ألوان متناسقة لتطبيقها فوراً على كامل الصفحة وعناصرها (20 مجموعة):
                         </div>
 
@@ -1476,11 +1476,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }}
                                 className={`w-full p-2 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer ${
                                   isCurrentActive
-                                    ? 'border-[#0071e3] bg-[#0071e3]/5 ring-1 ring-[#0071e3]'
+                                    ? 'border-brand bg-brand/5 ring-1 ring-brand'
                                     : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/80'
                                 }`}
                               >
-                                <span className="text-[11px] font-bold text-neutral-800 truncate">
+                                <span className="text-xs font-bold text-neutral-800 truncate">
                                   {pal.name}
                                 </span>
 
@@ -1495,7 +1495,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     />
                                   ))}
                                   {isCurrentActive && (
-                                    <Check size={12} className="text-[#0071e3] mr-1" />
+                                    <Check size={12} className="text-brand mr-1" />
                                   )}
                                 </div>
                               </button>
@@ -1520,7 +1520,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             >
                               <span 
                                 className={`w-7 h-7 rounded-full border border-black/15 shadow-xs flex items-center justify-center ${
-                                  customSlotIndex === idx ? 'ring-2 ring-[#0071e3] ring-offset-2' : ''
+                                  customSlotIndex === idx ? 'ring-2 ring-brand ring-offset-2' : ''
                                 }`}
                                 style={{ backgroundColor: c }}
                               >
@@ -1528,7 +1528,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   <Check size={12} className={c === '#ffffff' || c === '#fbfbfd' ? 'text-black' : 'text-white'} />
                                 )}
                               </span>
-                              <span className="text-[9px] font-medium text-neutral-500">
+                              <span className="text-xs font-medium text-neutral-500">
                                 {slotLabels[idx]}
                               </span>
                             </button>
@@ -1565,7 +1565,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                         {/* Numbered Pill Selector: ( 1 ) ( 2 ) ( 3 ) ( 4 ) ( 5 ) */}
                         <div className="space-y-1">
-                          <span className="text-[11px] font-bold text-neutral-700 block">
+                          <span className="text-xs font-bold text-neutral-700 block">
                             تحديد رقم اللون للتعديل:
                           </span>
                           <div className="flex items-center rounded-full bg-neutral-100 p-1 border border-neutral-200">
@@ -1575,7 +1575,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 onClick={() => setCustomSlotIndex(idx)}
                                 className={`flex-1 py-1 text-xs font-bold rounded-full transition-all ${
                                   customSlotIndex === idx
-                                    ? 'bg-[#0071e3] text-white shadow-2xs'
+                                    ? 'bg-brand text-white shadow-2xs'
                                     : 'text-neutral-600 hover:text-black'
                                 }`}
                               >
@@ -1913,7 +1913,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 </div>
                                 <div>
                                   <h3 className="text-xs font-bold text-neutral-900">إعدادات معرض الصور (٥ صور)</h3>
-                                  <p className="text-[10px] text-neutral-500">تحكم بالصور، الترتيب، والتنسيقات الأربعة</p>
+                                  <p className="text-xs text-neutral-500">تحكم بالصور، الترتيب، والتنسيقات الأربعة</p>
                                 </div>
                               </div>
                             </div>
@@ -1922,7 +1922,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             <div className="space-y-2">
                               <label className="text-xs font-bold text-neutral-800 flex items-center justify-between">
                                 <span>تنسيق المعرض (الرسم التخطيطي 1 - 4):</span>
-                                <span className="text-[10px] text-[#0071e3] font-medium">٤ تنسيقات</span>
+                                <span className="text-xs text-brand font-medium">٤ تنسيقات</span>
                               </label>
                               <div className="grid grid-cols-2 gap-2">
                                 {/* Layout 1 */}
@@ -1931,20 +1931,20 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   onClick={() => updateGalleryConfig({ layout: 'top-main' })}
                                   className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
                                     layout === 'top-main'
-                                      ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
+                                      ? 'border-brand bg-brand/10 ring-1 ring-brand'
                                       : 'border-neutral-200 bg-white hover:bg-neutral-50'
                                   }`}
                                 >
                                   <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-col justify-between">
-                                    <div className="h-6 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
+                                    <div className="h-6 bg-neutral-300 rounded-xs flex items-center justify-center text-xs text-neutral-600 font-bold">شاشة العرض</div>
                                     <div className="h-2.5 grid grid-cols-4 gap-0.5">
-                                      <div className="bg-[#0071e3] rounded-2xs" />
+                                      <div className="bg-brand rounded-2xs" />
                                       <div className="bg-neutral-400 rounded-2xs" />
                                       <div className="bg-neutral-400 rounded-2xs" />
                                       <div className="bg-neutral-400 rounded-2xs" />
                                     </div>
                                   </div>
-                                  <span className="text-[11px] font-bold text-neutral-800">١. شاشة أعلى ومصغرات أسفل</span>
+                                  <span className="text-xs font-bold text-neutral-800">١. شاشة أعلى ومصغرات أسفل</span>
                                 </button>
 
                                 {/* Layout 2 */}
@@ -1953,20 +1953,20 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   onClick={() => updateGalleryConfig({ layout: 'left-thumbnails' })}
                                   className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
                                     layout === 'left-thumbnails'
-                                      ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
+                                      ? 'border-brand bg-brand/10 ring-1 ring-brand'
                                       : 'border-neutral-200 bg-white hover:bg-neutral-50'
                                   }`}
                                 >
                                   <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-row gap-1">
                                     <div className="w-4.5 h-full grid grid-cols-2 grid-rows-2 gap-0.5">
-                                      <div className="bg-[#0071e3] rounded-2xs" />
+                                      <div className="bg-brand rounded-2xs" />
                                       <div className="bg-neutral-400 rounded-2xs" />
                                       <div className="bg-neutral-400 rounded-2xs" />
                                       <div className="bg-neutral-400 rounded-2xs" />
                                     </div>
-                                    <div className="flex-1 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
+                                    <div className="flex-1 bg-neutral-300 rounded-xs flex items-center justify-center text-xs text-neutral-600 font-bold">شاشة العرض</div>
                                   </div>
-                                  <span className="text-[11px] font-bold text-neutral-800">٢. شبكة مصغرات يسار</span>
+                                  <span className="text-xs font-bold text-neutral-800">٢. شبكة مصغرات يسار</span>
                                 </button>
 
                                 {/* Layout 3 */}
@@ -1975,20 +1975,20 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   onClick={() => updateGalleryConfig({ layout: 'right-thumbnails' })}
                                   className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
                                     layout === 'right-thumbnails'
-                                      ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
+                                      ? 'border-brand bg-brand/10 ring-1 ring-brand'
                                       : 'border-neutral-200 bg-white hover:bg-neutral-50'
                                   }`}
                                 >
                                   <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-row gap-1">
-                                    <div className="flex-1 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
+                                    <div className="flex-1 bg-neutral-300 rounded-xs flex items-center justify-center text-xs text-neutral-600 font-bold">شاشة العرض</div>
                                     <div className="w-4.5 h-full grid grid-cols-2 grid-rows-2 gap-0.5">
-                                      <div className="bg-[#0071e3] rounded-2xs" />
+                                      <div className="bg-brand rounded-2xs" />
                                       <div className="bg-neutral-400 rounded-2xs" />
                                       <div className="bg-neutral-400 rounded-2xs" />
                                       <div className="bg-neutral-400 rounded-2xs" />
                                     </div>
                                   </div>
-                                  <span className="text-[11px] font-bold text-neutral-800">٣. شبكة مصغرات يمين</span>
+                                  <span className="text-xs font-bold text-neutral-800">٣. شبكة مصغرات يمين</span>
                                 </button>
 
                                 {/* Layout 4 */}
@@ -1997,20 +1997,20 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   onClick={() => updateGalleryConfig({ layout: 'left-main-row' })}
                                   className={`p-2 rounded-xl border text-right transition-all flex flex-col gap-1.5 cursor-pointer ${
                                     layout === 'left-main-row'
-                                      ? 'border-[#0071e3] bg-[#0071e3]/10 ring-1 ring-[#0071e3]'
+                                      ? 'border-brand bg-brand/10 ring-1 ring-brand'
                                       : 'border-neutral-200 bg-white hover:bg-neutral-50'
                                   }`}
                                 >
                                   <div className="w-full h-11 bg-neutral-100 rounded-lg p-1 flex flex-row gap-1">
-                                    <div className="w-8 bg-neutral-300 rounded-xs flex items-center justify-center text-[7px] text-neutral-600 font-bold">شاشة العرض</div>
+                                    <div className="w-8 bg-neutral-300 rounded-xs flex items-center justify-center text-xs text-neutral-600 font-bold">شاشة العرض</div>
                                     <div className="flex-1 flex flex-col justify-between gap-0.5">
-                                      <div className="h-1.5 bg-[#0071e3] rounded-2xs" />
+                                      <div className="h-1.5 bg-brand rounded-2xs" />
                                       <div className="h-1.5 bg-neutral-400 rounded-2xs" />
                                       <div className="h-1.5 bg-neutral-400 rounded-2xs" />
                                       <div className="h-1.5 bg-neutral-400 rounded-2xs" />
                                     </div>
                                   </div>
-                                  <span className="text-[11px] font-bold text-neutral-800">٤. شاشة يسار ومصغرات صف</span>
+                                  <span className="text-xs font-bold text-neutral-800">٤. شاشة يسار ومصغرات صف</span>
                                 </button>
                               </div>
                             </div>
@@ -2025,7 +2025,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleTriggerDeviceUpload(-1)}
-                                    className="text-[10px] text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg font-bold flex items-center gap-1 border border-emerald-200/60 cursor-pointer"
+                                    className="text-xs text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg font-bold flex items-center gap-1 border border-emerald-200/60 cursor-pointer"
                                   >
                                     <Upload size={10} />
                                     <span>رفع صورة (+)</span>
@@ -2033,7 +2033,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleOpenUnsplashPicker(-1)}
-                                    className="text-[10px] text-purple-600 hover:text-purple-700 bg-purple-50 px-2 py-1 rounded-lg font-bold flex items-center gap-1 border border-purple-200/60 cursor-pointer"
+                                    className="text-xs text-purple-600 hover:text-purple-700 bg-purple-50 px-2 py-1 rounded-lg font-bold flex items-center gap-1 border border-purple-200/60 cursor-pointer"
                                   >
                                     <Sparkles size={10} />
                                     <span>Unsplash (+)</span>
@@ -2061,7 +2061,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                             className="w-full h-full object-cover"
                                           />
                                         )}
-                                        <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[8px] font-bold px-1 rounded-xs">
+                                        <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-xs font-bold px-1 rounded-xs">
                                           {idx + 1}
                                         </span>
                                       </div>
@@ -2076,34 +2076,34 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                             updateGalleryConfig({ items: newItems });
                                           }}
                                           placeholder={`صورة رقم ${idx + 1}`}
-                                          className="w-full text-xs font-semibold text-neutral-800 bg-transparent outline-none truncate border-b border-transparent hover:border-neutral-200 focus:border-[#0071e3]"
+                                          className="w-full text-xs font-semibold text-neutral-800 bg-transparent outline-none truncate border-b border-transparent hover:border-neutral-200 focus:border-brand"
                                         />
                                         <div className="flex items-center gap-1 mt-1">
                                           <button
                                             type="button"
                                             onClick={() => handleTriggerDeviceUpload(idx)}
                                             disabled={isUploadingThis}
-                                            className="text-[9.5px] text-neutral-600 hover:text-emerald-700 hover:bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
+                                            className="text-xs text-neutral-600 hover:text-emerald-700 hover:bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
                                             title="استبدال برفع صورة من جهازك إلى Firebase Storage"
                                           >
                                             <Upload size={9} />
                                             <span>من الجهاز</span>
                                           </button>
-                                          <span className="text-neutral-300 text-[9px]">|</span>
+                                          <span className="text-neutral-300 text-xs">|</span>
                                           <button
                                             type="button"
                                             onClick={() => handleOpenUnsplashPicker(idx)}
-                                            className="text-[9.5px] text-neutral-600 hover:text-purple-700 hover:bg-purple-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
+                                            className="text-xs text-neutral-600 hover:text-purple-700 hover:bg-purple-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
                                             title="استبدال بصورة من Unsplash"
                                           >
                                             <Sparkles size={9} />
                                             <span>Unsplash</span>
                                           </button>
-                                          <span className="text-neutral-300 text-[9px]">|</span>
+                                          <span className="text-neutral-300 text-xs">|</span>
                                           <button
                                             type="button"
                                             onClick={() => handleDownloadImage(item.url, item.title)}
-                                            className="text-[9.5px] text-neutral-600 hover:text-[#0071e3] hover:bg-blue-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
+                                            className="text-xs text-neutral-600 hover:text-brand hover:bg-blue-50 px-1 py-0.5 rounded flex items-center gap-0.5 transition-colors cursor-pointer"
                                             title="تنزيل الصورة الحالية لجهازك"
                                           >
                                             <Download size={9} />
@@ -2137,7 +2137,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                           <button
                                             type="button"
                                             onClick={() => handleDeleteImage(idx)}
-                                            className="w-full text-center text-[9px] text-red-500 hover:text-red-700 py-0.5 rounded hover:bg-red-50 cursor-pointer"
+                                            className="w-full text-center text-xs text-red-500 hover:text-red-700 py-0.5 rounded hover:bg-red-50 cursor-pointer"
                                             title="حذف هذه الصورة"
                                           >
                                             حذف
@@ -2153,14 +2153,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             {/* 3. SECTION: Visual Settings */}
                             <div className="space-y-2 pt-2 border-t border-neutral-100">
                               <div className="flex items-center justify-between">
-                                <span className="text-[11px] text-neutral-600">نمط ملء شاشة العرض:</span>
+                                <span className="text-xs text-neutral-600">نمط ملء شاشة العرض:</span>
                                 <div className="flex gap-1 bg-neutral-100 p-0.5 rounded-lg border border-neutral-200">
                                   <button
                                     type="button"
                                     onClick={() => updateGalleryConfig({ objectFit: 'cover' })}
-                                    className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                                    className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
                                       config.objectFit !== 'contain'
-                                        ? 'bg-white text-[#0071e3] shadow-xs'
+                                        ? 'bg-white text-brand shadow-xs'
                                         : 'text-neutral-600 hover:text-black'
                                     }`}
                                   >
@@ -2169,9 +2169,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => updateGalleryConfig({ objectFit: 'contain' })}
-                                    className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                                    className={`px-2 py-0.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
                                       config.objectFit === 'contain'
-                                        ? 'bg-white text-[#0071e3] shadow-xs'
+                                        ? 'bg-white text-brand shadow-xs'
                                         : 'text-neutral-600 hover:text-black'
                                     }`}
                                   >
@@ -2181,9 +2181,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               </div>
 
                               <div className="space-y-1">
-                                <div className="flex justify-between text-[11px] text-neutral-600">
+                                <div className="flex justify-between text-xs text-neutral-600">
                                   <span>انحناء زوايا الصور:</span>
-                                  <span className="font-mono font-bold text-[#0071e3]">{config.borderRadius ?? 12}px</span>
+                                  <span className="font-mono font-bold text-brand">{config.borderRadius ?? 12}px</span>
                                 </div>
                                 <input
                                   type="range"
@@ -2191,14 +2191,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   max="32"
                                   value={config.borderRadius ?? 12}
                                   onChange={(e) => updateGalleryConfig({ borderRadius: Number(e.target.value) })}
-                                  className="w-full accent-[#0071e3] cursor-pointer"
+                                  className="w-full accent-brand cursor-pointer"
                                 />
                               </div>
 
                               <div className="space-y-1">
-                                <div className="flex justify-between text-[11px] text-neutral-600">
+                                <div className="flex justify-between text-xs text-neutral-600">
                                   <span>المسافة بين المصغرات:</span>
-                                  <span className="font-mono font-bold text-[#0071e3]">{config.gap ?? 8}px</span>
+                                  <span className="font-mono font-bold text-brand">{config.gap ?? 8}px</span>
                                 </div>
                                 <input
                                   type="range"
@@ -2206,7 +2206,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   max="20"
                                   value={config.gap ?? 8}
                                   onChange={(e) => updateGalleryConfig({ gap: Number(e.target.value) })}
-                                  className="w-full accent-[#0071e3] cursor-pointer"
+                                  className="w-full accent-brand cursor-pointer"
                                 />
                               </div>
                             </div>
@@ -2217,7 +2217,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 <label className="text-xs font-bold text-neutral-800">
                                   تأثيرات وفلاتر صور المعرض:
                                 </label>
-                                <span className="text-[10px] text-neutral-400">
+                                <span className="text-xs text-neutral-400">
                                   (فلاتر بصرية جاهزة)
                                 </span>
                               </div>
@@ -2241,12 +2241,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                       onClick={() => onUpdateElementStyles({ imageFilter: f.id === 'none' ? undefined : f.id })}
                                       className={`py-1.5 px-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
                                         isCurrent
-                                          ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] ring-1 ring-[#0071e3]'
+                                          ? 'border-brand bg-brand/10 text-brand ring-1 ring-brand'
                                           : 'border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700'
                                       }`}
                                     >
                                       <span className="text-xs">{f.icon}</span>
-                                      <span className="text-[9px] font-bold truncate max-w-full">{f.name}</span>
+                                      <span className="text-xs font-bold truncate max-w-full">{f.name}</span>
                                     </button>
                                   );
                                 })}
@@ -2291,7 +2291,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   <div className="p-3.5 border-b border-neutral-200 flex items-center justify-between">
                                     <div>
                                       <h4 className="text-xs font-bold text-neutral-900">اختر صورة من مكتبة Unsplash</h4>
-                                      <p className="text-[10px] text-neutral-500">
+                                      <p className="text-xs text-neutral-500">
                                         {unsplashPickerIndex === -1 ? 'إضافة صورة جديدة للمعرض' : `استبدال الصورة رقم ${unsplashPickerIndex + 1}`}
                                       </p>
                                     </div>
@@ -2313,12 +2313,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                         if (e.key === 'Enter') handleLoadUnsplashForGallery(unsplashSearchQuery);
                                       }}
                                       placeholder="ابحث: طبيعة، فنادق، سيارات، أطعمة..."
-                                      className="flex-1 px-3 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-[#0071e3]"
+                                      className="flex-1 px-3 py-1.5 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-brand"
                                     />
                                     <button
                                       type="button"
                                       onClick={() => handleLoadUnsplashForGallery(unsplashSearchQuery)}
-                                      className="px-3 py-1.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                      className="px-3 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
                                     >
                                       بحث
                                     </button>
@@ -2327,8 +2327,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   <div className="flex-1 overflow-y-auto p-2.5 min-h-[220px]">
                                     {isUnsplashLoading ? (
                                       <div className="w-full h-36 flex flex-col items-center justify-center gap-2 text-neutral-500">
-                                        <Loader2 size={22} className="animate-spin text-[#0071e3]" />
-                                        <span className="text-[11px]">جاري جلب الصور...</span>
+                                        <Loader2 size={22} className="animate-spin text-brand" />
+                                        <span className="text-xs">جاري جلب الصور...</span>
                                       </div>
                                     ) : unsplashPhotos.length > 0 ? (
                                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -2336,7 +2336,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                           <div
                                             key={photo.id || pIdx}
                                             onClick={() => handleSelectUnsplashPhoto(photo.url, photo.title)}
-                                            className="group/photo relative aspect-4/3 rounded-lg overflow-hidden cursor-pointer border border-neutral-200 hover:border-[#0071e3] transition-all"
+                                            className="group/photo relative aspect-4/3 rounded-lg overflow-hidden cursor-pointer border border-neutral-200 hover:border-brand transition-all"
                                           >
                                             <img
                                               src={photo.url}
@@ -2345,7 +2345,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                               loading="lazy"
                                             />
                                             <div className="absolute inset-0 bg-black/0 group-hover/photo:bg-black/30 flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity">
-                                              <span className="bg-[#0071e3] text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+                                              <span className="bg-brand text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-xs">
                                                 اختيار
                                               </span>
                                             </div>
@@ -2368,7 +2368,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       {/* The ratings block: its stars' colour and the «قيّمنا على جوجل» link */}
                       {selectedElement.type === 'ratings' && (
                         <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-3 text-right">
-                          <p className="text-[11px] text-neutral-500 leading-relaxed">التقييمات بتنكتب من زوار صفحتك بعد ما يأكدوا إيميلهم، وبتقدر ترد عليها من «الإدارة».</p>
+                          <p className="text-xs text-neutral-500 leading-relaxed">التقييمات بتنكتب من زوار صفحتك بعد ما يأكدوا إيميلهم، وبتقدر ترد عليها من «الإدارة».</p>
                           <label className="block space-y-1">
                             <span className="text-xs font-bold text-neutral-700">لون النجوم</span>
                             <input type="color" value={selectedElement.ratingsAccentColor || '#f5a623'} onChange={(e) => onUpdateElement({ ratingsAccentColor: e.target.value })} className="w-full h-9 rounded-lg border border-neutral-200 cursor-pointer" />
@@ -2383,7 +2383,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               onChange={(e) => onUpdateElement({ ratingsGoogleUrl: e.target.value.trim() || undefined })}
                               className="w-full text-xs px-2.5 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:border-neutral-400"
                             />
-                            <span className="block text-[10px] text-neutral-400">من Google Business Profile: «اطلب تقييمات» ← انسخ الرابط.</span>
+                            <span className="block text-xs text-neutral-400">من Google Business Profile: «اطلب تقييمات» ← انسخ الرابط.</span>
                           </label>
                         </div>
                       )}
@@ -2485,13 +2485,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               </div>
                               <div>
                                 <h3 className="text-xs font-bold text-neutral-900">ضبط إعدادات حجز المواعيد</h3>
-                                <p className="text-[10px] text-neutral-500">قم بضبط أوقات العمل واللون والتحقق والمدد</p>
+                                <p className="text-xs text-neutral-500">قم بضبط أوقات العمل واللون والتحقق والمدد</p>
                               </div>
                             </div>
 
                             {/* 1. عنوان التقويم الرئيسي */}
                             <div className="space-y-1">
-                              <label className="text-[10.5px] font-bold text-neutral-800 block">عنوان التقويم ورأس النموذج:</label>
+                              <label className="text-xs font-bold text-neutral-800 block">عنوان التقويم ورأس النموذج:</label>
                               <input
                                 type="text"
                                 value={title}
@@ -2503,7 +2503,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* 2. اللون الرئيسي / ألوان البطاقة */}
                             <div className="space-y-1.5 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">لون البطاقة والتفاعل النشط:</span>
+                              <span className="text-xs font-bold text-neutral-800 block">لون البطاقة والتفاعل النشط:</span>
                               <div className="flex flex-wrap gap-1.5 mb-2">
                                 {presetColors.map((color) => {
                                   const isSelected = accentColor.toLowerCase() === color.hex.toLowerCase();
@@ -2518,13 +2518,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                       style={{ backgroundColor: color.hex }}
                                       title={color.name}
                                     >
-                                      {isSelected && <span className="text-[9px] text-white">✓</span>}
+                                      {isSelected && <span className="text-xs text-white">✓</span>}
                                     </button>
                                   );
                                 })}
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-neutral-500">رمز اللون المخصص:</span>
+                                <span className="text-xs text-neutral-500">رمز اللون المخصص:</span>
                                 <input
                                   type="text"
                                   value={accentColor}
@@ -2537,8 +2537,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* 3. أيام العمل والعطل الأسبوعية */}
                             <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">أيام العمل والعطل الأسبوعية:</span>
-                              <p className="text-[9.5px] text-neutral-400">اضغط على اليوم للتبديل بين يوم عمل (لون ملون) أو عطلة (رمادي):</p>
+                              <span className="text-xs font-bold text-neutral-800 block">أيام العمل والعطل الأسبوعية:</span>
+                              <p className="text-xs text-neutral-400">اضغط على اليوم للتبديل بين يوم عمل (لون ملون) أو عطلة (رمادي):</p>
                               <div className="grid grid-cols-4 gap-1.5">
                                 {daysList.map((day) => {
                                   const isWork = workingDays.includes(day.id);
@@ -2547,7 +2547,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                       key={day.id}
                                       type="button"
                                       onClick={() => handleToggleDay(day.id)}
-                                      className={`py-1 px-1 rounded-lg text-[10px] font-bold border transition-all text-center cursor-pointer ${
+                                      className={`py-1 px-1 rounded-lg text-xs font-bold border transition-all text-center cursor-pointer ${
                                         isWork
                                           ? 'text-white border-transparent'
                                           : 'bg-neutral-100 text-neutral-400 border-neutral-200 hover:bg-neutral-200'
@@ -2555,7 +2555,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                       style={{ backgroundColor: isWork ? accentColor : undefined }}
                                     >
                                       {day.name}
-                                      <div className="text-[7.5px] font-normal opacity-85 mt-0.5">
+                                      <div className="text-xs font-normal opacity-85 mt-0.5">
                                         {isWork ? 'عمل' : 'عطلة'}
                                       </div>
                                     </button>
@@ -2566,10 +2566,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* 4. أوقات الدوام الرسمي اليومي */}
                             <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">ساعات الدوام اليومي الرسمي:</span>
+                              <span className="text-xs font-bold text-neutral-800 block">ساعات الدوام اليومي الرسمي:</span>
                               <div className="grid grid-cols-2 gap-2 text-xs">
                                 <div>
-                                  <span className="text-[10px] text-neutral-500 block mb-0.5">بداية العمل:</span>
+                                  <span className="text-xs text-neutral-500 block mb-0.5">بداية العمل:</span>
                                   <input
                                     type="time"
                                     value={workStart}
@@ -2578,7 +2578,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   />
                                 </div>
                                 <div>
-                                  <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية العمل:</span>
+                                  <span className="text-xs text-neutral-500 block mb-0.5">نهاية العمل:</span>
                                   <input
                                     type="time"
                                     value={workEnd}
@@ -2591,10 +2591,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* 5. أوقات الاستراحة اليومية */}
                             <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">أوقات الاستراحة (تُستثنى من الحجوزات):</span>
+                              <span className="text-xs font-bold text-neutral-800 block">أوقات الاستراحة (تُستثنى من الحجوزات):</span>
                               <div className="grid grid-cols-2 gap-2 text-xs">
                                 <div>
-                                  <span className="text-[10px] text-neutral-500 block mb-0.5">بداية الاستراحة:</span>
+                                  <span className="text-xs text-neutral-500 block mb-0.5">بداية الاستراحة:</span>
                                   <input
                                     type="time"
                                     value={breakStart}
@@ -2603,7 +2603,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   />
                                 </div>
                                 <div>
-                                  <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية الاستراحة:</span>
+                                  <span className="text-xs text-neutral-500 block mb-0.5">نهاية الاستراحة:</span>
                                   <input
                                     type="time"
                                     value={breakEnd}
@@ -2616,7 +2616,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* 6. وتيرة تكرار المواعيد (Interval) */}
                             <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">مدة الفترة المتاحة لكل موعد:</span>
+                              <span className="text-xs font-bold text-neutral-800 block">مدة الفترة المتاحة لكل موعد:</span>
                               <select
                                 value={interval}
                                 onChange={(e) => onUpdateElement({ calendarInterval: e.target.value as any })}
@@ -2632,7 +2632,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {interval === 'manual' && (
                                 <div className="space-y-1 mt-1.5 animate-fadeIn">
-                                  <label className="text-[10px] text-neutral-500 block">أدخل الوقت بالدقائق يدوياً:</label>
+                                  <label className="text-xs text-neutral-500 block">أدخل الوقت بالدقائق يدوياً:</label>
                                   <div className="flex items-center gap-2">
                                     <input
                                       type="number"
@@ -2650,7 +2650,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* 7. هل يتطلب تأكيد مسبق */}
                             <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">آلية الموافقة وتأكيد الموعد:</span>
+                              <span className="text-xs font-bold text-neutral-800 block">آلية الموافقة وتأكيد الموعد:</span>
                               <label className="flex items-center gap-2 cursor-pointer select-none">
                                 <input
                                   type="checkbox"
@@ -2661,15 +2661,15 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 />
                                 <span className="text-xs font-medium text-neutral-700">يتطلب موافقة وتأكيد الإدارة أولاً (⏳ معلّق)</span>
                               </label>
-                              <p className="text-[9px] text-neutral-400 mr-6">
+                              <p className="text-xs text-neutral-400 mr-6">
                                 في حال عدم التفعيل، سيتم تأكيد الموعد للمستخدم مباشرة (✅ فوري).
                               </p>
                             </div>
 
                             {/* 8. نوع الموعد (حضور شخصي، هاتفي، اتصال فيديو واتساب) - متعدد الخيارات! */}
                             <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">طريقة ومكان إجراء المقابلة (اختر خياراً أو أكثر):</span>
-                              <p className="text-[9.5px] text-neutral-400">ستتاح للمتصفح إمكانية الاختيار بين الخيارات المحددة فقط:</p>
+                              <span className="text-xs font-bold text-neutral-800 block">طريقة ومكان إجراء المقابلة (اختر خياراً أو أكثر):</span>
+                              <p className="text-xs text-neutral-400">ستتاح للمتصفح إمكانية الاختيار بين الخيارات المحددة فقط:</p>
                               <div className="grid grid-cols-3 gap-1">
                                 {[
                                   { id: 'personal', name: '👤 شخصي', title: 'حضور شخصي بالمقر' },
@@ -2682,7 +2682,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                       key={type.id}
                                       type="button"
                                       onClick={() => handleToggleMeetingType(type.id)}
-                                      className={`py-1.5 rounded-lg text-[9.5px] font-bold border transition-all text-center cursor-pointer ${
+                                      className={`py-1.5 rounded-lg text-xs font-bold border transition-all text-center cursor-pointer ${
                                         isSel
                                           ? 'text-white border-transparent font-black'
                                           : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
@@ -2691,7 +2691,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                       title={type.title}
                                     >
                                       {type.name}
-                                      {isSel && <span className="mr-0.5 text-[8px]">✓</span>}
+                                      {isSel && <span className="mr-0.5 text-xs">✓</span>}
                                     </button>
                                   );
                                 })}
@@ -2700,12 +2700,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* 9. تخصيص عناوين حقول الإدخال */}
                             <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">تخصيص عناوين حقول النموذج:</span>
-                              <p className="text-[9.5px] text-neutral-400">تحكم بأسماء الحقول الظاهرة للزوار للتوافق مع نشاطك:</p>
+                              <span className="text-xs font-bold text-neutral-800 block">تخصيص عناوين حقول النموذج:</span>
+                              <p className="text-xs text-neutral-400">تحكم بأسماء الحقول الظاهرة للزوار للتوافق مع نشاطك:</p>
                               
                               <div className="space-y-2 text-xs">
                                 <div>
-                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل الاسم:</span>
+                                  <span className="text-xs text-neutral-400 block mb-0.5">اسم حقل الاسم:</span>
                                   <input
                                     type="text"
                                     value={nameLabel}
@@ -2715,7 +2715,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 </div>
 
                                 <div>
-                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل العنوان/المقر:</span>
+                                  <span className="text-xs text-neutral-400 block mb-0.5">اسم حقل العنوان/المقر:</span>
                                   <input
                                     type="text"
                                     value={addressLabel}
@@ -2725,7 +2725,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 </div>
 
                                 <div>
-                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل الهاتف:</span>
+                                  <span className="text-xs text-neutral-400 block mb-0.5">اسم حقل الهاتف:</span>
                                   <input
                                     type="text"
                                     value={phoneLabel}
@@ -2735,7 +2735,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 </div>
 
                                 <div>
-                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل البريد الإلكتروني:</span>
+                                  <span className="text-xs text-neutral-400 block mb-0.5">اسم حقل البريد الإلكتروني:</span>
                                   <input
                                     type="text"
                                     value={emailLabel}
@@ -2745,7 +2745,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 </div>
 
                                 <div>
-                                  <span className="text-[10px] text-neutral-400 block mb-0.5">اسم حقل وصف الطلب:</span>
+                                  <span className="text-xs text-neutral-400 block mb-0.5">اسم حقل وصف الطلب:</span>
                                   <input
                                     type="text"
                                     value={descLabel}
@@ -2758,7 +2758,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* 10. قائمة فترات الموعد المتاحة (كخيار احتياطي يدوي) */}
                             <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-[10.5px] font-bold text-neutral-800 block">الفترات الزمنية الاحتياطية (في حال عدم جيلها تلقائياً):</span>
+                              <span className="text-xs font-bold text-neutral-800 block">الفترات الزمنية الاحتياطية (في حال عدم جيلها تلقائياً):</span>
                               <textarea
                                 value={slots.join(', ')}
                                 onChange={(e) => {
@@ -2770,7 +2770,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 className="w-full px-2.5 py-1.5 bg-white rounded-xl border border-neutral-300 text-xs focus:outline-none font-mono text-left font-semibold"
                                 dir="ltr"
                               />
-                              <p className="text-[9px] text-neutral-400 leading-relaxed text-right" dir="rtl">
+                              <p className="text-xs text-neutral-400 leading-relaxed text-right" dir="rtl">
                                 تُستخدم هذه الفترات في حال رغبت بتجاوز الحساب التلقائي، اكتب الساعات مفصولة بفواصل.
                               </p>
                             </div>
@@ -2787,7 +2787,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           </span>
                           
                           <div className="space-y-1">
-                            <label className="text-[10px] text-neutral-500 block">رابط الفيديو (YouTube أو TikTok):</label>
+                            <label className="text-xs text-neutral-500 block">رابط الفيديو (YouTube أو TikTok):</label>
                             <input
                               type="url"
                               value={selectedElement.videoUrl || ''}
@@ -2799,7 +2799,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[10px] text-neutral-500 block">عنوان الفيديو أو وصفه:</label>
+                            <label className="text-xs text-neutral-500 block">عنوان الفيديو أو وصفه:</label>
                             <input
                               type="text"
                               value={selectedElement.content || ''}
@@ -2813,14 +2813,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             <button
                               type="button"
                               onClick={() => onUpdateElement({ videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' })}
-                              className="text-[9px] bg-red-100/50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md border border-red-200 font-bold font-mono transition-colors cursor-pointer"
+                              className="text-xs bg-red-100/50 hover:bg-red-100 text-red-700 px-2 py-1 rounded-md border border-red-200 font-bold font-mono transition-colors cursor-pointer"
                             >
                               YouTube تجريبي
                             </button>
                             <button
                               type="button"
                               onClick={() => onUpdateElement({ videoUrl: 'https://www.tiktok.com/@tiktok/video/7106362547144887554' })}
-                              className="text-[9px] bg-neutral-900 text-white px-2 py-1 rounded-md border border-neutral-800 font-bold font-mono hover:bg-neutral-800 transition-colors cursor-pointer"
+                              className="text-xs bg-neutral-900 text-white px-2 py-1 rounded-md border border-neutral-800 font-bold font-mono hover:bg-neutral-800 transition-colors cursor-pointer"
                             >
                               TikTok تجريبي
                             </button>
@@ -2840,7 +2840,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               type="button"
                               onClick={() => handleDetectUserLocation((loc) => onUpdateElement({ mapLocation: loc, content: loc }))}
                               disabled={isDetectingLocation}
-                              className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-white hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shadow-3xs transition-all cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 bg-white hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shadow-3xs transition-all cursor-pointer disabled:opacity-50"
                               title="تحديد الموقع الجغرافي الحالي تلقائياً وتثبيت الدبوس عليه"
                             >
                               {isDetectingLocation ? (
@@ -2858,7 +2858,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           </div>
                           
                           <div className="space-y-1">
-                            <label className="text-[10px] text-neutral-500 block">العنوان أو المكان المستهدف:</label>
+                            <label className="text-xs text-neutral-500 block">العنوان أو المكان المستهدف:</label>
                             <input
                               type="text"
                               value={selectedElement.mapLocation || selectedElement.content || ''}
@@ -2867,9 +2867,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                             />
                             {locationDetectError && (
-                              <p className="text-[10px] text-red-600 font-semibold mt-1">⚠️ {locationDetectError}</p>
+                              <p className="text-xs text-red-600 font-semibold mt-1">⚠️ {locationDetectError}</p>
                             )}
-                            <p className="text-[9.5px] text-neutral-400 leading-snug">
+                            <p className="text-xs text-neutral-400 leading-snug">
                               اكتب اسم المعلم أو المدينة أو اضغط زر "موقعي الحالي" وسيتم وضع الدبوس وتحديث الخريطة فوراً.
                             </p>
                           </div>
@@ -2884,7 +2884,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 key={preset.name}
                                 type="button"
                                 onClick={() => onUpdateElement({ mapLocation: preset.loc, content: preset.loc })}
-                                className="text-[9px] bg-blue-100/50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md border border-blue-200 font-bold transition-colors cursor-pointer"
+                                className="text-xs bg-blue-100/50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-md border border-blue-200 font-bold transition-colors cursor-pointer"
                               >
                                 {preset.name}
                               </button>
@@ -2903,7 +2903,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                           {/* 10 Coordinated Colors Palette */}
                           <div className="space-y-1.5">
-                            <label className="text-[10px] text-neutral-500 block">لون الجدول (السطر الأول والإطارات):</label>
+                            <label className="text-xs text-neutral-500 block">لون الجدول (السطر الأول والإطارات):</label>
                             <div className="grid grid-cols-5 gap-1.5">
                               {[
                                 { label: 'أزرق', value: '#0071e3' },
@@ -2945,7 +2945,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     title={color.label}
                                   >
                                     {isSelected && (
-                                      <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-bold">✓</span>
+                                      <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold">✓</span>
                                     )}
                                   </button>
                                 );
@@ -2956,7 +2956,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           {/* Rows and columns spinners */}
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
-                              <span className="text-[10px] text-neutral-500 block mb-0.5">عدد السطور:</span>
+                              <span className="text-xs text-neutral-500 block mb-0.5">عدد السطور:</span>
                               <div className="flex items-center gap-1">
                                 <input
                                   type="number"
@@ -3003,7 +3003,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               </div>
                             </div>
                             <div>
-                              <span className="text-[10px] text-neutral-500 block mb-0.5">عدد الأعمدة:</span>
+                              <span className="text-xs text-neutral-500 block mb-0.5">عدد الأعمدة:</span>
                               <div className="flex items-center gap-1">
                                 <input
                                   type="number"
@@ -3054,7 +3054,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           {/* Col Width and Row Height spinners */}
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
-                              <span className="text-[10px] text-neutral-500 block mb-0.5">عرض الأعمدة الافتراضي:</span>
+                              <span className="text-xs text-neutral-500 block mb-0.5">عرض الأعمدة الافتراضي:</span>
                               <input
                                 type="number"
                                 min={30}
@@ -3083,7 +3083,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               />
                             </div>
                             <div>
-                              <span className="text-[10px] text-neutral-500 block mb-0.5">ارتفاع الأسطر الافتراضي:</span>
+                              <span className="text-xs text-neutral-500 block mb-0.5">ارتفاع الأسطر الافتراضي:</span>
                               <input
                                 type="number"
                                 min={20}
@@ -3177,21 +3177,21 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <span className="text-xs font-bold text-neutral-800 block">أبعاد العنصر:</span>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
-                            <span className="text-[10px] text-neutral-400 block mb-0.5">العرض (W):</span>
+                            <span className="text-xs text-neutral-400 block mb-0.5">العرض (W):</span>
                             <input
                               type="number"
                               value={selectedElement.width}
                               onChange={(e) => onUpdateElement({ width: Math.max(20, Number(e.target.value)) })}
-                              className="w-full p-2 bg-neutral-50 rounded-lg border border-neutral-200 font-mono text-center focus:border-[#0071e3] focus:outline-none"
+                              className="w-full p-2 bg-neutral-50 rounded-lg border border-neutral-200 font-mono text-center focus:border-brand focus:outline-none"
                             />
                           </div>
                           <div>
-                            <span className="text-[10px] text-neutral-400 block mb-0.5">الارتفاع (H):</span>
+                            <span className="text-xs text-neutral-400 block mb-0.5">الارتفاع (H):</span>
                             <input
                               type="number"
                               value={selectedElement.height}
                               onChange={(e) => onUpdateElement({ height: Math.max(20, Number(e.target.value)) })}
-                              className="w-full p-2 bg-neutral-50 rounded-lg border border-neutral-200 font-mono text-center focus:border-[#0071e3] focus:outline-none"
+                              className="w-full p-2 bg-neutral-50 rounded-lg border border-neutral-200 font-mono text-center focus:border-brand focus:outline-none"
                             />
                           </div>
                         </div>
@@ -3201,10 +3201,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       <div className="space-y-2 pt-2 border-t border-neutral-200/80">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
-                            <RotateCw size={13} className="text-[#0071e3]" />
+                            <RotateCw size={13} className="text-brand" />
                             <span>تدوير العنصر في مركزه:</span>
                           </span>
-                          <div className="flex items-center gap-1 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200 font-mono text-xs font-bold text-[#0071e3]">
+                          <div className="flex items-center gap-1 bg-neutral-100 px-2 py-0.5 rounded-md border border-neutral-200 font-mono text-xs font-bold text-brand">
                             <span>{Math.round(selectedElement.rotation || 0)}°</span>
                           </div>
                         </div>
@@ -3217,9 +3217,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             max="360"
                             value={selectedElement.rotation || 0}
                             onChange={(e) => onUpdateElement({ rotation: Number(e.target.value) })}
-                            className="w-full accent-[#0071e3] cursor-pointer"
+                            className="w-full accent-brand cursor-pointer"
                           />
-                          <div className="flex justify-between text-[10px] text-neutral-400 font-mono px-0.5">
+                          <div className="flex justify-between text-xs text-neutral-400 font-mono px-0.5">
                             <span>0°</span>
                             <span>90°</span>
                             <span>180°</span>
@@ -3242,7 +3242,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               onClick={() => onUpdateElement({ rotation: btn.deg })}
                               className={`py-1.5 rounded-lg border text-xs font-mono font-bold transition-all ${
                                 (selectedElement.rotation || 0) === btn.deg
-                                  ? 'bg-[#0071e3] text-white border-[#0071e3] shadow-xs'
+                                  ? 'bg-brand text-white border-brand shadow-xs'
                                   : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
                               }`}
                             >
@@ -3306,12 +3306,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
               {/* TOOL: Format Painter (رول الدهان) */}
               {activeSection === 'format-painter' && (
-                <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-[#0071e3]/20 text-xs text-[#0071e3] space-y-1.5">
+                <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-brand/20 text-xs text-brand space-y-1.5">
                   <div className="flex items-center gap-2 font-bold text-sm">
                     <PaintRoller size={16} />
                     <span>{isFormatCopied ? 'تم نسخ التنسيق بنجاح!' : 'جاهز لنسخ التنسيق'}</span>
                   </div>
-                  <p className="text-neutral-600 text-[11px] leading-relaxed">
+                  <p className="text-neutral-600 text-xs leading-relaxed">
                     انقر الآن على أي عنصر آخر لتطبيق اللون والإطار والحجم عليه مباشرة.
                   </p>
                 </div>
@@ -3370,7 +3370,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         onClick={toggleItalic}
                         className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                           isItalic 
-                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            ? 'bg-brand/15 text-brand font-bold' 
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
                         title="ميلان النص"
@@ -3384,7 +3384,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         onClick={toggleBold}
                         className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                           isBold 
-                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            ? 'bg-brand/15 text-brand font-bold' 
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
                         title="عريض"
@@ -3398,7 +3398,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         onClick={toggleUnderline}
                         className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                           isUnderline 
-                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            ? 'bg-brand/15 text-brand font-bold' 
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
                         title="تسطير النص"
@@ -3412,7 +3412,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         onClick={toggleBulletList}
                         className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                           isBulletList 
-                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            ? 'bg-brand/15 text-brand font-bold' 
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
                         title="تعداد نقطي"
@@ -3426,7 +3426,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         onClick={toggleNumericList}
                         className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                           isNumericList 
-                            ? 'bg-[#0071e3]/15 text-[#0071e3] font-bold' 
+                            ? 'bg-brand/15 text-brand font-bold' 
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
                         title="تعداد رقمي"
@@ -3442,14 +3442,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         onClick={() => setTextSubSection('family')}
                         className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                           textSubSection === 'family'
-                            ? 'bg-white text-[#0071e3] ring-2 ring-[#0071e3] shadow-xs font-bold'
+                            ? 'bg-white text-brand ring-2 ring-brand shadow-xs font-bold'
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
                         title="نوع وشكل الخط (aA)"
                       >
                         <span className="font-sans text-[12px] font-bold flex items-baseline select-none">
                           <span>a</span>
-                          <span className="text-[10px] font-extrabold -mr-0.5 text-[#0071e3]">A</span>
+                          <span className="text-xs font-extrabold -mr-0.5 text-brand">A</span>
                         </span>
                       </button>
 
@@ -3459,7 +3459,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         onClick={() => setTextSubSection('size')}
                         className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                           textSubSection === 'size'
-                            ? 'bg-white text-[#0071e3] ring-2 ring-[#0071e3] shadow-xs font-bold'
+                            ? 'bg-white text-brand ring-2 ring-brand shadow-xs font-bold'
                             : 'text-neutral-700 hover:text-black hover:bg-white active:scale-95'
                         }`}
                         title="حجم الخط (T)"
@@ -3475,7 +3475,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       <div className="space-y-4">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-neutral-800 font-bold text-sm">حجم الخط:</span>
-                          <span className="font-mono text-[#0071e3] font-bold text-sm bg-[#0071e3]/10 px-2.5 py-0.5 rounded-lg border border-[#0071e3]/20">
+                          <span className="font-mono text-brand font-bold text-sm bg-brand/10 px-2.5 py-0.5 rounded-lg border border-brand/20">
                             {currentFontSize}px
                           </span>
                         </div>
@@ -3488,9 +3488,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             max="140"
                             value={currentFontSize}
                             onChange={(e) => onUpdateElementStyles({ fontSize: Number(e.target.value) })}
-                            className="w-full accent-[#0071e3] h-2 bg-neutral-200 rounded-lg cursor-pointer"
+                            className="w-full accent-brand h-2 bg-neutral-200 rounded-lg cursor-pointer"
                           />
-                          <div className="flex justify-between text-[10px] text-neutral-400 font-mono">
+                          <div className="flex justify-between text-xs text-neutral-400 font-mono">
                             <span>10px</span>
                             <span>70px</span>
                             <span>140px</span>
@@ -3499,7 +3499,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                         {/* المربعات الأربعة السريعة كما في المخطط اليدوي: [140] [100] [48] [24] */}
                         <div className="space-y-2 pt-1">
-                          <span className="text-[11px] text-neutral-500 block font-medium">أحجام شائعة سريعة:</span>
+                          <span className="text-xs text-neutral-500 block font-medium">أحجام شائعة سريعة:</span>
                           <div className="grid grid-cols-4 gap-2">
                             {[140, 100, 48, 24].map((sz) => (
                               <button
@@ -3508,7 +3508,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 onClick={() => onUpdateElementStyles({ fontSize: sz })}
                                 className={`py-2.5 rounded-xl border text-center font-bold text-sm transition-all cursor-pointer ${
                                   currentFontSize === sz
-                                    ? 'border-[#0071e3] bg-[#0071e3]/15 text-[#0071e3] ring-2 ring-[#0071e3]/50 shadow-xs'
+                                    ? 'border-brand bg-brand/15 text-brand ring-2 ring-brand/50 shadow-xs'
                                     : 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800 shadow-2xs'
                                 }`}
                               >
@@ -3526,7 +3526,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 onClick={() => onUpdateElementStyles({ fontSize: sz })}
                                 className={`py-1.5 rounded-lg border text-center font-semibold text-xs transition-all cursor-pointer ${
                                   currentFontSize === sz
-                                    ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3]'
+                                    ? 'border-brand bg-brand/10 text-brand'
                                     : 'border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-600'
                                 }`}
                               >
@@ -3554,7 +3554,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <div className="space-y-2.5">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-neutral-800 font-bold">نوع الخط:</span>
-                            <span className="text-neutral-400 text-[10px] font-mono">({filteredFonts.length} خط)</span>
+                            <span className="text-neutral-400 text-xs font-mono">({filteredFonts.length} خط)</span>
                           </div>
 
                           {/* شريط البحث المدمج والكبسولات الذكية */}
@@ -3565,7 +3565,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 value={fontSearch}
                                 onChange={(e) => setFontSearch(e.target.value)}
                                 placeholder="ابحث عن خط..."
-                                className="w-full px-2.5 py-1.5 bg-neutral-100 focus:bg-white border border-neutral-300 focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] rounded-lg text-xs text-right placeholder:text-neutral-400 focus:outline-none transition-all"
+                                className="w-full px-2.5 py-1.5 bg-neutral-100 focus:bg-white border border-neutral-300 focus:border-brand focus:ring-1 focus:ring-brand rounded-lg text-xs text-right placeholder:text-neutral-400 focus:outline-none transition-all"
                                 dir="rtl"
                               />
                               {fontSearch && (
@@ -3589,9 +3589,9 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   key={tab.id}
                                   type="button"
                                   onClick={() => setFontLangFilter(tab.id)}
-                                  className={`flex-1 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                                  className={`flex-1 py-1 rounded-md text-xs font-extrabold transition-all cursor-pointer ${
                                     fontLangFilter === tab.id
-                                      ? 'bg-white text-[#0071e3] shadow-3xs'
+                                      ? 'bg-white text-brand shadow-3xs'
                                       : 'text-neutral-500 hover:text-neutral-800'
                                   }`}
                                 >
@@ -3612,7 +3612,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   onClick={() => onUpdateElementStyles({ fontFamily: f.font })}
                                   className={`w-full py-2 px-3 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer ${
                                     isSelected
-                                      ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] font-bold shadow-2xs ring-1 ring-[#0071e3]/30'
+                                      ? 'border-brand bg-brand/10 text-brand font-bold shadow-2xs ring-1 ring-brand/30'
                                       : 'border-neutral-200/60 bg-white hover:border-neutral-300 hover:bg-neutral-50 text-neutral-800'
                                   }`}
                                 >
@@ -3623,7 +3623,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     {f.name}
                                   </span>
                                   {isSelected && (
-                                    <div className="w-4 h-4 rounded-full bg-[#0071e3] text-white flex items-center justify-center shrink-0">
+                                    <div className="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center shrink-0">
                                       <Check size={10} strokeWidth={3} />
                                     </div>
                                   )}
@@ -3697,7 +3697,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           onClick={() => setAddMenuMode('element')}
                           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                             addMenuMode === 'element'
-                              ? 'bg-white text-[#0071e3] shadow-2xs'
+                              ? 'bg-white text-brand shadow-2xs'
                               : 'text-neutral-500 hover:text-black'
                           }`}
                         >
@@ -3708,7 +3708,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           onClick={() => setAddMenuMode('slide')}
                           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                             addMenuMode === 'slide'
-                              ? 'bg-white text-[#0071e3] shadow-2xs'
+                              ? 'bg-white text-brand shadow-2xs'
                               : 'text-neutral-500 hover:text-black'
                           }`}
                         >
@@ -3719,7 +3719,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           onClick={() => setAddMenuMode('page')}
                           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                             addMenuMode === 'page'
-                              ? 'bg-white text-[#0071e3] shadow-2xs'
+                              ? 'bg-white text-brand shadow-2xs'
                               : 'text-neutral-500 hover:text-black'
                           }`}
                         >
@@ -3732,7 +3732,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <div className="space-y-3">
                           {([['basic', 'أساسي'], ['media', 'وسائط'], ['business', 'أعمال'], ['ready', 'جاهز']] as const).map(([group, title]) => (
                             <div key={group} className="space-y-1.5">
-                              <div className="text-[11px] font-bold text-neutral-400 px-1">{title}</div>
+                              <div className="text-xs font-bold text-neutral-400 px-1">{title}</div>
                               <div className="grid grid-cols-3 gap-1.5">
                                 {ADD_CATEGORIES.filter((cat) => cat.group === group).map((cat) => (
                                   <button
@@ -3743,12 +3743,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                       const firstSub = SUBCATEGORIES_MAP[cat.id]?.[0]?.id || 'all';
                                       setSelectedSubCategory(firstSub);
                                     }}
-                                    className="group h-[76px] bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-[#0071e3]/60 rounded-xl px-1.5 flex flex-col items-center justify-center gap-1.5 transition-[border-color,box-shadow,transform] duration-200 hover:shadow-[0_4px_12px_rgba(16,24,40,0.08)] hover:-translate-y-px active:scale-95 cursor-pointer text-center"
+                                    className="group h-[76px] bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-brand/60 rounded-xl px-1.5 flex flex-col items-center justify-center gap-1.5 transition-[border-color,box-shadow,transform] duration-200 hover:shadow-[0_4px_12px_rgba(16,24,40,0.08)] hover:-translate-y-px active:scale-95 cursor-pointer text-center"
                                   >
-                                    <span className="w-9 h-9 rounded-lg bg-neutral-100 group-hover:bg-[#0071e3]/10 text-neutral-700 group-hover:text-[#0071e3] flex items-center justify-center transition-[background-color,color,transform] duration-200 group-hover:scale-110">
+                                    <span className="w-9 h-9 rounded-lg bg-neutral-100 group-hover:bg-brand/10 text-neutral-700 group-hover:text-brand flex items-center justify-center transition-[background-color,color,transform] duration-200 group-hover:scale-110">
                                       {React.cloneElement(cat.icon as React.ReactElement<any>, { size: 18, strokeWidth: 2 })}
                                     </span>
-                                    <span className="text-[11.5px] font-semibold text-neutral-800 group-hover:text-[#0071e3] leading-tight truncate max-w-full">
+                                    <span className="text-xs font-semibold text-neutral-800 group-hover:text-brand leading-tight truncate max-w-full">
                                       {cat.name}
                                     </span>
                                   </button>
@@ -3767,7 +3767,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             <button
                               type="button"
                               onClick={() => onAddSlide()}
-                              className="flex flex-col items-center justify-center p-3 bg-[#0071e3]/5 hover:bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
+                              className="flex flex-col items-center justify-center p-3 bg-brand/5 hover:bg-brand/10 text-brand border border-brand/20 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
                             >
                               <Plus size={16} strokeWidth={2.5} />
                               <span>إضافة شريحة فارغة</span>
@@ -3784,7 +3784,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                           {/* 2. Ready Slides Section */}
                           <div className="space-y-2">
-                            <h4 className="text-[11px] font-black text-neutral-500 border-b border-neutral-100 pb-1.5 px-1 tracking-wide">
+                            <h4 className="text-xs font-black text-neutral-500 border-b border-neutral-100 pb-1.5 px-1 tracking-wide">
                               اختر فئة لتصفح الشرائح المصممة مسبقاً:
                             </h4>
                             <div className="grid grid-cols-2 gap-2">
@@ -3795,15 +3795,15 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   onClick={() => setActiveTemplateCategory(cat.id)}
                                   className={`p-2.5 rounded-xl border-2 text-right transition-all hover:shadow-sm active:scale-97 cursor-pointer flex flex-col gap-1 text-right ${
                                     activeTemplateCategory === cat.id
-                                      ? 'border-[#0071e3] bg-[#0071e3]/5 text-[#0071e3]'
+                                      ? 'border-brand bg-brand/5 text-brand'
                                       : 'border-neutral-200 bg-white hover:border-neutral-300 text-neutral-800'
                                   }`}
                                 >
                                   <div className="text-lg mb-0.5">{cat.icon}</div>
-                                  <span className="text-[11px] font-black leading-tight">
+                                  <span className="text-xs font-black leading-tight">
                                     {cat.name}
                                   </span>
-                                  <span className="text-[9px] text-neutral-400 font-medium leading-normal line-clamp-2">
+                                  <span className="text-xs text-neutral-400 font-medium leading-normal line-clamp-2">
                                     {cat.desc}
                                   </span>
                                 </button>
@@ -3824,7 +3824,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 const pageName = prompt('أدخل اسم الصفحة الجديدة:');
                                 if (pageName) onAddPage(pageName);
                               }}
-                              className="flex flex-col items-center justify-center p-3 bg-[#0071e3]/5 hover:bg-[#0071e3]/10 text-[#0071e3] border border-[#0071e3]/20 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
+                              className="flex flex-col items-center justify-center p-3 bg-brand/5 hover:bg-brand/10 text-brand border border-brand/20 rounded-2xl transition-all cursor-pointer font-bold text-xs gap-1.5 shadow-2xs active:scale-95 text-center"
                             >
                               <Plus size={16} strokeWidth={2.5} />
                               <span>إضافة صفحة فارغة</span>
@@ -3853,11 +3853,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 <span className="text-xs font-bold text-neutral-800 group-hover:text-[#1F5D50] transition-colors">
                                   القالب الأساسي: موقع تعريفي بخمس صفحات
                                 </span>
-                                <span className="text-[10px] text-[#1F5D50] font-semibold bg-[#1F5D50]/10 border border-[#1F5D50]/15 px-1.5 py-0.5 rounded-md">
+                                <span className="text-xs text-[#1F5D50] font-semibold bg-[#1F5D50]/10 border border-[#1F5D50]/15 px-1.5 py-0.5 rounded-md">
                                   5 صفحات
                                 </span>
                               </div>
-                              <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
+                              <span className="text-xs text-neutral-500 font-medium leading-relaxed">
                                 مدخل، من نحن، أعمالنا، الأسعار، واتصل بنا — كل صفحة مرتبطة بالأخرى عبر شريط التنقل العلوي. سيستبدل هذا كل صفحات موقعك الحالية.
                               </span>
                             </button>
@@ -3870,11 +3870,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 <span className="text-xs font-bold text-neutral-800 group-hover:text-[#B4532A] transition-colors">
                                   متجر إلكتروني: منتجات وسلة مشتريات
                                 </span>
-                                <span className="text-[10px] text-[#B4532A] font-semibold bg-[#B4532A]/10 border border-[#B4532A]/15 px-1.5 py-0.5 rounded-md">
+                                <span className="text-xs text-[#B4532A] font-semibold bg-[#B4532A]/10 border border-[#B4532A]/15 px-1.5 py-0.5 rounded-md">
                                   5 صفحات
                                 </span>
                               </div>
-                              <span className="text-[10px] text-neutral-500 font-medium leading-relaxed">
+                              <span className="text-xs text-neutral-500 font-medium leading-relaxed">
                                 الرئيسية، المنتجات، السلة، طريقة الطلب، وتواصل معنا — بطاقات منتجات بزر «أضف إلى السلة»، وصفحة سلة ترسل الطلب كاملًا عبر واتساب. سيستبدل هذا كل صفحات موقعك الحالية.
                               </span>
                             </button>
@@ -3909,25 +3909,25 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <button
                           type="button"
                           onClick={() => setActiveAddCategory(null)}
-                          className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                          className="flex items-center gap-1 text-xs font-bold text-brand hover:text-brand-hover bg-brand/10 hover:bg-brand/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
                         >
                           <ChevronRight size={15} strokeWidth={2.4} />
                           <span>رجوع للعناصر</span>
                         </button>
 
                         <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-                          <Type size={16} className="text-[#0071e3]" />
+                          <Type size={16} className="text-brand" />
                           <span>إضافة نص</span>
                         </h3>
                       </div>
 
                       {/* Notice bar: فقط النصوص الممكنة اضافتها */}
                       <div className="bg-neutral-50/90 border border-neutral-200/80 px-3 py-1.5 rounded-xl flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-neutral-700 flex items-center gap-1">
+                        <span className="text-xs font-bold text-neutral-700 flex items-center gap-1">
                           <span>✦</span>
                           <span>فقط النصوص الممكنة إضافتها:</span>
                         </span>
-                        <span className="text-[10px] text-neutral-400 font-mono font-semibold">
+                        <span className="text-xs text-neutral-400 font-mono font-semibold">
                           4 أحجام أساسية
                         </span>
                       </div>
@@ -3937,8 +3937,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         {/* 1. عنوان رئيسي - 40 PXL */}
                         <div className="flex items-stretch gap-2.5">
                           <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
-                            <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">40</span>
-                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">px</span>
+                            <span className="font-mono font-black text-sm text-ink leading-none">40</span>
+                            <span className="font-mono font-bold text-xs text-neutral-500 tracking-wider mt-0.5">px</span>
                           </div>
                           <button
                             type="button"
@@ -3950,17 +3950,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 { name: 'عنوان رئيسي (40px)', width: 560, height: 75 }
                               );
                             }}
-                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
+                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="text-lg sm:text-xl font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
+                              <span className="text-lg sm:text-xl font-bold text-ink group-hover:text-brand transition-colors leading-tight">
                                 عنوان رئيسي
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
                                 + إضافة
                               </span>
                             </div>
-                            <p className="text-[10px] text-neutral-400 mt-1">
+                            <p className="text-xs text-neutral-400 mt-1">
                               ترويسة عريضة وبارزة للموقع والشاشات الرئيسية
                             </p>
                           </button>
@@ -3969,8 +3969,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         {/* 2. عنوان فرعي - 25 PXL */}
                         <div className="flex items-stretch gap-2.5">
                           <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
-                            <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">25</span>
-                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">px</span>
+                            <span className="font-mono font-black text-sm text-ink leading-none">25</span>
+                            <span className="font-mono font-bold text-xs text-neutral-500 tracking-wider mt-0.5">px</span>
                           </div>
                           <button
                             type="button"
@@ -3982,17 +3982,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 { name: 'عنوان فرعي (25px)', width: 440, height: 55 }
                               );
                             }}
-                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
+                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="text-base font-semibold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
+                              <span className="text-base font-semibold text-ink group-hover:text-brand transition-colors leading-tight">
                                 عنوان فرعي
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
                                 + إضافة
                               </span>
                             </div>
-                            <p className="text-[10px] text-neutral-400 mt-1">
+                            <p className="text-xs text-neutral-400 mt-1">
                               عنوان للأقسام والفقرات الداخلية
                             </p>
                           </button>
@@ -4001,8 +4001,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         {/* 3. مسند نصي - 15 PXL */}
                         <div className="flex items-stretch gap-2.5">
                           <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
-                            <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">15</span>
-                            <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">px</span>
+                            <span className="font-mono font-black text-sm text-ink leading-none">15</span>
+                            <span className="font-mono font-bold text-xs text-neutral-500 tracking-wider mt-0.5">px</span>
                           </div>
                           <button
                             type="button"
@@ -4014,17 +4014,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 { name: 'فقرة (15px)', width: 460, height: 75 }
                               );
                             }}
-                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
+                            className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-normal text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight">
+                              <span className="text-sm font-normal text-neutral-800 group-hover:text-brand transition-colors leading-tight">
                                 فقرة
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
                                 + إضافة
                               </span>
                             </div>
-                            <p className="text-[10px] text-neutral-400 mt-1">
+                            <p className="text-xs text-neutral-400 mt-1">
                               فقرة نصية لشرح وتفصيل المحتوى
                             </p>
                           </button>
@@ -4034,8 +4034,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <div className="space-y-1.5">
                           <div className="flex items-stretch gap-2.5">
                             <div className="w-14 shrink-0 bg-neutral-100/90 border border-neutral-300 rounded-xl flex flex-col items-center justify-center text-center p-1 select-none shadow-3xs">
-                              <span className="font-mono font-black text-sm text-[#1d1d1f] leading-none">15</span>
-                              <span className="font-mono font-bold text-[9px] text-neutral-500 tracking-wider mt-0.5">px</span>
+                              <span className="font-mono font-black text-sm text-ink leading-none">15</span>
+                              <span className="font-mono font-bold text-xs text-neutral-500 tracking-wider mt-0.5">px</span>
                             </div>
                             <button
                               type="button"
@@ -4047,17 +4047,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   { name: 'حقل إدخال (15px)', width: 340, height: 48 }
                                 );
                               }}
-                              className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
+                              className="flex-1 bg-white hover:bg-neutral-50 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right transition-all shadow-2xs hover:shadow-md cursor-pointer group active:scale-[0.99]"
                             >
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold text-neutral-800 group-hover:text-[#0071e3] transition-colors leading-tight">
+                                <span className="text-sm font-semibold text-neutral-800 group-hover:text-brand transition-colors leading-tight">
                                   حقل ادخال
                                 </span>
-                                <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
                                   + إضافة
                                 </span>
                               </div>
-                              <div className="mt-1.5 px-2.5 py-1 bg-neutral-100 rounded-lg border border-neutral-200 text-[11px] text-neutral-400 font-normal">
+                              <div className="mt-1.5 px-2.5 py-1 bg-neutral-100 rounded-lg border border-neutral-200 text-xs text-neutral-400 font-normal">
                                 حقل إدخال تفاعلي...
                               </div>
                             </button>
@@ -4066,7 +4066,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           {/* Note callout as handwritten in sketch with arrow */}
                           <div className="mr-16 bg-amber-50/80 border border-amber-200/90 rounded-xl p-2.5 text-right flex items-start gap-2 shadow-3xs">
                             <span className="text-amber-600 text-sm font-bold shrink-0">↙</span>
-                            <div className="text-[11px] text-amber-900 leading-snug">
+                            <div className="text-xs text-amber-900 leading-snug">
                               <span className="font-bold block text-amber-950 mb-0.5">
                                 حقل إدخال نص تفاعلي:
                               </span>
@@ -4086,11 +4086,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             <h4 className="text-xs font-bold text-neutral-900">
                               نصوص مركبة بتنسيقات مختلفة:
                             </h4>
-                            <p className="text-[10px] text-neutral-400">
+                            <p className="text-xs text-neutral-400">
                               تراكيب نصوص منسقة جاهزة للإضافة بنقرة واحدة
                             </p>
                           </div>
-                          <span className="text-[10px] font-mono text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-full font-bold">
+                          <span className="text-xs font-mono text-brand bg-brand/10 px-2 py-0.5 rounded-full font-bold">
                             7 نماذج
                           </span>
                         </div>
@@ -4113,21 +4113,21 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }
                               );
                             }}
-                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[10px] font-bold text-neutral-400">
+                              <span className="text-xs font-bold text-neutral-400">
                                 ترويسة وعنوان مع شرح
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md">
                                 + إضافة
                               </span>
                             </div>
-                            <div className="space-y-1 pr-1 border-r-2 border-[#0071e3]/40">
-                              <div className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
+                            <div className="space-y-1 pr-1 border-r-2 border-brand/40">
+                              <div className="text-sm font-bold text-ink group-hover:text-brand transition-colors leading-tight">
                                 بناء مواقع المستقبل بهوية فاخرة
                               </div>
-                              <div className="text-[10.5px] text-neutral-500 leading-snug">
+                              <div className="text-xs text-neutral-500 leading-snug">
                                 مساحة عمل حرة تمنحك السيطرة المطلقة على كل تفصيلة...
                               </div>
                             </div>
@@ -4149,21 +4149,21 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }
                               );
                             }}
-                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[10px] font-bold text-neutral-400">
+                              <span className="text-xs font-bold text-neutral-400">
                                 شارة تعريفية مع عنوان
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md">
                                 + إضافة
                               </span>
                             </div>
                             <div className="space-y-1">
-                              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#0071e3]/10 text-[#0071e3]">
+                              <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand/10 text-brand">
                                 ✦ جديد وحصري
                               </span>
-                              <div className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors leading-tight">
+                              <div className="text-sm font-bold text-ink group-hover:text-brand transition-colors leading-tight">
                                 انطلاقة الجيل الجديد من تصاميم الويب
                               </div>
                             </div>
@@ -4185,13 +4185,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }
                               );
                             }}
-                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[10px] font-bold text-neutral-400">
+                              <span className="text-xs font-bold text-neutral-400">
                                 اقتباس مع اسم الكاتب
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md">
                                 + إضافة
                               </span>
                             </div>
@@ -4201,7 +4201,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 <div className="text-xs italic text-neutral-800 leading-snug">
                                   «البساطة والتصميم المتقن هما جوهر التجربة الرقمية...»
                                 </div>
-                                <div className="text-[10px] font-semibold text-neutral-500">
+                                <div className="text-xs font-semibold text-neutral-500">
                                   — ستيف جوبز
                                 </div>
                               </div>
@@ -4224,18 +4224,18 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }
                               );
                             }}
-                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[10px] font-bold text-neutral-400">
+                              <span className="text-xs font-bold text-neutral-400">
                                 رقم إحصائي بارز
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md">
                                 + إضافة
                               </span>
                             </div>
                             <div className="flex items-baseline gap-2">
-                              <span className="font-mono font-black text-2xl text-[#0071e3] leading-none">
+                              <span className="font-mono font-black text-2xl text-brand leading-none">
                                 +99.9%
                               </span>
                               <span className="text-xs font-semibold text-neutral-600 truncate">
@@ -4260,19 +4260,19 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }
                               );
                             }}
-                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[10px] font-bold text-neutral-400">
+                              <span className="text-xs font-bold text-neutral-400">
                                 ترويسة مع قائمة نقاط
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md">
                                 + إضافة
                               </span>
                             </div>
                             <div className="space-y-1">
                               <div className="text-xs font-bold text-neutral-900">أهم المزايا والمواصفات</div>
-                              <div className="text-[10.5px] text-neutral-600 space-y-0.5">
+                              <div className="text-xs text-neutral-600 space-y-0.5">
                                 <div>✓ سرعة تحميل فائقة وتوافق كامل</div>
                                 <div>✓ خوادم سحابية آمنة مع نسخ دوري</div>
                               </div>
@@ -4295,21 +4295,21 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }
                               );
                             }}
-                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[10px] font-bold text-neutral-400">
+                              <span className="text-xs font-bold text-neutral-400">
                                 عنوان جانبي مع خط بارز
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md">
                                 + إضافة
                               </span>
                             </div>
-                            <div className="pr-2 border-r-3 border-[#0071e3] space-y-0.5">
-                              <div className="text-xs font-bold text-neutral-900 group-hover:text-[#0071e3] transition-colors">
+                            <div className="pr-2 border-r-3 border-brand space-y-0.5">
+                              <div className="text-xs font-bold text-neutral-900 group-hover:text-brand transition-colors">
                                 رؤيتنا للمستقبل والريادة
                               </div>
-                              <div className="text-[10px] text-neutral-500">
+                              <div className="text-xs text-neutral-500">
                                 تمكين رواد الأعمال والمصممين من ابتكار تجارب ويب فريدة...
                               </div>
                             </div>
@@ -4332,13 +4332,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }
                               );
                             }}
-                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-[#0071e3] rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
+                            className="bg-white hover:bg-neutral-50/80 border-2 border-neutral-200 hover:border-brand rounded-2xl p-3 text-right cursor-pointer transition-all shadow-2xs hover:shadow-md group active:scale-[0.99]"
                           >
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[10px] font-bold text-neutral-400">
+                              <span className="text-xs font-bold text-neutral-400">
                                 عنوان منتج مع سعر
                               </span>
-                              <span className="text-[10px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md">
+                              <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md">
                                 + إضافة
                               </span>
                             </div>
@@ -4346,7 +4346,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               <span className="text-xs font-bold text-neutral-900">
                                 باقة الانطلاق للأعمال
                               </span>
-                              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 font-bold text-[10px] rounded-md">
+                              <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 font-bold text-xs rounded-md">
                                 ١٩٩ ر.س / شهرياً
                               </span>
                             </div>
@@ -4443,14 +4443,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             setSelectedSubCategory('all');
                             setIconifySearch('');
                           }}
-                          className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                          className="flex items-center gap-1 text-xs font-bold text-brand hover:text-brand-hover bg-brand/10 hover:bg-brand/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
                         >
                           <ChevronRight size={15} strokeWidth={2.4} />
                           <span>رجوع للعناصر</span>
                         </button>
 
                         <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-                          <span className="text-[#0071e3]">🔍</span>
+                          <span className="text-brand">🔍</span>
                           <span>مكتبة الأيقونات الكبيرة</span>
                         </h3>
                       </div>
@@ -4458,7 +4458,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       {/* Description */}
                       <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3 space-y-1">
                         <h4 className="text-xs font-bold text-blue-900">ابحث عن ملايين الأيقونات العالمية</h4>
-                        <p className="text-[10px] text-blue-700 leading-normal">
+                        <p className="text-xs text-blue-700 leading-normal">
                           اكتب اسم أي موضوع بالإنجليزية (مثل: <code className="bg-white px-1 py-0.5 rounded border font-mono">user</code>، <code className="bg-white px-1 py-0.5 rounded border font-mono">arrow</code>، <code className="bg-white px-1 py-0.5 rounded border font-mono">heart</code>) للبحث الفوري في كافة المكتبات العالمية!
                         </p>
                       </div>
@@ -4470,11 +4470,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           value={iconifySearch}
                           onChange={(e) => setIconifySearch(e.target.value)}
                           placeholder="ابحث بالأجنبية... (مثال: heart, user, search)"
-                          className="w-full text-xs font-semibold px-3 py-2.5 pr-8 bg-white rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:outline-none transition-all shadow-3xs text-right"
+                          className="w-full text-xs font-semibold px-3 py-2.5 pr-8 bg-white rounded-xl border border-neutral-300 focus:border-brand focus:outline-none transition-all shadow-3xs text-right"
                         />
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
                           {isSearchingIconify ? (
-                            <div className="w-4 h-4 border-2 border-neutral-300 border-t-[#0071e3] rounded-full animate-spin" />
+                            <div className="w-4 h-4 border-2 border-neutral-300 border-t-brand rounded-full animate-spin" />
                           ) : (
                             <Search size={14} />
                           )}
@@ -4483,10 +4483,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                       {/* Results Label */}
                       <div className="flex items-center justify-between px-1">
-                        <span className="text-[11px] font-bold text-neutral-500">
+                        <span className="text-xs font-bold text-neutral-500">
                           {iconifySearch.trim() ? `نتائج البحث لـ "${iconifySearch}"` : 'أيقونات شائعة ومقترحة:'}
                         </span>
-                        <span className="text-[10px] text-neutral-400">
+                        <span className="text-xs text-neutral-400">
                           {activeResults.length} أيقونة معروضة
                         </span>
                       </div>
@@ -4511,13 +4511,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   { name: `أيقونة ${simpleName}`, width: 64, height: 64 }
                                 );
                               }}
-                              className="bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-[#0071e3] rounded-xl p-2.5 aspect-square flex flex-col items-center justify-center gap-1.5 shadow-3xs hover:shadow-sm transition-all active:scale-95 cursor-pointer group text-center"
+                              className="bg-white hover:bg-neutral-50 border border-neutral-200 hover:border-brand rounded-xl p-2.5 aspect-square flex flex-col items-center justify-center gap-1.5 shadow-3xs hover:shadow-sm transition-all active:scale-95 cursor-pointer group text-center"
                               title={`إدراج ${iconName}`}
                             >
-                              <div className="text-2xl text-neutral-700 group-hover:text-[#0071e3] transition-colors flex items-center justify-center w-8 h-8">
+                              <div className="text-2xl text-neutral-700 group-hover:text-brand transition-colors flex items-center justify-center w-8 h-8">
                                 <Icon icon={iconName} />
                               </div>
-                              <span className="text-[8px] text-neutral-400 group-hover:text-neutral-700 font-mono truncate max-w-full block" dir="ltr">
+                              <span className="text-xs text-neutral-400 group-hover:text-neutral-700 font-mono truncate max-w-full block" dir="ltr">
                                 {iconName.split(':').pop()}
                               </span>
                             </button>
@@ -4535,14 +4535,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       <button
                         type="button"
                         onClick={() => setActiveAddCategory(null)}
-                        className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        className="flex items-center gap-1 text-xs font-bold text-brand hover:text-brand-hover bg-brand/10 hover:bg-brand/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
                       >
                         <ChevronRight size={15} strokeWidth={2.4} />
                         <span>رجوع للعناصر</span>
                       </button>
 
                       <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-                        <span className="text-[#0071e3]">{currentCategoryObj?.icon}</span>
+                        <span className="text-brand">{currentCategoryObj?.icon}</span>
                         <span>إضافة {currentCategoryObj?.name}</span>
                       </h3>
                     </div>
@@ -4575,7 +4575,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               onClick={() => setSelectedSubCategory(sub.id)}
                               className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                                 isSubActive
-                                  ? 'bg-[#0071e3] text-white shadow-xs font-bold'
+                                  ? 'bg-brand text-white shadow-xs font-bold'
                                   : 'text-neutral-700 hover:bg-neutral-100 hover:text-black'
                               }`}
                             >
@@ -4603,18 +4603,18 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         <button
                           type="button"
                           onClick={() => setActiveAddCategory('iconify')}
-                          className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-dashed border-[#0071e3]/40 bg-[#0071e3]/5 hover:bg-[#0071e3]/10 text-right cursor-pointer transition-colors"
+                          className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-dashed border-brand/40 bg-brand/5 hover:bg-brand/10 text-right cursor-pointer transition-colors"
                         >
-                          <Search size={16} className="text-[#0071e3] shrink-0" />
+                          <Search size={16} className="text-brand shrink-0" />
                           <span className="flex-1">
-                            <span className="block text-xs font-bold text-[#0071e3]">ابحث بالمكتبة الكبيرة</span>
-                            <span className="block text-[10.5px] text-neutral-500">آلاف الأيقونات الإضافية</span>
+                            <span className="block text-xs font-bold text-brand">ابحث بالمكتبة الكبيرة</span>
+                            <span className="block text-xs text-neutral-500">آلاف الأيقونات الإضافية</span>
                           </span>
-                          <ChevronLeft size={15} className="text-[#0071e3]" />
+                          <ChevronLeft size={15} className="text-brand" />
                         </button>
                       )}
                       {activeAddCategory === 'calendar' && (
-                        <div className="p-3.5 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 border-2 border-[#0071e3]/30 rounded-2xl text-right space-y-3.5 shadow-sm" dir="rtl">
+                        <div className="p-3.5 bg-gradient-to-b from-blue-50/80 to-indigo-50/40 border-2 border-brand/30 rounded-2xl text-right space-y-3.5 shadow-sm" dir="rtl">
                           {/* Header with expand/collapse toggle */}
                           <div className="flex items-center justify-between pb-2 border-b border-blue-200/60">
                             <div className="flex items-center gap-2">
@@ -4626,13 +4626,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               </div>
                               <div>
                                 <h4 className="text-xs font-black text-neutral-900">ضبط إعدادات بطاقة التقويم قبل الإضافة</h4>
-                                <p className="text-[10px] text-neutral-500">حدد ساعات الدوام، العطل، الألوان وحقول الحجز</p>
+                                <p className="text-xs text-neutral-500">حدد ساعات الدوام، العطل، الألوان وحقول الحجز</p>
                               </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => setCalAddSettingsOpen(prev => !prev)}
-                              className="text-[10px] font-bold text-[#0071e3] bg-white px-2 py-1 rounded-lg border border-blue-200 hover:bg-blue-50 transition-all cursor-pointer"
+                              className="text-xs font-bold text-brand bg-white px-2 py-1 rounded-lg border border-blue-200 hover:bg-blue-50 transition-all cursor-pointer"
                             >
                               {calAddSettingsOpen ? 'طي الإعدادات ▲' : 'توسيع الإعدادات ▼'}
                             </button>
@@ -4642,7 +4642,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             <div className="space-y-3 pt-1 text-xs">
                               {/* 1. عنوان التقويم الرئيسي */}
                               <div className="space-y-1">
-                                <label className="text-[10.5px] font-bold text-neutral-800 block">عنوان التقويم ورأس النموذج:</label>
+                                <label className="text-xs font-bold text-neutral-800 block">عنوان التقويم ورأس النموذج:</label>
                                 <input
                                   type="text"
                                   value={calAddTitle}
@@ -4654,7 +4654,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {/* 2. اللون الرئيسي للبطاقة */}
                               <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                                <span className="text-[10.5px] font-bold text-neutral-800 block">ألوان البطاقة والتفاعل النشط:</span>
+                                <span className="text-xs font-bold text-neutral-800 block">ألوان البطاقة والتفاعل النشط:</span>
                                 <div className="flex flex-wrap gap-1.5 mb-1.5">
                                   {[
                                     { hex: '#0071e3', name: 'أزرق آبل' },
@@ -4677,13 +4677,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                         style={{ backgroundColor: color.hex }}
                                         title={color.name}
                                       >
-                                        {isSelected && <span className="text-[9px] text-white">✓</span>}
+                                        {isSelected && <span className="text-xs text-white">✓</span>}
                                       </button>
                                     );
                                   })}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-neutral-500">رمز اللون المخصص:</span>
+                                  <span className="text-xs text-neutral-500">رمز اللون المخصص:</span>
                                   <input
                                     type="text"
                                     value={calAddAccentColor}
@@ -4696,8 +4696,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {/* 3. أيام العمل والعطل الأسبوعية */}
                               <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                                <span className="text-[10.5px] font-bold text-neutral-800 block">أيام العمل والعطل الأسبوعية:</span>
-                                <p className="text-[9.5px] text-neutral-500">اضغط على اليوم للتبديل بين يوم عمل متاح (ملوّن) أو عطلة (رمادي):</p>
+                                <span className="text-xs font-bold text-neutral-800 block">أيام العمل والعطل الأسبوعية:</span>
+                                <p className="text-xs text-neutral-500">اضغط على اليوم للتبديل بين يوم عمل متاح (ملوّن) أو عطلة (رمادي):</p>
                                 <div className="grid grid-cols-4 gap-1">
                                   {[
                                     { id: 'sunday', name: 'الأحد' },
@@ -4726,7 +4726,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                           setCalAddWorkingDays(newW);
                                           setCalAddHolidays(newH);
                                         }}
-                                        className={`py-1 px-1 rounded-lg text-[10px] font-bold border transition-all text-center cursor-pointer ${
+                                        className={`py-1 px-1 rounded-lg text-xs font-bold border transition-all text-center cursor-pointer ${
                                           isWork
                                             ? 'text-white border-transparent'
                                             : 'bg-neutral-100 text-neutral-400 border-neutral-200 hover:bg-neutral-200'
@@ -4734,7 +4734,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                         style={{ backgroundColor: isWork ? calAddAccentColor : undefined }}
                                       >
                                         {day.name}
-                                        <div className="text-[7.5px] font-normal opacity-85 mt-0.5">
+                                        <div className="text-xs font-normal opacity-85 mt-0.5">
                                           {isWork ? 'عمل' : 'عطلة'}
                                         </div>
                                       </button>
@@ -4745,10 +4745,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {/* 4. ساعات الدوام الرسمي اليومي */}
                               <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                                <span className="text-[10.5px] font-bold text-neutral-800 block">ساعات الدوام اليومي الرسمي:</span>
+                                <span className="text-xs font-bold text-neutral-800 block">ساعات الدوام اليومي الرسمي:</span>
                                 <div className="grid grid-cols-2 gap-2 text-xs">
                                   <div>
-                                    <span className="text-[10px] text-neutral-500 block mb-0.5">بداية العمل:</span>
+                                    <span className="text-xs text-neutral-500 block mb-0.5">بداية العمل:</span>
                                     <input
                                       type="time"
                                       value={calAddWorkStart}
@@ -4757,7 +4757,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     />
                                   </div>
                                   <div>
-                                    <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية العمل:</span>
+                                    <span className="text-xs text-neutral-500 block mb-0.5">نهاية العمل:</span>
                                     <input
                                       type="time"
                                       value={calAddWorkEnd}
@@ -4770,10 +4770,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {/* 5. أوقات الاستراحة اليومية */}
                               <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                                <span className="text-[10.5px] font-bold text-neutral-800 block">أوقات الاستراحة (تُستثنى من الحجوزات):</span>
+                                <span className="text-xs font-bold text-neutral-800 block">أوقات الاستراحة (تُستثنى من الحجوزات):</span>
                                 <div className="grid grid-cols-2 gap-2 text-xs">
                                   <div>
-                                    <span className="text-[10px] text-neutral-500 block mb-0.5">بداية الاستراحة:</span>
+                                    <span className="text-xs text-neutral-500 block mb-0.5">بداية الاستراحة:</span>
                                     <input
                                       type="time"
                                       value={calAddBreakStart}
@@ -4782,7 +4782,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     />
                                   </div>
                                   <div>
-                                    <span className="text-[10px] text-neutral-500 block mb-0.5">نهاية الاستراحة:</span>
+                                    <span className="text-xs text-neutral-500 block mb-0.5">نهاية الاستراحة:</span>
                                     <input
                                       type="time"
                                       value={calAddBreakEnd}
@@ -4795,7 +4795,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {/* 6. وتيرة تكرار المواعيد (Interval) */}
                               <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                                <span className="text-[10.5px] font-bold text-neutral-800 block">مدة الفترة المتاحة لكل موعد:</span>
+                                <span className="text-xs font-bold text-neutral-800 block">مدة الفترة المتاحة لكل موعد:</span>
                                 <select
                                   value={calAddInterval}
                                   onChange={(e) => setCalAddInterval(e.target.value as any)}
@@ -4811,7 +4811,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                                 {calAddInterval === 'manual' && (
                                   <div className="space-y-1 mt-1.5">
-                                    <label className="text-[10px] text-neutral-500 block">أدخل الوقت بالدقائق يدوياً:</label>
+                                    <label className="text-xs text-neutral-500 block">أدخل الوقت بالدقائق يدوياً:</label>
                                     <div className="flex items-center gap-2">
                                       <input
                                         type="number"
@@ -4829,7 +4829,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {/* 7. آلية الموافقة وتأكيد الموعد */}
                               <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                                <span className="text-[10.5px] font-bold text-neutral-800 block">آلية الموافقة وتأكيد الموعد:</span>
+                                <span className="text-xs font-bold text-neutral-800 block">آلية الموافقة وتأكيد الموعد:</span>
                                 <label className="flex items-center gap-2 cursor-pointer select-none">
                                   <input
                                     type="checkbox"
@@ -4844,7 +4844,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {/* 8. طرق إجراء المقابلة المتاحة */}
                               <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                                <span className="text-[10.5px] font-bold text-neutral-800 block">طريقة ومكان إجراء المقابلة (اختر خياراً أو أكثر):</span>
+                                <span className="text-xs font-bold text-neutral-800 block">طريقة ومكان إجراء المقابلة (اختر خياراً أو أكثر):</span>
                                 <div className="grid grid-cols-3 gap-1">
                                   {[
                                     { id: 'personal', name: '👤 شخصي', title: 'حضور شخصي بالمقر' },
@@ -4865,7 +4865,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                           }
                                           setCalAddMeetingTypes(newT);
                                         }}
-                                        className={`py-1.5 rounded-lg text-[9.5px] font-bold border transition-all text-center cursor-pointer ${
+                                        className={`py-1.5 rounded-lg text-xs font-bold border transition-all text-center cursor-pointer ${
                                           isSel
                                             ? 'text-white border-transparent font-black'
                                             : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
@@ -4873,7 +4873,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                         style={{ backgroundColor: isSel ? calAddAccentColor : undefined }}
                                       >
                                         {type.name}
-                                        {isSel && <span className="mr-0.5 text-[8px]">✓</span>}
+                                        {isSel && <span className="mr-0.5 text-xs">✓</span>}
                                       </button>
                                     );
                                   })}
@@ -4882,10 +4882,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                               {/* 9. تخصيص عناوين حقول النموذج */}
                               <div className="space-y-1.5 border-t border-blue-100 pt-2">
-                                <span className="text-[10.5px] font-bold text-neutral-800 block">تخصيص عناوين حقول النموذج:</span>
+                                <span className="text-xs font-bold text-neutral-800 block">تخصيص عناوين حقول النموذج:</span>
                                 <div className="grid grid-cols-2 gap-2 text-xs">
                                   <div>
-                                    <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل الاسم:</span>
+                                    <span className="text-xs text-neutral-500 block mb-0.5">اسم حقل الاسم:</span>
                                     <input
                                       type="text"
                                       value={calAddNameLabel}
@@ -4894,7 +4894,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     />
                                   </div>
                                   <div>
-                                    <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل العنوان:</span>
+                                    <span className="text-xs text-neutral-500 block mb-0.5">اسم حقل العنوان:</span>
                                     <input
                                       type="text"
                                       value={calAddAddressLabel}
@@ -4903,7 +4903,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     />
                                   </div>
                                   <div>
-                                    <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل الهاتف:</span>
+                                    <span className="text-xs text-neutral-500 block mb-0.5">اسم حقل الهاتف:</span>
                                     <input
                                       type="text"
                                       value={calAddPhoneLabel}
@@ -4912,7 +4912,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                     />
                                   </div>
                                   <div>
-                                    <span className="text-[9.5px] text-neutral-500 block mb-0.5">اسم حقل البريد:</span>
+                                    <span className="text-xs text-neutral-500 block mb-0.5">اسم حقل البريد:</span>
                                     <input
                                       type="text"
                                       value={calAddEmailLabel}
@@ -4978,7 +4978,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             dir="ltr"
                             className="w-full px-3 py-2 bg-white rounded-lg border border-neutral-300 text-xs font-mono focus:outline-none focus:border-red-500"
                           />
-                          <p className="text-[9.5px] text-neutral-400 leading-snug">
+                          <p className="text-xs text-neutral-400 leading-snug">
                             سيتم تزويد المشغل المختار بهذا الرابط تلقائياً عند إضافته للكانفاس. يمكنك أيضاً تعديل الرابط لاحقاً في أي وقت.
                           </p>
                         </div>
@@ -4992,7 +4992,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               type="button"
                               onClick={() => handleDetectUserLocation((loc) => setMapAddLocation(loc))}
                               disabled={isDetectingLocation}
-                              className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-white hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shadow-3xs transition-all cursor-pointer disabled:opacity-50"
+                              className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 bg-white hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shadow-3xs transition-all cursor-pointer disabled:opacity-50"
                               title="تحديد موقعك الجغرافي الحالي تلقائياً"
                             >
                               {isDetectingLocation ? (
@@ -5018,10 +5018,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           />
 
                           {locationDetectError && (
-                            <p className="text-[10px] text-red-600 font-semibold">⚠️ {locationDetectError}</p>
+                            <p className="text-xs text-red-600 font-semibold">⚠️ {locationDetectError}</p>
                           )}
 
-                          <p className="text-[9.5px] text-neutral-400 leading-snug">
+                          <p className="text-xs text-neutral-400 leading-snug">
                             سيتم تزويد الخريطة المختارة بهذا الموقع وتثبيت الدبوس عليه وتفعيلها تلقائياً عند إنزالها للكانفاس.
                           </p>
                         </div>
@@ -5036,7 +5036,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                           {/* Theme color selector */}
                           <div className="space-y-1">
-                            <label className="text-[10px] text-neutral-500 block">اختر لون الجدول (10 ألوان متناسقة):</label>
+                            <label className="text-xs text-neutral-500 block">اختر لون الجدول (10 ألوان متناسقة):</label>
                             <div className="grid grid-cols-5 gap-1.5">
                               {[
                                 { label: 'أزرق', value: '#0071e3' },
@@ -5059,7 +5059,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   title={c.label}
                                 >
                                   {tableAddColor === c.value && (
-                                    <span className="absolute inset-0 flex items-center justify-center text-white text-[10px] font-bold">✓</span>
+                                    <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold">✓</span>
                                   )}
                                 </button>
                               ))}
@@ -5069,7 +5069,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           {/* Rows and columns arrow spinners */}
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
-                              <span className="text-[10px] text-neutral-500 block mb-0.5">عدد الأسطر (الصفوف):</span>
+                              <span className="text-xs text-neutral-500 block mb-0.5">عدد الأسطر (الصفوف):</span>
                               <div className="flex items-center gap-1">
                                 <button
                                   type="button"
@@ -5091,7 +5091,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               </div>
                             </div>
                             <div>
-                              <span className="text-[10px] text-neutral-500 block mb-0.5">عدد الأعمدة:</span>
+                              <span className="text-xs text-neutral-500 block mb-0.5">عدد الأعمدة:</span>
                               <div className="flex items-center gap-1">
                                 <button
                                   type="button"
@@ -5117,7 +5117,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           {/* Column width and row height spinners */}
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
-                              <span className="text-[10px] text-neutral-500 block mb-0.5">عرض العمود (بكسل):</span>
+                              <span className="text-xs text-neutral-500 block mb-0.5">عرض العمود (بكسل):</span>
                               <div className="flex items-center gap-1">
                                 <button
                                   type="button"
@@ -5139,7 +5139,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               </div>
                             </div>
                             <div>
-                              <span className="text-[10px] text-neutral-500 block mb-0.5">ارتفاع السطر (بكسل):</span>
+                              <span className="text-xs text-neutral-500 block mb-0.5">ارتفاع السطر (بكسل):</span>
                               <div className="flex items-center gap-1">
                                 <button
                                   type="button"
@@ -5241,7 +5241,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           <div
                             key={item.id}
                             onClick={item.action}
-                            className="group bg-white rounded-2xl border-2 border-neutral-200 hover:border-[#0071e3] p-2.5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer text-right"
+                            className="group bg-white rounded-2xl border-2 border-neutral-200 hover:border-brand p-2.5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer text-right"
                           >
                             {/* Visual Miniature Preview */}
                             <div className="mb-2">
@@ -5250,18 +5250,18 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                             {/* Details & Action */}
                             <div>
-                              <h4 className="text-xs font-bold text-neutral-900 group-hover:text-[#0071e3] transition-colors truncate">
+                              <h4 className="text-xs font-bold text-neutral-900 group-hover:text-brand transition-colors truncate">
                                 {item.title}
                               </h4>
-                              <p className="text-[10px] text-neutral-500 line-clamp-1 mt-0.5">
+                              <p className="text-xs text-neutral-500 line-clamp-1 mt-0.5">
                                 {item.sub}
                               </p>
 
                               <div className="mt-2 pt-1.5 border-t border-neutral-100 flex items-center justify-between">
-                                <span className="text-[9px] font-bold text-[#0071e3] bg-[#0071e3]/10 px-2 py-0.5 rounded-md group-hover:bg-[#0071e3] group-hover:text-white transition-colors">
+                                <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md group-hover:bg-brand group-hover:text-white transition-colors">
                                   إضافة +
                                 </span>
-                                <span className="text-[10px] text-neutral-400 group-hover:text-[#0071e3]">
+                                <span className="text-xs text-neutral-400 group-hover:text-brand">
                                   ✦
                                 </span>
                               </div>
@@ -5400,11 +5400,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         type="text"
                         value={navbar.brandName || ''}
                         onChange={(e) => onUpdateNavbar({ brandName: e.target.value })}
-                        className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-[#0071e3] focus:bg-white focus:outline-none transition-all"
+                        className="w-full text-xs font-semibold px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-brand focus:bg-white focus:outline-none transition-all"
                         placeholder="مثال: متجر الأمل..."
                         dir="rtl"
                       />
-                      <p className="text-[10px] text-neutral-400 leading-tight">
+                      <p className="text-xs text-neutral-400 leading-tight">
                         هذا الاسم هو ما يظهر في النافبار — اكتب اسم شركتك أو اسمك الشخصي، فهو لا يُملأ تلقائيًا.
                       </p>
                     </div>
@@ -5423,7 +5423,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         {navbar.logoUrl ? (
                           <img src={navbar.logoUrl} alt="شعار الموقع" className="w-full h-full object-contain" />
                         ) : (
-                          <span className="text-[10px] text-neutral-400 font-bold">بدون شعار</span>
+                          <span className="text-xs text-neutral-400 font-bold">بدون شعار</span>
                         )}
                       </div>
                       <input
@@ -5437,7 +5437,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         type="button"
                         onClick={() => navbarLogoFileInputRef.current?.click()}
                         disabled={isNavbarLogoUploading}
-                        className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20 transition-all cursor-pointer disabled:opacity-60"
+                        className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-all cursor-pointer disabled:opacity-60"
                       >
                         {isNavbarLogoUploading ? 'جارٍ رفع الشعار...' : (navbar.logoUrl ? 'تغيير الشعار' : 'رفع شعار من الجهاز')}
                       </button>
@@ -5451,7 +5451,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         </button>
                       )}
                     </div>
-                    <p className="text-[10px] text-neutral-400 leading-tight">
+                    <p className="text-xs text-neutral-400 leading-tight">
                       عند رفع شعار، يظهر بدل الحرف الافتراضي بجانب اسم الموقع.
                     </p>
                   </div>
@@ -5472,7 +5472,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                   <div className="space-y-3 pt-2 border-t border-black/[0.06]">
                     <SectionHeader title="إطار أسماء الصفحات" />
-                    <p className="text-[11px] text-neutral-500 -mt-1">
+                    <p className="text-xs text-neutral-500 -mt-1">
                       إطار اختياري حول كل اسم صفحة في النافبار: سمك وتدوير الحواف ولون الإطار، ولون خلفية النص.
                     </p>
                     <Slider
@@ -5492,7 +5492,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       formatValue={(v) => `${v}px`}
                     />
                     <div className="space-y-1.5">
-                      <span className="text-[11px] font-bold text-neutral-700 block">لون الإطار</span>
+                      <span className="text-xs font-bold text-neutral-700 block">لون الإطار</span>
                       <ColorSwatchPicker
                         swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
                         selectedValue={navbar.itemsFrameBorderColor || 'transparent'}
@@ -5500,7 +5500,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <span className="text-[11px] font-bold text-neutral-700 block">لون خلفية النص</span>
+                      <span className="text-xs font-bold text-neutral-700 block">لون خلفية النص</span>
                       <ColorSwatchPicker
                         swatches={FIFTY_SOLID_COLORS.map((hex) => ({ value: hex }))}
                         selectedValue={navbar.itemsFrameBgColor || 'transparent'}
@@ -5508,11 +5508,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <span className="text-[11px] font-bold text-neutral-700 block">نوع الخط لأسماء الصفحات</span>
+                      <span className="text-xs font-bold text-neutral-700 block">نوع الخط لأسماء الصفحات</span>
                       <select
                         value={navbar.itemsFontFamily || ''}
                         onChange={(e) => onUpdateNavbar({ itemsFontFamily: e.target.value || undefined })}
-                        className="w-full px-2.5 py-2 bg-white border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
+                        className="w-full px-2.5 py-2 bg-white border border-neutral-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand"
                         style={{ fontFamily: navbar.itemsFontFamily || undefined }}
                       >
                         <option value="">الخط الافتراضي</option>
@@ -5531,7 +5531,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               {['grid', 'list', 'slides', 'navbar', 'grouping'].includes(activeSection) && (
                 <div className="p-3.5 bg-neutral-50 rounded-xl text-xs text-neutral-600 space-y-1">
                   <span className="font-bold block text-neutral-800">خيارات {getToolTitle()}:</span>
-                  <p className="text-[11px] text-neutral-500">
+                  <p className="text-xs text-neutral-500">
                     يمكنك تعديل إعدادات هذه الأداة مباشرة على العنصر المحدد في ساحة العمليات.
                   </p>
                 </div>
@@ -5551,14 +5551,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           and on top of it, never covered by a sticky navbar scrolling underneath it. */}
       {!isDocked && <button
         onClick={onToggle}
-        className="fixed top-32 right-0 z-[999999] w-7 h-11 bg-white/95 backdrop-blur-md border border-r-0 border-neutral-300 rounded-l-xl shadow-[-3px_2px_12px_rgba(0,0,0,0.1)] flex items-center justify-center text-neutral-600 hover:text-[#0071e3] transition-all hover:w-8 active:scale-95 group focus:outline-none"
+        className="fixed top-32 right-0 z-[999999] w-7 h-11 bg-white/95 backdrop-blur-md border border-r-0 border-neutral-300 rounded-l-xl shadow-[-3px_2px_12px_rgba(0,0,0,0.1)] flex items-center justify-center text-neutral-600 hover:text-brand transition-all hover:w-8 active:scale-95 group focus:outline-none"
         title={isOpen ? "إغلاق لوحة التحكم" : "فتح لوحة التحكم"}
         aria-label={isOpen ? "إغلاق لوحة التحكم" : "فتح لوحة التحكم"}
       >
         {isOpen ? (
-          <ChevronRight size={16} strokeWidth={2.4} className="text-neutral-500 group-hover:text-[#0071e3] transition-transform group-hover:translate-x-0.5" />
+          <ChevronRight size={16} strokeWidth={2.4} className="text-neutral-500 group-hover:text-brand transition-transform group-hover:translate-x-0.5" />
         ) : (
-          <ChevronLeft size={16} strokeWidth={2.4} className="text-neutral-500 group-hover:text-[#0071e3] transition-transform group-hover:-translate-x-0.5" />
+          <ChevronLeft size={16} strokeWidth={2.4} className="text-neutral-500 group-hover:text-brand transition-transform group-hover:-translate-x-0.5" />
         )}
       </button>}
 
@@ -5614,7 +5614,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 e.stopPropagation();
                 setPosition({ x: 0, y: 0 });
               }}
-              className="w-4 h-4 rounded bg-white hover:bg-neutral-100 border border-neutral-300 text-neutral-600 hover:text-[#0071e3] flex items-center justify-center transition-all shadow-3xs cursor-pointer focus:outline-none active:scale-95"
+              className="w-4 h-4 rounded bg-white hover:bg-neutral-100 border border-neutral-300 text-neutral-600 hover:text-brand flex items-center justify-center transition-all shadow-3xs cursor-pointer focus:outline-none active:scale-95"
               title="إعادة لوحة التحكم إلى موقعها الافتراضي"
             >
               <RotateCcw size={10} strokeWidth={2.8} />
@@ -5623,7 +5623,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             <div className="w-4 h-4" />
           )}
           
-          <div className="text-[9px] font-bold text-neutral-500 tracking-wide select-none">
+          <div className="text-xs font-bold text-neutral-500 tracking-wide select-none">
             اسحب للتحريك ✦ DRAG HANDLE
           </div>
 
@@ -5631,14 +5631,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         </div>}
 
         {/* Top Header with Close & Minimize Buttons */}
-        <div className="flex items-center justify-between px-3 pt-2 pb-1.5 bg-[#f5f5f7] border-b border-neutral-200 shrink-0 select-none">
+        <div className="flex items-center justify-between px-3 pt-2 pb-1.5 bg-bg border-b border-neutral-200 shrink-0 select-none">
           <div className="flex items-center gap-2 min-w-0">
             {isDocked && headerSlot ? (
               headerSlot
             ) : (
               <>
-                <span className="w-2 h-2 rounded-full bg-[#0071e3] animate-pulse" />
-                <span className="text-[11.5px] font-bold text-neutral-800">
+                <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
+                <span className="text-xs font-bold text-neutral-800">
                   لوحة التحكم
                 </span>
               </>
@@ -5647,14 +5647,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {!isDocked && <button
               type="button"
               onClick={toggleWeeAiChat}
-              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[9.5px] font-black transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-black transition-all cursor-pointer ${
                 isWeeAiChatCollapsed 
-                  ? 'bg-[#0071e3]/10 text-[#0071e3] border-[#0071e3]/20 hover:bg-[#0071e3]/25' 
+                  ? 'bg-brand/10 text-brand border-brand/20 hover:bg-brand/25' 
                   : 'bg-green-600/10 text-green-600 border-green-600/20 hover:bg-green-600/25'
               }`}
               title={isWeeAiChatCollapsed ? "فتح مساعد الذكاء الاصطناعي" : "طي مساعد الذكاء الاصطناعي"}
             >
-              <Sparkles size={11} className={isWeeAiChatCollapsed ? 'text-[#0071e3]' : 'text-green-600 animate-pulse'} />
+              <Sparkles size={11} className={isWeeAiChatCollapsed ? 'text-brand' : 'text-green-600 animate-pulse'} />
               <span>wee ai</span>
               {isWeeAiChatCollapsed ? (
                 <ChevronDown size={11} strokeWidth={2.8} />
@@ -5687,7 +5687,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
         {/* Where the selection is: project › page › slide (or the navbar) › element. Each step opens its settings. */}
         {isDocked && (
-          <nav aria-label="مسار التحديد" className="flex items-center flex-wrap gap-x-1 gap-y-0.5 px-3 py-2 text-[11px] text-neutral-500 bg-[#f5f5f7] border-b border-neutral-200 shrink-0 select-none">
+          <nav aria-label="مسار التحديد" className="flex items-center flex-wrap gap-x-1 gap-y-0.5 px-3 py-2 text-xs text-neutral-500 bg-bg border-b border-neutral-200 shrink-0 select-none">
             {(() => {
               const crumb = (label: string, onClick: () => void, current: boolean, key: string) => (
                 <button
@@ -5695,7 +5695,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                   type="button"
                   onClick={onClick}
                   className={`max-w-[9rem] truncate rounded-full px-2 py-0.5 transition-colors cursor-pointer ${
-                    current ? 'bg-[#0071e3]/10 text-[#0071e3] font-bold' : 'hover:bg-black/[0.05] hover:text-neutral-900'
+                    current ? 'bg-brand/10 text-brand font-bold' : 'hover:bg-black/[0.05] hover:text-neutral-900'
                   }`}
                 >
                   {label}
@@ -5731,13 +5731,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           Right Tab: الهيكل
           Left Tab: تعديل الصفحة (أو الأداة الحالية)
         */}
-        {!isDocked && <div className="flex items-end px-3 pt-1 border-b-2 border-neutral-300 bg-[#f5f5f7] gap-2">
+        {!isDocked && <div className="flex items-end px-3 pt-1 border-b-2 border-neutral-300 bg-bg gap-2">
           {/* Tab 1: الهيكل */}
           <button
             onClick={() => setActiveTab('structure')}
             className={`flex-1 py-2 px-3 text-xs font-bold rounded-t-xl transition-all border-t-2 border-x-2 flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'structure'
-                ? 'bg-white border-neutral-300 text-[#1d1d1f] shadow-xs relative -mb-[2px] z-10'
+                ? 'bg-white border-neutral-300 text-ink shadow-xs relative -mb-[2px] z-10'
                 : 'bg-neutral-200/80 border-transparent text-neutral-600 hover:text-black hover:bg-neutral-200'
             }`}
           >
@@ -5750,7 +5750,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             onClick={() => setActiveTab('tool')}
             className={`flex-1 py-2 px-3 text-xs font-bold rounded-t-xl transition-all border-t-2 border-x-2 flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'tool'
-                ? 'bg-white border-neutral-300 text-[#0071e3] shadow-xs relative -mb-[2px] z-10'
+                ? 'bg-white border-neutral-300 text-brand shadow-xs relative -mb-[2px] z-10'
                 : 'bg-neutral-200/80 border-transparent text-neutral-600 hover:text-black hover:bg-neutral-200'
             }`}
           >
@@ -5787,7 +5787,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                     <div className="flex items-center gap-1.5 text-neutral-500 shrink-0">
                       {/* عدد الشرائح بالوضع الطبيعي */}
-                      <span className="text-[10px] opacity-75 font-mono group-hover:hidden">
+                      <span className="text-xs opacity-75 font-mono group-hover:hidden">
                         {p.slides.length} شريحة
                       </span>
                       
@@ -5840,7 +5840,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             <div
                               className={`group w-full py-1.5 px-3.5 rounded-full flex items-center justify-between transition-all cursor-pointer border ${
                                 isSlideActive
-                                  ? 'bg-white border-[#0071e3] text-[#0071e3] shadow-xs font-bold'
+                                  ? 'bg-white border-brand text-brand shadow-xs font-bold'
                                   : 'bg-neutral-100 hover:bg-neutral-200/60 border-neutral-200 text-neutral-700 font-medium'
                               }`}
                               title="انقر لعرض المجموعات والعناصر"
@@ -5852,13 +5852,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 }}
                                 className="flex items-center gap-2 truncate flex-1 py-0.5"
                               >
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSlideActive ? 'bg-[#0071e3]' : 'bg-neutral-400'}`} />
-                                <span className="text-[11px] truncate">{s.name}</span>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSlideActive ? 'bg-brand' : 'bg-neutral-400'}`} />
+                                <span className="text-xs truncate">{s.name}</span>
                               </div>
 
                               <div className="flex items-center gap-1 text-neutral-400 shrink-0">
                                 {/* الارتفاع بالوضع الطبيعي */}
-                                <span className="text-[9px] font-mono group-hover:hidden">{s.height}px</span>
+                                <span className="text-xs font-mono group-hover:hidden">{s.height}px</span>
                                 
                                 {/* أزرار السهام والحذف للشريحة عند التمرير */}
                                 <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity duration-150">
@@ -5916,13 +5916,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                       >
                                         <div className="flex items-center gap-2 truncate">
                                           {renderGroupThumb(grp.container, grp.elements)}
-                                          <span className="text-[10.5px] font-bold truncate">
+                                          <span className="text-xs font-bold truncate">
                                             {grp.name}
                                           </span>
                                         </div>
 
                                         <div className="flex items-center gap-1 text-blue-600/70 shrink-0">
-                                          <span className="text-[9px]">({grp.elements.length})</span>
+                                          <span className="text-xs">({grp.elements.length})</span>
                                           <ChevronDown 
                                             size={10} 
                                             className={`transition-transform duration-200 ${isGroupExpanded ? 'rotate-180' : ''}`} 
@@ -5941,7 +5941,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                                 key={el.id}
                                                 className={`group w-full text-right py-1 px-2.5 rounded-lg flex items-center justify-between transition-all cursor-pointer ${
                                                   isSelected
-                                                    ? 'bg-[#0071e3]/10 text-[#0071e3] font-semibold'
+                                                    ? 'bg-brand/10 text-brand font-semibold'
                                                     : 'text-neutral-600 hover:text-black hover:bg-black/[0.04]'
                                                 }`}
                                               >
@@ -5950,7 +5950,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                                   className="flex items-center gap-2 truncate flex-1 py-0.5"
                                                 >
                                                   {getElementIcon(el.type)}
-                                                  <span className="text-[11px] truncate">{el.name}</span>
+                                                  <span className="text-xs truncate">{el.name}</span>
                                                 </div>
 
                                                 <div className="flex items-center gap-1 shrink-0">
@@ -5984,7 +5984,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                       key={el.id}
                                       className={`group w-full text-right py-1 px-2.5 rounded-lg flex items-center justify-between transition-all cursor-pointer ${
                                         isSelected
-                                          ? 'bg-[#0071e3]/10 text-[#0071e3] font-semibold'
+                                          ? 'bg-brand/10 text-brand font-semibold'
                                           : 'text-neutral-600 hover:text-black hover:bg-black/[0.04]'
                                       }`}
                                     >
@@ -5993,7 +5993,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                         className="flex items-center gap-2 truncate flex-1 py-0.5"
                                       >
                                         {getElementIcon(el.type)}
-                                        <span className="text-[11px] truncate">{el.name}</span>
+                                        <span className="text-xs truncate">{el.name}</span>
                                       </div>
 
                                       <div className="flex items-center gap-1 shrink-0">
@@ -6014,7 +6014,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                 })}
 
                                 {slideItemElements.length === 0 && (
-                                  <div className="text-[10px] text-neutral-400 py-1 pr-1">
+                                  <div className="text-xs text-neutral-400 py-1 pr-1">
                                     لا توجد عناصر في هذه الشريحة حالياً
                                   </div>
                                 )}
@@ -6097,12 +6097,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           style={{ height: '100%' }}
         >
           {/* Header of Pop-out Drawer */}
-          <div className="h-12 px-3 bg-[#f5f5f7] border-b border-neutral-200 flex items-center justify-between shrink-0">
+          <div className="h-12 px-3 bg-bg border-b border-neutral-200 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xs font-black text-neutral-800">
                 {READY_SLIDE_CATEGORIES.find(c => c.id === activeTemplateCategory)?.name || 'الشرائح الجاهزة'}
               </span>
-              <span className="text-[10px] text-[#0071e3] font-bold bg-[#0071e3]/5 border border-[#0071e3]/10 px-1.5 py-0.5 rounded-full">
+              <span className="text-xs text-brand font-bold bg-brand/5 border border-brand/10 px-1.5 py-0.5 rounded-full">
                 {activeTemplateCategory ? slideTemplateCount(activeTemplateCategory) : 10} تصاميم
               </span>
             </div>
@@ -6120,7 +6120,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           {/* Ready slides: one card per slide, drawn at its real proportions with example data */}
           <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
             {activeTemplateCategory && (
-              <p className="text-[10.5px] text-neutral-500 leading-relaxed -mt-0.5">
+              <p className="text-xs text-neutral-500 leading-relaxed -mt-0.5">
                 كل شريحة معروضة بشكلها وارتفاعها الحقيقي. الصور والبيانات هنا افتراضية، وبعد الإضافة تظهر صورك وبياناتك.
               </p>
             )}
@@ -6151,13 +6151,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       {isOpen && isMinimized && (
         <div className="fixed bottom-6 right-6 z-[999999] flex flex-col items-center select-none" dir="rtl">
           {/* Label tooltip */}
-          <span className="bg-neutral-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-full mb-2 shadow-lg border border-white/15 backdrop-blur-md select-none tracking-wide animate-pulse">
+          <span className="bg-neutral-900/90 text-white text-xs font-bold px-2.5 py-1 rounded-full mb-2 shadow-lg border border-white/15 backdrop-blur-md select-none tracking-wide animate-pulse">
             لوحة التحكم نشطة ✦
           </span>
           {/* Floating button */}
           <button
             onClick={() => setIsMinimized(false)}
-            className="w-14 h-14 bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white rounded-full shadow-[0_12px_32px_rgba(0,113,227,0.45)] hover:shadow-[0_16px_36px_rgba(0,113,227,0.55)] flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer border-2 border-white/30 hover:border-white focus:outline-none group relative"
+            className="w-14 h-14 bg-gradient-to-tr from-brand to-[#40a9ff] text-white rounded-full shadow-[0_12px_32px_rgba(0,113,227,0.45)] hover:shadow-[0_16px_36px_rgba(0,113,227,0.55)] flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer border-2 border-white/30 hover:border-white focus:outline-none group relative"
             title="انقر لتكبير لوحة التحكم وإظهارها ✦"
           >
             <SlidersHorizontal size={22} className="group-hover:rotate-12 transition-transform duration-300" strokeWidth={2.4} />

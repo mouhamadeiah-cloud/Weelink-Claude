@@ -387,14 +387,14 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-1 text-xs font-bold text-[#0071e3] hover:text-[#005bb5] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+            className="flex items-center gap-1 text-xs font-bold text-brand hover:text-brand-hover bg-brand/10 hover:bg-brand/15 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
           >
             <ChevronRight size={15} strokeWidth={2.4} />
             <span>رجوع للعناصر</span>
           </button>
 
           <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-            <ImageIcon size={16} className="text-[#0071e3]" />
+            <ImageIcon size={16} className="text-brand" />
             <span>{selectedElement?.type === 'image' ? 'تبديل وتغيير الصورة' : 'إضافة صورة'}</span>
           </h3>
         </div>
@@ -405,7 +405,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
         <div className="bg-neutral-50 border border-neutral-200 p-3 rounded-2xl space-y-2">
           <div className="flex justify-between items-center text-xs">
             <span className="font-bold text-neutral-700">الصورة الحالية في التصميم:</span>
-            <span className="text-[10px] text-[#0071e3] bg-[#0071e3]/8 px-2 py-0.5 rounded-md font-semibold">
+            <span className="text-xs text-brand bg-brand/8 px-2 py-0.5 rounded-md font-semibold">
               وضع التبديل النشط 🔄
             </span>
           </div>
@@ -422,10 +422,10 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
               <p className="text-xs font-bold text-neutral-800 truncate">
                 {elementDisplayName(selectedElement)}
               </p>
-              <p className="text-[10px] text-neutral-400 mt-0.5 truncate">
+              <p className="text-xs text-neutral-400 mt-0.5 truncate">
                 {selectedElement.width} × {selectedElement.height} بكسل
               </p>
-              <p className="text-[10px] text-neutral-500 font-medium mt-1 leading-normal">
+              <p className="text-xs text-neutral-500 font-medium mt-1 leading-normal">
                 اختر أي صورة أو جرافيك أدناه لتبديل هذه الصورة فوراً مع الاحتفاظ بكافة التأثيرات والحجم والإطارات.
               </p>
             </div>
@@ -446,7 +446,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           onClick={() => setActiveDoor('device')}
           className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             activeDoor === 'device'
-              ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-black/[0.04]'
+              ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]'
               : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/50'
           }`}
         >
@@ -460,7 +460,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           onClick={() => setActiveDoor('gallery')}
           className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             activeDoor === 'gallery'
-              ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-black/[0.04]'
+              ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]'
               : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/50'
           }`}
         >
@@ -474,7 +474,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           onClick={() => setActiveDoor('graphics')}
           className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
             activeDoor === 'graphics'
-              ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-black/[0.04]'
+              ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]'
               : 'text-neutral-600 hover:text-neutral-900 hover:bg-white/50'
           }`}
         >
@@ -503,8 +503,8 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className={`w-full p-6 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center text-center cursor-pointer group ${
               isDraggingOver
-                ? 'border-[#0071e3] bg-[#0071e3]/10 scale-[1.01]'
-                : 'border-neutral-300 hover:border-[#0071e3] bg-neutral-50/80 hover:bg-neutral-50'
+                ? 'border-brand bg-brand/10 scale-[1.01]'
+                : 'border-neutral-300 hover:border-brand bg-neutral-50/80 hover:bg-neutral-50'
             }`}
           >
             <input
@@ -516,18 +516,18 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
             />
 
             {/* Circular Arrow Up Icon exactly matching the user's sketch */}
-            <div className="w-14 h-14 rounded-full bg-white border-2 border-neutral-300 group-hover:border-[#0071e3] group-hover:bg-[#0071e3]/10 flex items-center justify-center text-neutral-600 group-hover:text-[#0071e3] transition-all shadow-sm mb-2.5">
+            <div className="w-14 h-14 rounded-full bg-white border-2 border-neutral-300 group-hover:border-brand group-hover:bg-brand/10 flex items-center justify-center text-neutral-600 group-hover:text-brand transition-all shadow-sm mb-2.5">
               {isUploading ? (
-                <RefreshCw size={24} className="animate-spin text-[#0071e3]" />
+                <RefreshCw size={24} className="animate-spin text-brand" />
               ) : (
                 <ArrowUpCircle size={30} strokeWidth={2.2} />
               )}
             </div>
 
-            <span className="text-xs font-bold text-neutral-800 group-hover:text-[#0071e3] transition-colors">
+            <span className="text-xs font-bold text-neutral-800 group-hover:text-brand transition-colors">
               {isUploading ? 'جاري قراءة ورفع الصورة...' : 'انقر لرفع صورة من الجهاز'}
             </span>
-            <p className="text-[11px] text-neutral-400 mt-0.5">
+            <p className="text-xs text-neutral-400 mt-0.5">
               أو اسحب وأفلت ملف الصورة هنا (PNG, JPG, SVG, WebP)
             </p>
           </div>
@@ -537,11 +537,11 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
                 <span>آخر الصور</span>
-                <span className="text-[10px] font-mono text-neutral-400 font-normal">
+                <span className="text-xs font-mono text-neutral-400 font-normal">
                   ({combinedRecentImages.length})
                 </span>
               </span>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-xs text-neutral-400">
                 انقر على أي صورة لإضافتها فوراً
               </span>
             </div>
@@ -552,7 +552,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                 <div
                   key={`${img.id}-${idx}`}
                   onClick={() => handleImageApply(img.url, img.title, 420, 260)}
-                  className="aspect-square bg-neutral-100 rounded-xl overflow-hidden border border-neutral-200 hover:border-[#0071e3] shadow-2xs hover:shadow-md transition-all cursor-pointer group relative"
+                  className="aspect-square bg-neutral-100 rounded-xl overflow-hidden border border-neutral-200 hover:border-brand shadow-2xs hover:shadow-md transition-all cursor-pointer group relative"
                   title={`${img.title} (انقر للإضافة)`}
                 >
                   <img
@@ -563,7 +563,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                   />
                   {/* Subtle hover overlay with add button */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-1">
-                    <span className="w-7 h-7 rounded-full bg-white/95 text-[#0071e3] flex items-center justify-center font-bold text-xs shadow-md scale-75 group-hover:scale-100 transition-transform">
+                    <span className="w-7 h-7 rounded-full bg-white/95 text-brand flex items-center justify-center font-bold text-xs shadow-md scale-75 group-hover:scale-100 transition-transform">
                       <Plus size={14} strokeWidth={3} />
                     </span>
                   </div>
@@ -621,7 +621,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                   onClick={() => setGalleryCategory(cat.id)}
                   className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
                     galleryCategory === cat.id
-                      ? 'bg-[#0071e3] text-white shadow-2xs'
+                      ? 'bg-brand text-white shadow-2xs'
                       : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'
                   }`}
                 >
@@ -647,7 +647,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
               value={gallerySearch}
               onChange={(e) => setGallerySearch(e.target.value)}
               placeholder="بحث في ملايين صور Unsplash (رخام، قهوة، طبيعة، تقنية...)"
-              className="w-full pl-8 pr-9 py-2 bg-neutral-100 focus:bg-white border border-neutral-300 focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] rounded-xl text-xs text-right placeholder:text-neutral-400 focus:outline-none transition-all shadow-3xs"
+              className="w-full pl-8 pr-9 py-2 bg-neutral-100 focus:bg-white border border-neutral-300 focus:border-brand focus:ring-1 focus:ring-brand rounded-xl text-xs text-right placeholder:text-neutral-400 focus:outline-none transition-all shadow-3xs"
               dir="rtl"
             />
             <Search
@@ -667,18 +667,18 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           </div>
 
           {/* Status info bar: Live Unsplash Indicator, Loaded Count & Compression Badge */}
-          <div className="flex items-center justify-between px-1 text-[11px] text-neutral-500">
+          <div className="flex items-center justify-between px-1 text-xs text-neutral-500">
             <div className="flex items-center gap-1.5 font-medium text-neutral-700">
               <span className={`w-2 h-2 rounded-full ring-2 ${isLive ? 'bg-emerald-500 ring-emerald-500/20' : 'bg-amber-400 ring-amber-400/20'}`} />
               <span>{isLive ? 'صور Unsplash' : 'صور مختارة'}</span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold">
                 ⚡ ضغط آلي ≤ 150KB
               </span>
               {totalCount > 0 && !isLoadingGallery && (
-                <span className="text-[10px] text-neutral-400 font-mono">
+                <span className="text-xs text-neutral-400 font-mono">
                   {totalCount > 1000 ? 'آلاف الصور' : `${totalCount} صورة`}
                 </span>
               )}
@@ -686,7 +686,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           </div>
 
           {!isLive && !isLoadingGallery && (
-            <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800">
+            <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800">
               {notLiveMessage(galleryError)}
             </p>
           )}
@@ -698,7 +698,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                 <Check size={14} className="text-emerald-600" />
                 <span>{compressedNotice.text}</span>
               </div>
-              <span className="text-[10px] bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded-md font-mono">
+              <span className="text-xs bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded-md font-mono">
                 {compressedNotice.sizeKb} KB
               </span>
             </div>
@@ -742,7 +742,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                     );
                     e.dataTransfer.effectAllowed = 'copy';
                   }}
-                  className="aspect-square bg-neutral-100 rounded-xl overflow-hidden border border-neutral-200 hover:border-[#0071e3] shadow-2xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing group relative select-none"
+                  className="aspect-square bg-neutral-100 rounded-xl overflow-hidden border border-neutral-200 hover:border-brand shadow-2xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing group relative select-none"
                   title={`${photo.title} (اسحب إلى الشريحة أو انقر للإضافة)`}
                 >
                   <img
@@ -756,19 +756,19 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                   {compressingPhotoId === photo.id && (
                     <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center p-1 text-white gap-1.5 z-20 backdrop-blur-[1px]">
                       <RefreshCw size={18} className="animate-spin text-white" />
-                      <span className="text-[9px] font-bold">جاري الضغط ≤150KB...</span>
+                      <span className="text-xs font-bold">جاري الضغط ≤150KB...</span>
                     </div>
                   )}
 
                   {/* Photo hover overlay */}
                   <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-between p-1.5 text-center text-white">
-                    <span className="text-[8px] bg-black/60 px-1 py-0.2 rounded-md font-mono self-end truncate max-w-[85%]">
+                    <span className="text-xs bg-black/60 px-1 py-0.2 rounded-md font-mono self-end truncate max-w-[85%]">
                       {photo.category}
                     </span>
-                    <span className="w-6 h-6 rounded-full bg-white text-[#0071e3] flex items-center justify-center font-bold text-xs shadow-sm scale-90 group-hover:scale-100 transition-transform">
+                    <span className="w-6 h-6 rounded-full bg-white text-brand flex items-center justify-center font-bold text-xs shadow-sm scale-90 group-hover:scale-100 transition-transform">
                       <Plus size={13} strokeWidth={3} />
                     </span>
-                    <span className="text-[9px] truncate w-full font-medium leading-tight opacity-90">
+                    <span className="text-xs truncate w-full font-medium leading-tight opacity-90">
                       {photo.photographer || photo.title}
                     </span>
                   </div>
@@ -784,7 +784,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                 <button
                   type="button"
                   onClick={() => setGallerySearch('')}
-                  className="text-xs text-[#0071e3] font-bold hover:underline"
+                  className="text-xs text-brand font-bold hover:underline"
                 >
                   مسح كلمة البحث
                 </button>
@@ -797,20 +797,20 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
             <button
               type="button"
               onClick={() => setIsPhotoBrowserOpen(true)}
-              className="w-full py-2.5 rounded-xl border border-neutral-300 hover:border-[#0071e3] bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-[#0071e3] transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer active:scale-[0.99]"
+              className="w-full py-2.5 rounded-xl border border-neutral-300 hover:border-brand bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-brand transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer active:scale-[0.99]"
             >
               <span>عرض المزيد والبحث بصور أكثر</span>
               <ChevronLeft size={14} strokeWidth={2.5} />
             </button>
           )}
 
-          <div className="text-[10px] text-neutral-400 text-center flex items-center justify-center gap-1">
+          <div className="text-xs text-neutral-400 text-center flex items-center justify-center gap-1">
             <span>الصور من</span>
             <a
               href="https://unsplash.com?utm_source=weelink&utm_medium=referral"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-neutral-600 hover:text-[#0071e3] inline-flex items-center gap-0.5"
+              className="font-semibold text-neutral-600 hover:text-brand inline-flex items-center gap-0.5"
             >
               <span>Unsplash</span>
               <ExternalLink size={10} />
@@ -848,9 +848,9 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                   key={cat.id}
                   type="button"
                   onClick={() => setGraphicsCategory(cat.id)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all shrink-0 cursor-pointer ${
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
                     graphicsCategory === cat.id
-                      ? 'bg-[#0071e3] text-white shadow-2xs'
+                      ? 'bg-brand text-white shadow-2xs'
                       : 'text-neutral-700 hover:bg-neutral-100'
                   }`}
                 >
@@ -878,7 +878,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
               value={graphicsSearch}
               onChange={(e) => setGraphicsSearch(e.target.value)}
               placeholder="بحث في الملصقات والفيكتور والكلايميشن..."
-              className="w-full pl-8 pr-9 py-2 bg-neutral-100 focus:bg-white border border-neutral-300 focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] rounded-xl text-xs text-right placeholder:text-neutral-400 focus:outline-none transition-all shadow-3xs"
+              className="w-full pl-8 pr-9 py-2 bg-neutral-100 focus:bg-white border border-neutral-300 focus:border-brand focus:ring-1 focus:ring-brand rounded-xl text-xs text-right placeholder:text-neutral-400 focus:outline-none transition-all shadow-3xs"
               dir="rtl"
             />
             <Search
@@ -920,7 +920,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                   );
                   e.dataTransfer.effectAllowed = 'copy';
                 }}
-                className="aspect-square bg-gradient-to-tr from-neutral-50 to-neutral-100/90 rounded-2xl overflow-hidden border border-neutral-200 hover:border-[#0071e3] shadow-2xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing group relative p-2 flex flex-col items-center justify-center text-center select-none"
+                className="aspect-square bg-gradient-to-tr from-neutral-50 to-neutral-100/90 rounded-2xl overflow-hidden border border-neutral-200 hover:border-brand shadow-2xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing group relative p-2 flex flex-col items-center justify-center text-center select-none"
                 title={`${item.title} (اسحب إلى الشريحة أو انقر للإضافة)`}
               >
                 <img
@@ -932,7 +932,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
 
                 {/* Badge tag */}
                 <div className="absolute top-1 right-1 opacity-80 group-hover:opacity-100">
-                  <span className="text-[7.5px] px-1 py-0.2 rounded-md font-bold bg-white/90 border border-black/10 text-neutral-700 shadow-3xs">
+                  <span className="text-xs px-1 py-0.2 rounded-md font-bold bg-white/90 border border-black/10 text-neutral-700 shadow-3xs">
                     {item.subCategory === 'stickers'
                       ? 'ستيكر'
                       : item.subCategory === 'claymation'
@@ -942,8 +942,8 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                 </div>
 
                 {/* Hover Add Overlay */}
-                <div className="absolute inset-0 bg-[#0071e3]/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="w-7 h-7 rounded-full bg-white text-[#0071e3] flex items-center justify-center font-bold text-xs shadow-md scale-90 group-hover:scale-100 transition-transform">
+                <div className="absolute inset-0 bg-brand/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="w-7 h-7 rounded-full bg-white text-brand flex items-center justify-center font-bold text-xs shadow-md scale-90 group-hover:scale-100 transition-transform">
                     <Plus size={14} strokeWidth={3} />
                   </span>
                 </div>
@@ -962,14 +962,14 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
             <button
               type="button"
               onClick={() => setVisibleGraphicsCount((prev) => prev + 12)}
-              className="w-full py-2.5 rounded-xl border border-neutral-300 hover:border-[#0071e3] bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-[#0071e3] transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-[0.99]"
+              className="w-full py-2.5 rounded-xl border border-neutral-300 hover:border-brand bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-brand transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-[0.99]"
             >
               <span>عرض المزيد من الجرافيك</span>
               <span className="text-sm">↓</span>
             </button>
           )}
 
-          <div className="p-2.5 bg-neutral-50 rounded-xl border border-neutral-200 text-[10px] text-neutral-500 leading-snug">
+          <div className="p-2.5 bg-neutral-50 rounded-xl border border-neutral-200 text-xs text-neutral-500 leading-snug">
             💡 <b>ملاحظة:</b> مكتبة الجرافيك توفر ملصقات 3D، وأيقونات فيكتور، ونماذج كلايميشن صلصالية جاهزة للإدراج مباشرة في تصميمك بنقرة واحدة.
           </div>
         </div>

@@ -233,7 +233,7 @@ export const LinkSection = ({
               }}
               className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 isActive 
-                  ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-[#0071e3]/30' 
+                  ? 'bg-white text-brand shadow-xs ring-1 ring-brand/30' 
                   : 'text-neutral-600 hover:text-black hover:bg-neutral-200/50'
               }`}
             >
@@ -279,7 +279,7 @@ export const LinkSection = ({
                 <span style={{ color: activePlatform.color }}>{activePlatform.icon}</span>
                 <span>رقم / حساب {activePlatform.name}:</span>
               </span>
-              <span className="text-[10px] text-neutral-400 font-mono">
+              <span className="text-xs text-neutral-400 font-mono">
                 {activePlatform.subname}
               </span>
             </div>
@@ -289,9 +289,9 @@ export const LinkSection = ({
               onChange={(e) => handleContactInputChange(e.target.value)}
               placeholder={activePlatform.placeholder}
               dir="ltr"
-              className="w-full px-3 py-2.5 bg-white rounded-xl border border-neutral-300 text-xs font-mono text-left focus:outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] transition-all shadow-2xs"
+              className="w-full px-3 py-2.5 bg-white rounded-xl border border-neutral-300 text-xs font-mono text-left focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all shadow-2xs"
             />
-            <p className="text-[10px] text-neutral-500 pt-0.5">
+            <p className="text-xs text-neutral-500 pt-0.5">
               {activePlatform.helpText}
             </p>
           </div>
@@ -305,7 +305,7 @@ export const LinkSection = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-neutral-800 font-bold text-sm">صفحات المشروع:</span>
-            <span className="text-[11px] text-neutral-500">اختر صفحة للانتقال إليها</span>
+            <span className="text-xs text-neutral-500">اختر صفحة للانتقال إليها</span>
           </div>
           <div className="space-y-1.5">
             {pages.map((p) => {
@@ -325,13 +325,13 @@ export const LinkSection = ({
                   }}
                   className={`w-full p-3 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer ${
                     isSelectedPage
-                      ? 'border-[#0071e3] bg-[#0071e3]/10 shadow-xs ring-1 ring-[#0071e3]/40'
+                      ? 'border-brand bg-brand/10 shadow-xs ring-1 ring-brand/40'
                       : 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      isSelectedPage ? 'bg-[#0071e3] text-white' : 'bg-neutral-100 text-neutral-600'
+                      isSelectedPage ? 'bg-brand text-white' : 'bg-neutral-100 text-neutral-600'
                     }`}>
                       <FileText size={16} />
                     </div>
@@ -339,7 +339,7 @@ export const LinkSection = ({
                       <div className="text-xs font-bold text-neutral-800">
                         {p.name}
                       </div>
-                      <div className="text-[10px] text-neutral-500 flex items-center gap-2 mt-0.5">
+                      <div className="text-xs text-neutral-500 flex items-center gap-2 mt-0.5">
                         <span className="font-mono">{p.slug}</span>
                         <span>•</span>
                         <span>{p.slides.length} شرائح</span>
@@ -347,7 +347,7 @@ export const LinkSection = ({
                     </div>
                   </div>
                   {isSelectedPage && (
-                    <div className="w-5 h-5 rounded-full bg-[#0071e3] text-white flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center shrink-0">
                       <Check size={12} strokeWidth={3} />
                     </div>
                   )}
@@ -363,7 +363,7 @@ export const LinkSection = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-neutral-800 font-bold text-sm">شرائح المشروع:</span>
-            <span className="text-[11px] text-neutral-500">اختر شريحة مستهدفة</span>
+            <span className="text-xs text-neutral-500">اختر شريحة مستهدفة</span>
           </div>
           <div className="space-y-3">
             {pages.map((p) => {
@@ -375,7 +375,7 @@ export const LinkSection = ({
                       <Folder size={14} className="text-neutral-400" />
                       <span>صفحة: {p.name}</span>
                     </div>
-                    <span className="text-[10px] font-normal text-neutral-400">({p.slides.length} شرائح)</span>
+                    <span className="text-xs font-normal text-neutral-400">({p.slides.length} شرائح)</span>
                   </div>
 
                   {/* الشرائح تحت الصفحة مباشرة */}
@@ -397,7 +397,7 @@ export const LinkSection = ({
                           }}
                           className={`w-full p-2.5 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer ${
                             isSelectedSlide
-                              ? 'border-[#0071e3] bg-[#0071e3]/10 shadow-xs ring-1 ring-[#0071e3]/40'
+                              ? 'border-brand bg-brand/10 shadow-xs ring-1 ring-brand/40'
                               : 'border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50'
                           }`}
                         >
@@ -411,7 +411,7 @@ export const LinkSection = ({
                             </div>
                           </div>
                           {isSelectedSlide && (
-                            <div className="w-5 h-5 rounded-full bg-[#0071e3] text-white flex items-center justify-center shrink-0">
+                            <div className="w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center shrink-0">
                               <Check size={12} strokeWidth={3} />
                             </div>
                           )}
@@ -431,7 +431,7 @@ export const LinkSection = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs">
             <span className="text-neutral-800 font-bold text-sm">رابط خارجي:</span>
-            <span className="text-[11px] text-neutral-500">موقع ويب خارجي</span>
+            <span className="text-xs text-neutral-500">موقع ويب خارجي</span>
           </div>
           <div className="space-y-2">
             <input
@@ -450,7 +450,7 @@ export const LinkSection = ({
               }}
               placeholder="https://example.com"
               dir="ltr"
-              className="w-full px-3 py-2.5 bg-white rounded-xl border border-neutral-300 text-xs font-mono text-left focus:outline-none focus:border-[#0071e3] focus:ring-1 focus:ring-[#0071e3] transition-all shadow-2xs"
+              className="w-full px-3 py-2.5 bg-white rounded-xl border border-neutral-300 text-xs font-mono text-left focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all shadow-2xs"
             />
 
             {/* بادئات واختصارات سريعة */}
@@ -469,7 +469,7 @@ export const LinkSection = ({
                       linkTargetId: undefined,
                     });
                   }}
-                  className="px-2 py-1 rounded-lg border border-neutral-200 text-[10px] font-mono text-neutral-600 hover:bg-neutral-50 cursor-pointer"
+                  className="px-2 py-1 rounded-lg border border-neutral-200 text-xs font-mono text-neutral-600 hover:bg-neutral-50 cursor-pointer"
                 >
                   {preset}
                 </button>
@@ -482,9 +482,9 @@ export const LinkSection = ({
       {/* معاينة الرابط وإزالته عند توفره */}
       {selectedElement?.linkUrl && (
         <div className="pt-2 border-t border-neutral-200 space-y-2">
-          <div className="p-2.5 bg-neutral-50 rounded-xl border border-neutral-200 text-[11px] flex items-center justify-between gap-2">
+          <div className="p-2.5 bg-neutral-50 rounded-xl border border-neutral-200 text-xs flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 overflow-hidden">
-              <ExternalLink size={13} className="text-[#0071e3] shrink-0" />
+              <ExternalLink size={13} className="text-brand shrink-0" />
               <span className="font-mono text-neutral-700 truncate" dir="ltr">
                 {selectedElement.linkUrl}
               </span>

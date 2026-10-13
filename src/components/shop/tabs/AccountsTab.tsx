@@ -53,14 +53,14 @@ const entryTime = (date: string) => {
 const today = () => dayKey(new Date());
 
 const Bars: React.FC<{ rows: CountRow[]; color: string; format?: (n: number) => string; empty: string }> = ({ rows, color, format = String, empty }) => {
-  if (!rows.length) return <div className="text-[11px] text-neutral-400 font-bold py-4 text-center">{empty}</div>;
+  if (!rows.length) return <div className="text-xs text-neutral-400 font-bold py-4 text-center">{empty}</div>;
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <div className="space-y-2">
       {rows.map((r) => (
         <div key={r.label} className="space-y-1">
-          <div className="flex justify-between gap-2 text-[11px] font-bold">
-            <span className="text-[#1d1d1f] truncate">{r.label}</span>
+          <div className="flex justify-between gap-2 text-xs font-bold">
+            <span className="text-ink truncate">{r.label}</span>
             <span className="text-neutral-500 shrink-0">{format(r.value)}</span>
           </div>
           <div className="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
@@ -211,7 +211,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
       <div className="flex border-b border-neutral-200" role="tablist" aria-label="أقسام الحسابات">
         {([['accounts', 'الحسابات'], ['dashboard', 'Dashboard والإحصائيات']] as const).map(([id, label]) => (
           <button key={id} type="button" role="tab" aria-selected={section === id} onClick={() => setSection(id)}
-            className={`h-10 px-4 -mb-px border-b-2 text-xs font-black transition cursor-pointer ${section === id ? 'border-[#0071e3] text-[#0071e3]' : 'border-transparent text-neutral-500 hover:text-[#1d1d1f]'}`}>
+            className={`h-10 px-4 -mb-px border-b-2 text-xs font-black transition cursor-pointer ${section === id ? 'border-brand text-brand' : 'border-transparent text-neutral-500 hover:text-ink'}`}>
             {label}
           </button>
         ))}
@@ -221,14 +221,14 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
         {section === 'accounts' && <div className="flex p-1 rounded-xl bg-neutral-100" role="tablist" aria-label="نوع الحسابات">
           {VIEWS.map((v) => (
             <button key={v.id} type="button" role="tab" aria-selected={view === v.id} onClick={() => setView(v.id)}
-              className={`h-8 px-3 rounded-lg text-[11px] font-bold transition cursor-pointer ${view === v.id ? 'bg-white text-[#1d1d1f] shadow-sm' : 'text-neutral-500'}`}>
+              className={`h-8 px-3 rounded-lg text-xs font-bold transition cursor-pointer ${view === v.id ? 'bg-white text-ink shadow-sm' : 'text-neutral-500'}`}>
               {v.label}
             </button>
           ))}
         </div>}
         <div className="flex items-center gap-1.5 mr-auto">
-          <button type="button" onClick={() => print(false)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"><Printer size={13} /> طباعة A4</button>
-          <button type="button" onClick={() => print(true)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"><FileDown size={13} /> تصدير PDF</button>
+          <button type="button" onClick={() => print(false)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Printer size={13} /> طباعة A4</button>
+          <button type="button" onClick={() => print(true)} className="h-8 px-3 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer"><FileDown size={13} /> تصدير PDF</button>
         </div>
       </div>
 
@@ -238,7 +238,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
             key={r.id}
             type="button"
             onClick={() => setRange(r.id)}
-            className={`h-8 px-3 rounded-full text-[11px] font-bold border transition cursor-pointer ${range === r.id ? 'bg-[#1d1d1f] border-[#1d1d1f] text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}
+            className={`h-8 px-3 rounded-full text-xs font-bold border transition cursor-pointer ${range === r.id ? 'bg-ink border-ink text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}
           >
             {r.label}
           </button>
@@ -256,14 +256,14 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
       <div className="flex gap-2 overflow-x-auto">
         {stats.map((s) => (
           <div key={s.label} className="flex-1 min-w-[96px] bg-white border border-neutral-200 rounded-xl px-2.5 py-1.5">
-            <div className="text-[10px] font-bold text-neutral-400 truncate">{s.label}</div>
+            <div className="text-xs font-bold text-neutral-400 truncate">{s.label}</div>
             <div className="text-[13px] font-black truncate" style={{ color: s.color }}>{s.value}</div>
           </div>
         ))}
       </div>
 
       <Card title="الحركة اليومية" actions={
-        <div className="flex items-center gap-3 text-[10px] font-bold text-neutral-500">
+        <div className="flex items-center gap-3 text-xs font-bold text-neutral-500">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#34c759]" />{view === 'page' ? 'مبيعات' : view === 'side' ? 'أرباح' : 'داخل'}</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#ff9f0a]" />{view === 'page' ? 'مشتريات' : view === 'side' ? 'مصروفات' : 'خارج'}</span>
         </div>
@@ -275,7 +275,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
                 <div className="w-2.5 rounded-t bg-[#34c759]" style={{ height: `${(d.inflow / maxBar) * 100}%`, minHeight: d.inflow ? 2 : 0 }} />
                 <div className="w-2.5 rounded-t bg-[#ff9f0a]" style={{ height: `${(d.outflow / maxBar) * 100}%`, minHeight: d.outflow ? 2 : 0 }} />
               </div>
-              <span className="text-[9px] text-neutral-400">{d.label}</span>
+              <span className="text-xs text-neutral-400">{d.label}</span>
             </div>
           ))}
         </div>
@@ -293,7 +293,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
               { label: 'المبيعات', value: money(data.movements.filter((m) => m.type === 'sale' && isoIn(m.createdAt)).reduce((t, m) => t + m.qty * m.unitAmount, 0)), color: '#34c759' },
             ].map((s) => (
               <div key={s.label} className="flex-1 min-w-[96px] bg-white border border-neutral-200 rounded-xl px-2.5 py-1.5">
-                <div className="text-[10px] font-bold text-neutral-400 truncate">{s.label}</div>
+                <div className="text-xs font-bold text-neutral-400 truncate">{s.label}</div>
                 <div className="text-[13px] font-black truncate" style={{ color: s.color }}>{s.value}</div>
               </div>
             ))}
@@ -321,7 +321,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
             <div className="flex p-1 rounded-xl bg-neutral-100 h-10" role="radiogroup" aria-label="نوع القيد">
               {(['income', 'expense'] as const).map((t) => (
                 <button key={t} type="button" role="radio" aria-checked={entry.type === t} onClick={() => setEntry({ ...entry, type: t })}
-                  className={`px-3 rounded-lg text-[11px] font-bold cursor-pointer ${entry.type === t ? (t === 'income' ? 'bg-white text-[#30b0c7] shadow-sm' : 'bg-white text-[#ff3b30] shadow-sm') : 'text-neutral-500'}`}>
+                  className={`px-3 rounded-lg text-xs font-bold cursor-pointer ${entry.type === t ? (t === 'income' ? 'bg-white text-[#30b0c7] shadow-sm' : 'bg-white text-[#ff3b30] shadow-sm') : 'text-neutral-500'}`}>
                   {t === 'income' ? 'ربح' : 'مصروف'}
                 </button>
               ))}
@@ -339,7 +339,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
             </Field>
             <PrimaryButton onClick={addEntry} className="flex items-center gap-1"><Plus size={14} /> إضافة</PrimaryButton>
           </div>
-          {entryError && <div className="text-[11px] text-red-600 font-bold">{entryError}</div>}
+          {entryError && <div className="text-xs text-red-600 font-bold">{entryError}</div>}
         </Card>
       )}
 

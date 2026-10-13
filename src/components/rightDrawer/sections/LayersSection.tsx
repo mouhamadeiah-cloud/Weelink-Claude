@@ -57,7 +57,7 @@ export const LayersSection = ({
               <span className="text-neutral-500 hover:text-black">
                 <ArrowDownToLine size={18} strokeWidth={2.2} />
               </span>
-              <span className="text-[10px] font-bold">أسفل</span>
+              <span className="text-xs font-bold">أسفل</span>
             </button>
 
             {/* 2. طبقة للأسفل (Send backward) */}
@@ -69,7 +69,7 @@ export const LayersSection = ({
               <span className="text-neutral-500 hover:text-black">
                 <ChevronDown size={18} strokeWidth={2.2} />
               </span>
-              <span className="text-[10px] font-bold">لأسفل</span>
+              <span className="text-xs font-bold">لأسفل</span>
             </button>
 
             {/* 3. طبقة للأعلى (Bring forward) */}
@@ -81,7 +81,7 @@ export const LayersSection = ({
               <span className="text-neutral-500 hover:text-black">
                 <ChevronUp size={18} strokeWidth={2.2} />
               </span>
-              <span className="text-[10px] font-bold">للأعلى</span>
+              <span className="text-xs font-bold">للأعلى</span>
             </button>
 
             {/* 4. أعلى الجميع (Bring to absolute top) */}
@@ -93,7 +93,7 @@ export const LayersSection = ({
               <span className="text-neutral-500 hover:text-black">
                 <ArrowUpToLine size={18} strokeWidth={2.2} />
               </span>
-              <span className="text-[10px] font-bold">أعلى</span>
+              <span className="text-xs font-bold">أعلى</span>
             </button>
           </div>
         ) : (
@@ -107,7 +107,7 @@ export const LayersSection = ({
       <div className="space-y-2.5 pt-2 border-t border-neutral-100">
         <div className="flex justify-between items-center text-xs">
           <span className="font-bold text-neutral-800">طبقات الشريحة الحالية:</span>
-          <span className="text-[10px] text-neutral-400 font-mono">({layersList.length} عناصر)</span>
+          <span className="text-xs text-neutral-400 font-mono">({layersList.length} عناصر)</span>
         </div>
 
         <div className="space-y-1.5 max-h-80 overflow-y-auto pr-0.5">
@@ -120,14 +120,14 @@ export const LayersSection = ({
                 key={el.id}
                 className={`p-2 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-pointer ${
                   isSelected
-                    ? 'border-[#0071e3] bg-[#0071e3]/5 shadow-xs ring-1 ring-[#0071e3]/30'
+                    ? 'border-brand bg-brand/5 shadow-xs ring-1 ring-brand/30'
                     : 'border-neutral-200 bg-white hover:bg-neutral-50 hover:border-neutral-300'
                 }`}
                 onClick={() => onSelectElement(el.id)}
               >
                 <div className="flex items-center gap-2 truncate">
                   {/* رقم الترتيب / الطبقة بصريًا */}
-                  <span className="text-[9px] font-mono font-bold text-neutral-400 bg-neutral-100 w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0">
+                  <span className="text-xs font-mono font-bold text-neutral-400 bg-neutral-100 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
                     {layersList.length - i}
                   </span>
                   {/* أيقونة العنصر */}
@@ -135,7 +135,7 @@ export const LayersSection = ({
                     {getElementIcon(el.type)}
                   </span>
                   {/* اسم العنصر */}
-                  <span className={`text-xs truncate ${isSelected ? 'font-bold text-[#0071e3]' : 'text-neutral-700 font-medium'}`}>
+                  <span className={`text-xs truncate ${isSelected ? 'font-bold text-brand' : 'text-neutral-700 font-medium'}`}>
                     {el.name}
                   </span>
                 </div>
@@ -189,7 +189,7 @@ export const LayersSection = ({
       </div>
 
       {/* نص توضيحي مفيد */}
-      <div className="p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-[10px] text-neutral-500 leading-tight">
+      <div className="p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-500 leading-tight">
         💡 <b>معلومة مفيدة:</b> الطبقات مرتبة من الأعلى للأسفل كبرامج التصميم الاحترافية. لتعديل عنصر مغطى بالكامل خلف عناصر أخرى، حدده مباشرة من هذه القائمة وسيتم تنشيطه على الفور في ساحة العمل.
       </div>
 

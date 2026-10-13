@@ -37,7 +37,7 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
           <Field label="اسم الطبق"><input className={inputClass} placeholder="مثلاً: شيش طاووق" value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} /></Field>
           <Field label="القسم">
             {data.categories.length === 0 ? (
-              <button type="button" onClick={() => onGoTo('categories')} className="h-10 text-xs font-bold text-[#0071e3] cursor-pointer">أضف قسمًا أولًا</button>
+              <button type="button" onClick={() => onGoTo('categories')} className="h-10 text-xs font-bold text-brand cursor-pointer">أضف قسمًا أولًا</button>
             ) : (
               <select className={inputClass} value={d.categoryId} onChange={(e) => setD({ ...d, categoryId: e.target.value })}>
                 <option value="">اختر القسم</option>
@@ -70,7 +70,7 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
           ].map((t) => (
             <div key={t.label} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5">
               <Toggle label={t.label} checked={t.checked} onChange={t.set} />
-              <div className="text-[10px] text-neutral-400 pb-0.5">{t.hint}</div>
+              <div className="text-xs text-neutral-400 pb-0.5">{t.hint}</div>
             </div>
           ))}
         </div>
@@ -78,15 +78,15 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
 
       <Card title="خيارات الزبون">
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setD({ ...d, subCatalogIds: null })} className={`h-9 px-3 rounded-xl text-xs font-bold border cursor-pointer ${!custom ? 'bg-[#0071e3] border-[#0071e3] text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>حسب القسم</button>
-          <button type="button" onClick={() => setD({ ...d, subCatalogIds: linked.map((s) => s.id) })} className={`h-9 px-3 rounded-xl text-xs font-bold border cursor-pointer ${custom ? 'bg-[#0071e3] border-[#0071e3] text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>اختيار خاص بهذا الطبق</button>
+          <button type="button" onClick={() => setD({ ...d, subCatalogIds: null })} className={`h-9 px-3 rounded-xl text-xs font-bold border cursor-pointer ${!custom ? 'bg-brand border-brand text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>حسب القسم</button>
+          <button type="button" onClick={() => setD({ ...d, subCatalogIds: linked.map((s) => s.id) })} className={`h-9 px-3 rounded-xl text-xs font-bold border cursor-pointer ${custom ? 'bg-brand border-brand text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>اختيار خاص بهذا الطبق</button>
         </div>
         {custom ? (
           <Field label="مجموعات المكونات لهذا الطبق">
             <MultiChips options={data.subCatalogs.map((s) => ({ id: s.id, label: s.name }))} value={d.subCatalogIds || []} onChange={(ids) => setD({ ...d, subCatalogIds: ids })} empty="لا توجد مجموعات مكونات بعد." />
           </Field>
         ) : (
-          <p className="text-[11px] text-neutral-500 leading-relaxed">{d.categoryId ? (linked.length ? `يعرض ما رُبط بقسمه: ${linked.map((s) => s.name).join('، ')}.` : 'لا مجموعة مكونات مربوطة بقسم هذا الطبق بعد.') : 'اختر قسم الطبق أولًا.'}</p>
+          <p className="text-xs text-neutral-500 leading-relaxed">{d.categoryId ? (linked.length ? `يعرض ما رُبط بقسمه: ${linked.map((s) => s.name).join('، ')}.` : 'لا مجموعة مكونات مربوطة بقسم هذا الطبق بعد.') : 'اختر قسم الطبق أولًا.'}</p>
         )}
         {active.map((s) => (
           <Field key={s.id} label={`${s.name} · اضغط عنصرًا لإخفائه من هذا الطبق`}>
@@ -96,7 +96,7 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
                 return (
                   <button key={i.id} type="button" aria-pressed={!hidden}
                     onClick={() => setD({ ...d, hiddenItemIds: hidden ? d.hiddenItemIds.filter((x) => x !== i.id) : [...d.hiddenItemIds, i.id] })}
-                    className={`h-7 px-2.5 rounded-full text-[11px] font-bold border cursor-pointer ${hidden ? 'bg-white border-neutral-200 text-neutral-400 line-through' : 'bg-neutral-100 border-neutral-100 text-neutral-700'}`}>
+                    className={`h-7 px-2.5 rounded-full text-xs font-bold border cursor-pointer ${hidden ? 'bg-white border-neutral-200 text-neutral-400 line-through' : 'bg-neutral-100 border-neutral-100 text-neutral-700'}`}>
                     {i.name}{s.type === 'extras' && i.price > 0 ? ` +${formatMoney(i.price, currency)}` : ''}
                   </button>
                 );
@@ -104,7 +104,7 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
             </div>
           </Field>
         ))}
-        <button type="button" onClick={() => onGoTo('subcatalogs')} className="text-[11px] font-bold text-[#0071e3] cursor-pointer">إدارة مجموعات المكونات</button>
+        <button type="button" onClick={() => onGoTo('subcatalogs')} className="text-xs font-bold text-brand cursor-pointer">إدارة مجموعات المكونات</button>
       </Card>
 
       <div className="flex gap-2 justify-end">
@@ -165,24 +165,24 @@ export const DishesTab: React.FC<RestaurantTabProps> = (props) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-black truncate">{d.name || 'طبق بدون اسم'}</span>
-                      {badge && <span className="h-5 px-1.5 rounded-full text-[10px] font-bold text-white inline-flex items-center" style={{ backgroundColor: badge.color }}>{badge.label}</span>}
+                      {badge && <span className="h-5 px-1.5 rounded-full text-xs font-bold text-white inline-flex items-center" style={{ backgroundColor: badge.color }}>{badge.label}</span>}
                     </div>
-                    <div className="text-[11px] text-neutral-400 font-bold">{c ? `${c.icon} ${c.name}` : 'بدون قسم'} · {formatMoney(d.price, currency)}</div>
+                    <div className="text-xs text-neutral-400 font-bold">{c ? `${c.icon} ${c.name}` : 'بدون قسم'} · {formatMoney(d.price, currency)}</div>
                   </div>
                   <button
                     type="button"
                     onClick={() => patch(d.id, { featured: !d.featured })}
                     aria-pressed={d.featured}
                     title={d.featured ? 'إلغاء الطبق المميز' : 'اجعله طبقًا مميزًا'}
-                    className={`h-8 px-2.5 rounded-full border text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition ${d.featured ? 'bg-[#FFF4DB] border-[#F59F00] text-[#B26B00]' : 'bg-white border-neutral-200 text-neutral-400 hover:border-neutral-300'}`}
+                    className={`h-8 px-2.5 rounded-full border text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition ${d.featured ? 'bg-[#FFF4DB] border-[#F59F00] text-[#B26B00]' : 'bg-white border-neutral-200 text-neutral-400 hover:border-neutral-300'}`}
                   >
                     <Star size={13} className={d.featured ? 'text-[#F59F00] fill-[#F59F00]' : ''} /> مميز
                   </button>
-                  <label className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-neutral-500 cursor-pointer">
+                  <label className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-neutral-500 cursor-pointer">
                     <input type="checkbox" checked={d.available} onChange={(e) => patch(d.id, { available: e.target.checked })} className="w-4 h-4 accent-[#34c759]" /> متوفر
                   </label>
-                  <label className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-neutral-500 cursor-pointer">
-                    <input type="checkbox" checked={d.published} onChange={(e) => patch(d.id, { published: e.target.checked })} className="w-4 h-4 accent-[#0071e3]" /> ظاهر
+                  <label className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-neutral-500 cursor-pointer">
+                    <input type="checkbox" checked={d.published} onChange={(e) => patch(d.id, { published: e.target.checked })} className="w-4 h-4 accent-brand" /> ظاهر
                   </label>
                   <button type="button" aria-label="تعديل" onClick={() => setEditing(d)} className="w-9 h-9 rounded-xl text-neutral-500 hover:bg-neutral-100 flex items-center justify-center cursor-pointer"><Pencil size={16} /></button>
                   <button type="button" aria-label="حذف" onClick={() => remove(d.id)} className="w-9 h-9 rounded-xl text-[#E03131] hover:bg-red-50 flex items-center justify-center cursor-pointer"><Trash2 size={16} /></button>

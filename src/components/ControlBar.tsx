@@ -107,7 +107,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             <button
               type="button"
               onClick={onOpenProjectSettings}
-              className="px-2.5 py-1 text-xs sm:text-sm font-bold text-[#1d1d1f] max-w-[110px] sm:max-w-[160px] truncate rounded-lg hover:bg-black/[0.04] transition-colors cursor-pointer"
+              className="px-2.5 py-1 text-xs sm:text-sm font-bold text-ink max-w-[110px] sm:max-w-[160px] truncate rounded-lg hover:bg-black/[0.04] transition-colors cursor-pointer"
               title="المشروع"
             >
               {projectName || 'مشروعي'}
@@ -115,7 +115,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             <button
               type="button"
               onClick={onOpenProjectSettings}
-              className="w-7 h-7 rounded-lg text-neutral-400 hover:text-[#0071e3] hover:bg-black/[0.04] active:scale-95 flex items-center justify-center transition-all cursor-pointer"
+              className="w-7 h-7 rounded-lg text-neutral-400 hover:text-brand hover:bg-black/[0.04] active:scale-95 flex items-center justify-center transition-all cursor-pointer"
               title="إعدادات المشروع (الاسم والرابط، ولاحقاً النشر والدومين)"
               aria-label="إعدادات المشروع"
             >
@@ -129,7 +129,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
         <div className="flex items-center gap-1.5 bg-neutral-100/90 hover:bg-neutral-200/70 rounded-xl p-1 border border-black/[0.05] transition-colors relative">
           <button
             onClick={() => setIsPagesDropdownOpen(!isPagesDropdownOpen)}
-            className="flex items-center gap-2 px-2.5 py-1 text-xs sm:text-sm font-medium text-[#1d1d1f] hover:text-black transition-colors rounded-lg focus:outline-none"
+            className="flex items-center gap-2 px-2.5 py-1 text-xs sm:text-sm font-medium text-ink hover:text-black transition-colors rounded-lg focus:outline-none"
             title="اختيار الصفحة الحالية"
           >
             <span className="max-w-[100px] sm:max-w-[140px] truncate">
@@ -144,7 +144,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           {/* Small settings gear icon right beside page name (opens page settings in control panel) */}
           <button
             onClick={onOpenPageSettings}
-            className="w-7 h-7 rounded-lg text-neutral-400 hover:text-[#0071e3] hover:bg-black/[0.04] active:scale-95 flex items-center justify-center transition-all cursor-pointer"
+            className="w-7 h-7 rounded-lg text-neutral-400 hover:text-brand hover:bg-black/[0.04] active:scale-95 flex items-center justify-center transition-all cursor-pointer"
             title="إعدادات الصفحة (فتح في لوحة التحكم)"
             aria-label="إعدادات الصفحة"
           >
@@ -157,7 +157,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
               className="absolute top-full right-0 mt-2 w-56 bg-white/95 backdrop-blur-xl rounded-2xl border border-black/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-2 z-50 text-right animate-in fade-in zoom-in-95 duration-150"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-[11px] font-semibold text-neutral-400 px-2.5 py-1">
+              <div className="text-xs font-semibold text-neutral-400 px-2.5 py-1">
                 صفحات الموقع
               </div>
               <div className="space-y-0.5 max-h-48 overflow-y-auto">
@@ -170,12 +170,12 @@ export const ControlBar: React.FC<ControlBarProps> = ({
                     }}
                     className={`w-full flex items-center justify-between px-3 py-1.5 text-xs rounded-xl font-medium transition-all ${
                       page.id === currentPage.id
-                        ? 'bg-[#0071e3] text-white'
+                        ? 'bg-brand text-white'
                         : 'text-neutral-700 hover:bg-neutral-100'
                     }`}
                   >
                     <span>{page.name}</span>
-                    <span className="text-[10px] opacity-75">{page.slug}</span>
+                    <span className="text-xs opacity-75">{page.slug}</span>
                   </button>
                 ))}
               </div>
@@ -190,19 +190,19 @@ export const ControlBar: React.FC<ControlBarProps> = ({
                       onChange={(e) => setNewPageName(e.target.value)}
                       placeholder="اسم الصفحة الجديدة..."
                       autoFocus
-                      className="w-full text-xs px-2.5 py-1.5 bg-neutral-100 rounded-lg border border-black/[0.08] focus:outline-none focus:border-[#0071e3] mb-2 text-right"
+                      className="w-full text-xs px-2.5 py-1.5 bg-neutral-100 rounded-lg border border-black/[0.08] focus:outline-none focus:border-brand mb-2 text-right"
                     />
                     <div className="flex gap-1.5 justify-end">
                       <button
                         type="button"
                         onClick={() => setIsAddingPage(false)}
-                        className="px-2 py-1 text-[11px] rounded-md text-neutral-500 hover:bg-neutral-100"
+                        className="px-2 py-1 text-xs rounded-md text-neutral-500 hover:bg-neutral-100"
                       >
                         إلغاء
                       </button>
                       <button
                         type="submit"
-                        className="px-2.5 py-1 text-[11px] rounded-md bg-[#0071e3] text-white font-medium hover:bg-[#0077ed]"
+                        className="px-2.5 py-1 text-xs rounded-md bg-brand text-white font-medium hover:bg-brand-hover"
                       >
                         إضافة
                       </button>
@@ -211,7 +211,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
                 ) : (
                   <button
                     onClick={() => setIsAddingPage(true)}
-                    className="w-full py-1.5 px-2.5 text-xs text-[#0071e3] hover:bg-[#0071e3]/10 rounded-xl flex items-center justify-center gap-1.5 font-medium transition-colors"
+                    className="w-full py-1.5 px-2.5 text-xs text-brand hover:bg-brand/10 rounded-xl flex items-center justify-center gap-1.5 font-medium transition-colors"
                   >
                     <Plus size={14} />
                     <span>إضافة صفحة جديدة</span>
@@ -228,7 +228,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             onClick={() => onChangePreviewMode('desktop')}
             className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
               previewMode === 'desktop'
-                ? 'bg-white text-[#0071e3] shadow-xs font-semibold'
+                ? 'bg-white text-brand shadow-xs font-semibold'
                 : 'text-neutral-500 hover:text-black hover:bg-black/[0.03]'
             }`}
             title="معاينة شاشة الكمبيوتر"
@@ -240,7 +240,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             onClick={() => onChangePreviewMode('tablet')}
             className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
               previewMode === 'tablet'
-                ? 'bg-white text-[#0071e3] shadow-xs font-semibold'
+                ? 'bg-white text-brand shadow-xs font-semibold'
                 : 'text-neutral-500 hover:text-black hover:bg-black/[0.03]'
             }`}
             title="معاينة شاشة التابلت"
@@ -252,7 +252,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             onClick={() => onChangePreviewMode('mobile')}
             className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
               previewMode === 'mobile'
-                ? 'bg-white text-[#0071e3] shadow-xs font-semibold'
+                ? 'bg-white text-brand shadow-xs font-semibold'
                 : 'text-neutral-500 hover:text-black hover:bg-black/[0.03]'
             }`}
             title="معاينة شاشة الهاتف المحمول"
@@ -293,7 +293,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           {onArrangeForMobile && !isPreviewActive && (
             <button
               onClick={onArrangeForMobile}
-              className="h-8 px-2 rounded-lg flex items-center justify-center gap-1 text-neutral-700 hover:text-[#0071e3] hover:bg-white active:scale-95 transition-all"
+              className="h-8 px-2 rounded-lg flex items-center justify-center gap-1 text-neutral-700 hover:text-brand hover:bg-white active:scale-95 transition-all"
               title="تنسيق الموبايل: ترتيب العناصر تلقائياً لشاشات الهاتف دون تغيير تصميم الكمبيوتر"
               aria-label="تنسيق الموبايل"
             >
@@ -308,8 +308,8 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           onClick={() => onTogglePreview?.()}
           className={`h-9 px-2.5 sm:px-3 rounded-xl border border-black/[0.05] active:scale-95 flex items-center gap-1.5 transition-all ${
             isPreviewActive
-              ? 'bg-[#0071e3] text-white shadow-xs font-semibold text-xs'
-              : 'bg-neutral-100/80 hover:bg-white text-neutral-700 hover:text-[#0071e3] hover:shadow-xs text-xs'
+              ? 'bg-brand text-white shadow-xs font-semibold text-xs'
+              : 'bg-neutral-100/80 hover:bg-white text-neutral-700 hover:text-brand hover:shadow-xs text-xs'
           }`}
           title={isPreviewActive ? "إنهاء المعاينة والعودة للتحرير" : "معاينة الصفحة كمتصفح ويب حقيقي بدون هوامش"}
           aria-label="معاينة كاملة"
@@ -325,7 +325,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           <button
             type="button"
             onClick={onPublish}
-            className="h-9 px-4 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-black shadow-sm active:scale-95 flex items-center gap-1.5 transition-all cursor-pointer"
+            className="h-9 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-xs sm:text-sm font-black shadow-sm active:scale-95 flex items-center gap-1.5 transition-all cursor-pointer"
             title={isPublished ? 'صفحتك منشورة: الرابط ورمز QR وتحديث النشر' : 'انشر صفحتك واحصل على رابطها'}
           >
             <Globe size={15} strokeWidth={2.4} />
@@ -337,10 +337,10 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           {user ? (
             <div className="flex items-center gap-2 bg-neutral-100 border border-neutral-200/60 rounded-xl p-1 pr-2.5">
               <div className="flex flex-col text-right">
-                <span className="text-[10px] font-bold text-neutral-800 leading-tight truncate max-w-[100px]">
+                <span className="text-xs font-bold text-neutral-800 leading-tight truncate max-w-[100px]">
                   {user.isAnonymous ? 'مستخدم زائر ☁️' : (user.displayName || 'مستخدم السحاب')}
                 </span>
-                <span className="text-[8.5px] text-emerald-600 font-medium flex items-center gap-0.5 leading-none">
+                <span className="text-xs text-emerald-600 font-medium flex items-center gap-0.5 leading-none">
                   {isSaving ? (
                     <>
                       <Loader2 size={8} className="animate-spin text-blue-600" />
@@ -370,7 +370,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
                 <button
                   type="button"
                   onClick={onLogin}
-                  className="h-7 px-2 text-[9px] font-bold bg-[#0071e3] text-white hover:bg-[#0077ed] rounded-lg flex items-center gap-1 shadow-2xs transition-all cursor-pointer mr-1 active:scale-95"
+                  className="h-7 px-2 text-xs font-bold bg-brand text-white hover:bg-brand-hover rounded-lg flex items-center gap-1 shadow-2xs transition-all cursor-pointer mr-1 active:scale-95"
                   title="ربط المشروع بحساب Google لحفظ دائم"
                 >
                   <span>حفظ بـ Google</span>
@@ -395,17 +395,17 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           className="flex items-center gap-2 group cursor-pointer"
           title="المشاريع: التبديل بين الصفحة المجانية والمتجر"
         >
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center shadow-[0_2px_8px_rgba(0,113,227,0.3)] transition-transform group-hover:scale-105">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand to-[#40a9ff] text-white flex items-center justify-center shadow-[0_2px_8px_rgba(0,113,227,0.3)] transition-transform group-hover:scale-105">
             <span className="text-sm font-bold tracking-tighter">W</span>
           </div>
           <div className="flex items-baseline gap-1" dir="ltr">
-            <span className="text-lg font-bold tracking-tight text-[#1d1d1f]">
+            <span className="text-lg font-bold tracking-tight text-ink">
               weelink
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3] inline-block mb-1" />
+            <span className="w-1.5 h-1.5 rounded-full bg-brand inline-block mb-1" />
             {projectLabel && (
               <span className="text-lg font-bold tracking-tight text-neutral-400">
-                / <span className="text-[#1d1d1f]">{projectLabel}</span>
+                / <span className="text-ink">{projectLabel}</span>
               </span>
             )}
           </div>

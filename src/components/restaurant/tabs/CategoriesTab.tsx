@@ -51,7 +51,7 @@ export const CategoriesTab: React.FC<RestaurantTabProps> = ({ data, update, onGo
         <Field label="صورة القسم (اختيارية، تظهر في المنيو وعلى تابلت الكاشير)"><ImagePicker value={draft.image} onChange={(image) => setDraft({ ...draft, image })} /></Field>
         <div className="flex flex-wrap gap-1">
           {ICONS.map((ic) => (
-            <button key={ic} type="button" onClick={() => setDraft({ ...draft, icon: ic })} className={`w-9 h-9 rounded-xl text-lg cursor-pointer ${draft.icon === ic ? 'bg-[#0071e3]/10 ring-2 ring-[#0071e3]' : 'hover:bg-neutral-100'}`}>{ic}</button>
+            <button key={ic} type="button" onClick={() => setDraft({ ...draft, icon: ic })} className={`w-9 h-9 rounded-xl text-lg cursor-pointer ${draft.icon === ic ? 'bg-brand/10 ring-2 ring-brand' : 'hover:bg-neutral-100'}`}>{ic}</button>
           ))}
         </div>
       </Card>
@@ -76,7 +76,7 @@ export const CategoriesTab: React.FC<RestaurantTabProps> = ({ data, update, onGo
                       {c.image ? <img src={c.image} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : <span>{c.icon || '🍽️'}</span>}
                     </button>
                     <input className={`${inputClass} flex-1 font-bold`} value={c.name} onChange={(e) => patch(c.id, { name: e.target.value })} aria-label="اسم القسم" />
-                    <span className="text-[11px] text-neutral-400 font-bold shrink-0 hidden sm:inline">{count} طبق</span>
+                    <span className="text-xs text-neutral-400 font-bold shrink-0 hidden sm:inline">{count} طبق</span>
                     <button type="button" title={c.hidden ? 'مخفي من الموقع' : 'ظاهر في الموقع'} onClick={() => patch(c.id, { hidden: !c.hidden })} className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer ${c.hidden ? 'text-neutral-400 bg-neutral-100' : 'text-[#2F9E44] hover:bg-neutral-100'}`}>{c.hidden ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                     <GhostButton onClick={() => setOpenId(open ? null : c.id)}>{open ? 'إغلاق' : 'تفاصيل'}</GhostButton>
                     <button type="button" title={count ? 'انقل أطباقه أولًا' : 'حذف'} disabled={count > 0} onClick={() => remove(c.id)} className="w-9 h-9 rounded-xl text-[#E03131] hover:bg-red-50 flex items-center justify-center cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed"><Trash2 size={16} /></button>
@@ -86,16 +86,16 @@ export const CategoriesTab: React.FC<RestaurantTabProps> = ({ data, update, onGo
                       <Field label="الرمز">
                         <div className="flex flex-wrap gap-1">
                           {ICONS.map((ic) => (
-                            <button key={ic} type="button" onClick={() => patch(c.id, { icon: ic })} className={`w-8 h-8 rounded-lg cursor-pointer ${c.icon === ic ? 'bg-[#0071e3]/10 ring-2 ring-[#0071e3]' : 'hover:bg-white'}`}>{ic}</button>
+                            <button key={ic} type="button" onClick={() => patch(c.id, { icon: ic })} className={`w-8 h-8 rounded-lg cursor-pointer ${c.icon === ic ? 'bg-brand/10 ring-2 ring-brand' : 'hover:bg-white'}`}>{ic}</button>
                           ))}
                         </div>
                       </Field>
                       <Field label="صورة القسم (اختيارية)"><ImagePicker value={c.image} onChange={(image) => patch(c.id, { image })} /></Field>
                       <Field label="مجموعات المكونات المربوطة بهذا القسم">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {subs.length === 0 && <span className="text-[11px] text-neutral-400 font-bold">لا شيء بعد.</span>}
-                          {subs.map((s) => <span key={s.id} className="h-7 px-2.5 rounded-full bg-white border border-neutral-200 text-[11px] font-bold inline-flex items-center">{s.name}</span>)}
-                          <button type="button" onClick={() => onGoTo('subcatalogs')} className="text-[11px] font-bold text-[#0071e3] cursor-pointer">إدارة مجموعات المكونات</button>
+                          {subs.length === 0 && <span className="text-xs text-neutral-400 font-bold">لا شيء بعد.</span>}
+                          {subs.map((s) => <span key={s.id} className="h-7 px-2.5 rounded-full bg-white border border-neutral-200 text-xs font-bold inline-flex items-center">{s.name}</span>)}
+                          <button type="button" onClick={() => onGoTo('subcatalogs')} className="text-xs font-bold text-brand cursor-pointer">إدارة مجموعات المكونات</button>
                         </div>
                       </Field>
                     </div>

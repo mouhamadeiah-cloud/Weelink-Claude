@@ -37,7 +37,7 @@ const ValuesInput: React.FC<{ option: ProductOption; onChange: (values: OptionVa
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
         {option.values.map((v) => (
-          <span key={v.label} className="inline-flex items-center gap-1 h-7 pr-2.5 pl-1 rounded-full bg-neutral-100 text-[11px] font-bold text-neutral-700">
+          <span key={v.label} className="inline-flex items-center gap-1 h-7 pr-2.5 pl-1 rounded-full bg-neutral-100 text-xs font-bold text-neutral-700">
             {v.color && <span className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: v.color }} />}
             {v.label}
             <button type="button" onClick={() => onChange(option.values.filter((x) => x.label !== v.label))} className="w-5 h-5 rounded-full hover:bg-neutral-200 flex items-center justify-center cursor-pointer" aria-label={`حذف ${v.label}`}>
@@ -105,9 +105,9 @@ export const OptionsEditor: React.FC<OptionsEditorProps> = ({ options, variants,
     <div className="space-y-3">
       {suggestions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 p-2.5 rounded-xl bg-blue-50/60">
-          <span className="text-[11px] font-bold text-[#0071e3] flex items-center gap-1"><Sparkles size={12} /> مقترح لهذا النوع:</span>
+          <span className="text-xs font-bold text-brand flex items-center gap-1"><Sparkles size={12} /> مقترح لهذا النوع:</span>
           {suggestions.map((k) => (
-            <button key={k} type="button" onClick={() => addPreset(k)} className="h-7 px-2.5 rounded-full bg-white border border-blue-100 text-[11px] font-bold text-[#0071e3] hover:bg-blue-50 cursor-pointer">
+            <button key={k} type="button" onClick={() => addPreset(k)} className="h-7 px-2.5 rounded-full bg-white border border-blue-100 text-xs font-bold text-brand hover:bg-blue-50 cursor-pointer">
               + {SPEC_PRESETS[k].name}
             </button>
           ))}
@@ -143,7 +143,7 @@ export const OptionsEditor: React.FC<OptionsEditorProps> = ({ options, variants,
                 {p.name}{p.key === 'shoeSize' ? ' (أحذية)' : ''}
               </button>
             ))}
-            <button type="button" onClick={addCustom} className="w-full text-right px-3 py-2 text-xs font-bold text-[#0071e3] hover:bg-neutral-50 border-t border-neutral-100 cursor-pointer">
+            <button type="button" onClick={addCustom} className="w-full text-right px-3 py-2 text-xs font-bold text-brand hover:bg-neutral-50 border-t border-neutral-100 cursor-pointer">
               مواصفات أخرى…
             </button>
           </div>
@@ -152,7 +152,7 @@ export const OptionsEditor: React.FC<OptionsEditorProps> = ({ options, variants,
 
       {stockOpts.length > 0 ? (
         <div className="rounded-xl border border-neutral-200 overflow-hidden">
-          <div className="grid grid-cols-[1fr_90px_110px] gap-2 px-3 py-2 bg-neutral-100 text-[10px] font-bold text-neutral-500">
+          <div className="grid grid-cols-[1fr_90px_110px] gap-2 px-3 py-2 bg-neutral-100 text-xs font-bold text-neutral-500">
             <span>{stockOpts.map((o) => o.name || 'مواصفة').join(' / ')}</span>
             <span>الكمية</span>
             <span>فرق السعر ({currency})</span>
@@ -160,16 +160,16 @@ export const OptionsEditor: React.FC<OptionsEditorProps> = ({ options, variants,
           <div className="max-h-72 overflow-y-auto divide-y divide-neutral-100">
             {variants.map((v, i) => (
               <div key={variantLabel(v.values)} className={`grid grid-cols-[1fr_90px_110px] gap-2 px-3 py-1.5 items-center ${linkedToWarehouse && v.stock <= 0 ? 'bg-neutral-50' : 'bg-white'}`}>
-                <span className="text-xs font-bold text-[#1d1d1f] flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-bold text-ink flex items-center gap-1.5 min-w-0">
                   <span className="truncate">{variantLabel(v.values)}</span>
-                  {linkedToWarehouse && v.stock <= 0 && <span className="text-[9px] text-neutral-400 font-bold shrink-0">غير متوفر</span>}
+                  {linkedToWarehouse && v.stock <= 0 && <span className="text-xs text-neutral-400 font-bold shrink-0">غير متوفر</span>}
                 </span>
                 <input className={`${inputClass} h-8`} type="number" min="0" inputMode="numeric" value={v.stock || ''} placeholder="0" onChange={(e) => setVariant(i, { stock: Math.max(0, Math.floor(num(e.target.value))) })} aria-label={`كمية ${variantLabel(v.values)}`} />
                 <input className={`${inputClass} h-8`} type="number" inputMode="decimal" value={v.priceDelta || ''} placeholder="0" onChange={(e) => setVariant(i, { priceDelta: num(e.target.value) })} aria-label={`فرق سعر ${variantLabel(v.values)}`} />
               </div>
             ))}
           </div>
-          <div className="px-3 py-2 bg-neutral-50 text-[11px] font-bold text-neutral-600 flex items-center gap-1.5">
+          <div className="px-3 py-2 bg-neutral-50 text-xs font-bold text-neutral-600 flex items-center gap-1.5">
             <Package size={13} /> المجموع في المستودع: {variants.reduce((s, v) => s + v.stock, 0)} قطعة
           </div>
         </div>

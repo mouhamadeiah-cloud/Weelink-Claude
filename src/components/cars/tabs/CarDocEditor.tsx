@@ -123,11 +123,11 @@ export const CarDocEditor: React.FC<Props> = ({ data, update, target, onClose })
 
   return createPortal(
     <div data-car-doc-editor className="fixed inset-0 z-[1000003] bg-black/30 flex items-center justify-center p-2 sm:p-6" onMouseDown={close}>
-      <div dir="rtl" role="dialog" aria-label={docTypeLabel(doc.type)} className="w-full max-w-6xl h-full max-h-[900px] bg-[#f5f5f7] rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.35)] flex flex-col overflow-hidden text-right font-sans" onMouseDown={(e) => e.stopPropagation()}>
+      <div dir="rtl" role="dialog" aria-label={docTypeLabel(doc.type)} className="w-full max-w-6xl h-full max-h-[900px] bg-bg rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.35)] flex flex-col overflow-hidden text-right font-sans" onMouseDown={(e) => e.stopPropagation()}>
         <header className="flex items-center gap-3 px-4 sm:px-6 h-16 bg-white border-b border-neutral-200 shrink-0">
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-black text-[#1d1d1f] truncate">{docTypeLabel(doc.type)} <span dir="ltr" className="text-neutral-400">{doc.number}</span></div>
-            <div className="text-[10px] text-neutral-400 font-bold truncate">{car ? `${carTitle(car)} · ${carSubtitle(car)}` : 'بدون سيارة'}{customer ? ` · ${customer.name}` : ''}</div>
+            <div className="text-sm font-black text-ink truncate">{docTypeLabel(doc.type)} <span dir="ltr" className="text-neutral-400">{doc.number}</span></div>
+            <div className="text-xs text-neutral-400 font-bold truncate">{car ? `${carTitle(car)} · ${carSubtitle(car)}` : 'بدون سيارة'}{customer ? ` · ${customer.name}` : ''}</div>
           </div>
           <GhostButton onClick={() => printDoc(doc, data, false)} className="h-9 flex items-center gap-1.5"><Printer size={14} /> طباعة A4</GhostButton>
           <GhostButton onClick={() => printDoc(doc, data, true)} className="h-9 hidden sm:flex items-center gap-1.5"><FileDown size={14} /> حفظ PDF</GhostButton>
@@ -181,7 +181,7 @@ export const CarDocEditor: React.FC<Props> = ({ data, update, target, onClose })
                   <div className="grid sm:grid-cols-2 gap-1.5">
                     {HANDOVER_CHECKS.map((c) => (
                       <label key={c.key} className="flex items-center gap-2 text-xs font-bold text-neutral-700 cursor-pointer">
-                        <input type="checkbox" className="w-4 h-4 accent-[#0071e3]" checked={!!doc.checks[c.key]} onChange={(e) => change((d) => ({ ...d, checks: { ...d.checks, [c.key]: e.target.checked } }))} />
+                        <input type="checkbox" className="w-4 h-4 accent-brand" checked={!!doc.checks[c.key]} onChange={(e) => change((d) => ({ ...d, checks: { ...d.checks, [c.key]: e.target.checked } }))} />
                         {c.label}
                       </label>
                     ))}
@@ -191,7 +191,7 @@ export const CarDocEditor: React.FC<Props> = ({ data, update, target, onClose })
 
               <Card title={doc.type === 'contract' ? 'البنود' : 'الشروط'}>
                 <textarea className={`${textareaClass} min-h-[150px]`} value={doc.terms} onChange={(e) => change((d) => ({ ...d, terms: e.target.value }))} />
-                <p className="text-[10px] text-neutral-400">كل سطر بند مستقل. النص الافتراضي يُعدَّل من «إعدادات المعرض ← الأوراق والعقود».</p>
+                <p className="text-xs text-neutral-400">كل سطر بند مستقل. النص الافتراضي يُعدَّل من «إعدادات المعرض ← الأوراق والعقود».</p>
               </Card>
             </fieldset>
 
@@ -210,7 +210,7 @@ export const CarDocEditor: React.FC<Props> = ({ data, update, target, onClose })
           </div>
 
           <div className="bg-neutral-200/70 p-3 sm:p-5 flex flex-col min-h-[620px] lg:min-h-0">
-            <div className="text-[11px] font-bold text-neutral-500 mb-2">معاينة الصفحة كما تُطبع</div>
+            <div className="text-xs font-bold text-neutral-500 mb-2">معاينة الصفحة كما تُطبع</div>
             <iframe title="معاينة الورقة" srcDoc={html} className="flex-1 w-full rounded-xl bg-white shadow-sm border border-neutral-200" />
           </div>
         </div>

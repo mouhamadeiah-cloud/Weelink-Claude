@@ -52,8 +52,8 @@ export const CatalogsTab: React.FC<AdminTabProps> = ({ data, update }) => {
       ) : (
         <>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold text-[#1d1d1f] truncate">{c.name}</div>
-            <div className="text-[10px] text-neutral-400">
+            <div className="text-sm font-bold text-ink truncate">{c.name}</div>
+            <div className="text-xs text-neutral-400">
               {productCount(c.id)} منتج{!isSub && childrenOf(c.id).length ? ` · ${childrenOf(c.id).length} فرعي` : ''}
             </div>
           </div>
@@ -71,7 +71,7 @@ export const CatalogsTab: React.FC<AdminTabProps> = ({ data, update }) => {
   return (
     <div className="max-w-3xl">
       <Card title="التصنيفات">
-        <p className="text-[11px] text-neutral-400 leading-relaxed">
+        <p className="text-xs text-neutral-400 leading-relaxed">
           تُضاف التصنيفات من «إضافة منتج»: اختر تصنيفاً من القائمة فيُضاف عند الحفظ، أو اختر «غير ذلك» واكتب اسماً ثم اضغط الزر الأخضر لإضافة تصنيف خاص بمتجرك.
         </p>
         {topLevel.length === 0 ? (

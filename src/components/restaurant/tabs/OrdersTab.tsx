@@ -65,7 +65,7 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid
         {filters.map((f) => {
           const n = f.id === 'all' ? all.length : f.id === 'open' ? all.filter(isOpen).length : all.filter((o) => o.status === f.id).length;
           return (
-            <button key={f.id} type="button" onClick={() => setFilter(f.id)} className={`h-8 px-3 rounded-full text-xs font-bold border cursor-pointer ${filter === f.id ? 'bg-[#1d1d1f] border-[#1d1d1f] text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>
+            <button key={f.id} type="button" onClick={() => setFilter(f.id)} className={`h-8 px-3 rounded-full text-xs font-bold border cursor-pointer ${filter === f.id ? 'bg-ink border-ink text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>
               {f.label} <span className="opacity-60">{n}</span>
             </button>
           );
@@ -81,14 +81,14 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid
             <Card key={o.id}>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-base font-black">طلب #{o.number}</span>
-                <span className="h-6 px-2.5 rounded-full text-[11px] font-bold text-white inline-flex items-center" style={{ backgroundColor: st.color }}>{st.label}</span>
-                <span className="h-6 px-2.5 rounded-full text-[11px] font-bold bg-neutral-100 text-neutral-600 inline-flex items-center gap-1">
+                <span className="h-6 px-2.5 rounded-full text-xs font-bold text-white inline-flex items-center" style={{ backgroundColor: st.color }}>{st.label}</span>
+                <span className="h-6 px-2.5 rounded-full text-xs font-bold bg-neutral-100 text-neutral-600 inline-flex items-center gap-1">
                   {o.type === 'table' ? <Armchair size={12} /> : o.type === 'delivery' ? <Bike size={12} /> : <Store size={12} />}
                   {orderPlace(o)}
                 </span>
-                <span className="h-6 px-2.5 rounded-full text-[11px] font-bold bg-[#0071e3]/10 text-[#0071e3] inline-flex items-center">{o.source === 'qr' ? 'QR' : 'الموقع'}</span>
-                {localIds.has(o.id) && <span className="h-6 px-2.5 rounded-full text-[11px] font-bold bg-neutral-100 text-neutral-500 inline-flex items-center">على هذا الجهاز</span>}
-                <span className="mr-auto text-[11px] text-neutral-400 font-bold">{orderTime(o.createdAt)}</span>
+                <span className="h-6 px-2.5 rounded-full text-xs font-bold bg-brand/10 text-brand inline-flex items-center">{o.source === 'qr' ? 'QR' : 'الموقع'}</span>
+                {localIds.has(o.id) && <span className="h-6 px-2.5 rounded-full text-xs font-bold bg-neutral-100 text-neutral-500 inline-flex items-center">على هذا الجهاز</span>}
+                <span className="mr-auto text-xs text-neutral-400 font-bold">{orderTime(o.createdAt)}</span>
               </div>
               <div className="grid md:grid-cols-[1fr_260px] gap-4">
                 <div className="space-y-2">
@@ -96,7 +96,7 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid
                     <div key={i} className="flex items-start justify-between gap-3 text-sm">
                       <div>
                         <span className="font-black">{l.qty} × {l.name}</span>
-                        {describeLine(l) && <div className="text-[11px] text-neutral-500">{describeLine(l)}</div>}
+                        {describeLine(l) && <div className="text-xs text-neutral-500">{describeLine(l)}</div>}
                       </div>
                       <span className="font-bold shrink-0">{formatMoney(l.unitPrice * l.qty, currency)}</span>
                     </div>
@@ -108,7 +108,7 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid
                 </div>
                 <div className="space-y-1.5 text-xs rounded-2xl bg-neutral-50 p-3">
                   <div className="font-black text-sm">{o.name || (o.type === 'table' ? `طاولة ${o.table}` : 'بدون اسم')}</div>
-                  {o.phone && <a href={`tel:${o.phone}`} className="flex items-center gap-1.5 text-[#0071e3] font-bold" dir="ltr"><Phone size={13} />{o.phone}</a>}
+                  {o.phone && <a href={`tel:${o.phone}`} className="flex items-center gap-1.5 text-brand font-bold" dir="ltr"><Phone size={13} />{o.phone}</a>}
                   {o.phone && <a href={whatsappHref(waNumber(o.phone), `مرحبًا ${o.name}، بخصوص طلبك رقم ${o.number}`)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[#2F9E44] font-bold"><MessageCircle size={13} />واتساب</a>}
                   {o.address && <div className="flex items-start gap-1.5 text-neutral-600"><MapPin size={13} className="mt-0.5 shrink-0" />{o.address}</div>}
                   {o.notes && <div className="text-neutral-600">ملاحظة: {o.notes}</div>}
@@ -117,7 +117,7 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid
               <div className="flex flex-wrap items-center gap-1.5">
                 {ORDER_STATUSES.map((s) => (
                   <button key={s.id} type="button" onClick={() => setStatus(o, s.id)} disabled={o.status === s.id}
-                    className="h-8 px-3 rounded-full text-[11px] font-bold border cursor-pointer disabled:cursor-default"
+                    className="h-8 px-3 rounded-full text-xs font-bold border cursor-pointer disabled:cursor-default"
                     style={o.status === s.id ? { backgroundColor: s.color, borderColor: s.color, color: '#fff' } : { borderColor: '#e5e5e5', color: '#525252', background: '#fff' }}>
                     {s.label}
                   </button>

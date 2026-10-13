@@ -16,7 +16,7 @@ const JoinedPages: React.FC = () => {
   if (!pages.length) return null;
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-black text-[#1d1d1f]">صفحات اشتركت بها</h2>
+      <h2 className="text-base font-black text-ink">صفحات اشتركت بها</h2>
       <p className="text-xs text-neutral-500">افتح الصفحة واضغط على اسمك في أعلاها لترى طلباتك وتغيّر بياناتك.</p>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {pages.map((p) => {
@@ -30,8 +30,8 @@ const JoinedPages: React.FC = () => {
               className="bg-white rounded-2xl border border-neutral-200 p-4 flex items-center justify-between gap-3 hover:border-neutral-300 transition"
             >
               <div className="min-w-0">
-                <div className="text-[11px] font-bold text-neutral-400">{PAGE_KIND_LABELS[p.kind]}</div>
-                <div className="text-sm font-black text-[#1d1d1f] truncate">{p.name || 'بدون اسم'}</div>
+                <div className="text-xs font-bold text-neutral-400">{PAGE_KIND_LABELS[p.kind]}</div>
+                <div className="text-sm font-black text-ink truncate">{p.name || 'بدون اسم'}</div>
               </div>
               {url && <ExternalLink size={16} className="shrink-0 text-neutral-400" />}
             </a>
@@ -92,7 +92,7 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
   ];
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] flex flex-col items-center justify-center px-5 py-12 font-sans" dir="rtl">
+    <div className="min-h-screen bg-bg flex flex-col items-center justify-center px-5 py-12 font-sans" dir="rtl">
       {onHome && (
         <button
           type="button"
@@ -105,10 +105,10 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
       <div className="w-full max-w-6xl space-y-8">
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2">
-            <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center font-bold">W</span>
-            <span className="text-2xl font-bold tracking-tight text-[#1d1d1f]">weelink</span>
+            <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand to-[#40a9ff] text-white flex items-center justify-center font-bold">W</span>
+            <span className="text-2xl font-bold tracking-tight text-ink">weelink</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#1d1d1f]">ماذا تريد أن تبني؟</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-ink">ماذا تريد أن تبني؟</h1>
           <p className="text-sm text-neutral-500">اختر مشروعاً للدخول إليه. يمكنك التبديل لاحقاً بالضغط على شعار weelink.</p>
         </div>
 
@@ -125,8 +125,8 @@ export const ProjectChooser: React.FC<ProjectChooserProps> = ({ onChoose, hasSho
                 <c.icon size={22} />
               </span>
               <div>
-                <div className="text-[11px] font-bold text-neutral-400">{c.subtitle}</div>
-                <div className="text-lg font-black text-[#1d1d1f]">{c.title}</div>
+                <div className="text-xs font-bold text-neutral-400">{c.subtitle}</div>
+                <div className="text-lg font-black text-ink">{c.title}</div>
               </div>
               <p className="text-xs text-neutral-500 leading-relaxed min-h-[36px]">{c.desc}</p>
               <span className="inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: c.accent }}>

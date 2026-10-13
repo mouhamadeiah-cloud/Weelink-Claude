@@ -134,7 +134,7 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
           )}
           <PrimaryButton onClick={addDevice}><span className="inline-flex items-center gap-1"><Plus size={14} /> أضف الجهاز وأنشئ كوده</span></PrimaryButton>
         </div>
-        <p className="text-[11px] text-neutral-400">{DEVICE_ROLES.find((r) => r.id === draft.role)?.hint}</p>
+        <p className="text-xs text-neutral-400">{DEVICE_ROLES.find((r) => r.id === draft.role)?.hint}</p>
       </Card>
 
       <Card title={`الأجهزة (${data.devices.length})`}>
@@ -150,9 +150,9 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
               return (
                 <div key={v.id} className={`p-3 rounded-2xl border space-y-2 ${v.active ? 'bg-white border-neutral-200' : 'bg-neutral-50 border-neutral-200 opacity-70'}`}>
                   <div className="flex items-center gap-2">
-                    {v.role === 'kitchen' ? <ChefHat size={18} className="text-[#E8590C]" /> : <MonitorSmartphone size={18} className="text-[#0071e3]" />}
+                    {v.role === 'kitchen' ? <ChefHat size={18} className="text-[#E8590C]" /> : <MonitorSmartphone size={18} className="text-brand" />}
                     <input className="flex-1 min-w-0 h-8 px-2 rounded-lg border border-transparent hover:border-neutral-200 text-sm font-black bg-transparent" value={v.name} onChange={(e) => patchDevice(v.id, { name: e.target.value })} aria-label="اسم الجهاز" />
-                    <span className={`h-6 px-2 rounded-full text-[10px] font-black inline-flex items-center ${v.active ? 'bg-[#EBFBEE] text-[#2F9E44]' : 'bg-neutral-200 text-neutral-500'}`}>{v.active ? 'يعمل' : 'موقوف'}</span>
+                    <span className={`h-6 px-2 rounded-full text-xs font-black inline-flex items-center ${v.active ? 'bg-[#EBFBEE] text-[#2F9E44]' : 'bg-neutral-200 text-neutral-500'}`}>{v.active ? 'يعمل' : 'موقوف'}</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-neutral-500">
                     <select className="h-8 px-2 rounded-lg border border-neutral-200 bg-white text-xs font-bold" value={v.role} onChange={(e) => patchDevice(v.id, { role: e.target.value as DeviceRole })}>
@@ -172,8 +172,8 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-neutral-400">الكود</span>
-                    <span className="text-2xl font-black tracking-[0.25em] text-[#1d1d1f]" dir="ltr">{v.code}</span>
+                    <span className="text-xs font-bold text-neutral-400">الكود</span>
+                    <span className="text-2xl font-black tracking-[0.25em] text-ink" dir="ltr">{v.code}</span>
                     <div className="mr-auto flex gap-1">
                       <button type="button" title="كود جديد" onClick={() => window.confirm('إنشاء كود جديد؟ الكود القديم يتوقف فورًا.') && patchDevice(v.id, { code: newDeviceCode(data.devices) })} className="w-8 h-8 rounded-lg hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer"><RefreshCw size={14} /></button>
                       <button type="button" title={v.active ? 'إيقاف الجهاز' : 'تشغيل الجهاز'} onClick={() => patchDevice(v.id, { active: !v.active })} className="w-8 h-8 rounded-lg hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer"><Power size={14} /></button>
@@ -185,7 +185,7 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
             })}
           </div>
         )}
-        <p className="text-[11px] text-neutral-400 leading-relaxed">على الكاشير وتابلت النادل يدخل كل عامل برقمه السري من «العمال والصناديق». شاشة الزبون تعرض فواتير جهاز الكاشير المربوطة به فقط. مرحلة تجربة: الحماية الكاملة لكل جهاز تأتي مع فصل مستويات الدخول.</p>
+        <p className="text-xs text-neutral-400 leading-relaxed">على الكاشير وتابلت النادل يدخل كل عامل برقمه السري من «العمال والصناديق». شاشة الزبون تعرض فواتير جهاز الكاشير المربوطة به فقط. مرحلة تجربة: الحماية الكاملة لكل جهاز تأتي مع فصل مستويات الدخول.</p>
       </Card>
     </div>
   );

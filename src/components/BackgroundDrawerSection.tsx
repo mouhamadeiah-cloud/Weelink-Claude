@@ -233,9 +233,9 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
       {/* Target Badge */}
       <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
         <span className="text-xs font-bold text-neutral-800">
-          تعديل خلفية: <span className="text-[#0071e3] font-semibold">{targetName}</span>
+          تعديل خلفية: <span className="text-brand font-semibold">{targetName}</span>
         </span>
-        <span className="text-[10px] bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md font-medium">
+        <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md font-medium">
           {targetType === 'slide' ? 'شريحة' : targetType === 'navbar' ? 'نافبار' : 'عنصر'}
         </span>
       </div>
@@ -248,7 +248,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           onClick={() => setActiveTab('color')}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             activeTab === 'color'
-              ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-black/[0.04]'
+              ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]'
               : 'text-neutral-600 hover:text-black'
           }`}
         >
@@ -258,7 +258,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           onClick={() => setActiveTab('image')}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             activeTab === 'image'
-              ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-black/[0.04]'
+              ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]'
               : 'text-neutral-600 hover:text-black'
           }`}
         >
@@ -268,7 +268,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           onClick={() => setActiveTab('gallery')}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
             activeTab === 'gallery'
-              ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-black/[0.04]'
+              ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]'
               : 'text-neutral-600 hover:text-black'
           }`}
         >
@@ -279,7 +279,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
             onClick={() => setActiveTab('video')}
             className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               activeTab === 'video'
-                ? 'bg-white text-[#0071e3] shadow-xs ring-1 ring-black/[0.04]'
+                ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]'
                 : 'text-neutral-600 hover:text-black'
             }`}
           >
@@ -310,7 +310,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
               <span className="text-xs font-bold text-neutral-800">
                 ألوان صفحتك:
               </span>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-xs text-neutral-400">
                 (أساسيات التصميم)
               </span>
             </div>
@@ -333,7 +333,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                         item.border ? 'border border-neutral-300' : 'border border-black/15'
                       } ${
                         isSelected 
-                          ? 'ring-2 ring-[#0071e3] ring-offset-2 scale-105 shadow-xs' 
+                          ? 'ring-2 ring-brand ring-offset-2 scale-105 shadow-xs' 
                           : 'shadow-2xs'
                       }`}
                       style={{
@@ -348,12 +348,12 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                       {isSelected && (
                         <Check 
                           size={14} 
-                          className={item.value === '#18181b' ? 'text-white' : 'text-[#0071e3]'} 
+                          className={item.value === '#18181b' ? 'text-white' : 'text-brand'} 
                           strokeWidth={2.8}
                         />
                       )}
                     </div>
-                    <span className="text-[9.5px] font-medium text-neutral-600 truncate max-w-[48px]">
+                    <span className="text-xs font-medium text-neutral-600 truncate max-w-[48px]">
                       {item.name}
                     </span>
                   </button>
@@ -368,7 +368,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
               <span className="text-xs font-bold text-neutral-800">
                 ألوان أساسية:
               </span>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-xs text-neutral-400">
                 (تدرج متناسق)
               </span>
             </div>
@@ -385,7 +385,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                         setCustomHex(hex);
                       }}
                       className={`w-6 h-6 rounded-full border border-black/10 transition-all hover:scale-125 cursor-pointer shadow-3xs flex items-center justify-center ${
-                        isSelected ? 'ring-2 ring-[#0071e3] ring-offset-1 scale-110 z-10' : ''
+                        isSelected ? 'ring-2 ring-brand ring-offset-1 scale-110 z-10' : ''
                       }`}
                       style={{ backgroundColor: hex }}
                       title={`لون ${idx + 1}: ${hex}`}
@@ -411,18 +411,18 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                 <span className="text-xs font-bold text-neutral-800">
                   تدرجات متعددة الألوان:
                 </span>
-                <span className="text-[10px] bg-[#0071e3]/10 text-[#0071e3] px-1.5 py-0.5 rounded-full font-bold">
+                <span className="text-xs bg-brand/10 text-brand px-1.5 py-0.5 rounded-full font-bold">
                   {RICH_MULTI_GRADIENTS.length + PASTEL_SOFT_GRADIENTS.length} تدرج
                 </span>
               </div>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-xs text-neutral-400">
                 (خلط ألوان ثلاثية ورباعية)
               </span>
             </div>
 
             {/* 1. الصف العلوي: تدرجات باستيل ناعمة متعددة النغمات (مثل الصف العلوي في كانفا) */}
             <div className="p-2 bg-gradient-to-r from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200/80 space-y-1 shadow-3xs">
-              <div className="text-[10px] font-semibold text-neutral-500 mb-1">
+              <div className="text-xs font-semibold text-neutral-500 mb-1">
                 تدرجات باستيل ناعمة متعددة النغمات:
               </div>
               <div className="grid grid-cols-7 gap-1.5 justify-items-center">
@@ -433,7 +433,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                       key={grad.id}
                       onClick={() => onApplyGradient(grad.value)}
                       className={`w-7 h-7 rounded-full border border-black/10 shadow-3xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${
-                        isSelected ? 'ring-2 ring-[#0071e3] ring-offset-2 scale-110 z-10' : ''
+                        isSelected ? 'ring-2 ring-brand ring-offset-2 scale-110 z-10' : ''
                       }`}
                       style={{ background: grad.value }}
                       title={`${grad.name} (باستيل ناعم)`}
@@ -461,9 +461,9 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                 <button
                   key={filterTab.id}
                   onClick={() => setGradientCategory(filterTab.id)}
-                  className={`text-[9.5px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                     gradientCategory === filterTab.id
-                      ? 'bg-[#0071e3] text-white shadow-2xs'
+                      ? 'bg-brand text-white shadow-2xs'
                       : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80 hover:text-black'
                   }`}
                 >
@@ -493,7 +493,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                         key={grad.id}
                         onClick={() => onApplyGradient(grad.value)}
                         className={`group relative w-7 h-7 rounded-full border border-black/10 shadow-2xs flex items-center justify-center transition-all hover:scale-125 cursor-pointer ${
-                          isSelected ? 'ring-2 ring-[#0071e3] ring-offset-2 scale-110 z-10' : 'hover:z-10'
+                          isSelected ? 'ring-2 ring-brand ring-offset-2 scale-110 z-10' : 'hover:z-10'
                         }`}
                         style={{ background: grad.value }}
                         title={grad.name}
@@ -548,7 +548,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
             <span className="text-xs font-bold text-neutral-800">
               إتاحة رفع صورة من الجهاز:
             </span>
-            <span className="text-[10px] text-neutral-400">
+            <span className="text-xs text-neutral-400">
               (PNG, JPG, WebP)
             </span>
           </div>
@@ -584,27 +584,27 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
             }}
             className={`w-full py-8 px-4 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center text-center cursor-pointer transition-all select-none ${
               isDragging
-                ? 'border-[#0071e3] bg-[#0071e3]/10 scale-[0.99]'
-                : 'border-neutral-300 hover:border-[#0071e3] hover:bg-neutral-50/80 bg-neutral-50/40'
+                ? 'border-brand bg-brand/10 scale-[0.99]'
+                : 'border-neutral-300 hover:border-brand hover:bg-neutral-50/80 bg-neutral-50/40'
             } ${isUploading ? 'opacity-70 pointer-events-none' : ''}`}
           >
             {isUploading ? (
               <div className="flex flex-col items-center justify-center py-2">
-                <Loader2 className="w-8 h-8 text-[#0071e3] animate-spin mb-2" />
-                <p className="text-xs font-bold text-[#1d1d1f]">جاري رفع وخزن الخلفية سحابياً...</p>
-                <p className="text-[10.5px] text-neutral-400 mt-1">يرجى الانتظار قليلاً</p>
+                <Loader2 className="w-8 h-8 text-brand animate-spin mb-2" />
+                <p className="text-xs font-bold text-ink">جاري رفع وخزن الخلفية سحابياً...</p>
+                <p className="text-xs text-neutral-400 mt-1">يرجى الانتظار قليلاً</p>
               </div>
             ) : (
               <>
                 {/* Upload Arrow Icon in a circle (Exactly as sketched) */}
-                <div className="w-12 h-12 rounded-full bg-white border border-neutral-200 shadow-xs flex items-center justify-center text-[#0071e3] mb-3 group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-full bg-white border border-neutral-200 shadow-xs flex items-center justify-center text-brand mb-3 group-hover:scale-110 transition-transform">
                   <Upload size={22} strokeWidth={2.4} />
                 </div>
 
-                <p className="text-xs font-bold text-[#1d1d1f] mb-1">
+                <p className="text-xs font-bold text-ink mb-1">
                   اضغط لرفع صورة أو اسحبها إلى هنا
                 </p>
-                <p className="text-[10.5px] text-neutral-400 max-w-xs">
+                <p className="text-xs text-neutral-400 max-w-xs">
                   سيتم تطبيق الصورة مباشرة كخلفية لـ ({targetName})
                 </p>
               </>
@@ -612,7 +612,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           </div>
 
           {uploadError && (
-            <div className="text-[11px] text-rose-500 bg-rose-50 p-2 rounded-lg border border-rose-200 text-right">
+            <div className="text-xs text-rose-500 bg-rose-50 p-2 rounded-lg border border-rose-200 text-right">
               {uploadError}
             </div>
           )}
@@ -642,12 +642,12 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                 }
               }}
               placeholder="ابحث في صور Unsplash (طبيعة، معمار، تجريدي)..."
-              className="w-full pr-8 pl-9 py-2 text-xs bg-neutral-100/90 hover:bg-neutral-100 focus:bg-white rounded-xl border border-transparent focus:border-[#0071e3] focus:outline-none transition-all shadow-2xs"
+              className="w-full pr-8 pl-9 py-2 text-xs bg-neutral-100/90 hover:bg-neutral-100 focus:bg-white rounded-xl border border-transparent focus:border-brand focus:outline-none transition-all shadow-2xs"
             />
             <Search size={14} className="absolute right-2.5 top-2.5 text-neutral-400 pointer-events-none" />
             <button
               onClick={() => handleSearchUnsplash()}
-              className="absolute left-1.5 top-1.5 w-6 h-6 rounded-lg bg-[#0071e3] hover:bg-[#0071e3]/90 text-white flex items-center justify-center transition-all cursor-pointer shadow-3xs"
+              className="absolute left-1.5 top-1.5 w-6 h-6 rounded-lg bg-brand hover:bg-brand/90 text-white flex items-center justify-center transition-all cursor-pointer shadow-3xs"
               title="بحث"
             >
               {isLoadingUnsplash ? <Loader2 size={12} className="animate-spin" /> : <Search size={11} />}
@@ -660,9 +660,9 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
               <button
                 key={cat}
                 onClick={() => handleCategorySelect(cat)}
-                className={`text-[11px] px-2.5 py-1 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
+                className={`text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
                   selectedCategory === cat
-                    ? 'bg-[#0071e3] text-white shadow-xs'
+                    ? 'bg-brand text-white shadow-xs'
                     : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80 hover:text-black'
                 }`}
               >
@@ -672,14 +672,14 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
           </div>
 
           {unsplashError && (
-            <div className="text-[10.5px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200 leading-relaxed">
+            <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200 leading-relaxed">
               {unsplashError}
             </div>
           )}
 
           {/* Photo Grid */}
           <div className="space-y-1">
-            <div className="text-[10.5px] text-neutral-500 font-medium">
+            <div className="text-xs text-neutral-500 font-medium">
               اضغط على أي صورة لتطبيقها فوراً كخلفية:
             </div>
 
@@ -692,7 +692,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                     onClick={() => onApplyImage(photo.fullUrl, 'cover')}
                     className={`group relative rounded-xl overflow-hidden border aspect-video transition-all cursor-pointer text-right shadow-2xs ${
                       isSelected
-                        ? 'border-[#0071e3] ring-2 ring-[#0071e3] ring-offset-1'
+                        ? 'border-brand ring-2 ring-brand ring-offset-1'
                         : 'border-neutral-200 hover:border-neutral-300 hover:shadow-xs'
                     }`}
                   >
@@ -708,17 +708,17 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
 
                     {/* Checkmark if selected */}
                     {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#0071e3] text-white flex items-center justify-center shadow-md">
+                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center shadow-md">
                         <Check size={12} strokeWidth={3} />
                       </div>
                     )}
 
                     {/* Title & Photographer */}
                     <div className="absolute bottom-1 right-1 left-1 pointer-events-none">
-                      <p className="text-[9px] font-bold text-white truncate drop-shadow-sm">
+                      <p className="text-xs font-bold text-white truncate drop-shadow-sm">
                         {photo.title}
                       </p>
-                      <p className="text-[7.5px] text-neutral-300 truncate">
+                      <p className="text-xs text-neutral-300 truncate">
                         بواسطة {photo.photographer}
                       </p>
                     </div>
@@ -730,7 +730,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
             <button
               type="button"
               onClick={() => setIsPhotoBrowserOpen(true)}
-              className="mt-2 w-full py-2.5 rounded-xl border border-neutral-300 hover:border-[#0071e3] bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-[#0071e3] transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer active:scale-[0.99]"
+              className="mt-2 w-full py-2.5 rounded-xl border border-neutral-300 hover:border-brand bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-brand transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer active:scale-[0.99]"
             >
               <span>عرض المزيد والبحث بصور أكثر</span>
               <ChevronLeft size={14} strokeWidth={2.5} />
@@ -763,7 +763,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
             <button
               type="button"
               onClick={onRemoveImage}
-              className="flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg transition-colors cursor-pointer font-semibold"
+              className="flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg transition-colors cursor-pointer font-semibold"
             >
               <Trash2 size={12} />
               <span>إزالة الصورة</span>
@@ -781,7 +781,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
 
           {/* Image Sizing Modes */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-neutral-600 block">
+            <span className="text-xs font-semibold text-neutral-600 block">
               طريقة عرض الصورة:
             </span>
             <div className="grid grid-cols-3 gap-1.5">
@@ -794,9 +794,9 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                   key={mode.id}
                   type="button"
                   onClick={() => onApplyImage(currentBgImage, mode.id as any)}
-                  className={`py-1.5 px-2 rounded-lg border text-[10.5px] font-semibold transition-all cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                     currentBgSize === mode.id
-                      ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3]'
+                      ? 'border-brand bg-brand/10 text-brand'
                       : 'border-neutral-200 hover:bg-white text-neutral-600'
                   }`}
                 >
@@ -808,7 +808,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
 
           {/* Image Attachment Mode (تثبيت الصورة في الخلفية) */}
           <div className="space-y-1.5 pt-2 border-t border-neutral-200/50">
-            <span className="text-[11px] font-semibold text-neutral-600 block">
+            <span className="text-xs font-semibold text-neutral-600 block">
               تثبيت الصورة في الخلفية:
             </span>
             <div className="grid grid-cols-2 gap-1.5">
@@ -820,9 +820,9 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                   key={mode.id}
                   type="button"
                   onClick={() => onApplyAttachment && onApplyAttachment(mode.id as any)}
-                  className={`py-1.5 px-2 rounded-lg border text-[10.5px] font-semibold transition-all cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
                     (currentBgAttachment || 'scroll') === mode.id
-                      ? 'border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3]'
+                      ? 'border-brand bg-brand/10 text-brand'
                       : 'border-neutral-200 hover:bg-white text-neutral-600'
                   }`}
                 >
@@ -853,14 +853,14 @@ const VideoLibraryTab: React.FC<{
     <div className="space-y-3">
       {currentBgVideo && (
         <div className="flex items-center justify-between p-2 bg-neutral-50 rounded-xl border border-neutral-200/80">
-          <span className="text-[11px] font-semibold text-neutral-700 truncate">
+          <span className="text-xs font-semibold text-neutral-700 truncate">
             الفيديو الحالي: {active?.title || 'فيديو'}
           </span>
           {onRemove && (
             <button
               type="button"
               onClick={onRemove}
-              className="flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg transition-colors cursor-pointer font-semibold shrink-0"
+              className="flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg transition-colors cursor-pointer font-semibold shrink-0"
             >
               <Trash2 size={12} />
               <span>إزالة الفيديو</span>
@@ -874,9 +874,9 @@ const VideoLibraryTab: React.FC<{
           <button
             key={cat}
             onClick={() => onCategory(cat)}
-            className={`text-[10px] px-2.5 py-1 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
+            className={`text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap transition-all cursor-pointer ${
               category === cat
-                ? 'bg-[#0071e3] text-white shadow-xs'
+                ? 'bg-brand text-white shadow-xs'
                 : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/80 hover:text-black'
             }`}
           >
@@ -885,7 +885,7 @@ const VideoLibraryTab: React.FC<{
         ))}
       </div>
 
-      <div className="text-[10.5px] text-neutral-500 font-medium">
+      <div className="text-xs text-neutral-500 font-medium">
         مرّر الماوس لمعاينة الفيديو، واضغط لتطبيقه كخلفية للشريحة:
       </div>
 
@@ -907,7 +907,7 @@ const VideoLibraryTab: React.FC<{
               }}
               className={`group relative rounded-xl overflow-hidden border aspect-video transition-all cursor-pointer text-right shadow-2xs bg-neutral-900 ${
                 isSelected
-                  ? 'border-[#0071e3] ring-2 ring-[#0071e3] ring-offset-1'
+                  ? 'border-brand ring-2 ring-brand ring-offset-1'
                   : 'border-neutral-200 hover:border-neutral-300 hover:shadow-xs'
               }`}
             >
@@ -915,14 +915,14 @@ const VideoLibraryTab: React.FC<{
               <video muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-70 pointer-events-none" />
               {isSelected && (
-                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#0071e3] text-white flex items-center justify-center shadow-md">
+                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-brand text-white flex items-center justify-center shadow-md">
                   <Check size={12} strokeWidth={3} />
                 </div>
               )}
               {video.portrait && (
-                <span className="absolute top-1.5 left-1.5 text-[8px] font-bold text-white bg-black/50 px-1.5 py-0.5 rounded-md">طولي</span>
+                <span className="absolute top-1.5 left-1.5 text-xs font-bold text-white bg-black/50 px-1.5 py-0.5 rounded-md">طولي</span>
               )}
-              <p className="absolute bottom-1 right-1.5 left-1.5 text-[9px] font-bold text-white truncate drop-shadow-sm pointer-events-none">
+              <p className="absolute bottom-1 right-1.5 left-1.5 text-xs font-bold text-white truncate drop-shadow-sm pointer-events-none">
                 {video.title}
               </p>
             </button>
@@ -930,7 +930,7 @@ const VideoLibraryTab: React.FC<{
         })}
       </div>
 
-      <p className="text-[9.5px] text-neutral-400 leading-relaxed">
+      <p className="text-xs text-neutral-400 leading-relaxed">
         الفيديو صامت ويتكرر. على الإنترنت البطيء تظهر صورته الثابتة بدلاً منه حتى تبقى الصفحة سريعة.
       </p>
     </div>

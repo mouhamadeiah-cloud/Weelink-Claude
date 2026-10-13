@@ -77,7 +77,7 @@ const Tile: React.FC<{
     title={title || label}
     aria-pressed={active || undefined}
     className={`group shrink-0 rounded-2xl flex flex-col items-center gap-1 font-semibold transition-colors cursor-pointer active:scale-95 ${
-      compact ? 'w-[58px] py-1 text-[9.5px]' : 'w-16 pt-1.5 pb-1 text-[10.5px]'
+      compact ? 'w-[58px] py-1 text-xs' : 'w-16 pt-1.5 pb-1 text-xs'
     } ${active ? 'bg-black/[0.05] text-neutral-900' : 'text-neutral-700 hover:bg-black/[0.04] hover:text-neutral-900'}`}
   >
     <span className={`rounded-xl flex items-center justify-center transition-[transform,box-shadow] duration-200 ease-out group-hover:scale-110 group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.10)] ${compact ? 'w-8 h-8' : 'w-[38px] h-[38px]'} ${tint}`}>
@@ -173,7 +173,7 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
           {pill && (
             <span
               aria-hidden="true"
-              className={`absolute rounded-2xl bg-[#0071e3]/10 transition-[top,height,right,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              className={`absolute rounded-2xl bg-brand/10 transition-[top,height,right,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                 horizontal ? 'top-0 bottom-0' : 'right-0 w-16'
               }`}
               style={horizontal ? { right: pill.start, width: pill.size } : { top: pill.start, height: pill.size }}
@@ -195,8 +195,8 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
                 title={g.title}
                 aria-pressed={on || undefined}
                 className={`group relative shrink-0 rounded-2xl flex flex-col items-center gap-1 font-semibold transition-colors cursor-pointer active:scale-95 ${
-                  horizontal ? 'w-[58px] py-1 text-[9.5px]' : 'w-16 pt-1.5 pb-1 text-[10.5px]'
-                } ${on ? 'text-[#0071e3]' : 'text-neutral-500 hover:text-neutral-900'}`}
+                  horizontal ? 'w-[58px] py-1 text-xs' : 'w-16 pt-1.5 pb-1 text-xs'
+                } ${on ? 'text-brand' : 'text-neutral-500 hover:text-neutral-900'}`}
               >
                 <span className={`rounded-xl flex items-center justify-center transition-transform duration-200 ease-out group-hover:scale-110 ${horizontal ? 'w-8 h-8' : 'w-[38px] h-[38px]'}`}>
                   {groupIcon(g)}
@@ -207,7 +207,7 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
                 <div
                   role="group"
                   aria-label={`أقسام ${g.title}`}
-                  className={`relative shrink-0 flex gap-0.5 rounded-2xl bg-[#0071e3]/[0.04] animate-[fade_0.2s_ease-out] ${
+                  className={`relative shrink-0 flex gap-0.5 rounded-2xl bg-brand/[0.04] animate-[fade_0.2s_ease-out] ${
                     horizontal ? 'flex-row-reverse items-center px-0.5 h-[54px]' : 'flex-col items-center py-1 w-14 mb-1'
                   }`}
                 >
@@ -217,8 +217,8 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
                       type="button"
                       onClick={() => onPickGroup(g.id, p.id)}
                       title={p.label}
-                      className={`group shrink-0 rounded-xl flex flex-col items-center gap-0.5 text-neutral-500 hover:text-[#0071e3] hover:bg-white transition-colors cursor-pointer active:scale-95 ${
-                        horizontal ? 'w-[50px] py-0.5 text-[8.5px]' : 'w-[52px] py-1 text-[9px]'
+                      className={`group shrink-0 rounded-xl flex flex-col items-center gap-0.5 text-neutral-500 hover:text-brand hover:bg-white transition-colors cursor-pointer active:scale-95 ${
+                        horizontal ? 'w-[50px] py-0.5 text-xs' : 'w-[52px] py-1 text-xs'
                       } font-semibold`}
                     >
                       <span className="w-6 h-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">{shortcutIcon(p.id)}</span>
@@ -252,7 +252,7 @@ export const EditorColumn: React.FC<EditorColumnProps> = ({
           label={isPanelOpen ? 'إخفاء' : 'إظهار'}
           title={isPanelOpen ? 'إخفاء لوحة التحكم' : 'إظهار لوحة التحكم'}
           icon={horizontal ? (isPanelOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />) : isPanelOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-          tint={isPanelOpen ? 'text-neutral-500' : 'bg-[#0071e3]/10 text-[#0071e3]'}
+          tint={isPanelOpen ? 'text-neutral-500' : 'bg-brand/10 text-brand'}
           compact={horizontal}
           onClick={onTogglePanel}
         />

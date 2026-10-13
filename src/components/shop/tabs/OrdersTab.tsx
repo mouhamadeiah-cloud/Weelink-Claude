@@ -210,7 +210,7 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
               key={s.id}
               type="button"
               onClick={() => setFilter(s.id)}
-              className={`h-8 px-3 rounded-full text-[11px] font-bold border transition cursor-pointer ${filter === s.id ? 'bg-[#1d1d1f] border-[#1d1d1f] text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}
+              className={`h-8 px-3 rounded-full text-xs font-bold border transition cursor-pointer ${filter === s.id ? 'bg-ink border-ink text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}
             >
               {s.label} ({count})
             </button>
@@ -235,8 +235,8 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
                     <button type="button" onClick={() => setOpenId(open ? null : o.id)} className="flex items-center gap-3 flex-1 min-w-[160px] text-right cursor-pointer" aria-expanded={open}>
                       <ClipboardList size={18} className="text-neutral-400 shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-sm font-bold text-[#1d1d1f]">#{o.number} · {customerName(o)}</div>
-                        <div className="text-[10px] text-neutral-400 truncate">
+                        <div className="text-sm font-bold text-ink">#{o.number} · {customerName(o)}</div>
+                        <div className="text-xs text-neutral-400 truncate">
                           {formatDate(o.createdAt)} · {o.items.map((i) => `${itemName(i)} × ${i.qty}`).join('، ')}
                           {' · '}{PAYMENT_METHODS.find((m) => m.id === o.paymentMethod)?.label} · {o.deliveryMethod === 'delivery' ? 'توصيل' : 'استلام'}
                         </div>
@@ -246,7 +246,7 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
                     <select
                       value={o.status}
                       onChange={(e) => setStatus(o, e.target.value as OrderStatus)}
-                      className="h-8 px-2 rounded-lg border text-[11px] font-bold cursor-pointer outline-none"
+                      className="h-8 px-2 rounded-lg border text-xs font-bold cursor-pointer outline-none"
                       style={{ color: st.color, borderColor: `${st.color}55`, backgroundColor: `${st.color}10` }}
                       aria-label="حالة الطلب"
                     >

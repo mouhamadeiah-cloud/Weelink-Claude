@@ -23,7 +23,8 @@ export const SiteView: React.FC<{
   phone: boolean;
   pageId: string;
   onSelectPage?: (id: string) => void;
-}> = ({ project, pages, elements, data, phone, pageId, onSelectPage }) => {
+  onContactClick?: (url: string) => void;
+}> = ({ project, pages, elements, data, phone, pageId, onSelectPage, onContactClick }) => {
   const view = useMemo(() => (phone ? withPhoneLayouts(pages, elements) : { pages, elements }), [pages, elements, phone]);
   const shop = useMemo(() => (project === 'shop' ? shopFromPublic(data) : null), [project, data]);
   const cars = useMemo(() => (project === 'cars' ? carsFromPublic(data) : null), [project, data]);
@@ -54,6 +55,7 @@ export const SiteView: React.FC<{
               onUpdateElementContent={noop}
               onDeleteElement={noop}
               onDuplicateElement={noop}
+              onContactClick={onContactClick}
             />
           </div>
         </CarDataContext.Provider>

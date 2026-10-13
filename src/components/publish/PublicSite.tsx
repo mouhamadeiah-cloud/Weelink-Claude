@@ -7,6 +7,7 @@ import { withLocalGraphics } from '../../utils/localGraphics';
 import { PublishedSite, SiteSeo, letterIcon, loadPublishedSite } from '../../services/sites';
 import { PublicRestaurantSite } from '../restaurant/PublicRestaurantSite';
 import { SiteView } from './SiteView';
+import { countContact, countVisit, isContactLink } from '../../services/siteStats';
 
 const PHONE_MAX = 768;
 
@@ -58,6 +59,8 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
         if (s?.pages?.[0]) setPageId(s.pages[0].id);
         const title = s?.pages?.[0]?.navbar?.brandName || '';
         if (s) {
+          // A restaurant's live site counts its own visits.
+          if (s.project !== 'restaurant') countVisit(s.owner, s.project);
           applySeo(s.seo, title);
           setPageIcon(s.icon || letterIcon(s.seo?.title || title || s.name));
         }
@@ -96,7 +99,7 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
 
   return (
     <div className="h-[100dvh]">
-      <SiteView project={ready.project} pages={ready.pages} elements={elements} data={ready.data} phone={phone} pageId={pageId} onSelectPage={selectPage} />
+      <SiteView project={ready.project} pages={ready.pages} elements={elements} data={ready.data} phone={phone} pageId={pageId} onSelectPage={selectPage} onContactClick={(url) => isContactLink(url) && countContact(ready.owner, ready.project)} />
     </div>
   );
 };

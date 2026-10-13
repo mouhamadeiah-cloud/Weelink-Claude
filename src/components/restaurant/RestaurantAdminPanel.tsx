@@ -2,7 +2,7 @@
 // shop and the showroom. The menu (main catalogs, sub-catalogs, dishes), the website's orders and
 // the settings are managed here; the restaurant's pages are edited in the editor like any page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users, UserCog, FileBarChart, Contact } from 'lucide-react';
+import { Settings, X, PencilLine, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users, UserCog, FileBarChart, Contact } from 'lucide-react';
 import { RestaurantAdminData, setDayStartHour } from './restaurantTypes';
 import { RestaurantTabProps, RestaurantTabId } from './tabs/shared';
 import { TablesTab } from './tabs/TablesTab';
@@ -49,9 +49,11 @@ interface RestaurantAdminPanelProps {
   openRequest?: number;
   // The floating gear is left out where the column's button opens the admin instead.
   hideGear?: boolean;
+  // «تعديل الصفحة»: shown when the admin was opened from the page's navbar, back to the editor.
+  onEditPage?: () => void;
 }
 
-export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid, access = OWNER_ACCESS, openRequest = 0, hideGear = false }) => {
+export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid, access = OWNER_ACCESS, openRequest = 0, hideGear = false, onEditPage }) => {
   // Before anything below reads «today»: the owner's business day.
   setDayStartHour(data.settings.dayStartHour);
   const [open, setOpen] = useState(false);
@@ -103,6 +105,11 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
                 <div className="text-sm font-black text-[#1d1d1f] truncate">إدارة المطعم{data.settings.name ? ` · ${data.settings.name}` : ''}</div>
                 <div className="text-[10px] text-neutral-400 font-bold">Weelink / Restaurant</div>
               </div>
+              {onEditPage && (
+                <button type="button" onClick={() => { setOpen(false); onEditPage(); }} className="h-9 px-3 rounded-xl bg-[#1d1d1f] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                  <PencilLine size={14} /> تعديل الصفحة
+                </button>
+              )}
               <button type="button" onClick={() => setOpen(false)} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق">
                 <X size={18} />
               </button>

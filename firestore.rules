@@ -366,6 +366,20 @@ service cloud.firestore {
         && incoming().by == request.auth.uid;
     }
 
+    // A published page's daily counters (src/services/siteStats.ts): a visitor adds exactly 1 to
+    // the visits or the contacts; only the owner and the members read them.
+    match /siteStats/{ownerId}/days/{dayId} {
+      allow read: if canManage(ownerId);
+      allow create: if isValidId(ownerId) && isValidId(dayId)
+        && incoming().keys().hasOnly(['visits', 'contacts']) && incoming().keys().size() == 1
+        && incoming().get('visits', 1) == 1 && incoming().get('contacts', 1) == 1;
+      allow update: if isValidId(ownerId) && isValidId(dayId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['visits', 'contacts'])
+        && incoming().get('visits', 0) - existing().get('visits', 0) + incoming().get('contacts', 0) - existing().get('contacts', 0) == 1
+        && incoming().get('visits', 0) >= existing().get('visits', 0)
+        && incoming().get('contacts', 0) >= existing().get('contacts', 0);
+    }
+
     // Match statement for platform_directory onboarding steps
     match /platform_directory/{userId} {
       allow get, write: if canManage(userId) || isDemo(userId);

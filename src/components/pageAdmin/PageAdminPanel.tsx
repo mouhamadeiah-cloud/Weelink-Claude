@@ -1,11 +1,14 @@
 // The free page's admin (Eyad, 13 Oct): every page has one now, opened from «الإدارة» in the page's
-// navbar while its owner looks at it. It shows how many people opened the published page and how
+// navbar while its owner looks at it, or from «إدارة» in the editor's column. It lists the page's
+// appointments. It shows how many people opened the published page and how
 // many tapped its WhatsApp, call or email links, the services that can be added, and the way back
 // to the editor («تعديل الصفحة»).
 import React, { useEffect, useState } from 'react';
 import { BarChart3, CalendarDays, Globe2, Loader2, MessageCircle, PencilLine, Sparkles, Star, Users, X } from 'lucide-react';
 import { DayStats, readStats } from '../../services/siteStats';
 import type { ProjectType } from '../shop/shopTypes';
+import { BookingsSection } from './BookingsSection';
+import { watchBookings } from '../../services/bookings';
 
 interface PageAdminPanelProps {
   open: boolean;
@@ -14,23 +17,25 @@ interface PageAdminPanelProps {
   project: ProjectType;
   pageName: string;
   published: boolean;
-  onEditPage: () => void;
+  // «تعديل الصفحة»: when the admin was opened from the page's navbar; the editor's own door leaves it out.
+  onEditPage?: () => void;
   onPublish?: () => void;
-  // Where the numbers come from (the counters in Firebase).
+  // Where the numbers and the bookings come from (Firebase).
   loadStats?: typeof readStats;
+  watchBookings?: typeof watchBookings;
 }
 
 const sum = (rows: DayStats[], key: 'visits' | 'contacts', last: number) => rows.slice(-last).reduce((n, r) => n + r[key], 0);
 const fmt = (n: number) => n.toLocaleString('ar-SY');
 
-// Services the page can grow with; the first two come in the next steps of the plan.
+// Services the page can grow with; ratings come in the next step of the plan.
 const SERVICES = [
-  { icon: CalendarDays, title: 'حجز المواعيد', line: 'زبائنك بيحجزوا من صفحتك، وبيوصل إلك وإلهم إيميل وتذكير قبل الموعد بيوم.', soon: true },
+  { icon: CalendarDays, title: 'حجز المواعيد', line: 'أضف «حجز مواعيد» من «إضافة»: زبائنك بيحجزوا من صفحتك، وبيوصل إلك وإلهم إيميل وتذكير قبل الموعد بيوم.', soon: false },
   { icon: Star, title: 'التقييمات', line: 'نجوم تحت اسمك بأول الصفحة، وتقييمات زبائنك مع ردودك عليها.', soon: true },
   { icon: Globe2, title: 'دومين خاص', line: 'صفحتك على اسمك أنت بدل رابط Weelink، من نافذة «نشر».', soon: false },
 ];
 
-export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, owner, project, pageName, published, onEditPage, onPublish, loadStats = readStats }) => {
+export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, owner, project, pageName, published, onEditPage, onPublish, loadStats = readStats, watchBookings: watch }) => {
   const [stats, setStats] = useState<DayStats[] | null | 'error'>(null);
 
   useEffect(() => {
@@ -61,9 +66,11 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
             <div className="text-sm font-black text-[#1d1d1f] truncate">إدارة الصفحة{pageName ? ` · ${pageName}` : ''}</div>
             <div className="text-[10px] text-neutral-400 font-bold">Weelink</div>
           </div>
-          <button type="button" onClick={() => { onClose(); onEditPage(); }} className="h-9 px-3 rounded-xl bg-[#1d1d1f] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
-            <PencilLine size={14} /> تعديل الصفحة
-          </button>
+          {onEditPage && (
+            <button type="button" onClick={() => { onClose(); onEditPage(); }} className="h-9 px-3 rounded-xl bg-[#1d1d1f] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <PencilLine size={14} /> تعديل الصفحة
+            </button>
+          )}
           <button type="button" onClick={onClose} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق">
             <X size={18} />
           </button>
@@ -76,6 +83,8 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
               {onPublish && <button type="button" onClick={() => { onClose(); onPublish(); }} className="h-9 px-4 rounded-xl bg-[#1d1d1f] text-white cursor-pointer">نشر الصفحة</button>}
             </div>
           )}
+
+          <BookingsSection owner={owner} project={project} watch={watch} />
 
           <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {([

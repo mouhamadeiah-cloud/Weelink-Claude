@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useContext } from 'react';
 import { BackgroundVideo } from './BackgroundVideo';
 import {
   CanvasElement,
@@ -29,6 +29,7 @@ import { useMenuCart, menuCartCount } from './restaurant/menuCartStore';
 import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
+import { BookingPageContext, createBooking, dayKey, readTaken } from '../services/bookings';
 import { 
   Trash2, 
   Copy, 
@@ -110,6 +111,15 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  // The page the calendar books on: on the published page (and the owner's view of it) a booking
+  // is saved and emailed; in the editor it only shows what a visitor would see.
+  const bookingPage = useContext(BookingPageContext);
+  const live = !!bookingPage?.live;
+  const [saving, setSaving] = useState(false);
+  const [bookError, setBookError] = useState('');
+  const [taken, setTaken] = useState<number[]>([]);
+  const [takenTick, setTakenTick] = useState(0);
+  const [savedStatus, setSavedStatus] = useState<'new' | 'confirmed' | null>(null);
 
   // Calendar & Form configurations
   const title = elem.calendarTitle || elem.content || 'حجز موعد جديد';
@@ -143,21 +153,57 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
     }
   }, [elem.calendarMeetingTypes, elem.calendarMeetingType]);
 
-  // Calendar Month states (Default to October 2026)
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(9); // 0-indexed, so 9 is October
+  // Calendar month: this month, and no earlier
+  const today = new Date();
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-indexed
+  const isThisMonth = currentYear === today.getFullYear() && currentMonth === today.getMonth();
+  const nowMins = today.getHours() * 60 + today.getMinutes();
 
   const monthNamesArabic = [
     'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
     'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
   ];
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone) {
-      alert('الرجاء كتابة الاسم ورقم الهاتف على الأقل لتأكيد حجز الموعد.');
+    setBookError('');
+    if (!name.trim() || !phone.trim() || (live && !email.trim())) {
+      setBookError(live ? 'اكتب اسمك ورقم هاتفك وإيميلك ليوصلك تأكيد الموعد والتذكير.' : 'الرجاء كتابة الاسم ورقم الهاتف على الأقل لتأكيد حجز الموعد.');
       return;
     }
+    const chosen = slotItems.find((s) => s.label === (selectedSlot || computedSlots[0]));
+    if (!chosen || taken.includes(chosen.startMin) || isPastSlot(chosen.startMin)) {
+      setBookError('اختر وقتاً متاحاً.');
+      return;
+    }
+    if (!live || !bookingPage) {
+      setSubmitted(true);
+      return;
+    }
+    setSaving(true);
+    const out = await createBooking({
+      owner: bookingPage.owner,
+      project: bookingPage.project,
+      pageName: bookingPage.pageName,
+      date: dayKey(new Date(currentYear, currentMonth, selectedDay)),
+      startMin: chosen.startMin,
+      slot: chosen.label,
+      meetingType: selectedMeetingType,
+      name, phone, email, address, desc,
+      needsConfirmation,
+    });
+    setSaving(false);
+    if ('error' in out) {
+      if (out.error === 'taken' || out.error === 'full') {
+        setBookError('انحجز هذا الوقت قبل لحظات. اختر وقتاً غيره.');
+        setTakenTick((n) => n + 1);
+      } else if (out.error === 'bad_email') setBookError('تأكد من الإيميل.');
+      else setBookError('ما قدرنا نحفظ الحجز. تأكد من الإنترنت وجرّب مرة ثانية.');
+      return;
+    }
+    setSavedStatus(out.status === 'confirmed' ? 'confirmed' : 'new');
+    setTakenTick((n) => n + 1);
     setSubmitted(true);
   };
 
@@ -169,7 +215,9 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
 
   const isDateHoliday = (dayNum: number) => {
     const dayName = getDayOfWeekNameOfDate(dayNum);
-    return holidays.includes(dayName) || !workingDays.includes(dayName);
+    return holidays.includes(dayName) || !workingDays.includes(dayName) || (isThisMonth && dayNum < today.getDate())
+      // today, once its last time has passed
+      || (isThisMonth && dayNum === today.getDate() && interval !== 'day' && slotItems.every((s) => s.startMin <= nowMins));
   };
 
   const intervalTexts: Record<string, string> = {
@@ -198,9 +246,9 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
     return `${displayH}:${displayM} ${ampm}`;
   };
 
-  const computedSlots = useMemo(() => {
+  const slotItems = useMemo((): { label: string; startMin: number }[] => {
     if (interval === 'day') {
-      return ['موعد طوال اليوم (فترة واحدة)'];
+      return [{ label: 'موعد طوال اليوم (فترة واحدة)', startMin: 0 }];
     }
 
     const parseTimeToMins = (tStr: string) => {
@@ -222,7 +270,7 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
     else if (interval === '60') duration = 60;
     else if (interval === 'manual') duration = intervalMins;
 
-    const list: string[] = [];
+    const list: { label: string; startMin: number }[] = [];
     let current = workStartMins;
 
     while (current + duration <= workEndMins) {
@@ -233,23 +281,41 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
       const overlapsBreak = start < breakEndMins && end > breakStartMins;
 
       if (!overlapsBreak) {
-        list.push(`${formatTime(start)} - ${formatTime(end)}`);
+        list.push({ label: `${formatTime(start)} - ${formatTime(end)}`, startMin: start });
       }
       current += duration;
     }
 
-    return list.length > 0 ? list : slots;
+    return list.length > 0 ? list : slots.map((label, i) => ({ label, startMin: i }));
   }, [interval, intervalMins, workStart, workEnd, breakStart, breakEnd, slots]);
+  const computedSlots = useMemo(() => slotItems.map((s) => s.label), [slotItems]);
+  const isToday = isThisMonth && selectedDay === today.getDate();
+  const isPastSlot = (startMin: number) => isToday && interval !== 'day' && startMin <= nowMins;
+  const isOpenSlot = (label: string) => {
+    const item = slotItems.find((s) => s.label === label);
+    return !!item && !taken.includes(item.startMin) && !isPastSlot(item.startMin);
+  };
 
-  // Keep selectedSlot valid
+  // The times already booked on the chosen day (on the published page).
   useEffect(() => {
-    if (computedSlots.length > 0 && (!selectedSlot || !computedSlots.includes(selectedSlot))) {
-      setSelectedSlot(computedSlots[0]);
+    if (!live || !bookingPage) return setTaken([]);
+    let alive = true;
+    readTaken(bookingPage.owner, bookingPage.project, dayKey(new Date(currentYear, currentMonth, selectedDay)))
+      .then((t) => alive && setTaken(t))
+      .catch(() => alive && setTaken([]));
+    return () => { alive = false; };
+  }, [live, bookingPage?.owner, bookingPage?.project, currentYear, currentMonth, selectedDay, takenTick]);
+
+  // Keep selectedSlot on a free time
+  useEffect(() => {
+    if (computedSlots.length > 0 && (!selectedSlot || !isOpenSlot(selectedSlot))) {
+      setSelectedSlot(computedSlots.find(isOpenSlot) || null);
     }
-  }, [computedSlots, selectedSlot]);
+  }, [computedSlots, selectedSlot, taken, selectedDay, currentMonth, currentYear]);
 
   // Handle month switching
   const handlePrevMonth = () => {
+    if (isThisMonth) return;
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear(prev => prev - 1);
@@ -323,7 +389,7 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
         >
           ✓
         </div>
-        <h4 className={`text-xs font-bold mb-1 ${textStyleClasses}`}>تم تسجيل طلب الموعد بنجاح!</h4>
+        <h4 className={`text-xs font-bold mb-1 ${textStyleClasses}`}>{savedStatus === 'confirmed' ? 'تم حجز موعدك!' : 'تم تسجيل طلب الموعد بنجاح!'}</h4>
         <p className={`text-[10px] max-w-xs leading-relaxed mb-3 ${subTextStyleClasses}`}>
           شكرًا لك <b>{name}</b>. تم حجز الموعد المبدئي يوم <b>{selectedDay} {monthNamesArabic[currentMonth]} {currentYear}</b> في تمام الساعة <b>{selectedSlot || computedSlots[0]}</b>.
         </p>
@@ -332,12 +398,14 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
           <div>• <b>طريقة المقابلة:</b> {meetingTypeTexts[selectedMeetingType] || meetingTypeTexts['phone']}</div>
           {address && <div>• <b>العنوان:</b> {address}</div>}
           <div>• <b>حالة التأكيد:</b> {needsConfirmation ? '⏳ يتطلب تأكيد الإدارة أولاً' : '⚡ تأكيد فوري ومباشر'}</div>
+          {savedStatus && email && <div>• <b>الإيميل:</b> وصلك إيميل على {email}، ورح يوصلك تذكير قبل الموعد بيوم.</div>}
         </div>
 
         <button 
           type="button"
           onClick={() => {
             setSubmitted(false);
+            setSavedStatus(null);
             setName('');
             setAddress('');
             setPhone('');
@@ -513,15 +581,20 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
             </div>
 
             <div className="grid grid-cols-2 gap-1.5 max-h-[110px] overflow-y-auto pr-0.5">
-              {computedSlots.map((slot: string, sIdx: number) => {
+ {computedSlots.map((slot: string, sIdx: number) => {
                 const isSelected = selectedSlot === slot;
+                const open = isOpenSlot(slot);
                 return (
                   <button
                     key={slot}
                     type="button"
+                    disabled={!open}
                     onClick={() => setSelectedSlot(slot)}
+                    title={open ? undefined : 'هذا الوقت محجوز أو مضى'}
                     className={`text-[9.5px] py-1.5 px-2 rounded-lg text-center font-bold border transition-all cursor-pointer ${
-                      isSelected 
+                      !open
+                        ? 'opacity-40 line-through cursor-not-allowed bg-neutral-100 border-neutral-200 text-neutral-400'
+                        : isSelected 
                         ? 'bg-white border-2 shadow-xs' 
                         : isDarkBg 
                           ? 'bg-white/10 border-white/10 text-white hover:bg-white/20' 
@@ -558,7 +631,7 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
               className="text-white text-[9px] px-2 py-0.5 rounded-md font-mono shrink-0 shadow-3xs"
               style={{ backgroundColor: accentColor }}
             >
-              {selectedSlot || computedSlots[0]}
+              {selectedSlot || '—'}
             </span>
           </div>
         </div>
@@ -684,15 +757,18 @@ export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps>
             </div>
           </div>
 
+          {bookError && <div className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5">{bookError}</div>}
+
           {/* Book Appointment CTA Button */}
           <button 
             type="button"
             onClick={handleBookingSubmit}
-            className="w-full mt-2 py-2.5 px-3 text-white rounded-xl text-xs font-black shadow-md transition-all text-center cursor-pointer hover:brightness-110 active:scale-98 flex items-center justify-center gap-1.5"
+            disabled={saving || !selectedSlot}
+            className="w-full mt-2 py-2.5 px-3 text-white rounded-xl text-xs font-black shadow-md transition-all text-center cursor-pointer hover:brightness-110 active:scale-98 flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ backgroundColor: accentColor }}
           >
             <span>📅</span>
-            <span>تأكيد حجز الموعد على التقويم</span>
+            <span>{saving ? 'عم نحفظ الحجز…' : !selectedSlot ? 'ما في أوقات متاحة بهذا اليوم' : 'تأكيد حجز الموعد على التقويم'}</span>
           </button>
         </div>
 

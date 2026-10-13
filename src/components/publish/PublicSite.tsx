@@ -8,6 +8,7 @@ import { PublishedSite, SiteSeo, letterIcon, loadPublishedSite } from '../../ser
 import { PublicRestaurantSite } from '../restaurant/PublicRestaurantSite';
 import { SiteView } from './SiteView';
 import { countContact, countVisit, isContactLink } from '../../services/siteStats';
+import { BookingPageContext } from '../../services/bookings';
 
 const PHONE_MAX = 768;
 
@@ -77,6 +78,11 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
 
   const ready = site && typeof site !== 'string' ? site : null;
   const elements = useMemo(() => ready?.elements || [], [ready]);
+  // The «حجز مواعيد» calendar on the page books for real here.
+  const bookingPage = useMemo(
+    () => (ready ? { owner: ready.owner, project: ready.project, pageName: ready.pages?.[0]?.navbar?.brandName || ready.seo?.title || ready.name, live: true } : null),
+    [ready]
+  );
 
   if (site === 'loading') {
     return <div className="min-h-[100dvh] flex items-center justify-center bg-white"><Loader2 size={36} className="animate-spin text-[#0071e3]" /></div>;
@@ -98,8 +104,10 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
   };
 
   return (
+    <BookingPageContext.Provider value={bookingPage}>
     <div className="h-[100dvh]">
       <SiteView project={ready.project} pages={ready.pages} elements={elements} data={ready.data} phone={phone} pageId={pageId} onSelectPage={selectPage} onContactClick={(url) => isContactLink(url) && countContact(ready.owner, ready.project)} />
     </div>
+    </BookingPageContext.Provider>
   );
 };

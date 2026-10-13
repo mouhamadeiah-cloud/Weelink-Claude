@@ -1,6 +1,6 @@
 // Online Shop admin: a large floating gear (bottom-left) that opens a floating admin window.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, PencilLine, FolderTree, PackagePlus, Warehouse, Users, ClipboardList, BarChart3, SlidersHorizontal } from 'lucide-react';
+import { Settings, X, PencilLine, FolderTree, PackagePlus, Warehouse, Users, ClipboardList, BarChart3, SlidersHorizontal, CalendarDays } from 'lucide-react';
 import { ShopAdminData } from './shopTypes';
 import { CatalogsTab } from './tabs/CatalogsTab';
 import { AddProductTab } from './tabs/AddProductTab';
@@ -10,8 +10,9 @@ import { OrdersTab } from './tabs/OrdersTab';
 import { AccountsTab } from './tabs/AccountsTab';
 import { SettingsTab } from './tabs/SettingsTab';
 import { AdminTabProps } from './tabs/tabProps';
+import { BookingsTab } from '../pageAdmin/BookingsTab';
 
-type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' | 'accounts' | 'settings';
+type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' | 'bookings' | 'accounts' | 'settings';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<AdminTabProps> }[] = [
   { id: 'add-product', label: 'إضافة منتج', icon: PackagePlus, Component: AddProductTab },
@@ -19,6 +20,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'catalogs', label: 'التصنيفات', icon: FolderTree, Component: CatalogsTab },
   { id: 'customers', label: 'الزبائن', icon: Users, Component: CustomersTab },
   { id: 'orders', label: 'الطلبات', icon: ClipboardList, Component: OrdersTab },
+  { id: 'bookings', label: 'المواعيد', icon: CalendarDays, Component: BookingsTab },
   { id: 'accounts', label: 'الحسابات', icon: BarChart3, Component: AccountsTab },
   { id: 'settings', label: 'الإعدادات', icon: SlidersHorizontal, Component: SettingsTab },
 ];

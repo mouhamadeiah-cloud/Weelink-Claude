@@ -16,6 +16,7 @@ import { CustomerAccount } from '../customers/CustomerAccount';
 import { getCustomerSession } from '../customers/customerSession';
 import { sendOrderConfirmation } from './orderStatus';
 import { countContact, countVisit, isContactLink } from '../../services/siteStats';
+import { BookingPageContext } from '../../services/bookings';
 
 const PHONE_MAX = 768;
 const noop = () => {};
@@ -85,6 +86,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
 
   return (
     <RestaurantDataContext.Provider value={site.admin}>
+      <BookingPageContext.Provider value={{ owner: uid, project: 'restaurant', pageName: site.admin.settings.name || '', live: true }}>
       <RestaurantOrderContext.Provider value={submit}>
         <div className="h-[100dvh] flex flex-col bg-white">
           <CustomerAccount ownerUid={uid} pageName={site.admin.settings.name} kind="restaurant" accent="#B5562B" currency={site.admin.settings.currency} />
@@ -111,6 +113,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
           />
         </div>
       </RestaurantOrderContext.Provider>
+      </BookingPageContext.Provider>
     </RestaurantDataContext.Provider>
   );
 };

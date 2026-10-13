@@ -380,6 +380,15 @@ service cloud.firestore {
         && incoming().get('contacts', 0) >= existing().get('contacts', 0);
     }
 
+    // Appointments booked from a page's «حجز مواعيد» calendar (api/booking.ts writes them):
+    // the owner and the members read their bookings; anyone reads which times of a day are taken.
+    match /bookings/{ownerId}/items/{bookingId} {
+      allow read: if canManage(ownerId);
+    }
+    match /bookingDays/{dayId} {
+      allow get: if true;
+    }
+
     // Match statement for platform_directory onboarding steps
     match /platform_directory/{userId} {
       allow get, write: if canManage(userId) || isDemo(userId);

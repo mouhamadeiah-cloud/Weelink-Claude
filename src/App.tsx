@@ -3846,6 +3846,7 @@ export default function App() {
           <PageLookPicker
             kind={KIND_OF_PROJECT[project]}
             current={pages[0]?.styleLook}
+            aiLook={pages[0]?.aiLook}
             sample={lookSample}
             onPick={handleApplyPageLook}
             onUndo={hasLookBackup ? handleUndoPageLook : undefined}

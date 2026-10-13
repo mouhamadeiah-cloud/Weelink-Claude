@@ -8,7 +8,7 @@ import { writeFileSync } from 'node:fs';
 import { WEE_SLIDE_BY_ID } from '../src/data/weeSlideTemplates';
 import { getSlideTemplatePayload } from '../src/data/slideTemplates';
 import { STORE_SLIDE_IDS } from '../src/data/storeSlideAi';
-import { TWENTY_PAGE_PALETTES } from '../src/data/palettes';
+import { DEFAULT_LOOK, PAGE_LOOKS, suitsKind } from '../src/data/pageLooks';
 
 type Kind = 'free' | 'restaurant' | 'shop' | 'cars';
 
@@ -152,14 +152,11 @@ for (const list of Object.values(sections)) for (const s of list) for (const t o
   if (!templates[t]) throw new Error(`Unknown template ${t} in section ${s.id}`);
 }
 
-// The four Arabic font pairs (heading, text) of the approval gallery.
-const fonts = {
-  'messiri-tajawal': { head: 'El Messiri', body: 'Tajawal' },
-  'amiri-plex': { head: 'Amiri', body: 'IBM Plex Sans Arabic' },
-  'alexandria-almarai': { head: 'Alexandria', body: 'Almarai' },
-  'cairo-cairo': { head: 'Cairo', body: 'Cairo' },
-};
-const palettes = Object.fromEntries(TWENTY_PAGE_PALETTES.map((p) => [p.id, { name: p.name, colors: p.colors }]));
+// The 12 page looks Wee AI chooses from: who each suits, its colours and its two fonts. The server
+// checks the AI's choice against this list and falls back on the page type's default look.
+const looks = Object.fromEntries(PAGE_LOOKS.map((l) => [l.id, { name: l.name, forWho: l.forWho, bg: l.bg, ink: l.ink, accent: l.accent, head: l.head, body: l.body }]));
+const kinds: Kind[] = ['free', 'restaurant', 'shop', 'cars'];
+const suits = Object.fromEntries(kinds.map((k) => [k, PAGE_LOOKS.filter((l) => suitsKind(l, k)).map((l) => l.id)]));
 
-writeFileSync(new URL('../src/data/ai/buildCatalog.json', import.meta.url), JSON.stringify({ listMax: LIST_MAX, sections, templates, fonts, palettes }, null, 1) + '\n');
+writeFileSync(new URL('../src/data/ai/buildCatalog.json', import.meta.url), JSON.stringify({ listMax: LIST_MAX, sections, templates, looks, suits, defaults: DEFAULT_LOOK }, null, 1) + '\n');
 console.log(`Wrote ${Object.keys(templates).length} templates.`);

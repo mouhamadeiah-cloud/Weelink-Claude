@@ -55,8 +55,18 @@ interface Section {
 }
 const TEMPLATES = catalog.templates as unknown as Record<string, TemplateSpec>;
 const SECTIONS = catalog.sections as Record<Kind, Section[]>;
-const PALETTES = catalog.palettes as Record<string, { name: string; colors: string[] }>;
-const FONTS = catalog.fonts as Record<string, { head: string; body: string }>;
+interface LookSpec {
+  name: string;
+  forWho: string;
+  bg: string;
+  ink: string;
+  accent: string;
+  head: string;
+  body: string;
+}
+const LOOKS = catalog.looks as Record<string, LookSpec>;
+const SUITS = catalog.suits as Record<Kind, string[]>;
+const DEFAULT_LOOKS = catalog.defaults as Record<Kind, string>;
 const LIST_MAX = catalog.listMax as number;
 const ICONS = new Set(iconList as string[]);
 const ENTRANCES = ['none', 'fade', 'slide-up', 'slide-left', 'slide-right', 'scale-up'];
@@ -80,9 +90,8 @@ export interface PlannedSection {
 }
 
 export interface Plan {
-  palette: string;
-  fonts: string;
-  accentColor?: string;
+  look: string; // one of the 12 page looks (id): its colours and its two fonts
+  accentColor?: string; // only the owner's own colour, never the AI's
   motion: boolean; // «تأثيرات حركية وبصرية»
   sections: PlannedSection[];
 }
@@ -244,10 +253,9 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
     if (i > 0 && s.tone === 'dark' && sections[i - 1].tone === 'dark') s.tone = 'tint';
   });
 
-  const accent = /^#[0-9a-f]{6}$/i.test(profile['اللون_المفضل_رمز'] || '') ? profile['اللون_المفضل_رمز'] : /^#[0-9a-f]{6}$/i.test(raw?.accentColor) ? raw.accentColor : undefined;
+  const accent = /^#[0-9a-f]{6}$/i.test(profile['اللون_المفضل_رمز'] || '') ? profile['اللون_المفضل_رمز'] : undefined;
   return {
-    palette: PALETTES[raw?.palette] ? raw.palette : Object.keys(PALETTES)[0],
-    fonts: FONTS[raw?.fonts] ? raw.fonts : Object.keys(FONTS)[0],
+    look: typeof raw?.look === 'string' && LOOKS[raw.look] ? raw.look : DEFAULT_LOOKS[kind],
     ...(accent ? { accentColor: accent } : {}),
     motion,
     sections,
@@ -278,8 +286,7 @@ const catalogFor = (kind: Kind, hasServices: boolean, assets: Assets) =>
 
 // One worked example of the answer's shape and quality (a dentist), to learn from, not to copy.
 const EXAMPLE = {
-  palette: 'modern-azure',
-  fonts: 'alexandria-almarai',
+  look: 'medical',
   sections: [
     {
       section: 'intro', template: 'hero.split', tone: 'light', entrance: 'fade',
@@ -315,9 +322,7 @@ const PAIR = (valueKey: string) => ({ type: 'array', items: { type: 'object', pr
 const RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
-    palette: { type: 'string' },
-    fonts: { type: 'string' },
-    accentColor: { type: 'string' },
+    look: { type: 'string', enum: Object.keys(LOOKS) },
     sections: {
       type: 'array',
       items: {
@@ -337,7 +342,7 @@ const RESPONSE_SCHEMA = {
       },
     },
   },
-  required: ['palette', 'fonts', 'sections'],
+  required: ['look', 'sections'],
 };
 
 // The function's time on Vercel (vercel.json maxDuration 60s): Gemini gets most of it, and a second
@@ -394,12 +399,12 @@ const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number, usage: Usa
 // prompt's unchanged beginning, which makes a build faster and its repeated part cheaper.
 export const buildPrompt = (kind: Kind, profile: Record<string, string>, assets: Assets) =>
   [
-    `palettes: ${JSON.stringify(Object.fromEntries(Object.entries(PALETTES).map(([id, p]) => [id, `${p.name} ${p.colors.join(' ')}`])))}`,
-    `fonts: ${JSON.stringify(FONTS)}`,
+    `looks (اختر واحداً منها فقط لكل الصفحة: اسمه، لمن يناسب، ألوانه، وخطّاه): ${JSON.stringify(Object.fromEntries(Object.entries(LOOKS).map(([id, l]) => [id, `${l.name}، يناسب: ${l.forWho}. خلفية ${l.bg} ونص ${l.ink} وتمييز ${l.accent}. خط العناوين ${l.head} والنص ${l.body}`])))}`,
     `icons: ${JSON.stringify([...ICONS])}`,
     `listMax: ${LIST_MAX}`,
     `مثال على شكل الرد وجودته لعيادة أسنان (تعلّم منه الأسلوب، لا تنسخه، ولا تستعمل أسماءه أو نصوصه):\n${JSON.stringify(EXAMPLE)}`,
     `نوع الصفحة: ${kind}`,
+    `الأنسب لهذا النوع عادةً: ${JSON.stringify(SUITS[kind])}`,
     `الكتالوج (الأقسام المتاحة لهذه الصفحة؛ لكل شريحة مثال خاناتها: رقم = حد الأحرف لنص، button:حد = زر، image = صورة؛ و lists = قوائم تختار عدد عناصرها):\n${JSON.stringify(catalogFor(kind, !!profile['الخدمات'], assets))}`,
     `assets (صور صاحب العمل المتوفرة): ${JSON.stringify({ heroBg: assets.heroBg, galleryCount: assets.gallery, logo: assets.logo })}`,
     `بطاقة صاحب العمل (profile):\n${JSON.stringify(profile, null, 1)}`,

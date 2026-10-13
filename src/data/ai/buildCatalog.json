@@ -1480,224 +1480,146 @@
    "lists": {}
   }
  },
- "fonts": {
-  "messiri-tajawal": {
-   "head": "El Messiri",
-   "body": "Tajawal"
+ "looks": {
+  "clear": {
+   "name": "واضح",
+   "forWho": "أطباء، مدرّسين، فنيين، خدمات",
+   "bg": "#FFFFFF",
+   "ink": "#141A24",
+   "accent": "#1D5BD8",
+   "head": "IBM Plex Sans Arabic",
+   "body": "IBM Plex Sans Arabic"
   },
-  "amiri-plex": {
+  "luxe": {
+   "name": "فخم داكن",
+   "forWho": "محامين، استشارات، مجوهرات، عطور",
+   "bg": "#0B111C",
+   "ink": "#E7ECF3",
+   "accent": "#C9A24A",
    "head": "Amiri",
    "body": "IBM Plex Sans Arabic"
   },
-  "alexandria-almarai": {
+  "homey": {
+   "name": "بيتي دافي",
+   "forWho": "مطاعم، مطابخ بيتية، حلويات، أفران",
+   "bg": "#FDF8F4",
+   "ink": "#3F261B",
+   "accent": "#9A3412",
+   "head": "El Messiri",
+   "body": "Tajawal"
+  },
+  "fresh": {
+   "name": "منعش",
+   "forWho": "فنانين، صالونات تجميل، أطفال، تصوير",
+   "bg": "#F1FAF8",
+   "ink": "#134E4A",
+   "accent": "#0D9488",
    "head": "Alexandria",
    "body": "Almarai"
   },
-  "cairo-cairo": {
-   "head": "Cairo",
+  "bold": {
+   "name": "قوي",
+   "forWho": "سيارات، نوادي رياضة، ورشات صيانة",
+   "bg": "#111214",
+   "ink": "#F4F4F5",
+   "accent": "#E11D2E",
+   "head": "Alexandria",
    "body": "Cairo"
+  },
+  "market": {
+   "name": "سوق",
+   "forWho": "متاجر، ماركت، ألبسة، إلكترونيات",
+   "bg": "#FFFFFF",
+   "ink": "#18221A",
+   "accent": "#2F7D32",
+   "head": "Readex Pro",
+   "body": "IBM Plex Sans Arabic"
+  },
+  "heritage": {
+   "name": "تراثي",
+   "forWho": "حلويات، عطارة، صابون غار، تحف",
+   "bg": "#F5EFE3",
+   "ink": "#2B2117",
+   "accent": "#1E5B4A",
+   "head": "Aref Ruqaa",
+   "body": "Noto Naskh Arabic"
+  },
+  "medical": {
+   "name": "طبي نظيف",
+   "forWho": "صيدليات، مخابر، عيادات، علاج فيزيائي",
+   "bg": "#F4FBFC",
+   "ink": "#0F2F3A",
+   "accent": "#0E7490",
+   "head": "Noto Kufi Arabic",
+   "body": "IBM Plex Sans Arabic"
+  },
+  "soft": {
+   "name": "ناعم",
+   "forWho": "صالونات، هدايا، ألعاب أطفال، ورد",
+   "bg": "#FFF6F8",
+   "ink": "#4A1D2C",
+   "accent": "#C2416B",
+   "head": "Lemonada",
+   "body": "Tajawal"
+  },
+  "mono": {
+   "name": "أبيض وأسود",
+   "forWho": "ألبسة، مصورين، مهندسين، ديكور",
+   "bg": "#FFFFFF",
+   "ink": "#0A0A0A",
+   "accent": "#0A0A0A",
+   "head": "Changa",
+   "body": "IBM Plex Sans Arabic"
+  },
+  "gold": {
+   "name": "ذهبي فاتح",
+   "forWho": "صالات أفراح، حفلات، مجوهرات، فنادق",
+   "bg": "#FBF8F1",
+   "ink": "#2A2418",
+   "accent": "#A67C2E",
+   "head": "Reem Kufi",
+   "body": "Almarai"
+  },
+  "tech": {
+   "name": "تقني",
+   "forWho": "موبايلات، كمبيوتر، برمجة، شبكات",
+   "bg": "#0D1424",
+   "ink": "#E6ECF7",
+   "accent": "#4F8CFF",
+   "head": "Kufam",
+   "body": "IBM Plex Sans Arabic"
   }
  },
- "palettes": {
-  "apple-classic": {
-   "name": "أبل كلاسيك",
-   "colors": [
-    "#fbfbfd",
-    "#ffffff",
-    "#e5e5ea",
-    "#1d1d1f",
-    "#0071e3"
-   ]
-  },
-  "modern-azure": {
-   "name": "سماوي عصري",
-   "colors": [
-    "#f0f9ff",
-    "#ffffff",
-    "#bae6fd",
-    "#0c4a6e",
-    "#0284c7"
-   ]
-  },
-  "oasis-emerald": {
-   "name": "زمرد الواحة",
-   "colors": [
-    "#f0fdf4",
-    "#ffffff",
-    "#bbf7d0",
-    "#14532d",
-    "#059669"
-   ]
-  },
-  "desert-najd": {
-   "name": "نجد الصحراوي",
-   "colors": [
-    "#fefce8",
-    "#ffffff",
-    "#fef08a",
-    "#713f12",
-    "#ca8a04"
-   ]
-  },
-  "coral-sunset": {
-   "name": "شفق وردي",
-   "colors": [
-    "#fff1f2",
-    "#ffffff",
-    "#fecdd3",
-    "#881337",
-    "#e11d48"
-   ]
-  },
-  "royal-violet": {
-   "name": "بنفسج ملكي",
-   "colors": [
-    "#faf5ff",
-    "#ffffff",
-    "#e9d5ff",
-    "#581c87",
-    "#7c3aed"
-   ]
-  },
-  "tech-indigo": {
-   "name": "نيلي تقني",
-   "colors": [
-    "#eef2ff",
-    "#ffffff",
-    "#c7d2fe",
-    "#312e81",
-    "#4f46e5"
-   ]
-  },
-  "modern-charcoal": {
-   "name": "فحم مودرن (داكن)",
-   "colors": [
-    "#18181b",
-    "#27272a",
-    "#3f3f46",
-    "#f4f4f5",
-    "#38bdf8"
-   ]
-  },
-  "midnight-dark": {
-   "name": "ليل داكن",
-   "colors": [
-    "#0f172a",
-    "#1e293b",
-    "#334155",
-    "#f8fafc",
-    "#38bdf8"
-   ]
-  },
-  "arabic-moka": {
-   "name": "قهوة عربية",
-   "colors": [
-    "#fdf8f6",
-    "#ffffff",
-    "#edd5be",
-    "#44281d",
-    "#9a3412"
-   ]
-  },
-  "coastal-turquoise": {
-   "name": "فيروزي ساحلي",
-   "colors": [
-    "#f0fdfa",
-    "#ffffff",
-    "#99f6e4",
-    "#134e4a",
-    "#0d9488"
-   ]
-  },
-  "islamic-gold": {
-   "name": "ذهب إسلامي",
-   "colors": [
-    "#faf8f0",
-    "#ffffff",
-    "#e9dfb5",
-    "#45380d",
-    "#d97706"
-   ]
-  },
-  "clean-monochrome": {
-   "name": "رمادي نقي",
-   "colors": [
-    "#f9fafb",
-    "#ffffff",
-    "#e5e7eb",
-    "#111827",
-    "#4b5563"
-   ]
-  },
-  "calm-mint": {
-   "name": "نعناعي هادئ",
-   "colors": [
-    "#ecfdf5",
-    "#ffffff",
-    "#a7f3d0",
-    "#064e3b",
-    "#10b981"
-   ]
-  },
-  "warm-amber": {
-   "name": "عنبر دافئ",
-   "colors": [
-    "#fffbeb",
-    "#ffffff",
-    "#fde68a",
-    "#78350f",
-    "#d97706"
-   ]
-  },
-  "ruby-crimson": {
-   "name": "ياقوت أحمر",
-   "colors": [
-    "#fdf2f2",
-    "#ffffff",
-    "#fbcfe8",
-    "#701a75",
-    "#db2777"
-   ]
-  },
-  "slate-stone": {
-   "name": "حجر طبيعي",
-   "colors": [
-    "#f8fafc",
-    "#ffffff",
-    "#cbd5e1",
-    "#0f172a",
-    "#64748b"
-   ]
-  },
-  "levantine-olive": {
-   "name": "زيتوني شامي",
-   "colors": [
-    "#f7fee7",
-    "#ffffff",
-    "#d9f99d",
-    "#365314",
-    "#65a30d"
-   ]
-  },
-  "andalusian-clay": {
-   "name": "فخار أندلسي",
-   "colors": [
-    "#fff7ed",
-    "#ffffff",
-    "#fed7aa",
-    "#7c2d12",
-    "#ea580c"
-   ]
-  },
-  "neon-aurora": {
-   "name": "أورورا نيون (داكن)",
-   "colors": [
-    "#090d16",
-    "#131b2e",
-    "#1f2d4d",
-    "#e2e8f0",
-    "#06b6d4"
-   ]
-  }
+ "suits": {
+  "free": [
+   "clear",
+   "fresh",
+   "medical",
+   "soft"
+  ],
+  "restaurant": [
+   "luxe",
+   "homey",
+   "market",
+   "heritage"
+  ],
+  "shop": [
+   "clear",
+   "market",
+   "soft",
+   "gold"
+  ],
+  "cars": [
+   "luxe",
+   "bold",
+   "mono",
+   "tech"
+  ]
+ },
+ "defaults": {
+  "restaurant": "homey",
+  "shop": "homey",
+  "cars": "bold",
+  "free": "clear"
  }
 }

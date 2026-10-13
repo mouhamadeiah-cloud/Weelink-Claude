@@ -39,6 +39,9 @@ const FIRST_FOR: Record<BuildKind, string[]> = {
   free: ['clear', 'fresh', 'medical', 'soft'],
 };
 
+// The look Wee AI falls back on when it names none that exists.
+export const DEFAULT_LOOK: Record<BuildKind, string> = { restaurant: 'homey', shop: 'homey', cars: 'bold', free: 'clear' };
+
 export const looksFor = (kind: BuildKind): PageLook[] => {
   const first = FIRST_FOR[kind] || [];
   return [...first.map((id) => pageLookById(id)!), ...PAGE_LOOKS.filter((l) => !first.includes(l.id))];

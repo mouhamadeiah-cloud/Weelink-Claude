@@ -45,6 +45,10 @@ import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Eye, FileText, FolderTree, LayoutTemplate, Loader2, MousePointer2, Plus, Redo2, Settings, SlidersHorizontal, Store, Undo2 } from 'lucide-react';
 import { applyPageTexts, businessFacts, pageTextItems, requestPageTexts, type WeeAnswers } from './services/weeWriter';
+import { applyPageLook } from './services/applyLook';
+import { formatMoney } from './components/shop/adminUi';
+import { PageLookPicker, type LookSample } from './components/rightDrawer/PageLookPicker';
+import type { PageLook } from './data/pageLooks';
 import { KIND_OF_PROJECT, buildPageFromPlan, emptyMainPage, buildProfile, pageAssets, requestPagePlan } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
@@ -1364,6 +1368,26 @@ export default function App() {
     setSelectedElementId(null);
     return { ok: true, message: `بنى Wee AI ${built.sections} أقسام لصفحتك. عدّل أي شي بدك ياه، أو اكبس «رجّع صفحتي متل ما كانت».` };
   };
+  // «ستايل الصفحة»: a look restyles every page of the site at once. Undo works on elements only,
+  // so the site as it was before the last pick is kept for «رجّع الستايل اللي قبل».
+  const lookBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[] } | null>(null);
+  const [hasLookBackup, setHasLookBackup] = useState(false);
+  const handleApplyPageLook = (look: PageLook) => {
+    lookBackupRef.current = { pages: pagesRef.current, elements: elementsRef.current };
+    setHasLookBackup(true);
+    const next = applyPageLook(pagesRef.current, elementsRef.current, look, KIND_OF_PROJECT[project]);
+    setPages(next.pages);
+    pushToHistory(next.elements);
+  };
+  const handleUndoPageLook = () => {
+    const backup = lookBackupRef.current;
+    if (!backup) return;
+    lookBackupRef.current = null;
+    setHasLookBackup(false);
+    setPages(backup.pages);
+    pushToHistory(backup.elements);
+  };
+
   const handleRestoreBuiltPage = () => {
     const backup = builtBackupRef.current;
     if (!backup) return { ok: false, message: 'ما في صفحة قديمة محفوظة.' };
@@ -1699,6 +1723,31 @@ export default function App() {
   };
 
   const currentPage = pages.find(p => p.id === activePageId) || pages[0];
+
+  // The look cards show the owner's own site: its name, the first heading, text and button of its
+  // first page, and its first dish, product, car or price.
+  const lookSample = useMemo((): LookSample => {
+    const plain = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+    const home = pages[0];
+    const order = new Map((home?.slides || []).map((s, i) => [s.id, i]));
+    const els = elements.filter((e) => order.has(e.slideId)).sort((a, b) => order.get(a.slideId)! - order.get(b.slideId)! || a.y - b.y);
+    const first = (type: string) => els.map((e) => (e.type === type ? plain(e.content || '') : '')).find((t) => t.length > 1) || '';
+    const dish = project === 'restaurant' ? restaurantAdmin.dishes.find((d) => d.published) : undefined;
+    const product = project === 'shop' ? shopAdmin.products[0] : undefined;
+    const car = project === 'cars' ? carAdmin.cars.find((c) => c.showPrice && c.price > 0) : undefined;
+    const plan = els.find((e) => e.pricingPlan && e.pricingPrice);
+    const item = dish ? { name: dish.name, price: formatMoney(dish.price, restaurantAdmin.settings.currency) }
+      : product ? { name: product.name, price: formatMoney(product.price, product.currency) }
+      : car ? { name: `${car.brand} ${car.model}`.trim(), price: formatMoney(car.price, car.currency) }
+      : plan ? { name: plan.pricingPlan!, price: plan.pricingPrice! } : undefined;
+    return {
+      name: home?.navbar.brandName || PROJECT_KIND_LABEL[project],
+      title: first('heading') || 'عنوان صفحتك',
+      text: first('paragraph') || 'هون بيطلع أول نص من صفحتك.',
+      button: (first('button') || 'تواصل معنا').slice(0, 24),
+      item,
+    };
+  }, [pages, elements, project, restaurantAdmin, shopAdmin, carAdmin]);
   const selectedElement = elements.find(el => el.id === selectedElementId) || null;
   const currentSlide = currentPage.slides.find(s => s.id === activeSlideId) || currentPage.slides[0];
 
@@ -3220,6 +3269,7 @@ export default function App() {
         return {
           ...p,
           colorPalette: palette,
+          styleLook: undefined,
           navbar: {
             ...p.navbar,
             bgColor: bg,
@@ -3812,6 +3862,15 @@ export default function App() {
         onToggleLock={handleToggleLock}
         onUpdatePage={handleUpdatePage}
         onApplyPagePalette={handleApplyPagePalette}
+        pageLookPicker={
+          <PageLookPicker
+            kind={KIND_OF_PROJECT[project]}
+            current={pages[0]?.styleLook}
+            sample={lookSample}
+            onPick={handleApplyPageLook}
+            onUndo={hasLookBackup ? handleUndoPageLook : undefined}
+          />
+        }
         onUpdateSlideDivider={handleUpdateSlideDivider}
         onUpdateSlideBackground={handleUpdateSlideBackground}
         onUpdateSlideBorder={handleUpdateSlideBorder}

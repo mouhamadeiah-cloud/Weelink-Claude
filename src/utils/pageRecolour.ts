@@ -23,8 +23,8 @@ export interface TargetColours {
   deep: string; // the darker of background and text: dark bands
   pale: string; // the lighter of the two: text on dark bands
 }
-type Role = keyof TargetColours;
-type SourceLook = { roles: [string, Role][]; dark?: boolean; head: string };
+export type Role = keyof TargetColours;
+export type SourceLook = { roles: [string, Role][]; dark?: boolean; head: string };
 
 const hexToRgb = (hex: string): Rgb | null => {
   const h = hex.replace('#', '');
@@ -105,6 +105,20 @@ export const lookOf = (aiTemplate: string | undefined, kind: string, elements: {
   if (head === WEE_LOOKS.painter.head) return LOOKS.painter;
   return LOOKS.kitchen;
 };
+
+/** A look whose colours are known role by role: a page look applied before, or a page palette. */
+export const sourceOf = (to: TargetColours, head: string, extra: [string, Role][] = []): SourceLook => {
+  const dark = toneColours(to, 'dark');
+  const roles = (Object.keys(to) as Role[]).map((r) => [to[r], r] as [string, Role]);
+  return {
+    roles: [...roles, ...extra, [dark.bg, 'deep'], [dark.ink, 'pale'], [toneColours(to, 'tint').bg, 'soft']],
+    dark: luminance(to.bg) < luminance(to.ink),
+    head,
+  };
+};
+
+/** Two sources as one: a slide drawn in a known look and then given a page palette. */
+export const joinSources = (a: SourceLook, b: SourceLook): SourceLook => ({ roles: [...a.roles, ...b.roles], dark: a.dark, head: a.head });
 
 const KEEP = ['#000000', '#1F9D55', '#D4AF37'].map((h) => hexToRgb(h)!);
 const WHITE: Rgb = [255, 255, 255];

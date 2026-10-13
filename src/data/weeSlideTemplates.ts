@@ -301,8 +301,8 @@ const PRICES: (() => WeeSlide)[] = [
         const my = 146 + i * 92; // the row's top on phones
         return [
           on(heading(K_, { x: x + 332, y, width: 180, height: 30 }, name, 19, { fontFamily: K_.body }, `items.${i}.name`), 160, my, 180, 30),
-          offPhone(line({ x: x + 126, y: y + 12, width: 200, height: 8 }, 'line-dotted', 'rgba(68,40,29,0.28)')),
-          on(text(K_, { x, y, width: 120, height: 30 }, `${price} ل.س`, 17, { color: K_.accent, fontWeight: 'bold', textAlign: 'left' }, `items.${i}.price`), 20, my, 136, 30),
+          offPhone(line({ x: x + 156, y: y + 12, width: 170, height: 8 }, 'line-dotted', 'rgba(68,40,29,0.28)')),
+          on(text(K_, { x, y, width: 150, height: 30 }, `${price} ل.س`, 17, { color: K_.accent, fontWeight: 'bold', textAlign: 'left' }, `items.${i}.price`), 20, my, 136, 30),
           on(text(K_, { x: x + 212, y: y + 32, width: 300, height: 24 }, desc, 14, {}, `items.${i}.desc`), 40, my + 34, 300, 26),
           on(el('divider', 'خط فاصل', { x, y: y + 66, width: 512, height: 2 }, '', { borderColor: K_.line, borderWidth: 1 }), 20, my + 72, 320, 2),
         ];

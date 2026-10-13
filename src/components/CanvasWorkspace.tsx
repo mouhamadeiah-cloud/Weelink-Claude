@@ -2476,7 +2476,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) onSelectPage?.(navbar.ctaLinkTargetId);
                       setIsNavMenuOpen(false);
                     }}
-                    className="mx-4 mt-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-[#0071e3] text-white"
+                    className="mx-4 mt-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-[#0071e3] text-white" style={navbar.accentColor ? { backgroundColor: navbar.accentColor, color: navbar.accentTextColor } : undefined}
                   >
                     {navPartLabel('cta', navbar.ctaText)}
                   </button>
@@ -2584,7 +2584,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     className="w-7 h-7 rounded-lg object-contain shrink-0"
                   />
                 ) : (
-                  <div className="w-7 h-7 rounded-lg bg-[#0071e3] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-[#0071e3] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0" style={navbar.accentColor ? { backgroundColor: navbar.accentColor, color: navbar.accentTextColor } : undefined}>
                     {navbar.brandName.charAt(0)}
                   </div>
                 )}
@@ -2671,6 +2671,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   }
                 }}
                 className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95 ${isNavVertical ? 'self-center' : ''}`}
+                style={navbar.accentColor ? { backgroundColor: navbar.accentColor, color: navbar.accentTextColor } : undefined}
               >
                 {navPartLabel('cta', navbar.ctaText)}
               </button>

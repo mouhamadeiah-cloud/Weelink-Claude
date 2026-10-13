@@ -18,7 +18,6 @@ import { RightDrawer, DrawerSection } from './components/RightDrawer';
 import { ProjectSettingsSection } from './components/rightDrawer/sections/ProjectSettingsSection';
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
-import { ProjectChooser } from './components/ProjectChooser';
 import { HomePage } from './components/home/HomePage';
 import { StartPage } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
@@ -54,7 +53,7 @@ import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
 import { getFreeStarterTemplate } from './data/freeStarterTemplate';
 import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
-import { arrangeForMobile } from './utils/mobileLayout';
+import { withPhoneLayouts } from './utils/mobileLayout';
 import { withTemplateGroups } from './utils/templateGroups';
 import { withLocalGraphics } from './utils/localGraphics';
 
@@ -966,8 +965,8 @@ export default function App() {
 
   // Saves the open project right away (the debounced saves above would be
   // cancelled when another project's data replaces it).
-  const flushProjectSave = () => {
-    if (!projectReadyRef.current) return;
+  const flushProjectSave = (): Promise<boolean> => {
+    if (!projectReadyRef.current) return Promise.resolve(false);
     const targetUserId = activeUserUid;
     const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE[project];
     try {
@@ -979,16 +978,19 @@ export default function App() {
     } catch (e) {
       console.warn("Could not save to LocalStorage:", e);
     }
-    // Not awaited: Firestore queues the write locally, and waiting for the server
-    // would freeze the switch while offline.
-    setDoc(doc(db, 'designs', targetUserId), {
+    // A project switch does not wait for it: Firestore queues the write locally, and waiting for
+    // the server would freeze the switch while offline. The top bar's cloud waits, to say «انحفظ».
+    return setDoc(doc(db, 'designs', targetUserId), {
       [pagesField]: sanitizeData(pages),
       [elementsField]: serializeElements(elements),
       ...(project === 'shop' ? { shopAdmin: sanitizeData(shopAdmin) } : {}),
       ...(project === 'cars' ? { carAdmin: sanitizeData(carAdmin) } : {}),
       ...(project === 'restaurant' ? { restaurantAdmin: sanitizeData(withoutStaff(restaurantAdmin)) } : {}),
       updatedAt: serverTimestamp(),
-    }, { merge: true }).catch((e) => console.warn("Cloud save failed while switching projects:", e));
+    }, { merge: true }).then(() => true, (e) => {
+      console.warn("Cloud save failed:", e);
+      return false;
+    });
   };
 
   const handleChooseProject = async (type: ProjectType, targetUserId: string = activeUserUid) => {
@@ -1055,10 +1057,12 @@ export default function App() {
     setIsPreviewActive(false);
   };
 
+  // The Weelink logo in the editor: back to the start page.
   const handleOpenProjects = () => {
     flushProjectSave();
     setIsPreviewActive(false);
-    setIsProjectChosen(false);
+    setStartKind(null);
+    setIsStartActive(true);
   };
 
   // Auth Action Handlers
@@ -1243,18 +1247,9 @@ export default function App() {
     // Wee AI stays open: its next step is the button that writes the page's texts from these answers.
   };
 
-  const handleManualSave = () => {
-    const targetUserId = activeUserUid;
-    try {
-      localStorage.setItem(`weelink_pages_${targetUserId}`, JSON.stringify(pages));
-      localStorage.setItem(`weelink_elements_${targetUserId}`, JSON.stringify(elements));
-
-      alert('تم حفظ الصفحة والشرائح بنجاح محلياً!');
-    } catch (error) {
-      console.error("Manual save failed:", error);
-      alert('عذراً، فشل الحفظ المحلي: ' + (error instanceof Error ? error.message : String(error)));
-    }
-  };
+  // The cloud in the top bar: saves the open project to the cloud now (it also saves itself a
+  // moment after every change). Resolves once Firebase has it, or false when it could not.
+  const handleManualSave = () => flushProjectSave();
 
   const handleStepChange = (_stepNum: number) => {
     setIsCanvasLoading(true);
@@ -3029,20 +3024,17 @@ export default function App() {
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, slides: updatedSlides } : p));
   };
 
-  // "تنسيق الموبايل": arranges every page's elements for phones (desktop layout untouched),
-  // collapses the navbar's page names into a hamburger menu on phones, and switches to mobile
-  // view so the result is visible right away. Undo reverts the elements.
-  const handleArrangeForMobile = () => {
-    const allSlides = pages.flatMap(p => p.slides);
-    const { elements: arrangedElements, slides: arrangedSlides } = arrangeForMobile(allSlides, elements);
-    const arrangedSlideById = new Map(arrangedSlides.map(s => [s.id, s]));
-    pushToHistory(arrangedElements);
-    setPages(pages.map(p => ({
-      ...p,
-      slides: p.slides.map(s => arrangedSlideById.get(s.id) || s),
-      navbar: { ...p.navbar, mobileMenu: true },
-    })));
-    setPreviewMode('mobile');
+  // The phone view arranges the slides that have no phone layout yet, as the published page does
+  // (the designs' own phone layouts and the owner's phone edits stay), and folds the navbar's page
+  // names into a menu. It replaced the «تنسيق الموبايل» button (Eyad, 13 Oct).
+  const handleChangePreviewMode = (mode: DevicePreviewMode) => {
+    setPreviewMode(mode);
+    if (mode !== 'mobile') return;
+    const arranged = withPhoneLayouts(pages, elements);
+    if (arranged.elements !== elements) pushToHistory(arranged.elements);
+    if (arranged.elements !== elements || pages.some(p => !p.navbar.mobileMenu)) {
+      setPages(arranged.pages.map(p => (p.navbar.mobileMenu ? p : { ...p, navbar: { ...p.navbar, mobileMenu: true } })));
+    }
   };
 
   // Pages management
@@ -3381,27 +3373,27 @@ export default function App() {
   };
 
   // The browser's back button walks back through Weelink's screens (home, the start page and its
-  // questions, sign-in, the projects, the editor) instead of leaving the site: each screen is an
+  // questions, sign-in, the editor) instead of leaving the site: each screen is an
   // entry in the browser's history.
-  const screen = isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'chooser' : 'editor';
+  const screen = isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'start' : 'editor';
   const screenRef = useRef(screen);
   screenRef.current = screen;
-  // Customers' page fonts load once the projects or the editor open (Weelink's own screens don't use them).
+  // Customers' page fonts load once the editor opens (Weelink's own screens don't use them).
   useEffect(() => {
-    if (screen === 'chooser' || screen === 'editor') loadPageFonts();
+    if (screen === 'editor') loadPageFonts();
   }, [screen]);
   const poppedRef = useRef(false);
   const goToScreenRef = useRef<(target: string, kind?: ProjectType | null) => void>(() => {});
   goToScreenRef.current = (target, kind) => {
     const signedIn = !!currentUser && !currentUser.isAnonymous;
-    const to = !signedIn && (target === 'chooser' || target === 'editor') ? 'home' : signedIn && target === 'auth' ? 'home' : target;
+    const asked = target === 'chooser' ? 'start' : target; // the old projects page's entries
+    const to = !signedIn && asked === 'editor' ? 'home' : signedIn && asked === 'auth' ? 'home' : asked;
     if (screenRef.current === 'editor' && to !== 'editor') flushProjectSave();
     setIsHomeActive(to === 'home');
     setIsStartActive(to === 'start');
     if (to === 'start') setStartKind(kind || null);
     if (to === 'auth') setIsAuthActive(true);
     else if (signedIn) setIsAuthActive(false);
-    if (to === 'chooser') setIsProjectChosen(false);
     if (to === 'editor') setIsProjectChosen(projectReadyRef.current);
   };
   useEffect(() => {
@@ -3455,7 +3447,9 @@ export default function App() {
     );
   }
 
-  if (isStartActive) {
+  // The start page is also where the Weelink logo leads from the editor: the kinds of page, with
+  // «كمّل صفحتك» on the ones the account has (it replaced the old projects page, Eyad 13 Oct).
+  if (isStartActive || (!isProjectChosen && !isAuthActive)) {
     return (
       <StartPage
         key={startKind || 'kinds'}
@@ -3501,19 +3495,6 @@ export default function App() {
           → الرئيسية
         </button>
       </>
-    );
-  }
-
-  if (!isProjectChosen) {
-    return (
-      <ProjectChooser
-        onHome={() => setIsHomeActive(true)}
-        onChoose={handleChooseProject}
-        hasShop={hasShop}
-        hasCars={hasCars}
-        hasRestaurant={hasRestaurant}
-        loadingType={projectLoading}
-      />
     );
   }
 
@@ -3645,12 +3626,11 @@ export default function App() {
           onSelectPage={setActivePageId}
           onAddPage={handleAddPage}
           previewMode={previewMode}
-          onChangePreviewMode={setPreviewMode}
+          onChangePreviewMode={handleChangePreviewMode}
           canUndo={historyIndex > 0}
           canRedo={historyIndex < history.length - 1}
           onUndo={handleUndo}
           onRedo={handleRedo}
-          onArrangeForMobile={handleArrangeForMobile}
           onOpenPageSettings={() => handleSelectTool('page-settings')}
           onTogglePreview={() => {
             const nextPreviewState = !isPreviewActive;
@@ -3958,7 +3938,6 @@ export default function App() {
         data={isPublishOpen ? publicDataFor(project, shopAdmin, carAdmin) : null}
         suggestedName={currentPage.navbar.brandName || ''}
         onPublishedChange={setPublishedName}
-        onArrangeForMobile={handleArrangeForMobile}
       />
     </div>
     </RatingsSlideContext.Provider>

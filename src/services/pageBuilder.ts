@@ -12,10 +12,10 @@ import { WEE_COLOR_CHOICES } from '../data/weeColorChoices';
 import { WEE_SLIDE_BY_ID } from '../data/weeSlideTemplates';
 import { getSlideTemplatePayload } from '../data/slideTemplates';
 import { STORE_SLIDE_IDS } from '../data/storeSlideAi';
-import { TWENTY_PAGE_PALETTES } from '../data/palettes';
+import { DEFAULT_LOOK, pageLookById } from '../data/pageLooks';
 import { REST_PAGE_IDS } from '../data/restaurantTemplate';
 import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
-import { slideSource } from './applyLook';
+import { applyPageLook, lookColours, slideSource } from './applyLook';
 import { lookOf, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
 import { fitTexts, fitTextsPhone, listItems, reflowList, type FlexEl } from '../utils/flexLayout';
 import { arrangeSlideForMobile } from '../utils/mobileLayout';
@@ -36,19 +36,11 @@ export interface PlannedSection {
   entrance: string; // an editor animation, or 'none'
 }
 export interface Plan {
-  palette: string;
-  fonts: string;
-  accentColor?: string;
+  look: string; // the page look Wee AI chose (its colours and two fonts)
+  accentColor?: string; // the owner's own colour only
   motion: boolean;
   sections: PlannedSection[];
 }
-
-const FONT_PAIRS: Record<string, { head: string; body: string }> = {
-  'messiri-tajawal': { head: 'El Messiri', body: 'Tajawal' },
-  'amiri-plex': { head: 'Amiri', body: 'IBM Plex Sans Arabic' },
-  'alexandria-almarai': { head: 'Alexandria', body: 'Almarai' },
-  'cairo-cairo': { head: 'Cairo', body: 'Cairo' },
-};
 
 // The Wee AI divider answer as the editor's slide edge.
 const DIVIDERS: Record<string, Slide['dividerShape']> = { straight: 'straight', wave: 'wave', sine: 'double-wave', curved: 'curve-down' };
@@ -547,14 +539,15 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
   const { kind, answers, pages } = input;
   const home = HOME_PAGE[kind];
   const page = pages.find((p) => p.id === (home && pages.some((x) => x.id === home) ? home : input.activePageId)) || pages[0];
-  // The owner's colours are the page's (Eyad: the chosen colours are the page colours); the AI's
-  // palette only when the owner chose none.
+  // The page look Wee AI chose gives the fonts. The owner's colours are the page's (Eyad: the chosen
+  // colours are the page colours); the look's colours only when the owner chose none, and then the
+  // site is also kept in that look («ستايل الصفحة»), so a ready slide added later comes in it.
+  const look = pageLookById(plan.look) || pageLookById(DEFAULT_LOOK[kind])!;
   const choice = ownersChoice(answers);
   const ownColours = choice ? ownerPalette(choice.accent, choice.second) : null;
-  const palette = TWENTY_PAGE_PALETTES.find((p) => p.id === plan.palette) || TWENTY_PAGE_PALETTES[0];
-  const colors = ownColours || palette.colors;
-  const to = targetColours(colors, choice ? choice.accent : plan.accentColor);
-  const fonts = FONT_PAIRS[plan.fonts] || FONT_PAIRS['messiri-tajawal'];
+  const colors: [string, string, string, string, string] = ownColours || [look.bg, look.card, look.line, look.ink, look.accent];
+  const to = choice ? targetColours(colors, choice.accent) : lookColours(look);
+  const fonts = { head: look.head, body: look.body };
   const stamp = Date.now().toString(36);
   const ctx: Context = {
     kind,
@@ -599,13 +592,14 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
       ...(logo ? { logoUrl: logo } : {}),
       ...(ctx.title ? { brandName: ctx.title } : {}),
     };
-    if (p.id === page.id) return { ...p, slides: built.map((b) => b.slide), navbar, colorPalette: colors, styleLook: undefined };
-    if (!restyle) return { ...p, navbar };
+    if (p.id === page.id) return { ...p, slides: built.map((b) => b.slide), navbar, colorPalette: colors, styleLook: undefined, aiLook: look.id };
+    if (!restyle) return { ...p, navbar, aiLook: look.id };
     return {
       ...p,
       navbar,
       colorPalette: colors,
       styleLook: undefined,
+      aiLook: look.id,
       slides: p.slides.map((s) => ({ ...s, backgroundColor: s.backgroundColor && recolourDeep(s.backgroundColor, sceneFor(s.aiTemplate, [], !!s.backgroundImage, s, p), 'fill') })),
     };
   });
@@ -625,10 +619,13 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
       })
     : others;
 
+  const allElements = [...restyled, ...built.flatMap((b) => b.elements)];
+  // No colour of the owner's: the whole site in the chosen look, its buttons and cards too.
+  const site = choice ? { pages: nextPages, elements: allElements } : applyPageLook(nextPages.map((p) => ({ ...p, styleLook: look.id })), allElements, look, kind, true);
   return {
     ok: true,
-    pages: nextPages,
-    elements: [...restyled, ...built.flatMap((b) => b.elements)],
+    pages: site.pages,
+    elements: site.elements,
     pageId: page.id,
     firstSlideId: built[0].slide.id,
     sections: built.length,

@@ -18,7 +18,7 @@ export interface LookSample {
 
 const headSize = (look: PageLook) => (look.head === 'Amiri' || look.head === 'Aref Ruqaa' ? 25 : look.head === 'Lemonada' || look.head === 'Noto Kufi Arabic' ? 19 : 21);
 
-const LookCard: React.FC<{ look: PageLook; sample: LookSample; current: boolean; suits: boolean; onPick: () => void }> = ({ look, sample, current, suits, onPick }) => {
+const LookCard: React.FC<{ look: PageLook; sample: LookSample; current: boolean; suits: boolean; byAi: boolean; onPick: () => void }> = ({ look, sample, current, suits, byAi, onPick }) => {
   return (
     <button
       type="button"
@@ -48,6 +48,8 @@ const LookCard: React.FC<{ look: PageLook; sample: LookSample; current: boolean;
           <span className="text-base font-bold text-ink">{look.name}</span>
           {current ? (
             <span className="inline-flex items-center gap-1 text-xs font-bold text-brand"><Check size={14} />ستايل صفحتك</span>
+          ) : byAi ? (
+            <span className="text-xs font-bold text-brand bg-brand/10 rounded-full px-2.5 py-0.5">اختاره Wee AI</span>
           ) : suits ? (
             <span className="text-xs font-bold text-brand bg-brand/10 rounded-full px-2.5 py-0.5">بيناسب صفحتك</span>
           ) : null}
@@ -62,10 +64,14 @@ const LookCard: React.FC<{ look: PageLook; sample: LookSample; current: boolean;
 export const PageLookPicker: React.FC<{
   kind: BuildKind;
   current?: string;
+  aiLook?: string; // the look Wee AI chose when it built the page: first, with its tag
   sample: LookSample;
   onPick: (look: PageLook) => void;
   onUndo?: () => void; // brings back the site as it was before the last pick
-}> = ({ kind, current, sample, onPick, onUndo }) => (
+}> = ({ kind, current, aiLook, sample, onPick, onUndo }) => {
+  const all = looksFor(kind);
+  const looks = aiLook ? [...all.filter((l) => l.id === aiLook), ...all.filter((l) => l.id !== aiLook)] : all;
+  return (
   <div className="flex flex-col gap-3">
     <p className="text-xs text-muted leading-relaxed">كل ستايل فيه خطّين وألوانه، وبيتطبّق على كل صفحات موقعك سوا. الألوان والخطوط اللي غيّرتها بإيدك بتضل متل ما هي.</p>
     {onUndo && (
@@ -74,8 +80,9 @@ export const PageLookPicker: React.FC<{
         رجّع الستايل اللي قبل
       </button>
     )}
-    {looksFor(kind).map((look) => (
-      <LookCard key={look.id} look={look} sample={sample} current={current === look.id} suits={suitsKind(look, kind)} onPick={() => onPick(look)} />
+    {looks.map((look) => (
+      <LookCard key={look.id} look={look} sample={sample} current={current === look.id} suits={suitsKind(look, kind)} byAi={aiLook === look.id} onPick={() => onPick(look)} />
     ))}
   </div>
-);
+  );
+};

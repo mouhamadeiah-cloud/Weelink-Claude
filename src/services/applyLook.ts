@@ -64,7 +64,7 @@ const newFont = (font: string, isHeading: boolean, slideHead: string, before: Be
   return font === slideHead || (isHeading && HEAD_FONTS.has(font)) ? look.head : look.body;
 };
 
-const restyleElement = (e: CanvasElement, scene: RecolourScene, slideHead: string, before: Before, look: PageLook): CanvasElement => {
+const restyleElement = (e: CanvasElement, scene: RecolourScene, slideHead: string, before: Before, look: PageLook, corners: boolean): CanvasElement => {
   const to = scene.to;
   const next = recolourDeep(e, scene);
   const styles = { ...next.styles };
@@ -76,7 +76,7 @@ const restyleElement = (e: CanvasElement, scene: RecolourScene, slideHead: strin
     if (swapped === look.head && swapped !== look.body && /^(bold|600)$/.test(String(styles.fontWeight ?? ''))) styles.fontWeight = look.headWeight >= 700 ? 'bold' : '600';
   }
   // Buttons take the look's corners, unless the owner set their own.
-  if (e.type === 'button' && (!before.look || styles.borderRadius === before.look.radius)) styles.borderRadius = look.radius;
+  if (e.type === 'button' && (corners || !before.look || styles.borderRadius === before.look.radius)) styles.borderRadius = look.radius;
   // Letters on the accent follow it, so they always read: dark on gold, white on the rest.
   if (e.type === 'button' && styles.backgroundColor === look.accent) styles.color = buttonText(look);
   next.styles = styles;
@@ -90,8 +90,11 @@ const restyleElement = (e: CanvasElement, scene: RecolourScene, slideHead: strin
   return next;
 };
 
-/** Every page and element of the site in the given look. */
-export const applyPageLook = (pages: Page[], elements: CanvasElement[], look: PageLook, kind: BuildKind): { pages: Page[]; elements: CanvasElement[] } => {
+/**
+ * Every page and element of the site in the given look. `corners`: the buttons take the look's
+ * corners whatever they had (a page just built by Wee AI, where no button was set by the owner).
+ */
+export const applyPageLook = (pages: Page[], elements: CanvasElement[], look: PageLook, kind: BuildKind, corners = false): { pages: Page[]; elements: CanvasElement[] } => {
   const to = lookColours(look);
   const palette: [string, string, string, string, string] = [look.bg, look.card, look.line, look.ink, look.accent];
   const bySlide = new Map<string, CanvasElement[]>();
@@ -130,7 +133,7 @@ export const applyPageLook = (pages: Page[], elements: CanvasElement[], look: Pa
     const els = bySlide.get(e.slideId)!;
     const scene: RecolourScene = { look: sourceFor(home.before, home.slide, kind, els), to, onPhoto: !!home.slide.backgroundImage };
     const slideHead = fontName(els.find((x) => x.type === 'heading' && x.styles?.fontFamily)?.styles.fontFamily);
-    return restyleElement(e, scene, slideHead, home.before, look);
+    return restyleElement(e, scene, slideHead, home.before, look, corners);
   });
 
   return { pages: nextPages, elements: nextElements };

@@ -384,6 +384,7 @@ export interface Page {
   // The page look («ستايل الصفحة», data/pageLooks) the site was last given, so the next one knows
   // which colours and fonts were the look's.
   styleLook?: string;
+  aiLook?: string; // the look Wee AI chose when it built the page («اختاره Wee AI» in the picker)
   // A paid page got its «التقييمات» slide suggested once; removing it then keeps it removed.
   ratingsSuggested?: boolean;
 }

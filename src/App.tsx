@@ -3445,7 +3445,7 @@ export default function App() {
         <button
           type="button"
           onClick={() => setIsHomeActive(true)}
-          className="fixed top-3 right-3 z-[60] bg-white/90 backdrop-blur border border-neutral-200 rounded-full px-3.5 py-1.5 text-xs font-bold text-neutral-700 shadow-sm"
+          className="fixed top-3 right-3 z-[60] bg-surface border border-line rounded-full px-3.5 py-1.5 text-xs font-bold text-muted hover:text-ink"
           dir="rtl"
         >
           → الرئيسية

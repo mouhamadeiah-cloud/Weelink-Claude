@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { auth } from '../services/firebase';
 import { SignInError, registerOwner, resolveAccountId, signInOwner } from '../services/accounts';
 import { EmailCodeProblem, emailCodeErrorText, needsEmailCode, sendEmailCode, verifyEmailCode } from '../services/emailCode';
@@ -171,277 +172,192 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
     }
   };
 
+  const fieldClass = 'w-full h-11 px-3 rounded-ctl border border-line bg-surface text-sm text-ink placeholder:text-faint focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition';
+  const primaryClass = 'w-full h-12 rounded-ctl bg-brand hover:bg-brand-hover text-white text-sm font-bold transition disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2';
+  const errorLine = error && (
+    <p role="alert" className="text-xs text-danger font-bold leading-relaxed flex items-start gap-1.5">
+      <AlertCircle size={14} className="shrink-0 mt-0.5" /> {error}
+    </p>
+  );
+  const passwordField = (label: string, value: string, set: (v: string) => void, shown: boolean, toggle: () => void, name: string, autoComplete: string) => (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-bold text-muted">{label}</span>
+      <span className="relative block">
+        <input
+          type={shown ? 'text' : 'password'}
+          name={name}
+          autoComplete={autoComplete}
+          required
+          value={value}
+          onChange={(e) => set(e.target.value)}
+          placeholder="••••••••"
+          className={`${fieldClass} pl-11`}
+        />
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={shown ? 'إخفاء كلمة السر' : 'إظهار كلمة السر'}
+          className="absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-ctl flex items-center justify-center text-faint hover:text-ink cursor-pointer"
+        >
+          {shown ? <EyeOff size={17} /> : <Eye size={17} />}
+        </button>
+      </span>
+    </label>
+  );
+  const emailField = (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-bold text-muted">إيميل</span>
+      <input
+        type="email"
+        name="email"
+        autoComplete="username"
+        required
+        dir="ltr"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="example@email.com"
+        className={`${fieldClass} text-left`}
+      />
+    </label>
+  );
+
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center items-center px-6 py-12 md:py-24 font-sans select-none" dir="rtl">
-      <div className="w-full max-w-[420px] space-y-12">
+    <div className="min-h-screen bg-bg text-ink flex flex-col justify-center items-center px-4 py-16 select-none" dir="rtl">
+      <div className="w-full max-w-[420px] space-y-5">
+        <div className="flex items-center justify-center gap-2">
+          <span className="w-8 h-8 rounded-ctl bg-brand text-white flex items-center justify-center font-bold">W</span>
+          <span className="text-lg font-bold tracking-tight font-logo">weelink</span>
+        </div>
+
         {pendingInvite() && (
-          <div className="p-4 rounded-2xl bg-[#0071e3]/5 border border-[#0071e3]/20 text-sm font-bold text-[#0071e3] leading-relaxed text-right">
+          <div className="p-4 rounded-card bg-brand/5 border border-brand/20 text-sm font-bold text-brand leading-relaxed">
             دُعيت لإدارة مطعم على Weelink. سجّل الدخول أو أنشئ حساباً بنفس البريد الإلكتروني الذي دُعيت به.
           </div>
         )}
-        
-        {/* IMAGE 1: LOGIN MODE (هل لديك حساب) */}
+
+        <div className="bg-surface border border-line rounded-card p-6 sm:p-8">
+          {mode === 'login' && (
+            <div className="space-y-6">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <h1 className="text-heading font-bold">هل لديك حساب</h1>
+                {emailField}
+                {passwordField('كلمة السر', password, setPassword, showPassword, () => setShowPassword(!showPassword), 'password', 'current-password')}
+                {errorLine}
+                <button type="submit" disabled={loading} className={primaryClass}>
+                  {loading && <Loader2 size={16} className="animate-spin" />}
+                  {loading ? 'جاري التحقق والدخول...' : 'دخول'}
+                </button>
+              </form>
+
+              <div className="flex items-center gap-3 text-xs text-faint">
+                <span className="flex-1 h-px bg-line" /> أو <span className="flex-1 h-px bg-line" />
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={onLoginWithGoogle}
+                  className="w-full h-11 rounded-ctl border border-line bg-surface hover:bg-bg text-sm font-bold text-ink transition cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <GoogleMark /> سجّل بحساب Google
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDirectLogin}
+                  title="دخول سريع للحساب المسجّل الدخول على هذا المتصفح"
+                  className="w-full h-11 rounded-ctl text-sm font-bold text-brand hover:bg-brand/5 transition cursor-pointer"
+                >
+                  دخول مباشر
+                </button>
+              </div>
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <h1 className="text-heading font-bold">إنشاء حساب</h1>
+              {emailField}
+              {passwordField('كلمة السر', password, setPassword, showPassword, () => setShowPassword(!showPassword), 'password', 'new-password')}
+              {passwordField('إعادة كلمة السر', confirmPassword, setConfirmPassword, showConfirmPassword, () => setShowConfirmPassword(!showConfirmPassword), 'confirm-password', 'new-password')}
+              {errorLine}
+              <button type="submit" disabled={loading} className={primaryClass}>
+                {loading && <Loader2 size={16} className="animate-spin" />}
+                {loading ? 'جاري إنشاء حسابك...' : 'إنشاء الحساب'}
+              </button>
+            </form>
+          )}
+
+          {/* Confirm the email of a new account with the code sent to it */}
+          {mode === 'code' && (
+            <form onSubmit={handleVerify} className="space-y-4">
+              <div className="space-y-2">
+                <h1 className="text-heading font-bold">أكّد بريدك الإلكتروني</h1>
+                <p className="text-sm text-muted leading-relaxed">
+                  أرسلنا رمزاً من 6 أرقام إلى <span dir="ltr" className="font-bold text-ink">{auth.currentUser?.email}</span>. إن لم تجده فانظر في البريد المزعج (Spam).
+                </p>
+              </div>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                autoFocus
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="••••••"
+                dir="ltr"
+                aria-label="رمز التأكيد"
+                className={`${fieldClass} h-14 text-center text-title font-bold tracking-[0.5em]`}
+              />
+              {errorLine}
+              <button type="submit" disabled={loading} className={primaryClass}>
+                {loading && <Loader2 size={16} className="animate-spin" />}
+                {loading ? 'جاري التحقق...' : 'تأكيد'}
+              </button>
+              <div className="flex justify-between gap-4 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resendWait > 0}
+                  className="text-brand disabled:text-faint cursor-pointer disabled:cursor-default"
+                >
+                  {resendWait > 0 ? `إرسال رمز جديد بعد ${resendWait} ثانية` : 'إرسال رمز جديد'}
+                </button>
+                <button type="button" onClick={handleChangeEmail} className="text-muted hover:text-ink cursor-pointer">
+                  استخدام بريد آخر
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
         {mode === 'login' && (
-          <div className="space-y-10">
-            {/* Top row buttons exactly like Image 1 */}
-            <div className="flex gap-4 w-full">
-              <button
-                type="button"
-                onClick={onLoginWithGoogle}
-                className="flex-1 py-3 px-4 border border-black rounded-lg text-xs font-bold text-black hover:bg-neutral-50 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <img 
-                  src="https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?auto=format&fit=crop&w=40&q=80" 
-                  alt="Google" 
-                  className="w-4 h-4 rounded-full"
-                />
-                <span>سجل بحساب Google</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDirectLogin}
-                className="flex-1 py-3 px-4 border border-[#0071e3] text-[#0071e3] rounded-lg text-xs font-bold hover:bg-[#0071e3]/5 transition-all cursor-pointer text-center"
-                title="دخول سريع للحساب المسجّل الدخول على هذا المتصفح"
-              >
-                دخول مباشر
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => { setMode('signup'); setError(null); }}
-                className="flex-1 py-3 px-4 bg-black text-white rounded-lg text-xs font-bold hover:bg-neutral-800 transition-all cursor-pointer text-center"
-              >
-                أنشئ حساباً مجانياً
-              </button>
-            </div>
-
-            {/* Form Section */}
-            <form onSubmit={handleLogin} className="space-y-6 pt-4">
-              <div className="space-y-2 text-right">
-                <h2 className="text-xl font-black text-neutral-900">هل لديك حساب</h2>
-              </div>
-
-              {/* Email Input */}
-              <div className="space-y-1 text-right">
-                <span className="text-xs font-bold text-neutral-500 block">إيميل</span>
-                <div className="relative">
-                  <input
-                    type="email"
-                    name="email"
-                    autoComplete="username"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="example@email.com"
-                    className="w-full text-sm font-semibold py-3 px-1 border-b-2 border-neutral-200 focus:border-black bg-transparent focus:outline-none transition-all"
-                  />
-                  <div className="absolute left-1 bottom-3.5 text-neutral-400 text-xs">
-                    ✓
-                  </div>
-                </div>
-              </div>
-
-              {/* Password Input */}
-              <div className="space-y-1 text-right">
-                <span className="text-xs font-bold text-neutral-500 block">كلمة السر</span>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full text-sm font-semibold py-3 pl-10 pr-1 border-b-2 border-neutral-200 focus:border-black bg-transparent focus:outline-none transition-all text-right"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute left-1 bottom-3 text-neutral-400 hover:text-black cursor-pointer text-sm p-1"
-                  >
-                    {showPassword ? '👁️' : '👁️‍🗨️'}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <p className="text-xs text-red-600 font-bold leading-relaxed text-right animate-fade-in">
-                  ⚠️ {error}
-                </p>
-              )}
-
-              {/* Submit Button exactly as specified */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-4.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-xl text-sm font-black shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>{loading ? 'جاري التحقق والدخول...' : 'بناء صفحة مجاناً مع wee ai'}</span>
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* IMAGE 2: SIGN UP MODE (إنشاء حساب) */}
-        {mode === 'signup' && (
-          <div className="space-y-8 animate-fade-in">
-            <form onSubmit={handleRegister} className="space-y-6">
-              <div className="space-y-2 text-right">
-                <h2 className="text-xl font-black text-neutral-900">إنشاء حساب</h2>
-              </div>
-
-              {/* Email Input */}
-              <div className="space-y-1 text-right">
-                <span className="text-xs font-bold text-neutral-500 block">إيميل</span>
-                <input
-                  type="email"
-                    name="email"
-                    autoComplete="username"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="example@email.com"
-                  className="w-full text-sm font-semibold py-3 px-1 border-b-2 border-neutral-200 focus:border-black bg-transparent focus:outline-none transition-all"
-                />
-              </div>
-
-              {/* Password Input */}
-              <div className="space-y-1 text-right">
-                <span className="text-xs font-bold text-neutral-500 block">كلمة السر</span>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    autoComplete="new-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full text-sm font-semibold py-3 pl-10 pr-1 border-b-2 border-neutral-200 focus:border-black bg-transparent focus:outline-none transition-all text-right"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute left-1 bottom-3 text-neutral-400 hover:text-black cursor-pointer text-sm p-1"
-                  >
-                    {showPassword ? '👁️' : '👁️‍🗨️'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password Input */}
-              <div className="space-y-1 text-right">
-                <span className="text-xs font-bold text-neutral-500 block">إعادة كلمة السر</span>
-                <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirm-password"
-                    autoComplete="new-password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full text-sm font-semibold py-3 pl-10 pr-1 border-b-2 border-neutral-200 focus:border-black bg-transparent focus:outline-none transition-all text-right"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute left-1 bottom-3 text-neutral-400 hover:text-black cursor-pointer text-sm p-1"
-                  >
-                    {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <p className="text-xs text-red-600 font-bold leading-relaxed text-right animate-fade-in">
-                  ⚠️ {error}
-                </p>
-              )}
-
-              {/* Register Button exactly as specified */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-4.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-xl text-sm font-black shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>{loading ? 'جاري إنشاء حسابك وبناء موقعك السحابي...' : 'بناء الصفحة مجاناً'}</span>
-              </button>
-            </form>
-
-            {/* Back link to login */}
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => { setMode('login'); setError(null); }}
-                className="text-xs text-neutral-500 hover:text-black font-bold underline decoration-neutral-300 transition-all cursor-pointer"
-              >
-                العودة لتسجيل الدخول (« هل لديك حساب)
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Confirm the email of a new account with the code sent to it */}
-        {mode === 'code' && (
-          <form onSubmit={handleVerify} className="space-y-6 animate-fade-in">
-            <div className="space-y-2 text-right">
-              <h2 className="text-xl font-black text-neutral-900">أكّد بريدك الإلكتروني</h2>
-              <p className="text-sm text-neutral-500 leading-relaxed">
-                أرسلنا رمزاً من 6 أرقام إلى <span dir="ltr" className="font-bold text-neutral-900">{auth.currentUser?.email}</span>. إن لم تجده فانظر في البريد المزعج (Spam).
-              </p>
-            </div>
-
-            <input
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              autoFocus
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="••••••"
-              dir="ltr"
-              className="w-full text-center text-2xl font-black tracking-[0.5em] py-3 px-1 border-b-2 border-neutral-200 focus:border-black bg-transparent focus:outline-none transition-all"
-            />
-
-            {error && (
-              <p className="text-xs text-red-600 font-bold leading-relaxed text-right animate-fade-in">
-                ⚠️ {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-xl text-sm font-black shadow-md transition-all active:scale-98 cursor-pointer flex items-center justify-center gap-2"
-            >
-              <span>{loading ? 'جاري التحقق...' : 'تأكيد'}</span>
+          <p className="text-center text-sm text-muted">
+            ما عندك حساب؟{' '}
+            <button type="button" onClick={() => { setMode('signup'); setError(null); }} className="font-bold text-brand hover:text-brand-hover cursor-pointer">
+              أنشئ حساباً مجانياً
             </button>
-
-            <div className="flex justify-between gap-4 text-xs font-bold">
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={resendWait > 0}
-                className="text-[#0071e3] disabled:text-neutral-400 cursor-pointer disabled:cursor-default"
-              >
-                {resendWait > 0 ? `إرسال رمز جديد بعد ${resendWait} ثانية` : 'إرسال رمز جديد'}
-              </button>
-              <button
-                type="button"
-                onClick={handleChangeEmail}
-                className="text-neutral-500 hover:text-black underline decoration-neutral-300 cursor-pointer"
-              >
-                استخدام بريد آخر
-              </button>
-            </div>
-          </form>
+          </p>
         )}
-
+        {mode === 'signup' && (
+          <p className="text-center text-sm text-muted">
+            عندك حساب؟{' '}
+            <button type="button" onClick={() => { setMode('login'); setError(null); }} className="font-bold text-brand hover:text-brand-hover cursor-pointer">
+              سجّل دخولك
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );
 };
+
+// Google's "G", for the sign-in button.
+const GoogleMark = () => (
+  <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z" />
+    <path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z" />
+    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
+  </svg>
+);

@@ -19,14 +19,13 @@ const STEPS = ['اختار نوع صفحتك', 'اختار باقتك', 'جاو�
 const QUESTION_COUNT = 12;
 
 // Photos of running the business, unlike the home page's search and order cards (Eyad, 12 Oct).
-const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; icon: React.ElementType; accent: string; image: string }[] = [
+const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; icon: React.ElementType; image: string }[] = [
   {
     type: 'page',
     title: 'صفحة لعملك',
     line: 'طبيب، محامي، كهربائي، مدرّس… صفحة تعرّف بك وبخدماتك.',
     perks: ['خدماتك وأسعارك', 'عنوانك على الخريطة', 'واتساب واتصال مباشر'],
     icon: FileText,
-    accent: '#0071e3',
     image: photo('1454165804606-c3d57bc86b40'),
   },
   {
@@ -35,7 +34,6 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
     line: 'منتجاتك بأقسام ومستودع وطلبات وتوصيل.',
     perks: ['سلة وطلب من الموبايل', 'مستودع وحسابات', 'عروض بالواجهة'],
     icon: ShoppingBag,
-    accent: '#7c3aed',
     image: photo('1460925895917-afdab827c52f'),
   },
   {
@@ -44,7 +42,6 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
     line: 'منيو وطلب أونلاين وكاشير ومطبخ.',
     perks: ['منيو بالصور', 'الطلبات للمطبخ لحظياً', 'طاولات QR'],
     icon: UtensilsCrossed,
-    accent: '#c2410c',
     image: photo('1517248135467-4c7edcad34c4'),
   },
   {
@@ -53,7 +50,6 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
     line: 'سياراتك بالصور والمواصفات والأسعار.',
     perks: ['بحث متقدم للزوار', 'طلبات تجربة', 'مصاريف وربح كل سيارة'],
     icon: CarFront,
-    accent: '#C8102E',
     image: carPhoto(CAR_PHOTOS.dark, 1200),
   },
 ];
@@ -125,15 +121,15 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
   const progress = Math.min(1, (Math.min(step, QUESTION_COUNT + 1) - 1) / QUESTION_COUNT);
 
   return (
-    <div className="min-h-screen bg-[#f6f3ee] text-[#1c1a17]" dir="rtl">
-      <header className="sticky top-0 z-30 bg-[#f6f3ee]/85 backdrop-blur border-b border-black/5">
+    <div className="min-h-screen bg-bg text-ink" dir="rtl">
+      <header className="sticky top-0 z-30 bg-bg/90 backdrop-blur border-b border-line">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <button type="button" onClick={kind ? stepBack : onHome} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5b5348] hover:text-[#c2410c] transition">
+          <button type="button" onClick={kind ? stepBack : onHome} className="inline-flex items-center gap-1.5 text-sm font-bold text-muted hover:text-brand transition">
             → {!kind ? 'الرئيسية' : stage === 'questions' && !initialKind ? 'الباقات' : 'نوع الصفحة'}
           </button>
           <div className="flex-1" />
           <span className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center font-bold">W</span>
+            <span className="w-8 h-8 rounded-ctl bg-brand text-white flex items-center justify-center font-bold">W</span>
             <span className="text-lg font-bold tracking-tight font-logo">weelink</span>
           </span>
         </div>
@@ -142,14 +138,14 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
       {!chosen ? (
         <main key="kinds" className="max-w-6xl mx-auto px-4 py-5 sm:py-8 space-y-6 sm:space-y-8">
           {/* Hero: what happens, in three steps */}
-          <section className="wl-rise relative rounded-[2rem] overflow-hidden min-h-[260px] sm:min-h-[320px] flex items-end text-white">
+          <section className="wl-rise relative rounded-card overflow-hidden bg-ink min-h-[260px] sm:min-h-[320px] flex items-end text-white">
             <img src={HERO} alt="" className="wl-drift absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/10" />
             <div className="relative p-5 sm:p-8 w-full space-y-4">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/15 backdrop-blur rounded-full px-3 py-1">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-white/15 backdrop-blur rounded-full px-3 py-1">
                 <Sparkles size={13} /> مجاناً، مع Wee AI
               </span>
-              <h1 className="text-3xl sm:text-5xl font-bold leading-tight">شو بدك تعمل؟</h1>
+              <h1 className="text-title sm:text-display font-bold">شو بدك تعمل؟</h1>
               <p className="text-sm sm:text-base opacity-90 max-w-xl leading-relaxed">
                 {signedIn ? 'اختر نوع صفحتك وباقتك وجاوب على كم سؤال، وبعدين بتصممها بإيدك أو بيبنيها إلك Wee AI. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع صفحتك وباقتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
               </p>
@@ -157,7 +153,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                 <ol className="flex flex-wrap gap-2">
                   {STEPS.map((s, i) => (
                     <li key={s} className="flex items-center gap-2 bg-white/12 backdrop-blur rounded-full pl-3 pr-1 py-1 text-xs font-bold">
-                      <span className="w-6 h-6 rounded-full bg-white text-[#1c1a17] flex items-center justify-center text-[11px]">{i + 1}</span>
+                      <span className="w-6 h-6 rounded-full bg-white text-ink flex items-center justify-center text-xs">{i + 1}</span>
                       {s}
                     </li>
                   ))}
@@ -175,26 +171,22 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                 disabled={!!loadingType}
                 onClick={() => choose(k.type)}
                 style={{ animationDelay: `${120 + i * 90}ms` }}
-                className="wl-rise group relative rounded-3xl overflow-hidden text-right text-white min-h-[220px] sm:min-h-[340px] flex items-end shadow-sm hover:shadow-[0_24px_50px_rgba(0,0,0,0.25)] hover:-translate-y-1 transition duration-300 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#c2410c]"
+                className="wl-rise group relative rounded-card overflow-hidden text-right text-white bg-ink min-h-[220px] sm:min-h-[340px] flex items-end transition duration-300 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
               >
                 <img src={k.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/5" />
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500" style={{ background: `linear-gradient(to top, ${k.accent}cc, transparent 70%)` }} />
                 {signedIn && owned.includes(k.type) && (
-                  <span className="absolute top-3 right-3 bg-white text-[#c2410c] text-[11px] font-bold rounded-full px-2.5 py-1 shadow">صفحتك محفوظة</span>
+                  <span className="absolute top-3 right-3 bg-surface text-brand text-xs font-bold rounded-full px-2.5 py-1">صفحتك محفوظة</span>
                 )}
                 {saved === k.type && (
-                  <span className="absolute top-3 right-3 bg-white text-[#c2410c] text-[11px] font-bold rounded-full px-2.5 py-1 shadow">إجاباتك محفوظة</span>
+                  <span className="absolute top-3 right-3 bg-surface text-brand text-xs font-bold rounded-full px-2.5 py-1">إجاباتك محفوظة</span>
                 )}
                 <span className="relative p-5 w-full space-y-2">
-                  <span className="w-11 h-11 rounded-2xl flex items-center justify-center mb-1 shadow-lg" style={{ backgroundColor: k.accent }}>
-                    <k.icon size={20} />
-                  </span>
-                  <span className="block text-xl font-bold">{k.title}</span>
+                  <span className="flex items-center gap-2 text-heading font-bold"><k.icon size={20} className="shrink-0" />{k.title}</span>
                   <span className="block text-xs opacity-90 leading-relaxed">{k.line}</span>
                   <span className="hidden sm:grid gap-1 pt-1 max-h-0 opacity-0 group-hover:max-h-24 group-hover:opacity-100 transition-all duration-500 overflow-hidden">
                     {k.perks.map((p) => (
-                      <span key={p} className="flex items-center gap-1.5 text-[11px] font-bold"><Check size={12} /> {p}</span>
+                      <span key={p} className="flex items-center gap-1.5 text-xs font-bold"><Check size={12} /> {p}</span>
                     ))}
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold pt-1">
@@ -208,19 +200,17 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </section>
         </main>
       ) : stage === 'plans' ? (
-        <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} accent={chosen.accent} title={chosen.title} onPicked={startQuestions} />
+        <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} title={chosen.title} onPicked={startQuestions} />
       ) : (
         <main key="chat" className="max-w-6xl mx-auto px-4 py-4 sm:py-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:gap-6 lg:items-start space-y-3 lg:space-y-0">
           {/* The chosen kind's photo: a banner on a phone, a tall panel beside the questions on a wide screen */}
-          <aside className="wl-rise relative rounded-3xl overflow-hidden text-white h-36 lg:h-[calc(100dvh-7rem)] lg:sticky lg:top-20 lg:order-2">
+          <aside className="wl-rise relative rounded-card overflow-hidden text-white bg-ink h-36 lg:h-[calc(100dvh-7rem)] lg:sticky lg:top-20 lg:order-2">
             <img src={chosen.image} alt="" className="wl-drift absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
             <div className="absolute bottom-0 inset-x-0 p-4 lg:p-7 space-y-2 lg:space-y-4">
               <div className="flex items-center gap-2.5">
-                <span className="w-9 h-9 lg:w-12 lg:h-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: chosen.accent }}>
-                  <chosen.icon size={18} />
-                </span>
-                <span className="text-xl lg:text-3xl font-bold">{chosen.title}</span>
+                <chosen.icon size={22} className="shrink-0" />
+                <span className="text-heading lg:text-title font-bold">{chosen.title}</span>
               </div>
               <p className="hidden lg:block text-sm opacity-90 leading-relaxed max-w-md">{chosen.line}</p>
               <ul className="hidden lg:grid gap-2">
@@ -230,7 +220,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               </ul>
               {/* How far along the questions are */}
               <div className="space-y-1">
-                <div className="flex justify-between text-[11px] font-bold opacity-90">
+                <div className="flex justify-between text-xs font-bold opacity-90">
                   <span>{step > QUESTION_COUNT ? 'خلصت الأسئلة' : `السؤال ${step} من ${QUESTION_COUNT}`}</span>
                   <span>{Math.round(progress * 100)}٪</span>
                 </div>
@@ -240,7 +230,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               </div>
             </div>
           </aside>
-          <div className="wl-rise relative h-[calc(100dvh-14rem)] lg:h-[calc(100dvh-7rem)] min-h-[440px] rounded-3xl overflow-hidden border border-black/10 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.08)] lg:order-1" style={{ animationDelay: '120ms' }}>
+          <div className="wl-rise relative h-[calc(100dvh-14rem)] lg:h-[calc(100dvh-7rem)] min-h-[440px] rounded-card overflow-hidden border border-line bg-surface lg:order-1" style={{ animationDelay: '120ms' }}>
             <WeeAIChat
               key={chosen.type}
               userId={signedIn ? accountId : WEE_GUEST_ID}

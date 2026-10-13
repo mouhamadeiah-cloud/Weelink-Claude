@@ -95,8 +95,8 @@ const Chip: React.FC<{ on: boolean; onClick: () => void; small?: boolean; childr
   <button
     type="button"
     onClick={onClick}
-    className={`shrink-0 whitespace-nowrap rounded-full border font-bold transition ${small ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'} ${
-      on ? 'bg-[#1c1a17] border-[#1c1a17] text-white' : 'bg-[#f6f3ee] border-black/10 text-[#5b5348] hover:border-[#c2410c]'
+    className={`shrink-0 whitespace-nowrap rounded-full border font-bold transition ${small ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'} ${
+      on ? 'bg-ink border-ink text-white' : 'bg-surface border-line text-muted hover:border-brand hover:text-ink'
     }`}
   >
     {children}
@@ -198,16 +198,16 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
   const pickCategory = (category?: string, sub?: string) => active?.intent && setActive({ intent: active.intent, query: '', category, sub });
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#f6f3ee] text-[#1c1a17]">
+    <div dir="rtl" className="min-h-screen bg-bg text-ink">
       {/* Top bar */}
-      <header className="sticky top-0 z-30 bg-[#f6f3ee]/90 backdrop-blur border-b border-black/5">
+      <header className="sticky top-0 z-30 bg-bg/90 backdrop-blur border-b border-line">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
           <a href="/" className="flex items-center gap-2 shrink-0" aria-label="weelink">
-            <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center font-bold">W</span>
+            <span className="w-8 h-8 rounded-ctl bg-brand text-white flex items-center justify-center font-bold">W</span>
             <span className="text-lg font-bold tracking-tight hidden sm:inline font-logo">weelink</span>
           </a>
-          <label className="flex items-center gap-1.5 text-xs font-bold text-[#5b5348] bg-white border border-black/10 rounded-full pr-2.5 pl-1 py-1 min-w-0">
-            <MapPin size={14} className="text-[#c2410c] shrink-0" />
+          <label className="flex items-center gap-1.5 text-xs font-bold text-muted bg-surface border border-line rounded-full pr-2.5 pl-1 py-1 min-w-0">
+            <MapPin size={14} className="text-brand shrink-0" />
             <select
               aria-label="محافظتك"
               value={place}
@@ -219,7 +219,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
             </select>
           </label>
           <div className="flex-1" />
-          <button type="button" onClick={onBuild} className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#1c1a17] hover:text-[#c2410c] px-2">
+          <button type="button" onClick={onBuild} className="hidden sm:inline-flex items-center gap-1.5 text-sm font-bold text-ink hover:text-brand px-2">
             <Store size={15} /> اعمل صفحتك
           </button>
           {user ? (
@@ -227,22 +227,22 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
-                className="flex items-center gap-2 bg-[#1c1a17] text-white rounded-full pl-3 pr-1 py-1 text-xs font-bold"
+                className="flex items-center gap-2 bg-ink text-white rounded-full pl-3 pr-1 py-1 text-xs font-bold"
               >
-                <span className="w-7 h-7 rounded-full bg-[#c2410c] flex items-center justify-center">{(firstName[0] || '؟').toUpperCase()}</span>
+                <span className="w-7 h-7 rounded-full bg-brand flex items-center justify-center">{(firstName[0] || '؟').toUpperCase()}</span>
                 حسابي
               </button>
               {menuOpen && (
-                <div className="absolute left-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-black/5 py-2 text-sm z-40">
-                  <button type="button" onClick={() => { setMenuOpen(false); onOpenMyPage(); }} className="w-full text-right px-4 py-2 hover:bg-[#f6f3ee] font-bold">صفحتي</button>
-                  <button type="button" onClick={() => { setMenuOpen(false); onBuild(); }} className="w-full text-right px-4 py-2 hover:bg-[#f6f3ee]">إضافة صفحة لحسابي</button>
-                  <div className="my-1 border-t border-black/5" />
-                  <button type="button" onClick={() => { setMenuOpen(false); onLogout(); }} className="w-full text-right px-4 py-2 hover:bg-[#f6f3ee] text-[#9a3412] flex items-center gap-2"><LogOut size={14} /> تسجيل الخروج</button>
+                <div className="absolute left-0 mt-2 w-52 bg-surface rounded-card shadow-lg border border-line py-2 text-sm z-40">
+                  <button type="button" onClick={() => { setMenuOpen(false); onOpenMyPage(); }} className="w-full text-right px-4 py-2 hover:bg-bg font-bold">صفحتي</button>
+                  <button type="button" onClick={() => { setMenuOpen(false); onBuild(); }} className="w-full text-right px-4 py-2 hover:bg-bg">إضافة صفحة لحسابي</button>
+                  <div className="my-1 border-t border-line" />
+                  <button type="button" onClick={() => { setMenuOpen(false); onLogout(); }} className="w-full text-right px-4 py-2 hover:bg-bg text-danger flex items-center gap-2"><LogOut size={14} /> تسجيل الخروج</button>
                 </div>
               )}
             </div>
           ) : (
-            <button type="button" onClick={onAccount} className="flex items-center gap-1.5 bg-[#1c1a17] text-white rounded-full px-4 py-2 text-xs font-bold">
+            <button type="button" onClick={onAccount} className="flex items-center gap-1.5 bg-ink text-white rounded-full px-4 py-2 text-xs font-bold">
               <UserRound size={15} /> حسابي
             </button>
           )}
@@ -250,26 +250,25 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
       </header>
 
       {/* Search */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,#fed7aa_0%,transparent_55%),radial-gradient(ellipse_at_bottom_left,#bfdbfe_0%,transparent_50%)] opacity-70" />
+      <section className="relative overflow-hidden bg-surface border-b border-line">
         <div className="relative max-w-3xl mx-auto px-4 pt-10 pb-8 sm:pt-16 sm:pb-12 text-center">
           {user && (
-            <p className="text-sm font-bold text-[#9a3412] mb-2">أهلاً {firstName}</p>
+            <p className="text-sm font-bold text-brand mb-2">أهلاً {firstName}</p>
           )}
-          <h1 className="text-[28px] leading-[1.25] sm:text-5xl sm:leading-[1.2] font-bold">
-            كل شي بتحتاجه{place ? <> بـ<span className="text-[#c2410c]">{place}</span></> : ' حواليك'}،<br className="hidden sm:block" /> بصفحة وحدة
+          <h1 className="text-title sm:text-display font-bold">
+            كل شي بتحتاجه{place ? <> بـ<span className="text-brand">{place}</span></> : ' حواليك'}،<br className="hidden sm:block" /> بصفحة وحدة
           </h1>
-          <p className="mt-3 text-sm sm:text-base text-[#5b5348]">أكل، تسوق، فنيين وسيارات، من محلات وناس حقيقيين.</p>
-          <form onSubmit={submitSearch} className="mt-6 flex items-center bg-white rounded-2xl shadow-[0_12px_40px_rgba(28,26,23,0.12)] border border-black/5 p-1.5">
-            <Search size={20} className="mx-3 text-[#8a8073] shrink-0" />
+          <p className="mt-3 text-sm sm:text-base text-muted">أكل، تسوق، فنيين وسيارات، من محلات وناس حقيقيين.</p>
+          <form onSubmit={submitSearch} className="mt-6 flex items-center bg-surface rounded-card border border-line shadow-sm focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15 p-1.5">
+            <Search size={20} className="mx-3 text-faint shrink-0" />
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="شو بدك اليوم؟ شاورما، كهربائي، تويوتا…"
               aria-label="ابحث"
-              className="flex-1 min-w-0 bg-transparent outline-none text-[15px] py-2.5"
+              className="flex-1 min-w-0 bg-transparent outline-none text-base placeholder:text-faint py-2.5"
             />
-            <button type="submit" className="shrink-0 bg-[#c2410c] hover:bg-[#9a3412] text-white rounded-xl px-5 py-2.5 text-sm font-bold transition">ابحث</button>
+            <button type="submit" className="shrink-0 bg-brand hover:bg-brand-hover text-white rounded-ctl px-5 py-2.5 text-sm font-bold transition">ابحث</button>
           </form>
         </div>
       </section>
@@ -278,19 +277,19 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         {/* Signed in: what they opened lately, and the pages they joined as a customer */}
         {user && (recent.length > 0 || joined.length > 0) && (
           <section>
-            <h2 className="text-base font-bold mb-3 flex items-center gap-2"><Clock size={16} className="text-[#8a8073]" /> زرتها مؤخراً</h2>
+            <h2 className="text-base font-bold mb-3 flex items-center gap-2"><Clock size={16} className="text-faint" /> زرتها مؤخراً</h2>
             <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x">
               {recent.map((p) => (
-                <a key={p.url} href={p.url} onClick={() => recordVisit(uid, p)} className="snap-start shrink-0 w-44 bg-white rounded-2xl border border-black/5 p-3 hover:shadow-md transition">
-                  <div className="text-[11px] font-bold text-[#8a8073]">{KIND_LABEL[p.kind] || 'صفحة'}</div>
+                <a key={p.url} href={p.url} onClick={() => recordVisit(uid, p)} className="snap-start shrink-0 w-44 bg-surface rounded-card border border-line p-3 hover:border-brand transition">
+                  <div className="text-xs font-bold text-muted">{KIND_LABEL[p.kind] || 'صفحة'}</div>
                   <div className="text-sm font-bold truncate">{p.title}</div>
                 </a>
               ))}
               {joined.filter((j) => !recent.some((r) => r.url === pageUrl(j.kind, j.ownerUid))).map((j) => {
                 const url = pageUrl(j.kind, j.ownerUid);
                 return url ? (
-                  <a key={j.ownerUid} href={url} className="snap-start shrink-0 w-44 bg-white rounded-2xl border border-black/5 p-3 hover:shadow-md transition">
-                    <div className="text-[11px] font-bold text-[#15803d]">مشترك فيها</div>
+                  <a key={j.ownerUid} href={url} className="snap-start shrink-0 w-44 bg-surface rounded-card border border-line p-3 hover:border-brand transition">
+                    <div className="text-xs font-bold text-success">مشترك فيها</div>
                     <div className="text-sm font-bold truncate">{j.name || 'بدون اسم'}</div>
                   </a>
                 ) : null;
@@ -303,26 +302,26 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         {favorite && !active && (() => {
           const fav = INTENTS.find((i) => i.id === favorite)!;
           return (
-            <section className="rounded-3xl overflow-hidden relative min-h-[180px] flex items-end text-white">
+            <section className="rounded-card overflow-hidden relative min-h-[180px] flex items-end text-white">
               <img src={fav.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10" />
               <div className="relative p-5 w-full space-y-3">
                 <div className="text-xs font-bold opacity-80">بتدور عادة على</div>
                 <div className="flex items-end justify-between gap-3">
-                  <h2 className="text-2xl font-bold">{fav.title}{place ? ` بـ${place}` : ''}</h2>
-                  <button type="button" onClick={() => openIntent(fav.id)} className="shrink-0 bg-white text-[#1c1a17] rounded-full px-4 py-2 text-xs font-bold flex items-center gap-1">
+                  <h2 className="text-heading sm:text-title font-bold">{fav.title}{place ? ` بـ${place}` : ''}</h2>
+                  <button type="button" onClick={() => openIntent(fav.id)} className="shrink-0 bg-surface text-ink rounded-full px-4 py-2 text-xs font-bold flex items-center gap-1">
                     افتح <ArrowLeft size={14} />
                   </button>
                 </div>
                 {favOffers.length > 0 && (
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {favOffers.map((o, i) => (
-                      <a key={i} href={o.restaurantUrl} className="shrink-0 bg-white/95 text-[#1c1a17] rounded-xl p-2 flex items-center gap-2 w-60">
+                      <a key={i} href={o.restaurantUrl} className="shrink-0 bg-surface text-ink rounded-ctl p-2 flex items-center gap-2 w-60">
                         {o.image && <img src={o.image} alt="" className="w-12 h-12 rounded-lg object-cover" />}
                         <div className="min-w-0">
                           <div className="text-xs font-bold truncate">{o.dish}</div>
-                          <div className="text-[11px] text-[#8a8073] truncate">{o.restaurant}</div>
-                          <div className="text-xs font-bold text-[#c2410c]">{money(o.price, o.currency)}</div>
+                          <div className="text-xs text-muted truncate">{o.restaurant}</div>
+                          <div className="text-xs font-bold text-brand">{money(o.price, o.currency)}</div>
                         </div>
                       </a>
                     ))}
@@ -341,14 +340,13 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
                 key={it.id}
                 type="button"
                 onClick={() => openIntent(it.id)}
-                className={`group relative rounded-3xl overflow-hidden aspect-[4/5] sm:aspect-[4/4.4] text-right text-white shadow-sm hover:shadow-xl transition ${active?.intent === it.id ? 'ring-4 ring-[#c2410c]' : ''}`}
+                className={`group relative rounded-card overflow-hidden aspect-[4/5] sm:aspect-[4/4.4] text-right text-white bg-ink transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40 ${active?.intent === it.id ? 'ring-4 ring-brand' : ''}`}
               >
                 <img src={it.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 inset-x-0 p-4 space-y-1">
-                  <span className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-2"><it.icon size={18} /></span>
-                  <div className="text-lg sm:text-xl font-bold">{it.title}</div>
-                  <div className="text-[11px] sm:text-xs opacity-85 leading-snug">{it.line}</div>
+                  <div className="text-heading font-bold flex items-center gap-2"><it.icon size={18} className="shrink-0" />{it.title}</div>
+                  <div className="text-xs opacity-90 leading-snug">{it.line}</div>
                 </div>
               </button>
             ))}
@@ -357,12 +355,12 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
 
         {/* Results of a search */}
         {active && (
-          <section id="home-results" className="scroll-mt-20 bg-white rounded-3xl border border-black/5 p-4 sm:p-6 space-y-4">
+          <section id="home-results" className="scroll-mt-20 bg-surface rounded-card border border-line p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold">
+              <h2 className="text-heading font-bold">
                 {activeIntent ? activeIntent.title : <>نتائج «{active.query}»</>}
               </h2>
-              <button type="button" onClick={() => setActive(null)} aria-label="إغلاق النتائج" className="w-8 h-8 rounded-full bg-[#f6f3ee] flex items-center justify-center"><X size={16} /></button>
+              <button type="button" onClick={() => setActive(null)} aria-label="إغلاق النتائج" className="w-8 h-8 rounded-full bg-bg hover:bg-line flex items-center justify-center"><X size={16} /></button>
             </div>
             {catKind && categories && (
               <div className="space-y-2">
@@ -382,20 +380,20 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
                 )}
               </div>
             )}
-            {place && <p className="text-[11px] text-[#8a8073]">الترتيب حسب المدينة والحي بيجي مع دليل المواقع بالمرحلة الجاية.</p>}
+            {place && <p className="text-xs text-muted">الترتيب حسب المدينة والحي بيجي مع دليل المواقع بالمرحلة الجاية.</p>}
             {offers.length > 0 && (
               <div>
-                <div className="text-xs font-bold text-[#c2410c] mb-2 flex items-center gap-1"><Sparkles size={13} /> عروض اليوم</div>
+                <div className="text-xs font-bold text-brand mb-2 flex items-center gap-1"><Sparkles size={13} /> عروض اليوم</div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {offers.map((o, i) => (
-                    <a key={i} href={o.restaurantUrl} className="shrink-0 w-40 rounded-2xl border border-black/5 overflow-hidden bg-[#fffaf5]">
-                      {o.image ? <img src={o.image} alt="" loading="lazy" className="w-full h-24 object-cover" /> : <div className="h-24 bg-[#fde7d4]" />}
+                    <a key={i} href={o.restaurantUrl} className="shrink-0 w-40 rounded-card border border-line overflow-hidden bg-surface">
+                      {o.image ? <img src={o.image} alt="" loading="lazy" className="w-full h-24 object-cover" /> : <div className="h-24 bg-bg" />}
                       <div className="p-2">
                         <div className="text-xs font-bold truncate">{o.dish}</div>
-                        <div className="text-[11px] text-[#8a8073] truncate">{o.restaurant}</div>
-                        <div className="text-xs font-bold text-[#c2410c]">
+                        <div className="text-xs text-muted truncate">{o.restaurant}</div>
+                        <div className="text-xs font-bold text-brand">
                           {money(o.price, o.currency)}
-                          {o.oldPrice > o.price && <span className="text-[#8a8073] line-through font-normal mr-1">{money(o.oldPrice, o.currency)}</span>}
+                          {o.oldPrice > o.price && <span className="text-faint line-through font-normal mr-1">{money(o.oldPrice, o.currency)}</span>}
                         </div>
                       </div>
                     </a>
@@ -404,23 +402,23 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
               </div>
             )}
             {results === null ? (
-              <div className="py-10 flex justify-center text-[#8a8073]"><Loader2 className="animate-spin" /></div>
+              <div className="py-10 flex justify-center text-faint"><Loader2 className="animate-spin" /></div>
             ) : results.length === 0 ? (
               <div className="py-8 text-center space-y-3">
-                <p className="text-sm text-[#5b5348]">{failed ? 'ما قدرنا نجيب النتائج. جرّب كمان شوي.' : 'لسا ما في صفحات منشورة هون.'}</p>
-                <button type="button" onClick={onBuild} className="text-sm font-bold text-[#c2410c]">عندك شغل بهالمجال؟ اعمل صفحتك أول وحدة</button>
+                <p className="text-sm text-muted">{failed ? 'ما قدرنا نجيب النتائج. جرّب كمان شوي.' : 'لسا ما في صفحات منشورة هون.'}</p>
+                <button type="button" onClick={onBuild} className="text-sm font-bold text-brand hover:text-brand-hover">عندك شغل بهالمجال؟ اعمل صفحتك أول وحدة</button>
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {results.map((e) => (
-                  <button key={e.name} type="button" onClick={() => openEntry(e)} className="text-right rounded-2xl border border-black/5 bg-[#fbf9f6] hover:bg-white hover:shadow-md p-4 transition flex items-start gap-3">
-                    <span className="w-11 h-11 rounded-xl bg-[#1c1a17] text-white flex items-center justify-center font-bold shrink-0">{e.title.trim()[0] || 'W'}</span>
+                  <button key={e.name} type="button" onClick={() => openEntry(e)} className="text-right rounded-card border border-line bg-surface hover:border-brand p-4 transition flex items-start gap-3">
+                    <span className="w-11 h-11 rounded-ctl bg-brand/10 text-brand flex items-center justify-center font-bold shrink-0">{e.title.trim()[0] || 'W'}</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] font-bold text-[#8a8073]">{KIND_LABEL[e.project] || 'صفحة'}</span>
+                      <span className="block text-xs font-bold text-muted">{KIND_LABEL[e.project] || 'صفحة'}</span>
                       <span className="block text-sm font-bold truncate">{e.title}</span>
-                      {e.description && <span className="block text-xs text-[#5b5348] line-clamp-2 mt-0.5">{e.description}</span>}
+                      {e.description && <span className="block text-xs text-muted line-clamp-2 mt-0.5">{e.description}</span>}
                     </span>
-                    <ArrowLeft size={16} className="text-[#8a8073] mt-1 shrink-0" />
+                    <ArrowLeft size={16} className="text-faint mt-1 shrink-0" />
                   </button>
                 ))}
               </div>
@@ -429,12 +427,12 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         )}
 
         {/* For business owners */}
-        <section className="rounded-3xl bg-[#1c1a17] text-white p-6 sm:p-10 flex flex-col sm:flex-row sm:items-center gap-5 justify-between">
+        <section className="rounded-card bg-ink text-white p-6 sm:p-10 flex flex-col sm:flex-row sm:items-center gap-5 justify-between">
           <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold">عندك محل أو مهنة؟</h2>
-            <p className="text-sm text-white/75 max-w-lg">اعمل صفحتك مجاناً، وخلّي الناس يلاقوك لما يدوّروا بمدينتك.</p>
+            <h2 className="text-heading sm:text-title font-bold">عندك محل أو مهنة؟</h2>
+            <p className="text-sm text-white/80 max-w-lg">اعمل صفحتك مجاناً، وخلّي الناس يلاقوك لما يدوّروا بمدينتك.</p>
           </div>
-          <button type="button" onClick={onBuild} className="shrink-0 bg-[#c2410c] hover:bg-[#ea580c] text-white rounded-2xl px-6 py-3.5 text-sm font-bold transition flex items-center gap-2 self-start sm:self-auto">
+          <button type="button" onClick={onBuild} className="shrink-0 bg-brand hover:bg-brand-hover text-white rounded-ctl px-6 py-3.5 text-sm font-bold transition flex items-center gap-2 self-start sm:self-auto">
             اعمل صفحتك مجاناً <ArrowLeft size={16} />
           </button>
         </section>
@@ -442,33 +440,33 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         {/* What Weelink builds, explained as the visitor scrolls */}
         <section className="space-y-6 sm:space-y-10 pt-4">
           <div className="text-center space-y-2">
-            <div className="text-xs font-bold text-[#c2410c]">لأصحاب المحلات والمهن</div>
-            <h2 className="text-2xl sm:text-4xl font-bold">شو بتقدر تعمل بـ Weelink</h2>
+            <div className="text-xs font-bold text-brand">لأصحاب المحلات والمهن</div>
+            <h2 className="text-title sm:text-display font-bold">شو بتقدر تعمل بـ Weelink</h2>
           </div>
           {FEATURES.map((f, i) => (
             <article key={f.title} className={`grid md:grid-cols-2 gap-5 md:gap-10 items-center ${i % 2 ? 'md:[&>*:first-child]:order-2' : ''}`}>
-              <div className={`rounded-3xl overflow-hidden aspect-[16/11] ${f.contain ? 'bg-white flex items-center justify-center p-8' : ''}`}>
+              <div className={`rounded-card overflow-hidden aspect-[16/11] ${f.contain ? 'bg-surface border border-line flex items-center justify-center p-8' : ''}`}>
                 <img src={f.image} alt="" loading="lazy" className={f.contain ? 'max-w-full max-h-full object-contain' : 'w-full h-full object-cover'} />
               </div>
               <div className="space-y-3">
-                <h3 className="text-xl sm:text-2xl font-bold">{f.title}</h3>
-                <p className="text-sm sm:text-base text-[#5b5348] leading-relaxed">{f.lead}</p>
+                <h3 className="text-heading sm:text-title font-bold">{f.title}</h3>
+                <p className="text-sm sm:text-base text-muted leading-relaxed">{f.lead}</p>
                 <ul className="space-y-1.5">
                   {f.points.map((p) => (
-                    <li key={p} className="text-sm flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#c2410c] shrink-0" />{p}</li>
+                    <li key={p} className="text-sm flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />{p}</li>
                   ))}
                 </ul>
               </div>
             </article>
           ))}
           <div className="text-center pt-2">
-            <button type="button" onClick={onBuild} className="bg-[#1c1a17] text-white rounded-2xl px-6 py-3.5 text-sm font-bold">ابدأ صفحتك</button>
+            <button type="button" onClick={onBuild} className="bg-brand hover:bg-brand-hover text-white rounded-ctl px-6 py-3.5 text-sm font-bold">ابدأ صفحتك</button>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-black/5 mt-10">
-        <div className="max-w-6xl mx-auto px-4 py-6 text-xs text-[#8a8073] flex flex-wrap gap-x-4 gap-y-1 justify-between">
+      <footer className="border-t border-line mt-10">
+        <div className="max-w-6xl mx-auto px-4 py-6 text-xs text-muted flex flex-wrap gap-x-4 gap-y-1 justify-between">
           <span>© Weelink</span>
           <span>صُنع للمحلات والمهن بسوريا</span>
         </div>

@@ -1,7 +1,7 @@
 // Category list, sub-category tabs and ready-made element templates for the "+" add menu.
 // Moved verbatim from RightDrawer.tsx; built per render exactly as before.
 import React from 'react';
-import { Type, Square, Image as ImageIcon, Sparkles, Globe, Shapes, Video, Clapperboard, MapPin, Tag, Calendar, Grid3X3, Code, Images, FolderOpen, Stethoscope, Minus } from 'lucide-react';
+import { Type, Square, Image as ImageIcon, Sparkles, Globe, Shapes, Video, Clapperboard, MapPin, Tag, Calendar, Grid3X3, Code, Images, FolderOpen, Stethoscope, Minus, Star } from 'lucide-react';
 import { ElementType } from '../../types';
 import { MASK_SHAPES } from '../../utils/maskShapes';
 import { LOTTIE_ANIMATIONS, LOTTIE_GROUPS } from '../../utils/lottieAnimations';
@@ -70,6 +70,7 @@ export const buildAddMenuData = ({
     { id: 'gallery', name: 'معرض صور', group: 'media', icon: <Images size={18} /> },
     { id: 'map', name: 'خريطة', group: 'media', icon: <MapPin size={18} /> },
     { id: 'calendar', name: 'حجز مواعيد', group: 'business', icon: <Calendar size={18} /> },
+    { id: 'ratings', name: 'التقييمات', group: 'business', icon: <Star size={18} /> },
     { id: 'pricing', name: 'أسعار', group: 'business', icon: <Tag size={18} /> },
     { id: 'sheet', name: 'جدول', group: 'business', icon: <Grid3X3 size={18} /> },
     { id: 'group-templates', name: 'بطاقات جاهزة', group: 'ready', icon: <FolderOpen size={18} /> },
@@ -157,6 +158,9 @@ export const buildAddMenuData = ({
       { id: 'month', label: 'تقويم شهري' },
       { id: 'slots', label: 'حجز ساعات' },
       { id: 'confirm', label: 'تأكيد موعد' },
+      { id: 'all', label: 'الكل' },
+    ],
+    ratings: [
       { id: 'all', label: 'الكل' },
     ],
     sheet: [
@@ -3545,6 +3549,38 @@ export const buildAddMenuData = ({
             calendarInterval: '15'
           });
         }
+      },
+    ],
+    // The page's ratings: average, 5-to-1 bars, the latest ratings, «قيّمنا» (Eyad, 13 Oct).
+    ratings: [
+      {
+        id: 'ratings-wide',
+        title: 'التقييمات (عريضة)',
+        sub: 'المعدل والنجوم وآخر 3 تقييمات وزر «قيّمنا»',
+        subCategories: ['all'],
+        type: 'ratings',
+        preview: (
+          <div className="w-full h-18 bg-white rounded-xl p-2 flex items-center gap-3 border border-neutral-200 text-right">
+            <div className="text-center"><div className="text-lg font-black">4.8</div><div className="text-[9px] text-[#f5a623]">★★★★★</div></div>
+            <div className="flex-1 space-y-0.5">{[90, 60, 25, 10, 5].map((w) => <div key={w} className="h-1 rounded bg-neutral-200"><div className="h-1 rounded bg-[#f5a623]" style={{ width: `${w}%` }} /></div>)}</div>
+            <span className="text-[8px] bg-[#0071e3] text-white px-2 py-1 rounded font-bold">قيّمنا</span>
+          </div>
+        ),
+        action: () => onAddElement('ratings', 'التقييمات', {}, { name: 'التقييمات', width: 1000, height: 380 }),
+      },
+      {
+        id: 'ratings-compact',
+        title: 'التقييمات (مضغوطة)',
+        sub: 'للأعمدة الضيقة: المعدل وآخر تقييمين',
+        subCategories: ['all'],
+        type: 'ratings',
+        preview: (
+          <div className="w-full h-18 bg-white rounded-xl p-2 flex flex-col justify-center gap-1 border border-neutral-200 text-right">
+            <div className="text-[10px] font-black">4.8 <span className="text-[#f5a623]">★★★★★</span></div>
+            <div className="h-2 rounded bg-neutral-100" /><div className="h-2 rounded bg-neutral-100 w-2/3" />
+          </div>
+        ),
+        action: () => onAddElement('ratings', 'التقييمات', {}, { name: 'التقييمات', width: 460, height: 460 }),
       },
     ],
     sheet: [

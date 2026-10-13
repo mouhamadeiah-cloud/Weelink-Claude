@@ -18,6 +18,7 @@ export const ELEMENT_TYPE_LABEL: Record<ElementType, string> = {
   map: 'خريطة',
   pricing: 'أسعار',
   calendar: 'حجوزات',
+  ratings: 'التقييمات',
   html: 'كود HTML',
   gallery: 'معرض صور',
   mask: 'صورة بقناع',

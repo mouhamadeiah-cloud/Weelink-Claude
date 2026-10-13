@@ -37,6 +37,7 @@ import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { PageAdminPanel } from './components/pageAdmin/PageAdminPanel';
 import { BookingPage, BookingPageContext } from './services/bookings';
+import { RatingsSlideContext } from './services/ratings';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
 import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, restaurantSiteUrl, saveStaff, withoutStaff } from './components/restaurant/restaurantCloud';
@@ -301,6 +302,47 @@ export default function App() {
   const ownerUid = activeUserUid;
   // The signed-in owner (or a member) looking at the page as visitors see it: its navbar gets «الإدارة».
   const isOwnerView = isPreviewActive && !!currentUser && !currentUser.isAnonymous;
+  // The «التقييمات» slide (Eyad, 13 Oct): every free page has one and can't remove it; a paid page
+  // gets it once, at the end of its main page, and may remove it. The admins add it back on request.
+  const hasRatings = useMemo(() => {
+    const slideIds = new Set(pages.flatMap((p) => p.slides.map((sl) => sl.id)));
+    return elements.some((el) => el.type === 'ratings' && slideIds.has(el.slideId));
+  }, [pages, elements]);
+  // One slide at a time, until the elements show it.
+  const addingRatingsRef = useRef(false);
+  if (hasRatings) addingRatingsRef.current = false;
+  const addRatingsSlide = useCallback(() => {
+    if (addingRatingsRef.current) return;
+    addingRatingsRef.current = true;
+    const stamp = Date.now();
+    const slideId = `slide-ratings-${stamp}`;
+    setPages((prev) =>
+      prev.map((p, i) =>
+        i === 0 ? { ...p, ratingsSuggested: true, slides: [...p.slides, { id: slideId, name: 'التقييمات', height: 560, backgroundColor: '#f5f5f7' }] } : p
+      )
+    );
+    setElements((prev) => [
+      ...prev,
+      { id: `el-${stamp}-rt`, name: 'عنوان التقييمات', type: 'heading', x: 140, y: 48, width: 1000, height: 60, content: 'آراء زبائننا', slideId, styles: { fontSize: 32, fontWeight: 'bold', color: '#1d1d1f', textAlign: 'center' } },
+      { id: `el-${stamp}-rb`, name: 'التقييمات', type: 'ratings', x: 140, y: 130, width: 1000, height: 380, content: 'التقييمات', slideId, styles: { backgroundColor: '#ffffff', borderRadius: 24 } },
+    ]);
+  }, []);
+  useEffect(() => {
+    if (!projectReadyRef.current || !pages[0]) return;
+    if (project === 'page') {
+      if (!hasRatings) addRatingsSlide();
+    } else if (!pages[0].ratingsSuggested) {
+      if (hasRatings) setPages((prev) => prev.map((p, i) => (i === 0 ? { ...p, ratingsSuggested: true } : p)));
+      else addRatingsSlide();
+    }
+  }, [project, hasRatings, pages[0]?.id, pages[0]?.ratingsSuggested]);
+  const isLockedRatings = (el: CanvasElement) => {
+    if (project !== 'page' || el.type !== 'ratings' || elements.filter((e) => e.type === 'ratings' && e.id !== el.id && pages.some((p) => p.slides.some((sl) => sl.id === e.slideId))).length > 0) return false;
+    setBuildNotice({ busy: false, ok: false, message: 'شريحة التقييمات أساسية بالصفحة المجانية وما بتنشال. فيك تغيّر شكلها ومكانها.' });
+    return true;
+  };
+  const ratingsSlide = useMemo(() => ({ has: hasRatings, add: addRatingsSlide }), [hasRatings, addRatingsSlide]);
+
   // The page the «حجز مواعيد» calendar books on, and whose bookings the admins list. Only the owner's
   // view of their page saves real bookings; the editor shows the calendar as a preview.
   const bookingBrand = pages[0]?.navbar?.brandName || '';
@@ -2052,6 +2094,7 @@ export default function App() {
 
   const handleDeleteElement = (id: string) => {
     const target = elements.find(el => el.id === id);
+    if (target && isLockedRatings(target)) return;
     let updated = elements.filter(el => el.id !== id);
     
     // Cascading delete: if this is an active group container, delete all its spatially grouped elements
@@ -2604,6 +2647,13 @@ export default function App() {
         calendarSlots: ['09:00 ص', '11:30 ص', '02:00 م', '04:30 م'],
         styles: { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', shadow: 'apple', ...(customStyles || {}) },
       },
+      ratings: {
+        name: 'التقييمات',
+        width: 1000,
+        height: 380,
+        content: customContent || 'التقييمات',
+        styles: { backgroundColor: '#ffffff', borderRadius: 24, ...(customStyles || {}) },
+      },
       html: {
         name: 'حاوية Html',
         width: 380,
@@ -2910,6 +2960,8 @@ export default function App() {
 
   const handleDeleteSlide = (slideId: string) => {
     if (currentPage.slides.length <= 1) return;
+    const lockedRatings = elements.find((el) => el.slideId === slideId && el.type === 'ratings');
+    if (lockedRatings && isLockedRatings(lockedRatings)) return;
     const updatedSlides = currentPage.slides.filter(s => s.id !== slideId);
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, slides: updatedSlides } : p));
     if (activeSlideId === slideId) {
@@ -3434,6 +3486,7 @@ export default function App() {
   };
   return (
     <BookingPageContext.Provider value={bookingPage}>
+    <RatingsSlideContext.Provider value={ratingsSlide}>
     <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col antialiased selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
       {/* The build after the questions: working, then what came of it */}
       {buildNotice && (
@@ -3844,6 +3897,7 @@ export default function App() {
         onArrangeForMobile={handleArrangeForMobile}
       />
     </div>
+    </RatingsSlideContext.Provider>
     </BookingPageContext.Provider>
   );
 }

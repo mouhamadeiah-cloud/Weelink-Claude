@@ -30,6 +30,7 @@ import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
 import { BookingPageContext, createBooking, dayKey, readTaken } from '../services/bookings';
+import { NavbarStars, RatingsWidget } from './ratings/RatingsUI';
 import { 
   Trash2, 
   Copy, 
@@ -2588,8 +2589,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   </div>
                 )}
                 {navbar.brandName && navbar.partIcons?.brand?.mode !== 'icon' && (
-                  <span className="font-bold text-sm tracking-tight" style={{ color: navbar.textColor }}>
-                    {navbar.brandName}
+                  <span className="flex flex-col items-start gap-0.5">
+                    <span className="font-bold text-sm tracking-tight" style={{ color: navbar.textColor }}>
+                      {navbar.brandName}
+                    </span>
+                    {/* The page's rating under its name (once it has one); opens all the ratings. */}
+                    <NavbarStars color={navbar.textColor} />
                   </span>
                 )}
               </div>
@@ -4594,6 +4599,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {elem.type === 'calendar' && (
                           <InteractiveCalendarWidget elem={elem} />
+                        )}
+
+                        {elem.type === 'ratings' && (
+                          <RatingsWidget elem={elem} />
                         )}
 
                         {elem.type === 'cart' && (

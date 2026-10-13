@@ -16,6 +16,7 @@ export type ElementType =
   | 'map'
   | 'pricing'
   | 'calendar'
+  | 'ratings'
   | 'html'
   | 'gallery'
   | 'mask'
@@ -216,6 +217,9 @@ export interface CanvasElement {
   calendarPhoneLabel?: string;
   calendarEmailLabel?: string;
   calendarDescLabel?: string;
+  // The «التقييمات» block: its stars' colour and an optional «قيّمنا على جوجل» link.
+  ratingsAccentColor?: string;
+  ratingsGoogleUrl?: string;
   compoundType?: 'hero' | 'badge-heading' | 'quote' | 'stat' | 'checklist' | 'accent-border' | 'price-tag' | 'card-box' | 'alert-box' | 'faq-box' | 'welcome-box';
   subContent?: string;
   badgeText?: string;
@@ -374,6 +378,8 @@ export interface Page {
   slides: Slide[];
   colorPalette?: [string, string, string, string, string];
   paletteMode?: 'default' | 'custom';
+  // A paid page got its «التقييمات» slide suggested once; removing it then keeps it removed.
+  ratingsSuggested?: boolean;
 }
 
 export const getGlowShadowStyle = (

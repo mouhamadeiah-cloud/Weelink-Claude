@@ -8,6 +8,7 @@ import { BarChart3, CalendarDays, Globe2, Loader2, MessageCircle, PencilLine, Sp
 import { DayStats, readStats } from '../../services/siteStats';
 import type { ProjectType } from '../shop/shopTypes';
 import { BookingsSection } from './BookingsSection';
+import { RatingsSection } from './RatingsSection';
 import { watchBookings } from '../../services/bookings';
 
 interface PageAdminPanelProps {
@@ -28,10 +29,10 @@ interface PageAdminPanelProps {
 const sum = (rows: DayStats[], key: 'visits' | 'contacts', last: number) => rows.slice(-last).reduce((n, r) => n + r[key], 0);
 const fmt = (n: number) => n.toLocaleString('ar-SY');
 
-// Services the page can grow with; ratings come in the next step of the plan.
+// Services the page can grow with.
 const SERVICES = [
   { icon: CalendarDays, title: 'حجز المواعيد', line: 'أضف «حجز مواعيد» من «إضافة»: زبائنك بيحجزوا من صفحتك، وبيوصل إلك وإلهم إيميل وتذكير قبل الموعد بيوم.', soon: false },
-  { icon: Star, title: 'التقييمات', line: 'نجوم تحت اسمك بأول الصفحة، وتقييمات زبائنك مع ردودك عليها.', soon: true },
+  { icon: Star, title: 'التقييمات', line: 'نجوم تحت اسمك بأول الصفحة، وتقييمات زبائنك مع ردودك عليها.', soon: false },
   { icon: Globe2, title: 'دومين خاص', line: 'صفحتك على اسمك أنت بدل رابط Weelink، من نافذة «نشر».', soon: false },
 ];
 
@@ -85,6 +86,8 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
           )}
 
           <BookingsSection owner={owner} project={project} watch={watch} />
+
+          <RatingsSection owner={owner} project={project} pageName={pageName} />
 
           <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {([

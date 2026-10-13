@@ -2,7 +2,7 @@
 // as in the Online Shop. All entries and management live here; the showroom's pages are edited in
 // the editor like any other page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, PencilLine, CarFront, Warehouse, SlidersHorizontal, Users, Wallet, FileText, Inbox, CalendarDays } from 'lucide-react';
+import { Settings, X, PencilLine, CarFront, Warehouse, SlidersHorizontal, Users, Wallet, FileText, Inbox, CalendarDays, Star } from 'lucide-react';
 import { CarAdminData } from './carTypes';
 import { CarEditor, CarTabProps } from './tabs/CarEditor';
 import { InventoryTab } from './tabs/InventoryTab';
@@ -13,14 +13,16 @@ import { CarDocumentsTab } from './tabs/CarDocumentsTab';
 import { CarRequestsTab } from './tabs/CarRequestsTab';
 import { CarDocEditor, DocEditorTarget } from './tabs/CarDocEditor';
 import { BookingsTab } from '../pageAdmin/BookingsTab';
+import { RatingsTab } from '../pageAdmin/RatingsTab';
 
-type TabId = 'add' | 'inventory' | 'requests' | 'bookings' | 'customers' | 'documents' | 'accounts' | 'settings';
+type TabId = 'add' | 'inventory' | 'requests' | 'bookings' | 'ratings' | 'customers' | 'documents' | 'accounts' | 'settings';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<CarTabProps> }[] = [
   { id: 'add', label: 'إضافة سيارة', icon: CarFront, Component: CarEditor },
   { id: 'inventory', label: 'المخزون', icon: Warehouse, Component: InventoryTab },
   { id: 'requests', label: 'طلبات الزوار', icon: Inbox, Component: CarRequestsTab },
   { id: 'bookings', label: 'المواعيد', icon: CalendarDays, Component: BookingsTab },
+  { id: 'ratings', label: 'التقييمات', icon: Star, Component: RatingsTab },
   { id: 'customers', label: 'الزبائن', icon: Users, Component: CarCustomersTab },
   { id: 'documents', label: 'الأوراق والعقود', icon: FileText, Component: CarDocumentsTab },
   { id: 'accounts', label: 'الحسابات', icon: Wallet, Component: CarAccountsTab },

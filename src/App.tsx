@@ -61,6 +61,7 @@ import { isSigningIn, resolveAccountId, takeInviteProblem } from './services/acc
 import { Access, OWNER_ACCESS, loadAccess } from './services/members';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { SelectionBar } from './components/SelectionBar';
+import { loadPageFonts } from './services/pageFonts';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const sanitizeData = (data: any): any => {
@@ -3335,6 +3336,10 @@ export default function App() {
   const screen = isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'chooser' : 'editor';
   const screenRef = useRef(screen);
   screenRef.current = screen;
+  // Customers' page fonts load once the projects or the editor open (Weelink's own screens don't use them).
+  useEffect(() => {
+    if (screen === 'chooser' || screen === 'editor') loadPageFonts();
+  }, [screen]);
   const poppedRef = useRef(false);
   const goToScreenRef = useRef<(target: string, kind?: ProjectType | null) => void>(() => {});
   goToScreenRef.current = (target, kind) => {

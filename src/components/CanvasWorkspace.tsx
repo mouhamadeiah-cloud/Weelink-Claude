@@ -2385,7 +2385,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       */}
       <div 
         ref={scalingWrapperRef}
-        className="flex flex-col items-center justify-start relative transition-all duration-300 origin-top"
+        className="flex flex-col items-center justify-start relative transition-all duration-300 origin-top font-page"
         style={{
           width: isPublicSite || (isPreviewActive && previewMode === 'desktop') ? '100%' : `${baseWidth * scaleFactor}px`,
           height: `${totalScaledHeight}px`,

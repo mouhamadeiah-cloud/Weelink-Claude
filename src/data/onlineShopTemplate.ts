@@ -10,6 +10,7 @@
 import type { Page, CanvasElement, NavbarConfig, ElementStyles } from '../types';
 import { withTemplateGroups } from '../utils/templateGroups';
 import { formatPrice } from '../utils/cartStore';
+import { typeSize } from './pageLooks';
 
 const WHATSAPP_NUMBER = '963991234567';
 const CURRENCY = 'ر.س';
@@ -75,7 +76,7 @@ function el(
 
 const heading = (id: string, slideId: string, box: Box, text: string, size: number, color = C.ink, align: 'right' | 'center' = 'right') =>
   el(id, 'heading', slideId, box, text, {
-    fontSize: size,
+    fontSize: typeSize(size),
     fontWeight: 'bold',
     color,
     fontFamily: HEADING_FONT,
@@ -84,7 +85,7 @@ const heading = (id: string, slideId: string, box: Box, text: string, size: numb
 
 const paragraph = (id: string, slideId: string, box: Box, text: string, size = 15, color = C.body, align: 'right' | 'center' = 'right') =>
   el(id, 'paragraph', slideId, box, text, {
-    fontSize: size,
+    fontSize: typeSize(size),
     color,
     fontFamily: BODY_FONT,
     textAlign: align,

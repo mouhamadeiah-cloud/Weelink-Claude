@@ -5,6 +5,7 @@
 // Colours and fonts are the showroom template's own. Coordinates are on the 1280-wide canvas.
 import { CAR_PAGE_IDS, CAR_PHOTOS, CAR_HEADING_FONT, CAR_BODY_FONT, carPhoto } from './carShowroomTemplate';
 import { groupFrame, INVISIBLE_GROUP_STYLES } from '../utils/templateGroups';
+import { typeSize } from './pageLooks';
 
 export const CAR_SLIDE_COLORS = {
   ink: '#121316',
@@ -29,10 +30,10 @@ const el = (type: string, name: string, box: Box, content: string, styles: Recor
 });
 
 const heading = (box: Box, text: string, size: number, color = C.ink, align = 'center') =>
-  el('heading', 'عنوان', box, text, { fontSize: size, fontWeight: 'bold', color, fontFamily: CAR_HEADING_FONT, textAlign: align });
+  el('heading', 'عنوان', box, text, { fontSize: typeSize(size), fontWeight: 'bold', color, fontFamily: CAR_HEADING_FONT, textAlign: align });
 
 const paragraph = (box: Box, text: string, size = 16, color = C.muted, align = 'center') =>
-  el('paragraph', 'نص', box, text, { fontSize: size, color, fontFamily: CAR_BODY_FONT, textAlign: align });
+  el('paragraph', 'نص', box, text, { fontSize: typeSize(size), color, fontFamily: CAR_BODY_FONT, textAlign: align });
 
 const cars = (box: Box, extra: Record<string, unknown>, accent = C.accent) =>
   el('carListings', 'سيارات المعرض', box, '', { color: accent }, { carLayout: 'grid', carLimit: 9, ...extra });

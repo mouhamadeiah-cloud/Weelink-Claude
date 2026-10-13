@@ -96,6 +96,8 @@ import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } fro
 import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
+import { lookSlide } from '../services/applyLook';
+import { pageLookById } from '../data/pageLooks';
 import { uploadGalleryImageToStorage } from '../utils/galleryUpload';
 import { buildAddMenuData } from './rightDrawer/addMenuTemplates';
 import { SlideTemplatePreview, SlidePayload } from './rightDrawer/SlideTemplatePreview';
@@ -6071,7 +6073,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {activeTemplateCategory && Array.from({ length: slideTemplateCount(activeTemplateCategory) }).map((_, idx) => {
               const cat = READY_SLIDE_CATEGORIES.find(c => c.id === activeTemplateCategory);
               const catName = cat ? cat.name : 'شريحة';
-              const templatePayload = getSlideTemplatePayload(activeTemplateCategory, idx, catName);
+              // Shown and added in the page's look («ستايل الصفحة») when it has one.
+              const templatePayload = lookSlide(getSlideTemplatePayload(activeTemplateCategory, idx, catName), pageLookById(currentPage.styleLook), isShopProject ? 'shop' : isCarProject ? 'cars' : isRestaurantProject ? 'restaurant' : 'free');
               return (
                 <SlideTemplatePreview
                   key={`${activeTemplateCategory}-${idx}`}

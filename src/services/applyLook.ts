@@ -135,3 +135,40 @@ export const applyPageLook = (pages: Page[], elements: CanvasElement[], look: Pa
 
   return { pages: nextPages, elements: nextElements };
 };
+
+/**
+ * A ready slide (as the gallery hands it over) in the page's look, so a slide added to a page that
+ * has a look arrives in it. Only the designs with a known look (aiTemplate) are restyled; the older
+ * ready slides come as they are.
+ */
+export const lookSlide = <T extends { aiTemplate?: string; backgroundColor: string; elements: any[] }>(payload: T, look: PageLook | undefined, kind: BuildKind): T => {
+  if (!look || !payload.aiTemplate) return payload;
+  const { elements, ...slide } = payload;
+  const id = '__ready';
+  const page = { id, name: '', slug: '', slides: [{ ...slide, id } as unknown as Slide], navbar: { brandName: '', items: [], ctaText: '', ctaHref: '', bgColor: '', textColor: '', isSticky: false } } as Page;
+  const els = elements.map((e, i) => ({ ...e, id: `${id}-${i}`, slideId: id })) as CanvasElement[];
+  const next = applyPageLook([page], els, look, kind);
+  const { id: _slideId, ...nextSlide } = next.pages[0].slides[0] as Slide & Record<string, unknown>;
+  return {
+    ...(nextSlide as unknown as T),
+    elements: next.elements.map((e, i) => {
+      const { id: _id, slideId: _sid, ...rest } = e;
+      return { ...elements[i], ...rest };
+    }),
+  };
+};
+
+// The look a new store starts in (Eyad, 13 Oct: the shop too starts warm).
+const STARTING_LOOK: Partial<Record<BuildKind, string>> = { restaurant: 'homey', shop: 'homey', cars: 'bold' };
+
+/** A new store's template in its starting look. */
+export const inStartingLook = (site: { pages: Page[]; elements: CanvasElement[] }, kind: BuildKind) => {
+  const look = pageLookById(STARTING_LOOK[kind]);
+  return look ? applyPageLook(site.pages, site.elements, look, kind) : site;
+};
+
+/** The colours a page's slide is drawn in now: its look's when the page has one. */
+export const slideSource = (page: Page, slide: Slide | undefined, kind: BuildKind, els: CanvasElement[]): SourceLook => {
+  const look = pageLookById(page.styleLook);
+  return look ? sourceFor({ look }, slide, kind, els) : lookOf(slide?.aiTemplate, kind, els);
+};

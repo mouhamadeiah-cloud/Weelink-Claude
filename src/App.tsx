@@ -35,6 +35,7 @@ import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
+import { PageAdminPanel } from './components/pageAdmin/PageAdminPanel';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
 import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, restaurantSiteUrl, saveStaff, withoutStaff } from './components/restaurant/restaurantCloud';
@@ -225,6 +226,8 @@ export default function App() {
   const [tabRequest, setTabRequest] = useState<{ tab: 'structure' | 'tool'; n: number }>({ tab: 'structure', n: 0 });
   // The column's "admin" button opens the restaurant, shop or showroom admin.
   const [adminOpenRequest, setAdminOpenRequest] = useState(0);
+  // The free page's admin window (the store kinds have their own, opened by adminOpenRequest).
+  const [isPageAdminOpen, setIsPageAdminOpen] = useState(false);
 
   // On a wide screen the control panel is docked on the right with the icons beside it, and the
   // workspace takes the rest of the width, so the panel never covers the canvas.
@@ -295,6 +298,8 @@ export default function App() {
   const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
   const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
   const ownerUid = activeUserUid;
+  // The signed-in owner (or a member) looking at the page as visitors see it: its navbar gets «الإدارة».
+  const isOwnerView = isPreviewActive && !!currentUser && !currentUser.isAnonymous;
   // Whether the open project is published (the «نشر» button shows «منشورة»).
   useEffect(() => {
     setPublishedName(null);
@@ -972,7 +977,27 @@ export default function App() {
     setIsHomeActive(false);
     setIsAuthActive(false);
     setIsProjectChosen(false);
-    if (target) handleChooseProject(target, accountId);
+    // The owner sees their page as visitors do, with «الإدارة» in its navbar (Eyad, 13 Oct); the
+    // editor is one step away, from the admin's «تعديل الصفحة».
+    if (target) handleChooseProject(target, accountId).then(openOwnerView);
+  };
+
+  const openOwnerView = () => {
+    setSelectedElementId(null);
+    setIsRightDrawerOpen(false);
+    setIsPreviewActive(true);
+  };
+
+  // «الإدارة» in the navbar of the owner's own page.
+  const openAdmin = () => {
+    if (project === 'page') setIsPageAdminOpen(true);
+    else setAdminOpenRequest((n) => n + 1);
+  };
+
+  // «تعديل الصفحة» in the admin: from the owner's view of the page back to the editor.
+  const editPageFromAdmin = () => {
+    setIsPageAdminOpen(false);
+    setIsPreviewActive(false);
   };
 
   const handleOpenProjects = () => {
@@ -3591,6 +3616,7 @@ export default function App() {
           onSelectTableCell={setActiveTableCell}
           navbar={currentPage.navbar}
           isPreviewActive={isPreviewActive}
+          navActions={isOwnerView ? [{ id: 'nav-owner-admin', label: 'الإدارة', onClick: openAdmin }] : undefined}
           activePageId={activePageId}
           chromeHeight={isDocked ? 56 : 104}
           renderSelectionBar={renderSelectionBar}
@@ -3775,13 +3801,25 @@ export default function App() {
 
       {/* Online Shop admin: floating gear + admin window */}
       {project === 'shop' && (
-        <ShopAdminPanel data={shopAdmin} onChange={updateShopAdmin} openRequest={adminOpenRequest} hideGear={isDocked} />
+        <ShopAdminPanel data={shopAdmin} onChange={updateShopAdmin} openRequest={adminOpenRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
       )}
       {project === 'cars' && (
-        <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} openRequest={adminOpenRequest} hideGear={isDocked} />
+        <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} openRequest={adminOpenRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
       )}
       {project === 'restaurant' && (
-        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} access={access} openRequest={adminOpenRequest} hideGear={isDocked} />
+        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} access={access} openRequest={adminOpenRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
+      )}
+      {project === 'page' && (
+        <PageAdminPanel
+          open={isPageAdminOpen}
+          onClose={() => setIsPageAdminOpen(false)}
+          owner={ownerUid}
+          project={project}
+          pageName={currentPage.navbar.brandName || ''}
+          published={!!publishedName}
+          onEditPage={editPageFromAdmin}
+          onPublish={() => setIsPublishOpen(true)}
+        />
       )}
 
       {/* Workspace Hub Drawer Panel */}

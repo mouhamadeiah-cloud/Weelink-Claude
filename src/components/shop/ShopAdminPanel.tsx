@@ -1,6 +1,6 @@
 // Online Shop admin: a large floating gear (bottom-left) that opens a floating admin window.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, FolderTree, PackagePlus, Warehouse, Users, ClipboardList, BarChart3, SlidersHorizontal } from 'lucide-react';
+import { Settings, X, PencilLine, FolderTree, PackagePlus, Warehouse, Users, ClipboardList, BarChart3, SlidersHorizontal } from 'lucide-react';
 import { ShopAdminData } from './shopTypes';
 import { CatalogsTab } from './tabs/CatalogsTab';
 import { AddProductTab } from './tabs/AddProductTab';
@@ -30,9 +30,11 @@ interface ShopAdminPanelProps {
   openRequest?: number;
   // The floating gear is left out where the column's button opens the admin instead.
   hideGear?: boolean;
+  // «تعديل الصفحة»: shown when the admin was opened from the page's navbar, back to the editor.
+  onEditPage?: () => void;
 }
 
-export const ShopAdminPanel: React.FC<ShopAdminPanelProps> = ({ data, onChange, openRequest = 0, hideGear = false }) => {
+export const ShopAdminPanel: React.FC<ShopAdminPanelProps> = ({ data, onChange, openRequest = 0, hideGear = false, onEditPage }) => {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (openRequest > 0) setOpen(true);
@@ -81,6 +83,11 @@ export const ShopAdminPanel: React.FC<ShopAdminPanelProps> = ({ data, onChange, 
                 <div className="text-sm font-black text-[#1d1d1f] truncate">إدارة المتجر{data.settings.storeName ? ` · ${data.settings.storeName}` : ''}</div>
                 <div className="text-[10px] text-neutral-400 font-bold">Weelink / Shops</div>
               </div>
+              {onEditPage && (
+                <button type="button" onClick={() => { setOpen(false); onEditPage(); }} className="h-9 px-3 rounded-xl bg-[#1d1d1f] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                  <PencilLine size={14} /> تعديل الصفحة
+                </button>
+              )}
               <button type="button" onClick={() => setOpen(false)} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق">
                 <X size={18} />
               </button>

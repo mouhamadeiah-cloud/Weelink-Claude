@@ -84,6 +84,11 @@ interface CanvasWorkspaceProps {
   isPublicSite?: boolean;
   // Height of the editor's bars above the workspace (the edit bar under the top bar, or not).
   chromeHeight?: number;
+  // Extra entries at the end of the navbar that run an action, not a link: «الإدارة» for the
+  // signed-in owner looking at their own page. Visitors never get them.
+  navActions?: { id: string; label: string; onClick: () => void }[];
+  // A WhatsApp, call or email link on the page was opened (the page's counters).
+  onContactClick?: (url: string) => void;
   // The docked editor's bar of quick tools, drawn above the selected element.
   renderSelectionBar?: (element: CanvasElement) => React.ReactNode;
   // A navbar part whose link the next clicked element receives (set from the navbar settings).
@@ -738,6 +743,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onSelectNavbar,
   isPublicSite = false,
   chromeHeight = 104,
+  navActions,
+  onContactClick,
   renderSelectionBar,
   linkCopySource = null,
   onApplyLinkCopy,
@@ -2024,6 +2031,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         targetElem.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
+      onContactClick?.(elem.linkUrl);
       window.open(elem.linkUrl, '_blank', 'noopener,noreferrer');
     }
   };
@@ -2075,7 +2083,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         {cartCount > 99 ? '99+' : cartCount}
       </span>
     ) : null;
-  const effectiveNavItems = allPages && allPages.length > 0 ? [...navPageLinkItems, ...navCustomItems] : navbar.items;
+  const navActionItems = (navActions || []).map((a) => ({ id: a.id, label: a.label, href: '#', linkType: undefined as 'page' | undefined, linkTargetId: undefined as string | undefined }));
+  const effectiveNavItems = [...(allPages && allPages.length > 0 ? [...navPageLinkItems, ...navCustomItems] : navbar.items), ...navActionItems];
+  // Runs the navbar action of this entry, if it is one.
+  const runNavAction = (id: string) => {
+    const action = navActions?.find((a) => a.id === id);
+    if (action) action.onClick();
+    return !!action;
+  };
 
   const slidesUnscaledHeight = slides.reduce((sum, s) => sum + s.height, 0);
   const totalUnscaledHeight = navFlowHeight + slidesUnscaledHeight;
@@ -2365,7 +2380,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       key={item.id}
                       title={item.label}
                       onClick={() => {
-                        if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                        if (runNavAction(item.id)) {}
+                        else if (isPageLink) onSelectPage?.(item.linkTargetId as string);
                         else if (isPreviewActive && isExternalNavHref(item.href)) window.open(item.href, '_blank', 'noopener,noreferrer');
                         setIsNavMenuOpen(false);
                       }}
@@ -2535,7 +2551,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     key={item.id}
                     title={item.label}
                     onClick={(e) => {
-                      if (isPageLink) {
+                      if (runNavAction(item.id)) {
+                        e.stopPropagation();
+                      } else if (isPageLink) {
                         e.stopPropagation();
                         onSelectPage?.(item.linkTargetId as string);
                       } else if (isPreviewActive && isExternalNavHref(item.href)) {
@@ -2608,7 +2626,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   <span
                     key={item.id}
                     onClick={() => {
-                      if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                      if (runNavAction(item.id)) {}
+                      else if (isPageLink) onSelectPage?.(item.linkTargetId as string);
                       else if (isPreviewActive && isExternalNavHref(item.href)) window.open(item.href, '_blank', 'noopener,noreferrer');
                       setIsNavMenuOpen(false);
                     }}

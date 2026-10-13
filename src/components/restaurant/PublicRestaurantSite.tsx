@@ -15,6 +15,7 @@ import type { MenuOrder } from './restaurantTypes';
 import { CustomerAccount } from '../customers/CustomerAccount';
 import { getCustomerSession } from '../customers/customerSession';
 import { sendOrderConfirmation } from './orderStatus';
+import { countContact, countVisit, isContactLink } from '../../services/siteStats';
 
 const PHONE_MAX = 768;
 const noop = () => {};
@@ -31,6 +32,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
         setSite(s ? { ...s, elements: s.elements.map(withLocalGraphics) } : null);
         if (s?.pages[0]) setPageId(s.pages[0].id);
         if (s?.admin.settings.name) document.title = s.admin.settings.name;
+        if (s) countVisit(uid, 'restaurant');
       })
       .catch(() => setSite('error'));
   }, [uid]);
@@ -105,6 +107,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
             onUpdateElementContent={noop}
             onDeleteElement={noop}
             onDuplicateElement={noop}
+            onContactClick={(url) => isContactLink(url) && countContact(uid, 'restaurant')}
           />
         </div>
       </RestaurantOrderContext.Provider>

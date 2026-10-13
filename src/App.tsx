@@ -184,22 +184,9 @@ const normalizeLegacyNavbarDefaults = (pagesToFix: Page[]): Page[] => {
   });
 };
 
-const getInitialPages = (): Page[] => {
-  // Deep sweep: Clear all legacy and active design caches from localStorage to ensure a 100% blank slate on refresh!
-  try {
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.startsWith('weelink_pages') || key.startsWith('weelink_elements'))) {
-        keysToRemove.push(key);
-      }
-    }
-    keysToRemove.forEach(key => localStorage.removeItem(key));
-  } catch (e) {
-    console.warn("Storage sweep failed:", e);
-  }
-  return [initialPage];
-};
+// A fresh tab starts on an empty page; the account's saved page loads after sign-in. The local copies
+// (one per account and project) stay: they are the fallback when the cloud save could not happen.
+const getInitialPages = (): Page[] => [initialPage];
 
 const getInitialElements = (): CanvasElement[] => {
   return [];
@@ -960,6 +947,7 @@ export default function App() {
       } catch {
         // storage unavailable: «صفحتي» just asks again next time
       }
+      ownedRef.current = { ...ownedRef.current, [type]: true };
       setIsProjectChosen(true);
     } finally {
       setProjectLoading(null);
@@ -1035,6 +1023,7 @@ export default function App() {
     const inviteProblem = takeInviteProblem();
     if (inviteProblem) window.setTimeout(() => window.alert(inviteProblem), 300);
     if (isNewUser) {
+      ownedRef.current = { page: false, shop: false, cars: false, restaurant: false };
       // ALWAYS start a brand-new account with a blank page. The editor screen
       // (isAuthActive === false) never renders before authentication succeeds,
       // so there is no such thing as "guest work designed before signup" to
@@ -1221,6 +1210,7 @@ export default function App() {
         setCarAdmin(createEmptyCarAdmin());
         setHasRestaurant(false);
         setRestaurantAdmin(createEmptyRestaurantAdmin());
+        ownedRef.current = { page: false, shop: false, cars: false, restaurant: false };
         setIsAuthActive(true);
         setIsHomeActive(true);
       } catch (e) {
@@ -1320,7 +1310,10 @@ export default function App() {
     const kind = afterQuestionsRef.current;
     if (!kind || !isProjectChosen || projectLoading || isStartActive || project !== kind) return;
     afterQuestionsRef.current = null;
-    if (freshProjectRef.current && kind !== 'page') {
+    // Only right after the project was first created: answering again from «عدّل إجاباتي» keeps the page.
+    const fresh = freshProjectRef.current;
+    freshProjectRef.current = false;
+    if (fresh && kind !== 'page') {
       const blank = emptyMainPage(KIND_OF_PROJECT[kind], pagesRef.current, elementsRef.current, activePageId);
       setPages(blank.pages);
       setElements(blank.elements);
@@ -3338,6 +3331,12 @@ export default function App() {
           setIsHomeActive(true);
         }}
         onBuild={openAfterQuestions}
+        owned={(Object.keys(ownedRef.current) as ProjectType[]).filter((k) => ownedRef.current[k])}
+        onOpen={async (kind) => {
+          setIsAuthActive(false);
+          await handleChooseProject(kind);
+          setIsStartActive(false);
+        }}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
           pendingBuildRef.current = kind;

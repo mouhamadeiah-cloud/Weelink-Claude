@@ -117,6 +117,7 @@ const SETTINGS_TITLE: Partial<Record<ElementType, string>> = {
   gallery: 'إعدادات معرض الصور (الصور وترتيبها وتنسيقاتها)',
   table: 'إعدادات الجدول',
   calendar: 'إعدادات التقويم والحجز',
+  ratings: 'إعدادات التقييمات',
   video: 'إعدادات الفيديو',
   map: 'إعدادات الخريطة',
   cart: 'إعدادات السلة',

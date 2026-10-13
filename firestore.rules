@@ -389,6 +389,15 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    // A page's ratings (api/rating.ts writes them after the rater confirmed their email): anyone
+    // reads them and the page's stars; nobody, the owner included, changes or deletes them here.
+    match /ratings/{ownerId}/items/{ratingId} {
+      allow read: if true;
+    }
+    match /ratingSummary/{summaryId} {
+      allow get: if true;
+    }
+
     // Match statement for platform_directory onboarding steps
     match /platform_directory/{userId} {
       allow get, write: if canManage(userId) || isDemo(userId);

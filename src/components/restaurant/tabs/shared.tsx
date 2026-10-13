@@ -6,7 +6,7 @@ import type { LiveState } from '../restaurantCloud';
 import { cloudErrorText } from '../restaurantCloud';
 import { uploadImageFile, inputClass } from '../../shop/adminUi';
 
-export type RestaurantTabId = 'orders' | 'customers' | 'bookings' | 'dishes' | 'categories' | 'subcatalogs' | 'halls' | 'devices' | 'workers' | 'tables' | 'accounts' | 'reports' | 'settings' | 'members';
+export type RestaurantTabId = 'orders' | 'customers' | 'bookings' | 'ratings' | 'dishes' | 'categories' | 'subcatalogs' | 'halls' | 'devices' | 'workers' | 'tables' | 'accounts' | 'reports' | 'settings' | 'members';
 
 export interface RestaurantTabProps {
   data: RestaurantAdminData;

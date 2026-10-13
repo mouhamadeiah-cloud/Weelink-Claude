@@ -2365,6 +2365,29 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         );
                       })()}
 
+                      {/* The ratings block: its stars' colour and the «قيّمنا على جوجل» link */}
+                      {selectedElement.type === 'ratings' && (
+                        <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-3 text-right">
+                          <p className="text-[11px] text-neutral-500 leading-relaxed">التقييمات بتنكتب من زوار صفحتك بعد ما يأكدوا إيميلهم، وبتقدر ترد عليها من «الإدارة».</p>
+                          <label className="block space-y-1">
+                            <span className="text-xs font-bold text-neutral-700">لون النجوم</span>
+                            <input type="color" value={selectedElement.ratingsAccentColor || '#f5a623'} onChange={(e) => onUpdateElement({ ratingsAccentColor: e.target.value })} className="w-full h-9 rounded-lg border border-neutral-200 cursor-pointer" />
+                          </label>
+                          <label className="block space-y-1">
+                            <span className="text-xs font-bold text-neutral-700">رابط «قيّمنا على جوجل» (اختياري)</span>
+                            <input
+                              type="url"
+                              dir="ltr"
+                              placeholder="https://g.page/r/..."
+                              value={selectedElement.ratingsGoogleUrl || ''}
+                              onChange={(e) => onUpdateElement({ ratingsGoogleUrl: e.target.value.trim() || undefined })}
+                              className="w-full text-xs px-2.5 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:border-neutral-400"
+                            />
+                            <span className="block text-[10px] text-neutral-400">من Google Business Profile: «اطلب تقييمات» ← انسخ الرابط.</span>
+                          </label>
+                        </div>
+                      )}
+
                         {/* إعدادات وتخصيص التقويم المتقدمة (حجز مواعيد متقدم) */}
                       {selectedElement.type === 'calendar' && (() => {
                         const title = selectedElement.calendarTitle || '';

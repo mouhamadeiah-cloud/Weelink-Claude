@@ -7,7 +7,6 @@ import type { ProjectType } from '../shop/shopTypes';
 import { ADD_ONS, PLANS, YEARLY_DISCOUNT, formatPounds, readPlan, savePlan, yearlyPrice } from '../../data/plans';
 import { PlanArt } from './PlanArt';
 
-const HEAD_FONT = "'Readex Pro', 'IBM Plex Sans Arabic', sans-serif";
 
 interface PlanPickerProps {
   kind: ProjectType;
@@ -33,7 +32,7 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, accent, tit
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <p className="text-xs font-bold" style={{ color: accent }}>{title}</p>
-          <h1 id="plans-title" className="text-2xl sm:text-3xl font-bold" style={{ fontFamily: HEAD_FONT }}>اختر باقتك</h1>
+          <h1 id="plans-title" className="text-2xl sm:text-3xl font-bold">اختر باقتك</h1>
           <p className="text-xs text-[#5b5348]">بعد ما تختار، منبلّش بالأسئلة. فيك تغيّر الباقة بأي وقت، والدفع لسا ما بلّش.</p>
         </div>
         <div className="inline-flex rounded-full bg-white border border-black/10 p-1 text-xs font-bold" role="group" aria-label="طريقة الدفع">
@@ -66,15 +65,15 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, accent, tit
               )}
               <PlanArt art={p.art} accent={accent} kind={kind} />
               <div className="mt-4 space-y-0.5">
-                <h2 className="text-lg font-bold" style={{ fontFamily: HEAD_FONT }}>{p.monthly === 0 ? 'الباقة المجانية' : `باقة ${p.name}`}</h2>
+                <h2 className="text-lg font-bold">{p.monthly === 0 ? 'الباقة المجانية' : `باقة ${p.name}`}</h2>
                 <p className="text-xs text-[#5b5348]">{p.tagline}</p>
               </div>
               <div className="my-4">
                 {p.monthly === 0 ? (
-                  <span className="text-3xl font-bold" style={{ fontFamily: HEAD_FONT }}>مجاناً</span>
+                  <span className="text-3xl font-bold">مجاناً</span>
                 ) : yearly ? (
                   <>
-                    <span className="text-2xl font-bold" style={{ fontFamily: HEAD_FONT }}>{formatPounds(yearlyPrice(p.monthly))}</span>
+                    <span className="text-2xl font-bold">{formatPounds(yearlyPrice(p.monthly))}</span>
                     <span className="text-xs text-[#5b5348] font-bold"> / بالسنة</span>
                     <span className="block text-[11px] font-bold mt-1" style={{ color: accent }}>
                       بدل {formatPounds(p.monthly * 12)}، ومعها دومين خاص مجاناً
@@ -82,7 +81,7 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, accent, tit
                   </>
                 ) : (
                   <>
-                    <span className="text-2xl font-bold" style={{ fontFamily: HEAD_FONT }}>{formatPounds(p.monthly)}</span>
+                    <span className="text-2xl font-bold">{formatPounds(p.monthly)}</span>
                     <span className="text-xs text-[#5b5348] font-bold"> / بالشهر</span>
                   </>
                 )}
@@ -110,7 +109,7 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, accent, tit
       </div>
 
       <div className="rounded-3xl bg-white border border-black/5 p-5 space-y-3">
-        <h3 className="text-sm font-bold" style={{ fontFamily: HEAD_FONT }}>إضافات</h3>
+        <h3 className="text-sm font-bold">إضافات</h3>
         <ul className="grid sm:grid-cols-2 gap-2">
           {ADD_ONS[kind].map((a) => (
             <li key={a.name} className="flex items-center gap-2.5 rounded-2xl bg-[#f6f3ee] px-3 py-2.5 text-xs">

@@ -1,5 +1,44 @@
 @import "tailwindcss";
 
+/* Weelink's own look («هادي وواضح»): one font, one blue, quiet greys. Weelink's screens use these
+   names (bg-brand, text-ink, border-line, rounded-ctl...) instead of writing colours by hand.
+   Customers' pages keep their own fonts and colours (font-page). */
+@theme {
+  --font-sans: 'IBM Plex Sans Arabic', Tahoma, system-ui, sans-serif;
+  --font-logo: 'Plus Jakarta Sans', 'IBM Plex Sans Arabic', sans-serif;
+  /* What a customer's page text falls back to when its element has no font of its own. */
+  --font-page: 'Readex Pro', 'Plus Jakarta Sans', sans-serif;
+
+  --color-brand: #1d5bd8;
+  --color-brand-hover: #1749b0;
+  --color-ink: #14171c;
+  --color-muted: #5d6573;
+  --color-faint: #8b93a1;
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-line: #e2e5ea;
+  --color-success: #1f8a4c;
+  --color-warn: #b7791f;
+  --color-danger: #c8322b;
+
+  /* Sizes: 40 / 28 / 20 / 16 / 14 / 12, nothing smaller. */
+  --text-display: 40px;
+  --text-display--line-height: 1.25;
+  --text-title: 28px;
+  --text-title--line-height: 1.3;
+  --text-heading: 20px;
+  --text-heading--line-height: 1.4;
+  --text-body: 16px;
+  --text-body--line-height: 1.7;
+  --text-small: 14px;
+  --text-small--line-height: 1.6;
+  --text-tiny: 12px;
+  --text-tiny--line-height: 1.5;
+
+  --radius-ctl: 10px;
+  --radius-card: 16px;
+}
+
 @layer base {
   * {
     box-sizing: border-box;

@@ -12,7 +12,6 @@ import { guestKindOf, readGuestAnswers, setGuestKind } from '../../services/gues
 import { CAR_PHOTOS, carPhoto } from '../../data/carShowroomTemplate';
 import type { ProjectType } from '../shop/shopTypes';
 
-const HEAD_FONT = "'Readex Pro', 'IBM Plex Sans Arabic', sans-serif";
 const photo = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`;
 
 const HERO = photo('1522071820081-009f0129c71c', 1600);
@@ -126,7 +125,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
   const progress = Math.min(1, (Math.min(step, QUESTION_COUNT + 1) - 1) / QUESTION_COUNT);
 
   return (
-    <div className="min-h-screen bg-[#f6f3ee] text-[#1c1a17]" dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic', 'Readex Pro', sans-serif" }}>
+    <div className="min-h-screen bg-[#f6f3ee] text-[#1c1a17]" dir="rtl">
       <header className="sticky top-0 z-30 bg-[#f6f3ee]/85 backdrop-blur border-b border-black/5">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
           <button type="button" onClick={kind ? stepBack : onHome} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5b5348] hover:text-[#c2410c] transition">
@@ -135,7 +134,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           <div className="flex-1" />
           <span className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center font-bold">W</span>
-            <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>weelink</span>
+            <span className="text-lg font-bold tracking-tight font-logo">weelink</span>
           </span>
         </div>
       </header>
@@ -150,7 +149,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/15 backdrop-blur rounded-full px-3 py-1">
                 <Sparkles size={13} /> مجاناً، مع Wee AI
               </span>
-              <h1 className="text-3xl sm:text-5xl font-bold leading-tight" style={{ fontFamily: HEAD_FONT }}>شو بدك تعمل؟</h1>
+              <h1 className="text-3xl sm:text-5xl font-bold leading-tight">شو بدك تعمل؟</h1>
               <p className="text-sm sm:text-base opacity-90 max-w-xl leading-relaxed">
                 {signedIn ? 'اختر نوع صفحتك وباقتك وجاوب على كم سؤال، وبعدين بتصممها بإيدك أو بيبنيها إلك Wee AI. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع صفحتك وباقتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
               </p>
@@ -191,7 +190,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                   <span className="w-11 h-11 rounded-2xl flex items-center justify-center mb-1 shadow-lg" style={{ backgroundColor: k.accent }}>
                     <k.icon size={20} />
                   </span>
-                  <span className="block text-xl font-bold" style={{ fontFamily: HEAD_FONT }}>{k.title}</span>
+                  <span className="block text-xl font-bold">{k.title}</span>
                   <span className="block text-xs opacity-90 leading-relaxed">{k.line}</span>
                   <span className="hidden sm:grid gap-1 pt-1 max-h-0 opacity-0 group-hover:max-h-24 group-hover:opacity-100 transition-all duration-500 overflow-hidden">
                     {k.perks.map((p) => (
@@ -221,7 +220,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                 <span className="w-9 h-9 lg:w-12 lg:h-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: chosen.accent }}>
                   <chosen.icon size={18} />
                 </span>
-                <span className="text-xl lg:text-3xl font-bold" style={{ fontFamily: HEAD_FONT }}>{chosen.title}</span>
+                <span className="text-xl lg:text-3xl font-bold">{chosen.title}</span>
               </div>
               <p className="hidden lg:block text-sm opacity-90 leading-relaxed max-w-md">{chosen.line}</p>
               <ul className="hidden lg:grid gap-2">

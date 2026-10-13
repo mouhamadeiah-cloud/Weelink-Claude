@@ -18,8 +18,6 @@ import type { ProjectType } from '../shop/shopTypes';
 
 const photo = (id: string, w = 900) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`;
 
-const HEAD_FONT = "'Readex Pro', 'IBM Plex Sans Arabic', sans-serif";
-const BODY_FONT = "'IBM Plex Sans Arabic', 'Readex Pro', sans-serif";
 
 const INTENTS: { id: Intent; title: string; line: string; icon: React.ElementType; image: string }[] = [
   { id: 'food', title: 'أكل وطلبات', line: 'مطاعم ومنيو وطلب أونلاين', icon: UtensilsCrossed, image: foodPhoto(FOOD_PHOTOS.grill, 900) },
@@ -200,13 +198,13 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
   const pickCategory = (category?: string, sub?: string) => active?.intent && setActive({ intent: active.intent, query: '', category, sub });
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#f6f3ee] text-[#1c1a17]" style={{ fontFamily: BODY_FONT }}>
+    <div dir="rtl" className="min-h-screen bg-[#f6f3ee] text-[#1c1a17]">
       {/* Top bar */}
       <header className="sticky top-0 z-30 bg-[#f6f3ee]/90 backdrop-blur border-b border-black/5">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
           <a href="/" className="flex items-center gap-2 shrink-0" aria-label="weelink">
             <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#0071e3] to-[#40a9ff] text-white flex items-center justify-center font-bold">W</span>
-            <span className="text-lg font-bold tracking-tight hidden sm:inline" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>weelink</span>
+            <span className="text-lg font-bold tracking-tight hidden sm:inline font-logo">weelink</span>
           </a>
           <label className="flex items-center gap-1.5 text-xs font-bold text-[#5b5348] bg-white border border-black/10 rounded-full pr-2.5 pl-1 py-1 min-w-0">
             <MapPin size={14} className="text-[#c2410c] shrink-0" />
@@ -258,7 +256,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
           {user && (
             <p className="text-sm font-bold text-[#9a3412] mb-2">أهلاً {firstName}</p>
           )}
-          <h1 className="text-[28px] leading-[1.25] sm:text-5xl sm:leading-[1.2] font-bold" style={{ fontFamily: HEAD_FONT }}>
+          <h1 className="text-[28px] leading-[1.25] sm:text-5xl sm:leading-[1.2] font-bold">
             كل شي بتحتاجه{place ? <> بـ<span className="text-[#c2410c]">{place}</span></> : ' حواليك'}،<br className="hidden sm:block" /> بصفحة وحدة
           </h1>
           <p className="mt-3 text-sm sm:text-base text-[#5b5348]">أكل، تسوق، فنيين وسيارات، من محلات وناس حقيقيين.</p>
@@ -280,7 +278,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         {/* Signed in: what they opened lately, and the pages they joined as a customer */}
         {user && (recent.length > 0 || joined.length > 0) && (
           <section>
-            <h2 className="text-base font-bold mb-3 flex items-center gap-2" style={{ fontFamily: HEAD_FONT }}><Clock size={16} className="text-[#8a8073]" /> زرتها مؤخراً</h2>
+            <h2 className="text-base font-bold mb-3 flex items-center gap-2"><Clock size={16} className="text-[#8a8073]" /> زرتها مؤخراً</h2>
             <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x">
               {recent.map((p) => (
                 <a key={p.url} href={p.url} onClick={() => recordVisit(uid, p)} className="snap-start shrink-0 w-44 bg-white rounded-2xl border border-black/5 p-3 hover:shadow-md transition">
@@ -311,7 +309,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
               <div className="relative p-5 w-full space-y-3">
                 <div className="text-xs font-bold opacity-80">بتدور عادة على</div>
                 <div className="flex items-end justify-between gap-3">
-                  <h2 className="text-2xl font-bold" style={{ fontFamily: HEAD_FONT }}>{fav.title}{place ? ` بـ${place}` : ''}</h2>
+                  <h2 className="text-2xl font-bold">{fav.title}{place ? ` بـ${place}` : ''}</h2>
                   <button type="button" onClick={() => openIntent(fav.id)} className="shrink-0 bg-white text-[#1c1a17] rounded-full px-4 py-2 text-xs font-bold flex items-center gap-1">
                     افتح <ArrowLeft size={14} />
                   </button>
@@ -349,7 +347,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 inset-x-0 p-4 space-y-1">
                   <span className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-2"><it.icon size={18} /></span>
-                  <div className="text-lg sm:text-xl font-bold" style={{ fontFamily: HEAD_FONT }}>{it.title}</div>
+                  <div className="text-lg sm:text-xl font-bold">{it.title}</div>
                   <div className="text-[11px] sm:text-xs opacity-85 leading-snug">{it.line}</div>
                 </div>
               </button>
@@ -361,7 +359,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         {active && (
           <section id="home-results" className="scroll-mt-20 bg-white rounded-3xl border border-black/5 p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold" style={{ fontFamily: HEAD_FONT }}>
+              <h2 className="text-lg font-bold">
                 {activeIntent ? activeIntent.title : <>نتائج «{active.query}»</>}
               </h2>
               <button type="button" onClick={() => setActive(null)} aria-label="إغلاق النتائج" className="w-8 h-8 rounded-full bg-[#f6f3ee] flex items-center justify-center"><X size={16} /></button>
@@ -433,7 +431,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         {/* For business owners */}
         <section className="rounded-3xl bg-[#1c1a17] text-white p-6 sm:p-10 flex flex-col sm:flex-row sm:items-center gap-5 justify-between">
           <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold" style={{ fontFamily: HEAD_FONT }}>عندك محل أو مهنة؟</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold">عندك محل أو مهنة؟</h2>
             <p className="text-sm text-white/75 max-w-lg">اعمل صفحتك مجاناً، وخلّي الناس يلاقوك لما يدوّروا بمدينتك.</p>
           </div>
           <button type="button" onClick={onBuild} className="shrink-0 bg-[#c2410c] hover:bg-[#ea580c] text-white rounded-2xl px-6 py-3.5 text-sm font-bold transition flex items-center gap-2 self-start sm:self-auto">
@@ -445,7 +443,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         <section className="space-y-6 sm:space-y-10 pt-4">
           <div className="text-center space-y-2">
             <div className="text-xs font-bold text-[#c2410c]">لأصحاب المحلات والمهن</div>
-            <h2 className="text-2xl sm:text-4xl font-bold" style={{ fontFamily: HEAD_FONT }}>شو بتقدر تعمل بـ Weelink</h2>
+            <h2 className="text-2xl sm:text-4xl font-bold">شو بتقدر تعمل بـ Weelink</h2>
           </div>
           {FEATURES.map((f, i) => (
             <article key={f.title} className={`grid md:grid-cols-2 gap-5 md:gap-10 items-center ${i % 2 ? 'md:[&>*:first-child]:order-2' : ''}`}>
@@ -453,7 +451,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
                 <img src={f.image} alt="" loading="lazy" className={f.contain ? 'max-w-full max-h-full object-contain' : 'w-full h-full object-cover'} />
               </div>
               <div className="space-y-3">
-                <h3 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: HEAD_FONT }}>{f.title}</h3>
+                <h3 className="text-xl sm:text-2xl font-bold">{f.title}</h3>
                 <p className="text-sm sm:text-base text-[#5b5348] leading-relaxed">{f.lead}</p>
                 <ul className="space-y-1.5">
                   {f.points.map((p) => (

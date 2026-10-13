@@ -70,7 +70,6 @@ import {
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape, getGlowShadowStyle, getLightGradientStyle, ContactType } from '../types';
 import { MASK_SHAPES } from '../utils/maskShapes';
 import { Icon } from '@iconify/react';
-import { TWENTY_PAGE_PALETTES } from '../data/palettes';
 import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
 import { BackgroundDrawerSection } from './BackgroundDrawerSection';
 import { ImageDrawerSection } from './ImageDrawerSection';
@@ -159,6 +158,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onToggleLock,
   onUpdatePage,
   onApplyPagePalette,
+  pageLookPicker,
   onUpdateSlideDivider,
   onUpdateSlideBackground,
   onUpdateSlideBorder,
@@ -1418,18 +1418,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     />
                   </div>
 
-                  {/* 2. ألوان الصفحة (تحت اسم الصفحة - خيارين: افتراضي وشخصي) */}
+                  {/* 2. ستايل الصفحة: the 12 page looks, or the owner's own colours */}
                   <div className="space-y-2.5 pt-2 border-t border-neutral-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-neutral-800">
-                        ألوان الصفحة:
-                      </span>
-                      <span className="text-xs text-neutral-400">
-                        (خلفية، صناديق، إطارات، نصوص، براند)
-                      </span>
-                    </div>
+                    <div className="text-sm font-bold text-ink">ستايل الصفحة</div>
 
-                    {/* Sub-tabs: افتراضي | شخصي (كما في الصورة الأولى) */}
+                    {/* Sub-tabs: ستايل | ألوان شخصية */}
                     <div className="flex rounded-xl bg-neutral-100 p-1 border border-neutral-200 gap-1">
                       <button
                         onClick={() => setPageColorMode('default')}
@@ -1439,7 +1432,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             : 'text-neutral-600 hover:text-black'
                         }`}
                       >
-                        افتراضي
+                        ستايل جاهز
                       </button>
                       <button
                         onClick={() => setPageColorMode('custom')}
@@ -1449,61 +1442,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             : 'text-neutral-600 hover:text-black'
                         }`}
                       >
-                        شخصي
+                        ألوان شخصية
                       </button>
                     </div>
 
-                    {/* MODE A: افتراضي - 20 خيار لألوان متناسقة كل خيار فيه 5 ألوان */}
-                    {pageColorMode === 'default' && (
-                      <div className="space-y-2 pt-1">
-                        <div className="text-xs text-neutral-500 font-medium leading-relaxed">
-                          اختر مجموعة ألوان متناسقة لتطبيقها فوراً على كامل الصفحة وعناصرها (20 مجموعة):
-                        </div>
-
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                          {TWENTY_PAGE_PALETTES.map((pal) => {
-                            const isCurrentActive = 
-                              currentPage.colorPalette && 
-                              currentPage.colorPalette[0] === pal.colors[0] &&
-                              currentPage.colorPalette[4] === pal.colors[4];
-
-                            return (
-                              <button
-                                key={pal.id}
-                                onClick={() => {
-                                  onApplyPagePalette(pal.colors);
-                                  setCustomColors(pal.colors);
-                                }}
-                                className={`w-full p-2 rounded-xl border text-right transition-all flex items-center justify-between cursor-pointer ${
-                                  isCurrentActive
-                                    ? 'border-brand bg-brand/5 ring-1 ring-brand'
-                                    : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50/80'
-                                }`}
-                              >
-                                <span className="text-xs font-bold text-neutral-800 truncate">
-                                  {pal.name}
-                                </span>
-
-                                {/* 5 Color Circles */}
-                                <div className="flex items-center gap-1 shrink-0">
-                                  {pal.colors.map((c, i) => (
-                                    <span
-                                      key={i}
-                                      className="w-4 h-4 rounded-full border border-black/15 shadow-3xs"
-                                      style={{ backgroundColor: c }}
-                                      title={`${slotLabels[i]}: ${c}`}
-                                    />
-                                  ))}
-                                  {isCurrentActive && (
-                                    <Check size={12} className="text-brand mr-1" />
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                    {/* MODE A: ستايل - the 12 page looks (data/pageLooks) */}
+                    {pageColorMode === 'default' && <div className="pt-1">{pageLookPicker}</div>}
 
                     {/* MODE B: شخصي - كما في الرسم السفلي بالصورة الأولى */}
                     {pageColorMode === 'custom' && (

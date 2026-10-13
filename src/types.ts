@@ -314,6 +314,9 @@ export interface NavbarConfig {
   ctaLinkTargetId?: string;
   bgColor: string;
   textColor: string;
+  // The navbar button and the logo letter badge (from the page look); unset = Weelink blue.
+  accentColor?: string;
+  accentTextColor?: string;
   isSticky: boolean;
   // How the navbar is laid out (chosen in its settings): a strip, a column, or a lone hamburger
   // icon. Unset = strip.
@@ -378,6 +381,9 @@ export interface Page {
   slides: Slide[];
   colorPalette?: [string, string, string, string, string];
   paletteMode?: 'default' | 'custom';
+  // The page look («ستايل الصفحة», data/pageLooks) the site was last given, so the next one knows
+  // which colours and fonts were the look's.
+  styleLook?: string;
   // A paid page got its «التقييمات» slide suggested once; removing it then keeps it removed.
   ratingsSuggested?: boolean;
 }

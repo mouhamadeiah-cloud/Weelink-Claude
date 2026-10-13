@@ -81,6 +81,7 @@ export interface RightDrawerProps {
   onToggleLock: () => void;
   onUpdatePage: (updates: Partial<Page>) => void;
   onApplyPagePalette: (palette: [string, string, string, string, string]) => void;
+  pageLookPicker?: React.ReactNode; // «ستايل الصفحة», the 12 page looks
   onUpdateSlideDivider: (slideId: string, shape: SlideDividerShape) => void;
   onUpdateSlideBackground: (
     slideId: string, 

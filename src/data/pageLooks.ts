@@ -45,3 +45,9 @@ export const looksFor = (kind: BuildKind): PageLook[] => {
 };
 
 export const suitsKind = (look: PageLook, kind: BuildKind) => (FIRST_FOR[kind] || []).includes(look.id);
+
+// The looks' type scale on the 1280-wide canvas: hero, section title, card title, lead, text, small.
+export const TYPE_SCALE = [64, 44, 28, 20, 17, 14];
+
+/** The nearest size of the scale. */
+export const typeSize = (size: number) => TYPE_SCALE.reduce((best, s) => (Math.abs(s - size) < Math.abs(best - size) ? s : best));

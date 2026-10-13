@@ -4,6 +4,7 @@
 // two cart pages (the cart summary beside the order card).
 // Texts are the shop template's own and images come from the platform library (public/Library).
 // Coordinates are already on the 1280-wide canvas.
+import { typeSize } from './pageLooks';
 
 export const SHOP_SLIDE_COLORS = {
   ink: '#2A1F1A',
@@ -30,10 +31,10 @@ const el = (type: string, name: string, box: Box, content: string, styles: Recor
 });
 
 const heading = (box: Box, text: string, size: number, color = C.ink, align = 'center') =>
-  el('heading', 'عنوان', box, text, { fontSize: size, fontWeight: 'bold', color, fontFamily: HEADING_FONT, textAlign: align });
+  el('heading', 'عنوان', box, text, { fontSize: typeSize(size), fontWeight: 'bold', color, fontFamily: HEADING_FONT, textAlign: align });
 
 const paragraph = (box: Box, text: string, size = 15, color = C.muted, align = 'center') =>
-  el('paragraph', 'نص', box, text, { fontSize: size, color, fontFamily: BODY_FONT, textAlign: align });
+  el('paragraph', 'نص', box, text, { fontSize: typeSize(size), color, fontFamily: BODY_FONT, textAlign: align });
 
 const products = (box: Box, extra: Record<string, unknown>) =>
   el('shopProducts', 'منتجات المتجر', box, '', { color: C.accent }, extra);

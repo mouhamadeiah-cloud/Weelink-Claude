@@ -4,6 +4,7 @@
 // search them. More pages are added like in any project.
 import type { Page, CanvasElement, NavbarConfig, ElementStyles } from '../types';
 import { withTemplateGroups } from '../utils/templateGroups';
+import { typeSize } from './pageLooks';
 
 export const CAR_PAGE_IDS = { home: 'car-page-home', showroom: 'car-page-showroom', about: 'car-page-about', contact: 'car-page-contact' };
 
@@ -36,10 +37,10 @@ function el(id: string, type: CanvasElement['type'], slideId: string, box: Box, 
 }
 
 const heading = (id: string, slideId: string, box: Box, text: string, size: number, color = C.ink, align: 'right' | 'center' = 'right') =>
-  el(id, 'heading', slideId, box, text, { fontSize: size, fontWeight: 'bold', color, fontFamily: CAR_HEADING_FONT, textAlign: align });
+  el(id, 'heading', slideId, box, text, { fontSize: typeSize(size), fontWeight: 'bold', color, fontFamily: CAR_HEADING_FONT, textAlign: align });
 
 const paragraph = (id: string, slideId: string, box: Box, text: string, size = 16, color = C.body, align: 'right' | 'center' = 'right') =>
-  el(id, 'paragraph', slideId, box, text, { fontSize: size, color, fontFamily: CAR_BODY_FONT, textAlign: align });
+  el(id, 'paragraph', slideId, box, text, { fontSize: typeSize(size), color, fontFamily: CAR_BODY_FONT, textAlign: align });
 
 const pageLink = (target: string) => ({ linkType: 'page' as const, linkTargetId: target, linkUrl: `#page-${target}` });
 const whatsapp = { linkType: 'contact' as const, contactType: 'whatsapp' as const, contactValue: WHATSAPP_NUMBER, linkUrl: `https://wa.me/${WHATSAPP_NUMBER}` };

@@ -45,7 +45,7 @@ import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Eye, FileText, FolderTree, LayoutTemplate, Loader2, MousePointer2, Plus, Redo2, Settings, SlidersHorizontal, Store, Undo2 } from 'lucide-react';
 import { applyPageTexts, businessFacts, pageTextItems, requestPageTexts, type WeeAnswers } from './services/weeWriter';
-import { applyPageLook } from './services/applyLook';
+import { applyPageLook, inStartingLook } from './services/applyLook';
 import { formatMoney } from './components/shop/adminUi';
 import { PageLookPicker, type LookSample } from './components/rightDrawer/PageLookPicker';
 import type { PageLook } from './data/pageLooks';
@@ -590,7 +590,7 @@ export default function App() {
     }
     freshProjectRef.current = shopPages.length === 0;
     if (shopPages.length === 0) {
-      const template = getOnlineShopTemplate({ liveProducts: true });
+      const template = inStartingLook(getOnlineShopTemplate({ liveProducts: true }), 'shop');
       shopPages = template.pages;
       shopElements = template.elements;
     } else {
@@ -657,7 +657,7 @@ export default function App() {
     }
     freshProjectRef.current = carPages.length === 0;
     if (carPages.length === 0) {
-      const template = getCarShowroomTemplate();
+      const template = inStartingLook(getCarShowroomTemplate(), 'cars');
       carPages = template.pages;
       carElements = template.elements;
       if (!admin) admin = { ...createEmptyCarAdmin(), cars: exampleCars() };
@@ -722,7 +722,7 @@ export default function App() {
     }
     freshProjectRef.current = restPages.length === 0;
     if (restPages.length === 0) {
-      const template = getRestaurantTemplate();
+      const template = inStartingLook(getRestaurantTemplate(), 'restaurant');
       restPages = template.pages;
       restElements = template.elements;
       if (!admin) {

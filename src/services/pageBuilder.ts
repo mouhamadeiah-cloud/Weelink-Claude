@@ -15,6 +15,7 @@ import { STORE_SLIDE_IDS } from '../data/storeSlideAi';
 import { TWENTY_PAGE_PALETTES } from '../data/palettes';
 import { REST_PAGE_IDS } from '../data/restaurantTemplate';
 import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
+import { slideSource } from './applyLook';
 import { lookOf, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
 import { fitTexts, fitTextsPhone, listItems, reflowList, type FlexEl } from '../utils/flexLayout';
 import { arrangeSlideForMobile } from '../utils/mobileLayout';
@@ -579,25 +580,33 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
   const logo = answers.personalInfo?.logoUrl;
   // A store's other pages (menu, products, cart…) keep their layout and take the new colours and fonts.
   const restyle = kind !== 'free';
-  const sceneFor = (aiTemplate: string | undefined, els: CanvasElement[], photoBg: boolean): RecolourScene => ({ look: lookOf(aiTemplate, kind, els), to, onPhoto: photoBg });
+  // A page in a look («ستايل الصفحة») has that look's colours; the build gives it the owner's.
+  const pageOf = new Map(pages.flatMap((p) => p.slides.map((s) => [s.id, p] as const)));
+  const sceneFor = (aiTemplate: string | undefined, els: CanvasElement[], photoBg: boolean, slide?: Slide, p?: Page): RecolourScene => ({
+    look: p ? slideSource(p, slide, kind, els) : lookOf(aiTemplate, kind, els),
+    to,
+    onPhoto: photoBg,
+  });
   const otherSlides = new Map(pages.filter((p) => p.id !== page.id).flatMap((p) => p.slides.map((s) => [s.id, s] as const)));
 
   const nextPages = pages.map((p) => {
     // The navbar in the page's own card and text colours, on every page so they match.
     const navbar = {
-      ...(restyle ? recolourDeep(p.navbar, sceneFor(undefined, [], false)) : p.navbar),
+      ...(restyle ? recolourDeep(p.navbar, sceneFor(undefined, [], false, undefined, p)) : p.navbar),
       bgColor: to.card,
       textColor: to.ink,
+      ...(p.navbar.accentColor ? { accentColor: to.accent, accentTextColor: textOn(to.accent) } : {}),
       ...(logo ? { logoUrl: logo } : {}),
       ...(ctx.title ? { brandName: ctx.title } : {}),
     };
-    if (p.id === page.id) return { ...p, slides: built.map((b) => b.slide), navbar, colorPalette: colors };
+    if (p.id === page.id) return { ...p, slides: built.map((b) => b.slide), navbar, colorPalette: colors, styleLook: undefined };
     if (!restyle) return { ...p, navbar };
     return {
       ...p,
       navbar,
       colorPalette: colors,
-      slides: p.slides.map((s) => ({ ...s, backgroundColor: s.backgroundColor && recolourDeep(s.backgroundColor, sceneFor(s.aiTemplate, [], !!s.backgroundImage), 'fill') })),
+      styleLook: undefined,
+      slides: p.slides.map((s) => ({ ...s, backgroundColor: s.backgroundColor && recolourDeep(s.backgroundColor, sceneFor(s.aiTemplate, [], !!s.backgroundImage, s, p), 'fill') })),
     };
   });
 
@@ -609,7 +618,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
         const s = otherSlides.get(e.slideId);
         if (!s) return e;
         const slideEls = bySlide.get(e.slideId)!;
-        const next = recolourDeep(e, sceneFor(s.aiTemplate, slideEls, !!s.backgroundImage));
+        const next = recolourDeep(e, sceneFor(s.aiTemplate, slideEls, !!s.backgroundImage, s, pageOf.get(e.slideId)));
         const head = slideEls.find((x) => x.type === 'heading' && x.styles?.fontFamily)?.styles.fontFamily;
         if (next.styles?.fontFamily) next.styles = { ...next.styles, fontFamily: next.styles.fontFamily === head ? fonts.head : fonts.body };
         return next;

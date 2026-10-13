@@ -5,6 +5,7 @@
 // restaurant template's own. Coordinates are on the 1280-wide canvas.
 import { REST_COLORS as C, REST_PAGE_IDS, REST_HEADING_FONT, REST_BODY_FONT } from './restaurantTemplate';
 import { FOOD_PHOTOS, foodPhoto } from '../components/restaurant/restaurantTypes';
+import { typeSize } from './pageLooks';
 
 type Box = { x: number; y: number; width: number; height: number };
 
@@ -18,10 +19,10 @@ const el = (type: string, name: string, box: Box, content: string, styles: Recor
 });
 
 const heading = (box: Box, text: string, size: number, color = C.ink, align = 'center') =>
-  el('heading', 'عنوان', box, text, { fontSize: size, fontWeight: 'bold', color, fontFamily: REST_HEADING_FONT, textAlign: align });
+  el('heading', 'عنوان', box, text, { fontSize: typeSize(size), fontWeight: 'bold', color, fontFamily: REST_HEADING_FONT, textAlign: align });
 
 const paragraph = (box: Box, text: string, size = 16, color = C.muted, align = 'center') =>
-  el('paragraph', 'نص', box, text, { fontSize: size, color, fontFamily: REST_BODY_FONT, textAlign: align });
+  el('paragraph', 'نص', box, text, { fontSize: typeSize(size), color, fontFamily: REST_BODY_FONT, textAlign: align });
 
 const menu = (box: Box, extra: Record<string, unknown>, accent = C.accent) =>
   el('menuList', 'منيو المطعم', box, '', { color: accent }, { menuLayout: 'grid', ...extra });

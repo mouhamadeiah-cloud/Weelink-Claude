@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { NavbarPart } from './utils/navbarParts';
 import { 
   Page, 
@@ -36,6 +36,7 @@ import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } fro
 import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { PageAdminPanel } from './components/pageAdmin/PageAdminPanel';
+import { BookingPage, BookingPageContext } from './services/bookings';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
 import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, restaurantSiteUrl, saveStaff, withoutStaff } from './components/restaurant/restaurantCloud';
@@ -300,6 +301,13 @@ export default function App() {
   const ownerUid = activeUserUid;
   // The signed-in owner (or a member) looking at the page as visitors see it: its navbar gets «الإدارة».
   const isOwnerView = isPreviewActive && !!currentUser && !currentUser.isAnonymous;
+  // The page the «حجز مواعيد» calendar books on, and whose bookings the admins list. Only the owner's
+  // view of their page saves real bookings; the editor shows the calendar as a preview.
+  const bookingBrand = pages[0]?.navbar?.brandName || '';
+  const bookingPage = useMemo<BookingPage | null>(
+    () => (ownerUid ? { owner: ownerUid, project, pageName: bookingBrand, live: isOwnerView } : null),
+    [ownerUid, project, bookingBrand, isOwnerView]
+  );
   // Whether the open project is published (the «نشر» button shows «منشورة»).
   useEffect(() => {
     setPublishedName(null);
@@ -2277,9 +2285,7 @@ export default function App() {
     cmds.push({ id: 'structure', section: 'أوامر', title: 'هيكل الموقع', keywords: 'صفحات شرائح عناصر شجرة', icon: <FolderTree size={14} />, run: () => { setIsChatActive(false); setTabRequest((r) => ({ tab: 'structure', n: r.n + 1 })); setIsRightDrawerOpen(true); } });
     cmds.push({ id: 'page-settings', section: 'أوامر', title: 'إعدادات الصفحة', keywords: 'ألوان الصفحة', icon: <Settings size={14} />, run: () => { setIsChatActive(false); setDrawerSection('page-settings'); setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 })); setIsRightDrawerOpen(true); } });
     cmds.push({ id: 'project-settings', section: 'أوامر', title: 'إعدادات المشروع', keywords: 'اسم المشروع', icon: <Settings size={14} />, run: () => { setIsChatActive(false); setDrawerSection('project-settings'); setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 })); setIsRightDrawerOpen(true); } });
-    if (project !== 'page') {
-      cmds.push({ id: 'admin', section: 'أوامر', title: project === 'shop' ? 'إدارة المتجر' : project === 'cars' ? 'إدارة معرض السيارات' : 'إدارة المطعم', keywords: 'ادارة طلبات منتجات', icon: <Store size={14} />, run: () => setAdminOpenRequest((n) => n + 1) });
-    }
+    cmds.push({ id: 'admin', section: 'أوامر', title: project === 'shop' ? 'إدارة المتجر' : project === 'cars' ? 'إدارة معرض السيارات' : project === 'restaurant' ? 'إدارة المطعم' : 'إدارة الصفحة', keywords: 'ادارة طلبات منتجات مواعيد حجوزات زوار', icon: <Store size={14} />, run: openAdmin });
     cmds.push({ id: 'wee-ai', section: 'أوامر', title: 'Wee AI', keywords: 'ذكاء اصطناعي كتابة نصوص', icon: <SlidersHorizontal size={14} />, run: () => { setIsChatActive(true); setIsRightDrawerOpen(true); } });
     return cmds;
   };
@@ -3427,6 +3433,7 @@ export default function App() {
     isNavbarSelected,
   };
   return (
+    <BookingPageContext.Provider value={bookingPage}>
     <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col antialiased selection:bg-[#0071e3]/15 selection:text-[#0071e3]">
       {/* The build after the questions: working, then what came of it */}
       {buildNotice && (
@@ -3684,7 +3691,7 @@ export default function App() {
               project === 'shop' ? { label: 'إدارة المتجر', onOpen: () => setAdminOpenRequest((n) => n + 1) }
               : project === 'cars' ? { label: 'إدارة معرض السيارات', onOpen: () => setAdminOpenRequest((n) => n + 1) }
               : project === 'restaurant' ? { label: 'إدارة المطعم', onOpen: () => setAdminOpenRequest((n) => n + 1) }
-              : null
+              : { label: 'إدارة الصفحة', onOpen: () => setIsPageAdminOpen(true) }
             }
             onWeeAi={() => {
               setIsChatActive((v) => !v);
@@ -3817,7 +3824,7 @@ export default function App() {
           project={project}
           pageName={currentPage.navbar.brandName || ''}
           published={!!publishedName}
-          onEditPage={editPageFromAdmin}
+          onEditPage={isPreviewActive ? editPageFromAdmin : undefined}
           onPublish={() => setIsPublishOpen(true)}
         />
       )}
@@ -3837,5 +3844,6 @@ export default function App() {
         onArrangeForMobile={handleArrangeForMobile}
       />
     </div>
+    </BookingPageContext.Provider>
   );
 }

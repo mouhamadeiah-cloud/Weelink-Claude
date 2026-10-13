@@ -71,9 +71,12 @@ interface StartPageProps {
   // A guest finished the questions: sign up, then open this kind.
   onSignUp: (kind: ProjectType) => void;
   loadingType?: ProjectType | null;
+  // The kinds this account already has a page of: picking one opens it, not the questions again.
+  owned?: ProjectType[];
+  onOpen?: (kind: ProjectType) => void;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, loadingType }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, loadingType, owned = [], onOpen }) => {
   const signedIn = !!user && !user.isAnonymous;
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
   // After the kind come its packages, then the questions (Eyad, 12 Oct). Editing the answers from
@@ -95,6 +98,11 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
   }, []);
 
   const choose = (type: ProjectType) => {
+    // A page started before (published or not) opens where the owner left it.
+    if (signedIn && onOpen && owned.includes(type)) {
+      onOpen(type);
+      return;
+    }
     if (!signedIn) setGuestKind(type);
     setStep(1);
     setKind(type);
@@ -173,6 +181,9 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                 <img src={k.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/5" />
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500" style={{ background: `linear-gradient(to top, ${k.accent}cc, transparent 70%)` }} />
+                {signedIn && owned.includes(k.type) && (
+                  <span className="absolute top-3 right-3 bg-white text-[#c2410c] text-[11px] font-bold rounded-full px-2.5 py-1 shadow">صفحتك محفوظة</span>
+                )}
                 {saved === k.type && (
                   <span className="absolute top-3 right-3 bg-white text-[#c2410c] text-[11px] font-bold rounded-full px-2.5 py-1 shadow">إجاباتك محفوظة</span>
                 )}
@@ -189,7 +200,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold pt-1">
                     {loadingType === k.type ? <Loader2 size={14} className="animate-spin" /> : null}
-                    ابدأ
+                    {signedIn && owned.includes(k.type) ? 'كمّل صفحتك' : 'ابدأ'}
                     <ArrowLeft size={14} className="transition group-hover:-translate-x-1.5" />
                   </span>
                 </span>

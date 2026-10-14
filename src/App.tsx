@@ -21,7 +21,9 @@ import { StandardAuth } from './components/StandardAuth';
 import { becomeDesigner, readDesigner } from './services/designers';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
-import { DESIGN_KIND_LABEL, PAGE_SLIDES, type DesignKind } from './data/slideCategories';
+import { insertDesign } from './services/fitDesign';
+import type { GallerySlide } from './services/galleryView';
+import { DESIGN_KIND_LABEL, PAGE_MAX_SLIDES, type DesignKind } from './data/slideCategories';
 import { ExportSlideModal } from './components/designer/ExportSlideModal';
 import { HomePage } from './components/home/HomePage';
 import { StartPage } from './components/onboarding/StartPage';
@@ -972,14 +974,14 @@ export default function App() {
   // ---------- «وضع المصمم» ----------
   // A draft is a slide or a page (Eyad, 14 Oct). The editor works on either as on any page: a slide
   // draft is one page with one empty slide, and the slide being edited is what is exported; a page
-  // draft is one page of three empty slides with a navbar, exported whole.
+  // draft is one page with a navbar and up to three slides (it starts with three empty ones), exported whole.
   const blankDraftPages = (kind: DesignKind = 'slide'): Page[] => [{
     id: 'page-home',
     name: kind === 'page' ? 'الرئيسية' : 'الشريحة',
     slug: '/',
     navbar: { brandName: kind === 'page' ? 'اسم الصفحة' : '', items: [], ctaText: '', ctaHref: '', bgColor: '#ffffff', textColor: '#1d1d1f', isSticky: true },
     slides: kind === 'page'
-      ? Array.from({ length: PAGE_SLIDES }, (_, i) => ({ id: `slide-${i + 1}`, name: `شريحة ${i + 1}`, height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' as const }))
+      ? Array.from({ length: PAGE_MAX_SLIDES }, (_, i) => ({ id: `slide-${i + 1}`, name: `شريحة ${i + 1}`, height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' as const }))
       : [{ id: 'slide-1', name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' }],
     ratingsSuggested: true,
   }];
@@ -1428,6 +1430,35 @@ export default function App() {
     } else {
       setStartKind('page');
       setIsStartActive(true);
+    }
+  };
+
+  // «أضف لصفحتي مجاناً» on a gallery design: the signed-in owner's page opens, and the design (its
+  // slides, or the slides of a page, without the navbar) is added at the end of the page's first page,
+  // fitted to the page's style unless the visitor asked for it as it is. A page that is still one empty
+  // slide gives that slide up to it. The editor's own autosave and undo take it from there.
+  const addGalleryDesign = async (g: GallerySlide, fit: boolean): Promise<{ ok: boolean; message: string }> => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) return { ok: false, message: 'سجّل دخولك لتضيف التصميم لصفحتك.' };
+    try {
+      await handleChooseProject('page', activeUserUid);
+      setIsStartActive(false);
+      // Wait for the loaded page to reach the refs the editor keeps of it.
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+      const design = g.kind === 'page' && g.page?.slides?.length ? { slides: g.page.slides, elements: g.elements } : { slides: [g.slide], elements: g.elements };
+      const result = insertDesign(pagesRef.current, elementsRef.current, design, { fit });
+      if (!result) return { ok: false, message: 'ما قدرت أضيف التصميم. جرّب مرة ثانية.' };
+      setPages(result.pages);
+      pushToHistoryRef.current(result.elements);
+      setActivePageId(result.pages[0].id);
+      setActiveSlideId(result.firstSlideId);
+      setSelectedElementId(null);
+      const word = result.added === 1 ? 'شريحة' : `${result.added} شرائح`;
+      setBuildNotice({ busy: false, ok: true, message: `أُضيفت ${word} من «${g.name}» لصفحتك${fit ? ' بألوان وخطوط ستايلها' : ''}. إذا ما عجبتك اكبس تراجع (${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}+Z).` });
+      return { ok: true, message: 'أُضيفت لصفحتك.' };
+    } catch (err) {
+      console.warn('Could not add the gallery design to the page:', err);
+      return { ok: false, message: 'تعذّرت الإضافة. جرّب مرة ثانية.' };
     }
   };
 
@@ -3686,6 +3717,7 @@ export default function App() {
           setIsStartActive(false);
         }}
         onDesigner={joinDesigners}
+        onAddDesign={addGalleryDesign}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
           pendingBuildRef.current = kind;
@@ -4156,12 +4188,12 @@ export default function App() {
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />
       {designerMode && isExportOpen && currentUser && (() => {
-        // A page draft is exported whole (its navbar and its three slides); a slide draft, the open slide.
+        // A page draft is exported whole (its navbar and its slides, up to three); a slide draft, the open slide.
         const kind: DesignKind = drafts.find((d) => d.slot === activeSlot)?.kind || 'slide';
         const slides = kind === 'page' ? pages.flatMap((p) => p.slides) : [currentSlide];
         const ids = new Set(slides.map((sl) => sl.id));
         const mine = elements.filter((e) => ids.has(e.slideId));
-        const problem = kind !== 'page' ? '' : pages.length !== 1 ? 'تصميم الصفحة هو صفحة واحدة بثلاث شرائح. احذف الصفحات الزائدة من قائمة الصفحات.' : slides.length !== PAGE_SLIDES ? `الصفحة ثلاث شرائح بالضبط، وعندك ${slides.length}.` : '';
+        const problem = kind !== 'page' ? '' : pages.length !== 1 ? 'تصميم الصفحة هو صفحة واحدة (حتى ثلاث شرائح). احذف الصفحات الزائدة من قائمة الصفحات.' : slides.length < 1 || slides.length > PAGE_MAX_SLIDES ? `الصفحة حتى ${PAGE_MAX_SLIDES} شرائح، وعندك ${slides.length}.` : '';
         return (
           <ExportSlideModal
             designerUid={currentUser.uid}

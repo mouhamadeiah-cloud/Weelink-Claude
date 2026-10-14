@@ -13,7 +13,7 @@ interface ExportSlideModalProps {
   designerUid: string;
   designerName: string;
   draftSlot: string;
-  // A slide, or a page (three slides with a navbar).
+  // A slide, or a page (up to three slides with a navbar).
   kind: DesignKind;
   // The slide being exported (for a page: its first) and, for a page, the page itself.
   slide: any;
@@ -22,7 +22,7 @@ interface ExportSlideModalProps {
   // Its elements, in the editor's format (for the contact check) and as they are stored (serialized).
   elements: CanvasElement[];
   storedElements: any[];
-  // Why this cannot be exported yet (a page must have exactly three slides), if so.
+  // Why this cannot be exported yet (a page has up to three slides), if so.
   problem?: string;
   onClose: () => void;
 }

@@ -18,18 +18,20 @@ export const SLIDE_CATEGORIES: { id: string; label: string }[] = [
   { id: 'other', label: 'أخرى' },
 ];
 
-// What a designer can design (Eyad, 14 Oct): one slide, or a page: three slides with a navbar.
+// What a designer can design (Eyad, 14 Oct): one slide, or a page: up to three slides with a navbar.
 export type DesignKind = 'slide' | 'page';
-export const PAGE_SLIDES = 3;
+export const PAGE_MAX_SLIDES = 3;
+// «ثلاث شرائح»، «شريحتان»، «شريحة واحدة».
+export const slidesWord = (n: number) => (n === 1 ? 'شريحة واحدة' : n === 2 ? 'شريحتين' : `${n} شرائح`);
 export const DESIGN_KIND_LABEL: Record<DesignKind, string> = { slide: 'شريحة', page: 'صفحة' };
 
-// The kinds of page in the gallery. Their ids start with «p-» so they never meet a slide category's id.
+// The kinds of page in the gallery (Eyad, 14 Oct): an intro page, a restaurant, a car showroom, a shop.
+// Their ids start with «p-» so they never meet a slide category's id.
 export const PAGE_CATEGORIES: { id: string; label: string }[] = [
   { id: 'p-business', label: 'صفحة تعريفية' },
-  { id: 'p-shop', label: 'متجر' },
   { id: 'p-restaurant', label: 'مطعم' },
   { id: 'p-cars', label: 'معرض سيارات' },
-  { id: 'p-other', label: 'أخرى' },
+  { id: 'p-shop', label: 'متجر' },
 ];
 
 export const categoriesFor = (kind: DesignKind) => (kind === 'page' ? PAGE_CATEGORIES : SLIDE_CATEGORIES);

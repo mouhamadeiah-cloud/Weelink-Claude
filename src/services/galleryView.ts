@@ -1,5 +1,5 @@
-// The designers' gallery, visitor side (Eyad, 14 Oct): the approved slides and pages, a visitor's own votes, and
-// voting. The counters are written by api/gallery.ts only; this reads them and asks it to vote.
+// The designers' gallery, visitor side (Eyad, 14 Oct): the approved slides and pages, a visitor's own votes,
+// voting, and counting the uses. The counters are written by api/gallery.ts only; this reads them and asks it to vote.
 import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from './firebase';
@@ -9,7 +9,7 @@ import type { DesignKind } from '../data/slideCategories';
 
 export interface GallerySlide {
   id: string;
-  // A slide, or a page: three slides with a navbar (`page`).
+  // A slide, or a page: up to three slides with a navbar (`page`).
   kind: DesignKind;
   page: { navbar?: NavbarConfig; slides?: Slide[] } | null;
   name: string;
@@ -18,6 +18,8 @@ export interface GallerySlide {
   designerName: string;
   likes: number;
   dislikes: number;
+  // How many accounts added it to their page.
+  uses: number;
   // When it was approved (or exported, for slides approved before the date was kept), in ms.
   at: number;
   slide: any;
@@ -45,6 +47,7 @@ export const listApprovedSlides = async (): Promise<GallerySlide[]> => {
       designerName: String(x.designerName || ''),
       likes: Number(x.likes) || 0,
       dislikes: Number(x.dislikes) || 0,
+      uses: Number(x.uses) || 0,
       at: Number(x.approvedAt) || x.createdAt?.toMillis?.() || 0,
       slide: x.slide || {},
       elements: deserializeElements(Array.isArray(x.elements) ? x.elements : []),
@@ -83,6 +86,22 @@ export const voteOnSlide = async (user: User, slideId: string, value: 1 | -1 | 0
     throw new VoteError(e === 'unverified' || e === 'own' || e === 'too_fast' || e === 'unauthorized' ? e : 'network');
   }
   return data as { likes: number; dislikes: number; mine: number };
+};
+
+// A customer added the design to their page: counted once per account and design (best effort; the
+// design is on their page whether or not the count went through).
+export const recordUse = async (user: User, slideId: string): Promise<number | null> => {
+  try {
+    const res = await fetch('/api/gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify({ action: 'use', slideId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return res.ok && typeof data.uses === 'number' ? data.uses : null;
+  } catch {
+    return null;
+  }
 };
 
 export const voteErrorText = (e: unknown) => {

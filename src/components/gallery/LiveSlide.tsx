@@ -1,7 +1,7 @@
 // A design drawn by the real renderer (the one published pages use), not a picture of it: background
 // videos play, text moves, effects and animations run, exactly as on a customer's page (Eyad, 14 Oct:
 // that is the heart of a design). It is drawn on the 1280-wide canvas it was made on and scaled to the
-// box it sits in. A slide is shown alone; a page (three slides with a navbar) is shown whole. A page
+// box it sits in. A slide is shown alone; a page (up to three slides with a navbar) is shown whole. A page
 // of cards must not play dozens of videos at once, so a design plays only while its card is on (or
 // near) the screen. Nothing in it can be clicked: a link or a phone number in a gallery design does
 // nothing.

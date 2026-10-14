@@ -9,6 +9,7 @@ import { ArrowLeft, CarFront, Check, FileText, Loader2, Palette, ShoppingBag, Sp
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
 import { DesignerGallery } from '../gallery/DesignerGallery';
+import type { GallerySlide } from '../../services/galleryView';
 import { guestKindOf, readGuestAnswers, setGuestKind } from '../../services/guestAnswers';
 import { CAR_PHOTOS, carPhoto } from '../../data/carShowroomTemplate';
 import type { ProjectType } from '../shop/shopTypes';
@@ -68,13 +69,15 @@ interface StartPageProps {
   onSignUp: (kind: ProjectType) => void;
   // «انضم لمصممينا»: a visitor signs up as a designer; a signed-in owner becomes one.
   onDesigner: () => void;
+  // «أضف لصفحتي مجاناً» on a gallery design: it goes into the signed-in owner's own page.
+  onAddDesign?: (slide: GallerySlide, fit: boolean) => Promise<{ ok: boolean; message: string }>;
   loadingType?: ProjectType | null;
   // The kinds this account already has a page of: picking one opens it, not the questions again.
   owned?: ProjectType[];
   onOpen?: (kind: ProjectType) => void;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, onDesigner, loadingType, owned = [], onOpen }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, onDesigner, onAddDesign, loadingType, owned = [], onOpen }) => {
   const signedIn = !!user && !user.isAnonymous;
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
   // After the kind come its packages, then the questions (Eyad, 12 Oct). Editing the answers from
@@ -228,7 +231,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </section>
 
           {/* The designers' approved slides, under the cards */}
-          <DesignerGallery user={user} />
+          <DesignerGallery user={user} onAddToMyPage={onAddDesign} />
         </main>
       ) : stage === 'plans' ? (
         <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} title={chosen.title} onPicked={startQuestions} />

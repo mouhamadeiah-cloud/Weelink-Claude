@@ -1,12 +1,17 @@
-// Vercel serverless function: votes on the designers' gallery slides (Eyad, 14 Oct).
+// Vercel serverless function: votes on, and uses of, the designers' gallery slides (Eyad, 14 Oct).
 //
 //   POST /api/gallery  { action: 'vote', slideId, value: 1 | -1 | 0 }  with  Authorization: Bearer <ID token>
 //        → one vote per account and slide: 1 = like, -1 = dislike, 0 = take the vote back; changing
 //          it moves the counters. A designer cannot vote on their own slide, and the email of the
 //          account must be confirmed.                         → { likes, dislikes, mine } | { error }
 //
-//   gallerySlides/{id}.likes / .dislikes   the counters, written here only (the rules deny the browser)
+//   POST /api/gallery  { action: 'use', slideId }  with  Authorization: Bearer <ID token>
+//        → a customer added the slide (or page) to their own page: counted once per account and slide,
+//          for «استُخدمت N مرة».                                 → { uses } | { error }
+//
+//   gallerySlides/{id}.likes / .dislikes / .uses   the counters, written here only (the rules deny the browser)
 //   galleryVotes/{uid} = { votes: { [slideId]: 1 | -1 }, last }   the voter reads their own
+//   galleryUses/{uid} = { slides: { [slideId]: true } }            server only
 // The counters are never taken from the browser: a designer cannot raise their own numbers.
 // Needs FIREBASE_SERVICE_ACCOUNT (the same one the other functions use).
 
@@ -50,7 +55,7 @@ export default {
     } catch {
       return json({ error: 'bad_request' }, 400);
     }
-    if (body.action !== 'vote') return json({ error: 'unknown_action' }, 400);
+    if (body.action !== 'vote' && body.action !== 'use') return json({ error: 'unknown_action' }, 400);
 
     const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     const user = token ? await admin.auth.verifyIdToken(token).catch(() => null) : null;
@@ -58,11 +63,34 @@ export default {
     if (!user.email_verified) return json({ error: 'unverified' }, 403);
 
     const slideId = body.slideId;
-    const value = Number(body.value);
-    if (!validId(slideId) || ![1, -1, 0].includes(value)) return json({ error: 'bad_request' }, 400);
-
+    if (!validId(slideId)) return json({ error: 'bad_request' }, 400);
     const { db } = admin;
     const slideRef = db.collection('gallerySlides').doc(slideId);
+
+    if (body.action === 'use') {
+      const usesRef = db.collection('galleryUses').doc(user.uid);
+      try {
+        const uses = await db.runTransaction(async (t) => {
+          const [slideSnap, usedSnap] = await Promise.all([t.get(slideRef), t.get(usesRef)]);
+          const slide = slideSnap.data();
+          if (!slide || slide.status !== 'approved') return null;
+          const count = Number(slide.uses) || 0;
+          // A designer copying their own design is not a use by a customer.
+          if (slide.designerUid === user.uid) return count;
+          if ((usedSnap.data() as { slides?: Record<string, boolean> } | undefined)?.slides?.[slideId]) return count;
+          t.update(slideRef, { uses: count + 1 });
+          t.set(usesRef, { slides: { [slideId]: true } }, { merge: true });
+          return count + 1;
+        });
+        return uses === null ? json({ error: 'not_found' }, 404) : json({ uses });
+      } catch (e) {
+        console.error('use failed:', e);
+        return json({ error: 'failed' }, 500);
+      }
+    }
+
+    const value = Number(body.value);
+    if (![1, -1, 0].includes(value)) return json({ error: 'bad_request' }, 400);
     const votesRef = db.collection('galleryVotes').doc(user.uid);
     try {
       const result = await db.runTransaction(async (t) => {

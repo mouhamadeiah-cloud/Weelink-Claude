@@ -12,7 +12,7 @@ import type { DesignKind } from '../data/slideCategories';
 export interface DraftMeta {
   slot: string;
   name: string;
-  // A slide, or a page of three slides with a navbar. Drafts made before pages are slides.
+  // A slide, or a page of up to three slides with a navbar. Drafts made before pages are slides.
   kind: DesignKind;
   updatedAt: number;
 }

@@ -5,6 +5,7 @@
 // and they arrive with the later phases, written by the server.
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { averageRating, isApproved, type DesignerStats } from '../data/designerBadge';
 
 export interface DesignerProfile {
   name: string;
@@ -49,3 +50,23 @@ export const updateDesignerProfile = (uid: string, fields: Partial<Pick<Designer
     ...(fields.name !== undefined ? { name: fields.name.trim().slice(0, DESIGNER_NAME_MAX) } : {}),
     ...(fields.bio !== undefined ? { bio: fields.bio.trim().slice(0, DESIGNER_BIO_MAX) } : {}),
   });
+
+// What the server keeps about a designer (api/design-orders.ts): finished orders and ratings. `verified` is the
+// «معتمد من Weelink» badge, as the server last worked it out.
+export interface DesignerPublic extends DesignerStats {
+  verified: boolean;
+  average: number;
+}
+
+export const toPublicStats = (d: any): DesignerPublic => {
+  const st: DesignerStats = { completed: Number(d?.completed) || 0, ratingCount: Number(d?.ratingCount) || 0, ratingSum: Number(d?.ratingSum) || 0 };
+  return { ...st, verified: d?.verified === true && isApproved(st), average: averageRating(st) };
+};
+
+export const readDesignerStats = async (uid: string): Promise<DesignerPublic> => {
+  try {
+    return toPublicStats((await getDoc(doc(db, 'designers', uid))).data());
+  } catch {
+    return toPublicStats(null);
+  }
+};

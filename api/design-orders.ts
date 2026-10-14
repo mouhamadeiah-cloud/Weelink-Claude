@@ -13,12 +13,16 @@
 //     { action: 'deliver', id }                                → { status: 'delivered' } (designer)
 //     { action: 'confirm', id }                                → { status: 'confirmed' } (customer)
 //     { action: 'dispute', id, reason }                        → { status: 'disputed' } (customer)
+//     { action: 'rate', id, stars, text? }                     → { ok: true }           (customer, once, after confirming)
 //
 // Status: awaiting_payment → paid (the admin, after the office got the money) → delivered (designer) →
 // confirmed (customer) → paid_out (the admin pays the designer their part). Also cancelled, disputed
 // (the admin decides: pay the designer or refund) and refunded.
 //   designOrders/{id}            the order; the customer and the designer read it, only the server writes it
 //   designOrders/{id}/messages   the messages; the same two read them
+// A confirmed order counts as a successful one for the designer (designers/{uid}.completed); the customer's
+// rating (1–5, only on a confirmed order, once) adds to ratingCount/ratingSum, and `verified` («معتمد من
+// Weelink») is recomputed from them each time, so it is withdrawn when the average falls (designerBadge.json).
 // The customer's name and email are never in the order: the designer sees «زبون ABCD».
 // Needs FIREBASE_SERVICE_ACCOUNT (the same one the other functions use).
 
@@ -27,6 +31,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import pricing from '../src/data/designerPricing.json' with { type: 'json' };
+import badge from '../src/data/designerBadge.json' with { type: 'json' };
 
 const MAX_OPEN_UNPAID = 5;
 const MIN_GAP_MS = 700;
@@ -70,6 +75,9 @@ const contactIn = (raw: string): string[] => {
   if ((t.match(PHONE)?.[0].replace(/\D/g, '') || '').length >= 7) kinds.push('phone');
   return kinds;
 };
+
+const isVerified = (st: { completed: number; ratingCount: number; ratingSum: number }) =>
+  st.completed >= badge.minCompleted && st.ratingCount >= badge.minRatings && st.ratingSum / Math.max(1, st.ratingCount) >= badge.minAverage;
 
 const FREE_PLAN = 'page-free';
 const prices = pricing.prices as Record<string, number>;
@@ -186,7 +194,15 @@ export default {
 
       if (action === 'confirm') {
         if (!isCustomer || order.status !== 'delivered') return json({ error: 'bad_state' }, 409);
-        await step('confirmed', 'customer', { confirmedAt: now });
+        await db.runTransaction(async (tx) => {
+          const dref = db.collection('designers').doc(order.designerUid);
+          const fresh = (await tx.get(ref)).data() as Record<string, any> | undefined;
+          if (!fresh || fresh.status !== 'delivered') throw new Error('bad_state');
+          const d = ((await tx.get(dref)).data() || {}) as Record<string, any>;
+          const st = { completed: (Number(d.completed) || 0) + 1, ratingCount: Number(d.ratingCount) || 0, ratingSum: Number(d.ratingSum) || 0 };
+          tx.update(ref, { status: 'confirmed', updatedAt: now, confirmedAt: now, history: FieldValue.arrayUnion({ at: now, status: 'confirmed', by: 'customer' }) });
+          tx.set(dref, { ...st, verified: isVerified(st) }, { merge: true });
+        });
         await system('أكّد الزبون استلام التصميم. سيحوّل المكتب حصة المصمم.');
         return json({ status: 'confirmed' });
       }
@@ -199,8 +215,29 @@ export default {
         return json({ status: 'disputed' });
       }
 
+      if (action === 'rate') {
+        const stars = Number(body.stars);
+        const comment = text(body.text, 500);
+        if (!isCustomer || !['confirmed', 'paid_out'].includes(order.status)) return json({ error: 'bad_state' }, 409);
+        if (!Number.isInteger(stars) || stars < 1 || stars > 5) return json({ error: 'bad_request' }, 400);
+        const kinds = contactIn(comment);
+        if (kinds.length) return json({ error: 'contact', kinds }, 400);
+        await db.runTransaction(async (tx) => {
+          const dref = db.collection('designers').doc(order.designerUid);
+          const fresh = (await tx.get(ref)).data() as Record<string, any> | undefined;
+          if (!fresh || fresh.rating) throw new Error('rated');
+          const d = ((await tx.get(dref)).data() || {}) as Record<string, any>;
+          const st = { completed: Number(d.completed) || 0, ratingCount: (Number(d.ratingCount) || 0) + 1, ratingSum: (Number(d.ratingSum) || 0) + stars };
+          tx.update(ref, { rating: { stars, text: comment, at: now }, updatedAt: now });
+          tx.set(dref, { ...st, verified: isVerified(st) }, { merge: true });
+        });
+        return json({ ok: true });
+      }
+
       return json({ error: 'unknown_action' }, 400);
     } catch (e) {
+      if (e instanceof Error && e.message === 'rated') return json({ error: 'rated' }, 409);
+      if (e instanceof Error && e.message === 'bad_state') return json({ error: 'bad_state' }, 409);
       console.error('design order failed:', e);
       return json({ error: 'failed' }, 500);
     }

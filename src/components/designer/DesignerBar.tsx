@@ -2,7 +2,7 @@
 // the note on Wee AI, which needs tokens that cannot be bought yet (Eyad, 14 Oct). Hand design is
 // always open.
 import React from 'react';
-import { ClipboardList, Coins, FileText, Plus, Presentation, Sparkles, Trash2 } from 'lucide-react';
+import { BarChart3, ClipboardList, Coins, FileText, Plus, Presentation, Sparkles, Trash2 } from 'lucide-react';
 import { DESIGN_KIND_LABEL, type DesignKind } from '../../data/slideCategories';
 import { MAX_DRAFTS, type DraftMeta } from '../../services/designerDrafts';
 
@@ -15,9 +15,11 @@ interface DesignerBarProps {
   onDelete: (slot: string) => void;
   // The orders customers made to this designer («طلبات التصميم»).
   onOrders?: () => void;
+  // The designer's earnings, rating and slides («لوحة المصمم»).
+  onDashboard?: () => void;
 }
 
-export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, busy, onOpen, onNew, onDelete, onOrders }) => {
+export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, busy, onOpen, onNew, onDelete, onOrders, onDashboard }) => {
   const full = drafts.length >= MAX_DRAFTS;
   return (
     <div dir="rtl" className="w-full bg-brand/5 border-b border-brand/15 px-4 lg:px-6 py-2 flex flex-wrap items-center gap-x-4 gap-y-2 z-30">
@@ -46,6 +48,11 @@ export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, bu
       </div>
 
       <div className="flex items-center gap-2 shrink-0 text-xs text-muted">
+        {onDashboard && (
+          <button type="button" onClick={onDashboard} className="h-8 px-3 rounded-ctl border border-line bg-surface text-ink text-xs font-bold inline-flex items-center gap-1 hover:border-brand/40 cursor-pointer">
+            <BarChart3 size={13} /> لوحتي
+          </button>
+        )}
         {onOrders && (
           <button type="button" onClick={onOrders} className="h-8 px-3 rounded-ctl border border-line bg-surface text-ink text-xs font-bold inline-flex items-center gap-1 hover:border-brand/40 cursor-pointer">
             <ClipboardList size={13} /> طلبات التصميم

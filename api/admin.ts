@@ -795,7 +795,7 @@ export default {
       const emails = await emailsOf([o.customerUid, o.designerUid]);
       const msgs = await ref.collection('messages').orderBy('at').limit(500).get();
       return json({
-        order: { ...o, customerEmail: emails.get(o.customerUid) || '', designerEmail: emails.get(o.designerUid) || '', history: snap.data()!.history || [] },
+        order: { ...o, customerEmail: emails.get(o.customerUid) || '', designerEmail: emails.get(o.designerUid) || '', history: snap.data()!.history || [], rating: snap.data()!.rating || null },
         messages: msgs.docs.map((m) => ({ id: m.id, role: String(m.data().role || ''), text: String(m.data().text || ''), at: Number(m.data().at) || 0 })),
       });
     }

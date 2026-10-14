@@ -13,6 +13,8 @@ const PublicRestaurantSite = lazy(() => import('./components/restaurant/PublicRe
 const KitchenPage = lazy(() => import('./components/restaurant/KitchenScreen').then((m) => ({default: m.KitchenPage})));
 // A published page: <name>.testweelink.de, /?s=<name>, or a customer's own domain.
 const PublicSite = lazy(() => import('./components/publish/PublicSite').then((m) => ({default: m.PublicSite})));
+// The platform admin site (Eyad's team): admin.<domain>, or ?admin on any address (the server decides who gets in).
+const AdminSite = lazy(() => import('./components/admin/AdminSite').then((m) => ({default: m.AdminSite})));
 const OrderStatusPage = lazy(() => import('./components/restaurant/OrderStatusPage').then((m) => ({default: m.OrderStatusPage})));
 const DevicePage = lazy(() => import('./components/restaurant/DeviceScreen').then((m) => ({default: m.DevicePage})));
 
@@ -21,7 +23,8 @@ const siteUid = params.get('r');
 const kitchenUid = params.get('kitchen');
 const deviceUid = params.get('device');
 const orderId = params.get('order');
-const publishedSite = siteFromLocation();
+const isAdminSite = window.location.hostname.toLowerCase().startsWith('admin.') || params.has('admin');
+const publishedSite = isAdminSite ? null : siteFromLocation();
 
 // Customers' pages (published pages, a restaurant's site and its order page) keep their own fonts:
 // the page fonts load, and text with no font of its own (windows included) stays in the page font.
@@ -47,7 +50,9 @@ const HostGate = ({host}: {host: string}) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {publishedSite && 'host' in publishedSite && !siteUid ? (
+    {isAdminSite ? (
+      <Suspense fallback={null}><AdminSite /></Suspense>
+    ) : publishedSite && 'host' in publishedSite && !siteUid ? (
       <HostGate host={publishedSite.host} />
     ) : publishedSite && !siteUid ? (
       <Suspense fallback={null}><PublicSite where={publishedSite} /></Suspense>

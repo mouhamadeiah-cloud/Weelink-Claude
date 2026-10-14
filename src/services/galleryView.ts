@@ -17,6 +17,8 @@ export interface GallerySlide {
   category: string;
   designerUid: string;
   designerName: string;
+  // A page made by Weelink itself («Weelink AI»): it cannot be hired and has no designer profile.
+  official: boolean;
   // The designer's ratings and badge; empty until the designer has finished orders.
   designer: DesignerPublic;
   likes: number;
@@ -53,6 +55,7 @@ export const listApprovedSlides = async (): Promise<GallerySlide[]> => {
       category: String(x.category || 'other'),
       designerUid: String(x.designerUid || ''),
       designerName: String(x.designerName || ''),
+      official: x.official === true,
       likes: Number(x.likes) || 0,
       dislikes: Number(x.dislikes) || 0,
       uses: Number(x.uses) || 0,

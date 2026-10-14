@@ -3,7 +3,7 @@
 // slide, drawn the way the gallery will draw it (videos and motion play). Only an approved slide ever appears in the gallery.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Loader2, ShieldCheck, X } from 'lucide-react';
-import { AdminError, GallerySlideRow, SlideStatus, adminSlideReview, adminSlides } from '../../services/adminApi';
+import { AdminError, GallerySlideRow, SeedResult, SeedStatus, SlideStatus, adminSeed, adminSeedStatus, adminSlideReview, adminSlides } from '../../services/adminApi';
 import { categoryLabel, slidesWord } from '../../data/slideCategories';
 import { LivePage, LiveSlide } from '../gallery/LiveSlide';
 import { deserializeElements } from '../../utils/elementStorage';
@@ -81,6 +81,52 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
   );
 };
 
+// The «Weelink AI» pages: published here, their photos found on Unsplash by the searches written in the pages.
+const SeedBox: React.FC<{ onSessionEnd: () => void; onDone: () => void }> = ({ onSessionEnd, onDone }) => {
+  const [status, setStatus] = useState<SeedStatus | null>(null);
+  const [result, setResult] = useState<SeedResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const refresh = useCallback(() => adminSeedStatus().then(setStatus).catch((e) => { if ((e as AdminError)?.code === 'session') onSessionEnd(); }), [onSessionEnd]);
+  useEffect(() => { refresh(); }, [refresh]);
+  if (!status || status.total === 0) return null;
+
+  const run = async (overwrite: boolean) => {
+    if (overwrite && !window.confirm('إعادة نشر كل النماذج؟ تُستبدل تصاميمها وتبقى إعجاباتها.')) return;
+    setBusy(true);
+    setError('');
+    try {
+      setResult(await adminSeed({ overwrite }));
+      await refresh();
+      onDone();
+    } catch (e) {
+      const code = (e as AdminError)?.code;
+      if (code === 'session') return onSessionEnd();
+      setError(code === 'no-unsplash-key' ? 'مفتاح Unsplash غير مضبوط في Vercel (UNSPLASH_ACCESS_KEY).' : 'تعذّر النشر. جرّب مرة ثانية.');
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-card border border-line bg-surface p-4">
+      <p className="text-small font-medium">نماذج Weelink AI في المعرض: {status.published.toLocaleString('ar-SY')} من {status.total.toLocaleString('ar-SY')}</p>
+      <p className="text-small text-muted leading-relaxed">كل نموذج يُنشر باسم «Weelink AI» مقبولاً مباشرة، وصوره تُجلب من Unsplash بكلمات البحث المكتوبة فيه. {status.searchesLeft > 0 ? `بقي ${status.searchesLeft.toLocaleString('ar-SY')} بحث. مفتاح Unsplash التجريبي يسمح بنحو 50 بحثاً في الساعة، فإن توقف النشر اضغط الزر بعد ساعة.` : 'كل الصور وُجدت.'}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" disabled={busy || !status.unsplash} onClick={() => run(false)} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-4 py-2 text-small font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} نشر النماذج</button>
+        {status.published > 0 && <button type="button" disabled={busy || !status.unsplash} onClick={() => run(true)} className="rounded-ctl border border-line px-4 py-2 text-small text-muted hover:bg-bg disabled:opacity-50">إعادة نشر الكل</button>}
+        {!status.unsplash && <span className="text-small text-danger">مفتاح Unsplash غير مضبوط.</span>}
+      </div>
+      {result && (
+        <p className="text-small text-muted leading-relaxed">
+          نُشر {result.published.length.toLocaleString('ar-SY')}، ينتظر {result.waiting.length.toLocaleString('ar-SY')}، أُجري {result.spent.toLocaleString('ar-SY')} بحثاً.
+          {result.limited ? ' وصلنا حد Unsplash: أعد المحاولة بعد ساعة.' : ''}{result.failed.length ? ` تعذّر: ${result.failed.join(' · ')}` : ''}
+        </p>
+      )}
+      {error && <p role="alert" className="text-small text-danger">{error}</p>}
+    </div>
+  );
+};
+
 export const SlidesReviewView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) => {
   const [status, setStatus] = useState<SlideStatus>('pending');
   const [rows, setRows] = useState<GallerySlideRow[] | null>(null);
@@ -109,6 +155,7 @@ export const SlidesReviewView: React.FC<{ onSessionEnd: () => void }> = ({ onSes
     <section className="flex flex-col gap-4">
       <h1 className="flex items-center gap-2 text-title font-semibold"><ShieldCheck className="h-6 w-6 text-brand" /> مراجعة الشرائح</h1>
       <p className="text-small text-muted leading-relaxed">الشرائح التي صدّرها المصممون. لا تظهر في المعرض إلا بعد قبولها.</p>
+      <SeedBox onSessionEnd={onSessionEnd} onDone={() => load(status)} />
       <div className="flex flex-wrap gap-2">
         {TABS.map(([id, label]) => (
           <button key={id} onClick={() => setStatus(id)} className={`rounded-full border px-4 py-1.5 text-small ${status === id ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-muted hover:bg-bg'}`}>

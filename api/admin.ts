@@ -65,6 +65,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { mailOrder } from '../server/orderMail.js';
 import { recountDesigner } from '../server/designerStats.js';
+import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
 import designTimers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
@@ -231,7 +232,7 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
 const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
 // The designers' gallery is the content reviewers' work (the owner too).
-const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review'];
+const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
@@ -872,6 +873,15 @@ export default {
       await mailOrder(auth, String(o.customerUid), 'refunded', snap.id);
       await audit(session.u, `design-order-refund:${snap.id}`);
       return json({ status: 'refunded' });
+    }
+
+    // The «Weelink AI» pages (server/gallerySeed.ts): publish them in the gallery, finding their photos on Unsplash.
+    if (action === 'gallery-seed-status') return json(await gallerySeedStatus(db));
+    if (action === 'gallery-seed') {
+      const result = await gallerySeed(db, { budget: Math.min(45, Math.max(1, Number(body.budget) || 40)), overwrite: body.overwrite === true, only: body.only ? String(body.only).slice(0, 40) : undefined });
+      if ('error' in result) return json({ error: result.error }, 400);
+      await audit(session.u, `gallery-seed:${result.published.length}`);
+      return json(result);
     }
 
     // ----- the designers' gallery -----

@@ -52,7 +52,7 @@ export const LiveDesign: React.FC<LiveDesignProps> = ({ slides, elements, navbar
   }, []);
 
   const fixed = useMemo(() => slides.map((s, i) => ({ ...s, id: s.id || `slide-${i + 1}`, height: Number(s.height) || 560 })), [slides]);
-  const page = useMemo<Page>(() => ({ id: 'gallery', name: '', slug: '/', navbar: navbar || NO_NAVBAR, slides: fixed }), [navbar, fixed]);
+  const page = useMemo<Page>(() => ({ id: 'gallery', name: 'الرئيسية', slug: '/', navbar: navbar || NO_NAVBAR, slides: fixed }), [navbar, fixed]);
   const height = navFlow(navbar) + fixed.reduce((sum, s) => sum + s.height, 0);
   const scale = width / DESIGN_WIDTH;
   const full = Math.max(8, Math.round(height * scale));

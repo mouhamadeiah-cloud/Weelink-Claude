@@ -63,6 +63,7 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import designTimers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 const DEFAULT_PASSWORD = '123456';
@@ -768,7 +769,9 @@ export default {
       designerName: String(d.designerName || ''), slideName: String(d.slideName || ''), planId: String(d.planId || ''),
       price: Number(d.price) || 0, designerShare: Number(d.designerShare) || 0, platformShare: Number(d.platformShare) || 0,
       status: String(d.status || ''), brief: String(d.brief || ''), disputeReason: String(d.disputeReason || ''),
-      createdAt: Number(d.createdAt) || 0, updatedAt: Number(d.updatedAt) || 0, payment: d.payment || null, payout: d.payout || null, refund: d.refund || null,
+      createdAt: Number(d.createdAt) || 0, updatedAt: Number(d.updatedAt) || 0, deliveredAt: Number(d.deliveredAt) || 0,
+      late: String(d.status) === 'disputed' && Date.now() - (Number(d.disputedAt) || Number(d.updatedAt) || Date.now()) > designTimers.disputeLateDays * 86400000,
+      payment: d.payment || null, payout: d.payout || null, refund: d.refund || null,
     });
     const emailsOf = async (uids: string[]) => {
       const list = [...new Set(uids.filter(Boolean))].slice(0, 100);

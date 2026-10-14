@@ -31,10 +31,12 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import pricing from '../src/data/designerPricing.json' with { type: 'json' };
+import timers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import badge from '../src/data/designerBadge.json' with { type: 'json' };
 
 const MAX_OPEN_UNPAID = 5;
 const MIN_GAP_MS = 700;
+const DAY = 24 * 60 * 60 * 1000;
 const TALKING = ['paid', 'delivered', 'confirmed', 'disputed'];
 
 const json = (body: unknown, status = 200) =>
@@ -86,10 +88,66 @@ const splitPrice = (price: number) => {
   return { designer: price - platform, platform };
 };
 
+// Confirming a delivered order: the order becomes `confirmed` and the designer's finished-orders count (and
+// the badge) is worked out, in one transaction. Used by the customer's «استلمت التصميم» and by the daily sweep.
+const confirmOrderTx = async (db: any, ref: any, designerUid: string, now: number, by: string) => {
+  await db.runTransaction(async (tx: any) => {
+    const dref = db.collection('designers').doc(designerUid);
+    const fresh = (await tx.get(ref)).data() as Record<string, any> | undefined;
+    if (!fresh || fresh.status !== 'delivered') throw new Error('bad_state');
+    const d = ((await tx.get(dref)).data() || {}) as Record<string, any>;
+    const st = { completed: (Number(d.completed) || 0) + 1, ratingCount: Number(d.ratingCount) || 0, ratingSum: Number(d.ratingSum) || 0 };
+    tx.update(ref, { status: 'confirmed', updatedAt: now, confirmedAt: now, history: FieldValue.arrayUnion({ at: now, status: 'confirmed', by }) });
+    tx.set(dref, { ...st, verified: isVerified(st) }, { merge: true });
+  });
+};
+
+// An unpaid order is cancelled after `unpaidCancelDays`; a delivered one the customer never answered is
+// confirmed by itself after `autoConfirmDays`, so a designer is not left unpaid by silence (a customer who
+// has a problem opens a complaint, which stops the clock).
+const sweepOrders = async (db: any, now: number) => {
+  const out = { cancelled: 0, confirmed: 0, failed: 0 };
+  const note = (ref: any, text: string) => ref.collection('messages').add({ role: 'system', text, at: now });
+  const unpaid = await db.collection('designOrders').where('status', '==', 'awaiting_payment').get();
+  for (const d of unpaid.docs) {
+    const o = d.data() as Record<string, any>;
+    if (now - (Number(o.createdAt) || now) < timers.unpaidCancelDays * DAY) continue;
+    try {
+      await d.ref.update({ status: 'cancelled', updatedAt: now, cancelledAt: now, history: FieldValue.arrayUnion({ at: now, status: 'cancelled', by: 'system' }) });
+      await note(d.ref, 'أُلغي الطلب تلقائياً لأنه لم يُدفع خلال المدة المحددة.');
+      out.cancelled++;
+    } catch (e) {
+      console.error('sweep cancel failed:', e);
+      out.failed++;
+    }
+  }
+  const delivered = await db.collection('designOrders').where('status', '==', 'delivered').get();
+  for (const d of delivered.docs) {
+    const o = d.data() as Record<string, any>;
+    if (now - (Number(o.deliveredAt) || now) < timers.autoConfirmDays * DAY) continue;
+    try {
+      await confirmOrderTx(db, d.ref, String(o.designerUid), now, 'system');
+      await note(d.ref, `مرّت ${timers.autoConfirmDays} أيام على التسليم دون ردّ، فاعتُبر الطلب مستلَماً. سيحوّل المكتب حصة المصمم.`);
+      out.confirmed++;
+    } catch (e) {
+      console.error('sweep confirm failed:', e);
+      out.failed++;
+    }
+  }
+  return out;
+};
+
 export default {
   async fetch(request: Request): Promise<Response> {
-    if (request.method !== 'POST') return json({ error: 'method' }, 405);
     const admin = firebaseAdmin();
+    if (request.method === 'GET') {
+      // Vercel's daily cron: the orders that were left waiting (see designOrderTimers.json).
+      const secret = process.env.CRON_SECRET;
+      if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'unauthorized' }, 401);
+      if (!admin) return json({ error: 'not_configured' }, 503);
+      return json(await sweepOrders(admin.db, Date.now()));
+    }
+    if (request.method !== 'POST') return json({ error: 'method' }, 405);
     if (!admin) return json({ error: 'not_configured' }, 503);
 
     let body: Record<string, unknown>;
@@ -194,15 +252,7 @@ export default {
 
       if (action === 'confirm') {
         if (!isCustomer || order.status !== 'delivered') return json({ error: 'bad_state' }, 409);
-        await db.runTransaction(async (tx) => {
-          const dref = db.collection('designers').doc(order.designerUid);
-          const fresh = (await tx.get(ref)).data() as Record<string, any> | undefined;
-          if (!fresh || fresh.status !== 'delivered') throw new Error('bad_state');
-          const d = ((await tx.get(dref)).data() || {}) as Record<string, any>;
-          const st = { completed: (Number(d.completed) || 0) + 1, ratingCount: Number(d.ratingCount) || 0, ratingSum: Number(d.ratingSum) || 0 };
-          tx.update(ref, { status: 'confirmed', updatedAt: now, confirmedAt: now, history: FieldValue.arrayUnion({ at: now, status: 'confirmed', by: 'customer' }) });
-          tx.set(dref, { ...st, verified: isVerified(st) }, { merge: true });
-        });
+        await confirmOrderTx(db, ref, order.designerUid, now, 'customer');
         await system('أكّد الزبون استلام التصميم. سيحوّل المكتب حصة المصمم.');
         return json({ status: 'confirmed' });
       }

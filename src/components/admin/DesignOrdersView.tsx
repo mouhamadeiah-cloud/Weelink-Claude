@@ -63,7 +63,7 @@ const Detail: React.FC<{ id: string; onClose: () => void; onChanged: () => void;
         </div>
         {!o ? (error ? <p className="text-small text-danger">{error}</p> : <Loader2 className="mx-auto mt-10 h-6 w-6 animate-spin text-muted" />) : (
           <div className="flex flex-col gap-4">
-            <div className={`text-small font-medium ${tone(o.status)}`}>{STATUS_LABEL[o.status]}</div>
+            <div className={`text-small font-medium ${tone(o.status)}`}>{STATUS_LABEL[o.status]}{o.late && <span className="mr-1.5 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-bold text-danger">شكوى متأخرة</span>}</div>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-small">
               <dt className="text-muted">الزبون</dt><dd dir="ltr" className="text-right">{o.customerEmail || o.customerUid} <span className="text-faint">({o.customerAlias})</span></dd>
               <dt className="text-muted">المصمم</dt><dd>{o.designerName} <span dir="ltr" className="text-faint">{o.designerEmail}</span></dd>
@@ -169,7 +169,7 @@ export const DesignOrdersView: React.FC<{ onSessionEnd: () => void }> = ({ onSes
                   <td className="px-3 py-2">{o.designerName}</td>
                   <td className="px-3 py-2 tabular-nums">{money(o.price)}</td>
                   <td className="px-3 py-2 tabular-nums">{money(o.designerShare)}</td>
-                  <td className={`px-3 py-2 ${tone(o.status)}`}>{STATUS_LABEL[o.status]}</td>
+                  <td className={`px-3 py-2 ${tone(o.status)}`}>{STATUS_LABEL[o.status]}{o.late && <span className="mr-1.5 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-bold text-danger">متأخرة</span>}</td>
                   <td className="px-3 py-2">{when(o.updatedAt)}</td>
                 </tr>
               ))}

@@ -180,7 +180,7 @@ export type DesignOrderStatus = 'awaiting_payment' | 'paid' | 'delivered' | 'con
 export interface AdminDesignOrder {
   id: string; customerUid: string; customerAlias: string; customerEmail: string; designerUid: string; designerName: string; designerEmail: string;
   slideName: string; planId: string; price: number; designerShare: number; platformShare: number; status: DesignOrderStatus; brief: string;
-  disputeReason: string; createdAt: number; updatedAt: number;
+  disputeReason: string; createdAt: number; updatedAt: number; late?: boolean;
   payment: { at: number; by: string; method: string; receiptNo: string; note: string; amount: number } | null;
   payout: { at: number; by: string; amount: number; note: string } | null;
   refund: { at: number; by: string; amount: number; reason: string } | null;

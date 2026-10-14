@@ -18,6 +18,10 @@
     {
       "path": "/api/admin",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/design-orders",
+      "schedule": "0 8 * * *"
     }
   ]
 }

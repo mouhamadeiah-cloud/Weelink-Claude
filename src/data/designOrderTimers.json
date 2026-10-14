@@ -1,0 +1,5 @@
+{
+  "unpaidCancelDays": 3,
+  "autoConfirmDays": 7,
+  "disputeLateDays": 2
+}

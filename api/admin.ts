@@ -18,6 +18,7 @@
 //   GET  /api/admin  with  Authorization: Bearer <CRON_SECRET>  (Vercel's daily cron)
 //        → reminds subscribers 14, 7 and 1 day before their subscription ends, and freezes the ones
 //          whose subscription ended
+//   POST /api/admin  { action: 'admins-list' | 'admin-add' | 'admin-update' | 'admin-reset-password', ... }  (owner only)
 //   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
 //   POST /api/admin  { action: 'tokens-adjust', uid, delta, reason } → { balance }
 //   POST /api/admin  { action: 'set-prices', in, out }           → { prices }
@@ -207,8 +208,24 @@ const readToken = (token: string): { u: string; v: number } | null => {
 
 const cleanUsername = (raw: unknown) => String(raw || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
 
-type Admin = { username: string; name: string; role: string; status: string; mustChange: boolean; v: number };
-const publicAdmin = (a: Admin) => ({ username: a.username, name: a.name, role: a.role, mustChange: a.mustChange });
+type Admin = { username: string; name: string; role: string; specialty?: string; status: string; mustChange: boolean; v: number };
+
+// The team (Eyad, 14 Oct): the main admin («owner») can do everything; the others have one specialty
+// and only its actions. Checked here on every call; the site only hides what is not allowed.
+const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
+const FINANCE_ONLY = ['payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
+const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password'];
+const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note'];
+const KNOWN_ACTIONS = [...OPEN_TO_ALL, ...FINANCE_ONLY, ...OWNER_ONLY];
+const can = (a: Pick<Admin, 'role' | 'specialty'>, action: string) =>
+  a.role === 'owner' || OPEN_TO_ALL.includes(action) || (FINANCE_ONLY.includes(action) && a.specialty === 'finance');
+const publicAdmin = (a: Admin) => ({ username: a.username, name: a.name, role: a.role, specialty: a.specialty || '', mustChange: a.mustChange, can: KNOWN_ACTIONS.filter((x) => can(a, x)) });
+
+// A temporary password the owner reads out once; the admin must change it at the first sign-in.
+const tempPassword = () => {
+  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from(randomBytes(12), (b) => chars[b % chars.length]).join('');
+};
 
 
 type Fb = NonNullable<ReturnType<typeof firebaseAdmin>>;
@@ -382,7 +399,7 @@ export default {
       }
       await lockRef.delete().catch(() => undefined);
       await audit(username, 'login');
-      const admin: Admin = { username, name: data.name, role: data.role, status: data.status, mustChange: !!data.mustChange, v: data.v };
+      const admin: Admin = { username, name: data.name, role: data.role, specialty: data.specialty, status: data.status, mustChange: !!data.mustChange, v: data.v };
       return json({ token: signToken(username, data.v), admin: publicAdmin(admin) });
     }
 
@@ -392,7 +409,7 @@ export default {
     const adminSnap = await db.collection('platform_admins').doc(session.u).get();
     const row = adminSnap.data() as (Omit<Admin, 'username'> & { pass: string }) | undefined;
     if (!row || row.status !== 'active' || row.v !== session.v) return json({ error: 'session' }, 401);
-    const admin: Admin = { username: session.u, name: row.name, role: row.role, status: row.status, mustChange: !!row.mustChange, v: row.v };
+    const admin: Admin = { username: session.u, name: row.name, role: row.role, specialty: row.specialty, status: row.status, mustChange: !!row.mustChange, v: row.v };
 
     if (action === 'me') return json({ admin: publicAdmin(admin) });
 
@@ -410,6 +427,66 @@ export default {
 
     // A default or temporary password only opens the step above.
     if (admin.mustChange) return json({ error: 'must-change' }, 403);
+    if (!can(admin, action)) return json({ error: KNOWN_ACTIONS.includes(action) ? 'forbidden' : 'unknown-action' }, KNOWN_ACTIONS.includes(action) ? 403 : 400);
+
+    // ----- the team (owner only) -----
+    if (action === 'admins-list') {
+      const snap = await db.collection('platform_admins').get();
+      const rows = snap.docs.map((d) => {
+        const x = d.data() as { name?: string; role?: string; specialty?: string; status?: string; mustChange?: boolean };
+        return { username: d.id, name: x.name || d.id, role: x.role || 'admin', specialty: x.specialty || '', status: x.status || 'active', mustChange: !!x.mustChange };
+      }).sort((a, b) => (a.role === 'owner' ? -1 : 0) - (b.role === 'owner' ? -1 : 0) || a.username.localeCompare(b.username));
+      return json({ rows, specialties: SPECIALTIES });
+    }
+
+    if (action === 'admin-add') {
+      const username = cleanUsername(body.username);
+      const name = String(body.name || '').trim().slice(0, 60);
+      const specialty = String(body.specialty || '');
+      if (username.length < 3) return json({ error: 'bad-username' }, 400);
+      if (!name) return json({ error: 'bad-name' }, 400);
+      if (!SPECIALTIES[specialty]) return json({ error: 'bad-specialty' }, 400);
+      const ref = db.collection('platform_admins').doc(username);
+      if ((await ref.get()).exists) return json({ error: 'exists' }, 409);
+      const temp = tempPassword();
+      await ref.set({ name, role: 'admin', specialty, status: 'active', pass: hashPassword(temp), v: 1, mustChange: true, createdAt: FieldValue.serverTimestamp(), createdBy: session.u });
+      await audit(session.u, `admin-add:${username}`);
+      return json({ username, tempPassword: temp });
+    }
+
+    if (action === 'admin-update' || action === 'admin-reset-password') {
+      const username = cleanUsername(body.username);
+      const ref = db.collection('platform_admins').doc(username);
+      const cur = (await ref.get()).data() as (Omit<Admin, 'username'> & { pass: string }) | undefined;
+      if (!cur) return json({ error: 'not-found' }, 404);
+      // The main admin cannot be changed from here (not even by itself): no lock-out.
+      if (cur.role === 'owner') return json({ error: 'owner' }, 400);
+      if (action === 'admin-reset-password') {
+        const temp = tempPassword();
+        await ref.update({ pass: hashPassword(temp), v: cur.v + 1, mustChange: true });
+        await audit(session.u, `admin-reset-password:${username}`);
+        return json({ username, tempPassword: temp });
+      }
+      const patch: Record<string, unknown> = {};
+      if (body.name !== undefined) {
+        const name = String(body.name).trim().slice(0, 60);
+        if (!name) return json({ error: 'bad-name' }, 400);
+        patch.name = name;
+      }
+      if (body.specialty !== undefined) {
+        if (!SPECIALTIES[String(body.specialty)]) return json({ error: 'bad-specialty' }, 400);
+        patch.specialty = String(body.specialty);
+      }
+      if (body.status !== undefined) {
+        if (!['active', 'frozen'].includes(String(body.status))) return json({ error: 'bad-status' }, 400);
+        patch.status = String(body.status);
+      }
+      if (!Object.keys(patch).length) return json({ error: 'bad-request' }, 400);
+      // A frozen admin's open sessions stop at their next call (the status is read every time).
+      await ref.update(patch);
+      await audit(session.u, `admin-update:${username}:${Object.keys(patch).join(',')}`);
+      return json({ ok: true });
+    }
 
     if (action === 'subscribers') {
       const q = String(body.q || '').trim().toLowerCase().slice(0, 100);
@@ -531,9 +608,9 @@ export default {
         },
         status: { status: st?.status || 'active', reason: st?.reason || '', at: st?.at || 0, by: st?.by || '' },
         subscription: st?.subscription?.endsAt ? { plan: String(st.subscription.plan || ''), planName: String(st.subscription.planName || ''), period: st.subscription.period === 'yearly' ? 'yearly' : 'monthly', endsAt: Number(st.subscription.endsAt) || 0, freezeAt: Number(st.subscription.freezeAt) || 0 } : null,
-        payments: paymentsSnap.docs.map((d) => payFromDoc(d.id, d.data())).sort((a, b) => b.paidAt - a.paidAt),
+        payments: can(admin, 'payments') ? paymentsSnap.docs.map((d) => payFromDoc(d.id, d.data())).sort((a, b) => b.paidAt - a.paidAt) : [],
         tokens: { balance: typeof st?.tokens?.balance === 'number' ? st.tokens.balance : null, used: st?.tokens?.used || 0, free: FREE_TOKENS },
-        calls: callsSnap.docs.map((d) => callFromDoc(d.data())).sort((a, b) => b.at - a.at).slice(0, 20),
+        calls: can(admin, 'tokens-overview') ? callsSnap.docs.map((d) => callFromDoc(d.data())).sort((a, b) => b.at - a.at).slice(0, 20) : [],
         sites: sitesSnap.docs.map((d) => ({ name: String(d.data().name), project: String(d.data().project), publishedAt: String(d.data().publishedAt || '') })),
         events: eventsSnap.docs.map((d) => {
           const e = d.data() as { at?: { toMillis?: () => number } | number; admin?: string; type?: string; text?: string; status?: string };

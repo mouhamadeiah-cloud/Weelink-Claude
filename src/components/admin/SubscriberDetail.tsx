@@ -34,7 +34,7 @@ const money = (n: number) => formatPounds(n);
 
 const inputCls = 'w-full rounded-ctl border border-line bg-surface px-3 py-2 text-small text-ink outline-none focus:border-brand';
 
-export const SubscriberDetail: React.FC<{ uid: string; onClose: () => void; onChanged: () => void; onSessionEnd: () => void }> = ({ uid, onClose, onChanged, onSessionEnd }) => {
+export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: () => void; onChanged: () => void; onSessionEnd: () => void }> = ({ uid, can, onClose, onChanged, onSessionEnd }) => {
   const [data, setData] = useState<Detail | null>(null);
   const [error, setError] = useState('');
   const [pending, setPending] = useState<SubscriberStatus | null>(null);
@@ -237,8 +237,8 @@ export const SubscriberDetail: React.FC<{ uid: string; onClose: () => void; onCh
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  <button onClick={openPay} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">تسجيل دفعة</button>
-                  <button onClick={() => { setPostpone({ date: '', reason: '' }); setError(''); setInfo(''); }} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">تأجيل التجميد</button>
+                  {can.includes('add-payment') && <button onClick={openPay} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">تسجيل دفعة</button>}
+                  {can.includes('postpone-freeze') && <button onClick={() => { setPostpone({ date: '', reason: '' }); setError(''); setInfo(''); }} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">تأجيل التجميد</button>}
                 </div>
               )}
 
@@ -258,7 +258,7 @@ export const SubscriberDetail: React.FC<{ uid: string; onClose: () => void; onCh
               )}
             </div>
 
-            <div>
+            <div hidden={!can.includes('tokens-overview')}>
               <h3 className="mb-2 font-medium">توكنز Wee AI</h3>
               <p className="mb-2">
                 الرصيد: <b className="tabular-nums">{data.tokens.balance === null ? `لم يستعمل بعد (يبدأ بـ ${data.tokens.free.toLocaleString('ar-SY')})` : data.tokens.balance.toLocaleString('ar-SY')}</b>
@@ -273,7 +273,7 @@ export const SubscriberDetail: React.FC<{ uid: string; onClose: () => void; onCh
                     <button onClick={() => setTok(null)} className="rounded-ctl px-3 py-1.5 hover:bg-surface">رجوع</button>
                   </div>
                 </div>
-              ) : <button onClick={() => { setTok({ delta: '', reason: '' }); setError(''); setInfo(''); }} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">شحن أو خصم</button>}
+              ) : can.includes('tokens-adjust') && <button onClick={() => { setTok({ delta: '', reason: '' }); setError(''); setInfo(''); }} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">شحن أو خصم</button>}
               {data.calls.length > 0 && (
                 <ul className="mt-3 flex flex-col gap-1">
                   {data.calls.map((c, i) => (
@@ -286,7 +286,7 @@ export const SubscriberDetail: React.FC<{ uid: string; onClose: () => void; onCh
               )}
             </div>
 
-            <div>
+            <div hidden={!can.includes('set-status')}>
               <h3 className="mb-2 font-medium">الإجراءات</h3>
               {!pending ? (
                 <div className="flex flex-wrap gap-2">

@@ -7,6 +7,7 @@ import { SubscriberDetail } from './SubscriberDetail';
 import { PaymentsView } from './PaymentsView';
 import { BillingSettings } from './BillingSettings';
 import { TokensView } from './TokensView';
+import { TeamView } from './TeamView';
 import {
   AdminError, AdminInfo, SubscriberQuery, SubscribersResult,
   adminChangePassword, adminLogin, adminMe, adminSubscribers, getAdminToken, setAdminToken,
@@ -59,24 +60,24 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   );
 };
 
-type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'password';
-interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View }[] }
+type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'password';
+interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View; needs?: string }[] }
 // Every group starts folded; the admin opens what he needs. Items without a view are the next phases.
 const MENU: MenuGroup[] = [
   { id: 'subs', title: 'المشتركون', icon: Users, items: [{ id: 'list', label: 'قائمة المشتركين', view: 'subscribers' }] },
-  { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'payments', label: 'كل الدفعات والفواتير', view: 'payments' }, { id: 'billing', label: 'إعدادات الفوترة', view: 'billing' }] },
-  { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'usage', label: 'الاستهلاك والأسعار', view: 'tokens' }] },
-  { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات' }, { id: 'flow', label: 'سير العمل' }, { id: 'chat', label: 'لوحة التواصل' }] },
+  { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'payments', label: 'كل الدفعات والفواتير', view: 'payments', needs: 'payments' }, { id: 'billing', label: 'إعدادات الفوترة', view: 'billing', needs: 'get-company' }] },
+  { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'usage', label: 'الاستهلاك والأسعار', view: 'tokens', needs: 'tokens-overview' }] },
+  { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات', view: 'team', needs: 'admins-list' }, { id: 'flow', label: 'سير العمل' }, { id: 'chat', label: 'لوحة التواصل' }] },
   { id: 'books', title: 'الحسابات والداشبورد', icon: BarChart3, items: [{ id: 'dash', label: 'الداشبورد' }] },
   { id: 'me', title: 'حسابي', icon: KeyRound, items: [{ id: 'pw', label: 'تغيير كلمة السر', view: 'password' }] },
 ];
 
-const SideMenu: React.FC<{ view: View | null; onView: (v: View) => void }> = ({ view, onView }) => {
+const SideMenu: React.FC<{ view: View | null; onView: (v: View) => void; can: string[] }> = ({ view, onView, can }) => {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const toggle = (id: string) => setOpen((o) => { const n = new Set(o); n.has(id) ? n.delete(id) : n.add(id); return n; });
   return (
     <nav className="flex flex-col gap-1">
-      {MENU.map((g) => {
+      {MENU.map((g) => ({ ...g, items: g.items.filter((it) => !it.needs || can.includes(it.needs)) })).filter((g) => g.items.length).map((g) => {
         const Icon = g.icon;
         const isOpen = open.has(g.id);
         return (
@@ -175,7 +176,7 @@ const Select: React.FC<{ value: string; onChange: (v: string) => void; options: 
   </select>
 );
 
-const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) => {
+const Subscribers: React.FC<{ onSessionEnd: () => void; can: string[] }> = ({ onSessionEnd, can }) => {
   const [query, setQuery] = useState<SubscriberQuery>({ q: '', state: 'all', published: 'all', verified: 'all', status: 'all', sub: 'all' });
   const [result, setResult] = useState<SubscribersResult | null>(null);
   const [error, setError] = useState('');
@@ -265,7 +266,7 @@ const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) =
           </div>
         </>
       )}
-      {openUid && <SubscriberDetail uid={openUid} onClose={() => setOpenUid('')} onChanged={() => load(query)} onSessionEnd={onSessionEnd} />}
+      {openUid && <SubscriberDetail can={can} uid={openUid} onClose={() => setOpenUid('')} onChanged={() => load(query)} onSessionEnd={onSessionEnd} />}
     </section>
   );
 };
@@ -291,11 +292,12 @@ export const AdminSite: React.FC = () => {
   if (!admin) return <Shell><LoginForm onDone={setAdmin} /></Shell>;
   if (admin.mustChange) return <Shell admin={admin} onLogout={logout}><ChangePassword forced onDone={setAdmin} /></Shell>;
   return (
-    <Shell admin={admin} onLogout={logout} menu={<SideMenu view={view} onView={setView} />}>
-      {view === 'subscribers' ? <Subscribers onSessionEnd={logout} />
+    <Shell admin={admin} onLogout={logout} menu={<SideMenu view={view} onView={setView} can={admin.can} />}>
+      {view === 'subscribers' ? <Subscribers onSessionEnd={logout} can={admin.can} />
         : view === 'payments' ? <PaymentsView onSessionEnd={logout} />
         : view === 'billing' ? <BillingSettings onSessionEnd={logout} />
         : view === 'tokens' ? <TokensView onSessionEnd={logout} />
+        : view === 'team' ? <TeamView onSessionEnd={logout} me={admin.username} />
         : view === 'password' ? <ChangePassword forced={false} onDone={(a) => { setAdmin(a); setView(null); }} />
         : <p className="mt-16 text-center text-muted">أهلاً {admin.name}. افتح قسماً من القائمة على اليسار.</p>}
     </Shell>

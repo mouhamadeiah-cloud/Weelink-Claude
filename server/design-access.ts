@@ -14,7 +14,9 @@
 //   POST /api/design-access  { action, id, ... }  with  Authorization: Bearer <ID token>  (a confirmed email)
 //     { action: 'issue', id }              → { code, expiresAt }          (customer; replaces any earlier code)
 //     { action: 'revoke', id }             → { ok: true }                 (customer)
-//     { action: 'status', id }             → { active, expiresAt, saves } (customer or designer)
+//     { action: 'status', id }             → { active, expiresAt, saves, backupAt } (customer or designer)
+//     { action: 'active' }                 → { rows: [{ id, designerName, expiresAt }] }  (customer: codes in use on their page)
+//     { action: 'restore', id }            → { ok: true }                 (customer: the page as it was before the designer)
 //     { action: 'open', id, code }         → { pages, elements }          (designer)
 //     { action: 'save', id, code, pages, elements } → { ok: true }        (designer)
 //   designAccess/{orderId} is read and written by this function only.
@@ -23,7 +25,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { mailOrder } from './orderMail.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
@@ -81,10 +83,26 @@ export default {
     const user = token ? await admin.auth.verifyIdToken(token).catch(() => null) : null;
     if (!user) return json({ error: 'unauthorized' }, 401);
     if (!user.email_verified) return json({ error: 'unverified' }, 403);
-    const id = body.id;
-    if (!validId(id)) return json({ error: 'bad_request' }, 400);
     const { db } = admin;
     const now = Date.now();
+
+    // The customer's editor asks which codes are in use on their page: while one is, the editor is locked
+    // (a save from the customer would overwrite the designer's work, and the other way round).
+    if (action === 'active') {
+      const mine = await db.collection('designAccess').where('customerUid', '==', user.uid).where('revoked', '==', false).get();
+      const rows: { id: string; designerName: string; expiresAt: number }[] = [];
+      for (const d of mine.docs) {
+        const a = d.data() as Record<string, any>;
+        if (Number(a.expiresAt) <= now) continue;
+        const o = (await db.collection('designOrders').doc(d.id).get()).data() as Record<string, any> | undefined;
+        if (!o || !ALLOWED.includes(o.status)) continue;
+        rows.push({ id: d.id, designerName: String(o.designerName || 'المصمم'), expiresAt: Number(a.expiresAt) });
+      }
+      return json({ rows });
+    }
+
+    const id = body.id;
+    if (!validId(id)) return json({ error: 'bad_request' }, 400);
 
     try {
       const orderRef = db.collection('designOrders').doc(id);
@@ -118,8 +136,28 @@ export default {
         return json({ ok: true });
       }
 
+      const latestBackup = async () => {
+        const all = await accessRef.collection('backups').get();
+        return all.docs.map((d: any) => d.data() as Record<string, any>).filter((b: any) => !b.beforeRestore).sort((a: any, b: any) => Number(b.at) - Number(a.at))[0];
+      };
+
       if (action === 'status') {
-        return json({ active: live, expiresAt: live ? Number(access!.expiresAt) : 0, saves: Number(access?.saves) || 0 });
+        const backup = isCustomer ? await latestBackup() : undefined;
+        return json({ active: live, expiresAt: live ? Number(access!.expiresAt) : 0, saves: Number(access?.saves) || 0, backupAt: backup ? Number(backup.at) : 0 });
+      }
+
+      // The customer brings the page back as it was when the designer first opened it (any time; the page
+      // as it is now is kept first, so even this can be undone by the office).
+      if (action === 'restore') {
+        if (!isCustomer) return json({ error: 'forbidden' }, 403);
+        if (live) return json({ error: 'in_use' }, 409);
+        const backup = await latestBackup();
+        if (!backup) return json({ error: 'no_backup' }, 404);
+        const pageRef = db.collection('designs').doc(order.customerUid);
+        const cur = (await pageRef.get()).data() as Record<string, any> | undefined;
+        await accessRef.collection('backups').add({ at: now, beforeRestore: true, pages: cur?.pages || [], elements: Array.isArray(cur?.elements) ? cur!.elements : [] });
+        await pageRef.set({ pages: backup.pages, elements: backup.elements, updatedAt: new Date().toISOString() }, { merge: true });
+        return json({ ok: true });
       }
 
       if (action === 'open' || action === 'save') {
@@ -129,7 +167,7 @@ export default {
         if ((Number(access.wrong) || 0) >= MAX_WRONG) return json({ error: 'locked' }, 429);
         const given = normalise(body.code);
         if (given.length !== 16 || !sameHash(hash(given), String(access.codeHash))) {
-          await accessRef.update({ wrong: (Number(access.wrong) || 0) + 1 });
+          await accessRef.update({ wrong: FieldValue.increment(1) });
           return json({ error: 'wrong_code' }, 403);
         }
         const pageRef = db.collection('designs').doc(order.customerUid);
@@ -156,7 +194,7 @@ export default {
         if (elements.some((e: any) => e?.type === 'html' && !had.has(`${e.id}:${e.htmlCode ?? ''}:${e.content ?? ''}`))) return json({ error: 'html_not_allowed' }, 400);
         // Only the two fields of the page; nothing else of the customer's document is written.
         await pageRef.set({ pages, elements, updatedAt: new Date().toISOString() }, { merge: true });
-        await accessRef.update({ saves: (Number(access.saves) || 0) + 1, lastSaveAt: now });
+        await accessRef.update({ saves: FieldValue.increment(1), lastSaveAt: now });
         return json({ ok: true });
       }
 

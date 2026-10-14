@@ -9,7 +9,7 @@ import {
   CAN_TALK, DesignOrder, OrderMessage, STATUS_LABEL,
   cancelOrder, confirmOrder, deliverOrder, disputeOrder, orderErrorText, rateOrder, sendOrderMessage, subscribeMessages, subscribeMyOrders,
 } from '../../services/designOrders';
-import { accessErrorText, accessStatus, issueAccessCode, revokeAccessCode } from '../../services/designAccess';
+import { accessErrorText, accessStatus, issueAccessCode, restorePage, revokeAccessCode } from '../../services/designAccess';
 import { contactKindsIn, CONTACT_KIND_LABEL } from '../../utils/contactCheck';
 import { formatPounds } from '../../data/plans';
 import timers from '../../data/designOrderTimers.json';
@@ -139,17 +139,19 @@ const dayTime = (ms: number) => new Date(ms).toLocaleString('ar-SY', { weekday: 
 // The three-day code that lets the hired designer into the customer's page. The customer makes it (it is
 // shown once, to be told to the designer) and can withdraw it; the designer types it in to open the page.
 const AccessBox: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'designer'; onEnter?: Props['onEnterClientPage'] }> = ({ user, order, me, onEnter }) => {
-  const [status, setStatus] = useState<{ active: boolean; expiresAt: number } | null>(null);
+  const [status, setStatus] = useState<{ active: boolean; expiresAt: number; backupAt?: number } | null>(null);
+  const [restored, setRestored] = useState(false);
   const [code, setCode] = useState('');
   const [fresh, setFresh] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const open = order.status === 'paid' || order.status === 'delivered';
+  const hasBackup = me === 'customer' && !!status?.backupAt;
   useEffect(() => {
-    if (!open) return;
+    if (!open && me !== 'customer') return;
     accessStatus(user, order.id).then(setStatus).catch(() => setStatus({ active: false, expiresAt: 0 }));
-  }, [user, order.id, open]);
-  if (!open) return null;
+  }, [user, order.id, open, me]);
+  if (!open && !hasBackup) return null;
   const btn = 'h-10 px-4 rounded-ctl text-sm font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5';
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key);
@@ -166,7 +168,7 @@ const AccessBox: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'de
     return (
       <div className="rounded-card border border-line bg-bg p-3 space-y-2 text-sm leading-relaxed">
         <p className="font-bold inline-flex items-center gap-1.5"><KeyRound size={15} /> دخول المصمم إلى صفحتك</p>
-        <p className="text-muted">لو أردت أن يعدّل المصمم صفحتك بنفسه، أعطه رمزاً يعمل 3 أيام. يعدّل تصميم الصفحة فقط ولا يرى بياناتك ولا زبائنك ولا طلباتك. تُحفظ نسخة من صفحتك قبل أول تعديل، وتسحب الرمز متى شئت.</p>
+        {open && <p className="text-muted">لو أردت أن يعدّل المصمم صفحتك بنفسه، أعطه رمزاً يعمل 3 أيام. يعدّل تصميم الصفحة فقط ولا يرى بياناتك ولا زبائنك ولا طلباتك. تُحفظ نسخة من صفحتك قبل أول تعديل، وتسحب الرمز متى شئت.</p>}
         {fresh && (
           <div className="rounded-ctl border border-brand/40 bg-surface p-3">
             <div className="text-xs text-muted">الرمز (يظهر مرة واحدة: أعطه للمصمم داخل المحادثة)</div>
@@ -174,10 +176,18 @@ const AccessBox: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'de
           </div>
         )}
         {status?.active && !fresh && <p className="text-success font-bold">الرمز فعّال حتى {dayTime(status.expiresAt)}.</p>}
-        <div className="flex flex-wrap gap-2">
+        {open && <div className="flex flex-wrap gap-2">
           <button type="button" disabled={!!busy} onClick={() => run('issue', async () => { const r = await issueAccessCode(user, order.id); setFresh(r.code); setStatus({ active: true, expiresAt: r.expiresAt }); })} className={`${btn} bg-brand hover:bg-brand-hover text-white`}>{busy === 'issue' && <Loader2 size={14} className="animate-spin" />} {status?.active ? 'رمز جديد (يلغي القديم)' : 'أنشئ رمز دخول'}</button>
           {status?.active && <button type="button" disabled={!!busy} onClick={() => run('revoke', async () => { await revokeAccessCode(user, order.id); setFresh(''); setStatus({ active: false, expiresAt: 0 }); })} className={`${btn} border border-line bg-surface text-danger`}>سحب الرمز</button>}
-        </div>
+        </div>}
+        {hasBackup && !status?.active && (
+          <div className="border-t border-line pt-2 space-y-1.5">
+            <p className="text-muted">عدّل المصمم صفحتك ولم يعجبك؟ تُحفظ نسخة من صفحتك كما كانت قبل دخوله ({dayTime(status!.backupAt!)}).</p>
+            {restored ? <p className="text-success font-bold">رجعت صفحتك كما كانت. افتح صفحتك من جديد لترى النتيجة.</p> : (
+              <button type="button" disabled={!!busy} onClick={() => { if (window.confirm('ترجيع صفحتك كما كانت قبل دخول المصمم؟ تعديلاته ستُحذف من صفحتك.')) run('restore', async () => { await restorePage(user, order.id); setRestored(true); }); }} className={`${btn} border border-line bg-surface text-danger`}>{busy === 'restore' && <Loader2 size={14} className="animate-spin" />} استرجع صفحتي كما كانت</button>
+            )}
+          </div>
+        )}
         {error && <p role="alert" className="text-xs font-bold text-danger">{error}</p>}
       </div>
     );

@@ -5,7 +5,7 @@
 // The browser's back button goes from the questions back to the kinds.
 import React, { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { ArrowLeft, CarFront, Check, FileText, Loader2, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
+import { ArrowLeft, CarFront, Check, FileText, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
 import { guestKindOf, readGuestAnswers, setGuestKind } from '../../services/guestAnswers';
@@ -65,13 +65,15 @@ interface StartPageProps {
   onBuild: (kind: ProjectType, answers: any) => void;
   // A guest finished the questions: sign up, then open this kind.
   onSignUp: (kind: ProjectType) => void;
+  // «انضم لمصممينا»: a visitor signs up as a designer; a signed-in owner becomes one.
+  onDesigner: () => void;
   loadingType?: ProjectType | null;
   // The kinds this account already has a page of: picking one opens it, not the questions again.
   owned?: ProjectType[];
   onOpen?: (kind: ProjectType) => void;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, loadingType, owned = [], onOpen }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, onDesigner, loadingType, owned = [], onOpen }) => {
   const signedIn = !!user && !user.isAnonymous;
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
   // After the kind come its packages, then the questions (Eyad, 12 Oct). Editing the answers from
@@ -163,7 +165,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </section>
 
           {/* The four kinds, as photo cards */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             {KINDS.map((k, i) => (
               <button
                 key={k.type}
@@ -197,6 +199,31 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                 </span>
               </button>
             ))}
+
+            {/* The fifth card: designers join here (their own sign-up, a free page with a gallery of their slides) */}
+            <button
+              type="button"
+              disabled={!!loadingType}
+              onClick={onDesigner}
+              style={{ animationDelay: `${120 + KINDS.length * 90}ms` }}
+              className="wl-rise group relative rounded-card overflow-hidden text-right text-white bg-brand min-h-[220px] sm:min-h-[340px] sm:col-span-2 lg:col-span-1 flex items-end transition duration-300 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
+            >
+              <Palette size={150} strokeWidth={1.25} aria-hidden="true" className="absolute -left-6 -top-6 text-white/15 transition duration-700 group-hover:scale-110 group-hover:-rotate-6" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              <span className="relative p-5 w-full space-y-2">
+                <span className="flex items-center gap-2 text-heading font-bold"><Palette size={20} className="shrink-0" />انضم لمصممينا</span>
+                <span className="block text-xs opacity-90 leading-relaxed">اعمل صفحتك مجاناً واكسب من التصميم للزبائن.</span>
+                <span className="hidden sm:grid gap-1 pt-1 max-h-0 opacity-0 group-hover:max-h-24 group-hover:opacity-100 transition-all duration-500 overflow-hidden">
+                  {['معرض لشرائحك باسمك', 'زبائن يضيفون شرائحك لصفحاتهم', 'أرباح من تصميم صفحات الزبائن'].map((p) => (
+                    <span key={p} className="flex items-center gap-1.5 text-xs font-bold"><Check size={12} /> {p}</span>
+                  ))}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold pt-1">
+                  انضم
+                  <ArrowLeft size={14} className="transition group-hover:-translate-x-1.5" />
+                </span>
+              </span>
+            </button>
           </section>
         </main>
       ) : stage === 'plans' ? (

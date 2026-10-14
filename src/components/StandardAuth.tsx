@@ -10,6 +10,8 @@ interface StandardAuthProps {
   onLoginWithGoogle: () => Promise<void>;
   // asDesigner: the account was just made through «انضم لمصممينا»; the app opens the designer's page.
   onAuthSuccess: (userUid: string, isNewUser: boolean, asDesigner?: boolean) => void;
+  // Opens on the designers' sign-up (from the start page's «انضم لمصممينا» card).
+  initialMode?: 'login' | 'designer';
 }
 
 const signInErrorText = (e: unknown, register = false) => {
@@ -23,12 +25,13 @@ const signInErrorText = (e: unknown, register = false) => {
 
 export const StandardAuth: React.FC<StandardAuthProps> = ({
   onLoginWithGoogle,
-  onAuthSuccess
+  onAuthSuccess,
+  initialMode = 'login'
 }) => {
   // 'login' represents Image 1 (هل لديك حساب), 'signup' represents Image 2 (إنشاء حساب)
   // 'code': a new account confirms its email with the 6-digit code sent to it.
   // 'designer': «انضم لمصممينا», a signup that also makes the account a designer.
-  const [mode, setMode] = useState<'login' | 'signup' | 'code' | 'designer'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'code' | 'designer'>(initialMode);
   const [designerName, setDesignerName] = useState('');
 
   // Input States

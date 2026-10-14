@@ -64,6 +64,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { mailOrder } from '../server/orderMail.js';
+import { recountDesigner } from '../server/designerStats.js';
 import designTimers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
@@ -228,7 +229,7 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 // The team (Eyad, 14 Oct): the main admin («owner») can do everything; the others have one specialty
 // and only its actions. Checked here on every call; the site only hides what is not allowed.
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
-const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
+const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
 // The designers' gallery is the content reviewers' work (the owner too).
 const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update'];
@@ -804,6 +805,15 @@ export default {
       });
     }
 
+    // The office recounts a designer's finished orders, ratings and badge from their orders.
+    if (action === 'designer-recount') {
+      const uid = String(body.uid || '').slice(0, 128);
+      if (!uid) return json({ error: 'bad-request' }, 400);
+      const stats = await recountDesigner(db, uid);
+      await audit(session.u, `designer-recount:${uid}`);
+      return json({ stats });
+    }
+
     if (action === 'design-order-paid' || action === 'design-order-release' || action === 'design-order-refund') {
       const ref = db.collection('designOrders').doc(String(body.id || '').slice(0, 128));
       const snap = await ref.get();
@@ -829,6 +839,7 @@ export default {
         if (!['confirmed', 'disputed'].includes(o.status)) return json({ error: 'bad-state' }, 409);
         await step('paid_out', { payout: { at: now, by: session.u, amount: Number(o.designerShare) || 0, note: clean(body.note, 300) } });
         await say('حوّل المكتب حصة المصمم. اكتمل الطلب.');
+        await recountDesigner(db, String(o.designerUid));
         await mailOrder(auth, String(o.designerUid), 'paid_out', snap.id);
         await audit(session.u, `design-order-release:${snap.id}`);
         return json({ status: 'paid_out' });
@@ -843,6 +854,7 @@ export default {
       if (!['paid', 'delivered', 'confirmed', 'disputed'].includes(o.status)) return json({ error: 'bad-state' }, 409);
       await step('refunded', { refund: { at: now, by: session.u, amount: Number(o.price) || 0, reason } });
       await say('ردّ المكتب المبلغ للزبون وأُغلق الطلب.');
+      await recountDesigner(db, String(o.designerUid));
       await mailOrder(auth, String(o.designerUid), 'refunded', snap.id);
       await mailOrder(auth, String(o.customerUid), 'refunded', snap.id);
       await audit(session.u, `design-order-refund:${snap.id}`);

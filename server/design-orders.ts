@@ -33,7 +33,7 @@ import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' 
 import pricing from '../src/data/designerPricing.json' with { type: 'json' };
 import { mailOffice, mailOrder } from './orderMail.js';
 import timers from '../src/data/designOrderTimers.json' with { type: 'json' };
-import badge from '../src/data/designerBadge.json' with { type: 'json' };
+import { recountDesigner } from './designerStats.js';
 
 const MAX_OPEN_UNPAID = 5;
 const MIN_GAP_MS = 700;
@@ -80,9 +80,6 @@ const contactIn = (raw: string): string[] => {
   return kinds;
 };
 
-const isVerified = (st: { completed: number; ratingCount: number; ratingSum: number }) =>
-  st.completed >= badge.minCompleted && st.ratingCount >= badge.minRatings && st.ratingSum / Math.max(1, st.ratingCount) >= badge.minAverage;
-
 const FREE_PLAN = 'page-free';
 const prices = pricing.prices as Record<string, number>;
 const splitPrice = (price: number) => {
@@ -90,18 +87,15 @@ const splitPrice = (price: number) => {
   return { designer: price - platform, platform };
 };
 
-// Confirming a delivered order: the order becomes `confirmed` and the designer's finished-orders count (and
-// the badge) is worked out, in one transaction. Used by the customer's «استلمت التصميم» and by the daily sweep.
+// Confirming a delivered order: the order becomes `confirmed`, then the designer's numbers are worked out again
+// (designerStats.ts). Used by the customer's «استلمت التصميم» and by the daily sweep.
 const confirmOrderTx = async (db: any, ref: any, designerUid: string, now: number, by: string) => {
   await db.runTransaction(async (tx: any) => {
-    const dref = db.collection('designers').doc(designerUid);
     const fresh = (await tx.get(ref)).data() as Record<string, any> | undefined;
     if (!fresh || fresh.status !== 'delivered') throw new Error('bad_state');
-    const d = ((await tx.get(dref)).data() || {}) as Record<string, any>;
-    const st = { completed: (Number(d.completed) || 0) + 1, ratingCount: Number(d.ratingCount) || 0, ratingSum: Number(d.ratingSum) || 0 };
     tx.update(ref, { status: 'confirmed', updatedAt: now, confirmedAt: now, history: FieldValue.arrayUnion({ at: now, status: 'confirmed', by }) });
-    tx.set(dref, { ...st, verified: isVerified(st) }, { merge: true });
   });
+  await recountDesigner(db, designerUid);
 };
 
 // An unpaid order is cancelled after `unpaidCancelDays`; a delivered one the customer never answered is
@@ -304,14 +298,11 @@ export default {
         const kinds = contactIn(comment);
         if (kinds.length) return json({ error: 'contact', kinds }, 400);
         await db.runTransaction(async (tx) => {
-          const dref = db.collection('designers').doc(order.designerUid);
           const fresh = (await tx.get(ref)).data() as Record<string, any> | undefined;
           if (!fresh || fresh.rating) throw new Error('rated');
-          const d = ((await tx.get(dref)).data() || {}) as Record<string, any>;
-          const st = { completed: Number(d.completed) || 0, ratingCount: (Number(d.ratingCount) || 0) + 1, ratingSum: (Number(d.ratingSum) || 0) + stars };
           tx.update(ref, { rating: { stars, text: comment, at: now }, updatedAt: now });
-          tx.set(dref, { ...st, verified: isVerified(st) }, { merge: true });
         });
+        await recountDesigner(db, order.designerUid);
         return json({ ok: true });
       }
 

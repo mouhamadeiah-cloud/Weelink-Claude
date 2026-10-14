@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import {
   AdminDesignOrder, AdminError, AdminOrderMessage, PAY_METHODS, PayMethod,
-  adminDesignOrder, adminDesignOrders, adminOrderPaid, adminOrderRefund, adminOrderRelease,
+  adminDesignOrder, adminDesignOrders, adminRecountDesigner, adminOrderPaid, adminOrderRefund, adminOrderRelease,
 } from '../../services/adminApi';
 import { STATUS_LABEL } from '../../services/designOrders';
 
@@ -26,6 +26,7 @@ const Detail: React.FC<{ id: string; onClose: () => void; onChanged: () => void;
   const [method, setMethod] = useState<PayMethod>('office');
   const [receipt, setReceipt] = useState('');
   const [note, setNote] = useState('');
+  const [recount, setRecount] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -79,6 +80,10 @@ const Detail: React.FC<{ id: string; onClose: () => void; onChanged: () => void;
               {o.payout && <><dt className="text-muted">صرف المصمم</dt><dd>{money(o.payout.amount)} · {when(o.payout.at)} · {o.payout.by}{o.payout.note ? ` · ${o.payout.note}` : ''}</dd></>}
               {o.refund && <><dt className="text-muted">إلغاء/استرداد</dt><dd>{o.refund.reason} · {when(o.refund.at)} · {o.refund.by}</dd></>}
             </dl>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-small">
+              <button type="button" disabled={!!busy} onClick={() => run('recount', async () => { const r = await adminRecountDesigner(o.designerUid); setNote(''); setRecount(`مكتملة ${r.stats.completed} · تقييمات ${r.stats.ratingCount} · ${r.stats.verified ? 'معتمد' : 'غير معتمد'}`); })} className="rounded-ctl border border-line px-3 py-1.5 font-medium text-muted hover:text-ink disabled:opacity-50">إعادة حساب إحصاء المصمم</button>
+              {recount && <span className="text-muted">{recount}</span>}
+            </div>
 
             {o.status === 'awaiting_payment' && (
               <div className="flex flex-col gap-2 rounded-card border border-line p-3">

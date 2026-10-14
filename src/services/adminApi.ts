@@ -190,6 +190,7 @@ export interface AdminDesignOrder {
 export interface AdminOrderMessage { id: string; role: string; text: string; at: number }
 export const adminDesignOrders = (status: string) => call<{ rows: AdminDesignOrder[]; counts: Record<string, number> }>({ action: 'design-orders', status });
 export const adminDesignOrder = (id: string) => call<{ order: AdminDesignOrder; messages: AdminOrderMessage[] }>({ action: 'design-order', id });
+export const adminRecountDesigner = (uid: string) => call<{ stats: { completed: number; ratingCount: number; ratingSum: number; verified: boolean } }>({ action: 'designer-recount', uid });
 export const adminOrderPaid = (id: string, method: PayMethod, receiptNo: string, note: string) => call<{ status: string }>({ action: 'design-order-paid', id, method, receiptNo, note });
 export const adminOrderRelease = (id: string, note: string) => call<{ status: string }>({ action: 'design-order-release', id, note });
 export const adminOrderRefund = (id: string, reason: string) => call<{ status: string }>({ action: 'design-order-refund', id, reason });

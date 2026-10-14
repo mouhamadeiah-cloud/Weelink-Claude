@@ -416,6 +416,55 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // The designers' drafts (src/services/designerDrafts.ts): up to ten slides a designer works on in
+    // «وضع المصمم», apart from their own page. Only the designer reads and writes them, and only in
+    // the ten slots d1..d10.
+    match /designerDrafts/{uid}/items/{slot} {
+      function isDesignerAccount() {
+        return exists(/databases/$(database)/documents/designers/$(uid));
+      }
+
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create, update: if isSignedIn() && request.auth.uid == uid && isDesignerAccount()
+        && slot in ['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9', 'd10']
+        && incoming().keys().hasOnly(['name', 'pages', 'elements', 'updatedAt'])
+        && incoming().name is string && incoming().name.size() <= 60
+        && incoming().pages is list && incoming().pages.size() <= 5
+        && incoming().elements is list && incoming().elements.size() <= 400;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // The gallery's slides (src/services/gallery.ts). A designer exports a slide as 'pending', having
+    // agreed to the current version of the page's law; only the platform's admin (api/admin.ts)
+    // approves or rejects it, so nobody changes a slide's status from the browser. The gallery
+    // reads approved slides; a designer reads their own, whatever their status.
+    match /gallerySlides/{slideId} {
+      allow get: if resource.data.status == 'approved' || (isSignedIn() && resource.data.designerUid == request.auth.uid);
+      allow list: if resource.data.status == 'approved' || (isSignedIn() && resource.data.designerUid == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(slideId)
+        && exists(/databases/$(database)/documents/designers/$(request.auth.uid))
+        && incoming().keys().hasOnly(['designerUid', 'designerName', 'name', 'category', 'draftSlot', 'slide', 'elements', 'status', 'lawVersion', 'acceptedAt', 'createdAt'])
+        && incoming().designerUid == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 60
+        && incoming().designerName is string && incoming().designerName.size() <= 60
+        && incoming().category is string && incoming().category.size() <= 30
+        && incoming().draftSlot is string && incoming().draftSlot.size() <= 4
+        && incoming().slide is map
+        && incoming().elements is list && incoming().elements.size() <= 400
+        && incoming().lawVersion is int
+        && incoming().lawVersion == get(/databases/$(database)/documents/platformSettings/pageLaw).data.version
+        && incoming().acceptedAt is string && incoming().acceptedAt.size() <= 40
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isSignedIn() && resource.data.designerUid == request.auth.uid;
+    }
+
+    // Platform settings the browser may read: the page's law (written by the admin site only).
+    match /platformSettings/{docId} {
+      allow get: if docId == 'pageLaw';
+    }
+
     // A frozen or cancelled subscriber (the admin site, api/admin.ts writes it): anyone may check
     // whether a workspace id is in the list, so its published pages show «غير متاحة مؤقتاً».
     match /suspendedAccounts/{accountId} {

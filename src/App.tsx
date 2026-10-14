@@ -19,6 +19,9 @@ import { ProjectSettingsSection } from './components/rightDrawer/sections/Projec
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
 import { becomeDesigner, readDesigner } from './services/designers';
+import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
+import { DesignerBar } from './components/designer/DesignerBar';
+import { ExportSlideModal } from './components/designer/ExportSlideModal';
 import { HomePage } from './components/home/HomePage';
 import { StartPage } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
@@ -272,6 +275,21 @@ export default function App() {
   const [startKind, setStartKind] = useState<ProjectType | null>(null);
   // Which form the sign-in screen opens on: the designers' sign-up comes from the start page's fifth card.
   const [authMode, setAuthMode] = useState<'login' | 'designer'>('login');
+  // The designers' programme: a designer account (designers/{uid}), and «وضع المصمم»: the editor
+  // holds one of the designer's drafts (a single slide) instead of their page; the page's own autosave
+  // is off meanwhile (designerModeRef) and the draft saves to designerDrafts/{uid}/items/{slot}.
+  const [isDesigner, setIsDesigner] = useState(false);
+  const [designerName, setDesignerName] = useState('');
+  const [designerMode, setDesignerMode] = useState(false);
+  const designerModeRef = useRef(false);
+  const draftReadyRef = useRef(false);
+  const [drafts, setDrafts] = useState<DraftMeta[]>([]);
+  const draftsRef = useRef<DraftMeta[]>([]);
+  const [activeSlot, setActiveSlot] = useState('d1');
+  const activeSlotRef = useRef('d1');
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const prevProjectRef = useRef<ProjectType>('page');
   // A page to build as soon as its kind is open in the editor: the questions just finished.
   // The kind whose questions just finished: the editor opens on it with an empty page and Wee AI's panel.
   const afterQuestionsRef = useRef<ProjectType | null>(null);
@@ -335,7 +353,7 @@ export default function App() {
     ]);
   }, []);
   useEffect(() => {
-    if (!projectReadyRef.current || !pages[0]) return;
+    if (!projectReadyRef.current || !pages[0] || designerModeRef.current) return;
     if (project === 'page') {
       if (!hasRatings) addRatingsSlide();
     } else if (!pages[0].ratingsSuggested) {
@@ -357,6 +375,20 @@ export default function App() {
     () => (ownerUid ? { owner: ownerUid, project, pageName: bookingBrand, live: isOwnerView } : null),
     [ownerUid, project, bookingBrand, isOwnerView]
   );
+  // Whether the signed-in account is a designer (designers/{uid}), and the name the gallery shows.
+  useEffect(() => {
+    setIsDesigner(false);
+    if (!currentUser || currentUser.isAnonymous) return;
+    let alive = true;
+    readDesigner(currentUser.uid).then((d) => {
+      if (!alive) return;
+      setIsDesigner(!!d);
+      setDesignerName(d?.name || '');
+    });
+    return () => {
+      alive = false;
+    };
+  }, [currentUser]);
   // Whether the open project is published (the «نشر» button shows «منشورة»).
   useEffect(() => {
     setPublishedName(null);
@@ -809,11 +841,13 @@ export default function App() {
   // 2. Debounced auto-save to LocalStorage whenever pages or elements change
   useEffect(() => {
     // Skip saving during initial boot/loading to prevent overwrite races
-    if (!isInitialLoadComplete.current || isFirebaseLoading) {
+    // (and in the designer's mode, where the editor holds a draft, not the page)
+    if (!isInitialLoadComplete.current || isFirebaseLoading || designerModeRef.current) {
       return;
     }
 
     const delayDebounceFn = setTimeout(() => {
+      if (designerModeRef.current) return;
       try {
         const targetUserId = activeUserUid;
         const { localPrefix } = PROJECT_STORAGE[project];
@@ -832,12 +866,13 @@ export default function App() {
   // 3. Debounced live auto-save to Firebase whenever pages or elements change
   useEffect(() => {
     // Skip saving during initial boot/loading to prevent overwrite races
-    if (!isInitialLoadComplete.current || isFirebaseLoading) {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || designerModeRef.current) {
       return;
     }
 
     const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
+      if (designerModeRef.current) return;
       try {
         setIsSavingCloud(true);
         const { pagesField, elementsField } = PROJECT_STORAGE[project];
@@ -969,6 +1004,8 @@ export default function App() {
   // Saves the open project right away (the debounced saves above would be
   // cancelled when another project's data replaces it).
   const flushProjectSave = (): Promise<boolean> => {
+    // In the designer's mode the cloud button saves the open draft, never over the page.
+    if (designerModeRef.current) return saveActiveDraft();
     if (!projectReadyRef.current) return Promise.resolve(false);
     const targetUserId = activeUserUid;
     const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE[project];
@@ -996,11 +1033,184 @@ export default function App() {
     });
   };
 
+  // ---------- «وضع المصمم» ----------
+  // A draft is one page with one empty slide: the editor works on it as on any page; only the
+  // slide being edited is exported to the gallery.
+  const blankDraftPages = (): Page[] => [{
+    id: 'page-home',
+    name: 'الشريحة',
+    slug: '/',
+    navbar: { brandName: '', items: [], ctaText: '', ctaHref: '', bgColor: '#ffffff', textColor: '#1d1d1f', isSticky: true },
+    slides: [{ id: 'slide-1', name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' }],
+    ratingsSuggested: true,
+  }];
+  const draftName = (slot: string) => `مسودة ${DRAFT_SLOTS.indexOf(slot) + 1}`;
+  const setDraftList = (list: DraftMeta[]) => {
+    draftsRef.current = list;
+    setDrafts(list);
+  };
+
+  // Saves the open draft now; the page itself is never touched.
+  const saveActiveDraft = async (): Promise<boolean> => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || !draftReadyRef.current) return false;
+    const slot = activeSlotRef.current;
+    const name = draftsRef.current.find((d) => d.slot === slot)?.name || draftName(slot);
+    setIsSavingCloud(true);
+    try {
+      await saveDraft(user.uid, slot, { name, pages: sanitizeData(pagesRef.current), elements: serializeElements(elementsRef.current) });
+      return true;
+    } catch (e) {
+      console.warn('Could not save the draft:', e);
+      return false;
+    } finally {
+      setIsSavingCloud(false);
+    }
+  };
+
+  // Puts a draft (or a blank one) in the editor.
+  const openDraft = async (uid: string, slot: string) => {
+    draftReadyRef.current = false;
+    let loaded: Awaited<ReturnType<typeof readDraft>> = null;
+    try {
+      loaded = await readDraft(uid, slot);
+    } catch (e) {
+      console.warn('Could not read the draft:', e);
+    }
+    const draftPages: Page[] = loaded && loaded.pages.length > 0 ? normalizeLegacyNavbarDefaults(loaded.pages) : blankDraftPages();
+    const draftElements = loaded ? deserializeElements(loaded.elements) : [];
+    loadSeqRef.current++;
+    setPages(draftPages);
+    setElements(draftElements);
+    setHistory([draftElements]);
+    setHistoryIndex(0);
+    setActivePageId(draftPages[0].id);
+    setActiveSlideId(draftPages[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    activeSlotRef.current = slot;
+    setActiveSlot(slot);
+    try {
+      localStorage.setItem(`weelink_last_draft_${uid}`, slot);
+    } catch {
+      // storage unavailable: the first draft opens next time
+    }
+    draftReadyRef.current = true;
+  };
+
+  const enterDesignerMode = async () => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || draftBusy || designerModeRef.current) return;
+    setDraftBusy(true);
+    try {
+      await flushProjectSave(); // the designer's own page first
+      prevProjectRef.current = project;
+      let list = await listDrafts(user.uid);
+      if (!list.length) {
+        await saveDraft(user.uid, 'd1', { name: draftName('d1'), pages: sanitizeData(blankDraftPages()), elements: [] });
+        list = [{ slot: 'd1', name: draftName('d1'), updatedAt: Date.now() }];
+      }
+      let last = '';
+      try {
+        last = localStorage.getItem(`weelink_last_draft_${user.uid}`) || '';
+      } catch {
+        last = '';
+      }
+      designerModeRef.current = true;
+      setProject('page');
+      setDraftList(list);
+      await openDraft(user.uid, list.find((d) => d.slot === last)?.slot || list[0].slot);
+      setDesignerMode(true);
+      setIsPreviewActive(false);
+      setIsChatActive(false);
+      setIsPageAdminOpen(false);
+    } catch (e) {
+      console.warn('Could not open the designer mode:', e);
+      designerModeRef.current = false;
+      draftReadyRef.current = false;
+      window.alert('تعذّر فتح وضع المصمم. تأكد من اتصالك وجرّب مرة ثانية.');
+    } finally {
+      setDraftBusy(false);
+    }
+  };
+
+  const exitDesignerMode = async () => {
+    if (draftBusy || !designerModeRef.current) return;
+    setDraftBusy(true);
+    await saveActiveDraft();
+    draftReadyRef.current = false;
+    setIsExportOpen(false);
+    const uid = activeUserUid;
+    const kind = prevProjectRef.current;
+    try {
+      // The page the designer left comes back from the cloud, as it was saved.
+      if (kind === 'shop') await loadShopWorkspace(uid);
+      else if (kind === 'cars') await loadCarsWorkspace(uid);
+      else if (kind === 'restaurant') await loadRestaurantWorkspace(uid);
+      else await loadUserWorkspace(uid);
+    } catch (e) {
+      console.warn('Could not bring the page back:', e);
+    }
+    designerModeRef.current = false;
+    setDesignerMode(false);
+    setDraftBusy(false);
+  };
+
+  const switchDraft = async (slot: string) => {
+    const user = auth.currentUser;
+    if (!user || draftBusy || slot === activeSlotRef.current) return;
+    setDraftBusy(true);
+    await saveActiveDraft();
+    await openDraft(user.uid, slot);
+    setDraftBusy(false);
+  };
+
+  const newDraft = async () => {
+    const user = auth.currentUser;
+    const slot = freeSlot(draftsRef.current);
+    if (!user || draftBusy || !slot) return;
+    setDraftBusy(true);
+    await saveActiveDraft();
+    try {
+      await saveDraft(user.uid, slot, { name: draftName(slot), pages: sanitizeData(blankDraftPages()), elements: [] });
+      setDraftList([...draftsRef.current, { slot, name: draftName(slot), updatedAt: Date.now() }].sort((a, b) => DRAFT_SLOTS.indexOf(a.slot) - DRAFT_SLOTS.indexOf(b.slot)));
+      await openDraft(user.uid, slot);
+    } catch (e) {
+      console.warn('Could not make a new draft:', e);
+      window.alert('تعذّر إنشاء مسودة جديدة. جرّب مرة ثانية.');
+    }
+    setDraftBusy(false);
+  };
+
+  const removeDraft = async (slot: string) => {
+    const user = auth.currentUser;
+    if (!user || draftBusy || draftsRef.current.length <= 1) return;
+    const name = draftsRef.current.find((d) => d.slot === slot)?.name || draftName(slot);
+    if (!window.confirm(`حذف «${name}» نهائياً؟ ما بتقدر ترجعها.`)) return;
+    setDraftBusy(true);
+    try {
+      await deleteDraft(user.uid, slot);
+      const rest = draftsRef.current.filter((d) => d.slot !== slot);
+      setDraftList(rest);
+      if (slot === activeSlotRef.current) await openDraft(user.uid, rest[0].slot);
+    } catch (e) {
+      console.warn('Could not delete the draft:', e);
+      window.alert('تعذّر حذف المسودة. جرّب مرة ثانية.');
+    }
+    setDraftBusy(false);
+  };
+
   const handleChooseProject = async (type: ProjectType, targetUserId: string = activeUserUid) => {
     if (projectLoading) return;
+    // Leaving «وضع المصمم» (the editor holds a draft, not the page): the draft is saved, and the
+    // project asked for is then loaded from the cloud like any other switch.
+    const fromDesignerMode = designerModeRef.current;
+    if (fromDesignerMode) {
+      if (draftBusy) return;
+      await exitDesignerMode();
+    }
     setProjectLoading(type);
     try {
-      if (type !== project || targetUserId !== activeUserUid) {
+      if (fromDesignerMode || type !== project || targetUserId !== activeUserUid) {
         flushProjectSave();
         if (type === 'shop') await loadShopWorkspace(targetUserId);
         else if (type === 'cars') await loadCarsWorkspace(targetUserId);
@@ -1156,8 +1366,9 @@ export default function App() {
       setHistoryIndex(0);
       setIsChatActive(false);
       // A new account answers Wee AI's questions on the start page, then the editor builds its page.
-      if (!pendingBuildRef.current && !asDesigner) {
-        setStartKind(null);
+      // A designer answers the same questions as everyone (for the free page), then lands on an empty slide.
+      if (!pendingBuildRef.current) {
+        setStartKind(asDesigner ? 'page' : null);
         setIsHomeActive(false);
         setIsStartActive(true);
       }
@@ -1205,11 +1416,9 @@ export default function App() {
       });
     }
     if (isNewUser && pendingBuildRef.current) openGuestBuild(userUid);
-    // A designer's page is the free page, opened on its empty slide: no questions, no Wee AI first.
-    if (isNewUser && asDesigner) {
-      setIsHomeActive(false);
-      setIsStartActive(false);
-      handleChooseProject('page', userUid);
+    if (asDesigner) {
+      setIsDesigner(true);
+      if (auth.currentUser) readDesigner(auth.currentUser.uid).then((d) => setDesignerName(d?.name || ''));
     }
     setIsSavingCloud(false);
     isInitialLoadComplete.current = true;
@@ -1254,18 +1463,28 @@ export default function App() {
       return;
     }
     try {
-      if (!(await readDesigner(user.uid))) {
+      const have = await readDesigner(user.uid);
+      if (have) setDesignerName(have.name);
+      else {
         const name = (window.prompt('اسمك كما سيظهر للزبائن في معرض المصممين:') || '').trim();
         if (name.length < 2) return;
-        await becomeDesigner(user.uid, name);
+        setDesignerName((await becomeDesigner(user.uid, name)).name);
       }
     } catch (err) {
       console.warn('Could not make the designer profile:', err);
       window.alert('تعذّر إنشاء حساب المصمم. حاول مرة ثانية بعد قليل.');
       return;
     }
-    setIsStartActive(false);
-    await handleChooseProject('page', activeUserUid);
+    setIsDesigner(true);
+    // Questions first, like any new page of the free kind (name, address, city, work); an owner who
+    // already has a page goes straight to it.
+    if (ownedRef.current.page) {
+      setIsStartActive(false);
+      await handleChooseProject('page', activeUserUid);
+    } else {
+      setStartKind('page');
+      setIsStartActive(true);
+    }
   };
 
   // «عدّل إجاباتي»: back to the questions of the open kind.
@@ -1304,6 +1523,7 @@ export default function App() {
   const handleLogout = async () => {
     if (confirm('هل أنت متأكد من رغبتك في تسجيل الخروج من الحساب السحابي؟')) {
       try {
+        if (designerModeRef.current) await saveActiveDraft();
         await logoutUser();
         // Critical: clear the in-memory design when logging out. Without this,
         // the previous account's pages/elements stay in React state, and if a
@@ -1317,6 +1537,11 @@ export default function App() {
         setActiveSlideId('slide-1');
         setHistory([[]]);
         setHistoryIndex(0);
+        designerModeRef.current = false;
+        draftReadyRef.current = false;
+        setDesignerMode(false);
+        setIsDesigner(false);
+        setIsExportOpen(false);
         setActiveUserUid('mouhamadeiah');
         loadSeqRef.current++;
         projectReadyRef.current = false;
@@ -1362,7 +1587,9 @@ export default function App() {
   // undo takes back. The answer can take a while, so it is applied to the elements as they are then.
   const pushToHistoryRef = useRef(pushToHistory);
   pushToHistoryRef.current = pushToHistory;
+  const DESIGNER_AI_NOTE = 'Wee AI في وضع المصمم يحتاج رصيد توكنز، وشراء التوكنز غير متاح حالياً. التصميم اليدوي مفتوح.';
   const handleWriteTexts = async (answers: WeeAnswers) => {
+    if (designerModeRef.current) return { ok: false, message: DESIGNER_AI_NOTE };
     const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
     const items = pageTextItems(elementsRef.current, page.slides);
     if (!items.length) return { ok: false, message: 'ما في نصوص بهالصفحة ليكتبها Wee AI. أضف عنوان أو فقرة أولاً.' };
@@ -1380,6 +1607,7 @@ export default function App() {
   // and «رجّع صفحتي متل ما كانت» brings it back.
   const builtBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; activePageId: string } | null>(null);
   const handleBuildPage = async (given: WeeAnswers, auto = false) => {
+    if (designerModeRef.current) return { ok: false, message: DESIGNER_AI_NOTE };
     const kind = KIND_OF_PROJECT[project];
     const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
     const siteName = page.navbar.brandName || PROJECT_KIND_LABEL[project];
@@ -3700,7 +3928,14 @@ export default function App() {
           onOpenProjects={handleOpenProjects}
           onPublish={currentUser && !currentUser.isAnonymous ? () => setIsPublishOpen(true) : undefined}
           isPublished={!!publishedName}
+          isDesigner={isDesigner}
+          isDesignerMode={designerMode}
+          onToggleDesignerMode={designerMode ? exitDesignerMode : enterDesignerMode}
+          onExportSlide={() => setIsExportOpen(true)}
         />
+        {designerMode && !isPreviewActive && (
+          <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} />
+        )}
 
         {/* 2. Secondary Edit Bar directly beneath (narrow screens; wide ones dock it beside the panel) */}
         {!isPreviewActive && !isDocked && !isSheet && <EditBar {...editBarProps} />}
@@ -3976,6 +4211,17 @@ export default function App() {
 
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />
+      {designerMode && isExportOpen && currentUser && (
+        <ExportSlideModal
+          designerUid={currentUser.uid}
+          designerName={designerName}
+          draftSlot={activeSlot}
+          slide={sanitizeData(currentSlide)}
+          elements={elements.filter((e) => e.slideId === currentSlide.id)}
+          storedElements={serializeElements(elements.filter((e) => e.slideId === currentSlide.id))}
+          onClose={() => setIsExportOpen(false)}
+        />
+      )}
       <PublishModal
         open={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}

@@ -206,10 +206,10 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               disabled={!!loadingType}
               onClick={onDesigner}
               style={{ animationDelay: `${120 + KINDS.length * 90}ms` }}
-              className="wl-rise group relative rounded-card overflow-hidden text-right text-white bg-brand min-h-[220px] sm:min-h-[340px] sm:col-span-2 lg:col-span-1 flex items-end transition duration-300 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
+              className="wl-rise group relative rounded-card overflow-hidden text-right text-white bg-ink min-h-[220px] sm:min-h-[340px] sm:col-span-2 lg:col-span-1 flex items-end transition duration-300 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
             >
-              <Palette size={150} strokeWidth={1.25} aria-hidden="true" className="absolute -left-6 -top-6 text-white/15 transition duration-700 group-hover:scale-110 group-hover:-rotate-6" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              <img src="/designers/designer-card.jpg" alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover object-[25%_70%] transition duration-700 group-hover:scale-110" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/5" />
               <span className="relative p-5 w-full space-y-2">
                 <span className="flex items-center gap-2 text-heading font-bold"><Palette size={20} className="shrink-0" />انضم لمصممينا</span>
                 <span className="block text-xs opacity-90 leading-relaxed">اعمل صفحتك مجاناً واكسب من التصميم للزبائن.</span>

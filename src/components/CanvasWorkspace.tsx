@@ -1,3 +1,4 @@
+import { cleanHtml, isSafeUrl } from '../utils/safeHtml';
 import React, { useRef, useState, useEffect, useMemo, useContext } from 'react';
 import { BackgroundVideo } from './BackgroundVideo';
 import {
@@ -2118,6 +2119,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         targetElem.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
+      if (!isSafeUrl(elem.linkUrl)) return;
       onContactClick?.(elem.linkUrl);
       window.open(elem.linkUrl, '_blank', 'noopener,noreferrer');
     }
@@ -4666,7 +4668,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             </div>
                             <div 
                               className="flex-1 p-3 overflow-auto flex items-center justify-center"
-                              dangerouslySetInnerHTML={{ __html: elem.htmlCode || elem.content || '<div style="color:#0071e3; font-weight:bold;">حاوية HTML نشطة</div>' }}
+                              dangerouslySetInnerHTML={{ __html: cleanHtml(elem.htmlCode || elem.content || '<div style="color:#0071e3; font-weight:bold;">حاوية HTML نشطة</div>') }}
                             />
                           </div>
                         )}

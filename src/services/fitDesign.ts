@@ -9,6 +9,7 @@
 // font. A page with neither a look nor a palette has no style to fit, so the design comes as it is.
 // Photos, videos, drawings, white and black letters on a photo, and the designer's own unrelated colours stay.
 
+import { SCRIPTABLE_TYPES } from '../utils/safeHtml';
 import type { CanvasElement, Page, Slide } from '../types';
 import { pageLookById, type PageLook } from '../data/pageLooks';
 import { buttonText, lookColours, restyleElement } from './applyLook';
@@ -222,7 +223,7 @@ export const insertDesign = (pages: Page[], elements: CanvasElement[], design: D
   const slideIds = new Map(fitted.slides.map((s, i) => [s.id, `slide-g${stamp}-${i + 1}`]));
   const newSlides = fitted.slides.map((s) => ({ ...s, id: slideIds.get(s.id)! }));
   const newElements = fitted.elements
-    .filter((e) => slideIds.has(e.slideId))
+    .filter((e) => slideIds.has(e.slideId) && !SCRIPTABLE_TYPES.includes(e.type))
     .map((e, i) => relink({ ...e, id: `el-g${stamp}-${i + 1}`, slideId: slideIds.get(e.slideId)! }, slideIds));
   const empty = page.slides.length === 1 && !elements.some((e) => e.slideId === page.slides[0].id);
   return {

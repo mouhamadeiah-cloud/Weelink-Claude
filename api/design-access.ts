@@ -147,6 +147,11 @@ export default {
         if (!Array.isArray(pages) || pages.length === 0 || pages.length > 30 || !Array.isArray(elements) || elements.length > 3000) return json({ error: 'bad_request' }, 400);
         if (JSON.stringify({ pages, elements }).length > MAX_JSON_BYTES) return json({ error: 'too_big' }, 413);
         if ((Number(access.saves) || 0) >= MAX_SAVES) return json({ error: 'too_many_saves' }, 429);
+        // A designer may not bring in a raw-HTML container (script would run in the customer's and the
+        // visitors' browsers); one the customer already had stays as it was.
+        const before = await pageRef.get().then((d) => (d.data() as Record<string, any> | undefined)?.elements);
+        const had = new Set((Array.isArray(before) ? before : []).filter((e: any) => e?.type === 'html').map((e: any) => `${e.id}:${e.htmlCode ?? ''}:${e.content ?? ''}`));
+        if (elements.some((e: any) => e?.type === 'html' && !had.has(`${e.id}:${e.htmlCode ?? ''}:${e.content ?? ''}`))) return json({ error: 'html_not_allowed' }, 400);
         // Only the two fields of the page; nothing else of the customer's document is written.
         await pageRef.set({ pages, elements, updatedAt: new Date().toISOString() }, { merge: true });
         await accessRef.update({ saves: (Number(access.saves) || 0) + 1, lastSaveAt: now });

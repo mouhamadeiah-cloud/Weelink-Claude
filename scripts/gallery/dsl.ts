@@ -9,7 +9,7 @@ import { withPhoneLayouts } from '../../src/utils/mobileLayout';
 import { groupTemplateCards } from '../../src/utils/templateGroups';
 import type { CanvasElement, NavbarConfig, Page, Slide, SlideDividerShape } from '../../src/types';
 
-export type Box = { x: number; y: number; width: number; height: number };
+export type Box = { x: number; y: number; width: number; height: number; rotation?: number };
 export type Styles = Record<string, unknown>;
 export type El = Omit<CanvasElement, 'id' | 'slideId' | 'styles'> & { styles: Styles; slideId?: string };
 

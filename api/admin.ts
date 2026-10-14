@@ -9,6 +9,15 @@
 //   POST /api/admin  { action: 'subscriber', uid }               → { profile, status, sites, events }
 //   POST /api/admin  { action: 'set-status', uid, status: 'active'|'frozen'|'cancelled', reason } → { status }
 //   POST /api/admin  { action: 'add-note', uid, text }           → { ok: true }
+//   POST /api/admin  { action: 'add-payment', uid, plan, planName, period, amount, method, receiptNo?, note? } → { payment }
+//   POST /api/admin  { action: 'postpone-freeze', uid, date: 'YYYY-MM-DD' | '', reason } → { freezeAt }
+//   POST /api/admin  { action: 'payments', month?, method?, q? } → { rows, total }
+//   POST /api/admin  { action: 'invoice-send', paymentId }       → { sent: true } | { error }
+//   POST /api/admin  { action: 'get-company' | 'set-company', ...fields }
+//   GET  /api/admin?invoice=<id>&k=<key>  → the invoice page (the key is in the invoice's email)
+//   GET  /api/admin  with  Authorization: Bearer <CRON_SECRET>  (Vercel's daily cron)
+//        → reminds subscribers 14, 7 and 1 day before their subscription ends, and freezes the ones
+//          whose subscription ended
 //   all but 'login' with  Authorization: Bearer <session token>
 //   GET  /api/admin  → which settings this deployment sees (yes/no only, never their values)
 //
@@ -21,6 +30,12 @@
 // platform_subscribers/{uid} keeps the status and platform_subscribers/{uid}/events the history,
 // and suspendedAccounts/{accountId} (public to read, server-only to write) tells the published
 // pages and the restaurant's site to show «غير متاحة مؤقتاً». Activating undoes all of it.
+// Subscriptions (Eyad, 14 Oct): a payment extends platform_subscribers/{uid}.subscription
+// { plan, planName, period, endsAt, freezeAt, notified } and sets freezeAt = endsAt, the day the
+// account freezes by itself. The admin can move freezeAt to a date (or remove it), and activating
+// by hand removes it. Payments are platform_payments/{id}; invoice numbers come from
+// platform_counters/invoice. Emails need EMAIL_FROM + RESEND_API_KEY (a verified domain to reach
+// subscribers) and the cron needs CRON_SECRET.
 // Failed sign-ins are counted per username and address (5 wrong → 15 minutes locked) and every
 // sign-in and password change is written to platform_audit.
 //
@@ -30,6 +45,7 @@ import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { Resend } from 'resend';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 const DEFAULT_PASSWORD = '123456';
@@ -62,6 +78,83 @@ const firebaseAdmin = () => {
   const app = getApps()[0] || initializeApp({ credential: cert(acc as object), projectId: firebaseConfig.projectId });
   const databaseId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
   return { auth: getAuth(app), db: databaseId ? getFirestore(app, databaseId) : getFirestore(app) };
+};
+
+// ---------- subscriptions, invoices and reminder emails (pure helpers) ----------
+
+type Period = 'monthly' | 'yearly';
+const PERIODS: Period[] = ['monthly', 'yearly'];
+const METHODS: Record<string, string> = { office: 'مكتب', cash: 'نقداً', transfer: 'حوالة', grant: 'منحة' };
+
+// The end of a period that starts at `from` (a month or a year later, same day of the month).
+const addPeriod = (from: number, period: Period) => {
+  const d = new Date(from);
+  if (period === 'yearly') d.setUTCFullYear(d.getUTCFullYear() + 1);
+  else d.setUTCMonth(d.getUTCMonth() + 1);
+  return d.getTime();
+};
+
+const esc = (s: unknown) =>
+  String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+
+const fmtDate = (ms: number) => new Date(ms).toLocaleDateString('ar-SY', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Damascus' });
+const fmtPounds = (n: number) => `${Number(n).toLocaleString('ar-SY')} ل.س`;
+
+interface Company { name: string; address: string; phone: string; email: string; taxNo: string; footer: string }
+const EMPTY_COMPANY: Company = { name: 'Weelink', address: '', phone: '', email: '', taxNo: '', footer: 'شكراً لثقتكم.' };
+
+interface Payment {
+  invoiceNo: string; name: string; email: string; planName: string; period: Period; amount: number;
+  method: string; receiptNo: string; note: string; paidAt: number; coversFrom: number; coversTo: number;
+}
+
+const invoiceHtml = (p: Payment, c: Company, withPrint: boolean) => `<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>فاتورة ${esc(p.invoiceNo)}</title>
+<style>
+  body{font-family:system-ui,Tahoma,sans-serif;background:#f6f7f9;color:#14171c;margin:0;padding:24px}
+  .sheet{max-width:640px;margin:auto;background:#fff;border-radius:16px;padding:32px;border:1px solid #e2e5ea}
+  h1{font-size:22px;margin:0 0 4px} .muted{color:#5d6573;font-size:13px;line-height:1.7}
+  table{width:100%;border-collapse:collapse;margin-top:20px;font-size:14px}
+  th,td{padding:10px 8px;text-align:right;border-bottom:1px solid #e2e5ea} th{color:#5d6573;font-weight:500}
+  .total{font-size:18px;font-weight:700} button{margin-top:20px;padding:10px 18px;border:0;border-radius:10px;background:#1d5bd8;color:#fff;font-size:14px;cursor:pointer}
+  @media print{body{background:#fff;padding:0}.sheet{border:0}button{display:none}}
+</style></head><body><div class="sheet">
+  <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div><h1>${esc(c.name)}</h1><div class="muted">${[c.address, c.phone, c.email, c.taxNo && `الرقم الضريبي: ${c.taxNo}`].filter(Boolean).map(esc).join('<br>')}</div></div>
+    <div class="muted" style="text-align:left"><b style="font-size:16px;color:#14171c">فاتورة</b><br>${esc(p.invoiceNo)}<br>${esc(fmtDate(p.paidAt))}</div>
+  </div>
+  <div class="muted" style="margin-top:20px">إلى: <b style="color:#14171c">${esc(p.name || p.email)}</b>${p.email ? `<br>${esc(p.email)}` : ''}</div>
+  <table>
+    <tr><th>البند</th><th>الفترة</th><th>المبلغ</th></tr>
+    <tr><td>اشتراك ${esc(p.planName)} (${p.period === 'yearly' ? 'سنوي' : 'شهري'})</td><td>${esc(fmtDate(p.coversFrom))} — ${esc(fmtDate(p.coversTo))}</td><td>${esc(fmtPounds(p.amount))}</td></tr>
+    <tr><td colspan="2" class="total">المجموع</td><td class="total">${esc(fmtPounds(p.amount))}</td></tr>
+  </table>
+  <div class="muted" style="margin-top:16px">طريقة الدفع: ${esc(METHODS[p.method] || p.method)}${p.receiptNo ? ` · إيصال ${esc(p.receiptNo)}` : ''}${p.note ? `<br>${esc(p.note)}` : ''}</div>
+  ${c.footer ? `<div class="muted" style="margin-top:20px">${esc(c.footer)}</div>` : ''}
+  ${withPrint ? '<button onclick="window.print()">طباعة / حفظ PDF</button>' : ''}
+</div></body></html>`;
+
+type Reminder = 'd14' | 'd7' | 'd1' | 'frozen';
+const reminderMail = (kind: Reminder, name: string, planName: string, endsAt: number) => {
+  const when = fmtDate(endsAt);
+  const copy: Record<Reminder, { subject: string; title: string; body: string; color: string }> = {
+    d14: { subject: 'تنبيه: اشتراكك ينتهي خلال أسبوعين', title: 'تنبيه', color: '#1d5bd8', body: `اشتراكك في ${planName} ينتهي بتاريخ ${when}. جدّد قبلها لتبقى صفحتك شغالة بدون انقطاع.` },
+    d7: { subject: 'تذكير: اشتراكك ينتهي خلال أسبوع', title: 'تذكير', color: '#b7791f', body: `باقي أسبوع على انتهاء اشتراكك في ${planName} بتاريخ ${when}. تواصل معنا للتجديد.` },
+    d1: { subject: 'تحذير: اشتراكك ينتهي غداً', title: 'تحذير', color: '#c8322b', body: `اشتراكك في ${planName} ينتهي غداً ${when}. بعدها تتجمّد صفحتك وحسابك لحين التجديد.` },
+    frozen: { subject: 'تم تجميد حسابك بعد انتهاء الاشتراك', title: 'تم التجميد', color: '#c8322b', body: `انتهى اشتراكك في ${planName} بتاريخ ${when} فتم تجميد حسابك وصفحاتك. بمجرد التجديد يرجع كل شي كما كان.` },
+  };
+  const c = copy[kind];
+  return {
+    subject: c.subject,
+    html: `<!doctype html><html lang="ar" dir="rtl"><body style="font-family:system-ui,sans-serif;background:#f6f7f9;margin:0;padding:32px">
+  <div style="max-width:460px;margin:auto;background:#fff;border-radius:16px;padding:32px">
+    <h1 style="font-size:20px;margin:0 0 12px;color:${c.color}">${esc(c.title)}</h1>
+    <p style="margin:0 0 8px">أهلاً ${esc(name || '')}،</p>
+    <p style="color:#444;line-height:1.8;margin:0">${esc(c.body)}</p>
+    <p style="color:#999;font-size:12px;margin:24px 0 0">رسالة من Weelink بخصوص اشتراكك.</p>
+  </div></body></html>`,
+  };
 };
 
 // ---------- passwords and sessions ----------
@@ -104,12 +197,124 @@ const cleanUsername = (raw: unknown) => String(raw || '').trim().toLowerCase().r
 type Admin = { username: string; name: string; role: string; status: string; mustChange: boolean; v: number };
 const publicAdmin = (a: Admin) => ({ username: a.username, name: a.name, role: a.role, mustChange: a.mustChange });
 
+
+type Fb = NonNullable<ReturnType<typeof firebaseAdmin>>;
+const DAY = 86400000;
+
+// The workspace ids of a subscriber: the uid, and the old 'sim_' accounts it claimed.
+const accountIdsOf = async (db: Fb['db'], uid: string) => {
+  const claimed = await db.collection('accounts').where('owner', '==', uid).select().get();
+  return [uid, ...claimed.docs.map((d) => d.id)];
+};
+
+// Freezes, cancels or activates a subscriber: the Firebase user, suspendedAccounts, the status and
+// the history. An admin's activation also removes the automatic freeze date, so the cron does not
+// freeze the account again the next morning.
+const applyStatus = async (fb: Fb, uid: string, next: string, reason: string, by: string, clearFreeze = by !== 'system') => {
+  const { db, auth } = fb;
+  const off = next !== 'active';
+  await auth.updateUser(uid, { disabled: off });
+  if (off) await auth.revokeRefreshTokens(uid);
+  const batch = db.batch();
+  const now = Date.now();
+  for (const id of await accountIdsOf(db, uid)) {
+    const ref = db.collection('suspendedAccounts').doc(id);
+    if (off) batch.set(ref, { status: next, at: now });
+    else batch.delete(ref);
+  }
+  const sub = db.collection('platform_subscribers').doc(uid);
+  batch.set(sub, { status: next, reason, at: now, by, autoFrozen: by === 'system' && next === 'frozen' }, { merge: true });
+  if (next === 'active' && clearFreeze) batch.set(sub, { subscription: { freezeAt: FieldValue.delete() } }, { merge: true });
+  batch.set(sub.collection('events').doc(), { at: now, admin: by, type: 'status', status: next, text: reason });
+  await batch.commit();
+};
+
+// 'sent', 'skipped' (no sender set up in Vercel) or 'failed' (Resend refused, with its reason).
+const sendMail = async (to: string, subject: string, html: string): Promise<{ result: 'sent' | 'skipped' | 'failed'; detail?: string }> => {
+  const from = process.env.EMAIL_FROM;
+  const key = process.env.RESEND_API_KEY;
+  if (!from || !key || !to) return { result: 'skipped' };
+  try {
+    const { error } = await new Resend(key).emails.send({ from, to, subject, html });
+    return error ? { result: 'failed', detail: error.message } : { result: 'sent' };
+  } catch (e) {
+    return { result: 'failed', detail: (e as Error)?.message };
+  }
+};
+
+const payFromDoc = (id: string, d: Record<string, any>) => ({
+  id, uid: String(d.uid || ''), invoiceNo: String(d.invoiceNo || ''), name: String(d.name || ''), email: String(d.email || ''),
+  plan: String(d.plan || ''), planName: String(d.planName || ''), period: (d.period === 'yearly' ? 'yearly' : 'monthly') as Period,
+  amount: Number(d.amount) || 0, method: String(d.method || ''), receiptNo: String(d.receiptNo || ''), note: String(d.note || ''),
+  paidAt: Number(d.paidAt) || 0, coversFrom: Number(d.coversFrom) || 0, coversTo: Number(d.coversTo) || 0,
+  by: String(d.by || ''), sentAt: Number(d.sentAt) || 0, key: String(d.key || ''),
+});
+
+const getCompany = async (db: Fb['db']): Promise<Company> => ({ ...EMPTY_COMPANY, ...((await db.collection('platform_settings').doc('company').get()).data() || {}) });
+
+// Vercel's daily cron: reminders 14, 7 and 1 day before freezeAt, and the freeze itself.
+const REMINDERS: { key: 'd14' | 'd7' | 'd1'; days: number }[] = [{ key: 'd1', days: 1 }, { key: 'd7', days: 7 }, { key: 'd14', days: 14 }];
+const runDaily = async (fb: Fb) => {
+  const { db, auth } = fb;
+  const now = Date.now();
+  const snap = await db.collection('platform_subscribers').where('subscription.freezeAt', '>', 0).get();
+  const out = { checked: snap.size, frozen: 0, reminded: 0, skipped: 0, failed: 0 };
+  for (const d of snap.docs) {
+    const data = d.data() as { status?: string; subscription?: { planName?: string; freezeAt?: number; notified?: Record<string, number> } };
+    const sub = data.subscription;
+    if (!sub?.freezeAt || (data.status || 'active') !== 'active') continue;
+    const user = await auth.getUser(d.id).catch(() => null);
+    if (!user) continue;
+    const planName = sub.planName || 'اشتراكك';
+    const left = (sub.freezeAt - now) / DAY;
+
+    if (left <= 0) {
+      await applyStatus(fb, d.id, 'frozen', 'انتهى الاشتراك', 'system');
+      out.frozen++;
+      const m = reminderMail('frozen', user.displayName || '', planName, sub.freezeAt);
+      if ((await sendMail(user.email || '', m.subject, m.html)).result === 'failed') out.failed++;
+      continue;
+    }
+    // The most urgent reminder not sent yet; the milder ones that also apply are marked as sent.
+    const due = REMINDERS.filter((r) => left <= r.days);
+    const todo = due.find((r) => !sub.notified?.[r.key]);
+    if (!todo) continue;
+    const m = reminderMail(todo.key, user.displayName || '', planName, sub.freezeAt);
+    const sent = await sendMail(user.email || '', m.subject, m.html);
+    if (sent.result === 'sent') {
+      out.reminded++;
+      await d.ref.set({ subscription: { notified: Object.fromEntries(due.map((r) => [r.key, now])) } }, { merge: true });
+    } else if (sent.result === 'failed') out.failed++;
+    else out.skipped++;
+  }
+  await db.collection('platform_audit').add({ at: FieldValue.serverTimestamp(), admin: 'system', action: `daily:${JSON.stringify(out)}`, ok: true, ip: 'cron' });
+  return out;
+};
+
 // ---------- handler ----------
 
 export default {
   async fetch(request: Request): Promise<Response> {
     if (request.method === 'GET') {
-      return json({ serviceAccount: !!serviceAccount() });
+      const url = new URL(request.url);
+      const invoiceId = url.searchParams.get('invoice');
+      const secret = process.env.CRON_SECRET;
+      const fbGet = firebaseAdmin();
+      if (invoiceId) {
+        if (!fbGet) return json({ error: 'not-configured' }, 503);
+        const snap = await fbGet.db.collection('platform_payments').doc(invoiceId.slice(0, 128)).get();
+        const key = String(url.searchParams.get('k') || '');
+        const have = String(snap.data()?.key || '');
+        const same = have.length > 0 && key.length === have.length && timingSafeEqual(Buffer.from(key), Buffer.from(have));
+        if (!snap.exists || !same) return new Response('Not found', { status: 404 });
+        const html = invoiceHtml(payFromDoc(snap.id, snap.data()!), await getCompany(fbGet.db), true);
+        return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
+      }
+      if (secret && request.headers.get('authorization') === `Bearer ${secret}`) {
+        if (!fbGet) return json({ error: 'not-configured' }, 503);
+        return json(await runDaily(fbGet));
+      }
+      return json({ serviceAccount: !!serviceAccount(), cron: !!secret, email: !!process.env.EMAIL_FROM && !!process.env.RESEND_API_KEY });
     }
     if (request.method !== 'POST') return json({ error: 'method' }, 405);
 
@@ -194,6 +399,7 @@ export default {
       const published = ['yes', 'no'].includes(String(body.published)) ? String(body.published) : 'all';
       const verified = ['yes', 'no'].includes(String(body.verified)) ? String(body.verified) : 'all';
       const status = STATUSES.includes(String(body.status)) ? String(body.status) : 'all';
+      const subFilter = ['none', 'active', 'expiring', 'expired'].includes(String(body.sub)) ? String(body.sub) : 'all';
 
       // Pages by owner: published sites carry the owner's workspace id, which for an old
       // account is not the Firebase uid (accounts/{id}.owner says whose it is).
@@ -210,9 +416,14 @@ export default {
         sitesByUid.set(uid, [...(sitesByUid.get(uid) || []), { name: s.name, project: s.project }]);
       });
 
-      const statusSnap = await db.collection('platform_subscribers').select('status').get();
+      const statusSnap = await db.collection('platform_subscribers').select('status', 'subscription').get();
       const statusOf = new Map<string, string>();
-      statusSnap.forEach((d) => statusOf.set(d.id, String(d.data().status || 'active')));
+      const subOf = new Map<string, { planName: string; endsAt: number; freezeAt: number }>();
+      statusSnap.forEach((d) => {
+        statusOf.set(d.id, String(d.data().status || 'active'));
+        const sb = d.data().subscription;
+        if (sb?.endsAt) subOf.set(d.id, { planName: String(sb.planName || ''), endsAt: Number(sb.endsAt) || 0, freezeAt: Number(sb.freezeAt) || 0 });
+      });
 
       const users: Awaited<ReturnType<typeof auth.listUsers>>['users'] = [];
       let pageToken: string | undefined;
@@ -236,6 +447,14 @@ export default {
           verified: u.emailVerified,
           disabled: u.disabled,
           status: statusOf.get(u.uid) || 'active',
+          sub: subOf.get(u.uid) || null,
+          subState: ((): string => {
+            const sb = subOf.get(u.uid);
+            if (!sb) return 'none';
+            if (!sb.freezeAt) return 'active';
+            const left = sb.freezeAt - Date.now();
+            return left <= 0 ? 'expired' : left <= 14 * DAY ? 'expiring' : 'active';
+          })(),
           active: seen >= sleepingBefore,
           sites,
         };
@@ -249,6 +468,7 @@ export default {
         if (verified === 'yes' && !r.verified) return false;
         if (verified === 'no' && r.verified) return false;
         if (status !== 'all' && r.status !== status) return false;
+        if (subFilter !== 'all' && r.subState !== subFilter) return false;
         return !q || [r.name, r.email, r.phone, r.uid, ...r.sites.map((s) => s.name)].some((v) => v.toLowerCase().includes(q));
       });
       matched.sort((a, b) => b.createdAt - a.createdAt);
@@ -269,22 +489,20 @@ export default {
     // ----- one subscriber -----
     const uid = String(body.uid || '').slice(0, 128);
     // The workspace ids of a subscriber: the uid, and the old 'sim_' accounts it claimed.
-    const accountIds = async (u: string) => {
-      const claimed = await db.collection('accounts').where('owner', '==', u).select().get();
-      return [u, ...claimed.docs.map((d) => d.id)];
-    };
+    const accountIds = (u: string) => accountIdsOf(db, u);
     const userOrNull = (u: string) => auth.getUser(u).catch(() => null);
 
     if (action === 'subscriber') {
       const user = uid ? await userOrNull(uid) : null;
       if (!user) return json({ error: 'not-found' }, 404);
       const ids = await accountIds(uid);
-      const [statusSnap, eventsSnap, sitesSnap] = await Promise.all([
+      const [statusSnap, eventsSnap, sitesSnap, paymentsSnap] = await Promise.all([
         db.collection('platform_subscribers').doc(uid).get(),
         db.collection('platform_subscribers').doc(uid).collection('events').orderBy('at', 'desc').limit(100).get(),
         db.collection('publishedSites').where('owner', 'in', ids.slice(0, 30)).select('name', 'project', 'publishedAt').get(),
+        db.collection('platform_payments').where('uid', '==', uid).get(),
       ]);
-      const st = statusSnap.data() as { status?: string; reason?: string; at?: number; by?: string } | undefined;
+      const st = statusSnap.data() as { status?: string; reason?: string; at?: number; by?: string; subscription?: Record<string, any> } | undefined;
       return json({
         profile: {
           uid, name: user.displayName || '', email: user.email || '', phone: user.phoneNumber || '', verified: user.emailVerified,
@@ -293,6 +511,8 @@ export default {
           providers: user.providerData.map((p) => p.providerId),
         },
         status: { status: st?.status || 'active', reason: st?.reason || '', at: st?.at || 0, by: st?.by || '' },
+        subscription: st?.subscription?.endsAt ? { plan: String(st.subscription.plan || ''), planName: String(st.subscription.planName || ''), period: st.subscription.period === 'yearly' ? 'yearly' : 'monthly', endsAt: Number(st.subscription.endsAt) || 0, freezeAt: Number(st.subscription.freezeAt) || 0 } : null,
+        payments: paymentsSnap.docs.map((d) => payFromDoc(d.id, d.data())).sort((a, b) => b.paidAt - a.paidAt),
         sites: sitesSnap.docs.map((d) => ({ name: String(d.data().name), project: String(d.data().project), publishedAt: String(d.data().publishedAt || '') })),
         events: eventsSnap.docs.map((d) => {
           const e = d.data() as { at?: { toMillis?: () => number } | number; admin?: string; type?: string; text?: string; status?: string };
@@ -306,24 +526,112 @@ export default {
       const reason = String(body.reason || '').trim().slice(0, 300);
       if (!STATUSES.includes(next)) return json({ error: 'bad-status' }, 400);
       if (next !== 'active' && reason.length < 3) return json({ error: 'reason' }, 400);
-      const user = uid ? await userOrNull(uid) : null;
-      if (!user) return json({ error: 'not-found' }, 404);
-
-      const off = next !== 'active';
-      await auth.updateUser(uid, { disabled: off });
-      if (off) await auth.revokeRefreshTokens(uid);
-      const batch = db.batch();
-      for (const id of await accountIds(uid)) {
-        const ref = db.collection('suspendedAccounts').doc(id);
-        if (off) batch.set(ref, { status: next, at: Date.now() });
-        else batch.delete(ref);
-      }
-      const now = Date.now();
-      batch.set(db.collection('platform_subscribers').doc(uid), { status: next, reason, at: now, by: session.u }, { merge: true });
-      batch.set(db.collection('platform_subscribers').doc(uid).collection('events').doc(), { at: now, admin: session.u, type: 'status', status: next, text: reason });
-      await batch.commit();
+      if (!uid || !(await userOrNull(uid))) return json({ error: 'not-found' }, 404);
+      await applyStatus(fb, uid, next, reason, session.u);
       await audit(session.u, `set-status:${next}:${uid}`);
       return json({ status: next });
+    }
+
+    if (action === 'add-payment') {
+      const user = uid ? await userOrNull(uid) : null;
+      if (!user) return json({ error: 'not-found' }, 404);
+      const plan = String(body.plan || '');
+      const period = String(body.period || '') as Period;
+      const amount = Number(body.amount);
+      const method = String(body.method || '');
+      if (!/^(page|restaurant|shop|cars)-(pro|30|60)$/.test(plan)) return json({ error: 'bad-plan' }, 400);
+      if (!PERIODS.includes(period)) return json({ error: 'bad-period' }, 400);
+      if (!(amount >= 0 && amount < 1e12)) return json({ error: 'bad-amount' }, 400);
+      if (!METHODS[method]) return json({ error: 'bad-method' }, 400);
+
+      const subRef = db.collection('platform_subscribers').doc(uid);
+      const cur = (await subRef.get()).data() as { status?: string; autoFrozen?: boolean; subscription?: { endsAt?: number } } | undefined;
+      const now = Date.now();
+      // A subscription still running is extended from its end; an ended one starts today.
+      const from = cur?.subscription?.endsAt && cur.subscription.endsAt > now ? cur.subscription.endsAt : now;
+      const endsAt = addPeriod(from, period);
+      const n = await db.runTransaction(async (t) => {
+        const ref = db.collection('platform_counters').doc('invoice');
+        const next = ((await t.get(ref)).data()?.n || 0) + 1;
+        t.set(ref, { n: next });
+        return next;
+      });
+      const planName = String(body.planName || '').trim().slice(0, 60) || plan;
+      const payRef = db.collection('platform_payments').doc();
+      const pay = {
+        uid, email: user.email || '', name: user.displayName || '', plan, planName, period, amount, method,
+        receiptNo: String(body.receiptNo || '').trim().slice(0, 40), note: String(body.note || '').trim().slice(0, 300),
+        paidAt: now, coversFrom: from, coversTo: endsAt, by: session.u, key: randomBytes(12).toString('hex'),
+        invoiceNo: `INV-${new Date(now).getUTCFullYear()}-${String(n).padStart(4, '0')}`,
+      };
+      const batch = db.batch();
+      batch.set(payRef, pay);
+      batch.set(subRef, { subscription: { plan, planName, period, endsAt, freezeAt: endsAt, notified: FieldValue.delete() } }, { merge: true });
+      batch.set(subRef.collection('events').doc(), { at: now, admin: session.u, type: 'payment', text: `${planName} ${period === 'yearly' ? 'سنوي' : 'شهري'} · ${amount.toLocaleString('en')} ل.س · ${METHODS[method]} · حتى ${fmtDate(endsAt)}` });
+      await batch.commit();
+      // Paying brings back an account the cron froze for the end of its subscription.
+      if (cur?.status === 'frozen' && cur.autoFrozen) await applyStatus(fb, uid, 'active', 'تجديد الاشتراك', session.u, false);
+      await audit(session.u, `add-payment:${uid}`);
+      return json({ payment: payFromDoc(payRef.id, pay) });
+    }
+
+    if (action === 'postpone-freeze') {
+      const reason = String(body.reason || '').trim().slice(0, 300);
+      const date = String(body.date || '');
+      if (reason.length < 3) return json({ error: 'reason' }, 400);
+      const user = uid ? await userOrNull(uid) : null;
+      if (!user) return json({ error: 'not-found' }, 404);
+      let freezeAt = 0;
+      if (date) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: 'bad-date' }, 400);
+        // The end of that day in Syria.
+        freezeAt = Date.parse(`${date}T23:59:59+03:00`);
+        if (!(freezeAt > Date.now())) return json({ error: 'past-date' }, 400);
+      }
+      const subRef = db.collection('platform_subscribers').doc(uid);
+      const cur = (await subRef.get()).data() as { status?: string; autoFrozen?: boolean } | undefined;
+      await subRef.set({ subscription: { freezeAt: freezeAt || FieldValue.delete(), notified: FieldValue.delete() } }, { merge: true });
+      await subRef.collection('events').add({ at: Date.now(), admin: session.u, type: 'freeze-date', text: `${freezeAt ? `التجميد التلقائي يوم ${fmtDate(freezeAt)}` : 'بدون تجميد تلقائي'} · ${reason}` });
+      if (cur?.status === 'frozen' && cur.autoFrozen) await applyStatus(fb, uid, 'active', reason, session.u, false);
+      await audit(session.u, `postpone-freeze:${uid}`);
+      return json({ freezeAt });
+    }
+
+    if (action === 'payments') {
+      const month = /^\d{4}-\d{2}$/.test(String(body.month)) ? String(body.month) : '';
+      const method = METHODS[String(body.method)] ? String(body.method) : '';
+      const q = String(body.q || '').trim().toLowerCase().slice(0, 100);
+      const snap = await db.collection('platform_payments').orderBy('paidAt', 'desc').limit(1000).get();
+      const rows = snap.docs.map((d) => payFromDoc(d.id, d.data())).filter((r) => {
+        if (month && new Date(r.paidAt).toISOString().slice(0, 7) !== month) return false;
+        if (method && r.method !== method) return false;
+        return !q || [r.name, r.email, r.invoiceNo, r.receiptNo, r.planName].some((v) => v.toLowerCase().includes(q));
+      });
+      return json({ rows: rows.slice(0, 300), matched: rows.length, total: rows.reduce((n, r) => n + r.amount, 0) });
+    }
+
+    if (action === 'invoice-send') {
+      const snap = await db.collection('platform_payments').doc(String(body.paymentId || '').slice(0, 128)).get();
+      if (!snap.exists) return json({ error: 'not-found' }, 404);
+      const pay = payFromDoc(snap.id, snap.data()!);
+      if (!pay.email) return json({ error: 'no-email' }, 400);
+      const link = `${new URL(request.url).origin}/api/admin?invoice=${snap.id}&k=${pay.key}`;
+      const html = invoiceHtml(pay, await getCompany(db), false).replace('</div></body>', `<p style="margin-top:20px;font-size:13px"><a href="${link}">افتح الفاتورة للطباعة أو الحفظ PDF</a></p></div></body>`);
+      const sent = await sendMail(pay.email, `فاتورة ${pay.invoiceNo}`, html);
+      if (sent.result === 'skipped') return json({ error: 'email-not-configured' }, 503);
+      if (sent.result === 'failed') return json({ error: 'refused', detail: String(sent.detail || '').slice(0, 200) }, 502);
+      await snap.ref.update({ sentAt: Date.now() });
+      await audit(session.u, `invoice-send:${snap.id}`);
+      return json({ sent: true });
+    }
+
+    if (action === 'get-company') return json({ company: await getCompany(db) });
+    if (action === 'set-company') {
+      const clean = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n);
+      const company: Company = { name: clean(body.name, 80) || 'Weelink', address: clean(body.address, 200), phone: clean(body.phone, 40), email: clean(body.email, 100), taxNo: clean(body.taxNo, 40), footer: clean(body.footer, 300) };
+      await db.collection('platform_settings').doc('company').set(company);
+      await audit(session.u, 'set-company');
+      return json({ company });
     }
 
     if (action === 'add-note') {

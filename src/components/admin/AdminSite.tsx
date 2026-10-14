@@ -4,6 +4,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { BarChart3, ChevronDown, Coins, CreditCard, KeyRound, Loader2, LogOut, Menu, Search, ShieldCheck, UserCog, Users, X } from 'lucide-react';
 import { SubscriberDetail } from './SubscriberDetail';
+import { PaymentsView } from './PaymentsView';
+import { BillingSettings } from './BillingSettings';
 import {
   AdminError, AdminInfo, SubscriberQuery, SubscribersResult,
   adminChangePassword, adminLogin, adminMe, adminSubscribers, getAdminToken, setAdminToken,
@@ -56,12 +58,12 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   );
 };
 
-type View = 'subscribers' | 'password';
+type View = 'subscribers' | 'payments' | 'billing' | 'password';
 interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View }[] }
 // Every group starts folded; the admin opens what he needs. Items without a view are the next phases.
 const MENU: MenuGroup[] = [
   { id: 'subs', title: 'المشتركون', icon: Users, items: [{ id: 'list', label: 'قائمة المشتركين', view: 'subscribers' }] },
-  { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'plans', label: 'الاشتراكات' }, { id: 'invoices', label: 'الفواتير' }] },
+  { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'payments', label: 'كل الدفعات والفواتير', view: 'payments' }, { id: 'billing', label: 'إعدادات الفوترة', view: 'billing' }] },
   { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'balances', label: 'أرصدة التوكنز' }, { id: 'cost', label: 'تكلفة الاستدعاء' }] },
   { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات' }, { id: 'flow', label: 'سير العمل' }, { id: 'chat', label: 'لوحة التواصل' }] },
   { id: 'books', title: 'الحسابات والداشبورد', icon: BarChart3, items: [{ id: 'dash', label: 'الداشبورد' }] },
@@ -173,7 +175,7 @@ const Select: React.FC<{ value: string; onChange: (v: string) => void; options: 
 );
 
 const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) => {
-  const [query, setQuery] = useState<SubscriberQuery>({ q: '', state: 'all', published: 'all', verified: 'all', status: 'all' });
+  const [query, setQuery] = useState<SubscriberQuery>({ q: '', state: 'all', published: 'all', verified: 'all', status: 'all', sub: 'all' });
   const [result, setResult] = useState<SubscribersResult | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -223,6 +225,7 @@ const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) =
         <Select value={query.state} onChange={(v) => set({ state: v as SubscriberQuery['state'] })} options={[['all', 'كل الحالات'], ['active', 'نشط'], ['sleeping', 'نائم']]} />
         <Select value={query.published} onChange={(v) => set({ published: v as SubscriberQuery['published'] })} options={[['all', 'الصفحات: الكل'], ['yes', 'عنده صفحة منشورة'], ['no', 'بلا صفحة منشورة']]} />
         <Select value={query.status} onChange={(v) => set({ status: v as SubscriberQuery['status'] })} options={[['all', 'الاشتراك: الكل'], ['active', 'فعّال'], ['frozen', 'مجمّد'], ['cancelled', 'ملغى']]} />
+        <Select value={query.sub} onChange={(v) => set({ sub: v as SubscriberQuery['sub'] })} options={[['all', 'الباقة: الكل'], ['none', 'بدون اشتراك مدفوع'], ['active', 'فعّال'], ['expiring', 'ينتهي خلال أسبوعين'], ['expired', 'منتهي']]} />
         <Select value={query.verified} onChange={(v) => set({ verified: v as SubscriberQuery['verified'] })} options={[['all', 'الإيميل: الكل'], ['yes', 'مؤكَّد'], ['no', 'غير مؤكَّد']]} />
         {loading && <Loader2 className="h-4 w-4 animate-spin text-muted" />}
       </div>
@@ -232,9 +235,9 @@ const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) =
         <>
           <p className="text-small text-muted">{fmt(result.matched)} مشترك{result.matched > result.rows.length ? ` (أول ${fmt(result.rows.length)} معروضة، ضيّق البحث)` : ''}</p>
           <div className="overflow-x-auto rounded-card border border-line bg-surface">
-            <table className="w-full min-w-[760px] text-right text-small">
+            <table className="w-full min-w-[900px] text-right text-small">
               <thead className="border-b border-line text-muted">
-                <tr>{['الاسم', 'الإيميل', 'الهاتف', 'تاريخ الاشتراك', 'آخر نشاط', 'الحالة', 'الصفحات'].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr>
+                <tr>{['الاسم', 'الإيميل', 'الهاتف', 'تاريخ الاشتراك', 'آخر نشاط', 'الحالة', 'الاشتراك', 'الصفحات'].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr>
               </thead>
               <tbody>
                 {result.rows.map((r) => (
@@ -248,11 +251,14 @@ const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) =
                       {r.status === 'cancelled' ? <span className="text-danger">ملغى</span> : r.status === 'frozen' ? <span className="text-warn">مجمّد</span> : r.disabled ? <span className="text-danger">موقوف</span> : r.active ? <span className="text-success">نشط</span> : <span className="text-faint">نائم</span>}
                     </td>
                     <td className="px-3 py-2">
+                      {r.sub ? <span className={r.subState === 'expired' ? 'text-danger' : r.subState === 'expiring' ? 'text-warn' : ''}>{r.sub.planName} · حتى {date(r.sub.freezeAt || r.sub.endsAt)}</span> : <span className="text-faint">—</span>}
+                    </td>
+                    <td className="px-3 py-2">
                       {r.sites.length ? r.sites.map((x) => <div key={x.name}>{KIND[x.project] || x.project} · <span dir="ltr">{x.name}</span></div>) : <span className="text-faint">—</span>}
                     </td>
                   </tr>
                 ))}
-                {!result.rows.length && <tr><td colSpan={7} className="px-3 py-8 text-center text-muted">لا نتائج.</td></tr>}
+                {!result.rows.length && <tr><td colSpan={8} className="px-3 py-8 text-center text-muted">لا نتائج.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -286,6 +292,8 @@ export const AdminSite: React.FC = () => {
   return (
     <Shell admin={admin} onLogout={logout} menu={<SideMenu view={view} onView={setView} />}>
       {view === 'subscribers' ? <Subscribers onSessionEnd={logout} />
+        : view === 'payments' ? <PaymentsView onSessionEnd={logout} />
+        : view === 'billing' ? <BillingSettings onSessionEnd={logout} />
         : view === 'password' ? <ChangePassword forced={false} onDone={(a) => { setAdmin(a); setView(null); }} />
         : <p className="mt-16 text-center text-muted">أهلاً {admin.name}. افتح قسماً من القائمة على اليسار.</p>}
     </Shell>

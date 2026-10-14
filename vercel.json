@@ -1,9 +1,23 @@
 {
   "functions": {
-    "api/build-page.ts": { "maxDuration": 60 },
-    "api/booking.ts": { "maxDuration": 60 }
+    "api/build-page.ts": {
+      "maxDuration": 60
+    },
+    "api/booking.ts": {
+      "maxDuration": 60
+    },
+    "api/admin.ts": {
+      "maxDuration": 60
+    }
   },
   "crons": [
-    { "path": "/api/booking", "schedule": "0 6 * * *" }
+    {
+      "path": "/api/booking",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/admin",
+      "schedule": "0 7 * * *"
+    }
   ]
 }

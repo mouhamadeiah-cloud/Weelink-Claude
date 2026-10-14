@@ -22,6 +22,11 @@
 //   POST /api/admin  { action: 'tasks' | 'task' | 'task-status' | 'task-reply' }  (an admin's own tasks) and
 //                    { action: 'task-create' | 'task-update' }  (owner only): the workflow board
 //   POST /api/admin  { action: 'chat', after?, uid? } and { action: 'chat-send', text, uid? }  (the team chat board)
+//   POST /api/admin  { action: 'page-law-get' } → { law }  and { action: 'page-law-set', text } → { law }
+//        (the designers' «قانون الصفحة»: platformSettings/pageLaw, the only text a designer agrees to)
+//   POST /api/admin  { action: 'slides-review-list', status? } → { rows, counts }  and
+//                    { action: 'slide-review', id, decision: 'approve'|'reject', reason? } → { status }
+//        (the slides designers exported to the gallery wait as gallerySlides/{id}.status = 'pending')
 //   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
 //   POST /api/admin  { action: 'tokens-adjust', uid, delta, reason } → { balance }
 //   POST /api/admin  { action: 'set-prices', in, out }           → { prices }
@@ -217,14 +222,16 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 // and only its actions. Checked here on every call; the site only hides what is not allowed.
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
 const FINANCE_ONLY = ['payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
+// The designers' gallery is the content reviewers' work (the owner too).
+const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
 const TASK_TYPES: Record<string, string> = { payment: 'طلب دفع', domain: 'طلب دومين', complaint: 'شكوى', other: 'أخرى' };
 const TASK_STATUSES = ['new', 'doing', 'done'];
-const KNOWN_ACTIONS = [...OPEN_TO_ALL, ...FINANCE_ONLY, ...OWNER_ONLY];
+const KNOWN_ACTIONS = [...OPEN_TO_ALL, ...FINANCE_ONLY, ...CONTENT_ONLY, ...OWNER_ONLY];
 const can = (a: Pick<Admin, 'role' | 'specialty'>, action: string) =>
-  a.role === 'owner' || OPEN_TO_ALL.includes(action) || (FINANCE_ONLY.includes(action) && a.specialty === 'finance');
+  a.role === 'owner' || OPEN_TO_ALL.includes(action) || (FINANCE_ONLY.includes(action) && a.specialty === 'finance') || (CONTENT_ONLY.includes(action) && a.specialty === 'content');
 const publicAdmin = (a: Admin) => ({ username: a.username, name: a.name, role: a.role, specialty: a.specialty || '', mustChange: a.mustChange, can: KNOWN_ACTIONS.filter((x) => can(a, x)) });
 
 // A temporary password the owner reads out once; the admin must change it at the first sign-in.
@@ -744,6 +751,71 @@ export default {
       await db.collection('platform_settings').doc('company').set(company);
       await audit(session.u, 'set-company');
       return json({ company });
+    }
+
+    // ----- the designers' gallery -----
+    // platformSettings/pageLaw = { text, version, updatedAt, updatedBy }: the law a designer agrees to
+    // when exporting a slide; every save raises the version, and a slide records the version it was
+    // exported under. gallerySlides/{id} (written by the designer, status 'pending') is approved or
+    // rejected here; the rules let nobody else change its status.
+    const SLIDE_STATUSES = ['pending', 'approved', 'rejected'];
+    const SLIDE_CATEGORY_IDS = ['hero', 'about', 'services', 'gallery', 'team', 'reviews', 'offers', 'booking', 'contact', 'menu', 'cars', 'products', 'legal', 'other'];
+    const lawFromDoc = (d: Record<string, any> | undefined) =>
+      d ? { text: String(d.text || ''), version: Number(d.version) || 0, updatedAt: Number(d.updatedAt) || 0, updatedBy: String(d.updatedBy || '') } : null;
+
+    if (action === 'page-law-get') {
+      return json({ law: lawFromDoc((await db.collection('platformSettings').doc('pageLaw').get()).data()) });
+    }
+
+    if (action === 'page-law-set') {
+      const text = String(body.text || '').trim();
+      if (text.length < 50 || text.length > 20000) return json({ error: 'bad-text' }, 400);
+      const ref = db.collection('platformSettings').doc('pageLaw');
+      const at = Date.now();
+      const version = await db.runTransaction(async (t) => {
+        const cur = (await t.get(ref)).data() as { version?: number } | undefined;
+        const next = (Number(cur?.version) || 0) + 1;
+        t.set(ref, { text, version: next, updatedAt: at, updatedBy: session.u });
+        return next;
+      });
+      await audit(session.u, `page-law-set:v${version}`);
+      return json({ law: { text, version, updatedAt: at, updatedBy: session.u } });
+    }
+
+    if (action === 'slides-review-list') {
+      const status = SLIDE_STATUSES.includes(String(body.status)) ? String(body.status) : 'pending';
+      const [snap, pendingCount] = await Promise.all([
+        db.collection('gallerySlides').where('status', '==', status).limit(60).get(),
+        db.collection('gallerySlides').where('status', '==', 'pending').select().get(),
+      ]);
+      const rows = snap.docs
+        .map((d) => {
+          const x = d.data();
+          return {
+            id: d.id, name: String(x.name || ''), category: String(x.category || ''), designerUid: String(x.designerUid || ''),
+            designerName: String(x.designerName || ''), status: String(x.status || 'pending'), lawVersion: Number(x.lawVersion) || 0,
+            acceptedAt: String(x.acceptedAt || ''), createdAt: x.createdAt?.toMillis?.() || 0, reason: String(x.reason || ''),
+            reviewedBy: String(x.reviewedBy || ''), slide: x.slide || {}, elements: Array.isArray(x.elements) ? x.elements : [],
+          };
+        })
+        .sort((a, b) => b.createdAt - a.createdAt);
+      return json({ rows, counts: { pending: pendingCount.size } });
+    }
+
+    if (action === 'slide-review') {
+      const id = String(body.id || '').slice(0, 128);
+      const decision = String(body.decision || '');
+      const reason = String(body.reason || '').trim().slice(0, 500);
+      if (!id || !['approve', 'reject'].includes(decision)) return json({ error: 'bad-request' }, 400);
+      if (decision === 'reject' && reason.length < 3) return json({ error: 'reason' }, 400);
+      const ref = db.collection('gallerySlides').doc(id);
+      const snap = await ref.get();
+      if (!snap.exists) return json({ error: 'not-found' }, 404);
+      if (decision === 'approve' && !SLIDE_CATEGORY_IDS.includes(String(snap.data()?.category))) return json({ error: 'bad-category' }, 400);
+      const status = decision === 'approve' ? 'approved' : 'rejected';
+      await ref.update({ status, reason: decision === 'reject' ? reason : '', reviewedBy: session.u, reviewedAt: Date.now() });
+      await audit(session.u, `slide-review:${id}:${status}`);
+      return json({ status });
     }
 
     // ----- tasks (the workflow board) -----

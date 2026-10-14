@@ -288,9 +288,11 @@ interface Props {
   categoryId: string;
   index: number;
   onAdd: () => void;
+  // Only shown (the admin's review, the gallery): no «انقر لإضافة الشريحة» on hover and no pointer.
+  readOnly?: boolean;
 }
 
-export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, index, onAdd }) => {
+export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, index, onAdd, readOnly }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(300);
   useLayoutEffect(() => {
@@ -311,8 +313,8 @@ export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, ind
 
   return (
     <div
-      onClick={onAdd}
-      className="w-full bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-2xs group cursor-pointer hover:shadow-md transition-all relative"
+      onClick={readOnly ? undefined : onAdd}
+      className={`w-full bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-2xs group transition-all relative ${readOnly ? '' : 'cursor-pointer hover:shadow-md'}`}
       style={{ ['--kind' as any]: kind.color }}
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = kind.color)}
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = '')}
@@ -362,12 +364,12 @@ export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, ind
             تتابع الشريحة للأسفل
           </div>
         )}
-        <div className="absolute inset-0 bg-neutral-950/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 z-[999]">
+        {!readOnly && <div className="absolute inset-0 bg-neutral-950/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 z-[999]">
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black shadow-lg" style={{ background: kind.color }}>
             ＋
           </div>
           {shownHeight * scale > 40 && <span className="text-[10px] font-bold">انقر لإضافة الشريحة</span>}
-        </div>
+        </div>}
       </div>
     </div>
   );

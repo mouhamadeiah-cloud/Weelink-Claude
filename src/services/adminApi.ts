@@ -158,3 +158,18 @@ export const adminTaskReply = (id: string, text: string) => call<{ ok: true }>({
 export interface ChatMessage { id: string; at: number; by: string; byName: string; text: string; uid: string; subscriber: string }
 export const adminChat = (q: { after?: number; uid?: string }) => call<{ rows: ChatMessage[]; me: string }>({ action: 'chat', ...q });
 export const adminChatSend = (text: string, uid?: string) => call<{ id: string; at: number }>({ action: 'chat-send', text, uid });
+
+// The designers' gallery: the page's law (the only text a designer agrees to) and the review of the
+// slides designers exported.
+export interface PageLaw { text: string; version: number; updatedAt: number; updatedBy: string }
+export const adminPageLaw = () => call<{ law: PageLaw | null }>({ action: 'page-law-get' });
+export const adminSetPageLaw = (text: string) => call<{ law: PageLaw }>({ action: 'page-law-set', text });
+
+export type SlideStatus = 'pending' | 'approved' | 'rejected';
+export interface GallerySlideRow {
+  id: string; name: string; category: string; designerUid: string; designerName: string; status: SlideStatus;
+  lawVersion: number; acceptedAt: string; createdAt: number; reason: string; reviewedBy: string;
+  slide: any; elements: any[];
+}
+export const adminSlides = (status: SlideStatus) => call<{ rows: GallerySlideRow[]; counts: { pending: number } }>({ action: 'slides-review-list', status });
+export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });

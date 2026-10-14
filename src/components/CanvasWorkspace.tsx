@@ -84,9 +84,11 @@ interface CanvasWorkspaceProps {
   // The guests' own view of a published site (no editor around it): fills the browser window
   // edge to edge, with no device frame, in desktop or phone layout.
   isPublicSite?: boolean;
-  // One slide shown inside a card (the designers' gallery): the real renderer, so its videos, text
-  // motion and effects play, but no navbar, no scrolling of its own and only as tall as the slides.
+  // A design shown inside a card (the designers' gallery): the real renderer, so its videos, text
+  // motion and effects play, but no scrolling of its own and only as tall as its content.
   embedded?: boolean;
+  // With `embedded`, a single slide: no navbar (a page keeps its own).
+  hideNavbar?: boolean;
   // Height of the editor's bars above the workspace (the edit bar under the top bar, or not).
   chromeHeight?: number;
   // Extra entries at the end of the navbar that run an action, not a link: «الإدارة» for the
@@ -823,6 +825,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onSelectNavbar,
   isPublicSite = false,
   embedded = false,
+  hideNavbar = false,
   chromeHeight = 104,
   navActions,
   onContactClick,
@@ -893,7 +896,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const isNavHamburger = navLayout === 'horizontal' && previewMode === 'mobile' && !!navbar.mobileMenu;
   // Height the navbar takes above the slides: only a strip at the top of the screen (posY 0) pushes
   // them down; anywhere else, and as a column or icon, it floats over them.
-  const navFlowHeight = !embedded && navLayout === 'horizontal' && !navbar.posY ? (navbar.height ?? 60) : 0;
+  const navFlowHeight = !hideNavbar && navLayout === 'horizontal' && !navbar.posY ? (navbar.height ?? 60) : 0;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   useEffect(() => {
     if (!isNavHamburger && !isNavIconOnly) setIsNavMenuOpen(false);
@@ -2423,7 +2426,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         )}
 
         {/* 1. Navbar: a lone hamburger icon (no box), floating where the user dragged it. */}
-        {!embedded && isNavIconOnly && wrapNav(
+        {!hideNavbar && isNavIconOnly && wrapNav(
           <div className="absolute top-0" style={{ left: `${navLeftPct}%` }} dir="rtl">
             <button
               type="button"
@@ -2496,7 +2499,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         )}
 
         {/* 1. Navbar - Narrow Strip (نافبار وهو شريحة ضيقة), docked at the top or floating, or a side column */}
-        {!embedded && !isNavIconOnly && wrapNav(
+        {!hideNavbar && !isNavIconOnly && wrapNav(
         <nav
           ref={navbarRef}
           onPointerDown={startNavMove}

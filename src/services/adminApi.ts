@@ -169,7 +169,7 @@ export type SlideStatus = 'pending' | 'approved' | 'rejected';
 export interface GallerySlideRow {
   id: string; name: string; category: string; designerUid: string; designerName: string; status: SlideStatus;
   lawVersion: number; acceptedAt: string; createdAt: number; reason: string; reviewedBy: string;
-  slide: any; elements: any[];
+  kind: 'slide' | 'page'; slide: any; page: any; elements: any[];
 }
 export const adminSlides = (status: SlideStatus) => call<{ rows: GallerySlideRow[]; counts: { pending: number } }>({ action: 'slides-review-list', status });
 export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });

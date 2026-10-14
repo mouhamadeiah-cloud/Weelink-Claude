@@ -24,7 +24,7 @@
 //   POST /api/admin  { action: 'chat', after?, uid? } and { action: 'chat-send', text, uid? }  (the team chat board)
 //   POST /api/admin  { action: 'page-law-get' } → { law }  and { action: 'page-law-set', text } → { law }
 //        (the designers' «قانون الصفحة»: platformSettings/pageLaw, the only text a designer agrees to)
-//   POST /api/admin  { action: 'slides-review-list', status? } → { rows, counts }  and
+//   POST /api/admin  { action: 'slides-review-list', status? } → { rows, counts }  (slides and pages)  and
 //                    { action: 'slide-review', id, decision: 'approve'|'reject', reason? } → { status }
 //        (the slides designers exported to the gallery wait as gallerySlides/{id}.status = 'pending')
 //   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
@@ -760,6 +760,7 @@ export default {
     // rejected here; the rules let nobody else change its status.
     const SLIDE_STATUSES = ['pending', 'approved', 'rejected'];
     const SLIDE_CATEGORY_IDS = ['hero', 'about', 'services', 'gallery', 'team', 'reviews', 'offers', 'booking', 'contact', 'menu', 'cars', 'products', 'legal', 'other'];
+    const PAGE_CATEGORY_IDS = ['p-business', 'p-shop', 'p-restaurant', 'p-cars', 'p-other'];
     const lawFromDoc = (d: Record<string, any> | undefined) =>
       d ? { text: String(d.text || ''), version: Number(d.version) || 0, updatedAt: Number(d.updatedAt) || 0, updatedBy: String(d.updatedBy || '') } : null;
 
@@ -795,7 +796,8 @@ export default {
             id: d.id, name: String(x.name || ''), category: String(x.category || ''), designerUid: String(x.designerUid || ''),
             designerName: String(x.designerName || ''), status: String(x.status || 'pending'), lawVersion: Number(x.lawVersion) || 0,
             acceptedAt: String(x.acceptedAt || ''), createdAt: x.createdAt?.toMillis?.() || 0, reason: String(x.reason || ''),
-            reviewedBy: String(x.reviewedBy || ''), slide: x.slide || {}, elements: Array.isArray(x.elements) ? x.elements : [],
+            reviewedBy: String(x.reviewedBy || ''), kind: x.kind === 'page' ? 'page' : 'slide', slide: x.slide || {}, page: x.kind === 'page' ? x.page || null : null,
+            elements: Array.isArray(x.elements) ? x.elements : [],
           };
         })
         .sort((a, b) => b.createdAt - a.createdAt);
@@ -811,7 +813,8 @@ export default {
       const ref = db.collection('gallerySlides').doc(id);
       const snap = await ref.get();
       if (!snap.exists) return json({ error: 'not-found' }, 404);
-      if (decision === 'approve' && !SLIDE_CATEGORY_IDS.includes(String(snap.data()?.category))) return json({ error: 'bad-category' }, 400);
+      const ids = snap.data()?.kind === 'page' ? PAGE_CATEGORY_IDS : SLIDE_CATEGORY_IDS;
+      if (decision === 'approve' && !ids.includes(String(snap.data()?.category))) return json({ error: 'bad-category' }, 400);
       const status = decision === 'approve' ? 'approved' : 'rejected';
       const cur = snap.data() as { likes?: number; dislikes?: number } | undefined;
       // An approved slide starts its counters at zero (a withdrawn one that comes back keeps them);

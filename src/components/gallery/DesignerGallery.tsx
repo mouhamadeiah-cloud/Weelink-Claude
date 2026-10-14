@@ -1,4 +1,4 @@
-// «تصميمات مصممينا»: the approved slides of the designers' gallery, under the start page's cards
+// «تصميمات مصممينا»: the approved slides and pages of the designers' gallery, under the start page's cards
 // (Eyad, 14 Oct). Each is the live slide (LiveSlide: videos, text motion and effects play); clicking one opens it large. Filter by the kind of
 // slide, sort by likes or by newest, and see more of one designer. A signed-in visitor likes or
 // dislikes a slide (once per slide, changeable); the counters come from api/gallery.ts, and the likes
@@ -8,14 +8,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { Heart, Loader2, MessageCircle, Plus, ThumbsDown, ThumbsUp, X } from 'lucide-react';
-import { LiveSlide } from './LiveSlide';
-import { SLIDE_CATEGORIES, categoryLabel } from '../../data/slideCategories';
+import { LivePage, LiveSlide } from './LiveSlide';
+import { PAGE_CATEGORIES, PAGE_SLIDES, SLIDE_CATEGORIES, categoryLabel, type DesignKind } from '../../data/slideCategories';
 import { GallerySlide, isNewSlide, listApprovedSlides, readMyVotes, voteErrorText, voteOnSlide } from '../../services/galleryView';
 
 type Sort = 'likes' | 'new';
 const nf = (n: number) => n.toLocaleString('ar-SY');
 
-const preview = (s: GallerySlide) => <LiveSlide slide={s.slide} elements={s.elements} />;
+// A page is drawn whole with its navbar; on a card a long page is cut (the large view shows it all).
+const CARD_PAGE_HEIGHT = 380;
+const preview = (s: GallerySlide, card = false) =>
+  s.kind === 'page' && s.page ? <LivePage page={s.page} elements={s.elements} maxHeight={card ? CARD_PAGE_HEIGHT : undefined} /> : <LiveSlide slide={s.slide} elements={s.elements} />;
 
 interface VoteButtonsProps {
   slide: GallerySlide;
@@ -51,6 +54,7 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
   const [slides, setSlides] = useState<GallerySlide[] | null>(null);
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [sort, setSort] = useState<Sort>('likes');
+  const [kind, setKind] = useState<'all' | DesignKind>('all');
   const [category, setCategory] = useState('all');
   const [designer, setDesigner] = useState<{ uid: string; name: string } | null>(null);
   const [openId, setOpenId] = useState('');
@@ -91,9 +95,9 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
 
   const present = useMemo(() => new Set((slides || []).map((s) => s.category)), [slides]);
   const shown = useMemo(() => {
-    const rows = (slides || []).filter((s) => (category === 'all' || s.category === category) && (!designer || s.designerUid === designer.uid));
+    const rows = (slides || []).filter((s) => (kind === 'all' || s.kind === kind) && (category === 'all' || s.category === category) && (!designer || s.designerUid === designer.uid));
     return [...rows].sort((a, b) => (sort === 'new' ? b.at - a.at || b.likes - a.likes : b.likes - a.likes || b.at - a.at));
-  }, [slides, category, designer, sort]);
+  }, [slides, kind, category, designer, sort]);
   const open = (slides || []).find((s) => s.id === openId) || null;
 
   useEffect(() => {
@@ -139,7 +143,7 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h2 id="designers-gallery-title" className="text-heading sm:text-title font-bold">تصميمات مصممينا</h2>
-          <p className="text-sm text-muted">شرائح جاهزة بتصميم مصممين على Weelink. اضغط على أي شريحة لتشوفها كبيرة.</p>
+          <p className="text-sm text-muted">شرائح وصفحات جاهزة بتصميم مصممين على Weelink. اضغط على أي تصميم لتشوفه كبيراً.</p>
         </div>
         <div className="inline-flex rounded-ctl border border-line bg-surface p-0.5" role="group" aria-label="الترتيب">
           {([['likes', 'الأكثر إعجاباً'], ['new', 'الأحدث']] as [Sort, string][]).map(([id, label]) => (
@@ -148,9 +152,14 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1" role="group" aria-label="نوع الشريحة">
-        <button type="button" onClick={() => setCategory('all')} aria-pressed={category === 'all'} className={chip(category === 'all')}>كل الشرائح</button>
-        {SLIDE_CATEGORIES.filter((c) => present.has(c.id)).map((c) => (
+      <div className="flex items-center gap-2 overflow-x-auto pb-1" role="group" aria-label="شرائح أو صفحات">
+        {([['all', 'الكل'], ['slide', 'شرائح'], ['page', 'صفحات كاملة']] as ['all' | DesignKind, string][]).map(([id, label]) => (
+          <button key={id} type="button" onClick={() => { setKind(id); setCategory('all'); }} aria-pressed={kind === id} className={`shrink-0 h-9 px-3.5 rounded-full border text-xs font-bold transition cursor-pointer ${kind === id ? 'bg-brand text-white border-brand' : 'bg-surface text-ink border-line hover:border-brand/40'}`}>{label}</button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 overflow-x-auto pb-1" role="group" aria-label="النوع">
+        <button type="button" onClick={() => setCategory('all')} aria-pressed={category === 'all'} className={chip(category === 'all')}>كل الأنواع</button>
+        {[...(kind === 'page' ? [] : SLIDE_CATEGORIES), ...(kind === 'slide' ? [] : PAGE_CATEGORIES)].filter((c) => present.has(c.id) && (slides || []).some((s) => s.category === c.id && (kind === 'all' || s.kind === kind))).map((c) => (
           <button key={c.id} type="button" onClick={() => setCategory(c.id)} aria-pressed={category === c.id} className={chip(category === c.id)}>{c.label}</button>
         ))}
       </div>
@@ -163,19 +172,19 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
       {notice && <p role="status" className="text-sm font-bold text-danger">{notice}</p>}
 
       {shown.length === 0 ? (
-        <p className="text-sm text-muted py-6 text-center">ما في شرائح بهالنوع بعد.</p>
+        <p className="text-sm text-muted py-6 text-center">ما في تصاميم بهالنوع بعد.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 items-start">
           {shown.map((s) => (
             <article key={s.id} className="rounded-card bg-surface border border-line overflow-hidden flex flex-col">
               <button type="button" onClick={() => setOpenId(s.id)} aria-label={`افتح ${s.name}`} className="block w-full text-right cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40">
-                {preview(s)}
+                {preview(s, true)}
               </button>
               <div className="p-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold truncate flex-1">{s.name}</h3>
                   {isNewSlide(s) && <span className="shrink-0 rounded-full bg-success/10 text-success text-xs font-bold px-2 py-0.5">جديد</span>}
-                  <span className="shrink-0 text-xs text-faint">{categoryLabel(s.category)}</span>
+                  <span className="shrink-0 text-xs text-faint">{s.kind === 'page' ? `صفحة · ${categoryLabel(s.category)}` : categoryLabel(s.category)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <DesignerLine slide={s} total={totals[s.designerUid] || 0} />
@@ -193,7 +202,7 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
             <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line">
               <div className="min-w-0 space-y-0.5">
                 <h3 className="text-heading font-bold truncate">{open.name}</h3>
-                <div className="flex items-center gap-2"><DesignerLine slide={open} total={totals[open.designerUid] || 0} /><span className="text-xs text-faint">· {categoryLabel(open.category)}</span></div>
+                <div className="flex items-center gap-2"><DesignerLine slide={open} total={totals[open.designerUid] || 0} /><span className="text-xs text-faint">· {open.kind === 'page' ? `صفحة من ${PAGE_SLIDES} شرائح · ` : ''}{categoryLabel(open.category)}</span></div>
               </div>
               <button type="button" onClick={() => setOpenId('')} aria-label="إغلاق" className="shrink-0 w-9 h-9 rounded-ctl flex items-center justify-center text-muted hover:text-ink hover:bg-bg cursor-pointer"><X size={18} /></button>
             </div>
@@ -202,7 +211,7 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
               <VoteButtons slide={open} mine={votes[open.id] || 0} own={!!user && user.uid === open.designerUid} onVote={vote} large />
               <button type="button" disabled title="يفتح الاتصال بالمصمم بعد الدفع: قريباً" className="h-10 px-4 rounded-ctl border border-line text-faint text-sm font-bold inline-flex items-center gap-1.5 cursor-not-allowed"><MessageCircle size={16} /> اتصل بالمصمم · قريباً</button>
               <button type="button" disabled title="نسخ الشريحة لصفحتك بألوانك: قريباً" className="h-10 px-4 rounded-ctl border border-line text-faint text-sm font-bold inline-flex items-center gap-1.5 cursor-not-allowed"><Plus size={16} /> أضف الشريحة لصفحتي مجاناً · قريباً</button>
-              <button type="button" onClick={() => { setDesigner({ uid: open.designerUid, name: open.designerName || 'المصمم' }); setCategory('all'); setOpenId(''); }} className="h-10 px-4 rounded-ctl bg-brand/10 text-brand text-sm font-bold cursor-pointer mr-auto">المزيد من {open.designerName || 'المصمم'}</button>
+              <button type="button" onClick={() => { setDesigner({ uid: open.designerUid, name: open.designerName || 'المصمم' }); setKind('all'); setCategory('all'); setOpenId(''); }} className="h-10 px-4 rounded-ctl bg-brand/10 text-brand text-sm font-bold cursor-pointer mr-auto">المزيد من {open.designerName || 'المصمم'}</button>
             </div>
             {notice && <p role="status" className="px-5 pb-4 text-sm font-bold text-danger">{notice}</p>}
           </div>

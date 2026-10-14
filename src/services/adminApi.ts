@@ -100,6 +100,7 @@ export interface Payment {
 
 export interface Company { name: string; address: string; phone: string; email: string; taxNo: string; footer: string }
 
+export type TaskStatus = 'new' | 'doing' | 'done';
 export interface AiCall { at: number; kind: string; tokens: number; input: number; output: number; costUsd: number; ok: boolean; reason: string }
 export interface TokensOverview {
   month: string;
@@ -119,6 +120,7 @@ export interface SubscriberDetail {
   payments: Payment[];
   tokens: { balance: number | null; used: number; free: number };
   calls: AiCall[];
+  tasks: { id: string; title: string; status: TaskStatus; assignee: string; updatedAt: number }[];
   events: { id: string; at: number; admin: string; type: 'status' | 'note' | string; text: string; status: string }[];
 }
 export const adminSubscriber = (uid: string) => call<SubscriberDetail>({ action: 'subscriber', uid });
@@ -142,3 +144,13 @@ export const adminTeam = () => call<{ rows: TeamAdmin[]; specialties: Record<str
 export const adminAddAdmin = (b: { username: string; name: string; specialty: string }) => call<{ username: string; tempPassword: string }>({ action: 'admin-add', ...b });
 export const adminUpdateAdmin = (username: string, patch: { name?: string; specialty?: string; status?: 'active' | 'frozen' }) => call<{ ok: true }>({ action: 'admin-update', username, ...patch });
 export const adminResetPassword = (username: string) => call<{ username: string; tempPassword: string }>({ action: 'admin-reset-password', username });
+
+export interface Task { id: string; title: string; instructions: string; type: string; uid: string; subscriber: string; assignee: string; assigneeName: string; status: TaskStatus; createdAt: number; updatedAt: number }
+export interface TaskReply { id: string; at: number; by: string; byName: string; text: string }
+export interface TasksResult { rows: Task[]; matched: number; counts: Record<TaskStatus, number>; types: Record<string, string> }
+export const adminTasks = (q: { status: string; q: string; assignee?: string; mine?: boolean }) => call<TasksResult>({ action: 'tasks', ...q });
+export const adminTask = (id: string) => call<{ task: Task; replies: TaskReply[] }>({ action: 'task', id });
+export const adminTaskCreate = (b: { title: string; instructions: string; type: string; assignee: string; uid?: string }) => call<{ id: string }>({ action: 'task-create', ...b });
+export const adminTaskUpdate = (id: string, patch: { title?: string; instructions?: string; type?: string; assignee?: string }) => call<{ ok: true }>({ action: 'task-update', id, ...patch });
+export const adminTaskStatus = (id: string, status: TaskStatus) => call<{ status: TaskStatus }>({ action: 'task-status', id, status });
+export const adminTaskReply = (id: string, text: string) => call<{ ok: true }>({ action: 'task-reply', id, text });

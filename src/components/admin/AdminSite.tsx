@@ -8,6 +8,7 @@ import { PaymentsView } from './PaymentsView';
 import { BillingSettings } from './BillingSettings';
 import { TokensView } from './TokensView';
 import { TeamView } from './TeamView';
+import { TasksView } from './TasksView';
 import {
   AdminError, AdminInfo, SubscriberQuery, SubscribersResult,
   adminChangePassword, adminLogin, adminMe, adminSubscribers, getAdminToken, setAdminToken,
@@ -60,14 +61,14 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   );
 };
 
-type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'password';
+type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'password';
 interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View; needs?: string }[] }
 // Every group starts folded; the admin opens what he needs. Items without a view are the next phases.
 const MENU: MenuGroup[] = [
   { id: 'subs', title: 'المشتركون', icon: Users, items: [{ id: 'list', label: 'قائمة المشتركين', view: 'subscribers' }] },
   { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'payments', label: 'كل الدفعات والفواتير', view: 'payments', needs: 'payments' }, { id: 'billing', label: 'إعدادات الفوترة', view: 'billing', needs: 'get-company' }] },
   { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'usage', label: 'الاستهلاك والأسعار', view: 'tokens', needs: 'tokens-overview' }] },
-  { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات', view: 'team', needs: 'admins-list' }, { id: 'flow', label: 'سير العمل' }, { id: 'chat', label: 'لوحة التواصل' }] },
+  { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات', view: 'team', needs: 'admins-list' }, { id: 'my-tasks', label: 'مهامي', view: 'my-tasks' }, { id: 'all-tasks', label: 'كل المهام', view: 'all-tasks', needs: 'task-create' }, { id: 'chat', label: 'لوحة التواصل' }] },
   { id: 'books', title: 'الحسابات والداشبورد', icon: BarChart3, items: [{ id: 'dash', label: 'الداشبورد' }] },
   { id: 'me', title: 'حسابي', icon: KeyRound, items: [{ id: 'pw', label: 'تغيير كلمة السر', view: 'password' }] },
 ];
@@ -297,6 +298,8 @@ export const AdminSite: React.FC = () => {
         : view === 'payments' ? <PaymentsView onSessionEnd={logout} />
         : view === 'billing' ? <BillingSettings onSessionEnd={logout} />
         : view === 'tokens' ? <TokensView onSessionEnd={logout} />
+        : view === 'my-tasks' ? <TasksView key="mine" onSessionEnd={logout} owner={false} />
+        : view === 'all-tasks' ? <TasksView key="all" onSessionEnd={logout} owner />
         : view === 'team' ? <TeamView onSessionEnd={logout} me={admin.username} />
         : view === 'password' ? <ChangePassword forced={false} onDone={(a) => { setAdmin(a); setView(null); }} />
         : <p className="mt-16 text-center text-muted">أهلاً {admin.name}. افتح قسماً من القائمة على اليسار.</p>}

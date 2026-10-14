@@ -19,6 +19,8 @@
 //        → reminds subscribers 14, 7 and 1 day before their subscription ends, and freezes the ones
 //          whose subscription ended
 //   POST /api/admin  { action: 'admins-list' | 'admin-add' | 'admin-update' | 'admin-reset-password', ... }  (owner only)
+//   POST /api/admin  { action: 'tasks' | 'task' | 'task-status' | 'task-reply' }  (an admin's own tasks) and
+//                    { action: 'task-create' | 'task-update' }  (owner only): the workflow board
 //   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
 //   POST /api/admin  { action: 'tokens-adjust', uid, delta, reason } → { balance }
 //   POST /api/admin  { action: 'set-prices', in, out }           → { prices }
@@ -214,8 +216,11 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 // and only its actions. Checked here on every call; the site only hides what is not allowed.
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
 const FINANCE_ONLY = ['payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
-const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password'];
-const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note'];
+const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update'];
+// The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
+const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'tasks', 'task', 'task-status', 'task-reply'];
+const TASK_TYPES: Record<string, string> = { payment: 'طلب دفع', domain: 'طلب دومين', complaint: 'شكوى', other: 'أخرى' };
+const TASK_STATUSES = ['new', 'doing', 'done'];
 const KNOWN_ACTIONS = [...OPEN_TO_ALL, ...FINANCE_ONLY, ...OWNER_ONLY];
 const can = (a: Pick<Admin, 'role' | 'specialty'>, action: string) =>
   a.role === 'owner' || OPEN_TO_ALL.includes(action) || (FINANCE_ONLY.includes(action) && a.specialty === 'finance');
@@ -610,6 +615,13 @@ export default {
         subscription: st?.subscription?.endsAt ? { plan: String(st.subscription.plan || ''), planName: String(st.subscription.planName || ''), period: st.subscription.period === 'yearly' ? 'yearly' : 'monthly', endsAt: Number(st.subscription.endsAt) || 0, freezeAt: Number(st.subscription.freezeAt) || 0 } : null,
         payments: can(admin, 'payments') ? paymentsSnap.docs.map((d) => payFromDoc(d.id, d.data())).sort((a, b) => b.paidAt - a.paidAt) : [],
         tokens: { balance: typeof st?.tokens?.balance === 'number' ? st.tokens.balance : null, used: st?.tokens?.used || 0, free: FREE_TOKENS },
+        tasks: await (async () => {
+          const snap = await db.collection('platform_tasks').where('uid', '==', uid).limit(100).get();
+          return snap.docs
+            .filter((d) => admin.role === 'owner' || d.data().assignee === session.u)
+            .map((d) => ({ id: d.id, title: String(d.data().title || ''), status: String(d.data().status || 'new'), assignee: String(d.data().assignee || ''), updatedAt: Number(d.data().updatedAt) || 0 }))
+            .sort((a, b) => b.updatedAt - a.updatedAt);
+        })(),
         calls: can(admin, 'tokens-overview') ? callsSnap.docs.map((d) => callFromDoc(d.data())).sort((a, b) => b.at - a.at).slice(0, 20) : [],
         sites: sitesSnap.docs.map((d) => ({ name: String(d.data().name), project: String(d.data().project), publishedAt: String(d.data().publishedAt || '') })),
         events: eventsSnap.docs.map((d) => {
@@ -731,6 +743,124 @@ export default {
       await db.collection('platform_settings').doc('company').set(company);
       await audit(session.u, 'set-company');
       return json({ company });
+    }
+
+    // ----- tasks (the workflow board) -----
+    // platform_tasks/{id} = { title, instructions, type, uid?, subscriber?, assignee, status, createdBy, createdAt,
+    // updatedAt } with replies in platform_tasks/{id}/replies. The owner creates and hands them out; the
+    // assignee changes the status and replies.
+    const owner = admin.role === 'owner';
+    const taskFromDoc = (id: string, d: Record<string, any>) => ({
+      id, title: String(d.title || ''), instructions: String(d.instructions || ''), type: TASK_TYPES[d.type] ? String(d.type) : 'other',
+      uid: String(d.uid || ''), subscriber: String(d.subscriber || ''), assignee: String(d.assignee || ''), status: TASK_STATUSES.includes(d.status) ? String(d.status) : 'new',
+      createdAt: Number(d.createdAt) || 0, updatedAt: Number(d.updatedAt) || 0,
+    });
+    const myTask = (t: { assignee: string }) => owner || t.assignee === session.u;
+    const loadTask = async (id: unknown) => {
+      const snap = await db.collection('platform_tasks').doc(String(id || '').slice(0, 128)).get();
+      if (!snap.exists) return null;
+      const t = taskFromDoc(snap.id, snap.data()!);
+      return myTask(t) ? { ref: snap.ref, t } : null;
+    };
+    const adminName = async (username: string) => (username ? ((await db.collection('platform_admins').doc(username).get()).data() as { name?: string } | undefined)?.name || username : '');
+    const subscriberEvent = (t: { uid: string }, text: string) =>
+      t.uid ? db.collection('platform_subscribers').doc(t.uid).collection('events').add({ at: Date.now(), admin: session.u, type: 'task', text }) : Promise.resolve();
+
+    if (action === 'tasks') {
+      const status = TASK_STATUSES.includes(String(body.status)) ? String(body.status) : '';
+      const q = String(body.q || '').trim().toLowerCase().slice(0, 100);
+      // The owner may look at one admin's tasks (or all); «مهامي» (mine) and everyone else see only their own.
+      const who = owner && body.mine !== true ? cleanUsername(body.assignee) : session.u;
+      const base = db.collection('platform_tasks');
+      const snap = await (who ? base.where('assignee', '==', who) : base).limit(1000).get();
+      const all = snap.docs.map((d) => taskFromDoc(d.id, d.data()));
+      const rows = all
+        .filter((t) => (!status || t.status === status) && (!q || [t.title, t.subscriber, t.instructions].some((v) => v.toLowerCase().includes(q))))
+        .sort((a, b) => (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0) || b.updatedAt - a.updatedAt);
+      const names = new Map(((await db.collection('platform_admins').get()).docs).map((d) => [d.id, String((d.data() as { name?: string }).name || d.id)]));
+      return json({
+        rows: rows.slice(0, 300).map((t) => ({ ...t, assigneeName: names.get(t.assignee) || t.assignee })),
+        matched: rows.length,
+        counts: { new: all.filter((t) => t.status === 'new').length, doing: all.filter((t) => t.status === 'doing').length, done: all.filter((t) => t.status === 'done').length },
+        types: TASK_TYPES,
+      });
+    }
+
+    if (action === 'task') {
+      const found = await loadTask(body.id);
+      if (!found) return json({ error: 'not-found' }, 404);
+      const replies = await found.ref.collection('replies').get();
+      return json({
+        task: { ...found.t, assigneeName: await adminName(found.t.assignee) },
+        replies: replies.docs.map((d) => { const r = d.data() as { at?: number; by?: string; byName?: string; text?: string }; return { id: d.id, at: r.at || 0, by: r.by || '', byName: r.byName || r.by || '', text: r.text || '' }; }).sort((a, b) => a.at - b.at),
+      });
+    }
+
+    if (action === 'task-create' || action === 'task-update') {
+      const creating = action === 'task-create';
+      const cur = creating ? null : await loadTask(body.id);
+      if (!creating && !cur) return json({ error: 'not-found' }, 404);
+      const patch: Record<string, unknown> = {};
+      if (creating || body.title !== undefined) {
+        const title = String(body.title || '').trim().slice(0, 120);
+        if (title.length < 3) return json({ error: 'bad-title' }, 400);
+        patch.title = title;
+      }
+      if (creating || body.instructions !== undefined) patch.instructions = String(body.instructions || '').trim().slice(0, 2000);
+      if (creating || body.type !== undefined) {
+        const type = String(body.type || 'other');
+        if (!TASK_TYPES[type]) return json({ error: 'bad-type' }, 400);
+        patch.type = type;
+      }
+      if (creating || body.assignee !== undefined) {
+        const who = cleanUsername(body.assignee);
+        if (who) {
+          const row = (await db.collection('platform_admins').doc(who).get()).data() as { status?: string } | undefined;
+          if (!row || row.status !== 'active') return json({ error: 'bad-assignee' }, 400);
+        }
+        patch.assignee = who;
+      }
+      if (creating && body.uid) {
+        // The subscriber is given by email (what the team has at hand) or by uid.
+        const given = String(body.uid).trim().slice(0, 128);
+        const sub = given.includes('@') ? await auth.getUserByEmail(given).catch(() => null) : await userOrNull(given);
+        if (!sub) return json({ error: 'no-subscriber' }, 404);
+        patch.uid = sub.uid;
+        patch.subscriber = sub.displayName || sub.email || sub.uid;
+      }
+      const now = Date.now();
+      if (creating) {
+        const ref = db.collection('platform_tasks').doc();
+        await ref.set({ status: 'new', uid: '', subscriber: '', ...patch, createdBy: session.u, createdAt: now, updatedAt: now });
+        const t = taskFromDoc(ref.id, { ...patch, status: 'new', createdAt: now, updatedAt: now });
+        await subscriberEvent(t, `مهمة جديدة: ${t.title} (${TASK_TYPES[t.type]}) → ${await adminName(t.assignee) || 'بدون مسؤول'}`);
+        await audit(session.u, `task-create:${ref.id}`);
+        return json({ id: ref.id });
+      }
+      if (!Object.keys(patch).length) return json({ error: 'bad-request' }, 400);
+      await cur!.ref.update({ ...patch, updatedAt: now });
+      await audit(session.u, `task-update:${cur!.t.id}`);
+      return json({ ok: true });
+    }
+
+    if (action === 'task-status' || action === 'task-reply') {
+      const cur = await loadTask(body.id);
+      if (!cur) return json({ error: 'not-found' }, 404);
+      const now = Date.now();
+      if (action === 'task-status') {
+        const status = String(body.status || '');
+        if (!TASK_STATUSES.includes(status)) return json({ error: 'bad-status' }, 400);
+        if (status !== cur.t.status) {
+          await cur.ref.update({ status, updatedAt: now });
+          await subscriberEvent(cur.t, `المهمة «${cur.t.title}»: ${status === 'done' ? 'انتهت' : status === 'doing' ? 'قيد العمل' : 'جديدة'}`);
+        }
+        return json({ status });
+      }
+      const text = String(body.text || '').trim().slice(0, 1000);
+      if (!text) return json({ error: 'bad-request' }, 400);
+      await cur.ref.collection('replies').add({ at: now, by: session.u, byName: admin.name, text });
+      await cur.ref.update({ updatedAt: now });
+      return json({ ok: true });
     }
 
     if (action === 'tokens-adjust') {

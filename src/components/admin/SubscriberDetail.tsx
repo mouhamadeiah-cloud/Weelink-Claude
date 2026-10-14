@@ -316,6 +316,15 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
               </div>
             </div>
 
+            {data.tasks.length > 0 && (
+              <div>
+                <h3 className="mb-2 font-medium">المهام</h3>
+                <ul className="flex flex-col gap-1">
+                  {data.tasks.map((t) => <li key={t.id} className="flex justify-between gap-2"><span>{t.title}</span><span className="text-tiny text-muted">{t.status === 'done' ? 'انتهت' : t.status === 'doing' ? 'قيد العمل' : 'جديدة'}{t.assignee ? ` · ${t.assignee}` : ''}</span></li>)}
+                </ul>
+              </div>
+            )}
+
             <div>
               <h3 className="mb-2 font-medium">السجل</h3>
               {data.events.length ? (
@@ -323,7 +332,7 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
                   {data.events.map((e) => (
                     <li key={e.id}>
                       <div className="text-tiny text-faint">{when(e.at)} · {e.admin}</div>
-                      <div>{e.type === 'payment' ? <span className="font-medium text-success">دفعة</span> : e.type === 'freeze-date' ? <span className="font-medium text-warn">موعد التجميد</span> : e.type === 'status' ? <span className={`font-medium ${STATUS_COLOR[e.status as SubscriberStatus] || ''}`}>{STATUS_LABEL[e.status as SubscriberStatus] || e.status}</span> : <span className="text-muted">ملاحظة</span>}{e.text ? ` · ${e.text}` : ''}</div>
+                      <div>{e.type === 'payment' ? <span className="font-medium text-success">دفعة</span> : e.type === 'freeze-date' ? <span className="font-medium text-warn">موعد التجميد</span> : e.type === 'task' ? <span className="font-medium text-brand">مهمة</span> : e.type === 'status' ? <span className={`font-medium ${STATUS_COLOR[e.status as SubscriberStatus] || ''}`}>{STATUS_LABEL[e.status as SubscriberStatus] || e.status}</span> : <span className="text-muted">ملاحظة</span>}{e.text ? ` · ${e.text}` : ''}</div>
                     </li>
                   ))}
                 </ol>

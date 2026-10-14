@@ -1,0 +1,62 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import handler from '../server/design-access.ts';
+import { store, tokens } from './fakeAdmin.ts';
+tokens['tc'] = { uid: 'cust', email_verified: true };
+tokens['td'] = { uid: 'desg', email_verified: true };
+tokens['tx'] = { uid: 'other', email_verified: true };
+store.set('designOrders/o1', { customerUid: 'cust', designerUid: 'desg', status: 'paid' });
+store.set('designs/cust', { pages: [{ id: 'p' }], elements: [{ id: 'e' }], restaurantAdmin: { secret: 1 }, shopAdmin: { customers: ['x'] } });
+const call = async (tok: string, body: any) => { const r = await handler.fetch(new Request('http://x', { method: 'POST', headers: { authorization: `Bearer ${tok}` }, body: JSON.stringify(body) })); return { s: r.status, ...(await r.json()) }; };
+process.env.FIREBASE_SERVICE_ACCOUNT = JSON.stringify({ private_key: 'x' });
+const results: [string, boolean, any][] = []; const check = (l: string, c: boolean, x: any = '') => { results.push([l, c, x]); };
+check('designer cannot issue', (await call('td', { action: 'issue', id: 'o1' })).error === 'bad_state');
+check('stranger not found', (await call('tx', { action: 'issue', id: 'o1' })).error === 'not_found');
+check('open before code → expired', (await call('td', { action: 'open', id: 'o1', code: 'AAAA-AAAA-AAAA-AAAA' })).error === 'expired');
+const i = await call('tc', { action: 'issue', id: 'o1' });
+check('issue gives a 4x4 code and 3-day expiry', /^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/.test(i.code) && Math.abs(i.expiresAt - Date.now() - 259200000) < 5000, i);
+check('code not stored in clear', !JSON.stringify([...store.values()]).includes(i.code.replace(/-/g, '')));
+check('wrong code refused', (await call('td', { action: 'open', id: 'o1', code: 'AAAA-AAAA-AAAA-AAAA' })).error === 'wrong_code');
+check('customer cannot open', (await call('tc', { action: 'open', id: 'o1', code: i.code })).error === 'forbidden');
+const o = await call('td', { action: 'open', id: 'o1', code: i.code.toLowerCase().replace(/-/g, ' ') });
+check('open returns only pages+elements', o.s === 200 && o.pages.length === 1 && !('restaurantAdmin' in o) && !('shopAdmin' in o), o);
+check('backup kept', [...store.keys()].some((k) => k.startsWith('designAccess/o1/backups/')));
+const sv = await call('td', { action: 'save', id: 'o1', code: i.code, pages: [{ id: 'p2' }], elements: [] });
+const d = store.get('designs/cust');
+check('save writes pages/elements and keeps the rest', sv.ok && d.pages[0].id === 'p2' && d.shopAdmin.customers[0] === 'x' && d.restaurantAdmin.secret === 1, d);
+check('bad payload refused', (await call('td', { action: 'save', id: 'o1', code: i.code, pages: 'x', elements: [] })).error === 'bad_request');
+check('status for designer', (await call('td', { action: 'status', id: 'o1' })).active === true);
+// lock after wrong tries
+for (let k = 0; k < 8; k++) await call('td', { action: 'open', id: 'o1', code: 'BBBB-BBBB-BBBB-BBBB' });
+check('locked after 8 wrong (even with the right code)', (await call('td', { action: 'open', id: 'o1', code: i.code })).error === 'locked');
+const i2 = await call('tc', { action: 'issue', id: 'o1' });
+check('new code unlocks and kills the old', (await call('td', { action: 'open', id: 'o1', code: i.code })).error === 'wrong_code' && (await call('td', { action: 'open', id: 'o1', code: i2.code })).s === 200);
+await call('tc', { action: 'revoke', id: 'o1' });
+check('revoked', (await call('td', { action: 'save', id: 'o1', code: i2.code, pages: [{}], elements: [] })).error === 'expired');
+const i3 = await call('tc', { action: 'issue', id: 'o1' });
+store.set('designOrders/o1', { ...store.get('designOrders/o1'), status: 'confirmed' });
+check('dies when order leaves paid/delivered', (await call('td', { action: 'open', id: 'o1', code: i3.code })).error === 'expired');
+store.set('designOrders/o1', { ...store.get('designOrders/o1'), status: 'paid' });
+store.set('designAccess/o1', { ...store.get('designAccess/o1'), expiresAt: Date.now() - 1 });
+check('expired by time', (await call('td', { action: 'open', id: 'o1', code: i3.code })).error === 'expired');
+
+// active codes, restore
+store.set('designOrders/o1', { ...store.get('designOrders/o1'), status: 'paid', designerName: 'سارة' });
+store.set('designs/cust', { ...store.get('designs/cust'), pages: [{ id: 'now' }], elements: [] });
+const i4 = await call('tc', { action: 'issue', id: 'o1' });
+const act = await call('tc', { action: 'active' });
+check('customer sees the code in use on their page', act.rows?.length === 1 && act.rows[0].id === 'o1' && act.rows[0].designerName === 'سارة', act);
+check('designer sees no codes on someone else\'s page', (await call('td', { action: 'active' })).rows.length === 0);
+check('cannot restore while the code is live', (await call('tc', { action: 'restore', id: 'o1' })).error === 'in_use');
+await call('td', { action: 'open', id: 'o1', code: i4.code });
+store.set('designs/cust', { ...store.get('designs/cust'), pages: [{ id: 'designer-version' }] });
+check('status shows the backup time to the customer, not the designer', (await call('tc', { action: 'status', id: 'o1' })).backupAt > 0 && (await call('td', { action: 'status', id: 'o1' })).backupAt === 0);
+await call('tc', { action: 'revoke', id: 'o1' });
+check('no active codes after revoke', (await call('tc', { action: 'active' })).rows.length === 0);
+check('designer cannot restore', (await call('td', { action: 'restore', id: 'o1' })).error === 'forbidden');
+check('restore brings the page back as before the designer', (await call('tc', { action: 'restore', id: 'o1' })).ok === true && store.get('designs/cust').pages[0].id === 'now', store.get('designs/cust'));
+check('the designer version is kept as a backup before restoring', [...store.entries()].some(([k, v]) => k.startsWith('designAccess/o1/backups/') && v.beforeRestore && v.pages[0].id === 'designer-version'));
+check('wrong counter counted atomically (increment)', typeof store.get('designAccess/o1').wrong === 'number');
+
+
+for (const [label, ok, extra] of results) test(label, () => assert.ok(ok, JSON.stringify(extra)));

@@ -15,6 +15,7 @@ const KitchenPage = lazy(() => import('./components/restaurant/KitchenScreen').t
 const PublicSite = lazy(() => import('./components/publish/PublicSite').then((m) => ({default: m.PublicSite})));
 // The platform admin site (Eyad's team): admin.<domain>, or ?admin on any address (the server decides who gets in).
 const AdminSite = lazy(() => import('./components/admin/AdminSite').then((m) => ({default: m.AdminSite})));
+const SuspendedGate = lazy(() => import('./components/publish/SuspendedGate').then((m) => ({default: m.SuspendedGate})));
 const OrderStatusPage = lazy(() => import('./components/restaurant/OrderStatusPage').then((m) => ({default: m.OrderStatusPage})));
 const DevicePage = lazy(() => import('./components/restaurant/DeviceScreen').then((m) => ({default: m.DevicePage})));
 
@@ -59,7 +60,7 @@ createRoot(document.getElementById('root')!).render(
     ) : siteUid && orderId ? (
       <Suspense fallback={null}><OrderStatusPage uid={siteUid} orderId={orderId} k={params.get('k') || ''} /></Suspense>
     ) : siteUid ? (
-      <Suspense fallback={null}><PublicRestaurantSite uid={siteUid} /></Suspense>
+      <Suspense fallback={null}><SuspendedGate owner={siteUid}><PublicRestaurantSite uid={siteUid} /></SuspendedGate></Suspense>
     ) : kitchenUid ? (
       <Suspense fallback={null}><KitchenPage uid={kitchenUid} /></Suspense>
     ) : deviceUid ? (

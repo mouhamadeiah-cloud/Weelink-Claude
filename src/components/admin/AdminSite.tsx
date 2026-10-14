@@ -3,6 +3,7 @@
 // All data comes from /api/admin; nothing here reads Firebase directly.
 import React, { useCallback, useEffect, useState } from 'react';
 import { BarChart3, ChevronDown, Coins, CreditCard, KeyRound, Loader2, LogOut, Menu, Search, ShieldCheck, UserCog, Users, X } from 'lucide-react';
+import { SubscriberDetail } from './SubscriberDetail';
 import {
   AdminError, AdminInfo, SubscriberQuery, SubscribersResult,
   adminChangePassword, adminLogin, adminMe, adminSubscribers, getAdminToken, setAdminToken,
@@ -172,10 +173,11 @@ const Select: React.FC<{ value: string; onChange: (v: string) => void; options: 
 );
 
 const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) => {
-  const [query, setQuery] = useState<SubscriberQuery>({ q: '', state: 'all', published: 'all', verified: 'all' });
+  const [query, setQuery] = useState<SubscriberQuery>({ q: '', state: 'all', published: 'all', verified: 'all', status: 'all' });
   const [result, setResult] = useState<SubscribersResult | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [openUid, setOpenUid] = useState('');
 
   const load = useCallback(async (q: SubscriberQuery) => {
     setLoading(true);
@@ -220,6 +222,7 @@ const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) =
         </div>
         <Select value={query.state} onChange={(v) => set({ state: v as SubscriberQuery['state'] })} options={[['all', 'كل الحالات'], ['active', 'نشط'], ['sleeping', 'نائم']]} />
         <Select value={query.published} onChange={(v) => set({ published: v as SubscriberQuery['published'] })} options={[['all', 'الصفحات: الكل'], ['yes', 'عنده صفحة منشورة'], ['no', 'بلا صفحة منشورة']]} />
+        <Select value={query.status} onChange={(v) => set({ status: v as SubscriberQuery['status'] })} options={[['all', 'الاشتراك: الكل'], ['active', 'فعّال'], ['frozen', 'مجمّد'], ['cancelled', 'ملغى']]} />
         <Select value={query.verified} onChange={(v) => set({ verified: v as SubscriberQuery['verified'] })} options={[['all', 'الإيميل: الكل'], ['yes', 'مؤكَّد'], ['no', 'غير مؤكَّد']]} />
         {loading && <Loader2 className="h-4 w-4 animate-spin text-muted" />}
       </div>
@@ -235,14 +238,14 @@ const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) =
               </thead>
               <tbody>
                 {result.rows.map((r) => (
-                  <tr key={r.uid} className="border-b border-line last:border-0">
+                  <tr key={r.uid} onClick={() => setOpenUid(r.uid)} className="cursor-pointer border-b border-line last:border-0 hover:bg-bg">
                     <td className="px-3 py-2">{r.name || '—'}</td>
                     <td className="px-3 py-2" dir="ltr">{r.email || '—'}{r.email && !r.verified && <span className="mr-1 text-warn" title="غير مؤكَّد"> •</span>}</td>
                     <td className="px-3 py-2" dir="ltr">{r.phone || '—'}</td>
                     <td className="px-3 py-2">{date(r.createdAt)}</td>
                     <td className="px-3 py-2">{date(r.lastActive)}</td>
                     <td className="px-3 py-2">
-                      {r.disabled ? <span className="text-danger">موقوف</span> : r.active ? <span className="text-success">نشط</span> : <span className="text-faint">نائم</span>}
+                      {r.status === 'cancelled' ? <span className="text-danger">ملغى</span> : r.status === 'frozen' ? <span className="text-warn">مجمّد</span> : r.disabled ? <span className="text-danger">موقوف</span> : r.active ? <span className="text-success">نشط</span> : <span className="text-faint">نائم</span>}
                     </td>
                     <td className="px-3 py-2">
                       {r.sites.length ? r.sites.map((x) => <div key={x.name}>{KIND[x.project] || x.project} · <span dir="ltr">{x.name}</span></div>) : <span className="text-faint">—</span>}
@@ -255,6 +258,7 @@ const Subscribers: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) =
           </div>
         </>
       )}
+      {openUid && <SubscriberDetail uid={openUid} onClose={() => setOpenUid('')} onChanged={() => load(query)} onSessionEnd={onSessionEnd} />}
     </section>
   );
 };

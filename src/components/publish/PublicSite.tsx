@@ -4,6 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { withLocalGraphics } from '../../utils/localGraphics';
+import { SuspendedGate } from './SuspendedGate';
 import { PublishedSite, SiteSeo, letterIcon, loadPublishedSite } from '../../services/sites';
 import { PublicRestaurantSite } from '../restaurant/PublicRestaurantSite';
 import { SiteView } from './SiteView';
@@ -87,7 +88,7 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
   if (site === 'loading') {
     return <div className="min-h-[100dvh] flex items-center justify-center bg-white"><Loader2 size={36} className="animate-spin text-[#0071e3]" /></div>;
   }
-  if (ready?.project === 'restaurant') return <PublicRestaurantSite uid={ready.owner} />;
+  if (ready?.project === 'restaurant') return <SuspendedGate owner={ready.owner}><PublicRestaurantSite uid={ready.owner} /></SuspendedGate>;
   if (!ready || !ready.pages?.length) {
     return (
       <div dir="rtl" className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 bg-[#f5f5f7] text-center p-6 font-sans">
@@ -104,10 +105,12 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
   };
 
   return (
+    <SuspendedGate owner={ready.owner}>
     <BookingPageContext.Provider value={bookingPage}>
     <div className="h-[100dvh]">
       <SiteView project={ready.project} pages={ready.pages} elements={elements} data={ready.data} phone={phone} pageId={pageId} onSelectPage={selectPage} onContactClick={(url) => isContactLink(url) && countContact(ready.owner, ready.project)} />
     </div>
     </BookingPageContext.Provider>
+    </SuspendedGate>
   );
 };

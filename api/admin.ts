@@ -21,6 +21,7 @@
 //   POST /api/admin  { action: 'admins-list' | 'admin-add' | 'admin-update' | 'admin-reset-password', ... }  (owner only)
 //   POST /api/admin  { action: 'tasks' | 'task' | 'task-status' | 'task-reply' }  (an admin's own tasks) and
 //                    { action: 'task-create' | 'task-update' }  (owner only): the workflow board
+//   POST /api/admin  { action: 'chat', after?, uid? } and { action: 'chat-send', text, uid? }  (the team chat board)
 //   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
 //   POST /api/admin  { action: 'tokens-adjust', uid, delta, reason } → { balance }
 //   POST /api/admin  { action: 'set-prices', in, out }           → { prices }
@@ -218,7 +219,7 @@ const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركي�
 const FINANCE_ONLY = ['payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
-const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'tasks', 'task', 'task-status', 'task-reply'];
+const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
 const TASK_TYPES: Record<string, string> = { payment: 'طلب دفع', domain: 'طلب دومين', complaint: 'شكوى', other: 'أخرى' };
 const TASK_STATUSES = ['new', 'doing', 'done'];
 const KNOWN_ACTIONS = [...OPEN_TO_ALL, ...FINANCE_ONLY, ...OWNER_ONLY];
@@ -861,6 +862,39 @@ export default {
       await cur.ref.collection('replies').add({ at: now, by: session.u, byName: admin.name, text });
       await cur.ref.update({ updatedAt: now });
       return json({ ok: true });
+    }
+
+    // ----- the team chat board -----
+    // platform_chat/{id} = { at, by, byName, text, uid?, subscriber? }: one channel for all admins. A message may
+    // be about a subscriber (email or uid); it then also lands in that subscriber's history as a note.
+    if (action === 'chat') {
+      const after = Number(body.after) || 0;
+      const about = String(body.uid || '').trim().slice(0, 128);
+      const col = db.collection('platform_chat');
+      const snap = await (about ? col.where('uid', '==', about).limit(200) : after ? col.where('at', '>', after).limit(200) : col.orderBy('at', 'desc').limit(100)).get();
+      const rows = snap.docs
+        .map((d) => { const m = d.data() as Record<string, any>; return { id: d.id, at: Number(m.at) || 0, by: String(m.by || ''), byName: String(m.byName || m.by || ''), text: String(m.text || ''), uid: String(m.uid || ''), subscriber: String(m.subscriber || '') }; })
+        .filter((m) => m.at > after)
+        .sort((a, b) => a.at - b.at);
+      return json({ rows, me: session.u });
+    }
+
+    if (action === 'chat-send') {
+      const text = String(body.text || '').trim().slice(0, 1000);
+      if (!text) return json({ error: 'bad-request' }, 400);
+      let uid = '', subscriber = '';
+      const given = String(body.uid || '').trim().slice(0, 128);
+      if (given) {
+        const sub = given.includes('@') ? await auth.getUserByEmail(given).catch(() => null) : await userOrNull(given);
+        if (!sub) return json({ error: 'no-subscriber' }, 404);
+        uid = sub.uid;
+        subscriber = sub.displayName || sub.email || sub.uid;
+      }
+      const at = Date.now();
+      const ref = db.collection('platform_chat').doc();
+      await ref.set({ at, by: session.u, byName: admin.name, text, uid, subscriber });
+      if (uid) await db.collection('platform_subscribers').doc(uid).collection('events').add({ at, admin: session.u, type: 'note', text: `من لوحة التواصل: ${text}` });
+      return json({ id: ref.id, at });
     }
 
     if (action === 'tokens-adjust') {

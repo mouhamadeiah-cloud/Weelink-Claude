@@ -154,3 +154,7 @@ export const adminTaskCreate = (b: { title: string; instructions: string; type: 
 export const adminTaskUpdate = (id: string, patch: { title?: string; instructions?: string; type?: string; assignee?: string }) => call<{ ok: true }>({ action: 'task-update', id, ...patch });
 export const adminTaskStatus = (id: string, status: TaskStatus) => call<{ status: TaskStatus }>({ action: 'task-status', id, status });
 export const adminTaskReply = (id: string, text: string) => call<{ ok: true }>({ action: 'task-reply', id, text });
+
+export interface ChatMessage { id: string; at: number; by: string; byName: string; text: string; uid: string; subscriber: string }
+export const adminChat = (q: { after?: number; uid?: string }) => call<{ rows: ChatMessage[]; me: string }>({ action: 'chat', ...q });
+export const adminChatSend = (text: string, uid?: string) => call<{ id: string; at: number }>({ action: 'chat-send', text, uid });

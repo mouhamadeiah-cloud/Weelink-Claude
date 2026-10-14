@@ -91,10 +91,17 @@ const restyleElement = (e: CanvasElement, scene: RecolourScene, slideHead: strin
 };
 
 /**
- * Every page and element of the site in the given look. `corners`: the buttons take the look's
- * corners whatever they had (a page just built by Wee AI, where no button was set by the owner).
+ * Every page and element of the site in the given look. For a page just built by Wee AI (where no
+ * button was set by the owner): `corners` gives the buttons the look's corners whatever they had,
+ * and `keepNavbar` leaves the navbar's colours as the build set them (the AI chose its tone).
  */
-export const applyPageLook = (pages: Page[], elements: CanvasElement[], look: PageLook, kind: BuildKind, corners = false): { pages: Page[]; elements: CanvasElement[] } => {
+export const applyPageLook = (
+  pages: Page[],
+  elements: CanvasElement[],
+  look: PageLook,
+  kind: BuildKind,
+  { corners = false, keepNavbar = false }: { corners?: boolean; keepNavbar?: boolean } = {},
+): { pages: Page[]; elements: CanvasElement[] } => {
   const to = lookColours(look);
   const palette: [string, string, string, string, string] = [look.bg, look.card, look.line, look.ink, look.accent];
   const bySlide = new Map<string, CanvasElement[]>();
@@ -116,11 +123,15 @@ export const applyPageLook = (pages: Page[], elements: CanvasElement[], look: Pa
       paletteMode: 'default' as const,
       navbar: {
         ...navbar,
-        // The lighter of background and card, so a white page keeps a white navbar.
-        bgColor: luminance(look.bg) >= luminance(look.card) ? look.bg : look.card,
-        textColor: look.ink,
-        accentColor: look.accent,
-        accentTextColor: buttonText(look),
+        ...(keepNavbar
+          ? {}
+          : {
+              // The lighter of background and card, so a white page keeps a white navbar.
+              bgColor: luminance(look.bg) >= luminance(look.card) ? look.bg : look.card,
+              textColor: look.ink,
+              accentColor: look.accent,
+              accentTextColor: buttonText(look),
+            }),
         ...(navbar.itemsFontFamily && LOOK_FONTS.has(fontName(navbar.itemsFontFamily)) ? { itemsFontFamily: look.body } : {}),
       },
       slides: p.slides.map((s) => recolourDeep(s, sceneFor(s))),

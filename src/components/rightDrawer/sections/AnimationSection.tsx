@@ -130,7 +130,9 @@ export const AnimationSection = ({
                 onClick={() => {
                   onUpdateElementStyles({ 
                     animation: animItem.id,
-                    animationDuration: animItem.id === 'none' ? undefined : animItem.delay
+                    animationDuration: animItem.id === 'none' ? undefined : animItem.delay,
+                    // A ticker runs for ever; the other trigger choices make it play once or wait for the mouse.
+                    ...(animItem.id.startsWith('marquee') ? { animationTrigger: 'loop' as const } : {}),
                   });
                 }}
                 className={`p-2 rounded-xl border text-right transition-all cursor-pointer flex flex-col gap-1.5 relative group ${

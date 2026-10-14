@@ -9,6 +9,7 @@ import { ArrowLeft, CarFront, Check, ClipboardList, FileText, Loader2, Palette, 
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
 import { DesignerGallery } from '../gallery/DesignerGallery';
+import { AttentionDot, useOrderAttention } from '../../services/orderAttention';
 import { DesignOrdersPanel } from '../designOrders/DesignOrdersPanel';
 import type { GallerySlide } from '../../services/galleryView';
 import { guestKindOf, readGuestAnswers, setGuestKind } from '../../services/guestAnswers';
@@ -80,6 +81,7 @@ interface StartPageProps {
 
 export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, onDesigner, onAddDesign, loadingType, owned = [], onOpen }) => {
   const signedIn = !!user && !user.isAnonymous;
+  const attention = useOrderAttention(signedIn && user ? user.uid : '');
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
   // After the kind come its packages, then the questions (Eyad, 12 Oct). Editing the answers from
   // the editor opens straight on the questions.
@@ -139,7 +141,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           <div className="flex-1" />
           {signedIn && !kind && (
             <button type="button" onClick={() => setOrders({ id: '' })} className="inline-flex items-center gap-1.5 text-sm font-bold text-muted hover:text-brand transition">
-              <ClipboardList size={16} /> طلبات التصميم
+              <ClipboardList size={16} /> طلبات التصميم <AttentionDot n={attention} />
             </button>
           )}
           <span className="flex items-center gap-2">

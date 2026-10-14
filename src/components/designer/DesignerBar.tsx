@@ -3,6 +3,7 @@
 // always open.
 import React from 'react';
 import { BarChart3, ClipboardList, Coins, FileText, Plus, Presentation, Sparkles, Trash2 } from 'lucide-react';
+import { AttentionDot } from '../../services/orderAttention';
 import { DESIGN_KIND_LABEL, type DesignKind } from '../../data/slideCategories';
 import { MAX_DRAFTS, type DraftMeta } from '../../services/designerDrafts';
 
@@ -18,10 +19,12 @@ interface DesignerBarProps {
   // The designer's earnings, rating and slides («لوحة المصمم»).
   onDashboard?: () => void;
   // Inside a customer's page (3-day code): a note with the time left and a way back to the drafts.
+  // Orders waiting for the designer (paid, not delivered yet).
+  attention?: number;
   client?: { expiresAt: number; onLeave: () => void };
 }
 
-export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, busy, onOpen, onNew, onDelete, onOrders, onDashboard, client }) => {
+export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, busy, onOpen, onNew, onDelete, onOrders, onDashboard, attention = 0, client }) => {
   const full = drafts.length >= MAX_DRAFTS;
   const left = client ? Math.max(0, client.expiresAt - Date.now()) : 0;
   const leftText = left >= 86400000 ? `${Math.floor(left / 86400000)} يوم` : `${Math.max(1, Math.ceil(left / 3600000))} ساعة`;
@@ -67,7 +70,7 @@ export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, bu
         )}
         {onOrders && (
           <button type="button" onClick={onOrders} className="h-8 px-3 rounded-ctl border border-line bg-surface text-ink text-xs font-bold inline-flex items-center gap-1 hover:border-brand/40 cursor-pointer">
-            <ClipboardList size={13} /> طلبات التصميم
+            <ClipboardList size={13} /> طلبات التصميم <AttentionDot n={attention} />
           </button>
         )}
         <span className="inline-flex items-center gap-1"><Sparkles size={13} /> Wee AI يحتاج رصيد توكنز</span>

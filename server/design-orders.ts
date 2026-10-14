@@ -189,7 +189,9 @@ export default {
 
     if (action === 'quote') {
       const planId = await planOf(user.uid);
-      return json({ planId, price: prices[planId] });
+      // How to pay the office (platformSettings/paymentInfo, written in the admin site), shown with the price.
+      const info = (await db.collection('platformSettings').doc('paymentInfo').get()).data() as { text?: string } | undefined;
+      return json({ planId, price: prices[planId], paymentInfo: String(info?.text || '') });
     }
 
     if (action === 'create') {

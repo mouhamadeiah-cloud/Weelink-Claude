@@ -22,6 +22,7 @@ interface HireDialogProps {
 
 export const HireDialog: React.FC<HireDialogProps> = ({ user, designerUid, designerName, slideId = '', slideName = '', onClose, onCreated }) => {
   const [price, setPrice] = useState<number | null>(null);
+  const [payInfo, setPayInfo] = useState('');
   const [brief, setBrief] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -29,7 +30,7 @@ export const HireDialog: React.FC<HireDialogProps> = ({ user, designerUid, desig
   useEffect(() => {
     let alive = true;
     quoteOrder(user)
-      .then((q) => alive && setPrice(q.price))
+      .then((q) => { if (!alive) return; setPrice(q.price); setPayInfo(q.paymentInfo); })
       .catch((e) => alive && setError(orderErrorText(e)));
     return () => {
       alive = false;
@@ -70,6 +71,12 @@ export const HireDialog: React.FC<HireDialogProps> = ({ user, designerUid, desig
             <span className="text-xs font-bold text-muted">ماذا تريد منه؟</span>
             <textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={5} maxLength={1000} placeholder="شو نوع عملك، وشو بدك بالصفحة، وأي ألوان أو أفكار عندك…" className="w-full rounded-ctl border border-line bg-surface p-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15" />
           </label>
+          {payInfo && (
+            <div className="rounded-card border border-line bg-bg p-3 space-y-1">
+              <p className="text-xs font-bold text-muted">طريقة الدفع للمكتب</p>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{payInfo}</p>
+            </div>
+          )}
           {contact.length > 0 && (
             <p role="alert" className="text-sm font-bold text-danger flex items-start gap-1.5"><AlertCircle size={15} className="shrink-0 mt-0.5" /> ممنوع كتابة {contact.map((k) => CONTACT_KIND_LABEL[k]).join(' أو ')} هنا. التواصل مع المصمم يتم داخل Weelink بعد الدفع.</p>
           )}

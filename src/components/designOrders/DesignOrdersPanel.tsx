@@ -7,7 +7,7 @@ import type { User } from 'firebase/auth';
 import { AlertCircle, CheckCircle2, KeyRound, Loader2, Send, Star, X } from 'lucide-react';
 import {
   CAN_TALK, DesignOrder, OrderMessage, STATUS_LABEL,
-  cancelOrder, confirmOrder, deliverOrder, disputeOrder, orderErrorText, rateOrder, sendOrderMessage, subscribeMessages, subscribeMyOrders,
+  cancelOrder, confirmOrder, quoteOrder, deliverOrder, disputeOrder, orderErrorText, rateOrder, sendOrderMessage, subscribeMessages, subscribeMyOrders,
 } from '../../services/designOrders';
 import { accessErrorText, accessStatus, issueAccessCode, restorePage, revokeAccessCode } from '../../services/designAccess';
 import { contactKindsIn, CONTACT_KIND_LABEL } from '../../utils/contactCheck';
@@ -216,6 +216,11 @@ const OrderDetail: React.FC<{ user: User; order: DesignOrder; me: 'customer' | '
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [complaint, setComplaint] = useState<string | null>(null);
+  const [payInfo, setPayInfo] = useState('');
+  useEffect(() => {
+    if (me !== 'customer' || order.status !== 'awaiting_payment') return;
+    quoteOrder(user).then((q) => setPayInfo(q.paymentInfo)).catch(() => {});
+  }, [user, me, order.status]);
 
   const run = async (key: string, fn: () => Promise<unknown>) => {
     setBusy(key);
@@ -250,6 +255,7 @@ const OrderDetail: React.FC<{ user: User; order: DesignOrder; me: 'customer' | '
           {me === 'customer' ? (
             <>
               <p>ادفع <b>{formatPounds(order.price)}</b> لمكتب Weelink وقل لهم رقم الطلب <b dir="ltr">{shortId(order.id)}</b>. يبقى المبلغ عند المكتب إلى أن تستلم التصميم، وتُفتح المحادثة مع المصمم فور تأكيد المكتب استلامه.</p>
+              {payInfo && <p className="rounded-ctl border border-line bg-surface p-2.5 whitespace-pre-wrap">{payInfo}</p>}
               <button type="button" disabled={!!busy} onClick={() => run('cancel', () => cancelOrder(user, order.id))} className={`${btn} border border-line bg-surface text-danger`}>{busy === 'cancel' && <Loader2 size={14} className="animate-spin" />} إلغاء الطلب</button>
             </>
           ) : <p>الطلب بانتظار أن يدفع الزبون للمكتب. تُفتح المحادثة بعد تأكيد المكتب استلام المبلغ.</p>}

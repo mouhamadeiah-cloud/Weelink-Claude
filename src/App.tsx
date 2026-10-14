@@ -18,6 +18,7 @@ import { RightDrawer, DrawerSection } from './components/RightDrawer';
 import { ProjectSettingsSection } from './components/rightDrawer/sections/ProjectSettingsSection';
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
+import { readDesigner } from './services/designers';
 import { HomePage } from './components/home/HomePage';
 import { StartPage } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
@@ -1101,7 +1102,7 @@ export default function App() {
     }
   };
 
-  const handleAuthSuccess = (userUid: string, isNewUser: boolean) => {
+  const handleAuthSuccess = (userUid: string, isNewUser: boolean, asDesigner = false) => {
     handledAuthUid.current = auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser.uid : null;
     setActiveUserUid(userUid);
     const inviteProblem = takeInviteProblem();
@@ -1152,7 +1153,7 @@ export default function App() {
       setHistoryIndex(0);
       setIsChatActive(false);
       // A new account answers Wee AI's questions on the start page, then the editor builds its page.
-      if (!pendingBuildRef.current) {
+      if (!pendingBuildRef.current && !asDesigner) {
         setStartKind(null);
         setIsHomeActive(false);
         setIsStartActive(true);
@@ -1189,12 +1190,24 @@ export default function App() {
       }
     } else {
       // Existing user: fetch their page, then open it when they came for their account.
-      loadUserWorkspace(userUid).then(() => {
+      loadUserWorkspace(userUid).then(async () => {
         if (pendingBuildRef.current) openGuestBuild(userUid);
         else if (afterSignInRef.current === 'account') openMyPage(userUid);
+        // A returning designer comes back to their page, in the editor.
+        else if (await readDesigner(userUid)) {
+          setIsHomeActive(false);
+          setIsStartActive(false);
+          handleChooseProject('page', userUid);
+        }
       });
     }
     if (isNewUser && pendingBuildRef.current) openGuestBuild(userUid);
+    // A designer's page is the free page, opened on its empty slide: no questions, no Wee AI first.
+    if (isNewUser && asDesigner) {
+      setIsHomeActive(false);
+      setIsStartActive(false);
+      handleChooseProject('page', userUid);
+    }
     setIsSavingCloud(false);
     isInitialLoadComplete.current = true;
     setIsAuthActive(false); // Hide login screen, go straight to builder/chat!

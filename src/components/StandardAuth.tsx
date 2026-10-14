@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Eye, EyeOff, Loader2, Palette } from 'lucide-react';
 import { auth } from '../services/firebase';
 import { SignInError, registerOwner, resolveAccountId, signInOwner } from '../services/accounts';
 import { EmailCodeProblem, emailCodeErrorText, needsEmailCode, sendEmailCode, verifyEmailCode } from '../services/emailCode';
 import { pendingInvite } from '../services/members';
+import { DESIGNER_NAME_MAX, becomeDesigner } from '../services/designers';
 
 interface StandardAuthProps {
   onLoginWithGoogle: () => Promise<void>;
-  onAuthSuccess: (userUid: string, isNewUser: boolean) => void;
+  // asDesigner: the account was just made through «انضم لمصممينا»; the app opens the designer's page.
+  onAuthSuccess: (userUid: string, isNewUser: boolean, asDesigner?: boolean) => void;
 }
 
 const signInErrorText = (e: unknown, register = false) => {
@@ -25,7 +27,9 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
 }) => {
   // 'login' represents Image 1 (هل لديك حساب), 'signup' represents Image 2 (إنشاء حساب)
   // 'code': a new account confirms its email with the 6-digit code sent to it.
-  const [mode, setMode] = useState<'login' | 'signup' | 'code'>('login');
+  // 'designer': «انضم لمصممينا», a signup that also makes the account a designer.
+  const [mode, setMode] = useState<'login' | 'signup' | 'code' | 'designer'>('login');
+  const [designerName, setDesignerName] = useState('');
 
   // Input States
   const [email, setEmail] = useState<string>('');
@@ -40,7 +44,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
 
   // The account to open once the email is confirmed.
-  const [pending, setPending] = useState<{ accountId: string; isNew: boolean } | null>(null);
+  const [pending, setPending] = useState<{ accountId: string; isNew: boolean; designer: boolean } | null>(null);
   const [code, setCode] = useState('');
   const [resendWait, setResendWait] = useState(0);
 
@@ -65,18 +69,18 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
   };
 
   // Opens the account, after the email-code step when this is a new registration.
-  const finishSignIn = async (accountId: string, isNew: boolean) => {
+  const finishSignIn = async (accountId: string, isNew: boolean, designer = false) => {
     const user = auth.currentUser;
     if (!user || !needsEmailCode(user, accountId)) {
-      onAuthSuccess(accountId, isNew);
+      onAuthSuccess(accountId, isNew, designer);
       return;
     }
     setError(null);
     if ((await sendCode()) !== 'sent') {
-      onAuthSuccess(accountId, isNew);
+      onAuthSuccess(accountId, isNew, designer);
       return;
     }
-    setPending({ accountId, isNew });
+    setPending({ accountId, isNew, designer });
     setCode('');
     setMode('code');
   };
@@ -93,7 +97,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
     setError(null);
     try {
       await verifyEmailCode(user, code);
-      onAuthSuccess(pending.accountId, pending.isNew);
+      onAuthSuccess(pending.accountId, pending.isNew, pending.designer);
     } catch (err) {
       setError(emailCodeErrorText(err));
     } finally {
@@ -109,9 +113,9 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
 
   const handleChangeEmail = async () => {
     await auth.signOut().catch(() => {});
-    setPending(null);
     setError(null);
-    setMode('signup');
+    setMode(pending?.designer ? 'designer' : 'signup');
+    setPending(null);
   };
 
   // "دخول مباشر": back into the account this browser is still signed in to (Firebase keeps the
@@ -139,6 +143,40 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
     } catch (err) {
       console.warn('Authentication login failure:', err);
       setError(signInErrorText(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // «انضم لمصممينا»: the same account as any owner, plus the designer's profile.
+  const handleRegisterDesigner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (designerName.trim().length < 2) {
+      setError('اكتب اسمك كما سيظهر للزبائن في معرض المصممين.');
+      return;
+    }
+    if (!email.trim() || !password || !confirmPassword) {
+      setError('الرجاء إدخال البريد الإلكتروني وكلمة المرور وتأكيدها.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('كلمتا المرور غير متطابقتين. يرجى التحقق وإعادة الإدخال.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('يجب أن تكون كلمة المرور مكونة من 6 أحرف على الأقل لحماية حسابك.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const { accountId, isNew } = await registerOwner(email.trim().toLowerCase(), password);
+      const user = auth.currentUser;
+      if (user) await becomeDesigner(user.uid, designerName);
+      await finishSignIn(accountId, isNew, true);
+    } catch (err) {
+      console.error('Designer registration flow error:', err);
+      setError(signInErrorText(err, true));
     } finally {
       setLoading(false);
     }
@@ -273,6 +311,37 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
             </div>
           )}
 
+          {mode === 'designer' && (
+            <form onSubmit={handleRegisterDesigner} className="space-y-4">
+              <div className="space-y-1.5">
+                <h1 className="text-heading font-bold">انضم لمصممينا</h1>
+                <p className="text-sm text-muted leading-relaxed">صفحتك مجانية، وفيها معرض لشرائحك. صمّم شرائح جاهزة، وأضف لها ما تريد، واكسب من تصميم صفحات الزبائن.</p>
+              </div>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-bold text-muted">اسمك كما سيظهر للزبائن</span>
+                <input
+                  type="text"
+                  name="designer-name"
+                  autoComplete="name"
+                  required
+                  maxLength={DESIGNER_NAME_MAX}
+                  value={designerName}
+                  onChange={(e) => setDesignerName(e.target.value)}
+                  placeholder="مثال: سارة للتصميم"
+                  className={fieldClass}
+                />
+              </label>
+              {emailField}
+              {passwordField('كلمة السر', password, setPassword, showPassword, () => setShowPassword(!showPassword), 'password', 'new-password')}
+              {passwordField('إعادة كلمة السر', confirmPassword, setConfirmPassword, showConfirmPassword, () => setShowConfirmPassword(!showConfirmPassword), 'confirm-password', 'new-password')}
+              {errorLine}
+              <button type="submit" disabled={loading} className={primaryClass}>
+                {loading && <Loader2 size={16} className="animate-spin" />}
+                {loading ? 'جاري إنشاء حسابك...' : 'انضم كمصمم'}
+              </button>
+            </form>
+          )}
+
           {mode === 'signup' && (
             <form onSubmit={handleRegister} className="space-y-4">
               <h1 className="text-heading font-bold">إنشاء حساب</h1>
@@ -339,7 +408,23 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
             </button>
           </p>
         )}
-        {mode === 'signup' && (
+        {mode === 'login' && (
+          <button
+            type="button"
+            onClick={() => { setMode('designer'); setError(null); }}
+            className="w-full text-right bg-surface border border-line hover:border-brand/40 rounded-card p-4 flex items-center gap-3 transition cursor-pointer"
+          >
+            <span className="w-11 h-11 rounded-ctl bg-brand/10 text-brand flex items-center justify-center shrink-0">
+              <Palette size={22} />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-bold text-ink">انضم لمصممينا</span>
+              <span className="block text-xs text-muted leading-relaxed">اعمل صفحتك مجاناً واكسب من التصميم للزبائن</span>
+            </span>
+            <ArrowLeft size={18} className="text-faint shrink-0" />
+          </button>
+        )}
+        {(mode === 'signup' || mode === 'designer') && (
           <p className="text-center text-sm text-muted">
             عندك حساب؟{' '}
             <button type="button" onClick={() => { setMode('login'); setError(null); }} className="font-bold text-brand hover:text-brand-hover cursor-pointer">

@@ -21,6 +21,7 @@ import { StandardAuth } from './components/StandardAuth';
 import { becomeDesigner, readDesigner } from './services/designers';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
+import { openClientPage, saveClientPage, accessErrorText } from './services/designAccess';
 import { DesignerDashboard } from './components/designer/DesignerDashboard';
 import { DesignOrdersPanel } from './components/designOrders/DesignOrdersPanel';
 import { insertDesign } from './services/fitDesign';
@@ -231,6 +232,10 @@ export default function App() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  // The hired designer inside a customer's page with the 3-day code: the editor holds that page, saves go
+  // to /api/design-access, and nothing can be exported from it.
+  const [clientSession, setClientSession] = useState<{ orderId: string; code: string; expiresAt: number } | null>(null);
+  const clientSessionRef = useRef<{ orderId: string; code: string; expiresAt: number } | null>(null);
   const prevProjectRef = useRef<ProjectType>('page');
   // A page to build as soon as its kind is open in the editor: the questions just finished.
   // The kind whose questions just finished: the editor opens on it with an empty page and Wee AI's panel.
@@ -1000,6 +1005,20 @@ export default function App() {
   const saveActiveDraft = async (): Promise<boolean> => {
     const user = auth.currentUser;
     if (!user || user.isAnonymous || !draftReadyRef.current) return false;
+    const client = clientSessionRef.current;
+    if (client) {
+      setIsSavingCloud(true);
+      try {
+        await saveClientPage(user, client.orderId, client.code, sanitizeData(pagesRef.current), serializeElements(elementsRef.current));
+        return true;
+      } catch (e) {
+        console.warn('Could not save the customer page:', e);
+        window.alert(accessErrorText(e));
+        return false;
+      } finally {
+        setIsSavingCloud(false);
+      }
+    }
     const slot = activeSlotRef.current;
     const meta = draftsRef.current.find((d) => d.slot === slot);
     const kind = activeKindRef.current;
@@ -1019,6 +1038,8 @@ export default function App() {
   // Puts a draft (or a blank one) in the editor.
   const openDraft = async (uid: string, slot: string) => {
     draftReadyRef.current = false;
+    clientSessionRef.current = null;
+    setClientSession(null);
     let loaded: Awaited<ReturnType<typeof readDraft>> = null;
     try {
       loaded = await readDraft(uid, slot);
@@ -1045,6 +1066,40 @@ export default function App() {
       // storage unavailable: the first draft opens next time
     }
     draftReadyRef.current = true;
+  };
+
+  // The hired designer opens the customer's page with the code the customer gave (designer mode only).
+  const openClientSession = async (orderId: string, code: string): Promise<{ ok: boolean; message: string }> => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || draftBusy || !designerModeRef.current) return { ok: false, message: 'افتح وضع المصمم أولاً.' };
+    setDraftBusy(true);
+    try {
+      const loaded = await openClientPage(user, orderId, code);
+      await saveActiveDraft();
+      const pagesIn: Page[] = loaded.pages.length > 0 ? normalizeLegacyNavbarDefaults(loaded.pages) : blankDraftPages('page');
+      const elementsIn = deserializeElements(loaded.elements);
+      draftReadyRef.current = false;
+      loadSeqRef.current++;
+      setPages(pagesIn);
+      setElements(elementsIn);
+      setHistory([elementsIn]);
+      setHistoryIndex(0);
+      setActivePageId(pagesIn[0].id);
+      setActiveSlideId(pagesIn[0].slides[0]?.id || 'slide-1');
+      setSelectedElementId(null);
+      const session = { orderId, code, expiresAt: loaded.expiresAt };
+      clientSessionRef.current = session;
+      setClientSession(session);
+      activeSlotRef.current = `client-${orderId}`;
+      activeKindRef.current = 'page';
+      setActiveSlot(`client-${orderId}`);
+      draftReadyRef.current = true;
+      return { ok: true, message: '' };
+    } catch (e) {
+      return { ok: false, message: accessErrorText(e) };
+    } finally {
+      setDraftBusy(false);
+    }
   };
 
   const enterDesignerMode = async () => {
@@ -3912,10 +3967,10 @@ export default function App() {
           isDesigner={isDesigner}
           isDesignerMode={designerMode}
           onToggleDesignerMode={designerMode ? exitDesignerMode : enterDesignerMode}
-          onExportSlide={() => setIsExportOpen(true)}
+          onExportSlide={clientSession ? undefined : () => setIsExportOpen(true)}
         />
         {designerMode && !isPreviewActive && (
-          <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} onOrders={() => setIsOrdersOpen(true)} onDashboard={() => setIsDashboardOpen(true)} />
+          <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} onOrders={() => setIsOrdersOpen(true)} onDashboard={() => setIsDashboardOpen(true)} client={clientSession ? { expiresAt: clientSession.expiresAt, onLeave: () => switchDraft(draftsRef.current[0]?.slot || '') } : undefined} />
         )}
 
         {/* 2. Secondary Edit Bar directly beneath (narrow screens; wide ones dock it beside the panel) */}
@@ -4193,7 +4248,7 @@ export default function App() {
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />
       {designerMode && isDashboardOpen && currentUser && <DesignerDashboard user={currentUser} onClose={() => setIsDashboardOpen(false)} />}
-      {designerMode && isOrdersOpen && currentUser && <DesignOrdersPanel user={currentUser} onClose={() => setIsOrdersOpen(false)} />}
+      {designerMode && isOrdersOpen && currentUser && <DesignOrdersPanel user={currentUser} onClose={() => setIsOrdersOpen(false)} onEnterClientPage={async (id, code) => { const r = await openClientSession(id, code); if (r.ok) setIsOrdersOpen(false); return r; }} />}
       {designerMode && isExportOpen && currentUser && (() => {
         // A page draft is exported whole (its navbar and its slides, up to three); a slide draft, the open slide.
         const kind: DesignKind = drafts.find((d) => d.slot === activeSlot)?.kind || 'slide';

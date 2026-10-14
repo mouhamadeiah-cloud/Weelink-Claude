@@ -17,11 +17,23 @@ interface DesignerBarProps {
   onOrders?: () => void;
   // The designer's earnings, rating and slides («لوحة المصمم»).
   onDashboard?: () => void;
+  // Inside a customer's page (3-day code): a note with the time left and a way back to the drafts.
+  client?: { expiresAt: number; onLeave: () => void };
 }
 
-export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, busy, onOpen, onNew, onDelete, onOrders, onDashboard }) => {
+export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, busy, onOpen, onNew, onDelete, onOrders, onDashboard, client }) => {
   const full = drafts.length >= MAX_DRAFTS;
+  const left = client ? Math.max(0, client.expiresAt - Date.now()) : 0;
+  const leftText = left >= 86400000 ? `${Math.floor(left / 86400000)} يوم` : `${Math.max(1, Math.ceil(left / 3600000))} ساعة`;
   return (
+    <>
+    {client && (
+      <div dir="rtl" className="w-full bg-warn/10 border-b border-warn/30 px-4 lg:px-6 py-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs z-30">
+        <span className="font-bold text-warn">أنت تعدّل صفحة زبون بالرمز الذي أعطاك إياه</span>
+        <span className="text-muted">يتبقى {leftText}. تعدّل التصميم فقط ولا ترى بيانات الزبون. الحفظ بزر السحابة. لا يمكن تصدير هذه الصفحة للمعرض.</span>
+        <button type="button" onClick={client.onLeave} className="mr-auto h-8 px-3 rounded-ctl border border-line bg-surface text-ink font-bold cursor-pointer">العودة لمسوداتي</button>
+      </div>
+    )}
     <div dir="rtl" className="w-full bg-brand/5 border-b border-brand/15 px-4 lg:px-6 py-2 flex flex-wrap items-center gap-x-4 gap-y-2 z-30">
       <span className="text-xs font-bold text-brand shrink-0">وضع المصمم</span>
 
@@ -64,5 +76,6 @@ export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, bu
         </button>
       </div>
     </div>
+    </>
   );
 };

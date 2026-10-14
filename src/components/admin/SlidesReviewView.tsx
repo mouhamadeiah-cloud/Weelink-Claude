@@ -5,9 +5,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Loader2, ShieldCheck, X } from 'lucide-react';
 import { AdminError, GallerySlideRow, SlideStatus, adminSlideReview, adminSlides } from '../../services/adminApi';
 import { categoryLabel } from '../../data/slideCategories';
-import { LiveSlide } from '../gallery/LiveSlide';
+import { LivePage, LiveSlide } from '../gallery/LiveSlide';
 import { deserializeElements } from '../../utils/elementStorage';
-import { findContactInfo, CONTACT_KIND_LABEL } from '../../utils/contactCheck';
+import { findContactInfo, findNavbarContact, CONTACT_KIND_LABEL } from '../../utils/contactCheck';
 
 const TABS: [SlideStatus, string][] = [['pending', 'بانتظار المراجعة'], ['approved', 'مقبولة'], ['rejected', 'مرفوضة']];
 const date = (ms: number) => (ms ? new Date(ms).toLocaleString('ar-SY', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—');
@@ -19,7 +19,7 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
   const [error, setError] = useState('');
   // A second look at the texts, the same check the designer's export runs.
   const elements = useMemo(() => deserializeElements(row.elements), [row.elements]);
-  const contact = findContactInfo(elements);
+  const contact = [...findContactInfo(elements), ...(row.kind === 'page' ? findNavbarContact(row.page?.navbar) : [])];
 
   const review = async (decision: 'approve' | 'reject') => {
     setBusy(true);
@@ -37,10 +37,10 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
 
   return (
     <article className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
-      <div className="overflow-hidden rounded-ctl border border-line"><LiveSlide slide={row.slide} elements={elements} /></div>
+      <div className="overflow-hidden rounded-ctl border border-line">{row.kind === 'page' && row.page ? <LivePage page={row.page} elements={elements} maxHeight={420} /> : <LiveSlide slide={row.slide} elements={elements} />}</div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-small">
         <dt className="text-muted">المصمم</dt><dd>{row.designerName || '—'} <span className="text-tiny text-faint" dir="ltr">{row.designerUid.slice(0, 8)}</span></dd>
-        <dt className="text-muted">التصنيف</dt><dd>{categoryLabel(row.category)}</dd>
+        <dt className="text-muted">النوع</dt><dd>{row.kind === 'page' ? 'صفحة (ثلاث شرائح مع شريط تنقل) · ' : 'شريحة · '}{categoryLabel(row.category)}</dd>
         <dt className="text-muted">التصدير</dt><dd>{date(row.createdAt)}</dd>
         <dt className="text-muted">وافق على القانون</dt><dd>النسخة {row.lawVersion} · {row.acceptedAt ? date(Date.parse(row.acceptedAt)) : '—'}</dd>
         {row.status === 'rejected' && <><dt className="text-muted">سبب الرفض</dt><dd className="text-danger">{row.reason || '—'}</dd></>}

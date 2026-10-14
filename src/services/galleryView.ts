@@ -1,13 +1,17 @@
-// The designers' gallery, visitor side (Eyad, 14 Oct): the approved slides, a visitor's own votes, and
+// The designers' gallery, visitor side (Eyad, 14 Oct): the approved slides and pages, a visitor's own votes, and
 // voting. The counters are written by api/gallery.ts only; this reads them and asks it to vote.
 import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from './firebase';
 import { deserializeElements } from '../utils/elementStorage';
-import type { CanvasElement } from '../types';
+import type { CanvasElement, NavbarConfig, Slide } from '../types';
+import type { DesignKind } from '../data/slideCategories';
 
 export interface GallerySlide {
   id: string;
+  // A slide, or a page: three slides with a navbar (`page`).
+  kind: DesignKind;
+  page: { navbar?: NavbarConfig; slides?: Slide[] } | null;
   name: string;
   category: string;
   designerUid: string;
@@ -33,6 +37,8 @@ export const listApprovedSlides = async (): Promise<GallerySlide[]> => {
     const x: any = d.data();
     return {
       id: d.id,
+      kind: x.kind === 'page' ? 'page' : 'slide',
+      page: x.kind === 'page' && x.page ? x.page : null,
       name: String(x.name || ''),
       category: String(x.category || 'other'),
       designerUid: String(x.designerUid || ''),

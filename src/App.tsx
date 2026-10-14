@@ -21,6 +21,7 @@ import { StandardAuth } from './components/StandardAuth';
 import { becomeDesigner, readDesigner } from './services/designers';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
+import { DESIGN_KIND_LABEL, PAGE_SLIDES, type DesignKind } from './data/slideCategories';
 import { ExportSlideModal } from './components/designer/ExportSlideModal';
 import { HomePage } from './components/home/HomePage';
 import { StartPage } from './components/onboarding/StartPage';
@@ -969,17 +970,21 @@ export default function App() {
   };
 
   // ---------- «وضع المصمم» ----------
-  // A draft is one page with one empty slide: the editor works on it as on any page; only the
-  // slide being edited is exported to the gallery.
-  const blankDraftPages = (): Page[] => [{
+  // A draft is a slide or a page (Eyad, 14 Oct). The editor works on either as on any page: a slide
+  // draft is one page with one empty slide, and the slide being edited is what is exported; a page
+  // draft is one page of three empty slides with a navbar, exported whole.
+  const blankDraftPages = (kind: DesignKind = 'slide'): Page[] => [{
     id: 'page-home',
-    name: 'الشريحة',
+    name: kind === 'page' ? 'الرئيسية' : 'الشريحة',
     slug: '/',
-    navbar: { brandName: '', items: [], ctaText: '', ctaHref: '', bgColor: '#ffffff', textColor: '#1d1d1f', isSticky: true },
-    slides: [{ id: 'slide-1', name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' }],
+    navbar: { brandName: kind === 'page' ? 'اسم الصفحة' : '', items: [], ctaText: '', ctaHref: '', bgColor: '#ffffff', textColor: '#1d1d1f', isSticky: true },
+    slides: kind === 'page'
+      ? Array.from({ length: PAGE_SLIDES }, (_, i) => ({ id: `slide-${i + 1}`, name: `شريحة ${i + 1}`, height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' as const }))
+      : [{ id: 'slide-1', name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' }],
     ratingsSuggested: true,
   }];
-  const draftName = (slot: string) => `مسودة ${DRAFT_SLOTS.indexOf(slot) + 1}`;
+  const draftName = (slot: string, kind: DesignKind = 'slide') => `${DESIGN_KIND_LABEL[kind]} ${DRAFT_SLOTS.indexOf(slot) + 1}`;
+  const activeKindRef = useRef<DesignKind>('slide');
   const setDraftList = (list: DraftMeta[]) => {
     draftsRef.current = list;
     setDrafts(list);
@@ -990,10 +995,12 @@ export default function App() {
     const user = auth.currentUser;
     if (!user || user.isAnonymous || !draftReadyRef.current) return false;
     const slot = activeSlotRef.current;
-    const name = draftsRef.current.find((d) => d.slot === slot)?.name || draftName(slot);
+    const meta = draftsRef.current.find((d) => d.slot === slot);
+    const kind = activeKindRef.current;
+    const name = meta?.name || draftName(slot, kind);
     setIsSavingCloud(true);
     try {
-      await saveDraft(user.uid, slot, { name, pages: sanitizeData(pagesRef.current), elements: serializeElements(elementsRef.current) });
+      await saveDraft(user.uid, slot, { name, kind, pages: sanitizeData(pagesRef.current), elements: serializeElements(elementsRef.current) });
       return true;
     } catch (e) {
       console.warn('Could not save the draft:', e);
@@ -1012,7 +1019,8 @@ export default function App() {
     } catch (e) {
       console.warn('Could not read the draft:', e);
     }
-    const draftPages: Page[] = loaded && loaded.pages.length > 0 ? normalizeLegacyNavbarDefaults(loaded.pages) : blankDraftPages();
+    const kind: DesignKind = loaded?.kind || draftsRef.current.find((d) => d.slot === slot)?.kind || 'slide';
+    const draftPages: Page[] = loaded && loaded.pages.length > 0 ? normalizeLegacyNavbarDefaults(loaded.pages) : blankDraftPages(kind);
     const draftElements = loaded ? deserializeElements(loaded.elements) : [];
     loadSeqRef.current++;
     setPages(draftPages);
@@ -1023,6 +1031,7 @@ export default function App() {
     setActiveSlideId(draftPages[0].slides[0]?.id || 'slide-1');
     setSelectedElementId(null);
     activeSlotRef.current = slot;
+    activeKindRef.current = kind;
     setActiveSlot(slot);
     try {
       localStorage.setItem(`weelink_last_draft_${uid}`, slot);
@@ -1041,8 +1050,8 @@ export default function App() {
       prevProjectRef.current = project;
       let list = await listDrafts(user.uid);
       if (!list.length) {
-        await saveDraft(user.uid, 'd1', { name: draftName('d1'), pages: sanitizeData(blankDraftPages()), elements: [] });
-        list = [{ slot: 'd1', name: draftName('d1'), updatedAt: Date.now() }];
+        await saveDraft(user.uid, 'd1', { name: draftName('d1'), kind: 'slide', pages: sanitizeData(blankDraftPages()), elements: [] });
+        list = [{ slot: 'd1', name: draftName('d1'), kind: 'slide', updatedAt: Date.now() }];
       }
       let last = '';
       try {
@@ -1099,15 +1108,15 @@ export default function App() {
     setDraftBusy(false);
   };
 
-  const newDraft = async () => {
+  const newDraft = async (kind: DesignKind) => {
     const user = auth.currentUser;
     const slot = freeSlot(draftsRef.current);
     if (!user || draftBusy || !slot) return;
     setDraftBusy(true);
     await saveActiveDraft();
     try {
-      await saveDraft(user.uid, slot, { name: draftName(slot), pages: sanitizeData(blankDraftPages()), elements: [] });
-      setDraftList([...draftsRef.current, { slot, name: draftName(slot), updatedAt: Date.now() }].sort((a, b) => DRAFT_SLOTS.indexOf(a.slot) - DRAFT_SLOTS.indexOf(b.slot)));
+      await saveDraft(user.uid, slot, { name: draftName(slot, kind), kind, pages: sanitizeData(blankDraftPages(kind)), elements: [] });
+      setDraftList([...draftsRef.current, { slot, name: draftName(slot, kind), kind, updatedAt: Date.now() }].sort((a, b) => DRAFT_SLOTS.indexOf(a.slot) - DRAFT_SLOTS.indexOf(b.slot)));
       await openDraft(user.uid, slot);
     } catch (e) {
       console.warn('Could not make a new draft:', e);
@@ -1119,7 +1128,7 @@ export default function App() {
   const removeDraft = async (slot: string) => {
     const user = auth.currentUser;
     if (!user || draftBusy || draftsRef.current.length <= 1) return;
-    const name = draftsRef.current.find((d) => d.slot === slot)?.name || draftName(slot);
+    const name = draftsRef.current.find((d) => d.slot === slot)?.name || draftName(slot, draftsRef.current.find((d) => d.slot === slot)?.kind);
     if (!window.confirm(`حذف «${name}» نهائياً؟ ما بتقدر ترجعها.`)) return;
     setDraftBusy(true);
     try {
@@ -4146,17 +4155,29 @@ export default function App() {
 
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />
-      {designerMode && isExportOpen && currentUser && (
-        <ExportSlideModal
-          designerUid={currentUser.uid}
-          designerName={designerName}
-          draftSlot={activeSlot}
-          slide={sanitizeData(currentSlide)}
-          elements={elements.filter((e) => e.slideId === currentSlide.id)}
-          storedElements={serializeElements(elements.filter((e) => e.slideId === currentSlide.id))}
-          onClose={() => setIsExportOpen(false)}
-        />
-      )}
+      {designerMode && isExportOpen && currentUser && (() => {
+        // A page draft is exported whole (its navbar and its three slides); a slide draft, the open slide.
+        const kind: DesignKind = drafts.find((d) => d.slot === activeSlot)?.kind || 'slide';
+        const slides = kind === 'page' ? pages.flatMap((p) => p.slides) : [currentSlide];
+        const ids = new Set(slides.map((sl) => sl.id));
+        const mine = elements.filter((e) => ids.has(e.slideId));
+        const problem = kind !== 'page' ? '' : pages.length !== 1 ? 'تصميم الصفحة هو صفحة واحدة بثلاث شرائح. احذف الصفحات الزائدة من قائمة الصفحات.' : slides.length !== PAGE_SLIDES ? `الصفحة ثلاث شرائح بالضبط، وعندك ${slides.length}.` : '';
+        return (
+          <ExportSlideModal
+            designerUid={currentUser.uid}
+            designerName={designerName}
+            draftSlot={activeSlot}
+            kind={kind}
+            slide={sanitizeData(slides[0])}
+            page={kind === 'page' ? sanitizeData({ navbar: pages[0].navbar, slides }) : undefined}
+            navbar={kind === 'page' ? pages[0].navbar : undefined}
+            elements={mine}
+            storedElements={serializeElements(mine)}
+            problem={problem}
+            onClose={() => setIsExportOpen(false)}
+          />
+        );
+      })()}
       <PublishModal
         open={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}

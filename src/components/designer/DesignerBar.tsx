@@ -1,8 +1,9 @@
-// The strip under the top bar in «وضع المصمم»: the designer's drafts (up to ten, one slide each) and
+// The strip under the top bar in «وضع المصمم»: the designer's drafts (up to ten, each a slide or a page) and
 // the note on Wee AI, which needs tokens that cannot be bought yet (Eyad, 14 Oct). Hand design is
 // always open.
 import React from 'react';
-import { Coins, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { Coins, FileText, Plus, Presentation, Sparkles, Trash2 } from 'lucide-react';
+import { DESIGN_KIND_LABEL, type DesignKind } from '../../data/slideCategories';
 import { MAX_DRAFTS, type DraftMeta } from '../../services/designerDrafts';
 
 interface DesignerBarProps {
@@ -10,7 +11,7 @@ interface DesignerBarProps {
   activeSlot: string;
   busy: boolean;
   onOpen: (slot: string) => void;
-  onNew: () => void;
+  onNew: (kind: DesignKind) => void;
   onDelete: (slot: string) => void;
 }
 
@@ -24,6 +25,7 @@ export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, bu
         {drafts.map((d, i) => (
           <span key={d.slot} className={`shrink-0 inline-flex items-center rounded-ctl border text-xs font-bold ${d.slot === activeSlot ? 'bg-brand text-white border-brand' : 'bg-surface text-ink border-line hover:border-brand/40'}`}>
             <button type="button" role="tab" aria-selected={d.slot === activeSlot} disabled={busy} onClick={() => onOpen(d.slot)} className="h-8 pl-2 pr-3 cursor-pointer disabled:cursor-wait">
+              {d.kind === 'page' ? <FileText size={13} className="inline ml-1 -mt-0.5" aria-label={DESIGN_KIND_LABEL.page} /> : null}
               {d.name || `مسودة ${i + 1}`}
             </button>
             {drafts.length > 1 && (
@@ -33,9 +35,11 @@ export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, bu
             )}
           </span>
         ))}
-        <button type="button" disabled={busy || full} onClick={onNew} title={full ? `الحد الأقصى ${MAX_DRAFTS} مسودات` : 'مسودة جديدة'} className="shrink-0 h-8 px-3 rounded-ctl border border-dashed border-brand/40 text-brand text-xs font-bold inline-flex items-center gap-1 hover:bg-brand/5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
-          <Plus size={14} /> مسودة جديدة
-        </button>
+        {([['slide', 'شريحة جديدة', Presentation, 'مسودة شريحة واحدة'], ['page', 'صفحة جديدة', FileText, 'مسودة صفحة: ثلاث شرائح مع شريط تنقل']] as const).map(([kind, label, Icon, hint]) => (
+          <button key={kind} type="button" disabled={busy || full} onClick={() => onNew(kind)} title={full ? `الحد الأقصى ${MAX_DRAFTS} مسودات` : hint} className="shrink-0 h-8 px-3 rounded-ctl border border-dashed border-brand/40 text-brand text-xs font-bold inline-flex items-center gap-1 hover:bg-brand/5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+            <Plus size={14} /> <Icon size={13} /> {label}
+          </button>
+        ))}
         <span className="shrink-0 text-xs text-muted tabular-nums">{drafts.length}/{MAX_DRAFTS}</span>
       </div>
 

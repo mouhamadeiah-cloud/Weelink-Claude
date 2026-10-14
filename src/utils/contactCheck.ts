@@ -2,7 +2,7 @@
 // through Weelink, after the payment (Eyad, 14 Oct). This finds phone numbers, emails, links and
 // handles in the slide's texts and links before it is exported. It reads text only; a number inside
 // a picture is for the platform's review to catch.
-import type { CanvasElement } from '../types';
+import type { CanvasElement, NavbarConfig } from '../types';
 
 export interface ContactFinding {
   elementName: string;
@@ -41,6 +41,17 @@ const kindsIn = (raw: string): ContactFinding['kind'][] => {
 
 // A link on an element that leaves the page (tel:, mailto:, wa.me, http...) is contact too.
 const externalLink = (url: string) => /^(tel:|mailto:|sms:|https?:|www\.|wa\.me|whatsapp:)/i.test(url.trim());
+
+// A page's navbar: its name, its button and its links carry no contact details either.
+export const findNavbarContact = (navbar: NavbarConfig | undefined): ContactFinding[] => {
+  if (!navbar) return [];
+  const out: ContactFinding[] = [];
+  const texts: [string, string | undefined][] = [['اسم الصفحة في الشريط', navbar.brandName], ['نص تحت الاسم', navbar.brandSubtext], ['زر الشريط', navbar.ctaText], ...(navbar.items || []).map((i): [string, string] => [`رابط «${i.label}»`, i.label])];
+  for (const [name, text] of texts) for (const kind of kindsIn(text || '')) out.push({ elementName: name, kind });
+  const links: [string, string | undefined][] = [['زر الشريط', navbar.ctaHref], ...(navbar.items || []).map((i): [string, string] => [`رابط «${i.label}»`, i.href])];
+  for (const [name, url] of links) if (url && externalLink(url)) out.push({ elementName: name, kind: 'link' });
+  return out;
+};
 
 export const findContactInfo = (elements: CanvasElement[]): ContactFinding[] => {
   const out: ContactFinding[] = [];

@@ -427,14 +427,15 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow create, update: if isSignedIn() && request.auth.uid == uid && isDesignerAccount()
         && slot in ['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9', 'd10']
-        && incoming().keys().hasOnly(['name', 'pages', 'elements', 'updatedAt'])
+        && incoming().keys().hasOnly(['name', 'kind', 'pages', 'elements', 'updatedAt'])
+        && (!('kind' in incoming()) || incoming().kind in ['slide', 'page'])
         && incoming().name is string && incoming().name.size() <= 60
         && incoming().pages is list && incoming().pages.size() <= 5
         && incoming().elements is list && incoming().elements.size() <= 400;
       allow delete: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // The gallery's slides (src/services/gallery.ts). A designer exports a slide as 'pending', having
+    // The gallery's slides and pages (src/services/gallery.ts). A designer exports a design as 'pending', having
     // agreed to the current version of the page's law; only the platform's admin (api/admin.ts)
     // approves or rejects it, so nobody changes a slide's status from the browser. The gallery
     // reads approved slides; a designer reads their own, whatever their status.
@@ -443,7 +444,12 @@ service cloud.firestore {
       allow list: if resource.data.status == 'approved' || (isSignedIn() && resource.data.designerUid == request.auth.uid);
       allow create: if isSignedIn() && isValidId(slideId)
         && exists(/databases/$(database)/documents/designers/$(request.auth.uid))
-        && incoming().keys().hasOnly(['designerUid', 'designerName', 'name', 'category', 'draftSlot', 'slide', 'elements', 'status', 'lawVersion', 'acceptedAt', 'createdAt'])
+        && incoming().keys().hasOnly(['designerUid', 'designerName', 'name', 'category', 'draftSlot', 'kind', 'slide', 'page', 'elements', 'status', 'lawVersion', 'acceptedAt', 'createdAt'])
+        && incoming().kind in ['slide', 'page']
+        // A page is its navbar and exactly three slides; a slide has no page.
+        && (incoming().kind == 'page'
+          ? (incoming().page is map && incoming().page.slides is list && incoming().page.slides.size() == 3)
+          : !('page' in incoming()))
         && incoming().designerUid == request.auth.uid
         && incoming().status == 'pending'
         && incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 60

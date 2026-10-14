@@ -21,6 +21,8 @@ import { StandardAuth } from './components/StandardAuth';
 import { becomeDesigner, readDesigner } from './services/designers';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
+import { insertDesign } from './services/fitDesign';
+import type { GallerySlide } from './services/galleryView';
 import { DESIGN_KIND_LABEL, PAGE_MAX_SLIDES, type DesignKind } from './data/slideCategories';
 import { ExportSlideModal } from './components/designer/ExportSlideModal';
 import { HomePage } from './components/home/HomePage';
@@ -1428,6 +1430,35 @@ export default function App() {
     } else {
       setStartKind('page');
       setIsStartActive(true);
+    }
+  };
+
+  // «أضف لصفحتي مجاناً» on a gallery design: the signed-in owner's page opens, and the design (its
+  // slides, or the slides of a page, without the navbar) is added at the end of the page's first page,
+  // fitted to the page's style unless the visitor asked for it as it is. A page that is still one empty
+  // slide gives that slide up to it. The editor's own autosave and undo take it from there.
+  const addGalleryDesign = async (g: GallerySlide, fit: boolean): Promise<{ ok: boolean; message: string }> => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) return { ok: false, message: 'سجّل دخولك لتضيف التصميم لصفحتك.' };
+    try {
+      await handleChooseProject('page', activeUserUid);
+      setIsStartActive(false);
+      // Wait for the loaded page to reach the refs the editor keeps of it.
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+      const design = g.kind === 'page' && g.page?.slides?.length ? { slides: g.page.slides, elements: g.elements } : { slides: [g.slide], elements: g.elements };
+      const result = insertDesign(pagesRef.current, elementsRef.current, design, { fit });
+      if (!result) return { ok: false, message: 'ما قدرت أضيف التصميم. جرّب مرة ثانية.' };
+      setPages(result.pages);
+      pushToHistoryRef.current(result.elements);
+      setActivePageId(result.pages[0].id);
+      setActiveSlideId(result.firstSlideId);
+      setSelectedElementId(null);
+      const word = result.added === 1 ? 'شريحة' : `${result.added} شرائح`;
+      setBuildNotice({ busy: false, ok: true, message: `أُضيفت ${word} من «${g.name}» لصفحتك${fit ? ' بألوان وخطوط ستايلها' : ''}. إذا ما عجبتك اكبس تراجع (${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}+Z).` });
+      return { ok: true, message: 'أُضيفت لصفحتك.' };
+    } catch (err) {
+      console.warn('Could not add the gallery design to the page:', err);
+      return { ok: false, message: 'تعذّرت الإضافة. جرّب مرة ثانية.' };
     }
   };
 
@@ -3686,6 +3717,7 @@ export default function App() {
           setIsStartActive(false);
         }}
         onDesigner={joinDesigners}
+        onAddDesign={addGalleryDesign}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
           pendingBuildRef.current = kind;

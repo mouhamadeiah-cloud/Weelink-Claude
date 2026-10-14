@@ -2,15 +2,15 @@
 // (Eyad, 14 Oct). Each is the live slide (LiveSlide: videos, text motion and effects play); clicking one opens it large. Filter by the kind of
 // slide, sort by likes or by newest, and see more of one designer. A signed-in visitor likes or
 // dislikes a slide (once per slide, changeable); the counters come from api/gallery.ts, and the likes
-// beside a designer's name are the total over their slides. Contact with the designer and «أضف
-// لصفحتي مجاناً» are shown and wait for their own phases. The section stays out of the way when
+// beside a designer's name are the total over their slides. «أضف لصفحتي مجاناً» copies the design
+// into the visitor's page (fitted to its style, or as it is); contact with the designer waits for its phase. The section stays out of the way when
 // the gallery has nothing yet.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { Heart, Loader2, MessageCircle, Plus, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { LivePage, LiveSlide } from './LiveSlide';
 import { PAGE_CATEGORIES, SLIDE_CATEGORIES, categoryLabel, slidesWord, type DesignKind } from '../../data/slideCategories';
-import { GallerySlide, isNewSlide, listApprovedSlides, readMyVotes, voteErrorText, voteOnSlide } from '../../services/galleryView';
+import { GallerySlide, isNewSlide, listApprovedSlides, readMyVotes, recordUse, voteErrorText, voteOnSlide } from '../../services/galleryView';
 
 type Sort = 'likes' | 'new';
 const nf = (n: number) => n.toLocaleString('ar-SY');
@@ -49,7 +49,13 @@ const DesignerLine: React.FC<{ slide: GallerySlide; total: number }> = ({ slide,
   </span>
 );
 
-export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
+interface DesignerGalleryProps {
+  user: User | null;
+  // «أضف لصفحتي مجاناً»: puts the design in the visitor's own page (fitted to its style when `fit`).
+  onAddToMyPage?: (slide: GallerySlide, fit: boolean) => Promise<{ ok: boolean; message: string }>;
+}
+
+export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToMyPage }) => {
   const signedIn = !!user && !user.isAnonymous;
   const [slides, setSlides] = useState<GallerySlide[] | null>(null);
   const [votes, setVotes] = useState<Record<string, number>>({});
@@ -59,6 +65,10 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
   const [designer, setDesigner] = useState<{ uid: string; name: string } | null>(null);
   const [openId, setOpenId] = useState('');
   const [notice, setNotice] = useState('');
+  // «أضف لصفحتي»: fitted to the page's style (on unless the visitor turns it off), and what came of it.
+  const [fit, setFit] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [addResult, setAddResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -99,6 +109,7 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
     return [...rows].sort((a, b) => (sort === 'new' ? b.at - a.at || b.likes - a.likes : b.likes - a.likes || b.at - a.at));
   }, [slides, kind, category, designer, sort]);
   const open = (slides || []).find((s) => s.id === openId) || null;
+  useEffect(() => setAddResult(null), [openId]);
 
   useEffect(() => {
     if (!open) return;
@@ -132,6 +143,20 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
       setNotice(voteErrorText(e));
     }
   }, [signedIn, user, votes]);
+
+  const addToMyPage = async (slide: GallerySlide) => {
+    if (!signedIn || !user) {
+      setAddResult({ ok: false, message: 'سجّل دخولك لتضيف التصميم لصفحتك.' });
+      return;
+    }
+    if (!onAddToMyPage) return;
+    setAdding(true);
+    setAddResult(null);
+    const result = await onAddToMyPage(slide, fit).catch(() => ({ ok: false, message: 'تعذّرت الإضافة. جرّب مرة ثانية.' }));
+    setAdding(false);
+    setAddResult(result);
+    if (result.ok) recordUse(user, slide.id);
+  };
 
   if (slides === null) return <div className="flex justify-center py-6 text-faint"><Loader2 size={18} className="animate-spin" /></div>;
   if (slides.length === 0) return null;
@@ -184,6 +209,7 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold truncate flex-1">{s.name}</h3>
                   {isNewSlide(s) && <span className="shrink-0 rounded-full bg-success/10 text-success text-xs font-bold px-2 py-0.5">جديد</span>}
+                  {s.uses > 0 && <span className="shrink-0 text-xs text-faint" title="كم مرة أُضيفت لصفحات">↻ {nf(s.uses)}</span>}
                   <span className="shrink-0 text-xs text-faint">{s.kind === 'page' ? `صفحة · ${categoryLabel(s.category)}` : categoryLabel(s.category)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -207,13 +233,25 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
               <button type="button" onClick={() => setOpenId('')} aria-label="إغلاق" className="shrink-0 w-9 h-9 rounded-ctl flex items-center justify-center text-muted hover:text-ink hover:bg-bg cursor-pointer"><X size={18} /></button>
             </div>
             <div className="p-4 sm:p-5">{preview(open)}</div>
-            <div className="px-5 pb-5 flex flex-wrap items-center gap-2">
+            {/* The actions stay at the bottom of the window while a long page is scrolled */}
+            <div className="sticky bottom-0 bg-surface border-t border-line px-5 pt-3 pb-4 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
               <VoteButtons slide={open} mine={votes[open.id] || 0} own={!!user && user.uid === open.designerUid} onVote={vote} large />
               <button type="button" disabled title="يفتح الاتصال بالمصمم بعد الدفع: قريباً" className="h-10 px-4 rounded-ctl border border-line text-faint text-sm font-bold inline-flex items-center gap-1.5 cursor-not-allowed"><MessageCircle size={16} /> اتصل بالمصمم · قريباً</button>
-              <button type="button" disabled title="نسخ الشريحة لصفحتك بألوانك: قريباً" className="h-10 px-4 rounded-ctl border border-line text-faint text-sm font-bold inline-flex items-center gap-1.5 cursor-not-allowed"><Plus size={16} /> أضف الشريحة لصفحتي مجاناً · قريباً</button>
+              <button type="button" disabled={adding || !onAddToMyPage} onClick={() => addToMyPage(open)} title="انسخها لصفحتك مجاناً" className="h-10 px-4 rounded-ctl bg-brand hover:bg-brand-hover text-white text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait">{adding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} أضف {open.kind === 'page' ? 'الصفحة' : 'الشريحة'} لصفحتي مجاناً</button>
               <button type="button" onClick={() => { setDesigner({ uid: open.designerUid, name: open.designerName || 'المصمم' }); setKind('all'); setCategory('all'); setOpenId(''); }} className="h-10 px-4 rounded-ctl bg-brand/10 text-brand text-sm font-bold cursor-pointer mr-auto">المزيد من {open.designerName || 'المصمم'}</button>
             </div>
-            {notice && <p role="status" className="px-5 pb-4 text-sm font-bold text-danger">{notice}</p>}
+            <div className="space-y-2">
+              <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={fit} onChange={(e) => setFit(e.target.checked)} className="w-4 h-4 accent-[var(--color-brand)]" />
+                بألوان وخطوط ستايل صفحتي (تعديل تلقائي)
+              </label>
+              {open.uses > 0 && <p className="text-xs text-muted">استُخدمت {nf(open.uses)} {open.uses === 1 ? 'مرة' : 'مرات'}.</p>}
+              {open.kind === 'page' && <p className="text-xs text-muted">تُضاف شرائح الصفحة إلى صفحتك، من دون شريط التنقل.</p>}
+              {addResult && <p role="status" className={`text-sm font-bold ${addResult.ok ? 'text-success' : 'text-danger'}`}>{addResult.message}</p>}
+              {notice && <p role="status" className="text-sm font-bold text-danger">{notice}</p>}
+            </div>
+            </div>
           </div>
         </div>
       )}

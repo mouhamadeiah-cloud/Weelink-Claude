@@ -64,7 +64,7 @@ const newFont = (font: string, isHeading: boolean, slideHead: string, before: Be
   return font === slideHead || (isHeading && HEAD_FONTS.has(font)) ? look.head : look.body;
 };
 
-const restyleElement = (e: CanvasElement, scene: RecolourScene, slideHead: string, before: Before, look: PageLook, corners: boolean): CanvasElement => {
+export const restyleElement = (e: CanvasElement, scene: RecolourScene, slideHead: string, before: Before, look: PageLook, corners: boolean): CanvasElement => {
   const to = scene.to;
   const next = recolourDeep(e, scene);
   const styles = { ...next.styles };

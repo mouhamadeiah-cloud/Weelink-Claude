@@ -460,6 +460,12 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.designerUid == request.auth.uid;
     }
 
+    // A voter's likes and dislikes on gallery slides (api/gallery.ts writes them, with the slides'
+    // counters): they read their own, to show which slides they voted on.
+    match /galleryVotes/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // Platform settings the browser may read: the page's law (written by the admin site only).
     match /platformSettings/{docId} {
       allow get: if docId == 'pageLaw';

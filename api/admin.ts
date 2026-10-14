@@ -813,7 +813,13 @@ export default {
       if (!snap.exists) return json({ error: 'not-found' }, 404);
       if (decision === 'approve' && !SLIDE_CATEGORY_IDS.includes(String(snap.data()?.category))) return json({ error: 'bad-category' }, 400);
       const status = decision === 'approve' ? 'approved' : 'rejected';
-      await ref.update({ status, reason: decision === 'reject' ? reason : '', reviewedBy: session.u, reviewedAt: Date.now() });
+      const cur = snap.data() as { likes?: number; dislikes?: number } | undefined;
+      // An approved slide starts its counters at zero (a withdrawn one that comes back keeps them);
+      // «جديد» in the gallery counts from the approval.
+      await ref.update({
+        status, reason: decision === 'reject' ? reason : '', reviewedBy: session.u, reviewedAt: Date.now(),
+        ...(decision === 'approve' ? { approvedAt: Date.now(), likes: Number(cur?.likes) || 0, dislikes: Number(cur?.dislikes) || 0 } : {}),
+      });
       await audit(session.u, `slide-review:${id}:${status}`);
       return json({ status });
     }

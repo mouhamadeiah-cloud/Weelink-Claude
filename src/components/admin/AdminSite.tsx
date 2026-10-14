@@ -6,6 +6,7 @@ import { BarChart3, ChevronDown, Coins, CreditCard, KeyRound, Loader2, LogOut, M
 import { SubscriberDetail } from './SubscriberDetail';
 import { PaymentsView } from './PaymentsView';
 import { BillingSettings } from './BillingSettings';
+import { TokensView } from './TokensView';
 import {
   AdminError, AdminInfo, SubscriberQuery, SubscribersResult,
   adminChangePassword, adminLogin, adminMe, adminSubscribers, getAdminToken, setAdminToken,
@@ -58,13 +59,13 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   );
 };
 
-type View = 'subscribers' | 'payments' | 'billing' | 'password';
+type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'password';
 interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View }[] }
 // Every group starts folded; the admin opens what he needs. Items without a view are the next phases.
 const MENU: MenuGroup[] = [
   { id: 'subs', title: 'المشتركون', icon: Users, items: [{ id: 'list', label: 'قائمة المشتركين', view: 'subscribers' }] },
   { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'payments', label: 'كل الدفعات والفواتير', view: 'payments' }, { id: 'billing', label: 'إعدادات الفوترة', view: 'billing' }] },
-  { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'balances', label: 'أرصدة التوكنز' }, { id: 'cost', label: 'تكلفة الاستدعاء' }] },
+  { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'usage', label: 'الاستهلاك والأسعار', view: 'tokens' }] },
   { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات' }, { id: 'flow', label: 'سير العمل' }, { id: 'chat', label: 'لوحة التواصل' }] },
   { id: 'books', title: 'الحسابات والداشبورد', icon: BarChart3, items: [{ id: 'dash', label: 'الداشبورد' }] },
   { id: 'me', title: 'حسابي', icon: KeyRound, items: [{ id: 'pw', label: 'تغيير كلمة السر', view: 'password' }] },
@@ -294,6 +295,7 @@ export const AdminSite: React.FC = () => {
       {view === 'subscribers' ? <Subscribers onSessionEnd={logout} />
         : view === 'payments' ? <PaymentsView onSessionEnd={logout} />
         : view === 'billing' ? <BillingSettings onSessionEnd={logout} />
+        : view === 'tokens' ? <TokensView onSessionEnd={logout} />
         : view === 'password' ? <ChangePassword forced={false} onDone={(a) => { setAdmin(a); setView(null); }} />
         : <p className="mt-16 text-center text-muted">أهلاً {admin.name}. افتح قسماً من القائمة على اليسار.</p>}
     </Shell>

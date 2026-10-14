@@ -97,12 +97,25 @@ export interface Payment {
 
 export interface Company { name: string; address: string; phone: string; email: string; taxNo: string; footer: string }
 
+export interface AiCall { at: number; kind: string; tokens: number; input: number; output: number; costUsd: number; ok: boolean; reason: string }
+export interface TokensOverview {
+  month: string;
+  totals: { calls: number; failed: number; tokens: number; input: number; output: number; costUsd: number };
+  kinds: { name: string; calls: number; tokens: number; costUsd: number }[];
+  top: { uid: string; name: string; calls: number; tokens: number; costUsd: number }[];
+  prices: { in: number; out: number };
+  emails: number;
+  truncated: boolean;
+}
+
 export interface SubscriberDetail {
   profile: { uid: string; name: string; email: string; phone: string; verified: boolean; createdAt: number; lastActive: number; providers: string[] };
   status: { status: SubscriberStatus; reason: string; at: number; by: string };
   sites: { name: string; project: string; publishedAt: string }[];
   subscription: { plan: string; planName: string; period: Period; endsAt: number; freezeAt: number } | null;
   payments: Payment[];
+  tokens: { balance: number | null; used: number; free: number };
+  calls: AiCall[];
   events: { id: string; at: number; admin: string; type: 'status' | 'note' | string; text: string; status: string }[];
 }
 export const adminSubscriber = (uid: string) => call<SubscriberDetail>({ action: 'subscriber', uid });
@@ -117,3 +130,6 @@ export const adminInvoiceSend = (paymentId: string) => call<{ sent: true }>({ ac
 export const adminGetCompany = () => call<{ company: Company }>({ action: 'get-company' });
 export const adminSetCompany = (company: Company) => call<{ company: Company }>({ action: 'set-company', ...company });
 export const invoiceUrl = (p: Payment) => `/api/admin?invoice=${encodeURIComponent(p.id)}&k=${encodeURIComponent(p.key)}`;
+export const adminTokensOverview = (month: string) => call<TokensOverview>({ action: 'tokens-overview', month });
+export const adminTokensAdjust = (uid: string, delta: number, reason: string) => call<{ balance: number }>({ action: 'tokens-adjust', uid, delta, reason });
+export const adminSetPrices = (price: { in: number; out: number }) => call<{ prices: { in: number; out: number } }>({ action: 'set-prices', ...price });

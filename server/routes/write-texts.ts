@@ -11,7 +11,7 @@
 import { GoogleGenAI, type ThinkingLevel } from '@google/genai';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
+import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
 
 // A fixed model, not «latest», so a newer and dearer Flash never comes in on its own (Eyad, 12 Oct).
 // Both can be changed in Vercel without code: GEMINI_MODEL, and GEMINI_THINKING (minimal, low,

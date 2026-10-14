@@ -29,11 +29,11 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
-import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
-import pricing from '../src/data/designerPricing.json' with { type: 'json' };
-import { mailOffice, mailOrder } from './_orderMail.js';
-import timers from '../src/data/designOrderTimers.json' with { type: 'json' };
-import badge from '../src/data/designerBadge.json' with { type: 'json' };
+import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
+import pricing from '../../src/data/designerPricing.json' with { type: 'json' };
+import { mailOffice, mailOrder } from '../orderMail.js';
+import timers from '../../src/data/designOrderTimers.json' with { type: 'json' };
+import badge from '../../src/data/designerBadge.json' with { type: 'json' };
 
 const MAX_OPEN_UNPAID = 5;
 const MIN_GAP_MS = 700;

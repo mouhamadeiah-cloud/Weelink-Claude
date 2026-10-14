@@ -22,7 +22,7 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
-import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
+import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
 
 const VALID_MS = 10 * 60 * 1000;
 const RESEND_AFTER_MS = 60 * 1000;

@@ -5,7 +5,10 @@
 //   POST /api/admin  { action: 'login', username, password }   → { token, admin }
 //   POST /api/admin  { action: 'me' }                           → { admin }
 //   POST /api/admin  { action: 'change-password', current, next } → { token, admin }
-//   POST /api/admin  { action: 'subscribers', q?, state?, published?, verified? } → { rows, matched, summary }
+//   POST /api/admin  { action: 'subscribers', q?, state?, published?, verified?, status? } → { rows, matched, summary }
+//   POST /api/admin  { action: 'subscriber', uid }               → { profile, status, sites, events }
+//   POST /api/admin  { action: 'set-status', uid, status: 'active'|'frozen'|'cancelled', reason } → { status }
+//   POST /api/admin  { action: 'add-note', uid, text }           → { ok: true }
 //   all but 'login' with  Authorization: Bearer <session token>
 //   GET  /api/admin  → which settings this deployment sees (yes/no only, never their values)
 //
@@ -14,6 +17,10 @@
 // creates the main admin; that password only opens the «choose a new password» step, nothing else.
 // A session token is signed with a key derived from the service account, lives 12 hours and stops
 // working when the password changes or the admin is frozen.
+// A frozen or cancelled subscriber: the Firebase user is disabled (no sign-in, tokens revoked),
+// platform_subscribers/{uid} keeps the status and platform_subscribers/{uid}/events the history,
+// and suspendedAccounts/{accountId} (public to read, server-only to write) tells the published
+// pages and the restaurant's site to show «غير متاحة مؤقتاً». Activating undoes all of it.
 // Failed sign-ins are counted per username and address (5 wrong → 15 minutes locked) and every
 // sign-in and password change is written to platform_audit.
 //
@@ -33,6 +40,7 @@ const LOCK_MS = 15 * 60 * 1000;
 const SLEEPING_AFTER_DAYS = 30;
 const MAX_ROWS = 500;
 const MAX_USERS = 5000;
+const STATUSES = ['active', 'frozen', 'cancelled'];
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -185,6 +193,7 @@ export default {
       const state = ['active', 'sleeping'].includes(String(body.state)) ? String(body.state) : 'all';
       const published = ['yes', 'no'].includes(String(body.published)) ? String(body.published) : 'all';
       const verified = ['yes', 'no'].includes(String(body.verified)) ? String(body.verified) : 'all';
+      const status = STATUSES.includes(String(body.status)) ? String(body.status) : 'all';
 
       // Pages by owner: published sites carry the owner's workspace id, which for an old
       // account is not the Firebase uid (accounts/{id}.owner says whose it is).
@@ -200,6 +209,10 @@ export default {
         const uid = uidOf.get(s.owner) || s.owner;
         sitesByUid.set(uid, [...(sitesByUid.get(uid) || []), { name: s.name, project: s.project }]);
       });
+
+      const statusSnap = await db.collection('platform_subscribers').select('status').get();
+      const statusOf = new Map<string, string>();
+      statusSnap.forEach((d) => statusOf.set(d.id, String(d.data().status || 'active')));
 
       const users: Awaited<ReturnType<typeof auth.listUsers>>['users'] = [];
       let pageToken: string | undefined;
@@ -222,6 +235,7 @@ export default {
           lastActive: seen,
           verified: u.emailVerified,
           disabled: u.disabled,
+          status: statusOf.get(u.uid) || 'active',
           active: seen >= sleepingBefore,
           sites,
         };
@@ -234,6 +248,7 @@ export default {
         if (published === 'no' && r.sites.length) return false;
         if (verified === 'yes' && !r.verified) return false;
         if (verified === 'no' && r.verified) return false;
+        if (status !== 'all' && r.status !== status) return false;
         return !q || [r.name, r.email, r.phone, r.uid, ...r.sites.map((s) => s.name)].some((v) => v.toLowerCase().includes(q));
       });
       matched.sort((a, b) => b.createdAt - a.createdAt);
@@ -249,6 +264,74 @@ export default {
           sleepingAfterDays: SLEEPING_AFTER_DAYS,
         },
       });
+    }
+
+    // ----- one subscriber -----
+    const uid = String(body.uid || '').slice(0, 128);
+    // The workspace ids of a subscriber: the uid, and the old 'sim_' accounts it claimed.
+    const accountIds = async (u: string) => {
+      const claimed = await db.collection('accounts').where('owner', '==', u).select().get();
+      return [u, ...claimed.docs.map((d) => d.id)];
+    };
+    const userOrNull = (u: string) => auth.getUser(u).catch(() => null);
+
+    if (action === 'subscriber') {
+      const user = uid ? await userOrNull(uid) : null;
+      if (!user) return json({ error: 'not-found' }, 404);
+      const ids = await accountIds(uid);
+      const [statusSnap, eventsSnap, sitesSnap] = await Promise.all([
+        db.collection('platform_subscribers').doc(uid).get(),
+        db.collection('platform_subscribers').doc(uid).collection('events').orderBy('at', 'desc').limit(100).get(),
+        db.collection('publishedSites').where('owner', 'in', ids.slice(0, 30)).select('name', 'project', 'publishedAt').get(),
+      ]);
+      const st = statusSnap.data() as { status?: string; reason?: string; at?: number; by?: string } | undefined;
+      return json({
+        profile: {
+          uid, name: user.displayName || '', email: user.email || '', phone: user.phoneNumber || '', verified: user.emailVerified,
+          createdAt: Date.parse(user.metadata.creationTime || '') || 0,
+          lastActive: Math.max(Date.parse(user.metadata.lastRefreshTime || '') || 0, Date.parse(user.metadata.lastSignInTime || '') || 0),
+          providers: user.providerData.map((p) => p.providerId),
+        },
+        status: { status: st?.status || 'active', reason: st?.reason || '', at: st?.at || 0, by: st?.by || '' },
+        sites: sitesSnap.docs.map((d) => ({ name: String(d.data().name), project: String(d.data().project), publishedAt: String(d.data().publishedAt || '') })),
+        events: eventsSnap.docs.map((d) => {
+          const e = d.data() as { at?: { toMillis?: () => number } | number; admin?: string; type?: string; text?: string; status?: string };
+          return { id: d.id, at: typeof e.at === 'number' ? e.at : e.at?.toMillis?.() || 0, admin: e.admin || '', type: e.type || '', text: e.text || '', status: e.status || '' };
+        }),
+      });
+    }
+
+    if (action === 'set-status') {
+      const next = String(body.status || '');
+      const reason = String(body.reason || '').trim().slice(0, 300);
+      if (!STATUSES.includes(next)) return json({ error: 'bad-status' }, 400);
+      if (next !== 'active' && reason.length < 3) return json({ error: 'reason' }, 400);
+      const user = uid ? await userOrNull(uid) : null;
+      if (!user) return json({ error: 'not-found' }, 404);
+
+      const off = next !== 'active';
+      await auth.updateUser(uid, { disabled: off });
+      if (off) await auth.revokeRefreshTokens(uid);
+      const batch = db.batch();
+      for (const id of await accountIds(uid)) {
+        const ref = db.collection('suspendedAccounts').doc(id);
+        if (off) batch.set(ref, { status: next, at: Date.now() });
+        else batch.delete(ref);
+      }
+      const now = Date.now();
+      batch.set(db.collection('platform_subscribers').doc(uid), { status: next, reason, at: now, by: session.u }, { merge: true });
+      batch.set(db.collection('platform_subscribers').doc(uid).collection('events').doc(), { at: now, admin: session.u, type: 'status', status: next, text: reason });
+      await batch.commit();
+      await audit(session.u, `set-status:${next}:${uid}`);
+      return json({ status: next });
+    }
+
+    if (action === 'add-note') {
+      const text = String(body.text || '').trim().slice(0, 1000);
+      if (!uid || !text) return json({ error: 'bad-request' }, 400);
+      if (!(await userOrNull(uid))) return json({ error: 'not-found' }, 404);
+      await db.collection('platform_subscribers').doc(uid).collection('events').add({ at: Date.now(), admin: session.u, type: 'note', text });
+      return json({ ok: true });
     }
 
     return json({ error: 'unknown-action' }, 400);

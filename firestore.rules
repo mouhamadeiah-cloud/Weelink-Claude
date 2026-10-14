@@ -398,6 +398,12 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    // A frozen or cancelled subscriber (the admin site, api/admin.ts writes it): anyone may check
+    // whether a workspace id is in the list, so its published pages show «غير متاحة مؤقتاً».
+    match /suspendedAccounts/{accountId} {
+      allow get: if true;
+    }
+
     // Match statement for platform_directory onboarding steps
     match /platform_directory/{userId} {
       allow get, write: if canManage(userId) || isDemo(userId);

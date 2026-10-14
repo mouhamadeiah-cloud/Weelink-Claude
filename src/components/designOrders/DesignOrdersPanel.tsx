@@ -12,6 +12,7 @@ import {
 import { accessErrorText, accessStatus, issueAccessCode, revokeAccessCode } from '../../services/designAccess';
 import { contactKindsIn, CONTACT_KIND_LABEL } from '../../utils/contactCheck';
 import { formatPounds } from '../../data/plans';
+import timers from '../../data/designOrderTimers.json';
 
 interface Props {
   user: User;
@@ -264,6 +265,14 @@ const OrderDetail: React.FC<{ user: User; order: DesignOrder; me: 'customer' | '
         </div>
       ))}
       </div>
+      {order.status === 'delivered' && (
+        <p className="text-xs text-muted leading-relaxed">
+          {me === 'customer'
+            ? `إن لم تؤكد الاستلام أو تفتح شكوى خلال ${timers.autoConfirmDays} أيام من التسليم${order.deliveredAt ? ` (قبل ${new Date(order.deliveredAt + timers.autoConfirmDays * 86400000).toLocaleDateString('ar-SY', { day: 'numeric', month: 'long' })})` : ''} يُعتبر الطلب مستلَماً تلقائياً.`
+            : `إن لم يردّ الزبون خلال ${timers.autoConfirmDays} أيام من التسليم يُعتبر الطلب مستلَماً تلقائياً.`}
+        </p>
+      )}
+      {order.status === 'awaiting_payment' && me === 'customer' && <p className="text-xs text-muted">يُلغى الطلب تلقائياً إن لم يُدفع خلال {timers.unpaidCancelDays} أيام.</p>}
       {order.status === 'disputed' && order.disputeReason && <p className="text-sm text-danger leading-relaxed">الشكوى: {order.disputeReason}</p>}
       {error && <p role="alert" className="text-sm font-bold text-danger flex items-start gap-1.5"><AlertCircle size={15} className="shrink-0 mt-0.5" /> {error}</p>}
 

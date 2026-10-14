@@ -26,6 +26,7 @@ export interface DesignOrder {
   rating: { stars: number; text: string } | null;
   createdAt: number;
   updatedAt: number;
+  deliveredAt: number;
 }
 
 export interface OrderMessage {
@@ -68,6 +69,7 @@ const toOrder = (id: string, d: any): DesignOrder => ({
   rating: d.rating && Number(d.rating.stars) >= 1 ? { stars: Number(d.rating.stars), text: String(d.rating.text || '') } : null,
   createdAt: Number(d.createdAt) || 0,
   updatedAt: Number(d.updatedAt) || 0,
+  deliveredAt: Number(d.deliveredAt) || 0,
 });
 
 // The orders the account made as a customer and the ones it got as a designer, live, newest first.

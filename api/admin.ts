@@ -229,7 +229,7 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 // The team (Eyad, 14 Oct): the main admin («owner») can do everything; the others have one specialty
 // and only its actions. Checked here on every call; the site only hides what is not allowed.
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
-const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
+const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
 // The designers' gallery is the content reviewers' work (the owner too).
 const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update'];
@@ -803,6 +803,19 @@ export default {
         order: { ...o, customerEmail: emails.get(o.customerUid) || '', designerEmail: emails.get(o.designerUid) || '', history: snap.data()!.history || [], rating: snap.data()!.rating || null },
         messages: msgs.docs.map((m) => ({ id: m.id, role: String(m.data().role || ''), text: String(m.data().text || ''), at: Number(m.data().at) || 0 })),
       });
+    }
+
+    // How the customer pays the office for a design order (account numbers, transfer office, hours): written
+    // here, shown to the customer beside the price and in the unpaid order.
+    if (action === 'payment-info-get') {
+      const d = (await db.collection('platformSettings').doc('paymentInfo').get()).data() as Record<string, any> | undefined;
+      return json({ text: String(d?.text || ''), updatedAt: Number(d?.updatedAt) || 0, updatedBy: String(d?.updatedBy || '') });
+    }
+    if (action === 'payment-info-set') {
+      const text = String(body.text ?? '').trim().slice(0, 1500);
+      await db.collection('platformSettings').doc('paymentInfo').set({ text, updatedAt: Date.now(), updatedBy: session.u });
+      await audit(session.u, 'payment-info-set');
+      return json({ ok: true });
     }
 
     // The office recounts a designer's finished orders, ratings and badge from their orders.

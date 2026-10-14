@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import {
   AdminDesignOrder, AdminError, AdminOrderMessage, PAY_METHODS, PayMethod,
-  adminDesignOrder, adminDesignOrders, adminRecountDesigner, adminOrderPaid, adminOrderRefund, adminOrderRelease,
+  adminDesignOrder, adminDesignOrders, adminPaymentInfo, adminRecountDesigner, adminSetPaymentInfo, adminOrderPaid, adminOrderRefund, adminOrderRelease,
 } from '../../services/adminApi';
 import { STATUS_LABEL } from '../../services/designOrders';
 
@@ -130,6 +130,43 @@ const Detail: React.FC<{ id: string; onClose: () => void; onChanged: () => void;
   );
 };
 
+// How the customer pays the office: shown to the customer with the price and in the unpaid order.
+const PaymentInfo: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) => {
+  const [text, setText] = useState<string | null>(null);
+  const [saved, setSaved] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    adminPaymentInfo().then((r) => { setText(r.text); setSaved(r.text); }).catch((e) => { if ((e as AdminError)?.code === 'session') onSessionEnd(); else setText(''); });
+  }, [onSessionEnd]);
+  if (text === null) return null;
+  const save = async () => {
+    setBusy(true);
+    setMsg('');
+    try {
+      await adminSetPaymentInfo(text);
+      setSaved(text);
+      setMsg('انحفظ.');
+    } catch (e) {
+      if ((e as AdminError)?.code === 'session') return onSessionEnd();
+      setMsg('تعذّر الحفظ.');
+    }
+    setBusy(false);
+  };
+  return (
+    <details className="rounded-card border border-line bg-surface p-4" open={!saved}>
+      <summary className="cursor-pointer text-small font-medium">تعليمات الدفع التي تظهر للزبون {saved ? '' : '(لم تُكتب بعد)'}</summary>
+      <div className="mt-3 flex flex-col gap-2">
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} maxLength={1500} placeholder="مثال: التحويل إلى حساب … باسم … أو التسليم في مكتب … من 10 إلى 6. اذكر رقم الطلب في الحوالة." className="w-full rounded-ctl border border-line bg-bg p-3 text-small outline-none focus:border-brand" />
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={save} disabled={busy || text === saved} className="rounded-ctl bg-brand px-4 py-2 text-small font-medium text-white disabled:opacity-50">حفظ</button>
+          {msg && <span className="text-small text-muted">{msg}</span>}
+        </div>
+      </div>
+    </details>
+  );
+};
+
 export const DesignOrdersView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEnd }) => {
   const [status, setStatus] = useState('');
   const [data, setData] = useState<{ rows: AdminDesignOrder[]; counts: Record<string, number> } | null>(null);
@@ -152,6 +189,7 @@ export const DesignOrdersView: React.FC<{ onSessionEnd: () => void }> = ({ onSes
     <section className="flex flex-col gap-4">
       <h1 className="text-title font-semibold">طلبات التصميم</h1>
       <p className="text-small text-muted leading-relaxed">طلبات الزبائن من المصممين. المبلغ يبقى عند المكتب إلى أن يؤكّد الزبون استلام التصميم، ثم تُصرف حصة المصمم (70%) وتبقى حصة المنصة (30%).</p>
+      <PaymentInfo onSessionEnd={onSessionEnd} />
       <div className="flex flex-wrap gap-2">
         {FILTERS.map(([id, label]) => (
           <button key={id} onClick={() => setStatus(id)} className={`rounded-full border px-3.5 py-1.5 text-small ${status === id ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-muted hover:bg-bg'}`}>

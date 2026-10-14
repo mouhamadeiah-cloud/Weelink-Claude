@@ -151,4 +151,8 @@ check('a complaint paid out to the designer counts', st3.completed === st2.compl
 check('recount is idempotent', JSON.stringify(await recountDesigner(db, 'desg')) === JSON.stringify(st3));
 
 
+// payment instructions
+check('quote has no payment text until the office writes it', (await call('tc', { action: 'quote' })).paymentInfo === '');
+store.set('platformSettings/paymentInfo', { text: 'حوّل إلى الحساب 123 واذكر رقم الطلب', updatedAt: 1, updatedBy: 'admin' });
+check('quote carries the office payment text', (await call('tc', { action: 'quote' })).paymentInfo === 'حوّل إلى الحساب 123 واذكر رقم الطلب');
 for (const [label, ok, extra] of results) test(label, () => assert.ok(ok, JSON.stringify(extra)));

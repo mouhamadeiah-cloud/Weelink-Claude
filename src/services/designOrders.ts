@@ -122,7 +122,7 @@ const call = async <T,>(user: User, body: Record<string, unknown>): Promise<T> =
   return data as T;
 };
 
-export const quoteOrder = (user: User) => call<{ planId: string; price: number }>(user, { action: 'quote' });
+export const quoteOrder = (user: User) => call<{ planId: string; price: number; paymentInfo: string }>(user, { action: 'quote' });
 export const createOrder = (user: User, designerUid: string, slideId: string, brief: string) => call<{ id: string; price: number }>(user, { action: 'create', designerUid, slideId, brief });
 export const cancelOrder = (user: User, id: string) => call<{ status: string }>(user, { action: 'cancel', id });
 export const sendOrderMessage = (user: User, id: string, text: string) => call<{ ok: true }>(user, { action: 'message', id, text });

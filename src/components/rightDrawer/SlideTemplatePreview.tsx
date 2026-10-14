@@ -288,13 +288,9 @@ interface Props {
   categoryId: string;
   index: number;
   onAdd: () => void;
-  // Only shown (the admin's review, the gallery): no «انقر لإضافة الشريحة» on hover and no pointer.
-  readOnly?: boolean;
-  // No coloured name strip above the drawing (the gallery shows the name itself).
-  hideHeader?: boolean;
 }
 
-export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, index, onAdd, readOnly, hideHeader }) => {
+export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, index, onAdd }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(300);
   useLayoutEffect(() => {
@@ -315,13 +311,13 @@ export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, ind
 
   return (
     <div
-      onClick={readOnly ? undefined : onAdd}
-      className={`w-full bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-2xs group transition-all relative ${readOnly ? '' : 'cursor-pointer hover:shadow-md'}`}
+      onClick={onAdd}
+      className="w-full bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-2xs group cursor-pointer hover:shadow-md transition-all relative"
       style={{ ['--kind' as any]: kind.color }}
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = kind.color)}
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = '')}
     >
-      {!hideHeader && <div className="px-2.5 py-2 border-b border-neutral-100 flex items-center gap-2" style={{ background: kind.bg }}>
+      <div className="px-2.5 py-2 border-b border-neutral-100 flex items-center gap-2" style={{ background: kind.bg }}>
         <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ background: kind.color }} />
         <div className="min-w-0 flex-1">
           <div className="text-[12.5px] font-black leading-tight truncate" style={{ color: kind.color }}>
@@ -334,7 +330,7 @@ export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, ind
             </span>
           </div>
         </div>
-      </div>}
+      </div>
 
       <div ref={boxRef} className="w-full relative overflow-hidden" style={{ height: Math.max(8, Math.round(shownHeight * scale)), background: bg }}>
         {payload.backgroundImage && (
@@ -366,12 +362,12 @@ export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, ind
             تتابع الشريحة للأسفل
           </div>
         )}
-        {!readOnly && <div className="absolute inset-0 bg-neutral-950/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 z-[999]">
+        <div className="absolute inset-0 bg-neutral-950/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 z-[999]">
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black shadow-lg" style={{ background: kind.color }}>
             ＋
           </div>
           {shownHeight * scale > 40 && <span className="text-[10px] font-bold">انقر لإضافة الشريحة</span>}
-        </div>}
+        </div>
       </div>
     </div>
   );

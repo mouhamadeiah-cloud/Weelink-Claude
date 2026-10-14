@@ -60,6 +60,7 @@ import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from '
 import { withPhoneLayouts } from './utils/mobileLayout';
 import { withTemplateGroups } from './utils/templateGroups';
 import { withLocalGraphics } from './utils/localGraphics';
+import { deserializeElements, sanitizeData, serializeElements } from './utils/elementStorage';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
@@ -71,72 +72,6 @@ import { SelectionBar } from './components/SelectionBar';
 import { loadPageFonts } from './services/pageFonts';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-const sanitizeData = (data: any): any => {
-  if (data === null || data === undefined) return null;
-  if (Array.isArray(data)) {
-    return data.map(sanitizeData);
-  }
-  if (typeof data === 'object') {
-    const cleaned: any = {};
-    for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        const val = data[key];
-        if (val !== undefined) {
-          cleaned[key] = sanitizeData(val);
-        }
-      }
-    }
-    return cleaned;
-  }
-  return data;
-};
-
-// Converts string[][] table cells to [{ row: string[] }] to avoid nested arrays (unsupported by Firestore)
-const serializeElements = (elements: CanvasElement[]): any[] => {
-  const mapped = elements.map(el => {
-    if (el.tableConfig) {
-      const { cells, ...rest } = el.tableConfig;
-      return {
-        ...el,
-        tableConfig: {
-          ...rest,
-          cells: cells ? cells.map(row => ({ row })) : []
-        }
-      };
-    }
-    return el;
-  });
-  return sanitizeData(mapped);
-};
-
-const deserializeElements = (dataElements: any[]): CanvasElement[] => {
-  if (!dataElements) return [];
-  return dataElements.map(withLocalGraphics).map(el => {
-    if (el.tableConfig) {
-      const { cells, ...rest } = el.tableConfig;
-      let restoredCells: string[][] = [];
-      if (Array.isArray(cells)) {
-        restoredCells = cells.map((item: any) => {
-          if (item && Array.isArray(item.row)) {
-            return item.row;
-          }
-          if (Array.isArray(item)) {
-            return item;
-          }
-          return [];
-        });
-      }
-      return {
-        ...el,
-        tableConfig: {
-          ...rest,
-          cells: restoredCells
-        }
-      } as CanvasElement;
-    }
-    return el;
-  });
-};
 
 const initialPage: Page = {
   id: 'page-home',

@@ -3,6 +3,8 @@
 import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from './firebase';
+import { deserializeElements } from '../utils/elementStorage';
+import type { CanvasElement } from '../types';
 
 export interface GallerySlide {
   id: string;
@@ -15,7 +17,7 @@ export interface GallerySlide {
   // When it was approved (or exported, for slides approved before the date was kept), in ms.
   at: number;
   slide: any;
-  elements: any[];
+  elements: CanvasElement[];
 }
 
 // A slide is «جديد» for a week after it appears, so a good new designer is seen next to the old ones.
@@ -39,7 +41,7 @@ export const listApprovedSlides = async (): Promise<GallerySlide[]> => {
       dislikes: Number(x.dislikes) || 0,
       at: Number(x.approvedAt) || x.createdAt?.toMillis?.() || 0,
       slide: x.slide || {},
-      elements: Array.isArray(x.elements) ? x.elements : [],
+      elements: deserializeElements(Array.isArray(x.elements) ? x.elements : []),
     };
   });
 };

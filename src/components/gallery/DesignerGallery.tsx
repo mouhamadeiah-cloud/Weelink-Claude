@@ -1,5 +1,5 @@
 // «تصميمات مصممينا»: the approved slides of the designers' gallery, under the start page's cards
-// (Eyad, 14 Oct). Each is drawn as it really looks; clicking one opens it large. Filter by the kind of
+// (Eyad, 14 Oct). Each is the live slide (LiveSlide: videos, text motion and effects play); clicking one opens it large. Filter by the kind of
 // slide, sort by likes or by newest, and see more of one designer. A signed-in visitor likes or
 // dislikes a slide (once per slide, changeable); the counters come from api/gallery.ts, and the likes
 // beside a designer's name are the total over their slides. Contact with the designer and «أضف
@@ -8,23 +8,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { Heart, Loader2, MessageCircle, Plus, ThumbsDown, ThumbsUp, X } from 'lucide-react';
-import { SlideTemplatePreview } from '../rightDrawer/SlideTemplatePreview';
+import { LiveSlide } from './LiveSlide';
 import { SLIDE_CATEGORIES, categoryLabel } from '../../data/slideCategories';
 import { GallerySlide, isNewSlide, listApprovedSlides, readMyVotes, voteErrorText, voteOnSlide } from '../../services/galleryView';
 
 type Sort = 'likes' | 'new';
 const nf = (n: number) => n.toLocaleString('ar-SY');
 
-const preview = (s: GallerySlide, large = false) => (
-  <SlideTemplatePreview
-    readOnly
-    hideHeader
-    categoryId={s.category}
-    index={large ? 1 : 0}
-    onAdd={() => undefined}
-    payload={{ name: s.name, height: Number(s.slide?.height) || 560, backgroundColor: s.slide?.backgroundColor, backgroundImage: s.slide?.backgroundImage, backgroundOpacity: s.slide?.backgroundOpacity, elements: s.elements }}
-  />
-);
+const preview = (s: GallerySlide) => <LiveSlide slide={s.slide} elements={s.elements} />;
 
 interface VoteButtonsProps {
   slide: GallerySlide;
@@ -206,7 +197,7 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
               </div>
               <button type="button" onClick={() => setOpenId('')} aria-label="إغلاق" className="shrink-0 w-9 h-9 rounded-ctl flex items-center justify-center text-muted hover:text-ink hover:bg-bg cursor-pointer"><X size={18} /></button>
             </div>
-            <div className="p-4 sm:p-5">{preview(open, true)}</div>
+            <div className="p-4 sm:p-5">{preview(open)}</div>
             <div className="px-5 pb-5 flex flex-wrap items-center gap-2">
               <VoteButtons slide={open} mine={votes[open.id] || 0} own={!!user && user.uid === open.designerUid} onVote={vote} large />
               <button type="button" disabled title="يفتح الاتصال بالمصمم بعد الدفع: قريباً" className="h-10 px-4 rounded-ctl border border-line text-faint text-sm font-bold inline-flex items-center gap-1.5 cursor-not-allowed"><MessageCircle size={16} /> اتصل بالمصمم · قريباً</button>

@@ -21,7 +21,7 @@ import { StandardAuth } from './components/StandardAuth';
 import { becomeDesigner, readDesigner } from './services/designers';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
-import { openClientPage, saveClientPage, accessErrorText } from './services/designAccess';
+import { openClientPage, saveClientPage, accessErrorText, activeAccess, revokeAccessCode } from './services/designAccess';
 import { useOrderAttention } from './services/orderAttention';
 import { DesignerDashboard } from './components/designer/DesignerDashboard';
 import { DesignOrdersPanel } from './components/designOrders/DesignOrdersPanel';
@@ -237,6 +237,10 @@ export default function App() {
   // The hired designer inside a customer's page with the 3-day code: the editor holds that page, saves go
   // to /api/design-access, and nothing can be exported from it.
   const [clientSession, setClientSession] = useState<{ orderId: string; code: string; expiresAt: number } | null>(null);
+  // A designer is inside this account's page with a code (api/design-access): the page is locked here, so a
+  // save from this editor cannot overwrite the designer's work. It is read again when the code ends.
+  const [designerLock, setDesignerLock] = useState<{ id: string; designerName: string; expiresAt: number } | null>(null);
+  const pageLockRef = useRef(false);
   const clientSessionRef = useRef<{ orderId: string; code: string; expiresAt: number } | null>(null);
   const prevProjectRef = useRef<ProjectType>('page');
   // A page to build as soon as its kind is open in the editor: the questions just finished.
@@ -791,12 +795,12 @@ export default function App() {
   useEffect(() => {
     // Skip saving during initial boot/loading to prevent overwrite races
     // (and in the designer's mode, where the editor holds a draft, not the page)
-    if (!isInitialLoadComplete.current || isFirebaseLoading || designerModeRef.current) {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || designerModeRef.current || (pageLockRef.current && project === 'page')) {
       return;
     }
 
     const delayDebounceFn = setTimeout(() => {
-      if (designerModeRef.current) return;
+      if (designerModeRef.current || (pageLockRef.current && project === 'page')) return;
       try {
         const targetUserId = activeUserUid;
         const { localPrefix } = PROJECT_STORAGE[project];
@@ -815,13 +819,13 @@ export default function App() {
   // 3. Debounced live auto-save to Firebase whenever pages or elements change
   useEffect(() => {
     // Skip saving during initial boot/loading to prevent overwrite races
-    if (!isInitialLoadComplete.current || isFirebaseLoading || designerModeRef.current) {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || designerModeRef.current || (pageLockRef.current && project === 'page')) {
       return;
     }
 
     const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
-      if (designerModeRef.current) return;
+      if (designerModeRef.current || (pageLockRef.current && project === 'page')) return;
       try {
         setIsSavingCloud(true);
         const { pagesField, elementsField } = PROJECT_STORAGE[project];
@@ -955,6 +959,7 @@ export default function App() {
   const flushProjectSave = (): Promise<boolean> => {
     // In the designer's mode the cloud button saves the open draft, never over the page.
     if (designerModeRef.current) return saveActiveDraft();
+    if (pageLockRef.current && project === 'page') return Promise.resolve(false);
     if (!projectReadyRef.current) return Promise.resolve(false);
     const targetUserId = activeUserUid;
     const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE[project];
@@ -981,6 +986,32 @@ export default function App() {
       return false;
     });
   };
+
+  // While a designer is inside the page with a code the page is locked here (see designerLock above): ask
+  // now and every 45 seconds; when the code ends, the page is read again, with the designer's changes.
+  useEffect(() => {
+    if (!currentUser || currentUser.isAnonymous || project !== 'page' || designerMode) return;
+    let alive = true;
+    const check = async () => {
+      try {
+        const { rows } = await activeAccess(currentUser);
+        if (!alive) return;
+        const lock = rows[0] || null;
+        const was = pageLockRef.current;
+        pageLockRef.current = !!lock;
+        setDesignerLock(lock);
+        if (was && !lock) loadUserWorkspace(activeUserUid).catch(() => {});
+      } catch {
+        // offline or no server: the page stays as it is
+      }
+    };
+    check();
+    const timer = window.setInterval(check, 45000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, [currentUser, project, designerMode, activeUserUid]);
 
   // ---------- «وضع المصمم» ----------
   // A draft is a slide or a page (Eyad, 14 Oct). The editor works on either as on any page: a slide
@@ -4249,6 +4280,15 @@ export default function App() {
 
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />
+      {designerLock && screen === 'editor' && !designerMode && project === 'page' && currentUser && (
+        <div className="fixed inset-0 z-[4000020] bg-black/60 flex items-center justify-center p-4" dir="rtl" role="alertdialog" aria-modal="true" aria-label="المصمم يعدّل صفحتك">
+          <div className="w-full max-w-md rounded-card bg-surface border border-line p-6 space-y-3 text-center">
+            <h2 className="text-heading font-bold">{designerLock.designerName} يعدّل صفحتك الآن</h2>
+            <p className="text-sm text-muted leading-relaxed">أُوقف التحرير هنا حتى لا تمحو تعديلاتكما بعضها. ينتهي رمز دخوله {new Date(designerLock.expiresAt).toLocaleString('ar-SY', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}، ثم تعود صفحتك بتعديلاته. تستطيع سحب الرمز الآن إن أردت التعديل بنفسك.</p>
+            <button type="button" onClick={async () => { try { await revokeAccessCode(currentUser, designerLock.id); pageLockRef.current = false; setDesignerLock(null); await loadUserWorkspace(activeUserUid); } catch { window.alert('تعذّر سحب الرمز. جرّب مرة ثانية.'); } }} className="h-11 px-5 rounded-ctl bg-danger text-white text-sm font-bold cursor-pointer">سحب الرمز وتعديل صفحتي</button>
+          </div>
+        </div>
+      )}
       {designerMode && isDashboardOpen && currentUser && <DesignerDashboard user={currentUser} onClose={() => setIsDashboardOpen(false)} />}
       {designerMode && isOrdersOpen && currentUser && <DesignOrdersPanel user={currentUser} onClose={() => setIsOrdersOpen(false)} onEnterClientPage={async (id, code) => { const r = await openClientSession(id, code); if (r.ok) setIsOrdersOpen(false); return r; }} />}
       {designerMode && isExportOpen && currentUser && (() => {

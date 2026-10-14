@@ -290,9 +290,11 @@ interface Props {
   onAdd: () => void;
   // Only shown (the admin's review, the gallery): no «انقر لإضافة الشريحة» on hover and no pointer.
   readOnly?: boolean;
+  // No coloured name strip above the drawing (the gallery shows the name itself).
+  hideHeader?: boolean;
 }
 
-export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, index, onAdd, readOnly }) => {
+export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, index, onAdd, readOnly, hideHeader }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(300);
   useLayoutEffect(() => {
@@ -319,7 +321,7 @@ export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, ind
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = kind.color)}
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = '')}
     >
-      <div className="px-2.5 py-2 border-b border-neutral-100 flex items-center gap-2" style={{ background: kind.bg }}>
+      {!hideHeader && <div className="px-2.5 py-2 border-b border-neutral-100 flex items-center gap-2" style={{ background: kind.bg }}>
         <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ background: kind.color }} />
         <div className="min-w-0 flex-1">
           <div className="text-[12.5px] font-black leading-tight truncate" style={{ color: kind.color }}>
@@ -332,7 +334,7 @@ export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, ind
             </span>
           </div>
         </div>
-      </div>
+      </div>}
 
       <div ref={boxRef} className="w-full relative overflow-hidden" style={{ height: Math.max(8, Math.round(shownHeight * scale)), background: bg }}>
         {payload.backgroundImage && (

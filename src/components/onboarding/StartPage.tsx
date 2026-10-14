@@ -8,6 +8,7 @@ import type { User } from 'firebase/auth';
 import { ArrowLeft, CarFront, Check, FileText, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
+import { DesignerGallery } from '../gallery/DesignerGallery';
 import { guestKindOf, readGuestAnswers, setGuestKind } from '../../services/guestAnswers';
 import { CAR_PHOTOS, carPhoto } from '../../data/carShowroomTemplate';
 import type { ProjectType } from '../shop/shopTypes';
@@ -225,6 +226,9 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               </span>
             </button>
           </section>
+
+          {/* The designers' approved slides, under the cards */}
+          <DesignerGallery user={user} />
         </main>
       ) : stage === 'plans' ? (
         <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} title={chosen.title} onPicked={startQuestions} />

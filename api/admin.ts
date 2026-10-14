@@ -18,6 +18,9 @@
 //   GET  /api/admin  with  Authorization: Bearer <CRON_SECRET>  (Vercel's daily cron)
 //        → reminds subscribers 14, 7 and 1 day before their subscription ends, and freezes the ones
 //          whose subscription ended
+//   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
+//   POST /api/admin  { action: 'tokens-adjust', uid, delta, reason } → { balance }
+//   POST /api/admin  { action: 'set-prices', in, out }           → { prices }
 //   all but 'login' with  Authorization: Bearer <session token>
 //   GET  /api/admin  → which settings this deployment sees (yes/no only, never their values)
 //
@@ -84,6 +87,16 @@ const firebaseAdmin = () => {
 
 type Period = 'monthly' | 'yearly';
 const PERIODS: Period[] = ['monthly', 'yearly'];
+// Wee AI tokens (the same numbers as in api/build-page.ts and api/write-texts.ts): the first AI call
+// grants FREE_TOKENS, a payment adds PAID_TOKENS for every month it covers.
+const FREE_TOKENS = 30_000;
+const PAID_TOKENS = 150_000;
+const DEFAULT_PRICE = { in: 0.3, out: 2.5 }; // US dollars per million tokens
+const KIND_NAMES: Record<string, string> = { 'build-page': 'ابن صفحتي', 'write-texts': 'اكتب النصوص' };
+const getPrices = async (db: Fb['db']) => {
+  const p = (await db.collection('platform_settings').doc('ai_prices').get()).data() as { in?: number; out?: number } | undefined;
+  return { in: typeof p?.in === 'number' ? p.in : DEFAULT_PRICE.in, out: typeof p?.out === 'number' ? p.out : DEFAULT_PRICE.out };
+};
 const METHODS: Record<string, string> = { office: 'مكتب', cash: 'نقداً', transfer: 'حوالة', grant: 'منحة' };
 
 // The end of a period that starts at `from` (a month or a year later, same day of the month).
@@ -241,6 +254,11 @@ const sendMail = async (to: string, subject: string, html: string): Promise<{ re
     return { result: 'failed', detail: (e as Error)?.message };
   }
 };
+
+const callFromDoc = (d: Record<string, any>) => ({
+  at: Number(d.at) || 0, kind: String(d.kind || ''), tokens: Number(d.tokens) || 0, input: Number(d.input) || 0, output: Number(d.output) || 0,
+  costUsd: Number(d.costUsd) || 0, ok: d.ok !== false, reason: String(d.reason || ''),
+});
 
 const payFromDoc = (id: string, d: Record<string, any>) => ({
   id, uid: String(d.uid || ''), invoiceNo: String(d.invoiceNo || ''), name: String(d.name || ''), email: String(d.email || ''),
@@ -496,13 +514,14 @@ export default {
       const user = uid ? await userOrNull(uid) : null;
       if (!user) return json({ error: 'not-found' }, 404);
       const ids = await accountIds(uid);
-      const [statusSnap, eventsSnap, sitesSnap, paymentsSnap] = await Promise.all([
+      const [statusSnap, eventsSnap, sitesSnap, paymentsSnap, callsSnap] = await Promise.all([
         db.collection('platform_subscribers').doc(uid).get(),
         db.collection('platform_subscribers').doc(uid).collection('events').orderBy('at', 'desc').limit(100).get(),
         db.collection('publishedSites').where('owner', 'in', ids.slice(0, 30)).select('name', 'project', 'publishedAt').get(),
         db.collection('platform_payments').where('uid', '==', uid).get(),
+        db.collection('platform_ai_calls').where('uid', '==', uid).limit(500).get(),
       ]);
-      const st = statusSnap.data() as { status?: string; reason?: string; at?: number; by?: string; subscription?: Record<string, any> } | undefined;
+      const st = statusSnap.data() as { status?: string; reason?: string; at?: number; by?: string; subscription?: Record<string, any>; tokens?: { balance?: number; used?: number } } | undefined;
       return json({
         profile: {
           uid, name: user.displayName || '', email: user.email || '', phone: user.phoneNumber || '', verified: user.emailVerified,
@@ -513,6 +532,8 @@ export default {
         status: { status: st?.status || 'active', reason: st?.reason || '', at: st?.at || 0, by: st?.by || '' },
         subscription: st?.subscription?.endsAt ? { plan: String(st.subscription.plan || ''), planName: String(st.subscription.planName || ''), period: st.subscription.period === 'yearly' ? 'yearly' : 'monthly', endsAt: Number(st.subscription.endsAt) || 0, freezeAt: Number(st.subscription.freezeAt) || 0 } : null,
         payments: paymentsSnap.docs.map((d) => payFromDoc(d.id, d.data())).sort((a, b) => b.paidAt - a.paidAt),
+        tokens: { balance: typeof st?.tokens?.balance === 'number' ? st.tokens.balance : null, used: st?.tokens?.used || 0, free: FREE_TOKENS },
+        calls: callsSnap.docs.map((d) => callFromDoc(d.data())).sort((a, b) => b.at - a.at).slice(0, 20),
         sites: sitesSnap.docs.map((d) => ({ name: String(d.data().name), project: String(d.data().project), publishedAt: String(d.data().publishedAt || '') })),
         events: eventsSnap.docs.map((d) => {
           const e = d.data() as { at?: { toMillis?: () => number } | number; admin?: string; type?: string; text?: string; status?: string };
@@ -566,8 +587,9 @@ export default {
       };
       const batch = db.batch();
       batch.set(payRef, pay);
-      batch.set(subRef, { subscription: { plan, planName, period, endsAt, freezeAt: endsAt, notified: FieldValue.delete() } }, { merge: true });
-      batch.set(subRef.collection('events').doc(), { at: now, admin: session.u, type: 'payment', text: `${planName} ${period === 'yearly' ? 'سنوي' : 'شهري'} · ${amount.toLocaleString('en')} ل.س · ${METHODS[method]} · حتى ${fmtDate(endsAt)}` });
+      const granted = PAID_TOKENS * (period === 'yearly' ? 12 : 1);
+      batch.set(subRef, { subscription: { plan, planName, period, endsAt, freezeAt: endsAt, notified: FieldValue.delete() }, tokens: { balance: FieldValue.increment(granted) } }, { merge: true });
+      batch.set(subRef.collection('events').doc(), { at: now, admin: session.u, type: 'payment', text: `${planName} ${period === 'yearly' ? 'سنوي' : 'شهري'} · ${amount.toLocaleString('en')} ل.س · ${METHODS[method]} · حتى ${fmtDate(endsAt)} · +${granted.toLocaleString('en')} توكن` });
       await batch.commit();
       // Paying brings back an account the cron froze for the end of its subscription.
       if (cur?.status === 'frozen' && cur.autoFrozen) await applyStatus(fb, uid, 'active', 'تجديد الاشتراك', session.u, false);
@@ -632,6 +654,71 @@ export default {
       await db.collection('platform_settings').doc('company').set(company);
       await audit(session.u, 'set-company');
       return json({ company });
+    }
+
+    if (action === 'tokens-adjust') {
+      const delta = Math.trunc(Number(body.delta));
+      const reason = String(body.reason || '').trim().slice(0, 300);
+      if (!delta || Math.abs(delta) > 100_000_000) return json({ error: 'bad-amount' }, 400);
+      if (reason.length < 3) return json({ error: 'reason' }, 400);
+      if (!uid || !(await userOrNull(uid))) return json({ error: 'not-found' }, 404);
+      const ref = db.collection('platform_subscribers').doc(uid);
+      // A balance never goes below zero; an account that never used Wee AI starts from the free amount.
+      const balance = await db.runTransaction(async (t) => {
+        const cur = (await t.get(ref)).data() as { tokens?: { balance?: number } } | undefined;
+        const start = typeof cur?.tokens?.balance === 'number' ? cur.tokens.balance : FREE_TOKENS;
+        const next = Math.max(0, start + delta);
+        t.set(ref, { tokens: { balance: next } }, { merge: true });
+        return next;
+      });
+      await ref.collection('events').add({ at: Date.now(), admin: session.u, type: 'tokens', text: `${delta > 0 ? 'شحن' : 'خصم'} ${Math.abs(delta).toLocaleString('en')} توكن · ${reason} · الرصيد ${balance.toLocaleString('en')}` });
+      await audit(session.u, `tokens-adjust:${uid}:${delta}`);
+      return json({ balance });
+    }
+
+    if (action === 'set-prices') {
+      const pin = Number(body.in), pout = Number(body.out);
+      if (!(pin >= 0 && pin < 1000 && pout >= 0 && pout < 1000)) return json({ error: 'bad-amount' }, 400);
+      await db.collection('platform_settings').doc('ai_prices').set({ in: pin, out: pout });
+      await audit(session.u, 'set-prices');
+      return json({ prices: { in: pin, out: pout } });
+    }
+
+    if (action === 'tokens-overview') {
+      const month = /^\d{4}-\d{2}$/.test(String(body.month)) ? String(body.month) : new Date().toISOString().slice(0, 7);
+      const [y, m] = month.split('-').map(Number);
+      const from = Date.UTC(y, m - 1, 1), to = Date.UTC(y, m, 1);
+      const [callsSnap, mailsSnap, prices] = await Promise.all([
+        db.collection('platform_ai_calls').where('at', '>=', from).where('at', '<', to).limit(20000).get(),
+        db.collection('platform_payments').where('sentAt', '>=', from).where('sentAt', '<', to).select().get(),
+        getPrices(db),
+      ]);
+      const totals = { calls: 0, failed: 0, tokens: 0, input: 0, output: 0, costUsd: 0 };
+      const kinds: Record<string, { name: string; calls: number; tokens: number; costUsd: number }> = {};
+      const perUser = new Map<string, { calls: number; tokens: number; costUsd: number }>();
+      callsSnap.forEach((d) => {
+        const c = callFromDoc(d.data());
+        totals.calls++;
+        if (!c.ok) totals.failed++;
+        totals.tokens += c.tokens; totals.input += c.input; totals.output += c.output; totals.costUsd += c.costUsd;
+        const k = (kinds[c.kind] ||= { name: KIND_NAMES[c.kind] || c.kind, calls: 0, tokens: 0, costUsd: 0 });
+        k.calls++; k.tokens += c.tokens; k.costUsd += c.costUsd;
+        const uidOfCall = String(d.data().uid || '');
+        const u = perUser.get(uidOfCall) || { calls: 0, tokens: 0, costUsd: 0 };
+        u.calls++; u.tokens += c.tokens; u.costUsd += c.costUsd;
+        perUser.set(uidOfCall, u);
+      });
+      const top = [...perUser.entries()].sort((a, b) => b[1].costUsd - a[1].costUsd || b[1].tokens - a[1].tokens).slice(0, 10);
+      const users = top.length ? await auth.getUsers(top.map(([u]) => ({ uid: u }))).catch(() => null) : null;
+      const nameOf = new Map((users?.users || []).map((u) => [u.uid, u.displayName || u.email || u.uid]));
+      return json({
+        month, totals, prices,
+        kinds: Object.values(kinds).sort((a, b) => b.costUsd - a.costUsd),
+        top: top.map(([u, v]) => ({ uid: u, name: nameOf.get(u) || u, ...v })),
+        // Invoice emails sent this month: an estimate, the email service gives no exact figure.
+        emails: mailsSnap.size,
+        truncated: callsSnap.size >= 20000,
+      });
     }
 
     if (action === 'add-note') {

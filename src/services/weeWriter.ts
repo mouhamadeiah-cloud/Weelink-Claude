@@ -100,6 +100,7 @@ export const requestPageTexts = async (facts: Record<string, string>, items: Ret
     const data = await res.json().catch(() => ({}));
     if (res.ok && Array.isArray(data.texts)) return { ok: true, texts: data.texts };
     if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
+    if (data.error === 'no_tokens') return { ok: false, message: 'انتهى رصيد Wee AI في حسابك. تواصل مع الإدارة لشحن رصيد جديد.' };
     if (res.status === 401) return { ok: false, message: 'انتهت جلسة الدخول. سجّل الدخول من جديد وجرّب مرة ثانية.' };
     return { ok: false, message: 'ما قدر Wee AI يكتب النصوص هالمرة. جرّب بعد شوي.' };
   } catch {

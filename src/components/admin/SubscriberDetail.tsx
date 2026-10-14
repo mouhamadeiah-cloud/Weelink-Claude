@@ -5,7 +5,7 @@ import { Loader2, X } from 'lucide-react';
 import { PLANS, formatPounds, yearlyPrice } from '../../data/plans';
 import {
   AdminError, PAY_METHODS, PayMethod, Period, SubscriberDetail as Detail, SubscriberStatus,
-  adminAddNote, adminAddPayment, adminInvoiceSend, adminPostponeFreeze, adminSetStatus, adminSubscriber, invoiceUrl,
+  adminAddNote, adminAddPayment, adminInvoiceSend, adminPostponeFreeze, adminSetStatus, adminSubscriber, adminTokensAdjust, invoiceUrl,
 } from '../../services/adminApi';
 import { SEND_ERRORS } from './PaymentsView';
 
@@ -44,6 +44,7 @@ export const SubscriberDetail: React.FC<{ uid: string; onClose: () => void; onCh
   const [pay, setPay] = useState<{ plan: string; period: Period; amount: string; method: PayMethod; receiptNo: string; note: string } | null>(null);
   const [postpone, setPostpone] = useState<{ date: string; reason: string } | null>(null);
   const [info, setInfo] = useState('');
+  const [tok, setTok] = useState<{ delta: string; reason: string } | null>(null);
 
   const fail = useCallback((e: unknown, fallback: string) => {
     if ((e as AdminError)?.code === 'session') return onSessionEnd();
@@ -117,6 +118,21 @@ export const SubscriberDetail: React.FC<{ uid: string; onClose: () => void; onCh
     }
     setBusy(false);
   };
+  const saveTokens = async () => {
+    if (!tok) return;
+    setBusy(true);
+    setError('');
+    try {
+      const r = await adminTokensAdjust(uid, Number(tok.delta), tok.reason);
+      setTok(null);
+      setInfo(`الرصيد الآن ${r.balance.toLocaleString('ar-SY')} توكن.`);
+      await load();
+    } catch (e) {
+      fail(e, 'تعذّر تعديل الرصيد (اكتب رقماً غير صفر).');
+    }
+    setBusy(false);
+  };
+
   const savePostpone = async () => {
     if (!postpone) return;
     setBusy(true);
@@ -236,6 +252,34 @@ export const SubscriberDetail: React.FC<{ uid: string; onClose: () => void; onCh
                         <a href={invoiceUrl(x)} target="_blank" rel="noreferrer" className="text-brand hover:underline">الفاتورة</a>
                         <button disabled={busy} onClick={() => sendInvoice(x.id)} className="text-brand hover:underline disabled:opacity-50">{x.sentAt ? 'إعادة الإرسال بالإيميل' : 'إرسال بالإيميل'}</button>
                       </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <h3 className="mb-2 font-medium">توكنز Wee AI</h3>
+              <p className="mb-2">
+                الرصيد: <b className="tabular-nums">{data.tokens.balance === null ? `لم يستعمل بعد (يبدأ بـ ${data.tokens.free.toLocaleString('ar-SY')})` : data.tokens.balance.toLocaleString('ar-SY')}</b>
+                {data.tokens.used > 0 && <span className="text-faint"> · استهلك {data.tokens.used.toLocaleString('ar-SY')}</span>}
+              </p>
+              {tok ? (
+                <div className="flex flex-col gap-2 rounded-ctl border border-line bg-bg p-3">
+                  <input type="number" value={tok.delta} onChange={(e) => setTok({ ...tok, delta: e.target.value })} placeholder="عدد التوكنز (موجب للشحن، سالب للخصم)" className={inputCls} />
+                  <input value={tok.reason} onChange={(e) => setTok({ ...tok, reason: e.target.value })} placeholder="السبب (مطلوب)" className={inputCls} />
+                  <div className="flex gap-2">
+                    <button disabled={busy || !Number(tok.delta) || tok.reason.trim().length < 3} onClick={saveTokens} className="inline-flex items-center gap-1 rounded-ctl bg-brand px-3 py-1.5 text-white hover:bg-brand-hover disabled:opacity-50">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} حفظ</button>
+                    <button onClick={() => setTok(null)} className="rounded-ctl px-3 py-1.5 hover:bg-surface">رجوع</button>
+                  </div>
+                </div>
+              ) : <button onClick={() => { setTok({ delta: '', reason: '' }); setError(''); setInfo(''); }} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">شحن أو خصم</button>}
+              {data.calls.length > 0 && (
+                <ul className="mt-3 flex flex-col gap-1">
+                  {data.calls.map((c, i) => (
+                    <li key={i} className="flex justify-between gap-2 text-tiny text-muted">
+                      <span>{when(c.at)} · {c.kind === 'build-page' ? 'ابن صفحتي' : c.kind === 'write-texts' ? 'اكتب النصوص' : c.kind}{c.ok ? '' : ` · فشل ${c.reason}`}</span>
+                      <span className="tabular-nums" dir="ltr">{c.tokens.toLocaleString('en')} · ${c.costUsd.toFixed(4)}</span>
                     </li>
                   ))}
                 </ul>

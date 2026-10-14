@@ -9,6 +9,8 @@
 // the size of each request is capped, so the endpoint cannot be used as a free general chatbot.
 
 import { GoogleGenAI, type ThinkingLevel } from '@google/genai';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 // A fixed model, not «latest», so a newer and dearer Flash never comes in on its own (Eyad, 12 Oct).
@@ -59,18 +61,77 @@ const cleanItems = (raw: unknown): Item[] => {
     .filter((it) => it.id);
 };
 
-// A Firebase ID token is valid when Google's identity service can look up its user.
-const isSignedIn = async (request: Request) => {
+// ---------- Token meter (the platform admin's «التوكنز والتكلفة») ----------
+// Every Gemini call is logged in platform_ai_calls and taken off the account's balance
+// (platform_subscribers/{uid}.tokens). The first call grants the opening balance: the free
+// amount, or the paid one while a subscription runs. Same block as in api/write-texts.ts and
+// api/build-page.ts (a function file cannot safely import a sibling). Without
+// FIREBASE_SERVICE_ACCOUNT nothing is metered and nothing is blocked.
+const FREE_TOKENS = 30_000;
+const PAID_TOKENS = 150_000;
+const DEFAULT_PRICE = { in: 0.3, out: 2.5 }; // US dollars per million tokens
+
+type Meter = { uid: string; db: ReturnType<typeof getFirestore> };
+
+const meterDb = () => {
+  try {
+    const acc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '');
+    const app = getApps()[0] || initializeApp({ credential: cert(acc), projectId: firebaseConfig.projectId });
+    const databaseId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
+    return databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+  } catch {
+    return null;
+  }
+};
+
+// null = not metered, 'empty' = no tokens left, otherwise the meter to close after the call.
+const meterOpen = async (uid: string): Promise<Meter | 'empty' | null> => {
+  const db = meterDb();
+  if (!db || !uid) return null;
+  try {
+    const ref = db.collection('platform_subscribers').doc(uid);
+    const cur = (await ref.get()).data() as { tokens?: { balance?: number }; subscription?: { endsAt?: number } } | undefined;
+    let balance = cur?.tokens?.balance;
+    if (typeof balance !== 'number') {
+      balance = (cur?.subscription?.endsAt || 0) > Date.now() ? PAID_TOKENS : FREE_TOKENS;
+      await ref.set({ tokens: { balance, used: 0 } }, { merge: true });
+    }
+    return balance > 0 ? { uid, db } : 'empty';
+  } catch {
+    return null;
+  }
+};
+
+const meterClose = async (m: Meter | null, kind: string, model: string, u: { input: number; cached: number; output: number }, ok: boolean, reason: string, ms: number) => {
+  if (!m) return;
+  try {
+    const p = (await m.db.collection('platform_settings').doc('ai_prices').get()).data() as { in?: number; out?: number } | undefined;
+    const price = { in: Number(p?.in) >= 0 && p?.in !== undefined ? Number(p.in) : DEFAULT_PRICE.in, out: Number(p?.out) >= 0 && p?.out !== undefined ? Number(p.out) : DEFAULT_PRICE.out };
+    const tokens = u.input + u.output;
+    const costUsd = (u.input * price.in + u.output * price.out) / 1e6;
+    const ref = m.db.collection('platform_subscribers').doc(m.uid);
+    await m.db.runTransaction(async (t) => {
+      const t0 = ((await t.get(ref)).data() as { tokens?: { balance?: number; used?: number } } | undefined)?.tokens || {};
+      t.set(ref, { tokens: { balance: Math.max(0, (t0.balance || 0) - tokens), used: (t0.used || 0) + tokens } }, { merge: true });
+    });
+    await m.db.collection('platform_ai_calls').add({ uid: m.uid, kind, model, input: u.input, cached: u.cached, output: u.output, tokens, costUsd, ok, reason: reason.slice(0, 60), ms, at: Date.now() });
+  } catch (err) {
+    console.error('meter failed:', (err as Error)?.message);
+  }
+};
+
+// A Firebase ID token is valid when Google's identity service can look up its user; the answer is its uid.
+const signedInUid = async (request: Request) => {
   const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!token) return false;
+  if (!token) return '';
   const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${firebaseConfig.apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken: token }),
   });
-  if (!res.ok) return false;
-  const data = (await res.json()) as { users?: unknown[] };
-  return !!data.users?.length;
+  if (!res.ok) return '';
+  const data = (await res.json()) as { users?: { localId?: string }[] };
+  return data.users?.[0]?.localId || '';
 };
 
 const SYSTEM = `أنت Wee AI، كاتب نصوص لمواقع الأعمال الصغيرة في المنطقة العربية.
@@ -90,7 +151,8 @@ export default {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return json({ error: 'not_configured' }, 503);
 
-    if (!(await isSignedIn(request))) return json({ error: 'unauthorized' }, 401);
+    const uid = await signedInUid(request);
+    if (!uid) return json({ error: 'unauthorized' }, 401);
 
     let body: any;
     try {
@@ -103,6 +165,10 @@ export default {
     if (!items.length) return json({ texts: [] });
 
     const prompt = `معلومات صاحب العمل:\n${JSON.stringify(info, null, 1)}\n\nعناصر الصفحة (المعرّف، النوع، الشريحة، النص الحالي، الحد الأقصى للأحرف):\n${JSON.stringify(items, null, 1)}`;
+
+    const meter = await meterOpen(uid);
+    if (meter === 'empty') return json({ error: 'no_tokens' }, 402);
+    const started = Date.now();
 
     try {
       const ai = new GoogleGenAI({ apiKey });
@@ -135,8 +201,11 @@ export default {
       const texts = (parsed.texts || [])
         .filter((t) => typeof t.id === 'string' && typeof t.text === 'string' && limits.has(t.id) && (t.text as string).trim())
         .map((t) => ({ id: t.id as string, text: (t.text as string).trim().slice(0, limits.get(t.id as string)! + 20) }));
+      const um = result.usageMetadata || {};
+      await meterClose(meter, 'write-texts', MODEL, { input: um.promptTokenCount || 0, cached: um.cachedContentTokenCount || 0, output: (um.candidatesTokenCount || 0) + (um.thoughtsTokenCount || 0) }, true, '', Date.now() - started);
       return json({ texts });
     } catch (err) {
+      await meterClose(meter, 'write-texts', MODEL, { input: 0, cached: 0, output: 0 }, false, String((err as any)?.status ? `gemini_${(err as any).status}` : 'failed'), Date.now() - started);
       console.error('write-texts failed:', err);
       return json({ error: 'ai_failed' }, 502);
     }

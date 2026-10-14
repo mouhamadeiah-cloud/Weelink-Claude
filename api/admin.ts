@@ -63,6 +63,7 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { mailOrder } from './_orderMail.js';
 import designTimers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
@@ -820,6 +821,7 @@ export default {
         if (!METHODS[method]) return json({ error: 'bad-method' }, 400);
         await step('paid', { payment: { at: now, by: session.u, method, receiptNo: clean(body.receiptNo, 40), note: clean(body.note, 300), amount: Number(o.price) || 0 } });
         await say('أكّد المكتب استلام المبلغ. تقدران تتواصلان هنا الآن، والمبلغ محفوظ عند Weelink إلى أن يستلم الزبون التصميم.');
+        await mailOrder(auth, String(o.designerUid), 'paid', snap.id);
         await audit(session.u, `design-order-paid:${snap.id}`);
         return json({ status: 'paid' });
       }
@@ -827,6 +829,7 @@ export default {
         if (!['confirmed', 'disputed'].includes(o.status)) return json({ error: 'bad-state' }, 409);
         await step('paid_out', { payout: { at: now, by: session.u, amount: Number(o.designerShare) || 0, note: clean(body.note, 300) } });
         await say('حوّل المكتب حصة المصمم. اكتمل الطلب.');
+        await mailOrder(auth, String(o.designerUid), 'paid_out', snap.id);
         await audit(session.u, `design-order-release:${snap.id}`);
         return json({ status: 'paid_out' });
       }
@@ -840,6 +843,8 @@ export default {
       if (!['paid', 'delivered', 'confirmed', 'disputed'].includes(o.status)) return json({ error: 'bad-state' }, 409);
       await step('refunded', { refund: { at: now, by: session.u, amount: Number(o.price) || 0, reason } });
       await say('ردّ المكتب المبلغ للزبون وأُغلق الطلب.');
+      await mailOrder(auth, String(o.designerUid), 'refunded', snap.id);
+      await mailOrder(auth, String(o.customerUid), 'refunded', snap.id);
       await audit(session.u, `design-order-refund:${snap.id}`);
       return json({ status: 'refunded' });
     }

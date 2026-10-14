@@ -24,6 +24,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { mailOrder } from './_orderMail.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 const TTL_MS = 3 * 24 * 60 * 60 * 1000;
@@ -107,6 +108,7 @@ export default {
           customerUid: order.customerUid, designerUid: order.designerUid,
         });
         await orderRef.collection('messages').add({ role: 'system', text: 'أعطى الزبون المصمم رمز دخول إلى صفحته لمدة 3 أيام. يستطيع المصمم تعديل تصميم الصفحة فقط، ولا يرى بيانات الزبون.', at: now });
+        await mailOrder(admin.auth, order.designerUid, 'access_code', id);
         return json({ code, expiresAt });
       }
 

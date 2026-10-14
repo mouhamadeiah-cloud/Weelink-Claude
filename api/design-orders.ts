@@ -31,11 +31,13 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import pricing from '../src/data/designerPricing.json' with { type: 'json' };
+import { mailOffice, mailOrder } from './_orderMail.js';
 import timers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import badge from '../src/data/designerBadge.json' with { type: 'json' };
 
 const MAX_OPEN_UNPAID = 5;
 const MIN_GAP_MS = 700;
+const MAIL_GAP_MS = 30 * 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
 const TALKING = ['paid', 'delivered', 'confirmed', 'disputed'];
 
@@ -105,8 +107,8 @@ const confirmOrderTx = async (db: any, ref: any, designerUid: string, now: numbe
 // An unpaid order is cancelled after `unpaidCancelDays`; a delivered one the customer never answered is
 // confirmed by itself after `autoConfirmDays`, so a designer is not left unpaid by silence (a customer who
 // has a problem opens a complaint, which stops the clock).
-const sweepOrders = async (db: any, now: number) => {
-  const out = { cancelled: 0, confirmed: 0, failed: 0 };
+const sweepOrders = async (db: any, auth: any, now: number) => {
+  const out = { cancelled: 0, confirmed: 0, reminded: 0, alerted: 0, failed: 0 };
   const note = (ref: any, text: string) => ref.collection('messages').add({ role: 'system', text, at: now });
   const unpaid = await db.collection('designOrders').where('status', '==', 'awaiting_payment').get();
   for (const d of unpaid.docs) {
@@ -115,6 +117,7 @@ const sweepOrders = async (db: any, now: number) => {
     try {
       await d.ref.update({ status: 'cancelled', updatedAt: now, cancelledAt: now, history: FieldValue.arrayUnion({ at: now, status: 'cancelled', by: 'system' }) });
       await note(d.ref, 'أُلغي الطلب تلقائياً لأنه لم يُدفع خلال المدة المحددة.');
+      await mailOrder(auth, String(o.customerUid), 'cancelled_unpaid', d.id);
       out.cancelled++;
     } catch (e) {
       console.error('sweep cancel failed:', e);
@@ -124,15 +127,34 @@ const sweepOrders = async (db: any, now: number) => {
   const delivered = await db.collection('designOrders').where('status', '==', 'delivered').get();
   for (const d of delivered.docs) {
     const o = d.data() as Record<string, any>;
-    if (now - (Number(o.deliveredAt) || now) < timers.autoConfirmDays * DAY) continue;
+    const age = now - (Number(o.deliveredAt) || now);
+    if (age < timers.autoConfirmDays * DAY) {
+      if (age >= (timers.autoConfirmDays - timers.reminderDaysBefore) * DAY && !o.reminded) {
+        await d.ref.update({ reminded: now });
+        await mailOrder(auth, String(o.customerUid), 'confirm_reminder', d.id);
+        out.reminded++;
+      }
+      continue;
+    }
     try {
       await confirmOrderTx(db, d.ref, String(o.designerUid), now, 'system');
       await note(d.ref, `مرّت ${timers.autoConfirmDays} أيام على التسليم دون ردّ، فاعتُبر الطلب مستلَماً. سيحوّل المكتب حصة المصمم.`);
+      await mailOrder(auth, String(o.designerUid), 'auto_confirmed', d.id);
+      await mailOrder(auth, String(o.customerUid), 'auto_confirmed', d.id);
       out.confirmed++;
     } catch (e) {
       console.error('sweep confirm failed:', e);
       out.failed++;
     }
+  }
+  // A complaint nobody answered for `disputeLateDays`: the office is told once.
+  const disputed = await db.collection('designOrders').where('status', '==', 'disputed').get();
+  for (const d of disputed.docs) {
+    const o = d.data() as Record<string, any>;
+    if (o.lateAlerted || now - (Number(o.disputedAt) || now) < timers.disputeLateDays * DAY) continue;
+    await d.ref.update({ lateAlerted: now });
+    await mailOffice(d.id, `شكوى على طلب تصميم مفتوحة منذ أكثر من ${timers.disputeLateDays} أيام. راجعها في «طلبات التصميم».`);
+    out.alerted++;
   }
   return out;
 };
@@ -145,7 +167,7 @@ export default {
       const secret = process.env.CRON_SECRET;
       if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'unauthorized' }, 401);
       if (!admin) return json({ error: 'not_configured' }, 503);
-      return json(await sweepOrders(admin.db, Date.now()));
+      return json(await sweepOrders(admin.db, admin.auth, Date.now()));
     }
     if (request.method !== 'POST') return json({ error: 'method' }, 405);
     if (!admin) return json({ error: 'not_configured' }, 503);
@@ -240,6 +262,12 @@ export default {
         if (now - (Number(order.lastMessage?.[role]) || 0) < MIN_GAP_MS) return json({ error: 'too_fast' }, 429);
         await ref.collection('messages').add({ role, text: msg, at: now });
         await ref.update({ updatedAt: now, [`lastMessage.${role}`]: now });
+        // One mail per half hour to the other side, so a long chat is not a stream of emails.
+        const other = isCustomer ? order.designerUid : order.customerUid;
+        if (now - (Number(order.lastMail?.[other]) || 0) > MAIL_GAP_MS) {
+          await ref.update({ [`lastMail.${other}`]: now });
+          await mailOrder(admin.auth, other, 'new_message', id);
+        }
         return json({ ok: true });
       }
 
@@ -247,6 +275,7 @@ export default {
         if (!isDesigner || order.status !== 'paid') return json({ error: 'bad_state' }, 409);
         await step('delivered', 'designer', { deliveredAt: now });
         await system('سلّم المصمم العمل. راجع صفحتك ثم اضغط «استلمت التصميم» ليصل المبلغ للمصمم، أو «لدي مشكلة» إن كان فيه ما يحتاج حلاً.');
+        await mailOrder(admin.auth, order.customerUid, 'delivered', id);
         return json({ status: 'delivered' });
       }
 
@@ -254,6 +283,7 @@ export default {
         if (!isCustomer || order.status !== 'delivered') return json({ error: 'bad_state' }, 409);
         await confirmOrderTx(db, ref, order.designerUid, now, 'customer');
         await system('أكّد الزبون استلام التصميم. سيحوّل المكتب حصة المصمم.');
+        await mailOrder(admin.auth, order.designerUid, 'confirmed', id);
         return json({ status: 'confirmed' });
       }
 
@@ -262,6 +292,7 @@ export default {
         if (!isCustomer || !['paid', 'delivered'].includes(order.status) || reason.length < 5) return json({ error: 'bad_state' }, 409);
         await step('disputed', 'customer', { disputedAt: now, disputeReason: reason });
         await system('فتح الزبون شكوى على الطلب. سيراجعه فريق Weelink ويقرر.');
+        await mailOrder(admin.auth, order.designerUid, 'disputed', id);
         return json({ status: 'disputed' });
       }
 

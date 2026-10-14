@@ -22,6 +22,7 @@ import { becomeDesigner, readDesigner } from './services/designers';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
 import { openClientPage, saveClientPage, accessErrorText } from './services/designAccess';
+import { useOrderAttention } from './services/orderAttention';
 import { DesignerDashboard } from './components/designer/DesignerDashboard';
 import { DesignOrdersPanel } from './components/designOrders/DesignOrdersPanel';
 import { insertDesign } from './services/fitDesign';
@@ -232,6 +233,7 @@ export default function App() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const orderAttention = useOrderAttention(currentUser && !currentUser.isAnonymous && designerMode ? currentUser.uid : '');
   // The hired designer inside a customer's page with the 3-day code: the editor holds that page, saves go
   // to /api/design-access, and nothing can be exported from it.
   const [clientSession, setClientSession] = useState<{ orderId: string; code: string; expiresAt: number } | null>(null);
@@ -3970,7 +3972,7 @@ export default function App() {
           onExportSlide={clientSession ? undefined : () => setIsExportOpen(true)}
         />
         {designerMode && !isPreviewActive && (
-          <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} onOrders={() => setIsOrdersOpen(true)} onDashboard={() => setIsDashboardOpen(true)} client={clientSession ? { expiresAt: clientSession.expiresAt, onLeave: () => switchDraft(draftsRef.current[0]?.slot || '') } : undefined} />
+          <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} onOrders={() => setIsOrdersOpen(true)} onDashboard={() => setIsDashboardOpen(true)} attention={orderAttention} client={clientSession ? { expiresAt: clientSession.expiresAt, onLeave: () => switchDraft(draftsRef.current[0]?.slot || '') } : undefined} />
         )}
 
         {/* 2. Secondary Edit Bar directly beneath (narrow screens; wide ones dock it beside the panel) */}

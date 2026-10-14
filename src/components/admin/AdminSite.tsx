@@ -12,6 +12,7 @@ import { TasksView } from './TasksView';
 import { ChatView } from './ChatView';
 import { PageLawView } from './PageLawView';
 import { SlidesReviewView } from './SlidesReviewView';
+import { DesignOrdersView } from './DesignOrdersView';
 import {
   AdminError, AdminInfo, SubscriberQuery, SubscribersResult,
   adminChangePassword, adminLogin, adminMe, adminSubscribers, getAdminToken, setAdminToken,
@@ -64,7 +65,7 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   );
 };
 
-type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'page-law' | 'slides' | 'password';
+type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'page-law' | 'slides' | 'design-orders' | 'password';
 interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View; needs?: string }[] }
 // Every group starts folded; the admin opens what he needs. Items without a view are the next phases.
 const MENU: MenuGroup[] = [
@@ -72,7 +73,7 @@ const MENU: MenuGroup[] = [
   { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'payments', label: 'كل الدفعات والفواتير', view: 'payments', needs: 'payments' }, { id: 'billing', label: 'إعدادات الفوترة', view: 'billing', needs: 'get-company' }] },
   { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'usage', label: 'الاستهلاك والأسعار', view: 'tokens', needs: 'tokens-overview' }] },
   { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات', view: 'team', needs: 'admins-list' }, { id: 'my-tasks', label: 'مهامي', view: 'my-tasks' }, { id: 'all-tasks', label: 'كل المهام', view: 'all-tasks', needs: 'task-create' }, { id: 'chat', label: 'لوحة التواصل', view: 'chat' }] },
-  { id: 'designers', title: 'معرض المصممين', icon: Palette, items: [{ id: 'slides', label: 'مراجعة الشرائح', view: 'slides', needs: 'slides-review-list' }, { id: 'law', label: 'قانون الصفحة', view: 'page-law', needs: 'page-law-get' }] },
+  { id: 'designers', title: 'معرض المصممين', icon: Palette, items: [{ id: 'slides', label: 'مراجعة الشرائح', view: 'slides', needs: 'slides-review-list' }, { id: 'orders', label: 'طلبات التصميم', view: 'design-orders', needs: 'design-orders' }, { id: 'law', label: 'قانون الصفحة', view: 'page-law', needs: 'page-law-get' }] },
   { id: 'books', title: 'الحسابات والداشبورد', icon: BarChart3, items: [{ id: 'dash', label: 'الداشبورد' }] },
   { id: 'me', title: 'حسابي', icon: KeyRound, items: [{ id: 'pw', label: 'تغيير كلمة السر', view: 'password' }] },
 ];
@@ -307,6 +308,7 @@ export const AdminSite: React.FC = () => {
         : view === 'chat' ? <ChatView onSessionEnd={logout} />
         : view === 'page-law' ? <PageLawView onSessionEnd={logout} />
         : view === 'slides' ? <SlidesReviewView onSessionEnd={logout} />
+        : view === 'design-orders' ? <DesignOrdersView onSessionEnd={logout} />
         : view === 'team' ? <TeamView onSessionEnd={logout} me={admin.username} />
         : view === 'password' ? <ChangePassword forced={false} onDone={(a) => { setAdmin(a); setView(null); }} />
         : <p className="mt-16 text-center text-muted">أهلاً {admin.name}. افتح قسماً من القائمة على اليسار.</p>}

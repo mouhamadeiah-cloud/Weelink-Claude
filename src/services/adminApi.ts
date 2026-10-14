@@ -173,3 +173,22 @@ export interface GallerySlideRow {
 }
 export const adminSlides = (status: SlideStatus) => call<{ rows: GallerySlideRow[]; counts: { pending: number } }>({ action: 'slides-review-list', status });
 export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });
+
+// Hiring a designer: the office takes the customer's money, holds it until the design is confirmed, then pays the
+// designer their part (api/design-orders.ts makes the orders).
+export type DesignOrderStatus = 'awaiting_payment' | 'paid' | 'delivered' | 'confirmed' | 'paid_out' | 'cancelled' | 'disputed' | 'refunded';
+export interface AdminDesignOrder {
+  id: string; customerUid: string; customerAlias: string; customerEmail: string; designerUid: string; designerName: string; designerEmail: string;
+  slideName: string; planId: string; price: number; designerShare: number; platformShare: number; status: DesignOrderStatus; brief: string;
+  disputeReason: string; createdAt: number; updatedAt: number;
+  payment: { at: number; by: string; method: string; receiptNo: string; note: string; amount: number } | null;
+  payout: { at: number; by: string; amount: number; note: string } | null;
+  refund: { at: number; by: string; amount: number; reason: string } | null;
+  history?: { at: number; status: string; by: string }[];
+}
+export interface AdminOrderMessage { id: string; role: string; text: string; at: number }
+export const adminDesignOrders = (status: string) => call<{ rows: AdminDesignOrder[]; counts: Record<string, number> }>({ action: 'design-orders', status });
+export const adminDesignOrder = (id: string) => call<{ order: AdminDesignOrder; messages: AdminOrderMessage[] }>({ action: 'design-order', id });
+export const adminOrderPaid = (id: string, method: PayMethod, receiptNo: string, note: string) => call<{ status: string }>({ action: 'design-order-paid', id, method, receiptNo, note });
+export const adminOrderRelease = (id: string, note: string) => call<{ status: string }>({ action: 'design-order-release', id, note });
+export const adminOrderRefund = (id: string, reason: string) => call<{ status: string }>({ action: 'design-order-refund', id, reason });

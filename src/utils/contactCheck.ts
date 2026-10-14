@@ -39,6 +39,9 @@ const kindsIn = (raw: string): ContactFinding['kind'][] => {
   return found;
 };
 
+// The same check on one text (a hiring message or brief: nothing that takes the two outside Weelink).
+export const contactKindsIn = (text: string): ContactFinding['kind'][] => kindsIn(text);
+
 // A link on an element that leaves the page (tel:, mailto:, wa.me, http...) is contact too.
 const externalLink = (url: string) => /^(tel:|mailto:|sms:|https?:|www\.|wa\.me|whatsapp:)/i.test(url.trim());
 

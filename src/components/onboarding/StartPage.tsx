@@ -5,10 +5,11 @@
 // The browser's back button goes from the questions back to the kinds.
 import React, { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { ArrowLeft, CarFront, Check, FileText, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
+import { ArrowLeft, CarFront, Check, ClipboardList, FileText, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
 import { DesignerGallery } from '../gallery/DesignerGallery';
+import { DesignOrdersPanel } from '../designOrders/DesignOrdersPanel';
 import type { GallerySlide } from '../../services/galleryView';
 import { guestKindOf, readGuestAnswers, setGuestKind } from '../../services/guestAnswers';
 import { CAR_PHOTOS, carPhoto } from '../../data/carShowroomTemplate';
@@ -84,6 +85,8 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
   // the editor opens straight on the questions.
   const [stage, setStage] = useState<'plans' | 'questions'>(initialKind ? 'questions' : 'plans');
   const [step, setStep] = useState(1);
+  // The design orders window («طلبات التصميم»), open on an order or on the list.
+  const [orders, setOrders] = useState<{ id: string } | null>(null);
   const saved = signedIn ? null : guestKindOf(readGuestAnswers());
 
   // The questions are a step of their own in the browser's history: back returns to the kinds.
@@ -134,6 +137,11 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
             → {!kind ? 'الرئيسية' : stage === 'questions' && !initialKind ? 'الباقات' : 'نوع الصفحة'}
           </button>
           <div className="flex-1" />
+          {signedIn && !kind && (
+            <button type="button" onClick={() => setOrders({ id: '' })} className="inline-flex items-center gap-1.5 text-sm font-bold text-muted hover:text-brand transition">
+              <ClipboardList size={16} /> طلبات التصميم
+            </button>
+          )}
           <span className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-ctl bg-brand text-white flex items-center justify-center font-bold">W</span>
             <span className="text-lg font-bold tracking-tight font-logo">weelink</span>
@@ -231,7 +239,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </section>
 
           {/* The designers' approved slides, under the cards */}
-          <DesignerGallery user={user} onAddToMyPage={onAddDesign} />
+          <DesignerGallery user={user} onAddToMyPage={onAddDesign} onOpenOrders={(id) => setOrders({ id: id || '' })} />
         </main>
       ) : stage === 'plans' ? (
         <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} title={chosen.title} onPicked={startQuestions} />
@@ -284,6 +292,8 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </div>
         </main>
       )}
+
+      {orders && user && !user.isAnonymous && <DesignOrdersPanel user={user} initialOrderId={orders.id} onClose={() => setOrders(null)} />}
     </div>
   );
 };

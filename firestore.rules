@@ -472,6 +472,18 @@ service cloud.firestore {
       allow get: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // Hiring a designer (api/design-orders.ts writes everything here, the browser nothing): the customer
+    // and the designer of an order read it and its messages. The customer's name and email are not in it.
+    match /designOrders/{orderId} {
+      allow get: if isSignedIn() && (resource.data.customerUid == request.auth.uid || resource.data.designerUid == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.customerUid == request.auth.uid || resource.data.designerUid == request.auth.uid);
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (get(/databases/$(database)/documents/designOrders/$(orderId)).data.customerUid == request.auth.uid
+          || get(/databases/$(database)/documents/designOrders/$(orderId)).data.designerUid == request.auth.uid);
+      }
+    }
+
     // Platform settings the browser may read: the page's law (written by the admin site only).
     match /platformSettings/{docId} {
       allow get: if docId == 'pageLaw';

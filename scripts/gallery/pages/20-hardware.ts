@@ -34,7 +34,7 @@ const sections = [
       k.heading({ x: x + 20, y: y + 108, width: 304, height: 38 }, name, 24),
     ];
   }),
-  k.gallery({ x: 96, y: 620, width: 1088, height: 260 }, 'right-thumbnails', ['hardware store tools wall', 'power tools workshop', 'building materials cement bricks', 'paint buckets colorful'], { borderRadius: 4 }, 8, 4),
+  k.gallery({ x: 96, y: 620, width: 1088, height: 260 }, 'right-thumbnails', ['hardware store tools wall#0', 'hardware store tools wall#1', 'hardware store tools wall#2', 'hardware store tools wall#3'], { borderRadius: 4 }, 8, 4),
 ];
 
 const wholesale = [

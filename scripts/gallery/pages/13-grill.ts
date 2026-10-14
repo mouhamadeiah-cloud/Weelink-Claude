@@ -32,7 +32,7 @@ const menu = [
       k.text({ x, y, width: 110, height: 40 }, price, 26, { color: FIRE, fontWeight: 'bold', textAlign: 'left' }),
     ];
   }),
-  k.gallery({ x: 96, y: 520, width: 1088, height: 240 }, 'top-main', ['grilled kebab skewers charcoal', 'shawarma sandwich wrap', 'arabic mezze plates'], { borderRadius: 6 }, 8, 6),
+  k.gallery({ x: 96, y: 520, width: 1088, height: 240 }, 'top-main', ['grilled kebab skewers charcoal#0', 'grilled kebab skewers charcoal#1', 'grilled kebab skewers charcoal#2'], { borderRadius: 6 }, 8, 6),
 ];
 
 const deliver = [

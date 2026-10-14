@@ -31,7 +31,7 @@ const programs = [
       k.text({ x: x + 14, y: 462, width: 216, height: 34 }, ['3 مرات أسبوعياً', 'حصص جماعية', 'مع مدربة', 'للمبتدئين والمحترفين'][i], 15, { textAlign: 'center', color: '#A1A1AA' }),
     ];
   }),
-  k.gallery({ x: 96, y: 550, width: 1088, height: 190 }, 'top-main', ['gym weights training', 'personal trainer workout', 'gym interior equipment'], { borderRadius: 4 }, 8, 4),
+  k.gallery({ x: 96, y: 550, width: 1088, height: 190 }, 'top-main', ['gym weights training#0', 'gym weights training#1', 'gym weights training#2'], { borderRadius: 4 }, 8, 4),
 ];
 
 const plans = [

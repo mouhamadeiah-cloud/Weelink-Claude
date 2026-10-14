@@ -31,7 +31,7 @@ const items = [
       k.button({ x: x + 40, y: 538, width: 164, height: 38 }, 'أضيفي للسلة', { slide: 3 }, { fontSize: 14 }),
     ];
   }),
-  k.gallery({ x: 96, y: 630, width: 1088, height: 280 }, 'left-thumbnails', ['makeup brushes flatlay', 'skincare products pink', 'beauty vanity table', 'lipstick collection'], { borderRadius: 28 }, 10, 22),
+  k.gallery({ x: 96, y: 630, width: 1088, height: 280 }, 'left-thumbnails', ['makeup brushes flatlay#0', 'makeup brushes flatlay#1', 'makeup brushes flatlay#2', 'makeup brushes flatlay#3'], { borderRadius: 28 }, 10, 22),
 ];
 
 const loved = [

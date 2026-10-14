@@ -38,7 +38,7 @@ const products = [
 const visit = [
   k.shape({ x: 0, y: 0, width: 1280, height: 760 }, { backgroundColor: L.soft }, 'خلفية'),
   k.heading({ x: 484, y: 70, width: 700, height: 64 }, 'زوروا معرضنا', 46),
-  k.gallery({ x: 96, y: 170, width: 620, height: 520 }, 'left-thumbnails', ['furniture showroom interior', 'sofa fabric samples', 'wooden furniture workshop', 'living room decor'], { borderRadius: 8, borderWidth: 4, borderColor: '#EADFC6', borderStyle: 'solid' }, 10, 6),
+  k.gallery({ x: 96, y: 170, width: 620, height: 520 }, 'left-thumbnails', ['furniture showroom interior#0', 'furniture showroom interior#1', 'furniture showroom interior#2', 'furniture showroom interior#3'], { borderRadius: 8, borderWidth: 4, borderColor: '#EADFC6', borderStyle: 'solid' }, 10, 6),
   ...[['mdi:truck-delivery-outline', 'توصيل لكل المحافظات'], ['mdi:tools', 'تركيب مجاني'], ['mdi:shield-check-outline', 'ضمان سنتين'], ['mdi:credit-card-outline', 'تقسيط مريح']].flatMap(([ic, t], i) => [
     k.shape({ x: 744, y: 170 + i * 98, width: 440, height: 80 }, { backgroundColor: '#FFFFFF', borderRadius: 6, borderWidth: 1, borderColor: '#EADFC6', borderStyle: 'solid' }, 'شريط'),
     k.icon({ x: 1130, y: 190 + i * 98, width: 40, height: 40 }, ic, A),

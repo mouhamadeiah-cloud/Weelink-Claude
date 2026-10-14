@@ -28,14 +28,14 @@ const dishes = [
   ...[['محاشي مشكلة', '9$', 'stuffed vegetables dolma'], ['كبة لبنية', '8$', 'kibbeh yogurt soup'], ['شيش برك', '7$', 'shish barak dumplings'], ['منسف بيت', '12$', 'mansaf rice lamb']].flatMap(([name, price, q], i) => {
     const x = 940 - i * 280;
     return [
-      k.card({ x, y: 210, width: 244, height: 360 }, { borderRadius: 40, borderWidth: 2, borderColor: '#EFDCCB', shadow: 'md', animation: 'slide-up', animationTrigger: 'once' }),
+      k.card({ x, y: 210, width: 244, height: 340 }, { borderRadius: 40, borderWidth: 2, borderColor: '#EFDCCB', shadow: 'md', animation: 'slide-up', animationTrigger: 'once' }),
       k.image({ x: x + 10, y: 220, width: 224, height: 220 }, q, { borderRadius: 32, animation: 'scale-up', animationTrigger: 'hover' }),
       k.badge({ x: x + 150, y: 232, width: 76, height: 34 }, price, { backgroundColor: A, color: '#FFFFFF' }),
       k.heading({ x: x + 14, y: 462, width: 216, height: 40 }, name, 24, { textAlign: 'center' }),
       k.text({ x: x + 14, y: 508, width: 216, height: 40 }, 'تُحضّر طازجة يومياً', 15, { textAlign: 'center' }),
     ];
   }),
-  k.gallery({ x: 96, y: 610, width: 1088, height: 300 }, 'right-thumbnails', ['home cooked meal table', 'arabic bread baking', 'cooking in pot', 'family dinner table'], { borderRadius: 32 }, 10, 28),
+  k.gallery({ x: 96, y: 610, width: 1088, height: 300 }, 'right-thumbnails', ['home cooked meal table#0', 'home cooked meal table#1', 'home cooked meal table#2', 'home cooked meal table#3'], { borderRadius: 32 }, 10, 28),
 ];
 
 const order = [

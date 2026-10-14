@@ -38,7 +38,7 @@ const services = [
       k.text({ x: x + 24, y: 408, width: 292, height: 90 }, body, 16),
     ];
   }),
-  k.gallery({ x: 96, y: 580, width: 1088, height: 330 }, 'left-thumbnails', ['dental clinic modern interior', 'dentist treatment room', 'smiling patient dentist', 'dental equipment clean'], { borderRadius: 20, borderWidth: 4, borderColor: L.line, borderStyle: 'solid' }, 12, 16),
+  k.gallery({ x: 96, y: 580, width: 1088, height: 330 }, 'left-thumbnails', ['dental clinic modern interior#0', 'dental clinic modern interior#1', 'dental clinic modern interior#2', 'dental clinic modern interior#3'], { borderRadius: 20, borderWidth: 4, borderColor: L.line, borderStyle: 'solid' }, 12, 16),
 ];
 
 const booking = [

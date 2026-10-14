@@ -36,7 +36,7 @@ const areas = [
 
 const consult = [
   k.shape({ x: 0, y: 0, width: 1280, height: 640 }, { backgroundColor: '#0F1726' }, 'خلفية'),
-  k.gallery({ x: 96, y: 90, width: 540, height: 460 }, 'right-thumbnails', ['law office books desk', 'lawyer handshake client', 'courthouse columns', 'legal documents signing'], { borderRadius: 0, borderWidth: 2, borderColor: GOLD, borderStyle: 'solid' }, 8, 0),
+  k.gallery({ x: 96, y: 90, width: 540, height: 460 }, 'right-thumbnails', ['law office books desk#0', 'law office books desk#1', 'law office books desk#2', 'law office books desk#3'], { borderRadius: 0, borderWidth: 2, borderColor: GOLD, borderStyle: 'solid' }, 8, 0),
   k.eyebrow({ x: 884, y: 100, width: 300, height: 24 }, 'استشارة سرية'),
   k.heading({ x: 664, y: 130, width: 520, height: 130 }, 'اعرض قضيتك على محامٍ مختص', 42),
   k.text({ x: 664, y: 280, width: 520, height: 100 }, 'جلسة أولى لفهم قضيتك وتقدير الموقف القانوني. نلتزم بالسرية الكاملة.', 19),

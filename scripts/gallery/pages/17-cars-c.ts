@@ -21,15 +21,15 @@ const stock = [
   k.heading({ x: 484, y: 98, width: 700, height: 64 }, 'اختر حسب ميزانيتك', 46),
   ...['الكل', 'اقتصادية', 'عائلية', 'SUV', 'كهربائية'].map((c, i) => k.badge({ x: 1064 - i * 132, y: 186, width: 118, height: 40 }, c, { backgroundColor: i === 0 ? BLUE : L.soft, color: i === 0 ? '#FFFFFF' : BLUE, borderRadius: 9999, fontSize: 15 })),
   ...[['كيا ريو 2019', '8,400$', 'kia rio hatchback'], ['هيونداي توسان 2018', '13,900$', 'hyundai tucson suv'], ['تويوتا كورولا 2020', '12,500$', 'toyota corolla sedan'], ['نيسان ليف 2019', '10,800$', 'nissan leaf electric car']].flatMap(([name, price, q], i) => {
-    const x = i % 2 === 0 ? 604 : 96;
+    const x = i % 2 === 0 ? 644 : 96;
     const y = 260 + Math.floor(i / 2) * 250;
     return [
-      k.card({ x, y, width: 580, height: 224 }, { borderRadius: 14, shadow: 'md', animation: 'slide-up', animationTrigger: 'once' }),
-      k.image({ x: x + 10, y: y + 10, width: 240, height: 204 }, q, { borderRadius: 10, animation: 'scale-up', animationTrigger: 'hover' }),
-      k.heading({ x: x + 270, y: y + 20, width: 300, height: 40 }, name, 24),
-      k.heading({ x: x + 270, y: y + 66, width: 300, height: 44 }, price, 32, { color: BLUE }),
-      k.text({ x: x + 270, y: y + 118, width: 300, height: 28 }, 'مفحوصة · ضمان 6 أشهر', 15),
-      k.button({ x: x + 270, y: y + 160, width: 300, height: 44 }, 'احجز المعاينة', { slide: 3 }, { fontSize: 15, borderRadius: 8 }),
+      k.card({ x, y, width: 540, height: 224 }, { borderRadius: 14, shadow: 'md', animation: 'slide-up', animationTrigger: 'once' }),
+      k.image({ x: x + 10, y: y + 10, width: 220, height: 204 }, q, { borderRadius: 10, animation: 'scale-up', animationTrigger: 'hover' }),
+      k.heading({ x: x + 250, y: y + 20, width: 280, height: 40 }, name, 24),
+      k.heading({ x: x + 250, y: y + 66, width: 280, height: 44 }, price, 32, { color: BLUE }),
+      k.text({ x: x + 250, y: y + 118, width: 280, height: 28 }, 'مفحوصة · ضمان 6 أشهر', 15),
+      k.button({ x: x + 250, y: y + 160, width: 280, height: 44 }, 'احجز المعاينة', { slide: 3 }, { fontSize: 15, borderRadius: 8 }),
     ];
   }),
 ];
@@ -46,7 +46,7 @@ const sell = [
       k.text({ x: x + 16, y: 290, width: 224, height: 60 }, t, 19, { color: L.ink, fontWeight: 'bold' }),
     ];
   }),
-  k.gallery({ x: 96, y: 410, width: 700, height: 160 }, 'top-main', ['used car inspection checklist', 'car handover keys', 'car valuation tablet'], { borderRadius: 10 }, 8, 8),
+  k.gallery({ x: 96, y: 410, width: 700, height: 160 }, 'top-main', ['used car inspection checklist#0', 'used car inspection checklist#1', 'used car inspection checklist#2'], { borderRadius: 10 }, 8, 8),
   k.button({ x: 934, y: 470, width: 250, height: 58 }, 'قدّر سعر سيارتي', undefined, { borderRadius: 8, glowColor: BLUE, glowIntensity: 14 }),
 ];
 

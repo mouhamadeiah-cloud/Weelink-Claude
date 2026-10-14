@@ -19,9 +19,9 @@ const hero = [
 
 const bar = (x: number, y: number, label: string, pct: number, value: string) => [
   k.text({ x: x + 270, y, width: 120, height: 26 }, label, 15, { color: L.muted }),
-  k.shape({ x, y: y + 6, width: 250, height: 10 }, { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 9999 }, 'مقياس'),
-  k.shape({ x: x + 250 - Math.round(250 * pct), y: y + 6, width: Math.round(250 * pct), height: 10 }, { backgroundColor: GOLD, borderRadius: 9999, glowColor: GOLD, glowIntensity: 8 }, 'مقياس'),
-  k.text({ x: x - 4, y: y - 2, width: 80, height: 24 }, value, 14, { color: '#FFFFFF', fontWeight: 'bold', textAlign: 'left' }),
+  k.shape({ x, y: y + 6, width: 250, height: 10 }, { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 9999 }, 'مقياس'),
+  k.shape({ x: x + 250 - Math.round(250 * pct), y: y + 6, width: Math.round(250 * pct), height: 10 }, { backgroundColor: GOLD, borderRadius: 9999 }, 'مقياس'),
+  k.text({ x: x - 100, y: y - 2, width: 92, height: 24 }, value, 14, { color: '#FFFFFF', fontWeight: 'bold', textAlign: 'left' }),
 ];
 
 const collection = [
@@ -30,16 +30,16 @@ const collection = [
   k.card({ x: 70, y: 210, width: 1080, height: 300 }, { borderRadius: 6, borderWidth: 2, borderColor: rgba(GOLD, 0.5), borderStyle: 'solid', glowColor: GOLD, glowIntensity: 10, glowPosition: 'bottom' }, true),
   k.image({ x: 80, y: 220, width: 480, height: 280 }, 'luxury sports car night', { borderRadius: 4, animation: 'scale-up', animationTrigger: 'hover' }),
   k.heading({ x: 600, y: 232, width: 530, height: 44 }, 'كوبيه رياضية 2023', 30),
-  ...bar(600, 300, 'القوة', 0.86, '580 حصان'),
-  ...bar(600, 346, 'التسارع', 0.92, '3.4 ثانية'),
-  ...bar(600, 392, 'الأمان', 0.78, '5 نجوم'),
+  ...bar(600, 300, 'القوة', 0.7, '580 حصان'),
+  ...bar(600, 346, 'التسارع', 0.88, '3.4 ثانية'),
+  ...bar(600, 392, 'الأمان', 0.58, '5 نجوم'),
   k.button({ x: 920, y: 440, width: 210, height: 48 }, 'اطلب ملف السيارة', { slide: 3 }, { borderRadius: 4, backgroundColor: GOLD, color: '#1A1405' }),
   k.card({ x: 70, y: 540, width: 1080, height: 300 }, { borderRadius: 6, borderWidth: 2, borderColor: rgba(GOLD, 0.5), borderStyle: 'solid' }, true),
   k.image({ x: 660, y: 550, width: 480, height: 280 }, 'classic vintage car restored', { borderRadius: 4, animation: 'scale-up', animationTrigger: 'hover' }),
   k.heading({ x: 100, y: 562, width: 520, height: 44 }, 'كلاسيكية مُرمَّمة 1968', 30),
-  ...bar(100, 630, 'الأصالة', 0.95, 'أصلية'),
-  ...bar(100, 676, 'الحالة', 0.88, 'ممتازة'),
-  ...bar(100, 722, 'الندرة', 0.9, '500 قطعة'),
+  ...bar(200, 630, 'الأصالة', 0.92, 'أصلية'),
+  ...bar(200, 676, 'الحالة', 0.64, 'ممتازة'),
+  ...bar(200, 722, 'الندرة', 0.4, '500 قطعة'),
   k.button({ x: 100, y: 770, width: 210, height: 48 }, 'احجز معاينة', { slide: 3 }, { borderRadius: 4, backgroundColor: 'transparent', color: GOLD, borderWidth: 2, borderColor: GOLD, borderStyle: 'solid' }),
 ];
 
@@ -48,7 +48,7 @@ const visit = [
   k.heading({ x: 500, y: 70, width: 650, height: 64 }, 'معاينة خاصة بموعد', 46),
   k.text({ x: 580, y: 146, width: 570, height: 60 }, 'نفتح المعرض لك وحدك لتجربة السيارة بهدوء مع خبيرنا.', 19),
   k.ratings({ x: 70, y: 240, width: 540, height: 260 }, GOLD, { borderRadius: 6 }),
-  k.gallery({ x: 70, y: 530, width: 540, height: 200 }, 'left-main-row', ['luxury car showroom dark', 'car interior leather', 'car wheel detail'], { borderRadius: 4 }, 8, 4),
+  k.gallery({ x: 70, y: 530, width: 540, height: 200 }, 'left-main-row', ['luxury car showroom dark#0', 'luxury car showroom dark#1', 'luxury car showroom dark#2'], { borderRadius: 4 }, 8, 4),
   k.glass({ x: 650, y: 240, width: 500, height: 490 }, true, { borderRadius: 6, borderColor: rgba(GOLD, 0.5), glowColor: GOLD, glowIntensity: 10 }),
   ...[['mdi:calendar-check-outline', 'اختر موعداً يناسبك'], ['mdi:car-key', 'جرّب القيادة بصحبة خبير'], ['mdi:file-document-check-outline', 'ملف فحص وتاريخ كامل'], ['mdi:handshake-outline', 'تمويل وتبديل سيارتك']].flatMap(([ic, t], i) => [
     k.icon({ x: 1096, y: 276 + i * 84, width: 36, height: 36 }, ic, GOLD),

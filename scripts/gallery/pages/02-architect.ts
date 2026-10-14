@@ -50,7 +50,7 @@ const steps = [
       k.text({ x: x - 60, y: 446, width: 220, height: 70 }, ['نستمع لاحتياجك ونرسم الأفكار الأولى.', 'مجسمات ومشاهد واقعية قبل البناء.', 'نتابع الموقع ونضبط الجودة والمواعيد.', 'تسليم مرتب مع ملف كامل للمشروع.'][i], 15, { color: 'rgba(255,255,255,0.7)', textAlign: 'center' }),
     ];
   }),
-  k.gallery({ x: 96, y: 530, width: 700, height: 200 }, 'top-main', ['architecture model wood', 'building site crane sunset', 'interior design living room'], { borderRadius: 0 }, 8, 0),
+  k.gallery({ x: 96, y: 530, width: 700, height: 200 }, 'top-main', ['architecture model wood#0', 'architecture model wood#1', 'architecture model wood#2'], { borderRadius: 0 }, 8, 0),
   k.button({ x: 934, y: 590, width: 250, height: 58 }, 'احجز استشارة هندسية', { slide: 3 }, { backgroundColor: W, color: '#0A0A0A', borderRadius: 0 }),
 ];
 

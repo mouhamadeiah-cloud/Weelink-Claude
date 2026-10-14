@@ -30,7 +30,7 @@ const works = [
       k.heading({ x: x + 16, y: 560, width: 312, height: 40 }, name, 22, { color: L.accent }),
     ];
   }),
-  k.gallery({ x: 96, y: 660, width: 1088, height: 340 }, 'left-main-row', ['woodworking workshop tools', 'carpenter sanding wood', 'wood planks stack', 'furniture finishing varnish'], { borderRadius: 8, borderWidth: 4, borderColor: '#E3D6BD', borderStyle: 'solid' }, 10, 8),
+  k.gallery({ x: 96, y: 660, width: 1088, height: 340 }, 'left-main-row', ['woodworking workshop tools#0', 'woodworking workshop tools#1', 'woodworking workshop tools#2', 'woodworking workshop tools#3'], { borderRadius: 8, borderWidth: 4, borderColor: '#E3D6BD', borderStyle: 'solid' }, 10, 8),
 ];
 
 const quote = [

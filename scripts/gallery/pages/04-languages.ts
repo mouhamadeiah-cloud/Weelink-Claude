@@ -35,7 +35,7 @@ const levels = [
       k.text({ x: x + 22, y: 380, width: 276, height: 70 }, desc, 17),
     ];
   }).flat(),
-  k.gallery({ x: 96, y: 540, width: 1088, height: 330 }, 'right-thumbnails', ['language class students', 'teacher whiteboard classroom', 'students speaking group', 'books and notebooks learning'], {}, 10, 22),
+  k.gallery({ x: 96, y: 540, width: 1088, height: 330 }, 'right-thumbnails', ['language class students#0', 'language class students#1', 'language class students#2', 'language class students#3'], {}, 10, 22),
 ];
 
 const cta = [

@@ -39,12 +39,12 @@ const finance = [
   k.shape({ x: 0, y: 0, width: 1280, height: 720 }, { backgroundColor: '#111214' }, 'خلفية'),
   k.shape({ x: -100, y: 400, width: 1500, height: 150, rotation: -6 }, { backgroundColor: 'rgba(225,29,46,0.18)' }, 'شريط'),
   k.heading({ x: 484, y: 80, width: 700, height: 64 }, 'تقسيط يناسب ميزانيتك', 46, { color: '#FFFFFF' }),
-  ...[['0%', 'مقدّم على الموديلات المختارة'], ['60', 'شهراً حداً أقصى للتقسيط'], ['24س', 'موافقة سريعة على الطلب']].flatMap(([n, t], i) => [
+  ...[['0%', 'مقدّم على الموديلات المختارة'], ['60', 'شهراً حداً أقصى للتقسيط'], ['24 ساعة', 'موافقة سريعة على الطلب']].flatMap(([n, t], i) => [
     k.shape({ x: 840 - i * 372, y: 190, width: 344, height: 190 }, { backgroundColor: '#1C1D21', borderRadius: 6, borderWidth: 2, borderColor: i === 0 ? RED : '#2C2D33', borderStyle: 'solid' }, 'إطار'),
     k.heading({ x: 860 - i * 372, y: 210, width: 304, height: 80 }, n, 64, { color: RED, textAlign: 'center' }),
     k.text({ x: 860 - i * 372, y: 304, width: 304, height: 56 }, t, 18, { color: '#F4F4F5', textAlign: 'center' }),
   ]),
-  k.gallery({ x: 96, y: 430, width: 700, height: 240 }, 'left-main-row', ['car showroom interior', 'car keys handover', 'sports car headlight'], { borderRadius: 4 }, 8, 4),
+  k.gallery({ x: 96, y: 430, width: 700, height: 240 }, 'left-main-row', ['car showroom interior#0', 'car showroom interior#1', 'car showroom interior#2'], { borderRadius: 4 }, 8, 4),
   k.text({ x: 830, y: 440, width: 354, height: 80 }, 'نستلم سيارتك القديمة كدفعة أولى.', 20, { color: '#F4F4F5' }),
   k.button({ x: 934, y: 560, width: 250, height: 58 }, 'احجز تجربة قيادة', undefined, { backgroundColor: RED, color: '#FFFFFF', borderRadius: 4, glowColor: RED, glowIntensity: 20, animation: 'pulse', animationTrigger: 'loop', animationDuration: 2.5 }),
 ];

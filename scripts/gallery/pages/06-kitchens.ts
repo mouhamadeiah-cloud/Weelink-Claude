@@ -28,7 +28,7 @@ const styles = [
       k.heading({ x, y: 496, width: 244, height: 40 }, name, 26, { textAlign: 'center', color: A }),
     ];
   }),
-  k.gallery({ x: 96, y: 570, width: 1088, height: 330 }, 'top-main', ['kitchen installation worker', 'granite countertop kitchen', 'kitchen cabinets handles', 'kitchen lighting design'], { borderRadius: 28 }, 10, 22),
+  k.gallery({ x: 96, y: 570, width: 1088, height: 330 }, 'top-main', ['kitchen installation worker#0', 'kitchen installation worker#1', 'kitchen installation worker#2', 'kitchen installation worker#3'], { borderRadius: 28 }, 10, 22),
 ];
 
 const visit = [

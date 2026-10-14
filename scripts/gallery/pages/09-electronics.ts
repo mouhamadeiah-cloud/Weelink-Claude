@@ -34,7 +34,7 @@ const devices = [
       k.heading({ x: x - 4, y: y + 100, width: 268, height: 38 }, name, 24, { textAlign: 'center' }),
     ];
   }),
-  k.gallery({ x: 250, y: 620, width: 934, height: 220 }, 'top-main', ['electronics repair bench soldering', 'smartphone screen repair', 'laptop motherboard repair'], { borderRadius: 14 }, 8, 10),
+  k.gallery({ x: 250, y: 620, width: 934, height: 220 }, 'top-main', ['electronics repair bench soldering#0', 'electronics repair bench soldering#1', 'electronics repair bench soldering#2'], { borderRadius: 14 }, 8, 10),
 ];
 
 const track = [

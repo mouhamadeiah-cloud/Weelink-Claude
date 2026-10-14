@@ -24,7 +24,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { mailOrder } from './_orderMail.js';
+import { mailOrder } from './orderMail.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 const TTL_MS = 3 * 24 * 60 * 60 * 1000;

@@ -7,7 +7,9 @@ import '../src/index.css';
 import { LiveDesign } from '../src/components/gallery/LiveSlide';
 import { deserializeElements } from '../src/utils/elementStorage';
 
-import data from '../src/data/galleryPages/preview.json';
+// preview.json is written by `npm run gallery-pages` and is not committed.
+const found = import.meta.glob('../src/data/galleryPages/preview.json', { eager: true, import: 'default' }) as Record<string, any[]>;
+const data: any[] = Object.values(found)[0] || [];
 
 const params = new URLSearchParams(location.search);
 

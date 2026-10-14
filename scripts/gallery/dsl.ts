@@ -62,8 +62,9 @@ export class Kit {
     return el('shape', name, box, '', styles);
   }
   // A card: a filled box with the look's radius; put the elements on it after it in the same slide.
-  card(box: Box, styles: Styles = {}) {
-    return el('shape', 'بطاقة', box, '', { backgroundColor: this.L.card, borderRadius: Math.min(this.L.radius, 28), borderWidth: 1, borderColor: this.L.line, borderStyle: 'solid', ...styles });
+  // `group` makes it a group even when it is wider than the editor's card rule (a full-width panel).
+  card(box: Box, styles: Styles = {}, group = false) {
+    return el('shape', 'بطاقة', box, '', { backgroundColor: this.L.card, borderRadius: Math.min(this.L.radius, 28), borderWidth: 1, borderColor: this.L.line, borderStyle: 'solid', ...styles }, group ? { isGroupContainer: true, groupName: 'بطاقة' } : {});
   }
   // Frosted glass: a see-through card over a photo (the constitution's only way to put text on a photo).
   glass(box: Box, dark: boolean, styles: Styles = {}) {
@@ -87,6 +88,13 @@ export class Kit {
     return el('calendar', 'حجز موعد', box, '', { backgroundColor: this.L.card }, {
       calendarTitle: title, calendarAccentColor: accent, calendarWorkingDays: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'],
       calendarSlots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'], calendarInterval: '60', calendarWorkStart: '09:00', calendarWorkEnd: '17:00', ...extra,
+    });
+  }
+  // The editor's table: the first row is the header; every column is as wide as the others.
+  table(box: Box, rows: string[][], themeColor: string, styles: Styles = {}) {
+    const cols = rows[0].length;
+    return el('table', 'جدول', box, '', styles, {
+      tableConfig: { rows: rows.length, cols, themeColor, headerRow: true, indexCol: false, colWidths: Array(cols).fill(Math.floor(box.width / cols)), rowHeights: Array(rows.length).fill(Math.floor(box.height / rows.length)), cells: rows },
     });
   }
   ratings(box: Box, accent: string, styles: Styles = {}) {

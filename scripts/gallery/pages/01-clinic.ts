@@ -72,7 +72,7 @@ const page: PageSpec = {
   slides: [
     { name: 'المدخل', height: 660, bg: { video: '6755020', fixed: false }, divider: 'curve-down', elements: hero },
     { name: 'الخدمات', height: 960, bg: { color: L.bg }, divider: 'wave', elements: services },
-    { name: 'الحجز', height: 960, bg: { color: '#0E7490' }, divider: 'straight', elements: booking },
+    { name: 'الحجز', height: 960, bg: { color: '#0E7490' }, divider: 'straight', innerGlow: { color: '#67E8F9', intensity: 70, position: 'top' }, elements: booking },
   ],
 };
 export default page;

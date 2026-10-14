@@ -18,7 +18,7 @@ import { RightDrawer, DrawerSection } from './components/RightDrawer';
 import { ProjectSettingsSection } from './components/rightDrawer/sections/ProjectSettingsSection';
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
-import { readDesigner } from './services/designers';
+import { becomeDesigner, readDesigner } from './services/designers';
 import { HomePage } from './components/home/HomePage';
 import { StartPage } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
@@ -270,6 +270,8 @@ export default function App() {
   const [isStartActive, setIsStartActive] = useState<boolean>(false);
   // The kind the start page opens on (from «عدّل إجاباتي» in the editor), else the kinds.
   const [startKind, setStartKind] = useState<ProjectType | null>(null);
+  // Which form the sign-in screen opens on: the designers' sign-up comes from the start page's fifth card.
+  const [authMode, setAuthMode] = useState<'login' | 'designer'>('login');
   // A page to build as soon as its kind is open in the editor: the questions just finished.
   // The kind whose questions just finished: the editor opens on it with an empty page and Wee AI's panel.
   const afterQuestionsRef = useRef<ProjectType | null>(null);
@@ -1104,6 +1106,7 @@ export default function App() {
 
   const handleAuthSuccess = (userUid: string, isNewUser: boolean, asDesigner = false) => {
     handledAuthUid.current = auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser.uid : null;
+    setAuthMode('login');
     setActiveUserUid(userUid);
     const inviteProblem = takeInviteProblem();
     if (inviteProblem) window.setTimeout(() => window.alert(inviteProblem), 300);
@@ -1194,7 +1197,7 @@ export default function App() {
         if (pendingBuildRef.current) openGuestBuild(userUid);
         else if (afterSignInRef.current === 'account') openMyPage(userUid);
         // A returning designer comes back to their page, in the editor.
-        else if (await readDesigner(userUid)) {
+        else if (auth.currentUser && (await readDesigner(auth.currentUser.uid))) {
           setIsHomeActive(false);
           setIsStartActive(false);
           handleChooseProject('page', userUid);
@@ -1236,6 +1239,33 @@ export default function App() {
     setIsAuthActive(false);
     await handleChooseProject(kind);
     setIsStartActive(false);
+  };
+
+  // «انضم لمصممينا» on the start page: a visitor goes to the designers' sign-up; a signed-in owner
+  // becomes a designer (their name for the gallery asked once) and lands on their page in the editor.
+  const joinDesigners = async () => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      afterSignInRef.current = 'build';
+      pendingBuildRef.current = null;
+      setAuthMode('designer');
+      setIsStartActive(false);
+      setIsAuthActive(true);
+      return;
+    }
+    try {
+      if (!(await readDesigner(user.uid))) {
+        const name = (window.prompt('اسمك كما سيظهر للزبائن في معرض المصممين:') || '').trim();
+        if (name.length < 2) return;
+        await becomeDesigner(user.uid, name);
+      }
+    } catch (err) {
+      console.warn('Could not make the designer profile:', err);
+      window.alert('تعذّر إنشاء حساب المصمم. حاول مرة ثانية بعد قليل.');
+      return;
+    }
+    setIsStartActive(false);
+    await handleChooseProject('page', activeUserUid);
   };
 
   // «عدّل إجاباتي»: back to the questions of the open kind.
@@ -3443,6 +3473,7 @@ export default function App() {
       <HomePage
         user={currentUser}
         onAccount={() => {
+          setAuthMode('login');
           afterSignInRef.current = 'account';
           pendingBuildRef.current = null;
           setIsHomeActive(false);
@@ -3482,6 +3513,7 @@ export default function App() {
           await handleChooseProject(kind);
           setIsStartActive(false);
         }}
+        onDesigner={joinDesigners}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
           pendingBuildRef.current = kind;
@@ -3496,6 +3528,8 @@ export default function App() {
     return (
       <>
         <StandardAuth
+          key={authMode}
+          initialMode={authMode}
           onLoginWithGoogle={handleLogin}
           onAuthSuccess={handleAuthSuccess}
         />

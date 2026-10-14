@@ -21,7 +21,7 @@ import { StandardAuth } from './components/StandardAuth';
 import { becomeDesigner, readDesigner } from './services/designers';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
-import { DESIGN_KIND_LABEL, PAGE_SLIDES, type DesignKind } from './data/slideCategories';
+import { DESIGN_KIND_LABEL, PAGE_MAX_SLIDES, type DesignKind } from './data/slideCategories';
 import { ExportSlideModal } from './components/designer/ExportSlideModal';
 import { HomePage } from './components/home/HomePage';
 import { StartPage } from './components/onboarding/StartPage';
@@ -972,14 +972,14 @@ export default function App() {
   // ---------- «وضع المصمم» ----------
   // A draft is a slide or a page (Eyad, 14 Oct). The editor works on either as on any page: a slide
   // draft is one page with one empty slide, and the slide being edited is what is exported; a page
-  // draft is one page of three empty slides with a navbar, exported whole.
+  // draft is one page with a navbar and up to three slides (it starts with three empty ones), exported whole.
   const blankDraftPages = (kind: DesignKind = 'slide'): Page[] => [{
     id: 'page-home',
     name: kind === 'page' ? 'الرئيسية' : 'الشريحة',
     slug: '/',
     navbar: { brandName: kind === 'page' ? 'اسم الصفحة' : '', items: [], ctaText: '', ctaHref: '', bgColor: '#ffffff', textColor: '#1d1d1f', isSticky: true },
     slides: kind === 'page'
-      ? Array.from({ length: PAGE_SLIDES }, (_, i) => ({ id: `slide-${i + 1}`, name: `شريحة ${i + 1}`, height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' as const }))
+      ? Array.from({ length: PAGE_MAX_SLIDES }, (_, i) => ({ id: `slide-${i + 1}`, name: `شريحة ${i + 1}`, height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' as const }))
       : [{ id: 'slide-1', name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' }],
     ratingsSuggested: true,
   }];
@@ -4156,12 +4156,12 @@ export default function App() {
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />
       {designerMode && isExportOpen && currentUser && (() => {
-        // A page draft is exported whole (its navbar and its three slides); a slide draft, the open slide.
+        // A page draft is exported whole (its navbar and its slides, up to three); a slide draft, the open slide.
         const kind: DesignKind = drafts.find((d) => d.slot === activeSlot)?.kind || 'slide';
         const slides = kind === 'page' ? pages.flatMap((p) => p.slides) : [currentSlide];
         const ids = new Set(slides.map((sl) => sl.id));
         const mine = elements.filter((e) => ids.has(e.slideId));
-        const problem = kind !== 'page' ? '' : pages.length !== 1 ? 'تصميم الصفحة هو صفحة واحدة بثلاث شرائح. احذف الصفحات الزائدة من قائمة الصفحات.' : slides.length !== PAGE_SLIDES ? `الصفحة ثلاث شرائح بالضبط، وعندك ${slides.length}.` : '';
+        const problem = kind !== 'page' ? '' : pages.length !== 1 ? 'تصميم الصفحة هو صفحة واحدة (حتى ثلاث شرائح). احذف الصفحات الزائدة من قائمة الصفحات.' : slides.length < 1 || slides.length > PAGE_MAX_SLIDES ? `الصفحة حتى ${PAGE_MAX_SLIDES} شرائح، وعندك ${slides.length}.` : '';
         return (
           <ExportSlideModal
             designerUid={currentUser.uid}

@@ -9,7 +9,7 @@ import type { DesignKind } from '../data/slideCategories';
 
 export interface GallerySlide {
   id: string;
-  // A slide, or a page: three slides with a navbar (`page`).
+  // A slide, or a page: up to three slides with a navbar (`page`).
   kind: DesignKind;
   page: { navbar?: NavbarConfig; slides?: Slide[] } | null;
   name: string;

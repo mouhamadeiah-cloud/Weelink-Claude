@@ -760,7 +760,7 @@ export default {
     // rejected here; the rules let nobody else change its status.
     const SLIDE_STATUSES = ['pending', 'approved', 'rejected'];
     const SLIDE_CATEGORY_IDS = ['hero', 'about', 'services', 'gallery', 'team', 'reviews', 'offers', 'booking', 'contact', 'menu', 'cars', 'products', 'legal', 'other'];
-    const PAGE_CATEGORY_IDS = ['p-business', 'p-shop', 'p-restaurant', 'p-cars', 'p-other'];
+    const PAGE_CATEGORY_IDS = ['p-business', 'p-restaurant', 'p-cars', 'p-shop'];
     const lawFromDoc = (d: Record<string, any> | undefined) =>
       d ? { text: String(d.text || ''), version: Number(d.version) || 0, updatedAt: Number(d.updatedAt) || 0, updatedBy: String(d.updatedBy || '') } : null;
 

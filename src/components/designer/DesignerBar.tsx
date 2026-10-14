@@ -35,7 +35,7 @@ export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, bu
             )}
           </span>
         ))}
-        {([['slide', 'شريحة جديدة', Presentation, 'مسودة شريحة واحدة'], ['page', 'صفحة جديدة', FileText, 'مسودة صفحة: ثلاث شرائح مع شريط تنقل']] as const).map(([kind, label, Icon, hint]) => (
+        {([['slide', 'شريحة جديدة', Presentation, 'مسودة شريحة واحدة'], ['page', 'صفحة جديدة', FileText, 'مسودة صفحة: حتى ثلاث شرائح مع شريط تنقل']] as const).map(([kind, label, Icon, hint]) => (
           <button key={kind} type="button" disabled={busy || full} onClick={() => onNew(kind)} title={full ? `الحد الأقصى ${MAX_DRAFTS} مسودات` : hint} className="shrink-0 h-8 px-3 rounded-ctl border border-dashed border-brand/40 text-brand text-xs font-bold inline-flex items-center gap-1 hover:bg-brand/5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
             <Plus size={14} /> <Icon size={13} /> {label}
           </button>

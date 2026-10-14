@@ -9,7 +9,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { Heart, Loader2, MessageCircle, Plus, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { LivePage, LiveSlide } from './LiveSlide';
-import { PAGE_CATEGORIES, PAGE_SLIDES, SLIDE_CATEGORIES, categoryLabel, type DesignKind } from '../../data/slideCategories';
+import { PAGE_CATEGORIES, SLIDE_CATEGORIES, categoryLabel, slidesWord, type DesignKind } from '../../data/slideCategories';
 import { GallerySlide, isNewSlide, listApprovedSlides, readMyVotes, voteErrorText, voteOnSlide } from '../../services/galleryView';
 
 type Sort = 'likes' | 'new';
@@ -202,7 +202,7 @@ export const DesignerGallery: React.FC<{ user: User | null }> = ({ user }) => {
             <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line">
               <div className="min-w-0 space-y-0.5">
                 <h3 className="text-heading font-bold truncate">{open.name}</h3>
-                <div className="flex items-center gap-2"><DesignerLine slide={open} total={totals[open.designerUid] || 0} /><span className="text-xs text-faint">· {open.kind === 'page' ? `صفحة من ${PAGE_SLIDES} شرائح · ` : ''}{categoryLabel(open.category)}</span></div>
+                <div className="flex items-center gap-2"><DesignerLine slide={open} total={totals[open.designerUid] || 0} /><span className="text-xs text-faint">· {open.kind === 'page' ? `صفحة بـ${slidesWord(open.page?.slides?.length || 1)} · ` : ''}{categoryLabel(open.category)}</span></div>
               </div>
               <button type="button" onClick={() => setOpenId('')} aria-label="إغلاق" className="shrink-0 w-9 h-9 rounded-ctl flex items-center justify-center text-muted hover:text-ink hover:bg-bg cursor-pointer"><X size={18} /></button>
             </div>

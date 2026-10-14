@@ -28,7 +28,7 @@ export interface SlideExport {
   category: string;
   draftSlot: string;
   // The slide itself and its elements, in the editor's own format. For a page: its first slide here,
-  // the whole page (navbar and the three slides) in `page`, and the elements of all three slides.
+  // the whole page (navbar and its slides) in `page`, and the elements of all its slides.
   slide: any;
   page?: any;
   elements: any[];

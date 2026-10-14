@@ -446,9 +446,9 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/designers/$(request.auth.uid))
         && incoming().keys().hasOnly(['designerUid', 'designerName', 'name', 'category', 'draftSlot', 'kind', 'slide', 'page', 'elements', 'status', 'lawVersion', 'acceptedAt', 'createdAt'])
         && incoming().kind in ['slide', 'page']
-        // A page is its navbar and exactly three slides; a slide has no page.
+        // A page is its navbar and one to three slides; a slide has no page.
         && (incoming().kind == 'page'
-          ? (incoming().page is map && incoming().page.slides is list && incoming().page.slides.size() == 3)
+          ? (incoming().page is map && incoming().page.slides is list && incoming().page.slides.size() >= 1 && incoming().page.slides.size() <= 3)
           : !('page' in incoming()))
         && incoming().designerUid == request.auth.uid
         && incoming().status == 'pending'

@@ -4,17 +4,20 @@
 // complaint. Messages carry no phone number, email or link (the server refuses them).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { AlertCircle, CheckCircle2, Loader2, Send, Star, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, KeyRound, Loader2, Send, Star, X } from 'lucide-react';
 import {
   CAN_TALK, DesignOrder, OrderMessage, STATUS_LABEL,
   cancelOrder, confirmOrder, deliverOrder, disputeOrder, orderErrorText, rateOrder, sendOrderMessage, subscribeMessages, subscribeMyOrders,
 } from '../../services/designOrders';
+import { accessErrorText, accessStatus, issueAccessCode, revokeAccessCode } from '../../services/designAccess';
 import { contactKindsIn, CONTACT_KIND_LABEL } from '../../utils/contactCheck';
 import { formatPounds } from '../../data/plans';
 
 interface Props {
   user: User;
   initialOrderId?: string;
+  // Designer mode only: opens the customer's page in the editor with the code (resolves to an error text).
+  onEnterClientPage?: (orderId: string, code: string) => Promise<{ ok: boolean; message: string }>;
   onClose: () => void;
 }
 
@@ -130,7 +133,75 @@ const RatingBox: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'de
   );
 };
 
-const OrderDetail: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'designer' }> = ({ user, order, me }) => {
+const dayTime = (ms: number) => new Date(ms).toLocaleString('ar-SY', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+// The three-day code that lets the hired designer into the customer's page. The customer makes it (it is
+// shown once, to be told to the designer) and can withdraw it; the designer types it in to open the page.
+const AccessBox: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'designer'; onEnter?: Props['onEnterClientPage'] }> = ({ user, order, me, onEnter }) => {
+  const [status, setStatus] = useState<{ active: boolean; expiresAt: number } | null>(null);
+  const [code, setCode] = useState('');
+  const [fresh, setFresh] = useState('');
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const open = order.status === 'paid' || order.status === 'delivered';
+  useEffect(() => {
+    if (!open) return;
+    accessStatus(user, order.id).then(setStatus).catch(() => setStatus({ active: false, expiresAt: 0 }));
+  }, [user, order.id, open]);
+  if (!open) return null;
+  const btn = 'h-10 px-4 rounded-ctl text-sm font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5';
+  const run = async (key: string, fn: () => Promise<void>) => {
+    setBusy(key);
+    setError('');
+    try {
+      await fn();
+    } catch (e) {
+      setError(e instanceof Error && (e as { code?: string }).code === 'x' ? e.message : accessErrorText(e));
+    }
+    setBusy('');
+  };
+
+  if (me === 'customer') {
+    return (
+      <div className="rounded-card border border-line bg-bg p-3 space-y-2 text-sm leading-relaxed">
+        <p className="font-bold inline-flex items-center gap-1.5"><KeyRound size={15} /> دخول المصمم إلى صفحتك</p>
+        <p className="text-muted">لو أردت أن يعدّل المصمم صفحتك بنفسه، أعطه رمزاً يعمل 3 أيام. يعدّل تصميم الصفحة فقط ولا يرى بياناتك ولا زبائنك ولا طلباتك. تُحفظ نسخة من صفحتك قبل أول تعديل، وتسحب الرمز متى شئت.</p>
+        {fresh && (
+          <div className="rounded-ctl border border-brand/40 bg-surface p-3">
+            <div className="text-xs text-muted">الرمز (يظهر مرة واحدة: أعطه للمصمم داخل المحادثة)</div>
+            <div dir="ltr" className="text-heading font-bold tracking-widest select-all">{fresh}</div>
+          </div>
+        )}
+        {status?.active && !fresh && <p className="text-success font-bold">الرمز فعّال حتى {dayTime(status.expiresAt)}.</p>}
+        <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={!!busy} onClick={() => run('issue', async () => { const r = await issueAccessCode(user, order.id); setFresh(r.code); setStatus({ active: true, expiresAt: r.expiresAt }); })} className={`${btn} bg-brand hover:bg-brand-hover text-white`}>{busy === 'issue' && <Loader2 size={14} className="animate-spin" />} {status?.active ? 'رمز جديد (يلغي القديم)' : 'أنشئ رمز دخول'}</button>
+          {status?.active && <button type="button" disabled={!!busy} onClick={() => run('revoke', async () => { await revokeAccessCode(user, order.id); setFresh(''); setStatus({ active: false, expiresAt: 0 }); })} className={`${btn} border border-line bg-surface text-danger`}>سحب الرمز</button>}
+        </div>
+        {error && <p role="alert" className="text-xs font-bold text-danger">{error}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-card border border-line bg-bg p-3 space-y-2 text-sm leading-relaxed">
+      <p className="font-bold inline-flex items-center gap-1.5"><KeyRound size={15} /> الدخول إلى صفحة الزبون</p>
+      {!status?.active ? (
+        <p className="text-muted">لم يعطك الزبون رمز دخول بعد (أو انتهى). اطلبه منه في المحادثة إن احتجت تعدّل صفحته بنفسك.</p>
+      ) : onEnter ? (
+        <>
+          <p className="text-muted">الرمز فعّال حتى {dayTime(status.expiresAt)}. ستعدّل التصميم فقط.</p>
+          <div className="flex flex-wrap gap-2">
+            <input dir="ltr" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={19} placeholder="XXXX-XXXX-XXXX-XXXX" className="h-10 px-3 rounded-ctl border border-line bg-surface text-sm tracking-widest outline-none focus:border-brand w-60" />
+            <button type="button" disabled={!!busy || code.replace(/[^A-Z0-9]/g, '').length !== 16} onClick={() => run('enter', async () => { const r = await onEnter(order.id, code); if (!r.ok) throw Object.assign(new Error(r.message), { code: 'x' }); })} className={`${btn} bg-brand hover:bg-brand-hover text-white`}>{busy === 'enter' && <Loader2 size={14} className="animate-spin" />} افتح صفحة الزبون</button>
+          </div>
+        </>
+      ) : <p className="text-muted">الرمز فعّال حتى {dayTime(status.expiresAt)}. افتح «وضع المصمم» من الصفحة الرئيسية لتدخل بالرمز.</p>}
+      {error && <p role="alert" className="text-xs font-bold text-danger">{error}</p>}
+    </div>
+  );
+};
+
+const OrderDetail: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'designer'; onEnter?: Props['onEnterClientPage'] }> = ({ user, order, me, onEnter }) => {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [complaint, setComplaint] = useState<string | null>(null);
@@ -196,6 +267,8 @@ const OrderDetail: React.FC<{ user: User; order: DesignOrder; me: 'customer' | '
       {order.status === 'disputed' && order.disputeReason && <p className="text-sm text-danger leading-relaxed">الشكوى: {order.disputeReason}</p>}
       {error && <p role="alert" className="text-sm font-bold text-danger flex items-start gap-1.5"><AlertCircle size={15} className="shrink-0 mt-0.5" /> {error}</p>}
 
+      <AccessBox user={user} order={order} me={me} onEnter={onEnter} />
+
       <RatingBox user={user} order={order} me={me} />
 
       <Thread user={user} order={order} me={me} />
@@ -203,7 +276,7 @@ const OrderDetail: React.FC<{ user: User; order: DesignOrder; me: 'customer' | '
   );
 };
 
-export const DesignOrdersPanel: React.FC<Props> = ({ user, initialOrderId, onClose }) => {
+export const DesignOrdersPanel: React.FC<Props> = ({ user, initialOrderId, onEnterClientPage, onClose }) => {
   const [mine, setMine] = useState<DesignOrder[] | null>(null);
   const [theirs, setTheirs] = useState<DesignOrder[]>([]);
   const [role, setRole] = useState<'customer' | 'designer'>('customer');
@@ -231,7 +304,7 @@ export const DesignOrdersPanel: React.FC<Props> = ({ user, initialOrderId, onClo
           ) : current ? (
             <div className="space-y-4">
               <button type="button" onClick={() => setOpenId('')} className="text-sm font-bold text-brand cursor-pointer">← كل الطلبات</button>
-              <OrderDetail key={current.o.id} user={user} order={current.o} me={current.me} />
+              <OrderDetail key={current.o.id} user={user} order={current.o} me={current.me} onEnter={onEnterClientPage} />
             </div>
           ) : (
             <div className="space-y-4">

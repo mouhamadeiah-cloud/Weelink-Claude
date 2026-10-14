@@ -398,6 +398,24 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    // The designers' programme (src/services/designers.ts): a public profile per designer, shown in the
+    // gallery. A designer writes only their own name and line; likes, ratings and the approved badge are
+    // written by the server in later phases, so the rules keep them out of this document.
+    match /designers/{uid} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == uid && isValidId(uid)
+        && incoming().keys().hasOnly(['name', 'bio', 'createdAt'])
+        && incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 60
+        && incoming().bio is string && incoming().bio.size() <= 200
+        && incoming().createdAt is string && incoming().createdAt.size() <= 40;
+      allow update: if isSignedIn() && request.auth.uid == uid
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'bio'])
+        && incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 60
+        && incoming().bio is string && incoming().bio.size() <= 200;
+      allow delete: if false;
+    }
+
     // A frozen or cancelled subscriber (the admin site, api/admin.ts writes it): anyone may check
     // whether a workspace id is in the list, so its published pages show «غير متاحة مؤقتاً».
     match /suspendedAccounts/{accountId} {

@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
 import type { CanvasElement, NavbarConfig } from '../../types';
 import { DESIGN_KIND_LABEL, categoriesFor, type DesignKind } from '../../data/slideCategories';
 import { exportSlide, readPageLaw, type PageLaw } from '../../services/gallery';
+import { SCRIPTABLE_TYPES } from '../../utils/safeHtml';
 import { CONTACT_KIND_LABEL, findContactInfo, findNavbarContact } from '../../utils/contactCheck';
 
 interface ExportSlideModalProps {
@@ -51,6 +52,7 @@ export const ExportSlideModal: React.FC<ExportSlideModalProps> = ({ designerUid,
 
   const contact = useMemo(() => [...findContactInfo(elements), ...(kind === 'page' ? findNavbarContact(navbar) : [])], [elements, navbar, kind]);
   const empty = elements.length === 0;
+  const scriptable = elements.some((e) => SCRIPTABLE_TYPES.includes(e.type));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +72,7 @@ export const ExportSlideModal: React.FC<ExportSlideModalProps> = ({ designerUid,
     setBusy(false);
   };
 
-  const blocked = empty || contact.length > 0 || !!problem;
+  const blocked = empty || scriptable || contact.length > 0 || !!problem;
 
   return (
     <div className="fixed inset-0 z-[4000010] flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" dir="rtl" role="dialog" aria-modal="true" aria-label={`تصدير ال${word} للمعرض`} onClick={onClose}>
@@ -93,6 +95,9 @@ export const ExportSlideModal: React.FC<ExportSlideModalProps> = ({ designerUid,
           <form onSubmit={submit} className="p-5 space-y-4">
             {empty && (
               <p role="alert" className="text-small text-danger font-bold flex items-start gap-1.5"><AlertCircle size={15} className="shrink-0 mt-1" /> {kind === 'page' ? 'الصفحة فارغة' : 'الشريحة فارغة'}. صمّم شيئاً فيها أولاً.</p>
+            )}
+            {scriptable && (
+              <p role="alert" className="text-small text-danger font-bold flex items-start gap-1.5"><AlertCircle size={15} className="shrink-0 mt-1" /> فيها «حاوية HTML»، وهي غير مسموحة في المعرض لأسباب أمنية. احذفها وصدّر من جديد.</p>
             )}
             {problem && (
               <p role="alert" className="text-small text-danger font-bold flex items-start gap-1.5"><AlertCircle size={15} className="shrink-0 mt-1" /> {problem}</p>

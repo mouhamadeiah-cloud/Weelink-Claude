@@ -23,6 +23,8 @@
 //                    { action: 'task-create' | 'task-update' }  (owner only): the workflow board
 //   POST /api/admin  { action: 'chat', after?, uid? } and { action: 'chat-send', text, uid? }  (the team chat board)
 //   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
+//   POST /api/admin  { action: 'dashboard' }  → numbers and 12-month chart; { action: 'export', kind: 'subscribers'|'payments' } → CSV; { action: 'backup' } → one JSON file (owner)
+//   POST /api/admin  { action: 'reports' | 'report-decide' }  rating reports;  'health' (owner);  'coupons' | 'coupon-save' | 'coupon-toggle' | 'coupon-apply';  'announce-preview' | 'announce' (owner)
 //   POST /api/admin  { action: 'tokens-adjust', uid, delta, reason } → { balance }
 //   POST /api/admin  { action: 'set-prices', in, out }           → { prices }
 //   all but 'login' with  Authorization: Bearer <session token>
@@ -216,15 +218,17 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 // The team (Eyad, 14 Oct): the main admin («owner») can do everything; the others have one specialty
 // and only its actions. Checked here on every call; the site only hides what is not allowed.
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
-const FINANCE_ONLY = ['payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
-const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update'];
+const FINANCE_ONLY = ['payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply'];
+// The rating reports are for the content reviewer (and the owner).
+const CONTENT_ONLY = ['reports', 'report-decide'];
+const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
 const TASK_TYPES: Record<string, string> = { payment: 'طلب دفع', domain: 'طلب دومين', complaint: 'شكوى', other: 'أخرى' };
 const TASK_STATUSES = ['new', 'doing', 'done'];
-const KNOWN_ACTIONS = [...OPEN_TO_ALL, ...FINANCE_ONLY, ...OWNER_ONLY];
+const KNOWN_ACTIONS = [...OPEN_TO_ALL, ...FINANCE_ONLY, ...CONTENT_ONLY, ...OWNER_ONLY];
 const can = (a: Pick<Admin, 'role' | 'specialty'>, action: string) =>
-  a.role === 'owner' || OPEN_TO_ALL.includes(action) || (FINANCE_ONLY.includes(action) && a.specialty === 'finance');
+  a.role === 'owner' || OPEN_TO_ALL.includes(action) || (FINANCE_ONLY.includes(action) && a.specialty === 'finance') || (CONTENT_ONLY.includes(action) && a.specialty === 'content');
 const publicAdmin = (a: Admin) => ({ username: a.username, name: a.name, role: a.role, specialty: a.specialty || '', mustChange: a.mustChange, can: KNOWN_ACTIONS.filter((x) => can(a, x)) });
 
 // A temporary password the owner reads out once; the admin must change it at the first sign-in.
@@ -331,6 +335,77 @@ const runDaily = async (fb: Fb) => {
   await db.collection('platform_audit').add({ at: FieldValue.serverTimestamp(), admin: 'system', action: `daily:${JSON.stringify(out)}`, ok: true, ip: 'cron' });
   return out;
 };
+
+// ---------- accounts and dashboard (phase 6) ----------
+
+type FbUser = Awaited<ReturnType<Fb['auth']['listUsers']>>['users'][number];
+const listAllUsers = async (auth: Fb['auth']) => {
+  const users: FbUser[] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await auth.listUsers(1000, pageToken);
+    users.push(...page.users);
+    pageToken = page.pageToken;
+  } while (pageToken && users.length < MAX_USERS);
+  return users;
+};
+
+// The last `n` calendar months as 'YYYY-MM', oldest first.
+const lastMonths = (n: number, now = Date.now()) => {
+  const d = new Date(now);
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() - (n - 1));
+  return Array.from({ length: n }, () => {
+    const key = d.toISOString().slice(0, 7);
+    d.setUTCMonth(d.getUTCMonth() + 1);
+    return key;
+  });
+};
+const isoDay = (ms: number) => (ms ? new Date(ms).toISOString().slice(0, 10) : '');
+const tsOf = (v: any): number => (typeof v?.toMillis === 'function' ? v.toMillis() : Number(v) || 0);
+const createdOf = (u: FbUser) => Date.parse(u.metadata.creationTime || '') || 0;
+
+// CSV for Excel: quotes where needed, and a leading quote on text that a spreadsheet would run as a formula.
+const csvCell = (v: unknown) => {
+  let s = String(v ?? '');
+  if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+const toCsv = (head: string[], rows: unknown[][]) => [head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
+
+// ---------- coupons (Eyad's extras): trial days, bonus tokens, a percent off a payment ----------
+
+const COUPON_KINDS: Record<string, string> = { trial: 'فترة تجربة (أيام)', tokens: 'توكنز هدية', discount: 'خصم على دفعة (%)' };
+const cleanCode = (raw: unknown) => String(raw || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
+interface Coupon { code: string; kind: string; value: number; plan: string; planName: string; maxUses: number; used: number; expiresAt: number; active: boolean; note: string; createdAt: number; by: string }
+const couponFromDoc = (id: string, d: Record<string, any>): Coupon => ({
+  code: id, kind: String(d.kind || ''), value: Number(d.value) || 0, plan: String(d.plan || ''), planName: String(d.planName || ''),
+  maxUses: Number(d.maxUses) || 0, used: Number(d.used) || 0, expiresAt: Number(d.expiresAt) || 0, active: d.active !== false,
+  note: String(d.note || ''), createdAt: Number(d.createdAt) || 0, by: String(d.by || ''),
+});
+const couponProblem = (c: Coupon, now: number) =>
+  !c.active ? 'inactive' : c.expiresAt && c.expiresAt < now ? 'expired' : c.maxUses && c.used >= c.maxUses ? 'used-up' : '';
+// One use per subscriber; the counter and the subscriber's mark are written together.
+const redeemCoupon = (db: Fb['db'], code: string, uid: string) =>
+  db.runTransaction(async (t) => {
+    const ref = db.collection('platform_coupons').doc(code);
+    const useRef = ref.collection('uses').doc(uid);
+    const [snap, useSnap] = await Promise.all([t.get(ref), t.get(useRef)]);
+    if (!snap.exists) return { error: 'not-found' as const };
+    const c = couponFromDoc(snap.id, snap.data() || {});
+    const bad = couponProblem(c, Date.now());
+    if (bad) return { error: bad };
+    if (useSnap.exists) return { error: 'already-used' };
+    t.set(ref, { used: c.used + 1 }, { merge: true });
+    t.set(useRef, { at: Date.now() });
+    return { coupon: c };
+  });
+
+// ---------- announcement emails ----------
+
+const AUDIENCES: Record<string, string> = { all: 'كل المشتركين', paid: 'المشتركون باشتراك فعّال', free: 'بدون اشتراك مدفوع', expiring: 'اشتراكهم ينتهي خلال أسبوعين' };
+const MAX_ANNOUNCE = 1000;
+const announceHtml = (subject: string, text: string) => `<!doctype html><html lang="ar" dir="rtl"><body style="margin:0;background:#f5f5f7;font-family:Tahoma,Arial,sans-serif;color:#1d1d1f"><div style="max-width:560px;margin:0 auto;padding:24px"><div style="background:#fff;border-radius:14px;padding:24px"><h2 style="margin:0 0 14px;font-size:19px">${esc(subject)}</h2><div style="line-height:1.9;font-size:15px;white-space:pre-wrap">${esc(text)}</div></div><p style="color:#86868b;font-size:12px;text-align:center;margin:14px 0 0">وصلتك هذه الرسالة لأنك مشترك في Weelink.</p></div></body></html>`;
 
 // ---------- handler ----------
 
@@ -648,12 +723,26 @@ export default {
       if (!user) return json({ error: 'not-found' }, 404);
       const plan = String(body.plan || '');
       const period = String(body.period || '') as Period;
-      const amount = Number(body.amount);
+      let amount = Number(body.amount);
       const method = String(body.method || '');
       if (!/^(page|restaurant|shop|cars)-(pro|30|60)$/.test(plan)) return json({ error: 'bad-plan' }, 400);
       if (!PERIODS.includes(period)) return json({ error: 'bad-period' }, 400);
       if (!(amount >= 0 && amount < 1e12)) return json({ error: 'bad-amount' }, 400);
       if (!METHODS[method]) return json({ error: 'bad-method' }, 400);
+
+      // A percent-off coupon lowers the amount; the note keeps what was taken off.
+      let couponNote = '';
+      const couponCode = cleanCode(body.coupon);
+      if (couponCode) {
+        const peek = (await db.collection('platform_coupons').doc(couponCode).get()).data();
+        if (!peek) return json({ error: 'coupon-not-found' }, 404);
+        if (peek.kind !== 'discount') return json({ error: 'coupon-kind' }, 400);
+        const r = await redeemCoupon(db, couponCode, uid);
+        if ('error' in r) return json({ error: `coupon-${r.error}` }, 400);
+        const off = Math.round((amount * r.coupon.value) / 100);
+        couponNote = `كوبون ${couponCode} -${r.coupon.value}% (خُصم ${off.toLocaleString('en')})`;
+        amount -= off;
+      }
 
       const subRef = db.collection('platform_subscribers').doc(uid);
       const cur = (await subRef.get()).data() as { status?: string; autoFrozen?: boolean; subscription?: { endsAt?: number } } | undefined;
@@ -671,7 +760,7 @@ export default {
       const payRef = db.collection('platform_payments').doc();
       const pay = {
         uid, email: user.email || '', name: user.displayName || '', plan, planName, period, amount, method,
-        receiptNo: String(body.receiptNo || '').trim().slice(0, 40), note: String(body.note || '').trim().slice(0, 300),
+        receiptNo: String(body.receiptNo || '').trim().slice(0, 40), note: [String(body.note || '').trim().slice(0, 300), couponNote].filter(Boolean).join(' · '),
         paidAt: now, coversFrom: from, coversTo: endsAt, by: session.u, key: randomBytes(12).toString('hex'),
         invoiceNo: `INV-${new Date(now).getUTCFullYear()}-${String(n).padStart(4, '0')}`,
       };
@@ -731,7 +820,10 @@ export default {
       const html = invoiceHtml(pay, await getCompany(db), false).replace('</div></body>', `<p style="margin-top:20px;font-size:13px"><a href="${link}">افتح الفاتورة للطباعة أو الحفظ PDF</a></p></div></body>`);
       const sent = await sendMail(pay.email, `فاتورة ${pay.invoiceNo}`, html);
       if (sent.result === 'skipped') return json({ error: 'email-not-configured' }, 503);
-      if (sent.result === 'failed') return json({ error: 'refused', detail: String(sent.detail || '').slice(0, 200) }, 502);
+      if (sent.result === 'failed') {
+        await audit(session.u, `invoice-send:${pay.invoiceNo}`, false);
+        return json({ error: 'refused', detail: String(sent.detail || '').slice(0, 200) }, 502);
+      }
       await snap.ref.update({ sentAt: Date.now() });
       await audit(session.u, `invoice-send:${snap.id}`);
       return json({ sent: true });
@@ -960,6 +1052,306 @@ export default {
         emails: mailsSnap.size,
         truncated: callsSnap.size >= 20000,
       });
+    }
+
+    // ----- phase 6: accounts and dashboard -----
+    if (action === 'dashboard') {
+      const now = Date.now();
+      const months = lastMonths(12, now);
+      const from = Date.parse(`${months[0]}-01T00:00:00Z`);
+      const [users, subSnap, paySnap, reportsSnap] = await Promise.all([
+        listAllUsers(auth),
+        db.collection('platform_subscribers').select('status', 'subscription', 'tokens').get(),
+        db.collection('platform_payments').orderBy('paidAt', 'desc').limit(5000).get(),
+        db.collection('ratingReports').select().get(),
+      ]);
+      const byUid = new Map(users.map((u) => [u.uid, u]));
+      const nameOf = (u: string) => byUid.get(u)?.displayName || byUid.get(u)?.email || u;
+
+      const chart = months.map((m) => ({ month: m, newUsers: 0, revenue: 0, payments: 0 }));
+      const slot = new Map(chart.map((c) => [c.month, c]));
+      users.forEach((u) => { const c = slot.get(new Date(createdOf(u)).toISOString().slice(0, 7)); if (c) c.newUsers++; });
+      const pays = paySnap.docs.map((d) => payFromDoc(d.id, d.data()));
+      pays.forEach((p) => { const c = p.paidAt >= from ? slot.get(new Date(p.paidAt).toISOString().slice(0, 7)) : undefined; if (c) { c.revenue += p.amount; c.payments++; } });
+
+      // The last payment of every subscriber: what they are likely to pay again.
+      const lastPay = new Map<string, number>();
+      pays.forEach((p) => { if (!lastPay.has(p.uid)) lastPay.set(p.uid, p.amount); });
+
+      const totals = { users: users.length, paidActive: 0, expiring30: 0, overdue: 0, frozen: 0, cancelled: 0, due30: 0, tokensUsedAll: 0 };
+      const expiring: { uid: string; name: string; email: string; planName: string; freezeAt: number; left: number; amount: number }[] = [];
+      const usage: { uid: string; name: string; used: number; balance: number }[] = [];
+      subSnap.forEach((d) => {
+        const x = d.data() as { status?: string; subscription?: { planName?: string; endsAt?: number; freezeAt?: number }; tokens?: { used?: number; balance?: number } };
+        const status = x.status || 'active';
+        if (status === 'frozen') totals.frozen++;
+        if (status === 'cancelled') totals.cancelled++;
+        if (x.tokens?.used) { totals.tokensUsedAll += x.tokens.used; usage.push({ uid: d.id, name: nameOf(d.id), used: x.tokens.used, balance: Number(x.tokens.balance) || 0 }); }
+        const until = Number(x.subscription?.freezeAt || x.subscription?.endsAt) || 0;
+        if (!until || status !== 'active') return;
+        const left = until - now;
+        if (left > 0) totals.paidActive++;
+        if (left <= 30 * DAY) {
+          if (left > 0) totals.expiring30++; else totals.overdue++;
+          const amount = lastPay.get(d.id) || 0;
+          totals.due30 += amount;
+          expiring.push({ uid: d.id, name: byUid.get(d.id)?.displayName || '', email: byUid.get(d.id)?.email || '', planName: String(x.subscription?.planName || ''), freezeAt: until, left, amount });
+        }
+      });
+      expiring.sort((a, b) => a.left - b.left);
+      usage.sort((a, b) => b.used - a.used);
+
+      // Renewal: of the subscriptions whose period ended in the last 90 days, how many were followed by a payment from the same subscriber.
+      const matured = pays.filter((p) => p.coversTo <= now && p.coversTo >= now - 90 * DAY);
+      const renewed = matured.filter((p) => pays.some((q) => q.uid === p.uid && q.paidAt > p.paidAt && q.coversFrom >= p.coversTo - 1000)).length;
+
+      const thisMonth = chart[chart.length - 1];
+      return json({
+        totals: { ...totals, newThisMonth: thisMonth.newUsers, revenueThisMonth: thisMonth.revenue, revenue12: chart.reduce((n, c) => n + c.revenue, 0), reportsOpen: reportsSnap.size },
+        chart,
+        renewal: { matured: matured.length, renewed, rate: matured.length ? renewed / matured.length : null, days: 90 },
+        expiring: expiring.slice(0, 50),
+        top: usage.slice(0, 10),
+        truncated: paySnap.size >= 5000 || users.length >= MAX_USERS,
+      });
+    }
+
+    if (action === 'export') {
+      const kind = String(body.kind || '');
+      if (kind === 'payments') {
+        const snap = await db.collection('platform_payments').orderBy('paidAt', 'desc').limit(5000).get();
+        const rows = snap.docs.map((d) => payFromDoc(d.id, d.data()));
+        const csv = toCsv(['رقم الفاتورة', 'التاريخ', 'المشترك', 'الإيميل', 'الباقة', 'الفترة', 'المبلغ (ل.س)', 'الطريقة', 'رقم الإيصال', 'من', 'إلى', 'سجّلها', 'ملاحظة'],
+          rows.map((p) => [p.invoiceNo, isoDay(p.paidAt), p.name, p.email, p.planName, p.period === 'yearly' ? 'سنوي' : 'شهري', p.amount, METHODS[p.method] || p.method, p.receiptNo, isoDay(p.coversFrom), isoDay(p.coversTo), p.by, p.note]));
+        await audit(session.u, 'export:payments');
+        return json({ filename: `weelink-payments-${isoDay(Date.now())}.csv`, csv, rows: rows.length });
+      }
+      if (kind === 'subscribers') {
+        const [users, subSnap] = await Promise.all([listAllUsers(auth), db.collection('platform_subscribers').select('status', 'subscription', 'tokens').get()]);
+        const subs = new Map(subSnap.docs.map((d) => [d.id, d.data() as Record<string, any>]));
+        const rows = users.map((u) => {
+          const s = subs.get(u.uid);
+          const seen = Math.max(Date.parse(u.metadata.lastRefreshTime || '') || 0, Date.parse(u.metadata.lastSignInTime || '') || 0);
+          return [u.uid, u.displayName || '', u.email || '', u.phoneNumber || '', u.emailVerified ? 'نعم' : 'لا', isoDay(createdOf(u)), isoDay(seen), s?.status || 'active', s?.subscription?.planName || '', isoDay(Number(s?.subscription?.endsAt) || 0), isoDay(Number(s?.subscription?.freezeAt) || 0), s?.tokens?.balance ?? '', s?.tokens?.used ?? ''];
+        });
+        const csv = toCsv(['المعرّف', 'الاسم', 'الإيميل', 'الهاتف', 'إيميل مؤكَّد', 'تاريخ الاشتراك', 'آخر نشاط', 'الحالة', 'الباقة', 'ينتهي', 'التجميد التلقائي', 'رصيد التوكنز', 'المستهلك'], rows);
+        await audit(session.u, 'export:subscribers');
+        return json({ filename: `weelink-subscribers-${isoDay(Date.now())}.csv`, csv, rows: rows.length });
+      }
+      return json({ error: 'bad-request' }, 400);
+    }
+
+    // ----- phase 6: the full backup (owner only): one JSON file of the platform's own records; no passwords or admin accounts -----
+    if (action === 'backup') {
+      const dump = async (name: string) => (await db.collection(name).limit(10000).get()).docs.map((d) => ({ id: d.id, ...d.data() }));
+      const [subscribers, payments, tasks, coupons, announcements, company, prices, counter] = await Promise.all([
+        dump('platform_subscribers'), dump('platform_payments'), dump('platform_tasks'), dump('platform_coupons'), dump('platform_announcements'),
+        db.collection('platform_settings').doc('company').get(), db.collection('platform_settings').doc('ai_prices').get(), db.collection('platform_counters').doc('invoice').get(),
+      ]);
+      const file = { exportedAt: new Date().toISOString(), by: session.u, subscribers, payments, tasks, coupons, announcements, settings: { company: company.data() || null, aiPrices: prices.data() || null, invoiceCounter: counter.data() || null } };
+      await audit(session.u, 'backup');
+      return json({ filename: `weelink-backup-${isoDay(Date.now())}.json`, json: JSON.stringify(file), counts: { subscribers: subscribers.length, payments: payments.length, tasks: tasks.length, coupons: coupons.length } });
+    }
+
+    // ----- phase 6: rating reports (the content reviewer, and the owner) -----
+    if (action === 'reports') {
+      const snap = await db.collection('ratingReports').limit(200).get();
+      const rows = snap.docs.map((d) => {
+        const x = d.data() as Record<string, any>;
+        return { id: d.id, owner: String(x.owner || ''), project: String(x.project || ''), stars: Number(x.stars) || 0, text: String(x.text || ''), rater: String(x.name || ''), reason: String(x.reason || ''), by: String(x.by || ''), at: String(x.at || '') };
+      }).sort((a, b) => b.at.localeCompare(a.at));
+      const ids = [...new Set(rows.map((r) => r.by).filter(Boolean))].slice(0, 100);
+      const found = ids.length ? await auth.getUsers(ids.map((u) => ({ uid: u }))).catch(() => null) : null;
+      const names = new Map((found?.users || []).map((u) => [u.uid, u.displayName || u.email || u.uid]));
+      return json({ rows: rows.map((r) => ({ ...r, reporter: names.get(r.by) || '' })) });
+    }
+
+    if (action === 'report-decide') {
+      const id = String(body.id || '').slice(0, 300);
+      const decision = String(body.decision || '');
+      const note = String(body.note || '').trim().slice(0, 300);
+      if (!['keep', 'remove'].includes(decision)) return json({ error: 'bad-request' }, 400);
+      const reportRef = db.collection('ratingReports').doc(id);
+      const rep = (await reportRef.get()).data() as { owner?: string; id?: string; project?: string; name?: string } | undefined;
+      if (!rep?.owner || !rep.id) return json({ error: 'not-found' }, 404);
+      const itemRef = db.collection('ratings').doc(rep.owner).collection('items').doc(rep.id);
+      if (decision === 'keep') {
+        await itemRef.set({ reported: false }, { merge: true }).catch(() => undefined);
+      } else {
+        // Removing a rating also takes it out of the stars under the page's name.
+        const summaryRef = db.collection('ratingSummary').doc(`${rep.owner}_${rep.project}`);
+        await db.runTransaction(async (t) => {
+          const item = (await t.get(itemRef)).data() as { stars?: number } | undefined;
+          if (!item) return;
+          const stars = Number(item.stars) || 0;
+          t.delete(itemRef);
+          t.set(summaryRef, { count: FieldValue.increment(-1), sum: FieldValue.increment(-stars), [`s${stars}`]: FieldValue.increment(-1) }, { merge: true });
+        });
+        await db.collection('ratingPrivate').doc(`${rep.owner}_${rep.id}`).delete().catch(() => undefined);
+        if (await userOrNull(rep.owner)) await db.collection('platform_subscribers').doc(rep.owner).collection('events').add({ at: Date.now(), admin: session.u, type: 'note', text: `حُذف تقييم من «${rep.name || ''}» بعد بلاغ${note ? ` · ${note}` : ''}` });
+      }
+      await reportRef.delete();
+      await audit(session.u, `report-decide:${decision}:${id}`);
+      return json({ ok: true });
+    }
+
+    // ----- phase 6: system health (owner only; only yes/no and counts, never a setting's value) -----
+    if (action === 'health') {
+      const now = Date.now();
+      const [callsSnap, cronSnap, failSnap] = await Promise.all([
+        db.collection('platform_ai_calls').where('at', '>=', now - DAY).limit(5000).get(),
+        db.collection('platform_audit').where('ip', '==', 'cron').limit(60).get(),
+        db.collection('platform_audit').where('ok', '==', false).limit(200).get(),
+      ]);
+      const calls = callsSnap.docs.map((d) => callFromDoc(d.data()));
+      const reasons: Record<string, number> = {};
+      calls.filter((c) => !c.ok).forEach((c) => { reasons[c.reason || 'failed'] = (reasons[c.reason || 'failed'] || 0) + 1; });
+      const daily = cronSnap.docs.map((d) => {
+        const x = d.data() as { at?: unknown; action?: string };
+        let out: Record<string, number> = {};
+        try { out = JSON.parse(String(x.action || '').replace(/^daily:/, '')); } catch { /* an old or odd row */ }
+        return { at: tsOf(x.at), checked: out.checked || 0, frozen: out.frozen || 0, reminded: out.reminded || 0, skipped: out.skipped || 0, failed: out.failed || 0 };
+      }).sort((a, b) => b.at - a.at).slice(0, 7);
+      const fails = failSnap.docs.map((d) => d.data() as { at?: unknown; admin?: string; action?: string }).map((x) => ({ at: tsOf(x.at), admin: String(x.admin || ''), action: String(x.action || '') }));
+      const loginFails = fails.filter((f) => f.action === 'login' && f.at >= now - DAY).length;
+      const mailFails = fails.filter((f) => /^(invoice-send|announce)/.test(f.action)).sort((a, b) => b.at - a.at).slice(0, 10);
+      return json({
+        config: { serviceAccount: !!serviceAccount(), resend: !!process.env.RESEND_API_KEY, emailFrom: !!process.env.EMAIL_FROM, cron: !!process.env.CRON_SECRET, gemini: !!process.env.GEMINI_API_KEY },
+        ai: { calls: calls.length, failed: calls.filter((c) => !c.ok).length, reasons, quotaHit: Object.keys(reasons).some((r) => r.includes('429')), lastFailures: calls.filter((c) => !c.ok).sort((a, b) => b.at - a.at).slice(0, 10).map((c) => ({ at: c.at, kind: KIND_NAMES[c.kind] || c.kind, reason: c.reason })) },
+        daily, mailFails, loginFails,
+      });
+    }
+
+    // ----- phase 6: coupons -----
+    if (action === 'coupons') {
+      const snap = await db.collection('platform_coupons').limit(300).get();
+      return json({ rows: snap.docs.map((d) => couponFromDoc(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt), kinds: COUPON_KINDS });
+    }
+
+    if (action === 'coupon-save') {
+      const code = cleanCode(body.code);
+      const kind = String(body.kind || '');
+      const value = Math.trunc(Number(body.value));
+      const maxUses = Math.max(0, Math.trunc(Number(body.maxUses) || 0));
+      const plan = String(body.plan || 'page-pro');
+      if (code.length < 3) return json({ error: 'bad-code' }, 400);
+      if (!COUPON_KINDS[kind]) return json({ error: 'bad-kind' }, 400);
+      if (!(value >= 1) || (kind === 'discount' && value > 100) || (kind === 'trial' && value > 365) || value > 100_000_000) return json({ error: 'bad-value' }, 400);
+      if (!/^(page|restaurant|shop|cars)-(pro|30|60)$/.test(plan)) return json({ error: 'bad-plan' }, 400);
+      let expiresAt = 0;
+      if (body.expires) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.expires))) return json({ error: 'bad-date' }, 400);
+        expiresAt = Date.parse(`${body.expires}T23:59:59+03:00`);
+      }
+      const ref = db.collection('platform_coupons').doc(code);
+      const old = (await ref.get()).data();
+      await ref.set({ kind, value, plan, planName: String(body.planName || '').trim().slice(0, 60) || 'تجربة مجانية', maxUses, expiresAt, note: String(body.note || '').trim().slice(0, 200), active: old ? old.active !== false : true, used: Number(old?.used) || 0, createdAt: Number(old?.createdAt) || Date.now(), by: String(old?.by || session.u) });
+      await audit(session.u, `coupon-save:${code}`);
+      return json({ code });
+    }
+
+    if (action === 'coupon-toggle') {
+      const code = cleanCode(body.code);
+      const ref = db.collection('platform_coupons').doc(code || 'x');
+      if (!(await ref.get()).exists) return json({ error: 'not-found' }, 404);
+      await ref.set({ active: body.active !== false }, { merge: true });
+      await audit(session.u, `coupon-toggle:${code}`);
+      return json({ ok: true });
+    }
+
+    if (action === 'coupon-apply') {
+      const code = cleanCode(body.code);
+      const user = uid ? await userOrNull(uid) : null;
+      if (!user) return json({ error: 'not-found' }, 404);
+      const peek = (await db.collection('platform_coupons').doc(code || 'x').get()).data();
+      if (!peek) return json({ error: 'coupon-not-found' }, 404);
+      if (peek.kind === 'discount') return json({ error: 'coupon-discount' }, 400);
+      const r = await redeemCoupon(db, code, uid);
+      if ('error' in r) return json({ error: `coupon-${r.error}` }, 400);
+      const c = r.coupon;
+      const subRef = db.collection('platform_subscribers').doc(uid);
+      const now = Date.now();
+      let text = '';
+      if (c.kind === 'tokens') {
+        const balance = await db.runTransaction(async (t) => {
+          const cur = (await t.get(subRef)).data() as { tokens?: { balance?: number } } | undefined;
+          const next = (typeof cur?.tokens?.balance === 'number' ? cur.tokens.balance : FREE_TOKENS) + c.value;
+          t.set(subRef, { tokens: { balance: next } }, { merge: true });
+          return next;
+        });
+        text = `كوبون ${code}: +${c.value.toLocaleString('en')} توكن · الرصيد ${balance.toLocaleString('en')}`;
+      } else {
+        // A trial runs from today, or after a subscription that is still running (which keeps its own plan).
+        const cur = (await subRef.get()).data() as { status?: string; autoFrozen?: boolean; subscription?: { endsAt?: number } } | undefined;
+        const running = !!cur?.subscription?.endsAt && cur.subscription.endsAt > now;
+        const endsAt = (running ? cur!.subscription!.endsAt! : now) + c.value * DAY;
+        const granted = Math.round((PAID_TOKENS * c.value) / 30);
+        await subRef.set({
+          subscription: running ? { endsAt, freezeAt: endsAt, notified: FieldValue.delete() } : { plan: c.plan, planName: c.planName, period: 'monthly', endsAt, freezeAt: endsAt, notified: FieldValue.delete(), trial: true },
+          tokens: { balance: FieldValue.increment(granted) },
+        }, { merge: true });
+        if (cur?.status === 'frozen' && cur.autoFrozen) await applyStatus(fb, uid, 'active', `كوبون ${code}`, session.u, false);
+        text = `كوبون ${code}: تجربة ${c.value} يوم · حتى ${fmtDate(endsAt)} · +${granted.toLocaleString('en')} توكن`;
+      }
+      await subRef.collection('events').add({ at: now, admin: session.u, type: 'note', text });
+      await audit(session.u, `coupon-apply:${code}:${uid}`);
+      return json({ ok: true, text });
+    }
+
+    // ----- phase 6: announcement emails to the subscribers (owner only) -----
+    const audienceOf = async (audience: string) => {
+      const [users, subSnap] = await Promise.all([listAllUsers(auth), db.collection('platform_subscribers').select('status', 'subscription').get()]);
+      const subs = new Map(subSnap.docs.map((d) => [d.id, d.data() as { status?: string; subscription?: { endsAt?: number; freezeAt?: number } }]));
+      const now = Date.now();
+      return users.filter((u) => {
+        if (!u.email || u.disabled || !u.emailVerified) return false;
+        const s = subs.get(u.uid);
+        if ((s?.status || 'active') !== 'active') return false;
+        const until = Number(s?.subscription?.freezeAt || s?.subscription?.endsAt) || 0;
+        const running = until > now;
+        return audience === 'paid' ? running : audience === 'free' ? !running : audience === 'expiring' ? running && until - now <= 14 * DAY : true;
+      }).map((u) => u.email as string);
+    };
+
+    if (action === 'announce-preview') {
+      const audience = AUDIENCES[String(body.audience)] ? String(body.audience) : 'all';
+      const history = (await db.collection('platform_announcements').limit(30).get()).docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, any>) })) as { id: string; at?: number; subject?: string; audience?: string; count?: number; sent?: number; failed?: number; by?: string }[];
+      return json({ count: (await audienceOf(audience)).length, audiences: AUDIENCES, max: MAX_ANNOUNCE, history: history.sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10) });
+    }
+
+    if (action === 'announce') {
+      const audience = AUDIENCES[String(body.audience)] ? String(body.audience) : 'all';
+      const subject = String(body.subject || '').trim().slice(0, 120);
+      const text = String(body.text || '').trim().slice(0, 4000);
+      const testTo = String(body.testTo || '').trim().slice(0, 200);
+      if (subject.length < 3 || text.length < 10) return json({ error: 'short' }, 400);
+      if (!process.env.EMAIL_FROM || !process.env.RESEND_API_KEY) return json({ error: 'email-not-configured' }, 503);
+      const html = announceHtml(subject, text);
+      if (testTo) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testTo)) return json({ error: 'bad-email' }, 400);
+        const sent = await sendMail(testTo, subject, html);
+        if (sent.result === 'failed') return json({ error: 'refused', detail: String(sent.detail || '').slice(0, 200) }, 502);
+        return json({ test: true, sent: 1 });
+      }
+      const list = await audienceOf(audience);
+      if (!list.length) return json({ error: 'nobody' }, 400);
+      if (list.length > MAX_ANNOUNCE) return json({ error: 'too-many', count: list.length, max: MAX_ANNOUNCE }, 400);
+      // The count the owner confirmed must still be right, so a list that grew meanwhile is not mailed unseen.
+      if (Number(body.confirm) !== list.length) return json({ error: 'count-changed', count: list.length }, 409);
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      let sent = 0, failed = 0;
+      for (let i = 0; i < list.length; i += 100) {
+        const chunk = list.slice(i, i + 100);
+        try {
+          const { error } = await resend.batch.send(chunk.map((to) => ({ from: process.env.EMAIL_FROM as string, to, subject, html })));
+          if (error) failed += chunk.length; else sent += chunk.length;
+        } catch {
+          failed += chunk.length;
+        }
+      }
+      await db.collection('platform_announcements').add({ at: Date.now(), by: session.u, audience, subject, count: list.length, sent, failed });
+      await audit(session.u, `announce:${audience}:${sent}/${list.length}`, failed === 0);
+      return json({ count: list.length, sent, failed });
     }
 
     if (action === 'add-note') {

@@ -3074,15 +3074,23 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     ['fade', 'slide-up', 'slide-down', 'slide-left', 'slide-right', 'scale-up', 'scale-down'].includes(anim) ? 1.2 :
                     ['pulse', 'brightness', 'shake', 'bounce', 'flash', 'float', 'heartbeat', 'rubberband', 'swing', 'jello'].includes(anim) ? 2 : 1.5
                   );
-                  const isAnimLoop = animTrigger === 'loop';
+                  const isMarquee = anim === 'marquee-rtl' || anim === 'marquee-ltr';
+                  // A ticker never stops after one pass: it runs round and round (unless it waits for the mouse).
+                  const isAnimLoop = animTrigger === 'loop' || (isMarquee && animTrigger !== 'hover');
                   const isAnimHover = animTrigger === 'hover';
+                  // The ticker crosses the whole page: from past the right edge to past the left one.
+                  const marqueeVars = isMarquee
+                    ? { '--marquee-from': `${pageWidth - elem.x + bleed}px`, '--marquee-to': `${-(elem.x + elem.width) - bleed}px` }
+                    : {};
                   
                   const animationStyle = anim && anim !== 'none' ? (
                     isAnimHover ? {
+                      ...marqueeVars,
                       '--anim-name': anim,
                       '--anim-duration': `${animDuration}s`,
                       '--anim-timing': ['marquee-rtl', 'marquee-ltr'].includes(anim) ? 'linear' : 'ease-out',
                     } : {
+                      ...marqueeVars,
                       animationName: anim,
                       animationDuration: `${animDuration}s`,
                       animationIterationCount: isAnimLoop ? 'infinite' : '1',

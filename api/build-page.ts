@@ -89,9 +89,19 @@ export interface PlannedSection {
   entrance: string; // an editor animation, or 'none'
 }
 
+export const NAV_LAYOUTS = ['horizontal', 'hamburger', 'vertical'] as const;
+export const NAV_TONES = ['light', 'tint', 'accent', 'dark'] as const;
+// The navbar the AI chose for this page: its shape, whether it stays on the screen, and its colour.
+export interface NavbarPlan {
+  layout: (typeof NAV_LAYOUTS)[number];
+  sticky: boolean;
+  tone: (typeof NAV_TONES)[number];
+}
+
 export interface Plan {
   look: string; // one of the 12 page looks (id): its colours and its two fonts
   accentColor?: string; // only the owner's own colour, never the AI's
+  navbar: NavbarPlan;
   motion: boolean; // «تأثيرات حركية وبصرية»
   sections: PlannedSection[];
 }
@@ -188,6 +198,7 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
     .filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true))
     .map((s) => (s.id === 'about' && description ? { ...s, required: true } : s));
   const answered: any[] = Array.isArray(raw?.sections) ? raw.sections : [];
+  const imageTemplate = (s: Section) => s.templates.find((t) => Object.values(TEMPLATES[t].slots).some((v) => v.kind === 'image'));
 
   // The AI's order, each section once; then any required one it left out.
   const chosen: { section: Section; given: any }[] = [];
@@ -196,11 +207,29 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
     if (section && !chosen.some((c) => c.section === section)) chosen.push({ section, given });
   }
   for (const section of pool) if (section.required && !chosen.some((c) => c.section === section)) chosen.push({ section, given: null });
+  // At least two sections carry a photo, not the entrance alone (Eyad, 14 Oct): «من نحن» takes the
+  // design with a photo, and is added when the owner wrote a description and the AI left it out.
+  const withPhoto = (c: { section: Section; given: any }) => {
+    const t = c.section.templates.includes(c.given?.template) ? c.given.template : c.section.templates[0];
+    return Object.values(TEMPLATES[t].slots).some((v) => v.kind === 'image');
+  };
+  const forcePhoto = new Set<Section>();
+  // (Only when the AI gave some photo search to take the second photo from: Weelink never shows
+  // the example's own photo for another business.)
+  const hasQuery = answered.some((s) => pairs(s?.images, 'ref').some(([, ref]) => IMAGE_QUERY.test(ref.trim())));
+  if (hasQuery && chosen.filter(withPhoto).length < 2) {
+    const about = pool.find((s) => s.id === 'about' && imageTemplate(s));
+    if (about && chosen.some((c) => c.section === about)) forcePhoto.add(about);
+    else if (about && description) {
+      chosen.push({ section: about, given: null });
+      forcePhoto.add(about);
+    }
+  }
   const rank = (s: Section) => (s.place === 'first' ? 0 : s.place === 'last' ? 2 + pool.indexOf(s) / 100 : 1);
   chosen.sort((a, b) => rank(a.section) - rank(b.section));
 
-  const sections: PlannedSection[] = chosen.map(({ section, given }) => {
-    const template = section.templates.includes(given?.template) ? given.template : section.templates[0];
+  const sections: PlannedSection[] = chosen.map(({ section, given }): PlannedSection | null => {
+    const template = forcePhoto.has(section) ? imageTemplate(section)! : section.templates.includes(given?.template) ? given.template : section.templates[0];
     const spec = TEMPLATES[template];
     const slots: Record<string, string> = {};
     for (const [key, value] of pairs(given?.slots, 'value')) {
@@ -236,10 +265,22 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
         images[key] = ref.trim();
       }
     }
+    // The gallery shows only the owner's own photos, one in each frame, in order; frames beyond
+    // the photos they gave stay empty and go.
+    if (section.id === 'gallery') {
+      for (const [key, v] of Object.entries(spec.slots)) {
+        const n = /^photos\.(\d+)$/.exec(key);
+        if (!n || v.kind !== 'image') continue;
+        if (+n[1] < assets.gallery) images[key] = `user:gallery:${+n[1] + 1}`;
+        else delete images[key];
+      }
+    }
+    // A section with no text and no photo is an empty slide: it never goes into the page.
+    if (!section.required && section.id !== 'intro' && section.id !== 'contact' && !Object.values(slots).some(Boolean) && !Object.keys(images).length) return null;
     const tone = TONES.includes(given?.tone) ? given.tone : 'light';
     const entrance = motion && ENTRANCES.includes(given?.entrance) ? given.entrance : motion ? 'fade' : 'none';
     return { section: section.id, template, tone, slots, icons, links, images, entrance };
-  });
+  }).filter((s): s is PlannedSection => !!s);
 
   // Buttons may lead only to sections that are on the page.
   for (const s of sections) {
@@ -256,6 +297,11 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
   const accent = /^#[0-9a-f]{6}$/i.test(profile['اللون_المفضل_رمز'] || '') ? profile['اللون_المفضل_رمز'] : undefined;
   return {
     look: typeof raw?.look === 'string' && LOOKS[raw.look] ? raw.look : DEFAULT_LOOKS[kind],
+    navbar: {
+      layout: NAV_LAYOUTS.find((l) => l === raw?.navbar?.layout) || 'horizontal',
+      sticky: typeof raw?.navbar?.sticky === 'boolean' ? raw.navbar.sticky : true,
+      tone: NAV_TONES.find((t) => t === raw?.navbar?.tone) || 'light',
+    },
     ...(accent ? { accentColor: accent } : {}),
     motion,
     sections,
@@ -287,6 +333,7 @@ const catalogFor = (kind: Kind, hasServices: boolean, assets: Assets) =>
 // One worked example of the answer's shape and quality (a dentist), to learn from, not to copy.
 const EXAMPLE = {
   look: 'medical',
+  navbar: { layout: 'horizontal', sticky: true, tone: 'tint' },
   sections: [
     {
       section: 'intro', template: 'hero.split', tone: 'light', entrance: 'fade',
@@ -312,6 +359,15 @@ const EXAMPLE = {
       icons: [{ key: 'points.0.icon', value: 'mdi:tooth-outline' }, { key: 'points.1.icon', value: 'mdi:star-outline' }, { key: 'points.2.icon', value: 'mdi:shield-check-outline' }, { key: 'points.3.icon', value: 'mdi:baby-face-outline' }],
       hide: ['eyebrow', 'text'],
     },
+    {
+      section: 'about', template: 'about.story', tone: 'light', entrance: 'fade',
+      slots: [
+        { key: 'eyebrow', value: 'من نحن' },
+        { key: 'title', value: 'عيادة صغيرة بمعايير كبيرة' },
+        { key: 'text', value: 'من ثماني سنوات في حمص، منعالج الأسنان بخطة واضحة وأجهزة معقمة وموعد ما بيتأخر.' },
+      ],
+      images: [{ key: 'image', ref: 'dentist explaining treatment plan to patient dental office' }],
+    },
     { section: 'contact', template: 'contact.card', tone: 'light', entrance: 'fade', slots: [{ key: 'title', value: 'احجز موعدك' }, { key: 'sub', value: 'اكتبلنا عالواتساب ومنرد بنفس اليوم.' }] },
   ],
 };
@@ -323,6 +379,15 @@ const RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
     look: { type: 'string', enum: Object.keys(LOOKS) },
+    navbar: {
+      type: 'object',
+      properties: {
+        layout: { type: 'string', enum: [...NAV_LAYOUTS] },
+        sticky: { type: 'boolean' },
+        tone: { type: 'string', enum: [...NAV_TONES] },
+      },
+      required: ['layout', 'sticky', 'tone'],
+    },
     sections: {
       type: 'array',
       items: {
@@ -342,7 +407,7 @@ const RESPONSE_SCHEMA = {
       },
     },
   },
-  required: ['look', 'sections'],
+  required: ['look', 'navbar', 'sections'],
 };
 
 // The function's time on Vercel (vercel.json maxDuration 60s): Gemini gets most of it, and a second

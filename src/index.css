@@ -108,14 +108,17 @@
   to { transform: translateX(0); opacity: 1; }
 }
 
+/* The ticker crosses the whole slide: the canvas gives each element its own start and end
+   (--marquee-from / --marquee-to, in px from where it sits), so it enters at one edge and leaves
+   at the other whatever its width and place. */
 @keyframes marquee-rtl {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
+  0% { transform: translateX(var(--marquee-from, 100%)); }
+  100% { transform: translateX(var(--marquee-to, -100%)); }
 }
 
 @keyframes marquee-ltr {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% { transform: translateX(var(--marquee-to, -100%)); }
+  100% { transform: translateX(var(--marquee-from, 100%)); }
 }
 
 @keyframes pulse {

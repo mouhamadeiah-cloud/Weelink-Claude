@@ -37,6 +37,7 @@ export interface PlannedSection {
 }
 export interface Plan {
   look: string; // the page look Wee AI chose (its colours and two fonts)
+  navbar: { layout: 'horizontal' | 'hamburger' | 'vertical'; sticky: boolean; tone: 'light' | 'tint' | 'accent' | 'dark' };
   accentColor?: string; // the owner's own colour only
   motion: boolean;
   sections: PlannedSection[];
@@ -404,6 +405,8 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
 
   // Texts at their own length: a box grows to fit and pushes down what is under it.
   const kept = els.filter((_, i) => !removed.has(i));
+  // Nothing left but a title and decoration (its photos or texts all went): an empty slide, not built.
+  if (kept.every((e) => e.type === 'heading' || e.type === 'shape' || e.type === 'icon')) return null;
   const grew = new Set(kept.filter((el) => filled.has(els.indexOf(el))));
   const fitted = fitTexts(kept, height, grew);
   height = fitted.height;
@@ -548,6 +551,18 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
   const colors: [string, string, string, string, string] = ownColours || [look.bg, look.card, look.line, look.ink, look.accent];
   const to = choice ? targetColours(colors, choice.accent) : lookColours(look);
   const fonts = { head: look.head, body: look.body };
+  // The navbar the AI chose: its colours from the page's, its shape, pinned or moving with the page.
+  const navTone = plan.navbar?.tone || 'light';
+  const navColours =
+    navTone === 'accent' ? { bg: to.accent, text: textOn(to.accent), accent: textOn(to.accent), accentText: to.accent }
+    : navTone === 'dark' ? { bg: to.deep, text: textOn(to.deep), accent: to.accent, accentText: textOn(to.accent) }
+    : navTone === 'tint' ? { bg: to.soft, text: to.ink, accent: to.accent, accentText: textOn(to.accent) }
+    : { bg: to.card, text: to.ink, accent: to.accent, accentText: textOn(to.accent) };
+  const navShape = {
+    layout: plan.navbar?.layout || 'horizontal',
+    isSticky: plan.navbar?.sticky ?? true,
+    ...(plan.navbar?.layout === 'vertical' ? { sideWidth: 190 } : {}),
+  };
   const stamp = Date.now().toString(36);
   const ctx: Context = {
     kind,
@@ -586,9 +601,11 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
     // The navbar in the page's own card and text colours, on every page so they match.
     const navbar = {
       ...(restyle ? recolourDeep(p.navbar, sceneFor(undefined, [], false, undefined, p)) : p.navbar),
-      bgColor: to.card,
-      textColor: to.ink,
-      ...(p.navbar.accentColor ? { accentColor: to.accent, accentTextColor: textOn(to.accent) } : {}),
+      ...navShape,
+      bgColor: navColours.bg,
+      textColor: navColours.text,
+      accentColor: navColours.accent,
+      accentTextColor: navColours.accentText,
       ...(logo ? { logoUrl: logo } : {}),
       ...(ctx.title ? { brandName: ctx.title } : {}),
     };
@@ -621,7 +638,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
 
   const allElements = [...restyled, ...built.flatMap((b) => b.elements)];
   // No colour of the owner's: the whole site in the chosen look, its buttons and cards too.
-  const site = choice ? { pages: nextPages, elements: allElements } : applyPageLook(nextPages.map((p) => ({ ...p, styleLook: look.id })), allElements, look, kind, true);
+  const site = choice ? { pages: nextPages, elements: allElements } : applyPageLook(nextPages.map((p) => ({ ...p, styleLook: look.id })), allElements, look, kind, { corners: true, keepNavbar: true });
   return {
     ok: true,
     pages: site.pages,

@@ -4,7 +4,10 @@ export interface AdminInfo {
   username: string;
   name: string;
   role: string;
+  specialty: string;
   mustChange: boolean;
+  /** The actions this admin may call (the server checks again). */
+  can: string[];
 }
 
 export type SubscriberStatus = 'active' | 'frozen' | 'cancelled';
@@ -133,3 +136,9 @@ export const invoiceUrl = (p: Payment) => `/api/admin?invoice=${encodeURICompone
 export const adminTokensOverview = (month: string) => call<TokensOverview>({ action: 'tokens-overview', month });
 export const adminTokensAdjust = (uid: string, delta: number, reason: string) => call<{ balance: number }>({ action: 'tokens-adjust', uid, delta, reason });
 export const adminSetPrices = (price: { in: number; out: number }) => call<{ prices: { in: number; out: number } }>({ action: 'set-prices', ...price });
+
+export interface TeamAdmin { username: string; name: string; role: string; specialty: string; status: 'active' | 'frozen'; mustChange: boolean }
+export const adminTeam = () => call<{ rows: TeamAdmin[]; specialties: Record<string, string> }>({ action: 'admins-list' });
+export const adminAddAdmin = (b: { username: string; name: string; specialty: string }) => call<{ username: string; tempPassword: string }>({ action: 'admin-add', ...b });
+export const adminUpdateAdmin = (username: string, patch: { name?: string; specialty?: string; status?: 'active' | 'frozen' }) => call<{ ok: true }>({ action: 'admin-update', username, ...patch });
+export const adminResetPassword = (username: string) => call<{ username: string; tempPassword: string }>({ action: 'admin-reset-password', username });

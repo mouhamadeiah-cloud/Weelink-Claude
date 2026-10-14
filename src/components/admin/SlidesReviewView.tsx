@@ -1,11 +1,12 @@
 // «مراجعة الشرائح»: the slides designers exported to the gallery wait here as «بانتظار المراجعة»
-// until the platform approves or rejects them. A rejection needs a reason. The preview is the real
-// slide, drawn the way the gallery will draw it. Only an approved slide ever appears in the gallery.
-import React, { useCallback, useEffect, useState } from 'react';
+// until the platform approves or rejects them. A rejection needs a reason. The preview is the live
+// slide, drawn the way the gallery will draw it (videos and motion play). Only an approved slide ever appears in the gallery.
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Loader2, ShieldCheck, X } from 'lucide-react';
 import { AdminError, GallerySlideRow, SlideStatus, adminSlideReview, adminSlides } from '../../services/adminApi';
 import { categoryLabel } from '../../data/slideCategories';
-import { SlideTemplatePreview } from '../rightDrawer/SlideTemplatePreview';
+import { LiveSlide } from '../gallery/LiveSlide';
+import { deserializeElements } from '../../utils/elementStorage';
 import { findContactInfo, CONTACT_KIND_LABEL } from '../../utils/contactCheck';
 
 const TABS: [SlideStatus, string][] = [['pending', 'بانتظار المراجعة'], ['approved', 'مقبولة'], ['rejected', 'مرفوضة']];
@@ -17,7 +18,8 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   // A second look at the texts, the same check the designer's export runs.
-  const contact = findContactInfo(row.elements);
+  const elements = useMemo(() => deserializeElements(row.elements), [row.elements]);
+  const contact = findContactInfo(elements);
 
   const review = async (decision: 'approve' | 'reject') => {
     setBusy(true);
@@ -35,13 +37,7 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
 
   return (
     <article className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
-      <SlideTemplatePreview
-        readOnly
-        categoryId={row.category}
-        index={0}
-        onAdd={() => undefined}
-        payload={{ name: row.name, height: Number(row.slide?.height) || 560, backgroundColor: row.slide?.backgroundColor, backgroundImage: row.slide?.backgroundImage, backgroundOpacity: row.slide?.backgroundOpacity, elements: row.elements }}
-      />
+      <div className="overflow-hidden rounded-ctl border border-line"><LiveSlide slide={row.slide} elements={elements} /></div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-small">
         <dt className="text-muted">المصمم</dt><dd>{row.designerName || '—'} <span className="text-tiny text-faint" dir="ltr">{row.designerUid.slice(0, 8)}</span></dd>
         <dt className="text-muted">التصنيف</dt><dd>{categoryLabel(row.category)}</dd>

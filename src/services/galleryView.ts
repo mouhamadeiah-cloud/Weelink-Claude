@@ -3,6 +3,7 @@
 import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from './firebase';
+import { readDesignerStats, type DesignerPublic } from './designers';
 import { deserializeElements } from '../utils/elementStorage';
 import type { CanvasElement, NavbarConfig, Slide } from '../types';
 import type { DesignKind } from '../data/slideCategories';
@@ -16,6 +17,8 @@ export interface GallerySlide {
   category: string;
   designerUid: string;
   designerName: string;
+  // The designer's ratings and badge; empty until the designer has finished orders.
+  designer: DesignerPublic;
   likes: number;
   dislikes: number;
   // How many accounts added it to their page.
@@ -33,11 +36,16 @@ export const isNewSlide = (s: GallerySlide) => Date.now() - s.at < NEW_FOR_MS;
 // The first approved slides. A page of the gallery for now: more come with paging.
 const GALLERY_LIMIT = 60;
 
+const toEmpty = (): DesignerPublic => ({ completed: 0, ratingCount: 0, ratingSum: 0, verified: false, average: 0 });
+
 export const listApprovedSlides = async (): Promise<GallerySlide[]> => {
   const snap = await getDocs(query(collection(db, 'gallerySlides'), where('status', '==', 'approved'), limit(GALLERY_LIMIT)));
+  const uids = [...new Set(snap.docs.map((d) => String(d.data().designerUid || '')).filter(Boolean))];
+  const stats = new Map(await Promise.all(uids.map(async (u) => [u, await readDesignerStats(u)] as const)));
   return snap.docs.map((d) => {
     const x: any = d.data();
     return {
+      designer: stats.get(String(x.designerUid || '')) || toEmpty(),
       id: d.id,
       kind: x.kind === 'page' ? 'page' : 'slide',
       page: x.kind === 'page' && x.page ? x.page : null,

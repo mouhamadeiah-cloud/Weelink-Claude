@@ -185,6 +185,7 @@ export interface AdminDesignOrder {
   payout: { at: number; by: string; amount: number; note: string } | null;
   refund: { at: number; by: string; amount: number; reason: string } | null;
   history?: { at: number; status: string; by: string }[];
+  rating?: { stars: number; text: string } | null;
 }
 export interface AdminOrderMessage { id: string; role: string; text: string; at: number }
 export const adminDesignOrders = (status: string) => call<{ rows: AdminDesignOrder[]; counts: Record<string, number> }>({ action: 'design-orders', status });

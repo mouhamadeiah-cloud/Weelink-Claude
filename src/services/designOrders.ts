@@ -22,6 +22,8 @@ export interface DesignOrder {
   status: OrderStatus;
   brief: string;
   disputeReason: string;
+  // The customer's rating of the finished work, once given.
+  rating: { stars: number; text: string } | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -63,6 +65,7 @@ const toOrder = (id: string, d: any): DesignOrder => ({
   status: String(d.status || 'awaiting_payment') as OrderStatus,
   brief: String(d.brief || ''),
   disputeReason: String(d.disputeReason || ''),
+  rating: d.rating && Number(d.rating.stars) >= 1 ? { stars: Number(d.rating.stars), text: String(d.rating.text || '') } : null,
   createdAt: Number(d.createdAt) || 0,
   updatedAt: Number(d.updatedAt) || 0,
 });
@@ -125,6 +128,8 @@ export const deliverOrder = (user: User, id: string) => call<{ status: string }>
 export const confirmOrder = (user: User, id: string) => call<{ status: string }>(user, { action: 'confirm', id });
 export const disputeOrder = (user: User, id: string, reason: string) => call<{ status: string }>(user, { action: 'dispute', id, reason });
 
+export const rateOrder = (user: User, id: string, stars: number, text: string) => call<{ ok: true }>(user, { action: 'rate', id, stars, text });
+
 export const orderErrorText = (e: unknown) => {
   const code = e instanceof OrderError ? e.code : 'network';
   const map: Record<string, string> = {
@@ -137,6 +142,7 @@ export const orderErrorText = (e: unknown) => {
     no_slide: 'هذا التصميم لم يعد متاحاً.',
     bad_state: 'ما بيصير تعمل هالإجراء على الطلب بحالته الحالية.',
     not_paid: 'الرسائل بتفتح بعد أن يؤكّد المكتب استلام المبلغ.',
+    rated: 'قيّمت هذا الطلب من قبل.',
     too_fast: 'على مهلك، جرّب بعد لحظة.',
   };
   return map[code] || 'تعذّر تنفيذ الطلب. تأكد من اتصالك وجرّب مرة ثانية.';

@@ -4,10 +4,10 @@
 // complaint. Messages carry no phone number, email or link (the server refuses them).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { AlertCircle, CheckCircle2, Loader2, Send, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Send, Star, X } from 'lucide-react';
 import {
   CAN_TALK, DesignOrder, OrderMessage, STATUS_LABEL,
-  cancelOrder, confirmOrder, deliverOrder, disputeOrder, orderErrorText, sendOrderMessage, subscribeMessages, subscribeMyOrders,
+  cancelOrder, confirmOrder, deliverOrder, disputeOrder, orderErrorText, rateOrder, sendOrderMessage, subscribeMessages, subscribeMyOrders,
 } from '../../services/designOrders';
 import { contactKindsIn, CONTACT_KIND_LABEL } from '../../utils/contactCheck';
 import { formatPounds } from '../../data/plans';
@@ -83,6 +83,53 @@ const Thread: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'desig
   );
 };
 
+const Stars: React.FC<{ value: number; onPick?: (n: number) => void }> = ({ value, onPick }) => (
+  <span className="inline-flex gap-0.5" role={onPick ? 'radiogroup' : 'img'} aria-label={`${value} من 5`}>
+    {[1, 2, 3, 4, 5].map((n) => (
+      <button key={n} type="button" disabled={!onPick} onClick={() => onPick?.(n)} aria-label={`${n}`} className={`${onPick ? 'cursor-pointer' : 'cursor-default'} ${n <= value ? 'text-warn' : 'text-line'}`}><Star size={onPick ? 24 : 16} className={n <= value ? 'fill-current' : ''} /></button>
+    ))}
+  </span>
+);
+
+// After the customer confirmed the work: 1–5 stars and an optional line, once. Only paid orders can be rated.
+const RatingBox: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'designer' }> = ({ user, order, me }) => {
+  const [stars, setStars] = useState(0);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (order.status !== 'confirmed' && order.status !== 'paid_out') return null;
+  if (order.rating) {
+    return (
+      <div className="rounded-card border border-line bg-bg p-3 space-y-1">
+        <div className="flex items-center gap-2 text-sm font-bold">{me === 'customer' ? 'تقييمك' : 'تقييم الزبون'} <Stars value={order.rating.stars} /></div>
+        {order.rating.text && <p className="text-sm text-muted whitespace-pre-wrap">{order.rating.text}</p>}
+      </div>
+    );
+  }
+  if (me === 'designer') return <p className="text-sm text-muted">لم يقيّم الزبون هذا الطلب بعد.</p>;
+  const contact = contactKindsIn(note);
+  const submit = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await rateOrder(user, order.id, stars, note.trim());
+    } catch (err) {
+      setError(orderErrorText(err));
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="rounded-card border border-brand/30 bg-brand/5 p-3 space-y-2">
+      <p className="text-sm font-bold">كيف كان عمل {order.designerName}؟</p>
+      <Stars value={stars} onPick={setStars} />
+      <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} placeholder="تعليق اختياري" className="w-full rounded-ctl border border-line bg-surface p-3 text-sm outline-none focus:border-brand" />
+      {contact.length > 0 && <p role="alert" className="text-xs font-bold text-danger">ممنوع كتابة {contact.map((k) => CONTACT_KIND_LABEL[k]).join(' أو ')}.</p>}
+      {error && <p role="alert" className="text-xs font-bold text-danger">{error}</p>}
+      <button type="button" disabled={busy || stars < 1 || contact.length > 0} onClick={submit} className="h-10 px-4 rounded-ctl bg-brand hover:bg-brand-hover text-white text-sm font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5">{busy && <Loader2 size={14} className="animate-spin" />} أرسل التقييم</button>
+    </div>
+  );
+};
+
 const OrderDetail: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'designer' }> = ({ user, order, me }) => {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -148,6 +195,8 @@ const OrderDetail: React.FC<{ user: User; order: DesignOrder; me: 'customer' | '
       </div>
       {order.status === 'disputed' && order.disputeReason && <p className="text-sm text-danger leading-relaxed">الشكوى: {order.disputeReason}</p>}
       {error && <p role="alert" className="text-sm font-bold text-danger flex items-start gap-1.5"><AlertCircle size={15} className="shrink-0 mt-0.5" /> {error}</p>}
+
+      <RatingBox user={user} order={order} me={me} />
 
       <Thread user={user} order={order} me={me} />
     </div>

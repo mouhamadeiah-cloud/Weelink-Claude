@@ -74,6 +74,7 @@ const Detail: React.FC<{ id: string; onClose: () => void; onChanged: () => void;
               <dt className="text-muted">أُنشئ</dt><dd>{when(o.createdAt)}</dd>
               <dt className="text-muted">الطلب</dt><dd className="whitespace-pre-wrap">{o.brief}</dd>
               {o.disputeReason && <><dt className="text-muted">الشكوى</dt><dd className="text-danger">{o.disputeReason}</dd></>}
+              {o.rating && <><dt className="text-muted">تقييم الزبون</dt><dd>{'★'.repeat(o.rating.stars)}{'☆'.repeat(5 - o.rating.stars)}{o.rating.text ? ` · ${o.rating.text}` : ''}</dd></>}
               {o.payment && <><dt className="text-muted">الدفع</dt><dd>{PAY_METHODS[o.payment.method as PayMethod] || o.payment.method} · {when(o.payment.at)}{o.payment.receiptNo ? ` · إيصال ${o.payment.receiptNo}` : ''} · {o.payment.by}</dd></>}
               {o.payout && <><dt className="text-muted">صرف المصمم</dt><dd>{money(o.payout.amount)} · {when(o.payout.at)} · {o.payout.by}{o.payout.note ? ` · ${o.payout.note}` : ''}</dd></>}
               {o.refund && <><dt className="text-muted">إلغاء/استرداد</dt><dd>{o.refund.reason} · {when(o.refund.at)} · {o.refund.by}</dd></>}

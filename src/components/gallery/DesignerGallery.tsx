@@ -8,13 +8,13 @@
 // the gallery has nothing yet.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { Heart, Loader2, MessageCircle, Plus, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { BadgeCheck, Heart, Loader2, MessageCircle, Plus, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { LivePage, LiveSlide } from './LiveSlide';
 import { HireDialog } from '../designOrders/HireDialog';
 import { PAGE_CATEGORIES, SLIDE_CATEGORIES, categoryLabel, slidesWord, type DesignKind } from '../../data/slideCategories';
 import { GallerySlide, isNewSlide, listApprovedSlides, readMyVotes, recordUse, voteErrorText, voteOnSlide } from '../../services/galleryView';
 
-type Sort = 'likes' | 'new';
+type Sort = 'likes' | 'new' | 'rating';
 const nf = (n: number) => n.toLocaleString('ar-SY');
 
 // A page is drawn whole with its navbar; on a card a long page is cut (the large view shows it all).
@@ -47,6 +47,8 @@ const VoteButtons: React.FC<VoteButtonsProps> = ({ slide, mine, own, onVote, lar
 const DesignerLine: React.FC<{ slide: GallerySlide; total: number }> = ({ slide, total }) => (
   <span className="inline-flex items-center gap-1.5 min-w-0 text-xs text-muted">
     <span className="font-bold text-ink truncate">{slide.designerName || 'مصمم'}</span>
+    {slide.designer.verified && <span className="inline-flex items-center gap-0.5 rounded-full bg-success/10 text-success font-bold px-1.5 py-0.5 shrink-0" title="معتمد من Weelink"><BadgeCheck size={12} /> معتمد</span>}
+    {slide.designer.ratingCount > 0 && <span className="inline-flex items-center gap-0.5 text-warn font-bold shrink-0" title={`${slide.designer.ratingCount} تقييم`}><Star size={12} className="fill-current" /> <span className="tabular-nums">{slide.designer.average.toFixed(1)}</span></span>}
     <span className="inline-flex items-center gap-0.5 text-brand font-bold shrink-0" title="مجموع إعجابات المصمم"><Heart size={12} className="fill-current" /> <span className="tabular-nums">{nf(total)}</span></span>
   </span>
 );
@@ -64,6 +66,7 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
   const [slides, setSlides] = useState<GallerySlide[] | null>(null);
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [sort, setSort] = useState<Sort>('likes');
+  const [approvedOnly, setApprovedOnly] = useState(false);
   const [kind, setKind] = useState<'all' | DesignKind>('all');
   const [category, setCategory] = useState('all');
   const [designer, setDesigner] = useState<{ uid: string; name: string } | null>(null);
@@ -111,9 +114,10 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
 
   const present = useMemo(() => new Set((slides || []).map((s) => s.category)), [slides]);
   const shown = useMemo(() => {
-    const rows = (slides || []).filter((s) => (kind === 'all' || s.kind === kind) && (category === 'all' || s.category === category) && (!designer || s.designerUid === designer.uid));
+    const rows = (slides || []).filter((s) => (!approvedOnly || s.designer.verified) && (kind === 'all' || s.kind === kind) && (category === 'all' || s.category === category) && (!designer || s.designerUid === designer.uid));
+    if (sort === 'rating') return [...rows].sort((a, b) => b.designer.average - a.designer.average || b.designer.ratingCount - a.designer.ratingCount || b.likes - a.likes);
     return [...rows].sort((a, b) => (sort === 'new' ? b.at - a.at || b.likes - a.likes : b.likes - a.likes || b.at - a.at));
-  }, [slides, kind, category, designer, sort]);
+  }, [slides, kind, category, designer, sort, approvedOnly]);
   const open = (slides || []).find((s) => s.id === openId) || null;
   useEffect(() => setAddResult(null), [openId]);
 
@@ -177,13 +181,14 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
           <p className="text-sm text-muted">شرائح وصفحات جاهزة بتصميم مصممين على Weelink. اضغط على أي تصميم لتشوفه كبيراً.</p>
         </div>
         <div className="inline-flex rounded-ctl border border-line bg-surface p-0.5" role="group" aria-label="الترتيب">
-          {([['likes', 'الأكثر إعجاباً'], ['new', 'الأحدث']] as [Sort, string][]).map(([id, label]) => (
+          {([['likes', 'الأكثر إعجاباً'], ['new', 'الأحدث'], ['rating', 'الأعلى تقييماً']] as [Sort, string][]).map(([id, label]) => (
             <button key={id} type="button" onClick={() => setSort(id)} aria-pressed={sort === id} className={`h-8 px-3 rounded-[10px] text-xs font-bold cursor-pointer transition ${sort === id ? 'bg-brand text-white' : 'text-muted hover:text-ink'}`}>{label}</button>
           ))}
         </div>
       </div>
 
       <div className="flex items-center gap-2 overflow-x-auto pb-1" role="group" aria-label="شرائح أو صفحات">
+        <button type="button" onClick={() => setApprovedOnly((v) => !v)} aria-pressed={approvedOnly} className={`shrink-0 h-9 px-3.5 rounded-full border text-xs font-bold transition cursor-pointer inline-flex items-center gap-1 ${approvedOnly ? 'bg-success text-white border-success' : 'bg-surface text-ink border-line hover:border-success/50'}`}><BadgeCheck size={13} /> معتمدون من Weelink</button>
         {([['all', 'الكل'], ['slide', 'شرائح'], ['page', 'صفحات كاملة']] as ['all' | DesignKind, string][]).map(([id, label]) => (
           <button key={id} type="button" onClick={() => { setKind(id); setCategory('all'); }} aria-pressed={kind === id} className={`shrink-0 h-9 px-3.5 rounded-full border text-xs font-bold transition cursor-pointer ${kind === id ? 'bg-brand text-white border-brand' : 'bg-surface text-ink border-line hover:border-brand/40'}`}>{label}</button>
         ))}

@@ -3,12 +3,14 @@
 // slide, sort by likes or by newest, and see more of one designer. A signed-in visitor likes or
 // dislikes a slide (once per slide, changeable); the counters come from api/gallery.ts, and the likes
 // beside a designer's name are the total over their slides. «أضف لصفحتي مجاناً» copies the design
-// into the visitor's page (fitted to its style, or as it is); contact with the designer waits for its phase. The section stays out of the way when
+// into the visitor's page (fitted to its style, or as it is); «اطلب المصمم» makes an order (HireDialog):
+// the visitor pays the office and talks to the designer in the order once it is paid. The section stays out of the way when
 // the gallery has nothing yet.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { Heart, Loader2, MessageCircle, Plus, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { LivePage, LiveSlide } from './LiveSlide';
+import { HireDialog } from '../designOrders/HireDialog';
 import { PAGE_CATEGORIES, SLIDE_CATEGORIES, categoryLabel, slidesWord, type DesignKind } from '../../data/slideCategories';
 import { GallerySlide, isNewSlide, listApprovedSlides, readMyVotes, recordUse, voteErrorText, voteOnSlide } from '../../services/galleryView';
 
@@ -51,11 +53,13 @@ const DesignerLine: React.FC<{ slide: GallerySlide; total: number }> = ({ slide,
 
 interface DesignerGalleryProps {
   user: User | null;
+  // «اطلب المصمم»: an order was made; the orders window opens on it.
+  onOpenOrders?: (orderId?: string) => void;
   // «أضف لصفحتي مجاناً»: puts the design in the visitor's own page (fitted to its style when `fit`).
   onAddToMyPage?: (slide: GallerySlide, fit: boolean) => Promise<{ ok: boolean; message: string }>;
 }
 
-export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToMyPage }) => {
+export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToMyPage, onOpenOrders }) => {
   const signedIn = !!user && !user.isAnonymous;
   const [slides, setSlides] = useState<GallerySlide[] | null>(null);
   const [votes, setVotes] = useState<Record<string, number>>({});
@@ -68,6 +72,8 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
   // «أضف لصفحتي»: fitted to the page's style (on unless the visitor turns it off), and what came of it.
   const [fit, setFit] = useState(true);
   const [adding, setAdding] = useState(false);
+  // «اطلب هذا المصمم» is open for this design.
+  const [hiring, setHiring] = useState<GallerySlide | null>(null);
   const [addResult, setAddResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
@@ -222,6 +228,18 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
         </div>
       )}
 
+      {hiring && user && (
+        <HireDialog
+          user={user}
+          designerUid={hiring.designerUid}
+          designerName={hiring.designerName}
+          slideId={hiring.id}
+          slideName={hiring.name}
+          onClose={() => setHiring(null)}
+          onCreated={(id) => { setHiring(null); setOpenId(''); onOpenOrders?.(id); }}
+        />
+      )}
+
       {open && (
         <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={open.name} onClick={() => setOpenId('')}>
           <div className="w-full sm:max-w-4xl max-h-[94vh] overflow-y-auto rounded-t-card sm:rounded-card bg-surface" onClick={(e) => e.stopPropagation()}>
@@ -237,7 +255,13 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
             <div className="sticky bottom-0 bg-surface border-t border-line px-5 pt-3 pb-4 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <VoteButtons slide={open} mine={votes[open.id] || 0} own={!!user && user.uid === open.designerUid} onVote={vote} large />
-              <button type="button" disabled title="يفتح الاتصال بالمصمم بعد الدفع: قريباً" className="h-10 px-4 rounded-ctl border border-line text-faint text-sm font-bold inline-flex items-center gap-1.5 cursor-not-allowed"><MessageCircle size={16} /> اتصل بالمصمم · قريباً</button>
+              <button
+                type="button"
+                disabled={!!user && user.uid === open.designerUid}
+                onClick={() => (signedIn ? setHiring(open) : setAddResult({ ok: false, message: 'سجّل دخولك لتطلب مصمماً.' }))}
+                title={user && user.uid === open.designerUid ? 'هذا تصميمك' : 'اطلب من هذا المصمم تصميم صفحتك: يُفتح التواصل بعد الدفع'}
+                className="h-10 px-4 rounded-ctl border border-brand text-brand text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer hover:bg-brand/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              ><MessageCircle size={16} /> اطلب {open.designerName || 'المصمم'} لصفحتي</button>
               <button type="button" disabled={adding || !onAddToMyPage} onClick={() => addToMyPage(open)} title="انسخها لصفحتك مجاناً" className="h-10 px-4 rounded-ctl bg-brand hover:bg-brand-hover text-white text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait">{adding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} أضف {open.kind === 'page' ? 'الصفحة' : 'الشريحة'} لصفحتي مجاناً</button>
               <button type="button" onClick={() => { setDesigner({ uid: open.designerUid, name: open.designerName || 'المصمم' }); setKind('all'); setCategory('all'); setOpenId(''); }} className="h-10 px-4 rounded-ctl bg-brand/10 text-brand text-sm font-bold cursor-pointer mr-auto">المزيد من {open.designerName || 'المصمم'}</button>
             </div>

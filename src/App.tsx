@@ -21,6 +21,7 @@ import { StandardAuth } from './components/StandardAuth';
 import { becomeDesigner, readDesigner } from './services/designers';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
+import { DesignOrdersPanel } from './components/designOrders/DesignOrdersPanel';
 import { insertDesign } from './services/fitDesign';
 import type { GallerySlide } from './services/galleryView';
 import { DESIGN_KIND_LABEL, PAGE_MAX_SLIDES, type DesignKind } from './data/slideCategories';
@@ -227,6 +228,7 @@ export default function App() {
   const activeSlotRef = useRef('d1');
   const [draftBusy, setDraftBusy] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const prevProjectRef = useRef<ProjectType>('page');
   // A page to build as soon as its kind is open in the editor: the questions just finished.
   // The kind whose questions just finished: the editor opens on it with an empty page and Wee AI's panel.
@@ -1517,6 +1519,7 @@ export default function App() {
         setDesignerMode(false);
         setIsDesigner(false);
         setIsExportOpen(false);
+        setIsOrdersOpen(false);
         setActiveUserUid('mouhamadeiah');
         loadSeqRef.current++;
         projectReadyRef.current = false;
@@ -3910,7 +3913,7 @@ export default function App() {
           onExportSlide={() => setIsExportOpen(true)}
         />
         {designerMode && !isPreviewActive && (
-          <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} />
+          <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} onOrders={() => setIsOrdersOpen(true)} />
         )}
 
         {/* 2. Secondary Edit Bar directly beneath (narrow screens; wide ones dock it beside the panel) */}
@@ -4187,6 +4190,7 @@ export default function App() {
 
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />
+      {designerMode && isOrdersOpen && currentUser && <DesignOrdersPanel user={currentUser} onClose={() => setIsOrdersOpen(false)} />}
       {designerMode && isExportOpen && currentUser && (() => {
         // A page draft is exported whole (its navbar and its slides, up to three); a slide draft, the open slide.
         const kind: DesignKind = drafts.find((d) => d.slot === activeSlot)?.kind || 'slide';

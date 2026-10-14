@@ -1,0 +1,208 @@
+// Vercel serverless function: hiring a designer (Eyad, 14 Oct). A customer asks a gallery designer to
+// design their page; the price depends on the package of the customer's page and the platform keeps
+// its share (data/designerPricing.json). The customer pays the Weelink office, which holds the money
+// until the customer confirms the design (the admin site's «طلبات التصميم»), and the customer and the
+// designer talk only through the order, only once it is paid: no phone number, email or link may be
+// sent in it, so the two do not leave the platform before the designer is paid.
+//
+//   POST /api/design-orders  { action, ... }  with  Authorization: Bearer <ID token>  (a confirmed email)
+//     { action: 'quote' }                                      → { planId, price }
+//     { action: 'create', designerUid, slideId?, brief }       → { id, price }          (customer)
+//     { action: 'cancel', id }                                 → { status }             (customer, before paying)
+//     { action: 'message', id, text }                          → { ok: true }           (the two, once paid)
+//     { action: 'deliver', id }                                → { status: 'delivered' } (designer)
+//     { action: 'confirm', id }                                → { status: 'confirmed' } (customer)
+//     { action: 'dispute', id, reason }                        → { status: 'disputed' } (customer)
+//
+// Status: awaiting_payment → paid (the admin, after the office got the money) → delivered (designer) →
+// confirmed (customer) → paid_out (the admin pays the designer their part). Also cancelled, disputed
+// (the admin decides: pay the designer or refund) and refunded.
+//   designOrders/{id}            the order; the customer and the designer read it, only the server writes it
+//   designOrders/{id}/messages   the messages; the same two read them
+// The customer's name and email are never in the order: the designer sees «زبون ABCD».
+// Needs FIREBASE_SERVICE_ACCOUNT (the same one the other functions use).
+
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
+import pricing from '../src/data/designerPricing.json' with { type: 'json' };
+
+const MAX_OPEN_UNPAID = 5;
+const MIN_GAP_MS = 700;
+const TALKING = ['paid', 'delivered', 'confirmed', 'disputed'];
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+
+const firebaseAdmin = () => {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) return null;
+  let account: { private_key?: string };
+  try {
+    account = JSON.parse(raw);
+  } catch {
+    console.error('FIREBASE_SERVICE_ACCOUNT is not valid JSON; paste the whole service-account file.');
+    return null;
+  }
+  if (!account.private_key) return null;
+  const app = getApps()[0] || initializeApp({ credential: cert(account as object), projectId: firebaseConfig.projectId });
+  const databaseId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
+  return { auth: getAuth(app), db: databaseId ? getFirestore(app, databaseId) : getFirestore(app) };
+};
+
+const validId = (v: unknown): v is string => typeof v === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(v);
+const text = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u0009\u000b-\u001f]/g, ' ').trim().slice(0, max) : '');
+
+// The same check the designer's export runs on a slide's texts (src/utils/contactCheck.ts, kept in
+// step with it): a phone number, an email, a link or an @name.
+const toLatin = (s: string) => s.replace(/[٠-٩۰-۹]/g, (d) => String(d.charCodeAt(0) >= 0x06f0 ? d.charCodeAt(0) - 0x06f0 : d.charCodeAt(0) - 0x0660));
+const EMAIL = /[a-z0-9._%+-]+\s*@\s*[a-z0-9.-]+\.[a-z]{2,}/i;
+const URL_LIKE = /(https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(com|net|org|de|sy|info|io|me|app|co|tv|shop|store|ly|link|site|online)\b/i;
+const HANDLE = /(^|\s)@[a-z0-9_.]{3,}/i;
+const PHONE = /(\+|00)?[\d][\d\s().-]{5,}\d/;
+const contactIn = (raw: string): string[] => {
+  const t = toLatin(raw);
+  const kinds: string[] = [];
+  if (EMAIL.test(t)) kinds.push('email');
+  if (URL_LIKE.test(t.replace(EMAIL, ' '))) kinds.push('link');
+  if (HANDLE.test(t.replace(EMAIL, ' '))) kinds.push('handle');
+  if ((t.match(PHONE)?.[0].replace(/\D/g, '') || '').length >= 7) kinds.push('phone');
+  return kinds;
+};
+
+const FREE_PLAN = 'page-free';
+const prices = pricing.prices as Record<string, number>;
+const splitPrice = (price: number) => {
+  const platform = Math.round(price * pricing.platformShare);
+  return { designer: price - platform, platform };
+};
+
+export default {
+  async fetch(request: Request): Promise<Response> {
+    if (request.method !== 'POST') return json({ error: 'method' }, 405);
+    const admin = firebaseAdmin();
+    if (!admin) return json({ error: 'not_configured' }, 503);
+
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: 'bad_request' }, 400);
+    }
+    const action = String(body.action || '');
+    const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    const user = token ? await admin.auth.verifyIdToken(token).catch(() => null) : null;
+    if (!user) return json({ error: 'unauthorized' }, 401);
+    if (!user.email_verified) return json({ error: 'unverified' }, 403);
+    const { db } = admin;
+    const now = Date.now();
+
+    // The package of the customer's page decides the price: the subscription the office recorded, or the free page.
+    const planOf = async (uid: string) => {
+      const sub = (await db.collection('platform_subscribers').doc(uid).get()).data() as { subscription?: { plan?: string } } | undefined;
+      const plan = String(sub?.subscription?.plan || '');
+      return plan && prices[plan] !== undefined ? plan : FREE_PLAN;
+    };
+
+    if (action === 'quote') {
+      const planId = await planOf(user.uid);
+      return json({ planId, price: prices[planId] });
+    }
+
+    if (action === 'create') {
+      const designerUid = body.designerUid;
+      const brief = text(body.brief, 1000);
+      if (!validId(designerUid) || brief.length < 10) return json({ error: 'bad_request' }, 400);
+      if (designerUid === user.uid) return json({ error: 'own' }, 400);
+      if (contactIn(brief).length) return json({ error: 'contact', kinds: contactIn(brief) }, 400);
+      const designer = (await db.collection('designers').doc(designerUid).get()).data() as { name?: string } | undefined;
+      if (!designer) return json({ error: 'no_designer' }, 404);
+      const open = await db.collection('designOrders').where('customerUid', '==', user.uid).where('status', '==', 'awaiting_payment').select().get();
+      if (open.size >= MAX_OPEN_UNPAID) return json({ error: 'too_many' }, 429);
+      let slideName = '';
+      let slideId = '';
+      if (body.slideId !== undefined && body.slideId !== '') {
+        if (!validId(body.slideId)) return json({ error: 'bad_request' }, 400);
+        const slide = (await db.collection('gallerySlides').doc(body.slideId).get()).data();
+        if (!slide || slide.status !== 'approved' || slide.designerUid !== designerUid) return json({ error: 'no_slide' }, 404);
+        slideId = body.slideId;
+        slideName = String(slide.name || '').slice(0, 60);
+      }
+      const planId = await planOf(user.uid);
+      const price = prices[planId];
+      const split = splitPrice(price);
+      const ref = db.collection('designOrders').doc();
+      await ref.set({
+        customerUid: user.uid, customerAlias: `زبون ${ref.id.slice(0, 4).toUpperCase()}`,
+        designerUid, designerName: String(designer.name || '').slice(0, 60), slideId, slideName,
+        planId, price, designerShare: split.designer, platformShare: split.platform,
+        status: 'awaiting_payment', brief, createdAt: now, updatedAt: now,
+        history: [{ at: now, status: 'awaiting_payment', by: 'customer' }],
+      });
+      return json({ id: ref.id, price });
+    }
+
+    // The rest work on an order the caller is part of.
+    const id = body.id;
+    if (!validId(id)) return json({ error: 'bad_request' }, 400);
+    const ref = db.collection('designOrders').doc(id);
+    const system = (t: string) => ref.collection('messages').add({ role: 'system', text: t, at: now });
+    const step = (status: string, by: string, extra: Record<string, unknown> = {}) =>
+      ref.update({ status, updatedAt: now, history: FieldValue.arrayUnion({ at: now, status, by }), ...extra });
+
+    try {
+      const order = (await ref.get()).data() as Record<string, any> | undefined;
+      if (!order) return json({ error: 'not_found' }, 404);
+      const isCustomer = order.customerUid === user.uid;
+      const isDesigner = order.designerUid === user.uid;
+      if (!isCustomer && !isDesigner) return json({ error: 'not_found' }, 404);
+
+      if (action === 'cancel') {
+        if (!isCustomer || order.status !== 'awaiting_payment') return json({ error: 'bad_state' }, 409);
+        await step('cancelled', 'customer', { cancelledAt: now });
+        return json({ status: 'cancelled' });
+      }
+
+      if (action === 'message') {
+        const msg = text(body.text, 1000);
+        if (!msg) return json({ error: 'bad_request' }, 400);
+        if (!TALKING.includes(order.status)) return json({ error: 'not_paid' }, 409);
+        const kinds = contactIn(msg);
+        if (kinds.length) return json({ error: 'contact', kinds }, 400);
+        const role = isCustomer ? 'customer' : 'designer';
+        if (now - (Number(order.lastMessage?.[role]) || 0) < MIN_GAP_MS) return json({ error: 'too_fast' }, 429);
+        await ref.collection('messages').add({ role, text: msg, at: now });
+        await ref.update({ updatedAt: now, [`lastMessage.${role}`]: now });
+        return json({ ok: true });
+      }
+
+      if (action === 'deliver') {
+        if (!isDesigner || order.status !== 'paid') return json({ error: 'bad_state' }, 409);
+        await step('delivered', 'designer', { deliveredAt: now });
+        await system('سلّم المصمم العمل. راجع صفحتك ثم اضغط «استلمت التصميم» ليصل المبلغ للمصمم، أو «لدي مشكلة» إن كان فيه ما يحتاج حلاً.');
+        return json({ status: 'delivered' });
+      }
+
+      if (action === 'confirm') {
+        if (!isCustomer || order.status !== 'delivered') return json({ error: 'bad_state' }, 409);
+        await step('confirmed', 'customer', { confirmedAt: now });
+        await system('أكّد الزبون استلام التصميم. سيحوّل المكتب حصة المصمم.');
+        return json({ status: 'confirmed' });
+      }
+
+      if (action === 'dispute') {
+        const reason = text(body.reason, 500);
+        if (!isCustomer || !['paid', 'delivered'].includes(order.status) || reason.length < 5) return json({ error: 'bad_state' }, 409);
+        await step('disputed', 'customer', { disputedAt: now, disputeReason: reason });
+        await system('فتح الزبون شكوى على الطلب. سيراجعه فريق Weelink ويقرر.');
+        return json({ status: 'disputed' });
+      }
+
+      return json({ error: 'unknown_action' }, 400);
+    } catch (e) {
+      console.error('design order failed:', e);
+      return json({ error: 'failed' }, 500);
+    }
+  },
+};

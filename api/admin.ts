@@ -27,6 +27,11 @@
 //   POST /api/admin  { action: 'slides-review-list', status? } → { rows, counts }  (slides and pages)  and
 //                    { action: 'slide-review', id, decision: 'approve'|'reject', reason? } → { status }
 //        (the slides designers exported to the gallery wait as gallerySlides/{id}.status = 'pending')
+//   POST /api/admin  { action: 'design-orders', status? } → { rows, counts }  and { action: 'design-order', id } → { order, messages }
+//   POST /api/admin  { action: 'design-order-paid', id, method, receiptNo?, note? }  the office got the customer's money
+//   POST /api/admin  { action: 'design-order-release', id, note? }                   pays the designer their part (after the customer confirmed, or a complaint)
+//   POST /api/admin  { action: 'design-order-refund', id, reason }                   gives the customer their money back (or cancels an unpaid order)
+//        (hiring a designer, api/design-orders.ts: the money is held by the office until the customer confirms)
 //   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
 //   POST /api/admin  { action: 'tokens-adjust', uid, delta, reason } → { balance }
 //   POST /api/admin  { action: 'set-prices', in, out }           → { prices }
@@ -221,7 +226,7 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 // The team (Eyad, 14 Oct): the main admin («owner») can do everything; the others have one specialty
 // and only its actions. Checked here on every call; the site only hides what is not allowed.
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
-const FINANCE_ONLY = ['payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
+const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
 // The designers' gallery is the content reviewers' work (the owner too).
 const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update'];
@@ -751,6 +756,89 @@ export default {
       await db.collection('platform_settings').doc('company').set(company);
       await audit(session.u, 'set-company');
       return json({ company });
+    }
+
+    // ----- hiring a designer: the orders and the money held by the office -----
+    // designOrders/{id} (made by api/design-orders.ts). The office takes the customer's money (paid), holds it
+    // until the customer confirms the design, and then pays the designer their part (release); a complaint
+    // is decided here too: release to the designer, or refund the customer. Each step is in the order's
+    // history and the audit log, and writes a system message the customer and the designer read.
+    const orderRow = (id: string, d: Record<string, any>) => ({
+      id, customerUid: String(d.customerUid || ''), customerAlias: String(d.customerAlias || ''), designerUid: String(d.designerUid || ''),
+      designerName: String(d.designerName || ''), slideName: String(d.slideName || ''), planId: String(d.planId || ''),
+      price: Number(d.price) || 0, designerShare: Number(d.designerShare) || 0, platformShare: Number(d.platformShare) || 0,
+      status: String(d.status || ''), brief: String(d.brief || ''), disputeReason: String(d.disputeReason || ''),
+      createdAt: Number(d.createdAt) || 0, updatedAt: Number(d.updatedAt) || 0, payment: d.payment || null, payout: d.payout || null, refund: d.refund || null,
+    });
+    const emailsOf = async (uids: string[]) => {
+      const list = [...new Set(uids.filter(Boolean))].slice(0, 100);
+      const got = list.length ? await auth.getUsers(list.map((u) => ({ uid: u }))).catch(() => null) : null;
+      return new Map((got?.users || []).map((u) => [u.uid, u.email || u.displayName || u.uid]));
+    };
+
+    if (action === 'design-orders') {
+      const snap = await db.collection('designOrders').orderBy('updatedAt', 'desc').limit(200).get();
+      const all = snap.docs.map((d) => orderRow(d.id, d.data()));
+      const status = String(body.status || '');
+      const rows = (status ? all.filter((o) => o.status === status) : all).slice(0, 100);
+      const counts: Record<string, number> = {};
+      for (const o of all) counts[o.status] = (counts[o.status] || 0) + 1;
+      const emails = await emailsOf(rows.flatMap((o) => [o.customerUid, o.designerUid]));
+      return json({ rows: rows.map((o) => ({ ...o, customerEmail: emails.get(o.customerUid) || '', designerEmail: emails.get(o.designerUid) || '' })), counts });
+    }
+
+    if (action === 'design-order') {
+      const ref = db.collection('designOrders').doc(String(body.id || '').slice(0, 128));
+      const snap = await ref.get();
+      if (!snap.exists) return json({ error: 'not-found' }, 404);
+      const o = orderRow(snap.id, snap.data()!);
+      const emails = await emailsOf([o.customerUid, o.designerUid]);
+      const msgs = await ref.collection('messages').orderBy('at').limit(500).get();
+      return json({
+        order: { ...o, customerEmail: emails.get(o.customerUid) || '', designerEmail: emails.get(o.designerUid) || '', history: snap.data()!.history || [] },
+        messages: msgs.docs.map((m) => ({ id: m.id, role: String(m.data().role || ''), text: String(m.data().text || ''), at: Number(m.data().at) || 0 })),
+      });
+    }
+
+    if (action === 'design-order-paid' || action === 'design-order-release' || action === 'design-order-refund') {
+      const ref = db.collection('designOrders').doc(String(body.id || '').slice(0, 128));
+      const snap = await ref.get();
+      if (!snap.exists) return json({ error: 'not-found' }, 404);
+      const o = snap.data() as Record<string, any>;
+      const now = Date.now();
+      const clean = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n);
+      const say = (t: string) => ref.collection('messages').add({ role: 'system', text: t, at: now });
+      const step = (status: string, extra: Record<string, unknown>) =>
+        ref.update({ status, updatedAt: now, history: FieldValue.arrayUnion({ at: now, status, by: `admin:${session.u}` }), ...extra });
+
+      if (action === 'design-order-paid') {
+        const method = clean(body.method, 20);
+        if (o.status !== 'awaiting_payment') return json({ error: 'bad-state' }, 409);
+        if (!METHODS[method]) return json({ error: 'bad-method' }, 400);
+        await step('paid', { payment: { at: now, by: session.u, method, receiptNo: clean(body.receiptNo, 40), note: clean(body.note, 300), amount: Number(o.price) || 0 } });
+        await say('أكّد المكتب استلام المبلغ. تقدران تتواصلان هنا الآن، والمبلغ محفوظ عند Weelink إلى أن يستلم الزبون التصميم.');
+        await audit(session.u, `design-order-paid:${snap.id}`);
+        return json({ status: 'paid' });
+      }
+      if (action === 'design-order-release') {
+        if (!['confirmed', 'disputed'].includes(o.status)) return json({ error: 'bad-state' }, 409);
+        await step('paid_out', { payout: { at: now, by: session.u, amount: Number(o.designerShare) || 0, note: clean(body.note, 300) } });
+        await say('حوّل المكتب حصة المصمم. اكتمل الطلب.');
+        await audit(session.u, `design-order-release:${snap.id}`);
+        return json({ status: 'paid_out' });
+      }
+      const reason = clean(body.reason, 300);
+      if (reason.length < 3) return json({ error: 'reason' }, 400);
+      if (o.status === 'awaiting_payment') {
+        await step('cancelled', { cancelledAt: now, refund: { at: now, by: session.u, amount: 0, reason } });
+        await audit(session.u, `design-order-cancel:${snap.id}`);
+        return json({ status: 'cancelled' });
+      }
+      if (!['paid', 'delivered', 'confirmed', 'disputed'].includes(o.status)) return json({ error: 'bad-state' }, 409);
+      await step('refunded', { refund: { at: now, by: session.u, amount: Number(o.price) || 0, reason } });
+      await say('ردّ المكتب المبلغ للزبون وأُغلق الطلب.');
+      await audit(session.u, `design-order-refund:${snap.id}`);
+      return json({ status: 'refunded' });
     }
 
     // ----- the designers' gallery -----

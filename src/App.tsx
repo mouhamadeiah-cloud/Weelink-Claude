@@ -3623,75 +3623,6 @@ export default function App() {
     setActiveSlideId(duplicatedSlides[0].id);
   };
 
-  // Applies a ready-made multi-page site template (pages linked through one shared navbar).
-  // This REPLACES the whole site (all current pages/elements) rather than appending, since it
-  // is a full starter-site action. Template ids get a unique suffix, and every page/slide
-  // reference (navbar items, navbar CTA, element links) is remapped to the new ids.
-  const applySiteTemplate = (
-    template: { pages: Page[]; elements: CanvasElement[] },
-    confirmMessage: string,
-    doneMessage?: string
-  ) => {
-    if (!window.confirm(confirmMessage)) return;
-    // What the page was before, kept for «تراجع».
-    const before = { pages: pagesRef.current, elements: elementsRef.current, pageId: activePageId, slideId: activeSlideId };
-
-    const { pages: templatePages, elements: templateElements } = template;
-    const suffix = Date.now();
-
-    const idMap: Record<string, string> = {};
-    templatePages.forEach((p) => { idMap[p.id] = `${p.id}-${suffix}`; });
-    templatePages.forEach((p) => {
-      p.slides.forEach((s) => { idMap[s.id] = `${s.id}-${suffix}`; });
-    });
-
-    const newPages: Page[] = templatePages.map((p) => ({
-      ...p,
-      id: idMap[p.id],
-      slides: p.slides.map((s) => ({ ...s, id: idMap[s.id] })),
-      navbar: {
-        ...p.navbar,
-        items: p.navbar.items.map((item) => {
-          const to = item.linkTargetId ? (idMap[item.linkTargetId] || item.linkTargetId) : item.linkTargetId;
-          return { ...item, linkTargetId: to, href: to && (item.linkType === 'page' || item.linkType === 'slide') ? `#${item.linkType}-${to}` : item.href };
-        }),
-        ctaLinkTargetId: p.navbar.ctaLinkTargetId ? (idMap[p.navbar.ctaLinkTargetId] || p.navbar.ctaLinkTargetId) : p.navbar.ctaLinkTargetId,
-        ctaHref: p.navbar.ctaLinkTargetId && (p.navbar.ctaLinkType === 'page' || p.navbar.ctaLinkType === 'slide') ? `#${p.navbar.ctaLinkType}-${idMap[p.navbar.ctaLinkTargetId] || p.navbar.ctaLinkTargetId}` : p.navbar.ctaHref,
-      },
-    }));
-
-    const newElements: CanvasElement[] = templateElements.map((el) => {
-      const linkTargetId = el.linkTargetId ? (idMap[el.linkTargetId] || el.linkTargetId) : el.linkTargetId;
-      const isInternalLink = el.linkType === 'page' || el.linkType === 'slide';
-      return {
-        ...el,
-        id: `${el.id}-${suffix}`,
-        slideId: idMap[el.slideId] || el.slideId,
-        linkTargetId,
-        linkUrl: isInternalLink && linkTargetId ? `#${el.linkType}-${linkTargetId}` : el.linkUrl,
-      };
-    });
-
-    setPages(newPages);
-    setElements(newElements);
-    setActivePageId(newPages[0].id);
-    setActiveSlideId(newPages[0].slides[0].id);
-    setSelectedElementId(null);
-    setBuildNotice({
-      busy: false,
-      ok: true,
-      message: doneMessage || 'استُبدلت صفحاتك بالقالب.',
-      undo: () => {
-        setPages(before.pages);
-        setElements(before.elements);
-        setActivePageId(before.pageId);
-        setActiveSlideId(before.slideId);
-        setSelectedElementId(null);
-        setBuildNotice(null);
-      },
-    });
-  };
-
   // «من معرض التصاميم» in the add panel: a slide goes to the end of the open page.
   const handleAddGallerySlide = (g: GallerySlide, fit: boolean) => {
     const result = insertDesign(pagesRef.current, elementsRef.current, { slides: [g.slide], elements: g.elements }, { pageId: activePageId, fit });
@@ -3720,17 +3651,58 @@ export default function App() {
     });
   };
 
-  // A gallery page replaces the main page with its navbar (a page cannot have two navbars); asked first, undoable.
-  const handleReplaceWithGalleryPage = (g: GallerySlide) => {
-    if (!g.page?.slides?.length || !g.page.navbar) return;
-    const stamp = `gp${Date.now().toString(36)}`;
-    applySiteTemplate(
-      { pages: [{ id: 'page-home', name: 'الرئيسية', slug: '/', navbar: g.page.navbar, slides: g.page.slides } as Page], elements: g.elements.map((e) => ({ ...e, id: `${e.id}-${stamp}` })) },
-      `سيستبدل هذا صفحتك الأساسية وشريطها العلوي بـ«${g.name}». الصفحات الأخرى في مشروعك تُحذف أيضاً. يمكنك التراجع بعدها. هل تريد المتابعة؟`,
-      `استُبدلت صفحتك بـ«${g.name}».`,
-    );
+  // A gallery design (a navbar and slides) becomes a new page of the project, with the name the person gave it: the navbar lists
+  // pages by name by itself, so the name appears there and its link opens the page. «شريط التصميم» gives the whole project the
+  // design's navbar look, keeping the project's own name, logo, links and button.
+  const handleAddGalleryPage = (g: GallerySlide, o: { name: string; fit: boolean; navbar: 'mine' | 'design' }) => {
+    if (!g.page?.slides?.length) return;
+    const before = { pages: pagesRef.current, elements: elementsRef.current, pageId: activePageId, slideId: activeSlideId };
+    const base = before.pages.find((p) => p.id === activePageId) || before.pages[0];
+    const stamp = Date.now();
+    const name = (o.name.trim() || g.name).slice(0, 30);
+    const newPage: Page = {
+      ...base,
+      id: `page-${stamp}`,
+      name,
+      slug: `/${name.toLowerCase().replace(/\s+/g, '-')}-${stamp.toString(36)}`,
+      slides: [{ id: `slide-${stamp}`, name: 'شريحة ١', height: 540, backgroundColor: '#ffffff' }],
+    };
+    const result = insertDesign([...before.pages, newPage], before.elements, { slides: g.page.slides, elements: g.elements }, { pageId: newPage.id, fit: o.fit });
+    if (!result) {
+      setBuildNotice({ busy: false, ok: false, message: 'ما قدرت أضيف الصفحة. جرّب مرة ثانية.' });
+      return;
+    }
+    const dn = g.page.navbar;
+    const pagesNext = o.navbar === 'design' && dn
+      ? result.pages.map((p) => ({
+          ...p,
+          navbar: {
+            ...dn,
+            brandName: p.navbar.brandName, brandSubtext: p.navbar.brandSubtext, showBrandName: p.navbar.showBrandName, logoUrl: p.navbar.logoUrl,
+            items: p.navbar.items, ctaText: p.navbar.ctaText, ctaHref: p.navbar.ctaHref, ctaLinkType: p.navbar.ctaLinkType, ctaLinkTargetId: p.navbar.ctaLinkTargetId,
+            partIcons: p.navbar.partIcons,
+          },
+        }))
+      : result.pages;
+    setPages(pagesNext);
+    pushToHistoryRef.current(result.elements);
+    setActivePageId(newPage.id);
+    setActiveSlideId(result.firstSlideId);
+    setSelectedElementId(null);
     const user = auth.currentUser;
     if (user && !user.isAnonymous) recordUse(user, g.id).catch(() => {});
+    setBuildNotice({
+      busy: false,
+      ok: true,
+      message: `أُضيفت صفحة «${name}» إلى مشروعك، واسمها في الشريط.`,
+      undo: () => {
+        setPages(before.pages);
+        pushToHistoryRef.current(before.elements);
+        setActivePageId(before.pageId);
+        setActiveSlideId(before.slideId);
+        setBuildNotice(null);
+      },
+    });
   };
 
   const handleUpdatePage = (updates: Partial<Page>) => {
@@ -4419,7 +4391,7 @@ export default function App() {
         onAddSlideTemplate={handleAddSlideTemplate}
         onAddPageTemplate={handleAddPageTemplate}
         onAddGallerySlide={handleAddGallerySlide}
-        onReplaceWithGalleryPage={handleReplaceWithGalleryPage}
+        onAddGalleryPage={handleAddGalleryPage}
         onDeleteSlide={handleDeleteSlide}
         onUpdateSlideHeight={handleUpdateSlideHeight}
         onAddElement={(type, customContent, customStyles, extraData) => {

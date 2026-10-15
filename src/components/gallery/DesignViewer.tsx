@@ -35,10 +35,12 @@ export const DesignViewer: React.FC<Props> = ({ items, index, onIndex, onClose, 
   }, [index, last, onIndex, onClose]);
   const slides = useMemo<Slide[]>(() => (item ? (item.kind === 'page' && item.page?.slides?.length ? item.page.slides : [item.slide]) : []), [item]);
   if (!item) return null;
+  // Only a click on the dark backdrop itself closes the view, never one that came up from a button or the design.
+  const backdrop = (e: React.MouseEvent) => { if (e.target === e.currentTarget) onClose(); };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/70" dir="rtl" role="dialog" aria-modal="true" aria-label={item.name} onClick={onClose}>
-      <div className="absolute inset-0 overflow-y-auto px-2 pb-24 pt-12 sm:px-16" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] bg-black/70" dir="rtl" role="dialog" aria-modal="true" aria-label={item.name} onClick={backdrop}>
+      <div className="absolute inset-0 overflow-y-auto px-2 pb-24 pt-12 sm:px-16" onClick={backdrop}>
         <div onClick={(e) => e.stopPropagation()} className={`mx-auto bg-white shadow-2xl ${device === 'mobile' ? 'max-w-[390px] overflow-hidden rounded-[28px] border-[10px] border-neutral-800' : 'max-w-5xl overflow-hidden rounded-card'}`}>
           <LiveDesign key={`${item.id}:${device}`} slides={slides} elements={item.elements} navbar={item.kind === 'page' ? item.page?.navbar : undefined} interactive device={device} />
         </div>

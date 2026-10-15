@@ -170,8 +170,32 @@ export interface GallerySlideRow {
   id: string; name: string; category: string; designerUid: string; designerName: string; status: SlideStatus;
   lawVersion: number; acceptedAt: string; createdAt: number; reason: string; reviewedBy: string;
   kind: 'slide' | 'page'; slide: any; page: any; elements: any[];
+  // Made by Weelink itself («Weelink AI»); changed by hand by someone; a designer's change to an approved design waiting for review.
+  official?: boolean; editedBy?: string; isEdit?: boolean;
 }
 export const adminSlides = (status: SlideStatus) => call<{ rows: GallerySlideRow[]; counts: { pending: number } }>({ action: 'slides-review-list', status });
+// Editing a design in the gallery: the admin edits anything (it changes in place), in the designer's panel (src/App.tsx opens it
+// with the session handed over by openGalleryEditor) or here for the name and category.
+export interface GalleryDoc { id: string; kind: 'slide' | 'page'; name: string; category: string; designerUid: string; designerName: string; status: SlideStatus; official: boolean; slide: any; page: any; elements: any[] }
+export const adminGalleryDoc = (id: string) => call<{ design: GalleryDoc; pendingEdit: boolean }>({ action: 'gallery-doc', id });
+export const adminGallerySave = (id: string, d: { page: any; elements: any[]; name?: string; category?: string; designerName?: string }) => call<{ ok: true }>({ action: 'gallery-doc-save', id, ...d });
+export const adminGalleryDelete = (id: string) => call<{ ok: true }>({ action: 'gallery-doc-delete', id });
+export const adminEditReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ ok: true }>({ action: 'slide-edit-review', id, decision, reason });
+// The editor opens in a new tab; it cannot read this tab's session, so the token is left for it for a few seconds.
+export const HANDOFF_KEY = 'weelink_admin_edit';
+export const openGalleryEditor = (id: string) => {
+  try {
+    localStorage.setItem(HANDOFF_KEY, JSON.stringify({ id, token: getAdminToken(), at: Date.now() }));
+  } catch {
+    return false;
+  }
+  return !!window.open('/?edit-gallery=1', '_blank');
+};
+
+export interface SeedStatus { total: number; published: number; staged: number; searchesLeft: number; unsplash: boolean }
+export interface SeedResult { published: string[]; waiting: string[]; limited: boolean; spent: number; failed: string[] }
+export const adminSeedStatus = () => call<SeedStatus>({ action: 'gallery-seed-status' });
+export const adminSeed = (opts: { overwrite?: boolean; publish?: boolean } = {}) => call<SeedResult>({ action: 'gallery-seed', overwrite: !!opts.overwrite, publish: !!opts.publish });
 export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });
 
 // Hiring a designer: the office takes the customer's money, holds it until the design is confirmed, then pays the

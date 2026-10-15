@@ -8,7 +8,7 @@
 // the gallery has nothing yet.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { BadgeCheck, Heart, Loader2, MessageCircle, Plus, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { BadgeCheck, Heart, Loader2, MessageCircle, Pencil, Plus, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { LivePage, LiveSlide } from './LiveSlide';
 import { HireDialog } from '../designOrders/HireDialog';
 import { PAGE_CATEGORIES, SLIDE_CATEGORIES, categoryLabel, slidesWord, type DesignKind } from '../../data/slideCategories';
@@ -47,6 +47,7 @@ const VoteButtons: React.FC<VoteButtonsProps> = ({ slide, mine, own, onVote, lar
 const DesignerLine: React.FC<{ slide: GallerySlide; total: number }> = ({ slide, total }) => (
   <span className="inline-flex items-center gap-1.5 min-w-0 text-xs text-muted">
     <span className="font-bold text-ink truncate">{slide.designerName || 'مصمم'}</span>
+    {slide.official && <span className="inline-flex items-center gap-0.5 rounded-full bg-brand/10 text-brand font-bold px-1.5 py-0.5 shrink-0" title="تصميم من Weelink"><BadgeCheck size={12} /> رسمي</span>}
     {slide.designer.verified && <span className="inline-flex items-center gap-0.5 rounded-full bg-success/10 text-success font-bold px-1.5 py-0.5 shrink-0" title="معتمد من Weelink"><BadgeCheck size={12} /> معتمد</span>}
     {slide.designer.ratingCount > 0 && <span className="inline-flex items-center gap-0.5 text-warn font-bold shrink-0" title={`${slide.designer.ratingCount} تقييم`}><Star size={12} className="fill-current" /> <span className="tabular-nums">{slide.designer.average.toFixed(1)}</span></span>}
     <span className="inline-flex items-center gap-0.5 text-brand font-bold shrink-0" title="مجموع إعجابات المصمم"><Heart size={12} className="fill-current" /> <span className="tabular-nums">{nf(total)}</span></span>
@@ -59,9 +60,11 @@ interface DesignerGalleryProps {
   onOpenOrders?: (orderId?: string) => void;
   // «أضف لصفحتي مجاناً»: puts the design in the visitor's own page (fitted to its style when `fit`).
   onAddToMyPage?: (slide: GallerySlide, fit: boolean) => Promise<{ ok: boolean; message: string }>;
+  // «تعديل»: shown only to the designer of the design.
+  onEditDesign?: (slide: GallerySlide) => void;
 }
 
-export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToMyPage, onOpenOrders }) => {
+export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToMyPage, onOpenOrders, onEditDesign }) => {
   const signedIn = !!user && !user.isAnonymous;
   const [slides, setSlides] = useState<GallerySlide[] | null>(null);
   const [votes, setVotes] = useState<Record<string, number>>({});
@@ -260,13 +263,16 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
             <div className="sticky bottom-0 bg-surface border-t border-line px-5 pt-3 pb-4 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <VoteButtons slide={open} mine={votes[open.id] || 0} own={!!user && user.uid === open.designerUid} onVote={vote} large />
-              <button
+              {onEditDesign && !!user && user.uid === open.designerUid && !open.official && (
+                <button type="button" onClick={() => onEditDesign(open)} className="h-10 px-4 rounded-ctl border border-line bg-surface text-ink text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer hover:border-brand/40"><Pencil size={16} /> تعديل {open.kind === 'page' ? 'الصفحة' : 'الشريحة'}</button>
+              )}
+              {!open.official && <button
                 type="button"
                 disabled={!!user && user.uid === open.designerUid}
                 onClick={() => (signedIn ? setHiring(open) : setAddResult({ ok: false, message: 'سجّل دخولك لتطلب مصمماً.' }))}
                 title={user && user.uid === open.designerUid ? 'هذا تصميمك' : 'اطلب من هذا المصمم تصميم صفحتك: يُفتح التواصل بعد الدفع'}
                 className="h-10 px-4 rounded-ctl border border-brand text-brand text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer hover:bg-brand/5 disabled:opacity-50 disabled:cursor-not-allowed"
-              ><MessageCircle size={16} /> اطلب {open.designerName || 'المصمم'} لصفحتي</button>
+              ><MessageCircle size={16} /> اطلب {open.designerName || 'المصمم'} لصفحتي</button>}
               <button type="button" disabled={adding || !onAddToMyPage} onClick={() => addToMyPage(open)} title="انسخها لصفحتك مجاناً" className="h-10 px-4 rounded-ctl bg-brand hover:bg-brand-hover text-white text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait">{adding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} أضف {open.kind === 'page' ? 'الصفحة' : 'الشريحة'} لصفحتي مجاناً</button>
               <button type="button" onClick={() => { setDesigner({ uid: open.designerUid, name: open.designerName || 'المصمم' }); setKind('all'); setCategory('all'); setOpenId(''); }} className="h-10 px-4 rounded-ctl bg-brand/10 text-brand text-sm font-bold cursor-pointer mr-auto">المزيد من {open.designerName || 'المصمم'}</button>
             </div>

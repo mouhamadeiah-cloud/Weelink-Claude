@@ -11,9 +11,11 @@ import { ShopDataContext, ShopUpdateContext } from '../shop/store/ShopDataContex
 import { CarDataContext, CarRequestContext } from '../cars/store/CarDataContext';
 import { RestaurantDataContext, RestaurantOrderContext } from '../restaurant/store/RestaurantDataContext';
 import { demoCarAdmin, demoRestaurantAdmin, demoShopAdmin } from '../rightDrawer/slidePreviewDemo';
+import { resolveMobileSlideHeight } from '../../utils/mobileLayout';
 import type { CanvasElement, NavbarConfig, Page, Slide } from '../../types';
 
 const DESIGN_WIDTH = 1280;
+const PHONE_WIDTH = 360;
 const noop = () => {};
 
 const NO_NAVBAR: NavbarConfig = { brandName: '', items: [], ctaText: '', ctaHref: '', bgColor: '#ffffff', textColor: '#1d1d1f', isSticky: false };
@@ -29,9 +31,13 @@ interface LiveDesignProps {
   // The tallest the box may be on the screen, in px: a long page is cut here with a fade (the large
   // view has no limit).
   maxHeight?: number;
+  // The admin walks around the page: its links and buttons work (to a slide, to the address of a link). Off, nothing in it can be clicked.
+  interactive?: boolean;
+  // The phone layout (360 wide) instead of the desktop one (1280).
+  device?: 'desktop' | 'mobile';
 }
 
-export const LiveDesign: React.FC<LiveDesignProps> = ({ slides, elements, navbar, maxHeight }) => {
+export const LiveDesign: React.FC<LiveDesignProps> = ({ slides, elements, navbar, maxHeight, interactive = false, device = 'desktop' }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [near, setNear] = useState(false);
@@ -52,12 +58,15 @@ export const LiveDesign: React.FC<LiveDesignProps> = ({ slides, elements, navbar
   }, []);
 
   const fixed = useMemo(() => slides.map((s, i) => ({ ...s, id: s.id || `slide-${i + 1}`, height: Number(s.height) || 560 })), [slides]);
-  const page = useMemo<Page>(() => ({ id: 'gallery', name: '', slug: '/', navbar: navbar || NO_NAVBAR, slides: fixed }), [navbar, fixed]);
-  const height = navFlow(navbar) + fixed.reduce((sum, s) => sum + s.height, 0);
-  const scale = width / DESIGN_WIDTH;
+  const page = useMemo<Page>(() => ({ id: 'gallery', name: 'الرئيسية', slug: '/', navbar: navbar || NO_NAVBAR, slides: fixed }), [navbar, fixed]);
+  const phone = device === 'mobile';
+  const designWidth = phone ? PHONE_WIDTH : DESIGN_WIDTH;
+  const height = navFlow(navbar) + fixed.reduce((sum, s) => sum + (phone ? resolveMobileSlideHeight(s, elements) : s.height), 0);
+  const scale = width / designWidth;
   const full = Math.max(8, Math.round(height * scale));
   const shown = maxHeight ? Math.min(full, maxHeight) : full;
   // Example data, so a shop, showroom or menu design shows filled (the same the ready-slide picker uses).
+  const goToSlide = (id: string) => document.getElementById(`slide-container-${id}`)?.scrollIntoView({ behavior: 'smooth' });
   const shop = useMemo(() => demoShopAdmin(), []);
   const cars = useMemo(() => demoCarAdmin(), []);
   const menu = useMemo(() => demoRestaurantAdmin(), []);
@@ -65,7 +74,7 @@ export const LiveDesign: React.FC<LiveDesignProps> = ({ slides, elements, navbar
   return (
     <div ref={boxRef} className="relative w-full overflow-hidden bg-white" style={{ height: shown }}>
       {near && width > 0 && (
-        <div dir="ltr" className="absolute top-0 left-0 pointer-events-none select-none" style={{ width: DESIGN_WIDTH, height, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+        <div dir="ltr" className={`absolute top-0 left-0 ${interactive ? '' : 'pointer-events-none select-none'}`} style={{ width: designWidth, height, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
           <ShopUpdateContext.Provider value={null}>
             <ShopDataContext.Provider value={shop}>
               <CarRequestContext.Provider value={null}>
@@ -77,13 +86,13 @@ export const LiveDesign: React.FC<LiveDesignProps> = ({ slides, elements, navbar
                         embedded
                         hideNavbar={!navbar}
                         isPreviewActive
-                        previewMode="desktop"
+                        previewMode={phone ? 'mobile' : 'desktop'}
                         slides={page.slides}
                         activeSlideId={page.slides[0].id}
                         elements={elements}
                         selectedElementId={null}
                         onSelectElement={noop}
-                        onSelectSlide={noop}
+                        onSelectSlide={interactive ? goToSlide : noop}
                         onSelectPage={noop}
                         allPages={[page]}
                         activePageId={page.id}

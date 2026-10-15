@@ -65,6 +65,8 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
 import { mailOrder } from '../server/orderMail.js';
 import { recountDesigner } from '../server/designerStats.js';
+import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
+import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
 import designTimers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
@@ -231,7 +233,7 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
 const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust'];
 // The designers' gallery is the content reviewers' work (the owner too).
-const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review'];
+const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'slide-edit-review'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
@@ -874,14 +876,21 @@ export default {
       return json({ status: 'refunded' });
     }
 
+    // The «Weelink AI» pages (server/gallerySeed.ts): publish them in the gallery, finding their photos on Unsplash.
+    if (action === 'gallery-seed-status') return json(await gallerySeedStatus(db));
+    if (action === 'gallery-seed') {
+      const result = await gallerySeed(db, { budget: Math.min(45, Math.max(1, Number(body.budget) || 40)), overwrite: body.overwrite === true, publish: body.publish === true, only: body.only ? String(body.only).slice(0, 40) : undefined });
+      if ('error' in result) return json({ error: result.error }, 400);
+      await audit(session.u, `gallery-seed:${result.published.length}`);
+      return json(result);
+    }
+
     // ----- the designers' gallery -----
     // platformSettings/pageLaw = { text, version, updatedAt, updatedBy }: the law a designer agrees to
     // when exporting a slide; every save raises the version, and a slide records the version it was
     // exported under. gallerySlides/{id} (written by the designer, status 'pending') is approved or
     // rejected here; the rules let nobody else change its status.
     const SLIDE_STATUSES = ['pending', 'approved', 'rejected'];
-    const SLIDE_CATEGORY_IDS = ['hero', 'about', 'services', 'gallery', 'team', 'reviews', 'offers', 'booking', 'contact', 'menu', 'cars', 'products', 'legal', 'other'];
-    const PAGE_CATEGORY_IDS = ['p-business', 'p-restaurant', 'p-cars', 'p-shop'];
     const lawFromDoc = (d: Record<string, any> | undefined) =>
       d ? { text: String(d.text || ''), version: Number(d.version) || 0, updatedAt: Number(d.updatedAt) || 0, updatedBy: String(d.updatedBy || '') } : null;
 
@@ -917,12 +926,14 @@ export default {
             id: d.id, name: String(x.name || ''), category: String(x.category || ''), designerUid: String(x.designerUid || ''),
             designerName: String(x.designerName || ''), status: String(x.status || 'pending'), lawVersion: Number(x.lawVersion) || 0,
             acceptedAt: String(x.acceptedAt || ''), createdAt: x.createdAt?.toMillis?.() || 0, reason: String(x.reason || ''),
-            reviewedBy: String(x.reviewedBy || ''), kind: x.kind === 'page' ? 'page' : 'slide', slide: x.slide || {}, page: x.kind === 'page' ? x.page || null : null,
+            reviewedBy: String(x.reviewedBy || ''), official: x.official === true, editedBy: String(x.editedBy || ''), kind: x.kind === 'page' ? 'page' : 'slide', slide: x.slide || {}, page: x.kind === 'page' ? x.page || null : null,
             elements: Array.isArray(x.elements) ? x.elements : [],
           };
         })
         .sort((a, b) => b.createdAt - a.createdAt);
-      return json({ rows, counts: { pending: pendingCount.size } });
+      // A designer's change to a design that is already approved waits here too, beside the new exports.
+      const edits = status === 'pending' ? await pendingEditRows(db) : [];
+      return json({ rows: [...edits, ...rows], counts: { pending: pendingCount.size + (status === 'pending' ? edits.length : (await pendingEditRows(db)).length) } });
     }
 
     if (action === 'slide-review') {
@@ -946,6 +957,37 @@ export default {
       });
       await audit(session.u, `slide-review:${id}:${status}`);
       return json({ status });
+    }
+
+    // The admin opens, edits, renames and deletes any design in the gallery (server/galleryEdit.ts).
+    if (action === 'gallery-doc') {
+      const r = await loadForEdit(db, String(body.id || '').slice(0, 128), { admin: true });
+      return 'error' in r ? json({ error: 'not-found' }, 404) : json(r);
+    }
+    if (action === 'gallery-doc-save') {
+      const id = String(body.id || '').slice(0, 128);
+      const r = await adminSave(db, id, { page: body.page as any, elements: body.elements as any, name: body.name, category: body.category, designerName: body.designerName }, session.u);
+      if ('error' in r) return json({ error: r.error, kinds: (r as any).kinds }, r.error === 'not_found' ? 404 : 400);
+      await audit(session.u, `gallery-doc-save:${id}`);
+      return json({ ok: true });
+    }
+    if (action === 'gallery-doc-delete') {
+      const id = String(body.id || '').slice(0, 128);
+      const r = await deleteDesign(db, id);
+      if ('error' in r) return json({ error: 'not-found' }, 404);
+      await audit(session.u, `gallery-doc-delete:${id}`);
+      return json({ ok: true });
+    }
+    if (action === 'slide-edit-review') {
+      const id = String(body.id || '').slice(0, 128);
+      const decision = String(body.decision || '');
+      const reason = String(body.reason || '').trim().slice(0, 500);
+      if (!id || !['approve', 'reject'].includes(decision)) return json({ error: 'bad-request' }, 400);
+      if (decision === 'reject' && reason.length < 3) return json({ error: 'reason' }, 400);
+      const r = await reviewEdit(db, id, decision as 'approve' | 'reject', reason, session.u);
+      if ('error' in r) return json({ error: 'not-found' }, 404);
+      await audit(session.u, `slide-edit-review:${id}:${decision}`);
+      return json({ ok: true });
     }
 
     // ----- tasks (the workflow board) -----

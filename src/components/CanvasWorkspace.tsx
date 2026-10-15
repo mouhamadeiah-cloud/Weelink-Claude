@@ -2329,6 +2329,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     );
   };
   const isExternalNavHref = (href?: string) => !!href && /^(https?:|mailto:|tel:)/i.test(href);
+  // A navbar entry or button that points at a slide of this page scrolls to it.
+  const goToNavSlide = (slideId: string) => {
+    onSelectSlide(slideId);
+    document.getElementById(`slide-container-${slideId}`)?.scrollIntoView({ behavior: 'smooth' });
+  };
+  const isNavSlideLink = (item: { linkType?: string; linkTargetId?: string }) => item.linkType === 'slide' && !!item.linkTargetId;
   const navItemPartId = (item: { id: string; linkType?: string; linkTargetId?: string }) =>
     item.linkType === 'page' && item.id.startsWith('page-link-') ? `page-${item.linkTargetId}` : `item-${item.id}`;
 
@@ -2473,10 +2479,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       onClick={() => {
                         if (runNavAction(item.id)) {}
                         else if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                        else if (isNavSlideLink(item)) goToNavSlide(item.linkTargetId as string);
                         else if (isPreviewActive && isExternalNavHref(item.href)) window.open(item.href, '_blank', 'noopener,noreferrer');
                         setIsNavMenuOpen(false);
                       }}
-                      className={`px-5 py-2.5 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
+                      className={`px-5 py-2.5 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink || isNavSlideLink(item) ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
                       style={{ fontFamily: navbar.itemsFontFamily || undefined }}
                     >
                       {navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}
@@ -2488,6 +2495,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     type="button"
                     onClick={() => {
                       if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) onSelectPage?.(navbar.ctaLinkTargetId);
+                      else if (navbar.ctaLinkType === 'slide' && navbar.ctaLinkTargetId) goToNavSlide(navbar.ctaLinkTargetId);
                       setIsNavMenuOpen(false);
                     }}
                     className="mx-4 mt-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-[#0071e3] text-white" style={navbar.accentColor ? { backgroundColor: navbar.accentColor, color: navbar.accentTextColor } : undefined}
@@ -2651,11 +2659,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       } else if (isPageLink) {
                         e.stopPropagation();
                         onSelectPage?.(item.linkTargetId as string);
+                      } else if (isNavSlideLink(item)) {
+                        e.stopPropagation();
+                        goToNavSlide(item.linkTargetId as string);
                       } else if (isPreviewActive && isExternalNavHref(item.href)) {
                         window.open(item.href, '_blank', 'noopener,noreferrer');
                       }
                     }}
-                    className={`${hasFrame ? 'px-2.5 py-1' : (isNavVertical ? 'py-1' : '')} ${isPageLink ? 'cursor-pointer' : 'cursor-default'}`}
+                    className={`${hasFrame ? 'px-2.5 py-1' : (isNavVertical ? 'py-1' : '')} ${isPageLink || isNavSlideLink(item) ? 'cursor-pointer' : 'cursor-default'}`}
                     style={{
                       fontFamily: navbar.itemsFontFamily || undefined,
                       backgroundColor: navbar.itemsFrameBgColor || undefined,
@@ -2682,6 +2693,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
                     e.stopPropagation();
                     onSelectPage?.(navbar.ctaLinkTargetId);
+                  } else if (navbar.ctaLinkType === 'slide' && navbar.ctaLinkTargetId) {
+                    e.stopPropagation();
+                    goToNavSlide(navbar.ctaLinkTargetId);
                   }
                 }}
                 className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95 ${isNavVertical ? 'self-center' : ''}`}
@@ -2724,10 +2738,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     onClick={() => {
                       if (runNavAction(item.id)) {}
                       else if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                      else if (isNavSlideLink(item)) goToNavSlide(item.linkTargetId as string);
                       else if (isPreviewActive && isExternalNavHref(item.href)) window.open(item.href, '_blank', 'noopener,noreferrer');
                       setIsNavMenuOpen(false);
                     }}
-                    className={`px-6 py-3 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
+                    className={`px-6 py-3 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink || isNavSlideLink(item) ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
                     style={{ fontFamily: navbar.itemsFontFamily || undefined }}
                   >
                     {navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}

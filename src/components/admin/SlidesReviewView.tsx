@@ -91,7 +91,7 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
       {error && <p role="alert" className="text-small text-danger">{error}</p>}
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setViewing(true)} className="inline-flex items-center gap-1.5 rounded-ctl border border-line px-3 py-1.5 text-small hover:bg-bg"><Eye className="h-4 w-4" /> دخول الصفحة</button>
+        <button type="button" onClick={() => setViewing(true)} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-3 py-1.5 text-small font-medium text-white"><Eye className="h-4 w-4" /> دخول الصفحة والتنقل فيها</button>
         {!row.isEdit && <button type="button" onClick={edit} className="inline-flex items-center gap-1.5 rounded-ctl border border-line px-3 py-1.5 text-small hover:bg-bg"><Pencil className="h-4 w-4" /> تعديل في لوحة المصمم</button>}
         {!row.isEdit && <button type="button" onClick={() => setEditingInfo((v) => !v)} className="rounded-ctl border border-line px-3 py-1.5 text-small hover:bg-bg">بيانات</button>}
         {!row.isEdit && <button type="button" disabled={busy} onClick={remove} className="inline-flex items-center gap-1.5 rounded-ctl border border-line px-3 py-1.5 text-small text-danger hover:bg-bg disabled:opacity-50"><Trash2 className="h-4 w-4" /> حذف</button>}

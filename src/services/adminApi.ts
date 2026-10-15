@@ -184,12 +184,15 @@ export const adminEditReview = (id: string, decision: 'approve' | 'reject', reas
 // The editor opens in a new tab; it cannot read this tab's session, so the token is left for it for a few seconds.
 export const HANDOFF_KEY = 'weelink_admin_edit';
 export const openGalleryEditor = (id: string) => {
+  // The designer's panel lives on the main site, not on admin.<domain>; the two addresses do not share storage, so the
+  // hand-over travels in the address fragment (never sent to a server) and is erased by the editor tab on arrival.
+  const payload = { id, token: getAdminToken(), at: Date.now() };
+  const host = window.location.hostname.replace(/^admin\./i, '');
+  const origin = `${window.location.protocol}//${host}${window.location.port ? `:${window.location.port}` : ''}`;
   try {
-    localStorage.setItem(HANDOFF_KEY, JSON.stringify({ id, token: getAdminToken(), at: Date.now() }));
-  } catch {
-    return false;
-  }
-  return !!window.open('/?edit-gallery=1', '_blank');
+    localStorage.setItem(HANDOFF_KEY, JSON.stringify(payload));
+  } catch { /* the fragment is enough */ }
+  return !!window.open(`${origin}/?edit-gallery=1#h=${encodeURIComponent(JSON.stringify(payload))}`, '_blank');
 };
 
 export interface SeedStatus { total: number; published: number; staged: number; searchesLeft: number; unsplash: boolean }

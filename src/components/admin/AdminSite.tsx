@@ -36,7 +36,7 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   const [drawer, setDrawer] = useState(false);
   return (
     <div dir="rtl" className="min-h-screen bg-bg font-sans text-ink">
-      <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-3 sm:px-6">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2 font-logo text-heading font-semibold">
           {menu && <button onClick={() => setDrawer(true)} className="rounded-ctl p-1 hover:bg-bg lg:hidden" aria-label="القائمة"><Menu className="h-5 w-5" /></button>}
           <ShieldCheck className="h-5 w-5 text-brand" /> Weelink · الإدارة
@@ -54,7 +54,7 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
         {menu && (
           <>
             {drawer && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setDrawer(false)} />}
-            <aside dir="rtl" className={`fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-line bg-surface p-3 transition-transform lg:static lg:z-auto lg:min-h-[calc(100vh-57px)] lg:translate-x-0 ${drawer ? 'translate-x-0' : '-translate-x-full'}`}>
+            <aside dir="rtl" className={`fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-line bg-surface p-3 transition-transform lg:sticky lg:top-[57px] lg:z-auto lg:h-[calc(100vh-57px)] lg:self-start lg:translate-x-0 ${drawer ? 'translate-x-0' : '-translate-x-full'}`}>
               <button onClick={() => setDrawer(false)} className="mb-2 rounded-ctl p-1 hover:bg-bg lg:hidden" aria-label="إغلاق"><X className="h-5 w-5" /></button>
               <div onClick={() => setDrawer(false)}>{menu}</div>
             </aside>

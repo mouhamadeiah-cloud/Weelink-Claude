@@ -39,7 +39,7 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2 font-logo text-heading font-semibold">
           {menu && <button onClick={() => setDrawer(true)} className="rounded-ctl p-1 hover:bg-bg lg:hidden" aria-label="القائمة"><Menu className="h-5 w-5" /></button>}
-          <ShieldCheck className="h-5 w-5 text-brand" /> Weelink · الإدارة
+          <ShieldCheck className="h-5 w-5 text-brand" /> <a href={`${window.location.protocol}//${window.location.hostname.replace(/^admin\./i, '')}${window.location.port ? `:${window.location.port}` : ''}/`} target="_blank" rel="noopener noreferrer" title="فتح موقع Weelink في تبويب جديد" className="rounded-ctl px-1 hover:text-brand">Weelink</a> · الإدارة
         </div>
         {admin && (
           <div className="flex items-center gap-3 text-small text-muted">

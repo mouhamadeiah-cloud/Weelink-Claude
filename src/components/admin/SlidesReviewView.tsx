@@ -2,7 +2,8 @@
 // until the platform approves or rejects them. A rejection needs a reason. The preview is the live
 // slide, drawn the way the gallery will draw it (videos and motion play). Only an approved slide ever appears in the gallery.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Eye, Loader2, Pencil, ShieldCheck, Trash2, X } from 'lucide-react';
+import { Check, Eye, Info, Loader2, Pencil, ShieldCheck, Trash2, X } from 'lucide-react';
+import { FloatingTools, FloatingTool } from '../ui/FloatingTools';
 import { AdminError, GallerySlideRow, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
 import { PagePreviewModal } from './PagePreviewModal';
 import { categoriesFor, categoryLabel, slidesWord } from '../../data/slideCategories';
@@ -71,11 +72,20 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
     if (!openGalleryEditor(row.id)) setError('تعذّر فتح لوحة المصمم. اسمح للنوافذ المنبثقة وجرّب مرة ثانية.');
   };
 
+  const tools: FloatingTool[] = [
+    { id: 'view', label: 'دخول الصفحة والتنقل فيها', icon: <Eye className="h-4 w-4" />, onClick: () => setViewing(true) },
+    ...(row.isEdit ? [] : [
+      { id: 'edit', label: 'تعديل في لوحة المصمم', icon: <Pencil className="h-4 w-4" />, onClick: edit },
+      { id: 'info', label: 'بيانات (الاسم والتصنيف)', icon: <Info className="h-4 w-4" />, onClick: () => setEditingInfo((v) => !v) },
+      { id: 'del', label: 'حذف', icon: <Trash2 className="h-4 w-4" />, onClick: remove, danger: true, disabled: busy },
+    ]),
+  ];
+
   return (
     <article className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
       {viewing && <PagePreviewModal title={row.name} kind={row.kind} slide={row.slide} page={row.page} elements={row.elements} onClose={() => setViewing(false)} onEdit={row.isEdit ? undefined : edit} />}
       {row.isEdit && <p className="rounded-ctl bg-warn/10 p-2 text-small font-medium text-warn">تعديل من المصمم على تصميم منشور: يبقى القديم في المعرض حتى تقبله.</p>}
-      <div className="overflow-hidden rounded-ctl border border-line">{row.kind === 'page' && row.page ? <LivePage page={row.page} elements={elements} maxHeight={420} /> : <LiveSlide slide={row.slide} elements={elements} />}</div>
+      <div className="group relative overflow-hidden rounded-ctl border border-line"><FloatingTools tools={tools} />{row.kind === 'page' && row.page ? <LivePage page={row.page} elements={elements} maxHeight={420} /> : <LiveSlide slide={row.slide} elements={elements} />}</div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-small">
         <dt className="text-muted">المصمم</dt><dd>{row.designerName || '—'} {row.official ? <span className="rounded-full bg-brand/10 px-2 py-0.5 text-tiny font-bold text-brand">رسمي</span> : <span className="text-tiny text-faint" dir="ltr">{row.designerUid.slice(0, 8)}</span>}</dd>
         <dt className="text-muted">النوع</dt><dd>{row.kind === 'page' ? `صفحة (${slidesWord(row.page?.slides?.length || 1)} مع شريط تنقل) · ` : 'شريحة · '}{categoryLabel(row.category)}</dd>
@@ -90,12 +100,6 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
       )}
       {error && <p role="alert" className="text-small text-danger">{error}</p>}
 
-      <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setViewing(true)} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-3 py-1.5 text-small font-medium text-white"><Eye className="h-4 w-4" /> دخول الصفحة والتنقل فيها</button>
-        {!row.isEdit && <button type="button" onClick={edit} className="inline-flex items-center gap-1.5 rounded-ctl border border-line px-3 py-1.5 text-small hover:bg-bg"><Pencil className="h-4 w-4" /> تعديل في لوحة المصمم</button>}
-        {!row.isEdit && <button type="button" onClick={() => setEditingInfo((v) => !v)} className="rounded-ctl border border-line px-3 py-1.5 text-small hover:bg-bg">بيانات</button>}
-        {!row.isEdit && <button type="button" disabled={busy} onClick={remove} className="inline-flex items-center gap-1.5 rounded-ctl border border-line px-3 py-1.5 text-small text-danger hover:bg-bg disabled:opacity-50"><Trash2 className="h-4 w-4" /> حذف</button>}
-      </div>
       {editingInfo && (
         <div className="flex flex-col gap-2 rounded-ctl border border-line bg-bg p-3">
           <label className="flex flex-col gap-1 text-small">الاسم<input value={info.name} maxLength={60} onChange={(e) => setInfo({ ...info, name: e.target.value })} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand" /></label>

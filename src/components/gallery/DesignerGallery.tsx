@@ -6,6 +6,7 @@
 // into the visitor's page (fitted to its style, or as it is); «اطلب المصمم» makes an order (HireDialog):
 // the visitor pays the office and talks to the designer in the order once it is paid. The section stays out of the way when
 // the gallery has nothing yet.
+import { FloatingTools } from '../ui/FloatingTools';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { BadgeCheck, Heart, Loader2, MessageCircle, Pencil, Plus, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
@@ -258,14 +259,13 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
               </div>
               <button type="button" onClick={() => setOpenId('')} aria-label="إغلاق" className="shrink-0 w-9 h-9 rounded-ctl flex items-center justify-center text-muted hover:text-ink hover:bg-bg cursor-pointer"><X size={18} /></button>
             </div>
-            <div className="p-4 sm:p-5">{preview(open)}</div>
+            <div className="group relative p-4 sm:p-5">
+              {onEditDesign && !!user && user.uid === open.designerUid && !open.official && <FloatingTools tools={[{ id: 'edit', label: `تعديل ${open.kind === 'page' ? 'الصفحة' : 'الشريحة'} وإعادة نشرها`, icon: <Pencil size={16} />, onClick: () => onEditDesign(open) }]} />}
+              {preview(open)}
+            </div>
             {/* The actions stay at the bottom of the window while a long page is scrolled */}
             <div className="sticky bottom-0 bg-surface border-t border-line px-5 pt-3 pb-4 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <VoteButtons slide={open} mine={votes[open.id] || 0} own={!!user && user.uid === open.designerUid} onVote={vote} large />
-              {onEditDesign && !!user && user.uid === open.designerUid && !open.official && (
-                <button type="button" onClick={() => onEditDesign(open)} className="h-10 px-4 rounded-ctl border border-line bg-surface text-ink text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer hover:border-brand/40"><Pencil size={16} /> تعديل {open.kind === 'page' ? 'الصفحة' : 'الشريحة'}</button>
-              )}
               {!open.official && <button
                 type="button"
                 disabled={!!user && user.uid === open.designerUid}

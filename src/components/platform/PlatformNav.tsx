@@ -2,10 +2,9 @@
 // The screen you are on carries a light blue frame. «حسابي» is a small menu that closes on a click outside it.
 import React, { useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { LogOut, X } from 'lucide-react';
-import { readPageLaw, type PageLaw } from '../../services/gallery';
+import { LogOut } from 'lucide-react';
 
-export type NavScreen = 'home' | 'start';
+export type NavScreen = 'home' | 'start' | 'law';
 
 interface Props {
   current: NavScreen;
@@ -13,6 +12,7 @@ interface Props {
   onHome: () => void;
   onStart: () => void;
   onOpenMyPage: () => void;
+  onLaw: () => void;
   onAccount: () => void;
   onLogout: () => void;
   // Extra items of the screen (the design orders on the start page).
@@ -24,31 +24,9 @@ const itemCls = (on: boolean) =>
     on ? 'border-brand/35 bg-brand/5 text-brand' : 'border-transparent text-muted hover:text-ink'
   }`;
 
-const LawModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [law, setLaw] = useState<PageLaw | null | undefined>(undefined);
-  useEffect(() => {
-    readPageLaw().then(setLaw).catch(() => setLaw(null));
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, [onClose]);
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="قانون الصفحة" onClick={onClose}>
-      <div dir="rtl" className="max-h-[85vh] w-full overflow-y-auto rounded-t-card bg-surface p-5 sm:max-w-2xl sm:rounded-card" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-heading font-bold">قانون الصفحة</h2>
-          <button type="button" onClick={onClose} aria-label="إغلاق" className="rounded-full p-1.5 text-muted hover:bg-bg"><X size={18} /></button>
-        </div>
-        {law === undefined ? <p className="text-sm text-muted">…</p> : law ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{law.text}</p> : <p className="text-sm text-muted">قانون الصفحة غير منشور بعد.</p>}
-      </div>
-    </div>
-  );
-};
-
-export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, onOpenMyPage, onAccount, onLogout, extra }) => {
+export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, onOpenMyPage, onLaw, onAccount, onLogout, extra }) => {
   const signedIn = !!user && !user.isAnonymous;
   const [menu, setMenu] = useState(false);
-  const [lawOpen, setLawOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const firstName = user ? (user.displayName || user.email?.split('@')[0] || '').split(' ')[0] : '';
 
@@ -75,7 +53,7 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
           <button type="button" onClick={onStart} aria-current={current === 'start' ? 'page' : undefined} className={itemCls(current === 'start')}>اعمل صفحتك</button>
           {signedIn && <button type="button" onClick={onOpenMyPage} className={itemCls(false)}>صفحتي</button>}
           {extra}
-          <button type="button" onClick={() => setLawOpen(true)} className={itemCls(false)}>قانون الصفحة</button>
+          <button type="button" onClick={onLaw} aria-current={current === 'law' ? 'page' : undefined} className={itemCls(current === 'law')}>قانون الصفحة</button>
         </div>
         <div ref={box} className="relative shrink-0">
           {signedIn ? (
@@ -95,7 +73,6 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
           )}
         </div>
       </nav>
-      {lawOpen && <LawModal onClose={() => setLawOpen(false)} />}
     </header>
   );
 };

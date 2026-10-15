@@ -95,6 +95,7 @@ import { elementDisplayName } from '../utils/elementLabels';
 import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
 import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
+import { GalleryPicker } from './rightDrawer/GalleryPicker';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
 import { lookSlide } from '../services/applyLook';
 import { pageLookById } from '../data/pageLooks';
@@ -145,8 +146,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   isCarProject = false,
   isRestaurantProject = false,
   onAddPageTemplate,
-  onApplyFreeStarterTemplate,
-  onApplyOnlineShopTemplate,
+  onAddGallerySlide,
+  onReplaceWithGalleryPage,
   onDeleteSlide,
   onAddElement,
   onAddGroup,
@@ -353,6 +354,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     }
   }, [isOpen, activeTab, activeSection]);
   const [addMenuMode, setAddMenuMode] = useState<'element' | 'slide' | 'page'>('element');
+  // Where the slides / pages on offer come from: Weelink's ready ones, or the designers' gallery.
+  const [slideSource, setSlideSource] = useState<'ready' | 'gallery'>('ready');
+  const [pageSource, setPageSource] = useState<'ready' | 'gallery'>('ready');
+  const [galleryFit, setGalleryFit] = useState(true);
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<string | null>(null);
 
   // --- Draggable & Minimization States & Handlers for Control Panel ---
@@ -3728,7 +3733,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             </button>
                           </div>
 
-                          {/* 2. Ready Slides Section */}
+                          <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
+                            {([['ready', 'شرائح جاهزة'], ['gallery', 'تصميمات من المعرض']] as const).map(([id, label]) => (
+                              <button key={id} type="button" onClick={() => setSlideSource(id)} className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all cursor-pointer ${slideSource === id ? 'bg-white text-brand shadow-2xs' : 'text-neutral-500 hover:text-black'}`}>{label}</button>
+                            ))}
+                          </div>
+                          {slideSource === 'gallery' && <GalleryPicker kind="slide" fit={galleryFit} onFit={setGalleryFit} onAdd={(g) => onAddGallerySlide && onAddGallerySlide(g, galleryFit)} />}
+                          {slideSource === 'ready' && (
                           <div className="space-y-2">
                             <h4 className="text-xs font-black text-neutral-500 border-b border-neutral-100 pb-1.5 px-1 tracking-wide">
                               اختر فئة لتصفح الشرائح المصممة مسبقاً:
@@ -3756,6 +3767,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               ))}
                             </div>
                           </div>
+                          )}
                         </div>
                       )}
 
@@ -3785,46 +3797,18 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             </button>
                           </div>
 
-                          {/* 2. Ready Site Template Section */}
-                          <div className="space-y-2">
-                            <h4 className="text-xs font-bold text-neutral-700 border-b border-neutral-100 pb-1.5 px-1">
-                              موقع جاهز للتعديل والاستخدام:
-                            </h4>
-                            <button
-                              type="button"
-                              onClick={() => onApplyFreeStarterTemplate && onApplyFreeStarterTemplate()}
-                              className="w-full bg-gradient-to-br from-[#1F5D50]/5 to-[#1F5D50]/[0.02] hover:from-[#1F5D50]/10 hover:to-[#1F5D50]/5 border border-[#1F5D50]/20 hover:border-[#1F5D50] rounded-2xl p-3.5 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <span className="text-xs font-bold text-neutral-800 group-hover:text-[#1F5D50] transition-colors">
-                                  القالب الأساسي: موقع تعريفي بخمس صفحات
-                                </span>
-                                <span className="text-xs text-[#1F5D50] font-semibold bg-[#1F5D50]/10 border border-[#1F5D50]/15 px-1.5 py-0.5 rounded-md">
-                                  5 صفحات
-                                </span>
-                              </div>
-                              <span className="text-xs text-neutral-500 font-medium leading-relaxed">
-                                مدخل، من نحن، أعمالنا، الأسعار، واتصل بنا — كل صفحة مرتبطة بالأخرى عبر شريط التنقل العلوي. سيستبدل هذا كل صفحات موقعك الحالية.
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onApplyOnlineShopTemplate && onApplyOnlineShopTemplate()}
-                              className="w-full bg-gradient-to-br from-[#B4532A]/5 to-[#B4532A]/[0.02] hover:from-[#B4532A]/10 hover:to-[#B4532A]/5 border border-[#B4532A]/20 hover:border-[#B4532A] rounded-2xl p-3.5 flex flex-col text-right transition-all hover:shadow-xs active:scale-99 cursor-pointer group gap-1.5"
-                            >
-                              <div className="flex items-center justify-between w-full">
-                                <span className="text-xs font-bold text-neutral-800 group-hover:text-[#B4532A] transition-colors">
-                                  متجر إلكتروني: منتجات وسلة مشتريات
-                                </span>
-                                <span className="text-xs text-[#B4532A] font-semibold bg-[#B4532A]/10 border border-[#B4532A]/15 px-1.5 py-0.5 rounded-md">
-                                  5 صفحات
-                                </span>
-                              </div>
-                              <span className="text-xs text-neutral-500 font-medium leading-relaxed">
-                                الرئيسية، المنتجات، السلة، طريقة الطلب، وتواصل معنا — بطاقات منتجات بزر «أضف إلى السلة»، وصفحة سلة ترسل الطلب كاملًا عبر واتساب. سيستبدل هذا كل صفحات موقعك الحالية.
-                              </span>
-                            </button>
+                          <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
+                            {([['ready', 'صفحات جاهزة'], ['gallery', 'تصميمات من المعرض']] as const).map(([id, label]) => (
+                              <button key={id} type="button" onClick={() => setPageSource(id)} className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all cursor-pointer ${pageSource === id ? 'bg-white text-brand shadow-2xs' : 'text-neutral-500 hover:text-black'}`}>{label}</button>
+                            ))}
                           </div>
+                          {pageSource === 'ready' ? (
+                            <p className="rounded-xl border border-dashed border-neutral-300 px-3 py-6 text-center text-xs leading-relaxed text-neutral-500">
+                              الصفحات الجاهزة الكاملة (مطعم، سيارات، متجر، عيادة بحجز موعد) قيد التجهيز. في الأثناء تجد صفحات مصممة في تبويب «تصميمات من المعرض».
+                            </p>
+                          ) : (
+                            <GalleryPicker kind="page" fit={galleryFit} onFit={setGalleryFit} onAdd={(g) => onReplaceWithGalleryPage && onReplaceWithGalleryPage(g)} />
+                          )}
                         </div>
                       )}
                     </div>

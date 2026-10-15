@@ -68,6 +68,7 @@ interface StartPageProps {
   onHome: () => void;
   // The top bar's account entries (the same bar as the front page).
   onOpenMyPage?: () => void;
+  onLaw?: () => void;
   onAccount?: () => void;
   onLogout?: () => void;
   // A signed-in owner finished the questions: open this kind and build it from the answers.
@@ -86,7 +87,7 @@ interface StartPageProps {
   onOpen?: (kind: ProjectType) => void;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onOpenMyPage, onAccount, onLogout, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [], onOpen }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onOpenMyPage, onLaw, onAccount, onLogout, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [], onOpen }) => {
   const signedIn = !!user && !user.isAnonymous;
   const attention = useOrderAttention(signedIn && user ? user.uid : '');
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
@@ -146,6 +147,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
         onHome={onHome}
         onStart={() => { if (kind) setKind(null); else window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         onOpenMyPage={onOpenMyPage || onHome}
+        onLaw={onLaw || onHome}
         onAccount={onAccount || onHome}
         onLogout={onLogout || onHome}
         extra={signedIn && !kind ? (

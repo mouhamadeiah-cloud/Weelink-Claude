@@ -73,6 +73,7 @@ interface HomePageProps {
   user: User | null;
   onAccount: () => void; // signed out: open the sign-in screen
   onOpenMyPage: () => void; // signed in: straight to the person's own page(s)
+  onLaw: () => void; // «قانون الصفحة»
   onBuild: () => void; // «اعمل صفحتك»
   onLogout: () => void;
 }
@@ -89,7 +90,7 @@ const Chip: React.FC<{ on: boolean; onClick: () => void; small?: boolean; childr
   </button>
 );
 
-export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPage, onBuild, onLogout }) => {
+export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPage, onLaw, onBuild, onLogout }) => {
   const uid = user?.uid || null;
   const [place, setPlace] = useState(readHomePlace);
   // A search: one of the four fields (narrowed to a category and its sub-category when picked).
@@ -175,6 +176,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         onStart={onBuild}
         onOpenMyPage={onOpenMyPage}
+        onLaw={onLaw}
         onAccount={onAccount}
         onLogout={onLogout}
       />

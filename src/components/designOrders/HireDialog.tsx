@@ -58,13 +58,13 @@ export const HireDialog: React.FC<HireDialogProps> = ({ user, designerUid, desig
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" dir="rtl" role="dialog" aria-modal="true" aria-label="اطلب مصمماً" onClick={onClose}>
       <form onSubmit={submit} className="w-full sm:max-w-lg max-h-[94vh] overflow-y-auto rounded-t-card sm:rounded-card bg-surface border border-line" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-line">
-          <h2 className="text-heading font-bold">اطلب {designerName || 'المصمم'} لصفحتك</h2>
+          <h2 className="text-heading font-bold">اطلب {designerName || 'المصمم'} لمشروعك</h2>
           <button type="button" onClick={onClose} aria-label="إغلاق" className="w-9 h-9 rounded-ctl flex items-center justify-center text-muted hover:text-ink hover:bg-bg cursor-pointer"><X size={18} /></button>
         </div>
         <div className="p-5 space-y-4">
           {slideName && <p className="text-sm text-muted">أعجبك تصميمه «{slideName}». اطلب منه تصميماً بهذا الأسلوب لصفحتك.</p>}
           <div className="rounded-card bg-bg border border-line p-4 flex items-center justify-between gap-3">
-            <span className="text-sm text-muted">سعر التصميم حسب باقة صفحتك</span>
+            <span className="text-sm text-muted">سعر التصميم حسب باقة مشروعك</span>
             <span className="text-heading font-bold tabular-nums">{price === null ? <Loader2 size={18} className="animate-spin text-faint" /> : formatPounds(price)}</span>
           </div>
           <label className="block space-y-1.5">

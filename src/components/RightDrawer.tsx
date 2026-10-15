@@ -357,6 +357,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   // Where the slides / pages on offer come from: Weelink's ready ones, or the designers' gallery.
   const [slideSource, setSlideSource] = useState<'ready' | 'gallery'>('ready');
   const [galleryFit, setGalleryFit] = useState(true);
+  const [galleryNavbar, setGalleryNavbar] = useState(false);
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<string | null>(null);
 
   // --- Draggable & Minimization States & Handlers for Control Panel ---
@@ -3797,7 +3798,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           </div>
 
                           <h4 className="border-b border-neutral-100 px-1 pb-1.5 text-xs font-bold text-neutral-700">صفحات جاهزة من معرض التصاميم:</h4>
-                          <GalleryPicker kind="page" fit={galleryFit} onFit={setGalleryFit} onAdd={(g, o) => onAddGalleryPage && onAddGalleryPage(g, o)} />
+                          <GalleryPicker kind="page" fit={galleryFit} onFit={setGalleryFit} designNavbar={galleryNavbar} onDesignNavbar={setGalleryNavbar} onAdd={(g, o) => onAddGalleryPage && onAddGalleryPage(g, o)} />
                         </div>
                       )}
                     </div>

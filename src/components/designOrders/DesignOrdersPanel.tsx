@@ -167,8 +167,8 @@ const AccessBox: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'de
   if (me === 'customer') {
     return (
       <div className="rounded-card border border-line bg-bg p-3 space-y-2 text-sm leading-relaxed">
-        <p className="font-bold inline-flex items-center gap-1.5"><KeyRound size={15} /> دخول المصمم إلى صفحتك</p>
-        {open && <p className="text-muted">لو أردت أن يعدّل المصمم صفحتك بنفسه، أعطه رمزاً يعمل 3 أيام. يعدّل تصميم الصفحة فقط ولا يرى بياناتك ولا زبائنك ولا طلباتك. تُحفظ نسخة من صفحتك قبل أول تعديل، وتسحب الرمز متى شئت.</p>}
+        <p className="font-bold inline-flex items-center gap-1.5"><KeyRound size={15} /> دخول المصمم إلى مشروعك</p>
+        {open && <p className="text-muted">لو أردت أن يعدّل المصمم مشروعك بنفسه، أعطه رمزاً يعمل 3 أيام. يعدّل تصميم المشروع فقط ولا يرى بياناتك ولا زبائنك ولا طلباتك. تُحفظ نسخة من مشروعك قبل أول تعديل، وتسحب الرمز متى شئت.</p>}
         {fresh && (
           <div className="rounded-ctl border border-brand/40 bg-surface p-3">
             <div className="text-xs text-muted">الرمز (يظهر مرة واحدة: أعطه للمصمم داخل المحادثة)</div>
@@ -182,9 +182,9 @@ const AccessBox: React.FC<{ user: User; order: DesignOrder; me: 'customer' | 'de
         </div>}
         {hasBackup && !status?.active && (
           <div className="border-t border-line pt-2 space-y-1.5">
-            <p className="text-muted">عدّل المصمم صفحتك ولم يعجبك؟ تُحفظ نسخة من صفحتك كما كانت قبل دخوله ({dayTime(status!.backupAt!)}).</p>
-            {restored ? <p className="text-success font-bold">رجعت صفحتك كما كانت. افتح صفحتك من جديد لترى النتيجة.</p> : (
-              <button type="button" disabled={!!busy} onClick={() => { if (window.confirm('ترجيع صفحتك كما كانت قبل دخول المصمم؟ تعديلاته ستُحذف من صفحتك.')) run('restore', async () => { await restorePage(user, order.id); setRestored(true); }); }} className={`${btn} border border-line bg-surface text-danger`}>{busy === 'restore' && <Loader2 size={14} className="animate-spin" />} استرجع صفحتي كما كانت</button>
+            <p className="text-muted">عدّل المصمم مشروعك ولم يعجبك؟ تُحفظ نسخة من مشروعك كما كانت قبل دخوله ({dayTime(status!.backupAt!)}).</p>
+            {restored ? <p className="text-success font-bold">رجعت مشروعك كما كانت. افتح مشروعك من جديد لترى النتيجة.</p> : (
+              <button type="button" disabled={!!busy} onClick={() => { if (window.confirm('ترجيع مشروعك كما كانت قبل دخول المصمم؟ تعديلاته ستُحذف من مشروعك.')) run('restore', async () => { await restorePage(user, order.id); setRestored(true); }); }} className={`${btn} border border-line bg-surface text-danger`}>{busy === 'restore' && <Loader2 size={14} className="animate-spin" />} استرجع صفحتي كما كانت</button>
             )}
           </div>
         )}

@@ -318,7 +318,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
             <form onSubmit={handleRegisterDesigner} className="space-y-4">
               <div className="space-y-1.5">
                 <h1 className="text-heading font-bold">انضم لمصممينا</h1>
-                <p className="text-sm text-muted leading-relaxed">صفحتك مجانية، وفيها معرض لشرائحك. صمّم شرائح جاهزة، وأضف لها ما تريد، واكسب من تصميم صفحات الزبائن.</p>
+                <p className="text-sm text-muted leading-relaxed">مشروعك مجاني، وفيه معرض لشرائحك. صمّم شرائح جاهزة، وأضف لها ما تريد، واكسب من تصميم مشاريع الزبائن.</p>
               </div>
               <label className="block space-y-1.5">
                 <span className="text-xs font-bold text-muted">اسمك كما سيظهر للزبائن</span>
@@ -422,7 +422,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
             </span>
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-ink">انضم لمصممينا</span>
-              <span className="block text-xs text-muted leading-relaxed">اعمل صفحتك مجاناً واكسب من التصميم للزبائن</span>
+              <span className="block text-xs text-muted leading-relaxed">اعمل مشروعك مجاناً واكسب من التصميم للزبائن</span>
             </span>
             <ArrowLeft size={18} className="text-faint shrink-0" />
           </button>

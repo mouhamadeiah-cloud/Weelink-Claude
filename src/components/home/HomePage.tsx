@@ -29,14 +29,14 @@ const INTENTS: { id: Intent; title: string; line: string; icon: React.ElementTyp
 const intentOf = (kind: ProjectType): Intent | null =>
   (Object.entries(INTENT_KIND) as [Intent, ProjectType][]).find(([, k]) => k === kind)?.[0] || null;
 
-const KIND_LABEL: Record<ProjectType, string> = { page: 'صفحة', shop: 'متجر', cars: 'معرض سيارات', restaurant: 'مطعم' };
+const KIND_LABEL: Record<ProjectType, string> = { page: 'مشروع', shop: 'متجر', cars: 'معرض سيارات', restaurant: 'مطعم' };
 
 // What each kind of page gives its owner, shown as the visitor scrolls down.
 const FEATURES: { title: string; lead: string; points: string[]; image: string; contain?: boolean }[] = [
   {
-    title: 'صفحتك جاهزة بدقائق، مع Wee AI',
-    lead: 'بتجاوب على كم سؤال عن شغلك، وWee AI بيكتبلك النصوص وبيرتب الصفحة. بعدها بتعدّل كل شي بإيدك.',
-    points: ['صفحة تعريفية مجانية لأي مهنة', 'عنوانك على الخريطة وأرقام التواصل', 'تصميم حر: صور، ألوان، حركات'],
+    title: 'مشروعك جاهز بدقائق، مع Wee AI',
+    lead: 'بتجاوب على كم سؤال عن شغلك، وWee AI بيكتبلك النصوص وبيرتب مشروعك. بعدها بتعدّل كل شي بإيدك.',
+    points: ['مشروع تعريفي مجاني لأي مهنة', 'عنوانك على الخريطة وأرقام التواصل', 'تصميم حر: صور، ألوان، حركات'],
     image: '/graphics/undraw/web-development.svg',
     contain: true,
   },
@@ -60,7 +60,7 @@ const FEATURES: { title: string; lead: string; points: string[]; image: string; 
   },
   {
     title: 'اسمك على الإنترنت',
-    lead: 'بتنشر صفحتك باسم خاص فيك، مع رمز QR وأيقونة، وبتظهر بالبحث بـ Weelink.',
+    lead: 'بتنشر مشروعك باسم خاص فيك، مع رمز QR وأيقونة، وبتظهر بالبحث بـ Weelink.',
     points: ['اسم مجاني name.testweelink.de', 'دومين خاص إذا بدك', 'كلمات بحث لـ Google'],
     image: '/graphics/undraw/launch-day.svg',
     contain: true,
@@ -74,7 +74,7 @@ interface HomePageProps {
   onAccount: () => void; // signed out: open the sign-in screen
   onOpenMyPage: () => void; // signed in: straight to the person's own page(s)
   onLaw: () => void; // «قانون الصفحة»
-  onBuild: () => void; // «اعمل صفحتك»
+  onBuild: () => void; // «اعمل مشروعك»
   onLogout: () => void;
 }
 
@@ -202,7 +202,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
             <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x">
               {recent.map((p) => (
                 <a key={p.url} href={p.url} onClick={() => recordVisit(uid, p)} className="snap-start shrink-0 w-44 bg-surface rounded-card border border-line p-3 hover:border-brand transition">
-                  <div className="text-xs font-bold text-muted">{KIND_LABEL[p.kind] || 'صفحة'}</div>
+                  <div className="text-xs font-bold text-muted">{KIND_LABEL[p.kind] || 'مشروع'}</div>
                   <div className="text-sm font-bold truncate">{p.title}</div>
                 </a>
               ))}
@@ -336,8 +336,8 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
               <div className="py-10 flex justify-center text-faint"><Loader2 className="animate-spin" /></div>
             ) : results.length === 0 ? (
               <div className="py-8 text-center space-y-3">
-                <p className="text-sm text-muted">{failed ? 'ما قدرنا نجيب النتائج. جرّب كمان شوي.' : 'لسا ما في صفحات منشورة هون.'}</p>
-                <button type="button" onClick={onBuild} className="text-sm font-bold text-brand hover:text-brand-hover">عندك شغل بهالمجال؟ اعمل صفحتك أول وحدة</button>
+                <p className="text-sm text-muted">{failed ? 'ما قدرنا نجيب النتائج. جرّب كمان شوي.' : 'لسا ما في مشاريع منشورة هون.'}</p>
+                <button type="button" onClick={onBuild} className="text-sm font-bold text-brand hover:text-brand-hover">عندك شغل بهالمجال؟ اعمل مشروعك أول وحدة</button>
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -345,7 +345,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
                   <button key={e.name} type="button" onClick={() => openEntry(e)} className="text-right rounded-card border border-line bg-surface hover:border-brand p-4 transition flex items-start gap-3">
                     <span className="w-11 h-11 rounded-ctl bg-brand/10 text-brand flex items-center justify-center font-bold shrink-0">{e.title.trim()[0] || 'W'}</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-bold text-muted">{KIND_LABEL[e.project] || 'صفحة'}</span>
+                      <span className="block text-xs font-bold text-muted">{KIND_LABEL[e.project] || 'مشروع'}</span>
                       <span className="block text-sm font-bold truncate">{e.title}</span>
                       {e.description && <span className="block text-xs text-muted line-clamp-2 mt-0.5">{e.description}</span>}
                     </span>
@@ -361,10 +361,10 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         <section className="rounded-card bg-ink text-white p-6 sm:p-10 flex flex-col sm:flex-row sm:items-center gap-5 justify-between">
           <div className="space-y-2">
             <h2 className="text-heading sm:text-title font-bold">عندك محل أو مهنة؟</h2>
-            <p className="text-sm text-white/80 max-w-lg">اعمل صفحتك مجاناً، وخلّي الناس يلاقوك لما يدوّروا بمدينتك.</p>
+            <p className="text-sm text-white/80 max-w-lg">اعمل مشروعك مجاناً، وخلّي الناس يلاقوك لما يدوّروا بمدينتك.</p>
           </div>
           <button type="button" onClick={onBuild} className="shrink-0 bg-brand hover:bg-brand-hover text-white rounded-ctl px-6 py-3.5 text-sm font-bold transition flex items-center gap-2 self-start sm:self-auto">
-            اعمل صفحتك مجاناً <ArrowLeft size={16} />
+            اعمل مشروعك مجاناً <ArrowLeft size={16} />
           </button>
         </section>
 
@@ -391,7 +391,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
             </article>
           ))}
           <div className="text-center pt-2">
-            <button type="button" onClick={onBuild} className="bg-brand hover:bg-brand-hover text-white rounded-ctl px-6 py-3.5 text-sm font-bold">ابدأ صفحتك</button>
+            <button type="button" onClick={onBuild} className="bg-brand hover:bg-brand-hover text-white rounded-ctl px-6 py-3.5 text-sm font-bold">ابدأ مشروعك</button>
           </div>
         </section>
       </main>

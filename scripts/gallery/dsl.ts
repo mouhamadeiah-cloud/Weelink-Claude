@@ -240,6 +240,8 @@ export const buildPage = (spec: PageSpec) => {
     ...(n.icons ? { partIcons: Object.fromEntries(Object.entries(n.icons).map(([key, v]) => [key.replace(/^item-(\d+)$/, 'item-nav-$1'), v])) } : {}),
     ...(n.backgroundImage ? { backgroundImage: n.backgroundImage } : {}),
     itemsFontFamily: spec.look.body,
+    // On phones the page names fold into a menu button, as «تنسيق الموبايل» does.
+    mobileMenu: true,
   } as NavbarConfig;
 
   let counter = 0;

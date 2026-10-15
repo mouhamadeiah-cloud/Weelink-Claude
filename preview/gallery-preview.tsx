@@ -28,14 +28,14 @@ const fill = (v: any): any => {
 
 const only = params.get('key');
 const App = () => (
-  <div style={{ width: 1280, margin: '0 auto' }}>
+  <div style={{ width: params.get('device') === 'mobile' ? 390 : 1280, margin: '0 auto' }}>
     {data.filter((d) => !only || d.key === only).map((d) => {
       const page = fill(d.page);
       const elements = deserializeElements(fill(d.elements));
       return (
         <section key={d.key} id={`p-${d.key}`} style={{ marginBottom: 40, background: '#fff' }}>
           <div dir="ltr" style={{ padding: 8, font: '14px sans-serif', background: '#222', color: '#fff' }}>{d.key} · {d.name} · {d.lookId}</div>
-          <LiveDesign slides={page.slides} elements={elements} navbar={page.navbar} />
+          <LiveDesign slides={page.slides} elements={elements} navbar={page.navbar} interactive={params.get('interactive') === '1'} device={params.get('device') === 'mobile' ? 'mobile' : 'desktop'} />
         </section>
       );
     })}

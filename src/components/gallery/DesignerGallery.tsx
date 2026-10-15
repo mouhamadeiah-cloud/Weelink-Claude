@@ -8,7 +8,7 @@
 // the gallery has nothing yet.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { BadgeCheck, Heart, Loader2, MessageCircle, Plus, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { BadgeCheck, Heart, Loader2, MessageCircle, Pencil, Plus, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { LivePage, LiveSlide } from './LiveSlide';
 import { HireDialog } from '../designOrders/HireDialog';
 import { PAGE_CATEGORIES, SLIDE_CATEGORIES, categoryLabel, slidesWord, type DesignKind } from '../../data/slideCategories';
@@ -60,9 +60,11 @@ interface DesignerGalleryProps {
   onOpenOrders?: (orderId?: string) => void;
   // «أضف لصفحتي مجاناً»: puts the design in the visitor's own page (fitted to its style when `fit`).
   onAddToMyPage?: (slide: GallerySlide, fit: boolean) => Promise<{ ok: boolean; message: string }>;
+  // «تعديل»: shown only to the designer of the design.
+  onEditDesign?: (slide: GallerySlide) => void;
 }
 
-export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToMyPage, onOpenOrders }) => {
+export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToMyPage, onOpenOrders, onEditDesign }) => {
   const signedIn = !!user && !user.isAnonymous;
   const [slides, setSlides] = useState<GallerySlide[] | null>(null);
   const [votes, setVotes] = useState<Record<string, number>>({});
@@ -261,6 +263,9 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
             <div className="sticky bottom-0 bg-surface border-t border-line px-5 pt-3 pb-4 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <VoteButtons slide={open} mine={votes[open.id] || 0} own={!!user && user.uid === open.designerUid} onVote={vote} large />
+              {onEditDesign && !!user && user.uid === open.designerUid && !open.official && (
+                <button type="button" onClick={() => onEditDesign(open)} className="h-10 px-4 rounded-ctl border border-line bg-surface text-ink text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer hover:border-brand/40"><Pencil size={16} /> تعديل {open.kind === 'page' ? 'الصفحة' : 'الشريحة'}</button>
+              )}
               {!open.official && <button
                 type="button"
                 disabled={!!user && user.uid === open.designerUid}

@@ -73,13 +73,15 @@ interface StartPageProps {
   onDesigner: () => void;
   // «أضف لصفحتي مجاناً» on a gallery design: it goes into the signed-in owner's own page.
   onAddDesign?: (slide: GallerySlide, fit: boolean) => Promise<{ ok: boolean; message: string }>;
+  // «تعديل» on a design of the signed-in designer's own: the editor opens on it.
+  onEditDesign?: (slide: GallerySlide) => void;
   loadingType?: ProjectType | null;
   // The kinds this account already has a page of: picking one opens it, not the questions again.
   owned?: ProjectType[];
   onOpen?: (kind: ProjectType) => void;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, onDesigner, onAddDesign, loadingType, owned = [], onOpen }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [], onOpen }) => {
   const signedIn = !!user && !user.isAnonymous;
   const attention = useOrderAttention(signedIn && user ? user.uid : '');
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
@@ -241,7 +243,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </section>
 
           {/* The designers' approved slides, under the cards */}
-          <DesignerGallery user={user} onAddToMyPage={onAddDesign} onOpenOrders={(id) => setOrders({ id: id || '' })} />
+          <DesignerGallery user={user} onEditDesign={onEditDesign} onAddToMyPage={onAddDesign} onOpenOrders={(id) => setOrders({ id: id || '' })} />
         </main>
       ) : stage === 'plans' ? (
         <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} title={chosen.title} onPicked={startQuestions} />

@@ -23,6 +23,8 @@ import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, t
 import { DesignerBar } from './components/designer/DesignerBar';
 import { openClientPage, saveClientPage, accessErrorText, activeAccess, revokeAccessCode } from './services/designAccess';
 import { useOrderAttention } from './services/orderAttention';
+import { GalleryEditBar } from './components/designer/GalleryEditBar';
+import { adminEditOpen, adminEditSave, designerEditOpen, designerEditSave, editErrorText, takeAdminHandoff, type EditableDesign } from './services/galleryEdit';
 import { DesignerDashboard } from './components/designer/DesignerDashboard';
 import { DesignOrdersPanel } from './components/designOrders/DesignOrdersPanel';
 import { insertDesign } from './services/fitDesign';
@@ -241,6 +243,12 @@ export default function App() {
   // save from this editor cannot overwrite the designer's work. It is read again when the code ends.
   const [designerLock, setDesignerLock] = useState<{ id: string; designerName: string; expiresAt: number } | null>(null);
   const pageLockRef = useRef(false);
+  // A design of the gallery open in the editor (services/galleryEdit.ts): the admin edits any of them, a designer their own.
+  const [galleryEdit, setGalleryEdit] = useState<{ id: string; as: 'admin' | 'designer'; name: string; kind: DesignKind; status: string; pendingEdit: boolean } | null>(null);
+  const galleryEditRef = useRef<{ id: string; as: 'admin' | 'designer'; kind: DesignKind; token?: string } | null>(null);
+  const galleryBaselineRef = useRef('');
+  const [gallerySaving, setGallerySaving] = useState(false);
+  const [gallerySavedNote, setGallerySavedNote] = useState('');
   const clientSessionRef = useRef<{ orderId: string; code: string; expiresAt: number } | null>(null);
   const prevProjectRef = useRef<ProjectType>('page');
   // A page to build as soon as its kind is open in the editor: the questions just finished.
@@ -1036,6 +1044,8 @@ export default function App() {
 
   // Saves the open draft now; the page itself is never touched.
   const saveActiveDraft = async (): Promise<boolean> => {
+    // A gallery design is saved only by its own «حفظ» button: a switch of draft must not send it to review by itself.
+    if (galleryEditRef.current) return false;
     const user = auth.currentUser;
     if (!user || user.isAnonymous || !draftReadyRef.current) return false;
     const client = clientSessionRef.current;
@@ -1073,6 +1083,8 @@ export default function App() {
     draftReadyRef.current = false;
     clientSessionRef.current = null;
     setClientSession(null);
+    galleryEditRef.current = null;
+    setGalleryEdit(null);
     let loaded: Awaited<ReturnType<typeof readDraft>> = null;
     try {
       loaded = await readDraft(uid, slot);
@@ -1135,6 +1147,136 @@ export default function App() {
     }
   };
 
+  // ---------- Editing a design of the gallery ----------
+  const confirmLeaveGalleryEdit = () => !galleryEditRef.current || JSON.stringify({ pages, elements }) === galleryBaselineRef.current || window.confirm('عندك تعديلات لم تُحفظ على هذا التصميم. تتركها؟');
+
+  const loadGalleryDesign = (d: EditableDesign, as: 'admin' | 'designer', pendingEdit: boolean, token?: string) => {
+    const base = blankDraftPages(d.kind)[0];
+    const pageIn: Page = d.kind === 'page'
+      ? { ...base, navbar: d.page?.navbar || base.navbar, slides: d.page?.slides?.length ? d.page.slides : base.slides }
+      : { ...base, slides: [d.slide] };
+    const pagesIn: Page[] = normalizeLegacyNavbarDefaults([pageIn]);
+    const elementsIn = deserializeElements(d.elements);
+    draftReadyRef.current = false;
+    loadSeqRef.current++;
+    setPages(pagesIn);
+    setElements(elementsIn);
+    setHistory([elementsIn]);
+    setHistoryIndex(0);
+    setActivePageId(pagesIn[0].id);
+    setActiveSlideId(pagesIn[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    galleryBaselineRef.current = JSON.stringify({ pages: pagesIn, elements: elementsIn });
+    galleryEditRef.current = { id: d.id, as, kind: d.kind, token };
+    setGalleryEdit({ id: d.id, as, name: d.name, kind: d.kind, status: d.status, pendingEdit });
+    setGallerySavedNote('');
+    activeSlotRef.current = `gallery-${d.id}`;
+    activeKindRef.current = d.kind;
+    setActiveSlot(`gallery-${d.id}`);
+    draftReadyRef.current = true;
+  };
+
+  // What is saved: the page's navbar and slides (a slide design: the open slide) with their elements.
+  const galleryPayload = () => {
+    const kind = galleryEditRef.current?.kind || 'slide';
+    const slides = kind === 'page' ? pages.flatMap((p) => p.slides) : [currentSlide];
+    const ids = new Set(slides.map((sl) => sl.id));
+    const problem = kind !== 'page' ? '' : pages.length !== 1 ? 'تصميم الصفحة هو صفحة واحدة (حتى ثلاث شرائح). احذف الصفحات الزائدة من قائمة الصفحات.' : slides.length > PAGE_MAX_SLIDES ? `الصفحة حتى ${PAGE_MAX_SLIDES} شرائح، وعندك ${slides.length}.` : '';
+    return { problem, page: sanitizeData(kind === 'page' ? { navbar: pages[0].navbar, slides } : { slides }), elements: serializeElements(elements.filter((e) => ids.has(e.slideId))) };
+  };
+
+  const saveGalleryEdit = async (): Promise<boolean> => {
+    const session = galleryEditRef.current;
+    if (!session || gallerySaving) return false;
+    const payload = galleryPayload();
+    if (payload.problem) {
+      window.alert(payload.problem);
+      return false;
+    }
+    setGallerySaving(true);
+    setGallerySavedNote('');
+    try {
+      if (session.as === 'admin') await adminEditSave(session.token || '', session.id, payload);
+      else {
+        const user = auth.currentUser;
+        if (!user) throw new Error('unauthorized');
+        const r = await designerEditSave(user, session.id, payload);
+        setGallerySavedNote(r.mode === 'review' ? 'أُرسل للمراجعة' : 'حُفظ وعاد للمراجعة');
+      }
+      if (session.as === 'admin') setGallerySavedNote('حُفظ');
+      galleryBaselineRef.current = JSON.stringify({ pages, elements });
+      return true;
+    } catch (e) {
+      window.alert(editErrorText(e));
+      return false;
+    } finally {
+      setGallerySaving(false);
+    }
+  };
+
+  const leaveGalleryEdit = async () => {
+    const session = galleryEditRef.current;
+    if (!session || !confirmLeaveGalleryEdit()) return;
+    if (session.as === 'admin') {
+      galleryEditRef.current = null;
+      window.close();
+      window.location.href = '/?admin';
+      return;
+    }
+    const user = auth.currentUser;
+    if (user && draftsRef.current[0]) {
+      setDraftBusy(true);
+      await openDraft(user.uid, draftsRef.current[0].slot);
+      setDraftBusy(false);
+    }
+  };
+
+  // The admin's editor tab (opened by «تعديل في لوحة المصمم» in the admin site) starts here, once the sign-in check is done.
+  const adminEditStarted = useRef(false);
+  useEffect(() => {
+    if (isFirebaseLoading || adminEditStarted.current || !new URLSearchParams(window.location.search).has('edit-gallery')) return;
+    adminEditStarted.current = true;
+    const handoff = takeAdminHandoff();
+    if (!handoff) {
+      window.alert('انتهت مهلة فتح التعديل. افتح الإدارة واضغط «تعديل في لوحة المصمم» من جديد.');
+      return;
+    }
+    (async () => {
+      try {
+        designerModeRef.current = true;
+        const r = await adminEditOpen(handoff.token, handoff.id);
+        setProject('page');
+        loadGalleryDesign(r.design, 'admin', false, handoff.token);
+        setIsHomeActive(false);
+        setIsStartActive(false);
+        setIsAuthActive(false);
+        setIsProjectChosen(true);
+        setDesignerMode(true);
+        setIsPreviewActive(false);
+      } catch (e) {
+        designerModeRef.current = false;
+        window.alert(editErrorText(e));
+      }
+    })();
+  }, [isFirebaseLoading]);
+
+  // «تعديل» on a design of the designer's own in the gallery: the editor opens on it in the designer's mode.
+  const editMyDesign = async (slide: { id: string }) => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || !isDesigner) return;
+    try {
+      const r = await designerEditOpen(user, slide.id);
+      setIsAuthActive(false);
+      await handleChooseProject('page');
+      setIsStartActive(false);
+      await enterDesignerMode();
+      if (!designerModeRef.current) return;
+      loadGalleryDesign(r.design, 'designer', r.pendingEdit);
+    } catch (e) {
+      window.alert(editErrorText(e));
+    }
+  };
+
   const enterDesignerMode = async () => {
     const user = auth.currentUser;
     if (!user || user.isAnonymous || draftBusy || designerModeRef.current) return;
@@ -1172,7 +1314,7 @@ export default function App() {
   };
 
   const exitDesignerMode = async () => {
-    if (draftBusy || !designerModeRef.current) return;
+    if (draftBusy || !designerModeRef.current || !confirmLeaveGalleryEdit()) return;
     setDraftBusy(true);
     await saveActiveDraft();
     draftReadyRef.current = false;
@@ -1195,7 +1337,7 @@ export default function App() {
 
   const switchDraft = async (slot: string) => {
     const user = auth.currentUser;
-    if (!user || draftBusy || slot === activeSlotRef.current) return;
+    if (!user || draftBusy || slot === activeSlotRef.current || !confirmLeaveGalleryEdit()) return;
     setDraftBusy(true);
     await saveActiveDraft();
     await openDraft(user.uid, slot);
@@ -1205,7 +1347,7 @@ export default function App() {
   const newDraft = async (kind: DesignKind) => {
     const user = auth.currentUser;
     const slot = freeSlot(draftsRef.current);
-    if (!user || draftBusy || !slot) return;
+    if (!user || draftBusy || !slot || !confirmLeaveGalleryEdit()) return;
     setDraftBusy(true);
     await saveActiveDraft();
     try {
@@ -1578,7 +1720,7 @@ export default function App() {
 
   // The cloud in the top bar: saves the open project to the cloud now (it also saves itself a
   // moment after every change). Resolves once Firebase has it, or false when it could not.
-  const handleManualSave = () => flushProjectSave();
+  const handleManualSave = () => (galleryEditRef.current ? saveGalleryEdit() : flushProjectSave());
 
   const handleStepChange = (_stepNum: number) => {
     setIsCanvasLoading(true);
@@ -3811,6 +3953,7 @@ export default function App() {
         }}
         onDesigner={joinDesigners}
         onAddDesign={addGalleryDesign}
+        onEditDesign={isDesigner ? editMyDesign : undefined}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
           pendingBuildRef.current = kind;
@@ -4000,9 +4143,12 @@ export default function App() {
           isDesigner={isDesigner}
           isDesignerMode={designerMode}
           onToggleDesignerMode={designerMode ? exitDesignerMode : enterDesignerMode}
-          onExportSlide={clientSession ? undefined : () => setIsExportOpen(true)}
+          onExportSlide={clientSession || galleryEdit ? undefined : () => setIsExportOpen(true)}
         />
-        {designerMode && !isPreviewActive && (
+        {designerMode && !isPreviewActive && galleryEdit && (
+          <GalleryEditBar as={galleryEdit.as} name={galleryEdit.name} kind={galleryEdit.kind} status={galleryEdit.status} pendingEdit={galleryEdit.pendingEdit} saving={gallerySaving} savedNote={gallerySavedNote} onSave={saveGalleryEdit} onLeave={leaveGalleryEdit} />
+        )}
+        {designerMode && !isPreviewActive && !galleryEdit && (
           <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} onOrders={() => setIsOrdersOpen(true)} onDashboard={() => setIsDashboardOpen(true)} attention={orderAttention} client={clientSession ? { expiresAt: clientSession.expiresAt, onLeave: () => switchDraft(draftsRef.current[0]?.slot || '') } : undefined} />
         )}
 

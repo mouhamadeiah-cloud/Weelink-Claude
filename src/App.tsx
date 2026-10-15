@@ -3944,6 +3944,15 @@ export default function App() {
           setStartKind(null);
           setIsHomeActive(true);
         }}
+        onOpenMyPage={() => openMyPage(activeUserUid)}
+        onAccount={() => {
+          setAuthMode('login');
+          afterSignInRef.current = 'account';
+          pendingBuildRef.current = null;
+          setIsStartActive(false);
+          setIsAuthActive(true);
+        }}
+        onLogout={handleLogout}
         onBuild={openAfterQuestions}
         owned={(Object.keys(ownedRef.current) as ProjectType[]).filter((k) => ownedRef.current[k])}
         onOpen={async (kind) => {

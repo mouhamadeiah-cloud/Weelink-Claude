@@ -5,12 +5,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import {
-  ArrowLeft, CarFront, Clock, Loader2, LogOut, MapPin, Search, ShoppingBag, Sparkles, Store, UserRound, UtensilsCrossed, Wrench, X,
+  ArrowLeft, CarFront, Clock, Loader2, MapPin, ShoppingBag, Sparkles, UtensilsCrossed, Wrench, X,
 } from 'lucide-react';
+import { PlatformNav } from '../platform/PlatformNav';
 import { SYRIAN_GOVERNORATES } from '../../utils/syriaLists';
-import { normalizeArabic } from '../ui/ComboInput';
 import { Intent, RecentPage, bumpIntent, favoriteIntent, listRecent, readHomePlace, recordVisit, saveHomePlace } from '../../services/homeActivity';
-import { DirectoryEntry, DishOffer, INTENT_KIND, entryUrl, listByCategory, listByKind, restaurantOffers, searchDirectory } from '../../services/directory';
+import { DirectoryEntry, DishOffer, INTENT_KIND, entryUrl, listByCategory, listByKind, restaurantOffers } from '../../services/directory';
 import { categorySourceOf, useCategories } from '../../utils/businessCategories';
 import { JoinedPage, listJoinedPages, pageUrl } from '../../services/pageCustomers';
 import { FOOD_PHOTOS, foodPhoto } from '../restaurant/restaurantTypes';
@@ -28,20 +28,6 @@ const INTENTS: { id: Intent; title: string; line: string; icon: React.ElementTyp
 
 const intentOf = (kind: ProjectType): Intent | null =>
   (Object.entries(INTENT_KIND) as [Intent, ProjectType][]).find(([, k]) => k === kind)?.[0] || null;
-
-// Words that mean one of the four searches, so «مطعم» or «سيارة» opens it instead of a keyword search.
-const INTENT_WORDS: Record<Intent, string[]> = {
-  food: ['اكل', 'مطعم', 'مطاعم', 'طعام', 'طلبات', 'وجبه', 'منيو', 'فطور', 'غدا', 'عشا'],
-  shop: ['تسوق', 'متجر', 'متاجر', 'شراء', 'منتجات', 'سوق'],
-  pros: ['فني', 'فنيين', 'خدمات', 'صيانه', 'مهني', 'حرفي'],
-  cars: ['سياره', 'سيارات', 'معرض', 'معارض'],
-};
-
-const matchIntent = (text: string): Intent | null => {
-  const words = normalizeArabic(text).split(/\s+/).map((w) => w.replace(/^ال/, ''));
-  if (words.length !== 1) return null;
-  return (Object.entries(INTENT_WORDS) as [Intent, string[]][]).find(([, list]) => list.includes(words[0]))?.[0] || null;
-};
 
 const KIND_LABEL: Record<ProjectType, string> = { page: 'صفحة', shop: 'متجر', cars: 'معرض سيارات', restaurant: 'مطعم' };
 
@@ -106,13 +92,11 @@ const Chip: React.FC<{ on: boolean; onClick: () => void; small?: boolean; childr
 export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPage, onBuild, onLogout }) => {
   const uid = user?.uid || null;
   const [place, setPlace] = useState(readHomePlace);
-  const [text, setText] = useState('');
-  // A search: one of the four (narrowed to a category and its sub-category when picked), or typed words.
-  const [active, setActive] = useState<{ intent: Intent | null; query: string; category?: string; sub?: string } | null>(null);
+  // A search: one of the four fields (narrowed to a category and its sub-category when picked).
+  const [active, setActive] = useState<{ intent: Intent; category?: string; sub?: string } | null>(null);
   const [results, setResults] = useState<DirectoryEntry[] | null>(null);
   const [offers, setOffers] = useState<DishOffer[]>([]);
   const [failed, setFailed] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [joined, setJoined] = useState<JoinedPage[]>([]);
   const recent = useMemo<RecentPage[]>(() => (uid ? listRecent(uid) : []), [uid, active]);
   const favorite = uid ? favoriteIntent(uid) : null;
@@ -145,11 +129,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
     setOffers([]);
     setFailed(false);
     const filter = active.sub || active.category;
-    const load = active.intent
-      ? filter
-        ? listByCategory(INTENT_KIND[active.intent], filter)
-        : listByKind(INTENT_KIND[active.intent])
-      : searchDirectory(active.query);
+    const load = filter ? listByCategory(INTENT_KIND[active.intent], filter) : listByKind(INTENT_KIND[active.intent]);
     load
       .then(async (list) => {
         if (!alive) return;
@@ -167,17 +147,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
 
   const openIntent = (intent: Intent) => {
     bumpIntent(uid, intent);
-    setActive({ intent, query: '' });
-    window.setTimeout(() => document.getElementById('home-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-  };
-
-  const submitSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = text.trim();
-    if (!q) return;
-    const intent = matchIntent(q);
-    if (intent) return openIntent(intent);
-    setActive({ intent: null, query: q });
+    setActive({ intent });
     window.setTimeout(() => document.getElementById('home-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
@@ -185,91 +155,40 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
     const url = entryUrl(e);
     recordVisit(uid, { kind: e.project, name: e.name, title: e.title, url });
     const intent = intentOf(e.project);
-    if (intent && !active?.intent) bumpIntent(uid, intent);
+    if (intent && !active) bumpIntent(uid, intent);
     window.location.href = url;
   };
 
   const orderedIntents = favorite ? [...INTENTS].sort((a, b) => Number(b.id === favorite) - Number(a.id === favorite)) : INTENTS;
-  const activeIntent = active?.intent ? INTENTS.find((i) => i.id === active.intent) : null;
+  const activeIntent = active ? INTENTS.find((i) => i.id === active.intent) : null;
   // The categories of the open search (Eyad's shop and restaurant lists, the occupations for services).
-  const catKind = active?.intent && active.intent !== 'cars' ? INTENT_KIND[active.intent] : undefined;
+  const catKind = active && active.intent !== 'cars' ? INTENT_KIND[active.intent] : undefined;
   const categories = useCategories(categorySourceOf(catKind), !!catKind);
   const activeCategory = active?.category ? categories?.find((c) => c.name === active.category) : undefined;
-  const pickCategory = (category?: string, sub?: string) => active?.intent && setActive({ intent: active.intent, query: '', category, sub });
+  const pickCategory = (category?: string, sub?: string) => active && setActive({ intent: active.intent, category, sub });
 
   return (
     <div dir="rtl" className="min-h-screen bg-bg text-ink">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 bg-bg/90 backdrop-blur border-b border-line">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <a href="/" className="flex items-center gap-2 shrink-0" aria-label="weelink">
-            <span className="w-8 h-8 rounded-ctl bg-brand text-white flex items-center justify-center font-bold">W</span>
-            <span className="text-lg font-bold tracking-tight hidden sm:inline font-logo">weelink</span>
-          </a>
-          <label className="flex items-center gap-1.5 text-xs font-bold text-muted bg-surface border border-line rounded-full pr-2.5 pl-1 py-1 min-w-0">
-            <MapPin size={14} className="text-brand shrink-0" />
-            <select
-              aria-label="محافظتك"
-              value={place}
-              onChange={(e) => { setPlace(e.target.value); saveHomePlace(e.target.value); }}
-              className="bg-transparent outline-none cursor-pointer max-w-[7.5rem] truncate"
-            >
-              <option value="">كل سوريا</option>
-              {SYRIAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
-            </select>
-          </label>
-          <div className="flex-1" />
-          <button type="button" onClick={onBuild} className="hidden sm:inline-flex items-center gap-1.5 text-sm font-bold text-ink hover:text-brand px-2">
-            <Store size={15} /> اعمل صفحتك
-          </button>
-          {user ? (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMenuOpen((o) => !o)}
-                className="flex items-center gap-2 bg-ink text-white rounded-full pl-3 pr-1 py-1 text-xs font-bold"
-              >
-                <span className="w-7 h-7 rounded-full bg-brand flex items-center justify-center">{(firstName[0] || '؟').toUpperCase()}</span>
-                حسابي
-              </button>
-              {menuOpen && (
-                <div className="absolute left-0 mt-2 w-52 bg-surface rounded-card shadow-lg border border-line py-2 text-sm z-40">
-                  <button type="button" onClick={() => { setMenuOpen(false); onOpenMyPage(); }} className="w-full text-right px-4 py-2 hover:bg-bg font-bold">صفحتي</button>
-                  <button type="button" onClick={() => { setMenuOpen(false); onBuild(); }} className="w-full text-right px-4 py-2 hover:bg-bg">إضافة صفحة لحسابي</button>
-                  <div className="my-1 border-t border-line" />
-                  <button type="button" onClick={() => { setMenuOpen(false); onLogout(); }} className="w-full text-right px-4 py-2 hover:bg-bg text-danger flex items-center gap-2"><LogOut size={14} /> تسجيل الخروج</button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button type="button" onClick={onAccount} className="flex items-center gap-1.5 bg-ink text-white rounded-full px-4 py-2 text-xs font-bold">
-              <UserRound size={15} /> حسابي
-            </button>
-          )}
-        </div>
-      </header>
+      <PlatformNav
+        current="home"
+        user={user}
+        onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onStart={onBuild}
+        onOpenMyPage={onOpenMyPage}
+        onAccount={onAccount}
+        onLogout={onLogout}
+      />
 
-      {/* Search */}
+      {/* The way in: pick the field first; the search of that field (its categories and city) opens below */}
       <section className="relative overflow-hidden bg-surface border-b border-line">
-        <div className="relative max-w-3xl mx-auto px-4 pt-10 pb-8 sm:pt-16 sm:pb-12 text-center">
+        <div className="relative max-w-3xl mx-auto px-4 pt-10 pb-8 sm:pt-14 sm:pb-10 text-center">
           {user && (
             <p className="text-sm font-bold text-brand mb-2">أهلاً {firstName}</p>
           )}
           <h1 className="text-title sm:text-display font-bold">
             كل شي بتحتاجه{place ? <> بـ<span className="text-brand">{place}</span></> : ' حواليك'}،<br className="hidden sm:block" /> بصفحة وحدة
           </h1>
-          <p className="mt-3 text-sm sm:text-base text-muted">أكل، تسوق، فنيين وسيارات، من محلات وناس حقيقيين.</p>
-          <form onSubmit={submitSearch} className="mt-6 flex items-center bg-surface rounded-card border border-line shadow-sm focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15 p-1.5">
-            <Search size={20} className="mx-3 text-faint shrink-0" />
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="شو بدك اليوم؟ شاورما، كهربائي، تويوتا…"
-              aria-label="ابحث"
-              className="flex-1 min-w-0 bg-transparent outline-none text-base placeholder:text-faint py-2.5"
-            />
-            <button type="submit" className="shrink-0 bg-brand hover:bg-brand-hover text-white rounded-ctl px-5 py-2.5 text-sm font-bold transition">ابحث</button>
-          </form>
+          <p className="mt-3 text-sm sm:text-base text-muted">اختر شو بدك تدور عليه: أكل، تسوق، فنيين وسيارات، من محلات وناس حقيقيين.</p>
         </div>
       </section>
 
@@ -357,9 +276,19 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         {active && (
           <section id="home-results" className="scroll-mt-20 bg-surface rounded-card border border-line p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-heading font-bold">
-                {activeIntent ? activeIntent.title : <>نتائج «{active.query}»</>}
-              </h2>
+              <h2 className="text-heading font-bold">{activeIntent?.title}</h2>
+              <label className="ms-auto flex min-w-0 items-center gap-1.5 rounded-full border border-line bg-bg py-1 pl-1 pr-2.5 text-xs font-bold text-muted">
+                <MapPin size={14} className="shrink-0 text-brand" />
+                <select
+                  aria-label="محافظتك"
+                  value={place}
+                  onChange={(e) => { setPlace(e.target.value); saveHomePlace(e.target.value); }}
+                  className="max-w-[7.5rem] cursor-pointer truncate bg-transparent outline-none"
+                >
+                  <option value="">كل سوريا</option>
+                  {SYRIAN_GOVERNORATES.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </label>
               <button type="button" onClick={() => setActive(null)} aria-label="إغلاق النتائج" className="w-8 h-8 rounded-full bg-bg hover:bg-line flex items-center justify-center"><X size={16} /></button>
             </div>
             {catKind && categories && (

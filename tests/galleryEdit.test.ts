@@ -100,3 +100,13 @@ test('the admin deletes a design for good', async () => {
   assert.equal(store.has('gallerySlides/g1'), false);
   assert.equal(((await deleteDesign(db, 'g1')) as any).error, 'not_found');
 });
+
+test('deleting a page also deletes the slides taken from it, and only those', async () => {
+  seed('approved');
+  store.set('gallerySlides/g1_s1', { kind: 'slide', derivedFrom: 'g1', name: 'ش1', status: 'approved' });
+  store.set('gallerySlides/g1_s2', { kind: 'slide', derivedFrom: 'g1', name: 'ش2', status: 'approved' });
+  store.set('gallerySlides/other_s1', { kind: 'slide', derivedFrom: 'other', name: 'غريبة', status: 'approved' });
+  assert.ok(((await deleteDesign(db, 'g1')) as any).ok);
+  assert.ok(!store.has('gallerySlides/g1_s1') && !store.has('gallerySlides/g1_s2'));
+  assert.ok(store.has('gallerySlides/other_s1'));
+});

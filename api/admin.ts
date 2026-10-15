@@ -916,10 +916,13 @@ export default {
     if (action === 'slides-review-list') {
       const status = SLIDE_STATUSES.includes(String(body.status)) ? String(body.status) : 'pending';
       const [snap, pendingCount] = await Promise.all([
-        db.collection('gallerySlides').where('status', '==', status).limit(60).get(),
-        db.collection('gallerySlides').where('status', '==', 'pending').select().get(),
+        db.collection('gallerySlides').where('status', '==', status).limit(240).get(),
+        db.collection('gallerySlides').where('status', '==', 'pending').select('derivedFrom').get(),
       ]);
+      // The slides taken from a page follow the page's decision: they are listed only among the approved ones.
       const rows = snap.docs
+        .filter((d) => !d.data().derivedFrom || status === 'approved')
+        .slice(0, 60)
         .map((d) => {
           const x = d.data();
           return {
@@ -933,7 +936,7 @@ export default {
         .sort((a, b) => b.createdAt - a.createdAt);
       // A designer's change to a design that is already approved waits here too, beside the new exports.
       const edits = status === 'pending' ? await pendingEditRows(db) : [];
-      return json({ rows: [...edits, ...rows], counts: { pending: pendingCount.size + (status === 'pending' ? edits.length : (await pendingEditRows(db)).length) } });
+      return json({ rows: [...edits, ...rows], counts: { pending: pendingCount.docs.filter((d) => !d.data().derivedFrom).length + (status === 'pending' ? edits.length : (await pendingEditRows(db)).length) } });
     }
 
     if (action === 'slide-review') {
@@ -955,6 +958,14 @@ export default {
         status, reason: decision === 'reject' ? reason : '', reviewedBy: session.u, reviewedAt: Date.now(),
         ...(decision === 'approve' ? { approvedAt: Date.now(), likes: Number(cur?.likes) || 0, dislikes: Number(cur?.dislikes) || 0 } : {}),
       });
+      // The slides taken from this page (Weelink's own pages) get the same decision.
+      const derived = await db.collection('gallerySlides').where('derivedFrom', '==', id).get();
+      for (const d of derived.docs) {
+        await d.ref.update({
+          status, reason: decision === 'reject' ? reason : '', reviewedBy: session.u, reviewedAt: Date.now(),
+          ...(decision === 'approve' ? { approvedAt: d.data().approvedAt || Date.now() } : {}),
+        });
+      }
       await audit(session.u, `slide-review:${id}:${status}`);
       return json({ status });
     }

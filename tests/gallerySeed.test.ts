@@ -5,6 +5,9 @@ import { getFirestore, store } from './fakeAdmin.ts';
 
 process.env.UNSPLASH_ACCESS_KEY = 'test';
 const db = getFirestore() as any;
+// The pages are the docs without `derivedFrom`; the others are the slides taken from them.
+const pageEntries = () => [...store.entries()].filter(([k, v]) => k.startsWith(`gallerySlides/${OFFICIAL_UID}_`) && !v.derivedFrom);
+const slideEntries = () => [...store.entries()].filter(([k, v]) => k.startsWith(`gallerySlides/${OFFICIAL_UID}_`) && v.derivedFrom);
 let calls = 0;
 let limitAfter = Infinity;
 globalThis.fetch = (async (url: string) => {
@@ -37,7 +40,7 @@ test('running again finishes: every page published, no photo placeholder left, o
     if (!r.waiting.length) break;
   }
   assert.equal(r.waiting.length, 0);
-  const docs = [...store.entries()].filter(([k]) => k.startsWith(`gallerySlides/${OFFICIAL_UID}_`)).map(([, v]) => v);
+  const docs = pageEntries().map(([, v]) => v);
   assert.equal(docs.length, r.published.length);
   for (const d of docs) {
     assert.equal(d.official, true);
@@ -58,17 +61,46 @@ test('publish: true approves them', async () => {
 });
 
 test('a page the admin edited by hand is never rebuilt', async () => {
-  const [path, doc] = [...store.entries()].find(([k]) => k.startsWith(`gallerySlides/${OFFICIAL_UID}_`))!;
+  const [path, doc] = pageEntries()[0];
   store.set(path, { ...doc, name: 'معدّل يدوياً', editedBy: 'admin:x' });
   await gallerySeed(db, { budget: 40, overwrite: true });
   assert.equal(store.get(path).name, 'معدّل يدوياً');
 });
 
 test('a second run asks Unsplash for nothing and keeps the likes', async () => {
-  const [path, doc] = [...store.entries()].find(([k]) => k.startsWith(`gallerySlides/${OFFICIAL_UID}_`))!;
+  const [path, doc] = pageEntries()[0];
   store.set(path, { ...doc, likes: 7 });
   const before = calls;
   await gallerySeed(db, { budget: 40, overwrite: true });
   assert.equal(calls, before);
   assert.equal(store.get(path).likes, 7);
+});
+
+test('each page also gives its slides as gallery slides: same status, no link to a slide that is not there, a valid category', async () => {
+  const { SLIDE_CATEGORY_IDS } = await import('../server/galleryEdit.ts');
+  const pages = pageEntries();
+  const slides = slideEntries();
+  assert.ok(slides.length >= pages.length);
+  for (const [, s] of slides) {
+    assert.equal(s.kind, 'slide');
+    assert.equal(s.official, true);
+    assert.ok(SLIDE_CATEGORY_IDS.includes(s.category), `${s.key}: ${s.category}`);
+    assert.ok(store.has(`gallerySlides/${s.derivedFrom}`));
+    assert.equal(s.status, store.get(`gallerySlides/${s.derivedFrom}`).status);
+    for (const e of s.elements) {
+      assert.equal(e.slideId, s.slide.id);
+      assert.ok(e.linkType !== 'slide' && e.linkType !== 'page', `${s.key}: a link to another slide is left`);
+    }
+    assert.ok(!JSON.stringify(s).includes('photo:'));
+  }
+});
+
+test('rebuilding keeps a derived slide the admin edited by hand and the likes of the others', async () => {
+  const [path, doc] = slideEntries()[0];
+  const [path2, doc2] = slideEntries()[1];
+  store.set(path, { ...doc, name: 'شريحة معدّلة', editedBy: 'admin:x' });
+  store.set(path2, { ...doc2, likes: 5 });
+  await gallerySeed(db, { budget: 40, overwrite: true });
+  assert.equal(store.get(path).name, 'شريحة معدّلة');
+  assert.equal(store.get(path2).likes, 5);
 });

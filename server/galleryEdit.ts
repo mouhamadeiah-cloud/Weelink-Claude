@@ -144,5 +144,8 @@ export const deleteDesign = async (db: any, id: string) => {
   if (!(await ref.get()).exists) return { error: 'not_found' };
   await ref.delete();
   await db.collection('galleryEdits').doc(id).delete();
+  // A page's own slides in the gallery go with it.
+  const derived = await db.collection('gallerySlides').where('derivedFrom', '==', id).get();
+  for (const d of derived.docs) await d.ref.delete();
   return { ok: true as const };
 };

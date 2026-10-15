@@ -189,7 +189,7 @@ const SeedBox: React.FC<{ onSessionEnd: () => void; onDone: () => void }> = ({ o
     <div className="flex flex-col gap-2 rounded-card border border-line bg-surface p-4">
       <p className="text-small font-medium">نماذج Weelink AI: {ready.toLocaleString('ar-SY')} من {status.total.toLocaleString('ar-SY')} جاهزة ({status.published.toLocaleString('ar-SY')} منشورة، {status.staged.toLocaleString('ar-SY')} بانتظار مراجعتك)</p>
       <p className="text-small text-muted leading-relaxed">
-        «تجهيز النماذج» يضعها في «بانتظار المراجعة» باسم «Weelink AI» وصورها من Unsplash بكلمات البحث المكتوبة فيها. افتح كل نموذج بزر «دخول الصفحة»، عدّله بزر «تعديل في لوحة المصمم»، ثم اضغط «قبول ونشر في المعرض».
+        «تجهيز النماذج» يضعها في «بانتظار المراجعة» باسم «Weelink AI» وصورها من Unsplash بكلمات البحث المكتوبة فيها. افتح كل نموذج بزر «دخول الصفحة»، عدّله بزر «تعديل في لوحة المصمم»، ثم اضغط «قبول ونشر في المعرض». شرائح كل صفحة تظهر أيضاً كشرائح مستقلة في المعرض وتأخذ قرارها (قبول أو رفض أو حذف).
         {status.searchesLeft > 0 ? ` بقي ${status.searchesLeft.toLocaleString('ar-SY')} بحث. مفتاح Unsplash التجريبي يسمح بنحو 50 بحثاً في الساعة، فإن توقف التجهيز اضغط الزر بعد ساعة.` : ' كل الصور وُجدت.'}
       </p>
       <div className="flex flex-wrap items-center gap-2">

@@ -1,6 +1,6 @@
 // 2. Architect. Look «أبيض وأسود»; a photo hero held still while the page scrolls; a lone hamburger navbar;
 // drafting-table lines, outlined letters and hard frames.
-import { Kit, look, type PageSpec } from '../dsl';
+import { Kit, look, onlyDesktop, type PageSpec } from '../dsl';
 
 const L = look('mono');
 const k = new Kit(L);
@@ -8,7 +8,7 @@ const W = '#FFFFFF';
 
 const hero = [
   k.shape({ x: 0, y: 0, width: 1280, height: 720 }, { backgroundColor: 'linear-gradient(90deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.78) 100%)' }, 'تعتيم'),
-  k.heading({ x: 40, y: 300, width: 480, height: 230 }, 'عمارة', 190, { color: 'transparent', textEffect: 'hollow', textEffectColor: '#FFFFFF', textEffectIntensity: 55, opacity: 0.55, textAlign: 'left' }),
+  onlyDesktop(k.heading({ x: 40, y: 300, width: 480, height: 230 }, 'عمارة', 190, { color: 'transparent', textEffect: 'hollow', textEffectColor: '#FFFFFF', textEffectIntensity: 55, opacity: 0.55, textAlign: 'left' })),
   k.shape({ x: 1120, y: 120, width: 2, height: 480 }, { backgroundColor: 'rgba(255,255,255,0.35)' }, 'خط'),
   k.shape({ x: 1180, y: 120, width: 1, height: 480 }, { backgroundColor: 'rgba(255,255,255,0.2)' }, 'خط'),
   k.eyebrow({ x: 720, y: 196, width: 360, height: 26 }, 'مكتب هندسي معماري', { color: '#FFFFFF', letterSpacing: 2 }),
@@ -32,8 +32,8 @@ const projects = [
   k.image({ x: 96, y: 230, width: 440, height: 220 }, 'minimalist concrete building', { borderWidth: 3, borderColor: '#0A0A0A', borderStyle: 'solid', imageFilter: 'grayscale', animation: 'scale-up', animationTrigger: 'hover' }),
   k.image({ x: 96, y: 480, width: 440, height: 220 }, 'architect drawing blueprint desk', { borderWidth: 3, borderColor: '#0A0A0A', borderStyle: 'solid', imageFilter: 'grayscale', animation: 'scale-up', animationTrigger: 'hover' }),
   k.text({ x: 96, y: 716, width: 440, height: 26 }, '02 · مبنى تجاري      03 · مخططات', 15, { color: '#0A0A0A', fontWeight: 'bold' }),
-  k.shape({ x: 78, y: 212, width: 40, height: 40 }, { backgroundColor: 'transparent', borderWidth: 3, borderColor: '#0A0A0A', borderStyle: 'solid', borderRadius: 0 }, 'مربع'),
-  k.shape({ x: 1166, y: 686, width: 40, height: 40 }, { backgroundColor: '#0A0A0A', borderRadius: 9999 }, 'دائرة'),
+  onlyDesktop(k.shape({ x: 78, y: 212, width: 40, height: 40 }, { backgroundColor: 'transparent', borderWidth: 3, borderColor: '#0A0A0A', borderStyle: 'solid', borderRadius: 0 }, 'مربع')),
+  onlyDesktop(k.shape({ x: 1166, y: 686, width: 40, height: 40 }, { backgroundColor: '#0A0A0A', borderRadius: 9999 }, 'دائرة')),
 ];
 
 const steps = [

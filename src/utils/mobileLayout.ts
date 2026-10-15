@@ -40,6 +40,10 @@ interface LayoutNode {
 const TEXT_TYPES = new Set(['heading', 'paragraph']);
 const SMALL_INLINE_TYPES = new Set(['button', 'icon', 'badge']);
 const MEDIA_TYPES = new Set(['image', 'video', 'lottie', 'map', 'gallery', 'mask', 'table', 'shape']);
+const PICTURE_TYPES = new Set(['image', 'video', 'lottie', 'gallery', 'mask']);
+const MAX_PICTURE_HEIGHT = 420;
+// A small round or square badge that holds an icon or a letter keeps its size on a phone; it is not a panel.
+const BADGE_MAX = 200;
 const REFLOW_TYPES = new Set(['pricing', 'calendar', 'ratings', 'html', 'input', 'divider', 'menuCart']);
 
 const DEFAULT_FONT_SIZE: Record<string, number> = { heading: 32, paragraph: 16 };
@@ -72,7 +76,7 @@ const fontScaleFor = (el: CanvasElement) => {
 // Rough height of wrapped text at a given width (Arabic glyphs average ~0.55em wide).
 const estimateTextHeight = (el: CanvasElement, width: number, fontScale: number) => {
   const fs = (el.styles.fontSize || DEFAULT_FONT_SIZE[el.type] || 16) * fontScale;
-  const lineHeight = fs * 1.6;
+  const lineHeight = fs * (el.type === 'heading' ? 1.3 : 1.6);
   const charsPerLine = Math.max(1, Math.floor((width - 16) / (fs * 0.55)));
   const lines = stripHtml(el.content || '')
     .split('\n')
@@ -96,6 +100,17 @@ const sizeLeaf = (el: CanvasElement, available: number): { width: number; height
     return { width, height: Math.round(Math.min(el.height * 3, Math.max(el.height, grown))), fontScale };
   }
 
+  // A gallery keeps a usable picture on a phone: scaling it by its desktop proportions would leave a thin strip.
+  if (el.type === 'gallery') {
+    const scale = Math.min(1, available / el.width);
+    return { width: Math.round(el.width * scale), height: Math.max(Math.round(el.height * scale), Math.round(available * 0.8)), fontScale };
+  }
+
+  // The ratings box is as tall as its content needs, not as tall as its desktop frame.
+  if (el.type === 'ratings') {
+    return { width: available, height: Math.min(el.height, 280), fontScale };
+  }
+
   if (REFLOW_TYPES.has(el.type)) {
     // These fill their box, so they take the full width; content-heavy ones grow taller as they narrow.
     const width = available;
@@ -103,10 +118,17 @@ const sizeLeaf = (el: CanvasElement, available: number): { width: number; height
     return { width, height: Math.round(el.height * growth), fontScale };
   }
 
+  // A thin vertical rule (a desktop divider between columns) lies down as a short horizontal rule instead of a tall empty strip.
+  if (el.type === 'shape' && el.width <= 8 && el.height >= 40) {
+    return { width: Math.min(available, Math.max(60, Math.min(el.height, 140))), height: Math.max(1, el.width), fontScale };
+  }
+
   if (MEDIA_TYPES.has(el.type) || el.width > available) {
-    // Keep the aspect ratio; only shrink when wider than the phone.
-    const scale = Math.min(1, available / el.width);
-    return { width: Math.round(el.width * scale), height: Math.round(el.height * scale), fontScale };
+    // Keep the aspect ratio. A real picture (not a small logo) fills the phone's width; anything else only shrinks.
+    const scale = (el.type === 'image' || el.type === 'video') && el.width >= 140 ? available / el.width : Math.min(1, available / el.width);
+    const height = Math.round(el.height * scale);
+    // A tall portrait picture would fill the whole screen: it is cropped to a sensible height.
+    return { width: Math.round(el.width * scale), height: PICTURE_TYPES.has(el.type) ? Math.min(height, MAX_PICTURE_HEIGHT) : height, fontScale };
   }
 
   // Buttons, icons, badges and anything else that already fits: keep its size.
@@ -147,7 +169,8 @@ export const arrangeSlideForMobile = (
     let best: CanvasElement | null = null;
     for (const candidate of rest) {
       if (candidate.id === el.id || !isEmptyBox(candidate)) continue;
-      if (candidate.width * candidate.height <= el.width * el.height * 1.2) continue;
+      const badge = candidate.width <= BADGE_MAX && candidate.height <= BADGE_MAX && (TEXT_TYPES.has(el.type) || el.type === 'icon');
+      if (!badge && candidate.width * candidate.height <= el.width * el.height * 1.05) continue;
       if (!containsCenter(candidate, el)) continue;
       if (!best || candidate.width * candidate.height < best.width * best.height) best = candidate;
     }
@@ -166,9 +189,11 @@ export const arrangeSlideForMobile = (
   const decorative = roots.filter(
     n =>
       n.children.length === 0 &&
-      n.el.type === 'shape' &&
-      isEmptyBox(n.el) &&
-      (isOutsideCanvas(n.el, slide.height) || (n.el.width * n.el.height) / slideArea > 0.15)
+      ((n.el.type === 'shape' &&
+        isEmptyBox(n.el) &&
+        (isOutsideCanvas(n.el, slide.height) || (n.el.width * n.el.height) / slideArea > 0.15)) ||
+        // A huge icon is a backdrop (a big cog, a watermark), not something to read.
+        (n.el.type === 'icon' && n.el.width >= 150))
   );
   const decorativeIds = new Set(decorative.map(n => n.el.id));
   const flowRoots = roots.filter(n => !decorativeIds.has(n.el.id));
@@ -198,17 +223,46 @@ export const arrangeSlideForMobile = (
     return cursor;
   };
 
+  // The side the last text of the column sat on: buttons and badges under it follow, so a stack of them is not staggered.
+  let textAlign: Align | null = null;
+
   // Places one node stacked at `cursor`; returns its bottom edge.
   const placeStacked = (n: LayoutNode, parentBox: Box, x: number, cursor: number, width: number): number => {
+    const small = n.el.width <= BADGE_MAX && n.el.height <= BADGE_MAX;
+    if (n.children.length > 0 && small) {
+      // Badge: it keeps its size and its contents keep their place inside it.
+      const s = sizeLeaf(n.el, width);
+      const left = alignedX(textAlign ?? alignmentIn(n.el, parentBox), x, width, s.width);
+      layouts.set(n.el.id, { x: Math.round(left), y: Math.round(cursor), width: s.width, height: s.height, fontScale: 1 });
+      const ratio = s.width / (n.el.width || 1);
+      const place = (child: LayoutNode) => {
+        layouts.set(child.el.id, {
+          x: Math.round(left + (child.el.x - n.el.x) * ratio),
+          y: Math.round(cursor + (child.el.y - n.el.y) * ratio),
+          width: Math.round(child.el.width * ratio),
+          height: Math.round(child.el.height * ratio),
+          fontScale: ratio < 1 ? Math.round(ratio * 100) / 100 : 1,
+        });
+        child.children.forEach(place);
+      };
+      n.children.forEach(place);
+      return cursor + s.height;
+    }
     if (n.children.length > 0) {
       // Panel: arrange its contents inside, then wrap them.
+      const saved = textAlign;
+      textAlign = null;
       const contentBottom = layoutFlow(n.children, n.el, x + PANEL_PADDING, cursor + PANEL_PADDING, width - PANEL_PADDING * 2);
+      textAlign = saved;
       const height = Math.round(contentBottom + PANEL_PADDING - cursor);
       layouts.set(n.el.id, { x: Math.round(x), y: Math.round(cursor), width: Math.round(width), height, fontScale: 1 });
       return cursor + height;
     }
     const s = sizeLeaf(n.el, width);
-    const left = alignedX(alignmentIn(n.el, parentBox), x, width, s.width);
+    const own = alignmentIn(n.el, parentBox);
+    if (TEXT_TYPES.has(n.el.type)) textAlign = n.el.styles.textAlign ?? own;
+    const align = SMALL_INLINE_TYPES.has(n.el.type) && textAlign ? textAlign : own;
+    const left = alignedX(align, x, width, s.width);
     layouts.set(n.el.id, { x: Math.round(left), y: Math.round(cursor), width: s.width, height: s.height, fontScale: s.fontScale });
     return cursor + s.height;
   };

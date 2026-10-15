@@ -51,7 +51,7 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
         <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
           <button type="button" onClick={onHome} aria-current={current === 'home' ? 'page' : undefined} className={itemCls(current === 'home')}>الرئيسية</button>
           <button type="button" onClick={onStart} aria-current={current === 'start' ? 'page' : undefined} className={itemCls(current === 'start')}>اعمل صفحتك</button>
-          {signedIn && <button type="button" onClick={onOpenMyPage} className={itemCls(false)}>صفحتي</button>}
+          {signedIn && <button type="button" onClick={onOpenMyPage} className={itemCls(false)}>مشروعي</button>}
           {extra}
           <button type="button" onClick={onLaw} aria-current={current === 'law' ? 'page' : undefined} className={itemCls(current === 'law')}>قانون الصفحة</button>
         </div>
@@ -61,8 +61,8 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
               <button type="button" onClick={() => setMenu((o) => !o)} aria-expanded={menu} className={itemCls(menu)}>حسابي{firstName ? ` · ${firstName}` : ''}</button>
               {menu && (
                 <div role="menu" className="absolute left-0 z-40 mt-1.5 w-48 overflow-hidden rounded-card border border-line bg-surface py-1 text-xs shadow-lg">
-                  <button type="button" role="menuitem" onClick={pick(onOpenMyPage)} className="w-full px-4 py-2 text-right font-medium hover:bg-bg">صفحتي</button>
-                  <button type="button" role="menuitem" onClick={pick(onStart)} className="w-full px-4 py-2 text-right hover:bg-bg">إضافة صفحة لحسابي</button>
+                  <button type="button" role="menuitem" onClick={pick(onOpenMyPage)} className="w-full px-4 py-2 text-right font-medium hover:bg-bg">مشروعي</button>
+                  <button type="button" role="menuitem" onClick={pick(onStart)} className="w-full px-4 py-2 text-right hover:bg-bg">إضافة مشروع لحسابي</button>
                   <div className="my-1 border-t border-line" />
                   <button type="button" role="menuitem" onClick={pick(onLogout)} className="flex w-full items-center gap-2 px-4 py-2 text-right text-danger hover:bg-bg"><LogOut size={13} /> تسجيل الخروج</button>
                 </div>

@@ -95,7 +95,7 @@ import { elementDisplayName } from '../utils/elementLabels';
 import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
 import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
-import { GalleryPicker } from './rightDrawer/GalleryPicker';
+import { GalleryPicker, type AddPageOptions } from './rightDrawer/GalleryPicker';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
 import { lookSlide } from '../services/applyLook';
 import { pageLookById } from '../data/pageLooks';
@@ -147,7 +147,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   isRestaurantProject = false,
   onAddPageTemplate,
   onAddGallerySlide,
-  onReplaceWithGalleryPage,
+  onAddGalleryPage,
   onDeleteSlide,
   onAddElement,
   onAddGroup,
@@ -356,7 +356,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const [addMenuMode, setAddMenuMode] = useState<'element' | 'slide' | 'page'>('element');
   // Where the slides / pages on offer come from: Weelink's ready ones, or the designers' gallery.
   const [slideSource, setSlideSource] = useState<'ready' | 'gallery'>('ready');
-  const [pageSource, setPageSource] = useState<'ready' | 'gallery'>('ready');
   const [galleryFit, setGalleryFit] = useState(true);
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<string | null>(null);
 
@@ -3797,18 +3796,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                             </button>
                           </div>
 
-                          <div className="flex gap-1 rounded-lg bg-neutral-100 p-1">
-                            {([['ready', 'صفحات جاهزة'], ['gallery', 'تصميمات من المعرض']] as const).map(([id, label]) => (
-                              <button key={id} type="button" onClick={() => setPageSource(id)} className={`flex-1 rounded-md py-1.5 text-xs font-bold transition-all cursor-pointer ${pageSource === id ? 'bg-white text-brand shadow-2xs' : 'text-neutral-500 hover:text-black'}`}>{label}</button>
-                            ))}
-                          </div>
-                          {pageSource === 'ready' ? (
-                            <p className="rounded-xl border border-dashed border-neutral-300 px-3 py-6 text-center text-xs leading-relaxed text-neutral-500">
-                              الصفحات الجاهزة الكاملة (مطعم، سيارات، متجر، عيادة بحجز موعد) قيد التجهيز. في الأثناء تجد صفحات مصممة في تبويب «تصميمات من المعرض».
-                            </p>
-                          ) : (
-                            <GalleryPicker kind="page" fit={galleryFit} onFit={setGalleryFit} onAdd={(g) => onReplaceWithGalleryPage && onReplaceWithGalleryPage(g)} />
-                          )}
+                          <h4 className="border-b border-neutral-100 px-1 pb-1.5 text-xs font-bold text-neutral-700">صفحات جاهزة من معرض التصاميم:</h4>
+                          <GalleryPicker kind="page" fit={galleryFit} onFit={setGalleryFit} onAdd={(g, o) => onAddGalleryPage && onAddGalleryPage(g, o)} />
                         </div>
                       )}
                     </div>

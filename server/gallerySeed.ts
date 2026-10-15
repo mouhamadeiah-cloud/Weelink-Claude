@@ -25,6 +25,49 @@ const queriesOf = (p: PageDoc): string[] => {
   return [...out];
 };
 
+// Each slide of a page is also a slide of its own in the gallery (gallerySlides/weelink-ai_<key>_s<n>, `derivedFrom` = the page's doc),
+// so «إضافة شريحة» finds them too. A link inside a slide to another slide of its page leads nowhere on its own, so it is dropped. The
+// slide is saved with the page's status; the admin's decision on the page is applied to them (api/admin.ts), and a slide the
+// admin edited by hand (editedBy) is never rebuilt.
+const plain = (html: unknown) => String(html || '').replace(/<[^>]*>/g, ' ');
+export const slideRole = (els: any[], index: number, count: number): string => {
+  const types = new Set(els.map((e) => e.type));
+  const text = els.filter((e) => e.type === 'heading' || e.type === 'paragraph').map((e) => plain(e.content)).join(' ');
+  if (types.has('calendar')) return 'booking';
+  if (types.has('menuList') || types.has('menuCart')) return 'menu';
+  if (types.has('carListings') || types.has('carSearch')) return 'cars';
+  if (types.has('shopProducts') || types.has('shopSearch') || types.has('cart') || types.has('checkout')) return 'products';
+  if (types.has('ratings')) return 'reviews';
+  if (types.has('pricing') || types.has('table')) return 'services';
+  if (els.filter((e) => e.type === 'input').length >= 2) return 'contact';
+  if (/عرض خاص|عروض|خصم|تخفيض/.test(text)) return 'offers';
+  if (/من نحن|قصتنا|فريقنا/.test(text)) return 'about';
+  if (types.has('gallery')) return 'gallery';
+  if (index === 0) return 'hero';
+  return index === count - 1 ? 'contact' : 'services';
+};
+
+const unlink = (e: any) => {
+  if (e.linkType !== 'slide' && e.linkType !== 'page') return e;
+  const { linkType: _t, linkTargetId: _id, linkUrl: _u, ...rest } = e;
+  return rest;
+};
+
+export const derivedSlides = (pageId: string, p: { key: string; name: string }, page: any, elements: any[]) => {
+  const slides: any[] = page?.slides || [];
+  return slides.map((slide, i) => {
+    const els = elements.filter((e) => e.slideId === slide.id);
+    return {
+      id: `${pageId}_s${i + 1}`,
+      doc: {
+        key: `${p.key}_s${i + 1}`, derivedFrom: pageId, designerUid: OFFICIAL_UID, designerName: OFFICIAL_NAME, official: true,
+        name: `${p.name} · ${String(slide.name || `شريحة ${i + 1}`).slice(0, 40)}`, category: slideRole(els, i, slides.length), kind: 'slide', page: null, draftSlot: '',
+        slide, elements: els.map(unlink),
+      },
+    };
+  });
+};
+
 const accessKey = () => process.env.UNSPLASH_ACCESS_KEY || process.env.VITE_UNSPLASH_ACCESS_KEY || process.env.UNSPLASH_KEY || '';
 
 const search = async (q: string, key: string): Promise<{ found?: Found[]; limited?: boolean; failed?: string }> => {
@@ -69,6 +112,23 @@ export const gallerySeedStatus = async (db: any) => {
   };
 };
 
+// Writes the slides of a page as gallery slides: the missing ones always, all of them when the page was rebuilt.
+const writeDerived = async (db: any, pageId: string, p: PageDoc, pageData: any, rebuild: boolean) => {
+  const now = Date.now();
+  for (const d of derivedSlides(pageId, p, pageData.page, pageData.elements || [])) {
+    const ref = db.collection('gallerySlides').doc(d.id);
+    const existing = (await ref.get()).data();
+    if (existing && (!rebuild || existing.editedBy)) continue;
+    const status = String(pageData.status || 'pending');
+    await ref.set({
+      ...d.doc, photoCredits: pageData.photoCredits || [], status, lawVersion: 0,
+      ...(status === 'approved' ? { approvedAt: existing?.approvedAt || pageData.approvedAt || now, reviewedBy: 'weelink-ai' } : {}),
+      likes: Number(existing?.likes) || 0, dislikes: Number(existing?.dislikes) || 0, uses: Number(existing?.uses) || 0,
+      createdAt: existing?.createdAt || FieldValue.serverTimestamp(),
+    });
+  }
+};
+
 // Runs the missing searches (at most `budget`), then publishes every page whose photos are all found.
 export const gallerySeed = async (db: any, opts: { budget: number; overwrite: boolean; only?: string; publish?: boolean }) => {
   const key = accessKey();
@@ -102,6 +162,7 @@ export const gallerySeed = async (db: any, opts: { budget: number; overwrite: bo
     const ref = db.collection('gallerySlides').doc(`${OFFICIAL_UID}_${p.key}`);
     const existing = (await ref.get()).data();
     if (existing && (!opts.overwrite || existing.editedBy)) {
+      await writeDerived(db, ref.id, p, existing, false);
       published.push(p.key);
       continue;
     }
@@ -113,6 +174,7 @@ export const gallerySeed = async (db: any, opts: { budget: number; overwrite: bo
       likes: Number(existing?.likes) || 0, dislikes: Number(existing?.dislikes) || 0, uses: Number(existing?.uses) || 0,
       createdAt: existing?.createdAt || FieldValue.serverTimestamp(),
     });
+    await writeDerived(db, ref.id, p, { page: built.page, elements: built.elements, status: opts.publish ? 'approved' : (existing?.status || 'pending'), approvedAt: opts.publish ? (existing?.approvedAt || now) : existing?.approvedAt, photoCredits: built.credits }, true);
     published.push(p.key);
   }
   return { published, waiting, limited, spent, failed };

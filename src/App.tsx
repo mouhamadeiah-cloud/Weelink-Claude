@@ -790,6 +790,7 @@ export default function App() {
       localStorage.removeItem('weelink_simulated_user_email');
       localStorage.removeItem('weelink_last_login_account');
       const accountId = user ? await resolveAccountId(user) : 'mouhamadeiah';
+      resetAccountMemory();
       setActiveUserUid(accountId);
       await loadUserWorkspace(accountId);
       const problem = takeInviteProblem();
@@ -805,12 +806,12 @@ export default function App() {
   useEffect(() => {
     // Skip saving during initial boot/loading to prevent overwrite races
     // (and in the designer's mode, where the editor holds a draft, not the page)
-    if (!isInitialLoadComplete.current || isFirebaseLoading || designerModeRef.current || (pageLockRef.current && project === 'page')) {
+    if (!isInitialLoadComplete.current || !projectReadyRef.current || isFirebaseLoading || designerModeRef.current || (pageLockRef.current && project === 'page')) {
       return;
     }
 
     const delayDebounceFn = setTimeout(() => {
-      if (designerModeRef.current || (pageLockRef.current && project === 'page')) return;
+      if (!projectReadyRef.current || designerModeRef.current || (pageLockRef.current && project === 'page')) return;
       try {
         const targetUserId = activeUserUid;
         const { localPrefix } = PROJECT_STORAGE[project];
@@ -829,13 +830,13 @@ export default function App() {
   // 3. Debounced live auto-save to Firebase whenever pages or elements change
   useEffect(() => {
     // Skip saving during initial boot/loading to prevent overwrite races
-    if (!isInitialLoadComplete.current || isFirebaseLoading || designerModeRef.current || (pageLockRef.current && project === 'page')) {
+    if (!isInitialLoadComplete.current || !projectReadyRef.current || isFirebaseLoading || designerModeRef.current || (pageLockRef.current && project === 'page')) {
       return;
     }
 
     const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
-      if (designerModeRef.current || (pageLockRef.current && project === 'page')) return;
+      if (!projectReadyRef.current || designerModeRef.current || (pageLockRef.current && project === 'page')) return;
       try {
         setIsSavingCloud(true);
         const { pagesField, elementsField } = PROJECT_STORAGE[project];
@@ -1500,6 +1501,7 @@ export default function App() {
 
   const handleAuthSuccess = (userUid: string, isNewUser: boolean, asDesigner = false) => {
     handledAuthUid.current = auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser.uid : null;
+    resetAccountMemory();
     setAuthMode('login');
     setActiveUserUid(userUid);
     const inviteProblem = takeInviteProblem();
@@ -1589,6 +1591,7 @@ export default function App() {
     } else {
       // Existing user: fetch their page, then open it when they came for their account.
       loadUserWorkspace(userUid).then(async () => {
+        isInitialLoadComplete.current = true;
         if (pendingBuildRef.current) openGuestBuild(userUid);
         else if (afterSignInRef.current === 'account') openMyPage(userUid);
         // A returning designer comes back to their page, in the editor.
@@ -1605,7 +1608,7 @@ export default function App() {
       if (auth.currentUser) readDesigner(auth.currentUser.uid).then((d) => setDesignerName(d?.name || ''));
     }
     setIsSavingCloud(false);
-    isInitialLoadComplete.current = true;
+    if (isNewUser) isInitialLoadComplete.current = true;
     setIsAuthActive(false); // Hide login screen, go straight to builder/chat!
     // A phone sees its page first; the panel waits behind the bar at the bottom.
     setIsRightDrawerOpen(window.innerWidth >= 1024);
@@ -1743,13 +1746,7 @@ export default function App() {
         // DIFFERENT person then signs up as a new user on this same browser
         // without a page refresh, handleAuthSuccess's "preserve current design
         // for the new user" logic would hand them the previous user's page.
-        setPages([initialPage]);
-        setElements([]);
-        setSelectedElementId(null);
-        setActivePageId('page-home');
-        setActiveSlideId('slide-1');
-        setHistory([[]]);
-        setHistoryIndex(0);
+        resetAccountMemory();
         designerModeRef.current = false;
         draftReadyRef.current = false;
         setDesignerMode(false);
@@ -1757,17 +1754,7 @@ export default function App() {
         setIsExportOpen(false);
         setIsOrdersOpen(false);
         setActiveUserUid('mouhamadeiah');
-        loadSeqRef.current++;
-        projectReadyRef.current = false;
-        setProject('page');
         setIsProjectChosen(false);
-        setHasShop(false);
-        setShopAdmin(createEmptyShopAdmin());
-        setHasCars(false);
-        setCarAdmin(createEmptyCarAdmin());
-        setHasRestaurant(false);
-        setRestaurantAdmin(createEmptyRestaurantAdmin());
-        ownedRef.current = { page: false, shop: false, cars: false, restaurant: false };
         setIsAuthActive(true);
         setIsLawActive(false);
         setIsHomeActive(true);
@@ -1820,7 +1807,7 @@ export default function App() {
   // palette, texts, photos and links) and replaces the page's slides; a store's other pages take
   // the new colours and fonts. Undo works on elements only, so the page as it was is kept here
   // and «رجّع صفحتي متل ما كانت» brings it back.
-  const builtBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; activePageId: string } | null>(null);
+  const builtBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; activePageId: string; uid: string; project: ProjectType } | null>(null);
   const handleBuildPage = async (given: WeeAnswers, auto = false) => {
     if (designerModeRef.current) return { ok: false, message: DESIGNER_AI_NOTE };
     const kind = KIND_OF_PROJECT[project];
@@ -1838,7 +1825,7 @@ export default function App() {
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
     const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId });
     if (!built.ok) return { ok: false, message: built.message };
-    builtBackupRef.current = before;
+    builtBackupRef.current = { ...before, uid: activeUserUid, project };
     setHasBuildBackup(true);
     setPages(built.pages);
     setElements(built.elements);
@@ -1851,10 +1838,10 @@ export default function App() {
   };
   // «ستايل الصفحة»: a look restyles every page of the site at once. Undo works on elements only,
   // so the site as it was before the last pick is kept for «رجّع الستايل اللي قبل».
-  const lookBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[] } | null>(null);
+  const lookBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; uid: string; project: ProjectType } | null>(null);
   const [hasLookBackup, setHasLookBackup] = useState(false);
   const handleApplyPageLook = (look: PageLook) => {
-    lookBackupRef.current = { pages: pagesRef.current, elements: elementsRef.current };
+    lookBackupRef.current = { pages: pagesRef.current, elements: elementsRef.current, uid: activeUserUid, project };
     setHasLookBackup(true);
     const next = applyPageLook(pagesRef.current, elementsRef.current, look, KIND_OF_PROJECT[project]);
     setPages(next.pages);
@@ -1862,16 +1849,46 @@ export default function App() {
   };
   const handleUndoPageLook = () => {
     const backup = lookBackupRef.current;
-    if (!backup) return;
+    if (!backup || backup.uid !== activeUserUid || backup.project !== project) return;
     lookBackupRef.current = null;
     setHasLookBackup(false);
     setPages(backup.pages);
     pushToHistory(backup.elements);
   };
 
+  // Everything the editor holds in memory belongs to one account. When the account changes (sign-in, sign-out) all of it goes, so
+  // nothing of the previous account is shown to, undone into, or saved under the next one (the saving effects wait for the next
+  // account's workspace: projectReadyRef).
+  const resetAccountMemory = () => {
+    loadSeqRef.current++;
+    projectReadyRef.current = false;
+    builtBackupRef.current = null;
+    setHasBuildBackup(false);
+    lookBackupRef.current = null;
+    setHasLookBackup(false);
+    afterQuestionsRef.current = null;
+    setBuildNotice(null);
+    setPages([initialPage]);
+    setElements([]);
+    setHistory([[]]);
+    setHistoryIndex(0);
+    setSelectedElementId(null);
+    setActivePageId('page-home');
+    setActiveSlideId('slide-1');
+    setProject('page');
+    setHasShop(false);
+    setShopAdmin(createEmptyShopAdmin());
+    setHasCars(false);
+    setCarAdmin(createEmptyCarAdmin());
+    setHasRestaurant(false);
+    setRestaurantAdmin(createEmptyRestaurantAdmin());
+    ownedRef.current = { page: false, shop: false, cars: false, restaurant: false };
+  };
+
   const handleRestoreBuiltPage = () => {
     const backup = builtBackupRef.current;
-    if (!backup) return { ok: false, message: 'ما في صفحة قديمة محفوظة.' };
+    // A copy kept for another account (or another project) is never put into this one.
+    if (!backup || backup.uid !== activeUserUid || backup.project !== project) return { ok: false, message: 'ما في صفحة قديمة محفوظة.' };
     builtBackupRef.current = null;
     setHasBuildBackup(false);
     setPages(backup.pages);
@@ -4366,6 +4383,7 @@ export default function App() {
       {/* Right Control Drawer: docked on a wide screen, floating over the canvas on a narrow one */}
       <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
       <RightDrawer
+        key={activeUserUid}
         isShopProject={project === 'shop'}
         isCarProject={project === 'cars'}
         isRestaurantProject={project === 'restaurant'}

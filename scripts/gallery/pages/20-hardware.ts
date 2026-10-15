@@ -1,6 +1,6 @@
 // 20. Hand tools and building materials. Look «سوق»; a plain graphite hero with hazard stripes and a turning gear (no
 // photo or video); a wide navbar with framed names; a wholesale price table.
-import { Kit, look, rgba, type PageSpec } from '../dsl';
+import { Kit, look, rgba, onlyDesktop, type PageSpec } from '../dsl';
 
 const L = look('market');
 const k = new Kit(L);
@@ -10,7 +10,7 @@ const GREEN = L.accent;
 
 const hero = [
   k.shape({ x: 0, y: 640, width: 1280, height: 60 }, { backgroundColor: YELLOW }, 'شريط تحذير'),
-  ...Array.from({ length: 9 }, (_, i) => k.shape({ x: -40 + i * 160, y: 640, width: 70, height: 60, rotation: 0 }, { backgroundColor: GRAPH, opacity: 0.95 }, 'شريط')),
+  ...Array.from({ length: 9 }, (_, i) => onlyDesktop(k.shape({ x: -40 + i * 160, y: 640, width: 70, height: 60, rotation: 0 }, { backgroundColor: GRAPH, opacity: 0.95 }, 'شريط'))),
   k.icon({ x: 120, y: 130, width: 340, height: 340 }, 'mdi:cog', 'rgba(250,204,21,0.9)', { animation: 'spin-slow', animationTrigger: 'loop', animationDuration: 24 }),
   k.icon({ x: 340, y: 330, width: 190, height: 190 }, 'mdi:cog-outline', 'rgba(255,255,255,0.6)', { animation: 'spin-slow', animationTrigger: 'loop', animationDuration: 16 }),
   k.badge({ x: 904, y: 150, width: 280, height: 38 }, 'عدد يدوية وكهربائية ومواد بناء', { backgroundColor: YELLOW, color: GRAPH, borderRadius: 4 }),

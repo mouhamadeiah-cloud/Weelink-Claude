@@ -1069,7 +1069,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     const handleResize = () => {
       if (workspaceRef.current) {
         setWorkspaceWidth(workspaceRef.current.clientWidth);
-        setWorkspaceHeight(workspaceRef.current.clientHeight);
+        // An embedded page (the gallery) is drawn as tall as the whole page: a floating navbar is placed against a screen, not against that.
+        setWorkspaceHeight(embedded ? Math.min(workspaceRef.current.clientHeight, previewMode === 'mobile' ? 700 : 800) : workspaceRef.current.clientHeight);
       }
     };
     handleResize();

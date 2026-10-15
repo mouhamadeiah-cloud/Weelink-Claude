@@ -13,6 +13,9 @@ export type Box = { x: number; y: number; width: number; height: number; rotatio
 export type Styles = Record<string, unknown>;
 export type El = Omit<CanvasElement, 'id' | 'slideId' | 'styles'> & { styles: Styles; slideId?: string };
 
+// A decoration that only works on the wide layout (a scatter of circles, a row of squares): it is left out on phones.
+export const onlyDesktop = <T extends object>(e: T): T => ({ ...e, phoneHide: true });
+
 export const look = (id: string): PageLook => {
   const found = PAGE_LOOKS.find((l) => l.id === id);
   if (!found) throw new Error(`unknown look ${id}`);
@@ -252,6 +255,25 @@ export const buildPage = (spec: PageSpec) => {
     }),
   );
   const page: Page = { id: 'page-home', name: 'الرئيسية', slug: '/', navbar, slides };
-  const done = withPhoneLayouts([page], groupTemplateCards(elements));
-  return { key: spec.key, name: spec.name, category: spec.category, lookId: spec.look.id, page: { navbar, slides: done.pages[0].slides }, elements: done.elements };
+  // Decorations marked onlyDesktop are taken out of the phone layout and parked outside the slide there.
+  const hidden = elements.filter((e) => (e as any).phoneHide);
+  const kept = elements.filter((e) => !(e as any).phoneHide);
+  const done = withPhoneLayouts([page], groupTemplateCards(kept));
+  // A navbar floating over the first slide (posY > 0) sits on top of its content, so on a phone that slide starts lower.
+  if (navbar.posY && done.pages[0].slides[0]) {
+    const inset = (navbar.height ?? 60) + 16;
+    const first = done.pages[0].slides[0];
+    const oldHeight = first.mobileHeight || first.height;
+    done.pages[0].slides[0] = { ...first, mobileHeight: oldHeight + inset };
+    done.elements = done.elements.map((e) => {
+      if (e.slideId !== first.id || !e.mobile) return e;
+      const full = e.mobile.y === 0 && e.mobile.height >= oldHeight;
+      return { ...e, mobile: full ? { ...e.mobile, height: e.mobile.height + inset } : { ...e.mobile, y: e.mobile.y + inset } };
+    });
+  }
+  const parked = hidden.map((e) => {
+    const { phoneHide, ...rest } = e as any;
+    return { ...rest, mobile: { x: -4000, y: 0, width: e.width, height: e.height, fontScale: 1 } } as CanvasElement;
+  });
+  return { key: spec.key, name: spec.name, category: spec.category, lookId: spec.look.id, page: { navbar, slides: done.pages[0].slides }, elements: [...done.elements, ...parked] };
 };

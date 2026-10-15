@@ -1,6 +1,6 @@
 // 4. Language courses. Look «منعش»; the hero is a flowing multi-colour gradient (no photo); a navbar with icons beside
 // each name; moving-gradient letters; level cards.
-import { Kit, look, rgba, type PageSpec } from '../dsl';
+import { Kit, look, rgba, onlyDesktop, type PageSpec } from '../dsl';
 
 const L = look('fresh');
 const k = new Kit(L);
@@ -15,9 +15,9 @@ const hero = [
   k.button({ x: 964, y: 480, width: 220, height: 58 }, 'جرّب حصة مجانية', { slide: 3 }, { backgroundColor: '#FFFFFF', color: '#0F766E', glowColor: '#FFFFFF', glowIntensity: 18 }),
   k.button({ x: 730, y: 480, width: 210, height: 58 }, 'اختر لغتك', { slide: 2 }, { backgroundColor: 'transparent', color: '#FFFFFF', borderWidth: 2, borderColor: '#FFFFFF', borderStyle: 'solid' }),
   ...[['EN', 'إنكليزي'], ['DE', 'ألماني'], ['FR', 'فرنسي'], ['TR', 'تركي']].flatMap(([c, n], i) => [
-    k.shape({ x: 96 + i * 110, y: 220 + (i % 2) * 90, width: 100, height: 100 }, { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 9999, borderWidth: 4, borderColor: '#FFFFFF', borderStyle: 'solid', glowColor: '#FFFFFF', glowIntensity: 10, animation: 'float', animationTrigger: 'loop', animationDuration: 3 + i }, 'علم'),
-    k.heading({ x: 96 + i * 110, y: 248 + (i % 2) * 90, width: 100, height: 40 }, c, 28, { color: '#FFFFFF', textAlign: 'center' }),
-    k.text({ x: 96 + i * 110, y: 326 + (i % 2) * 90, width: 100, height: 24 }, n, 13, { color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold' }),
+    onlyDesktop(k.shape({ x: 96 + i * 110, y: 220 + (i % 2) * 90, width: 100, height: 100 }, { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 9999, borderWidth: 4, borderColor: '#FFFFFF', borderStyle: 'solid', glowColor: '#FFFFFF', glowIntensity: 10, animation: 'float', animationTrigger: 'loop', animationDuration: 3 + i }, 'علم')),
+    onlyDesktop(k.heading({ x: 96 + i * 110, y: 248 + (i % 2) * 90, width: 100, height: 40 }, c, 28, { color: '#FFFFFF', textAlign: 'center' })),
+    onlyDesktop(k.text({ x: 96 + i * 110, y: 326 + (i % 2) * 90, width: 100, height: 24 }, n, 13, { color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold' })),
   ]),
 ];
 

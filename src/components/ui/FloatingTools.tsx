@@ -7,7 +7,7 @@ import { MoreHorizontal } from 'lucide-react';
 const SHADOW = 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.75)]';
 
 export const ToolBar: React.FC<{ children: React.ReactNode; pinned?: boolean }> = ({ children, pinned }) => (
-  <div dir="rtl" onClick={(e) => e.stopPropagation()} className={`absolute inset-x-0 bottom-0 z-10 flex items-center gap-0.5 bg-gradient-to-t from-black/40 to-transparent px-2 pb-1.5 pt-7 text-white transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100 ${pinned ? 'opacity-100' : 'opacity-0'}`}>
+  <div dir="rtl" onClick={(e) => e.stopPropagation()} className={`tool-bar absolute inset-x-0 bottom-0 z-10 flex items-center gap-0.5 bg-gradient-to-t from-black/40 to-transparent px-2 pb-1.5 pt-7 text-white transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100 ${pinned ? 'opacity-100' : 'opacity-0'}`}>
     {children}
   </div>
 );

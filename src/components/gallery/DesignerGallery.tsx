@@ -11,6 +11,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { BadgeCheck, Heart, Loader2, Maximize2, MessageCircle, Palette, Pencil, Plus, Star, ThumbsDown, ThumbsUp, UserRound, X } from 'lucide-react';
 import { LivePage, LiveSlide } from './LiveSlide';
+import { DesignViewer } from './DesignViewer';
 import { HireDialog } from '../designOrders/HireDialog';
 import { PAGE_CATEGORIES, SLIDE_CATEGORIES, categoryLabel, slidesWord, type DesignKind } from '../../data/slideCategories';
 import { GallerySlide, isNewSlide, listApprovedSlides, readMyVotes, recordUse, voteErrorText, voteOnSlide } from '../../services/galleryView';
@@ -122,15 +123,8 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
     if (sort === 'rating') return [...rows].sort((a, b) => b.designer.average - a.designer.average || b.designer.ratingCount - a.designer.ratingCount || b.likes - a.likes);
     return [...rows].sort((a, b) => (sort === 'new' ? b.at - a.at || b.likes - a.likes : b.likes - a.likes || b.at - a.at));
   }, [slides, kind, category, designer, sort, approvedOnly]);
-  const open = (slides || []).find((s) => s.id === openId) || null;
+  const openIdx = shown.findIndex((s) => s.id === openId);
   useEffect(() => setAddResult(null), [openId]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpenId('');
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
 
   const vote = useCallback(async (slide: GallerySlide, value: 1 | -1) => {
     if (!signedIn || !user) {
@@ -255,7 +249,7 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
         </div>
       )}
 
-      {!open && addResult && <p role="status" className={`fixed inset-x-4 bottom-4 z-[55] mx-auto w-fit max-w-full rounded-full bg-surface px-4 py-2 text-center text-sm font-bold shadow-xl ${addResult.ok ? 'text-success' : 'text-danger'}`}>{addResult.message}</p>}
+      {addResult && <p role="status" className={`fixed inset-x-4 bottom-20 z-[70] mx-auto w-fit max-w-full rounded-full bg-surface px-4 py-2 text-center text-sm font-bold shadow-xl ${addResult.ok ? 'text-success' : 'text-danger'}`}>{addResult.message}</p>}
 
       {hiring && user && (
         <HireDialog
@@ -269,15 +263,8 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
         />
       )}
 
-      {open && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={open.name} onClick={() => setOpenId('')}>
-          <div className="group relative w-full sm:max-w-4xl" onClick={(e) => e.stopPropagation()}>
-            <div className="max-h-[94vh] overflow-y-auto rounded-t-card bg-surface pb-9 sm:rounded-card">{preview(open)}</div>
-            <button type="button" onClick={() => setOpenId('')} aria-label="إغلاق" className="absolute left-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.75)] opacity-0 transition hover:scale-110 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"><X size={20} /></button>
-            {designBar(open, true)}
-            {(addResult || notice) && <p role="status" className={`absolute inset-x-6 bottom-11 z-20 rounded-full bg-surface px-3 py-1.5 text-center text-xs font-bold shadow-lg ${addResult?.ok ? 'text-success' : 'text-danger'}`}>{addResult?.message || notice}</p>}
-          </div>
-        </div>
+      {openIdx >= 0 && (
+        <DesignViewer items={shown} index={openIdx} onIndex={(i) => setOpenId(shown[i].id)} onClose={() => setOpenId('')} tools={(it) => designBar(shown.find((x) => x.id === it.id) || shown[openIdx], true)} />
       )}
     </section>
   );

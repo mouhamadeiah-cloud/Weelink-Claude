@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Eye, FileText, Loader2, Pencil, ShieldCheck, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react';
 import { ToolBar, ToolButton, ToolMenu, ToolSpacer, type MenuItem } from '../ui/FloatingTools';
 import { AdminError, GallerySlideRow, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
-import { PagePreviewModal } from './PagePreviewModal';
+import { DesignViewer } from '../gallery/DesignViewer';
 import { categoriesFor, categoryLabel, slidesWord } from '../../data/slideCategories';
 import { LivePage, LiveSlide } from '../gallery/LiveSlide';
 import { deserializeElements } from '../../utils/elementStorage';
@@ -14,13 +14,13 @@ import { findContactInfo, findNavbarContact, CONTACT_KIND_LABEL } from '../../ut
 const TABS: [SlideStatus, string][] = [['pending', 'بانتظار المراجعة'], ['approved', 'مقبولة'], ['rejected', 'مرفوضة']];
 const date = (ms: number) => (ms ? new Date(ms).toLocaleString('ar-SY', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—');
 
-const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessionEnd: () => void }> = ({ row, onChanged, onSessionEnd }) => {
+// The review tools of one design (the icons along its bottom edge and the small panel over it): on its card and in the large view.
+const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessionEnd: () => void; onOpen?: () => void }> = ({ row, onChanged, onSessionEnd, onOpen }) => {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [details, setDetails] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
-  const [viewing, setViewing] = useState(false);
   const [editingInfo, setEditingInfo] = useState(false);
   const [info, setInfo] = useState({ name: row.name, category: row.category, designerName: row.designerName });
   // A second look at the texts, the same check the designer's export runs.
@@ -83,17 +83,14 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
   ];
 
   return (
-    <article className="group relative overflow-hidden rounded-card border border-line bg-surface shadow-sm transition-shadow hover:shadow-lg">
-      {viewing && <PagePreviewModal title={row.name} kind={row.kind} slide={row.slide} page={row.page} elements={row.elements} onClose={() => setViewing(false)} onEdit={row.isEdit ? undefined : edit} />}
-      {row.kind === 'page' && row.page ? <LivePage page={row.page} elements={elements} maxHeight={420} /> : <LiveSlide slide={row.slide} elements={elements} />}
-
+    <>
       <div className="pointer-events-none absolute right-2 top-2 z-10 flex flex-wrap gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         {row.isEdit && <span className="rounded-full bg-warn px-2 py-0.5 text-tiny font-bold text-white shadow">تعديل من المصمم</span>}
         {contact.length > 0 && <span className="rounded-full bg-danger px-2 py-0.5 text-tiny font-bold text-white shadow">فيها بيانات تواصل</span>}
       </div>
 
       {panelOpen && (
-        <div dir="rtl" className="absolute inset-x-2 bottom-11 z-20 flex max-h-[80%] flex-col gap-2 overflow-y-auto rounded-xl border border-line bg-surface p-3 text-small text-ink shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div dir="rtl" className="absolute inset-x-2 bottom-11 z-20 flex max-h-[min(60vh,80%)] flex-col gap-2 overflow-y-auto rounded-xl border border-line bg-surface p-3 text-small text-ink shadow-xl" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between">
             <p className="truncate font-semibold">{row.name}</p>
             <button type="button" aria-label="إغلاق" onClick={() => { setDetails(false); setEditingInfo(false); setRejecting(false); setReason(''); setError(''); }} className="rounded-full p-1 text-muted hover:bg-bg"><X className="h-4 w-4" /></button>
@@ -139,12 +136,22 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
       )}
 
       <ToolBar pinned={panelOpen || busy}>
-        <ToolButton label="دخول الصفحة والتنقل فيها" icon={<Eye size={18} />} onClick={() => setViewing(true)} />
+        {onOpen && <ToolButton label="دخول الصفحة والتنقل فيها" icon={<Eye size={18} />} onClick={onOpen} />}
         {!row.isEdit && <ToolButton label="تعديل في لوحة المصمم" icon={<Pencil size={18} />} onClick={edit} />}
         <ToolSpacer />
         {row.status !== 'approved' && <ToolButton label={row.isEdit ? 'قبول التعديل ونشره' : 'قبول ونشر في المعرض'} icon={busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={20} />} onClick={() => review('approve')} disabled={busy} />}
         <ToolMenu items={items} />
       </ToolBar>
+    </>
+  );
+};
+
+const SlideCard: React.FC<{ row: GallerySlideRow; onOpen: () => void; onChanged: () => void; onSessionEnd: () => void }> = ({ row, onOpen, onChanged, onSessionEnd }) => {
+  const elements = useMemo(() => deserializeElements(row.elements), [row.elements]);
+  return (
+    <article className="group relative overflow-hidden rounded-card border border-line bg-surface shadow-sm transition-shadow hover:shadow-lg">
+      <div onClick={onOpen} className="cursor-pointer">{row.kind === 'page' && row.page ? <LivePage page={row.page} elements={elements} maxHeight={420} /> : <LiveSlide slide={row.slide} elements={elements} />}</div>
+      <ReviewTools row={row} onOpen={onOpen} onChanged={onChanged} onSessionEnd={onSessionEnd} />
     </article>
   );
 };
@@ -207,6 +214,9 @@ export const SlidesReviewView: React.FC<{ onSessionEnd: () => void }> = ({ onSes
   const [rows, setRows] = useState<GallerySlideRow[] | null>(null);
   const [pending, setPending] = useState(0);
   const [error, setError] = useState('');
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const rowKey = (r: GallerySlideRow) => `${r.id}:${r.isEdit ? 'edit' : 'doc'}`;
+  const viewerItems = useMemo(() => (rows || []).map((r) => ({ id: rowKey(r), name: r.name, kind: r.kind, slide: r.slide, page: r.page, elements: deserializeElements(r.elements) })), [rows]);
 
   const load = useCallback(async (st: SlideStatus) => {
     setError('');
@@ -243,8 +253,12 @@ export const SlidesReviewView: React.FC<{ onSessionEnd: () => void }> = ({ onSes
         <p className="mt-8 text-center text-muted">لا توجد شرائح هنا.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {rows.map((r) => <SlideCard key={`${r.id}:${r.isEdit ? 'edit' : 'doc'}`} row={r} onChanged={() => load(status)} onSessionEnd={onSessionEnd} />)}
+          {rows.map((r, i) => <SlideCard key={rowKey(r)} row={r} onOpen={() => setOpenIdx(i)} onChanged={() => load(status)} onSessionEnd={onSessionEnd} />)}
         </div>
+      )}
+      {rows && openIdx !== null && openIdx < rows.length && (
+        <DesignViewer items={viewerItems} index={openIdx} onIndex={setOpenIdx} onClose={() => setOpenIdx(null)}
+          tools={(it) => { const r = rows.find((x) => rowKey(x) === it.id); return r ? <ReviewTools key={it.id} row={r} onChanged={() => load(status)} onSessionEnd={onSessionEnd} /> : null; }} />
       )}
     </section>
   );

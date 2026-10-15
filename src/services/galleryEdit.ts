@@ -45,7 +45,10 @@ export const adminEditSave = async (token: string, id: string, d: { page: any; e
 // What the admin site left for this tab (once, and only if it is fresh).
 export const takeAdminHandoff = (): { id: string; token: string } | null => {
   try {
-    const raw = localStorage.getItem(HANDOFF_KEY);
+    const frag = /^#h=(.+)$/.exec(window.location.hash)?.[1];
+    if (frag) window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    let raw: string | null = frag ? decodeURIComponent(frag) : null;
+    if (!raw) raw = localStorage.getItem(HANDOFF_KEY);
     localStorage.removeItem(HANDOFF_KEY);
     const v = raw ? JSON.parse(raw) : null;
     return v && typeof v.id === 'string' && typeof v.token === 'string' && v.token && Date.now() - Number(v.at) < 120_000 ? { id: v.id, token: v.token } : null;

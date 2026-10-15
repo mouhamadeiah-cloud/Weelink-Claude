@@ -622,6 +622,268 @@ const LEGAL: (() => WeeSlide)[] = [
   },
 ];
 
+// «فريق العمل»: ten designs of their own (a card grid, a spotlight, a mosaic, a ribbon, a leader with a grid, a path, a banner, numbers
+// with people, an orbit, and a hiring slide). The portraits are the three stock photos the platform already used; a member without
+// one is a letter in a circle. Phone layouts come from the automatic phone arrangement.
+const PEOPLE = [
+  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=600&q=80',
+];
+const MEMBERS = [
+  ['سامر الحلبي', 'مدير المشاريع', 'يتابع كل مشروع من أول فكرة حتى التسليم.'],
+  ['ليلى القاسم', 'رئيسة التصميم', 'تحوّل الأفكار إلى شكل يُحَب من أول نظرة.'],
+  ['أحمد درويش', 'مسؤول الجودة', 'لا يسلّم شيئاً قبل أن يجرّبه بنفسه مرتين.'],
+  ['هنادي خوري', 'خدمة الزبائن', 'أول من يردّ، وآخر من يغلق الملف.'],
+  ['رامي سعيد', 'التنفيذ والتركيب', 'يعمل بيديه ويحترم الموعد.'],
+];
+const person = (box: Box, i: number, styles: Styles = {}) => image(box, PEOPLE[i % PEOPLE.length], { borderRadius: 9999, ...styles });
+// A member without a photo: a person icon on a soft round (or rounded-square) ground.
+const initial = (_L: Look, box: Box, glyph: string, fill: string, ink: string, _size = 0, radius = 9999) => [
+  shape('خلفية الأيقونة', box, { backgroundColor: fill, borderRadius: radius }),
+  icon({ x: box.x + box.width * 0.25, y: box.y + box.height * 0.25, width: box.width * 0.5, height: box.height * 0.5 }, glyph, ink),
+];
+const ring = (L: Look, extra: Styles = {}) => ({ borderWidth: 4, borderStyle: 'solid', borderColor: L.accent, ...extra });
+const cardShape = (L: Look, box: Box, extra: Styles = {}, glow = 'rgba(0,0,0,0.16)') =>
+  shape('بطاقة', box, { backgroundColor: L.card, borderColor: L.line, borderWidth: 1, borderRadius: 24, glowIntensity: 22, glowColor: glow, glowPosition: 'bottom', ...extra });
+const socials = (color: string, x: number, y: number) => [
+  icon({ x, y, width: 22, height: 22 }, 'mdi:instagram', color),
+  icon({ x: x + 30, y, width: 22, height: 22 }, 'mdi:linkedin', color),
+];
+
+const TEAM: (() => WeeSlide)[] = [
+  // team.cards: four member cards in a row, a ring round each portrait.
+  () => ({
+    aiTemplate: 'team.cards', name: 'فريق أربع بطاقات', height: 620, mobileHeight: 620, backgroundColor: K_.bg, dividerShape: 'wave',
+    elements: [
+      shape('دائرة زخرفية', { x: -140, y: -140, width: 380, height: 380 }, { backgroundColor: K_.soft, borderRadius: 9999 }),
+      eyebrow(K_, { x: 96, y: 56, width: 1088, height: 26 }, 'فريق العمل'),
+      heading(K_, { x: 96, y: 88, width: 1088, height: 62 }, 'ناس بيحبوا شغلهم', 46, { textEffect: 'marker', textEffectColor: 'rgba(154,52,18,0.3)' }),
+      text(K_, { x: 96, y: 160, width: 760, height: 56 }, 'أربعة وجوه بتعرفوها من أول اتصال، وكل واحد مسؤول عن قسمه من أول فكرة لحد التسليم.', 17),
+      ...MEMBERS.slice(0, 4).flatMap(([name, role, line], i) => {
+        const x = 936 - i * 280;
+        return [
+          cardShape(K_, { x, y: 250, width: 248, height: 320 }, { animation: 'slide-up', animationTrigger: 'once' }, 'rgba(154,52,18,0.2)'),
+          ...(i < 3 ? [person({ x: x + 68, y: 274, width: 112, height: 112 }, i, ring(K_, { glowIntensity: 14, glowColor: 'rgba(154,52,18,0.35)', glowPosition: 'bottom' }))] : initial(K_, { x: x + 68, y: 274, width: 112, height: 112 }, 'mdi:account', K_.soft, K_.accent)),
+          heading(K_, { x: x + 16, y: 404, width: 216, height: 32 }, name, 21, { textAlign: 'center' }),
+          text(K_, { x: x + 16, y: 438, width: 216, height: 24 }, role, 14, { textAlign: 'center', color: K_.accent, fontWeight: 'bold' }),
+          text(K_, { x: x + 24, y: 468, width: 200, height: 50 }, line, 13, { textAlign: 'center' }),
+          ...socials(K_.accent, x + 98, 530),
+        ];
+      }),
+    ],
+  }),
+
+  // team.spotlight: one member in the light, with figures and the others in small.
+  () => ({
+    aiTemplate: 'team.spotlight', name: 'فريق واجهة قائدة الفريق', height: 640, mobileHeight: 640, backgroundColor: L_.bg,
+    elements: [
+      shape('إطار ذهبي', { x: 70, y: 92, width: 420, height: 490 }, { backgroundColor: 'transparent', borderColor: GOLD, borderWidth: 2, borderStyle: 'solid', borderRadius: 28 }),
+      image({ x: 96, y: 70, width: 420, height: 490 }, PEOPLE[0], { borderRadius: 28, imageFilter: 'grayscale', glowIntensity: 24, glowColor: 'rgba(212,175,55,0.3)', glowPosition: 'bottom' }),
+      eyebrow(L_, { x: 600, y: 84, width: 584, height: 26 }, 'قائدة الفريق'),
+      heading(L_, { x: 600, y: 114, width: 584, height: 66 }, 'لينا الخطيب', 52, { animation: 'fade', animationTrigger: 'once' }),
+      text(L_, { x: 600, y: 188, width: 584, height: 30 }, 'مديرة العمليات والجودة', 20, { color: L_.accent, fontWeight: 'bold' }),
+      icon({ x: 1136, y: 236, width: 48, height: 48 }, 'mdi:format-quote-open', GOLD),
+      text(L_, { x: 600, y: 290, width: 584, height: 110 }, 'أؤمن أن الثقة تُبنى بالتفاصيل الصغيرة: موعد يُحترم، وردّ يصل بسرعة، وعمل نسلّمه كما وعدنا.', 18, { color: L_.ink }),
+      el('divider', 'خط فاصل', { x: 600, y: 420, width: 584, height: 2 }, '', { borderColor: L_.line, borderWidth: 1 }),
+      ...[['15', 'سنة خبرة'], ['300', 'مشروع'], ['98%', 'رضا الزبائن']].flatMap(([n, label], i) => [
+        heading(L_, { x: 1064 - i * 200, y: 436, width: 120, height: 52 }, n, 42, { color: L_.accent, animation: 'slide-up', animationTrigger: 'once' }),
+        text(L_, { x: 1064 - i * 200, y: 490, width: 120, height: 24 }, label, 14, { color: L_.ink }),
+      ]),
+      ...[1, 2, 0].flatMap((m, i) => [person({ x: 600 + i * 56, y: 548, width: 44, height: 44 }, m, { borderWidth: 3, borderStyle: 'solid', borderColor: L_.card })]),
+      text(L_, { x: 780, y: 556, width: 240, height: 28 }, 'ومعها تسعة زملاء', 15, { color: L_.muted }),
+      button(L_, { x: 984, y: 544, width: 200, height: 50 }, 'تعرّف على الفريق', { backgroundColor: GOLD, color: '#1A1A1A', fontSize: 15 }),
+    ],
+  }),
+
+  // team.mosaic: portraits in a staggered mosaic with name pills, a tilted band behind.
+  () => ({
+    aiTemplate: 'team.mosaic', name: 'فريق فسيفساء صور', height: 660, mobileHeight: 660, backgroundColor: P_.bg,
+    elements: [
+      shape('شريط مائل', { x: -120, y: 400, width: 1520, height: 320 }, { backgroundColor: P_.soft, rotation: -5 }),
+      shape('دائرة زخرفية', { x: 1010, y: -90, width: 320, height: 320 }, { backgroundColor: 'rgba(13,148,136,0.14)', borderRadius: 9999, animation: 'float', animationTrigger: 'loop' }),
+      eyebrow(P_, { x: 640, y: 76, width: 544, height: 26 }, 'فريق العمل'),
+      heading(P_, { x: 640, y: 106, width: 544, height: 130 }, 'فريق صغير بأيدٍ كثيرة', 50, { textEffect: 'marker', textEffectColor: 'rgba(13,148,136,0.3)' }),
+      text(P_, { x: 640, y: 252, width: 544, height: 88 }, 'نعمل كعائلة: كل واحد يعرف شغل الثاني، فما في مشروع بيتأخر لأن حدا غايب.', 18),
+      button(P_, { x: 984, y: 364, width: 200, height: 52 }, 'انضم إلينا'),
+      person({ x: 96, y: 70, width: 230, height: 290 }, 0, { borderRadius: 32 }),
+      person({ x: 344, y: 120, width: 200, height: 250 }, 1, { borderRadius: 32 }),
+      person({ x: 150, y: 392, width: 200, height: 200 }, 2, { borderRadius: 32 }),
+      ...initial(P_, { x: 370, y: 410, width: 150, height: 150 }, 'mdi:account', P_.accent, '#FFFFFF', 0, 32),
+      el('badge', 'اسم', { x: 112, y: 322, width: 198, height: 30 }, MEMBERS[0][0], { backgroundColor: P_.accent, color: '#FFFFFF', fontSize: 14, borderRadius: 9999, textAlign: 'center', fontFamily: P_.body }),
+      el('badge', 'اسم', { x: 360, y: 332, width: 168, height: 30 }, MEMBERS[1][0], { backgroundColor: P_.card, color: P_.ink, fontSize: 14, borderRadius: 9999, textAlign: 'center', fontFamily: P_.body }),
+      el('badge', 'اسم', { x: 166, y: 554, width: 168, height: 30 }, MEMBERS[2][0], { backgroundColor: P_.card, color: P_.ink, fontSize: 14, borderRadius: 9999, textAlign: 'center', fontFamily: P_.body }),
+    ],
+  }),
+
+  // team.ribbon: three round portraits cross a soft band; a wavy line runs through it.
+  () => ({
+    aiTemplate: 'team.ribbon', name: 'فريق شريط وصور دائرية', height: 600, mobileHeight: 600, backgroundColor: K_.card,
+    elements: [
+      shape('شريط', { x: 0, y: 236, width: 1280, height: 170 }, { backgroundColor: K_.soft }),
+      line({ x: 96, y: 322, width: 1088, height: 6 }, 'line-wavy', K_.accent),
+      heading(K_, { x: 96, y: 52, width: 1088, height: 60 }, 'وجوه شغلنا', 46, { textAlign: 'center', textEffect: 'marker', textEffectColor: 'rgba(154,52,18,0.3)' }),
+      text(K_, { x: 290, y: 122, width: 700, height: 56 }, 'مين بيجاوبك على الهاتف، ومين بيصمم، ومين بيوصل لعندك. تعرّف عليهم.', 17, { textAlign: 'center' }),
+      ...MEMBERS.slice(0, 3).flatMap(([name, role, line], i) => {
+        const cx = 1024 - i * 384;
+        return [
+          person({ x: cx - 95, y: 230, width: 190, height: 190 }, i, { borderWidth: 8, borderStyle: 'solid', borderColor: '#FFFFFF', glowIntensity: 24, glowColor: 'rgba(154,52,18,0.3)', glowPosition: 'bottom', animation: 'slide-up', animationTrigger: 'once' }),
+          heading(K_, { x: cx - 150, y: 440, width: 300, height: 34 }, name, 24, { textAlign: 'center' }),
+          text(K_, { x: cx - 150, y: 478, width: 300, height: 24 }, role, 15, { textAlign: 'center', color: K_.accent, fontWeight: 'bold' }),
+          text(K_, { x: cx - 140, y: 508, width: 280, height: 44 }, line, 14, { textAlign: 'center' }),
+        ];
+      }),
+    ],
+  }),
+
+  // team.leader: one large leader card beside a two-by-two grid of the others.
+  () => ({
+    aiTemplate: 'team.leader', name: 'فريق قائد وأربعة أعضاء', height: 640, mobileHeight: 640, backgroundColor: L_.bg,
+    elements: [
+      cardShape(L_, { x: 664, y: 70, width: 520, height: 500 }, { borderRadius: 28 }, 'rgba(6,182,212,0.25)'),
+      shape('رأس البطاقة', { x: 664, y: 70, width: 520, height: 8 }, { backgroundColor: L_.accent, borderRadius: 4 }),
+      person({ x: 1010, y: 112, width: 140, height: 140 }, 1, ring(L_, { borderColor: GOLD })),
+      heading(L_, { x: 704, y: 128, width: 290, height: 40 }, 'سامر الحلبي', 30),
+      text(L_, { x: 704, y: 176, width: 290, height: 26 }, 'المدير العام ومؤسس الفريق', 16, { color: L_.accent, fontWeight: 'bold' }),
+      text(L_, { x: 704, y: 214, width: 290, height: 40 }, 'عشرون سنة بين الورشة والمكتب.', 14, { color: L_.muted }),
+      text(L_, { x: 704, y: 284, width: 440, height: 110 }, 'بدأ الفريق بثلاثة أشخاص وطاولة واحدة. واليوم نحن فريق كامل، لكن القاعدة ما تغيّرت: نعمل كل مشروع كأنه مشروعنا.', 17, { color: L_.ink }),
+      el('divider', 'خط فاصل', { x: 704, y: 420, width: 440, height: 2 }, '', { borderColor: L_.line, borderWidth: 1 }),
+      ...['قيادة', 'تخطيط', 'جودة'].map((t, i) => el('badge', 'مهارة', { x: 1014 - i * 150, y: 446, width: 130, height: 34 }, t, { backgroundColor: L_.soft, color: L_.accent, fontSize: 14, borderRadius: 9999, textAlign: 'center', fontFamily: L_.body })),
+      button(L_, { x: 944, y: 504, width: 200, height: 48 }, 'تواصل معه', { fontSize: 15 }),
+      ...MEMBERS.slice(1, 5).flatMap(([name, role], i) => {
+        const x = 376 - (i % 2) * 280;
+        const y = 70 + Math.floor(i / 2) * 270;
+        return [
+          cardShape(L_, { x, y, width: 256, height: 230 }, { borderRadius: 22 }, 'rgba(6,182,212,0.18)'),
+          ...initial(L_, { x: x + 176, y: y + 22, width: 60, height: 60 }, 'mdi:account', L_.soft, L_.accent),
+          heading(L_, { x: x + 20, y: y + 100, width: 216, height: 30 }, name, 20),
+          text(L_, { x: x + 20, y: y + 134, width: 216, height: 24 }, role, 14, { color: L_.accent, fontWeight: 'bold' }),
+          icon({ x: x + 214, y: y + 178, width: 22, height: 22 }, 'mdi:briefcase-outline', L_.muted),
+          text(L_, { x: x + 20, y: y + 178, width: 190, height: 24 }, `${[6, 9, 4, 11][i]} سنوات خبرة`, 14),
+        ];
+      }),
+    ],
+  }),
+
+  // team.path: four people along a gradient line, a numbered step above each.
+  () => ({
+    aiTemplate: 'team.path', name: 'فريق مسار بخطوات', height: 600, mobileHeight: 600, backgroundColor: P_.soft,
+    elements: [
+      heading(P_, { x: 96, y: 52, width: 1088, height: 60 }, 'كيف بنشتغل معك؟', 44, { textAlign: 'center' }),
+      text(P_, { x: 290, y: 118, width: 700, height: 56 }, 'أربع محطات، وفي كل محطة شخص مسؤول عنك بالاسم.', 18, { textAlign: 'center' }),
+      line({ x: 140, y: 252, width: 1000, height: 4 }, 'line-gradient', P_.accent),
+      ...MEMBERS.slice(0, 4).flatMap(([name, role, text_], i) => {
+        const cx = 1100 - i * 307;
+        const ic = ['mdi:lightbulb-outline', 'mdi:pencil-ruler', 'mdi:hammer-wrench', 'mdi:flag-checkered'][i];
+        return [
+          text(P_, { x: cx - 80, y: 206, width: 160, height: 24 }, `الخطوة ${['الأولى', 'الثانية', 'الثالثة', 'الرابعة'][i]}`, 14, { textAlign: 'center', color: P_.accent, fontWeight: 'bold' }),
+          shape('نقطة', { x: cx - 22, y: 232, width: 44, height: 44 }, { backgroundColor: P_.accent, borderRadius: 9999, glowIntensity: 14, glowColor: 'rgba(13,148,136,0.5)', glowPosition: 'center' }),
+          heading(P_, { x: cx - 22, y: 238, width: 44, height: 32 }, String(i + 1), 20, { textAlign: 'center', color: '#FFFFFF' }),
+          cardShape(P_, { x: cx - 135, y: 310, width: 270, height: 250 }, { borderRadius: 22 }, 'rgba(13,148,136,0.22)'),
+          shape('خلفية الأيقونة', { x: cx - 28, y: 330, width: 56, height: 56 }, { backgroundColor: P_.soft, borderRadius: 16 }),
+          icon({ x: cx - 14, y: 344, width: 28, height: 28 }, ic, P_.accent, { animation: 'float', animationTrigger: 'loop' }),
+          heading(P_, { x: cx - 120, y: 402, width: 240, height: 32 }, name, 21, { textAlign: 'center' }),
+          text(P_, { x: cx - 120, y: 436, width: 240, height: 24 }, role, 15, { textAlign: 'center', color: P_.accent, fontWeight: 'bold' }),
+          text(P_, { x: cx - 112, y: 468, width: 224, height: 60 }, text_, 14, { textAlign: 'center' }),
+        ];
+      }),
+    ],
+  }),
+
+  // team.banner: a photo behind a dark veil, three glass cards over it.
+  () => ({
+    aiTemplate: 'team.banner', name: 'فريق على صورة بأوراق زجاجية', height: 640, mobileHeight: 640, backgroundColor: '#1B120D', backgroundImage: photo('k-hero'),
+    elements: [
+      shape('طبقة داكنة', { x: 0, y: 0, width: 1280, height: 640 }, { backgroundColor: 'rgba(24,12,6,0.62)' }),
+      eyebrow(K_, { x: 96, y: 62, width: 1088, height: 26 }, 'فريق العمل', { textAlign: 'center', color: '#FDBA74' }),
+      heading(K_, { x: 96, y: 94, width: 1088, height: 70 }, 'خلف كل طبخة إيدين بتعرفها', 50, { textAlign: 'center', color: '#FFFFFF', textShadowIntensity: 14, textShadowColor: 'rgba(0,0,0,0.6)', textShadowPosition: 'bottom' }),
+      text(K_, { x: 290, y: 174, width: 700, height: 54 }, 'ثلاثة أشخاص بيصحوا قبل الكل ويناموا بعد الكل.', 18, { textAlign: 'center', color: 'rgba(255,255,255,0.88)' }),
+      ...MEMBERS.slice(0, 3).flatMap(([name, role, line], i) => {
+        const x = 848 - i * 376;
+        return [
+          shape('بطاقة زجاج', { x, y: 262, width: 336, height: 300 }, { backgroundColor: 'rgba(255,255,255,0.13)', borderColor: 'rgba(255,255,255,0.4)', borderWidth: 1, borderStyle: 'solid', borderRadius: 26, glowIntensity: 18, glowColor: 'rgba(255,255,255,0.25)', glowPosition: 'bottom', animation: 'slide-up', animationTrigger: 'once' }),
+          person({ x: x + 118, y: 284, width: 100, height: 100 }, i, { borderWidth: 4, borderStyle: 'solid', borderColor: '#FFFFFF' }),
+          heading(K_, { x: x + 20, y: 400, width: 296, height: 32 }, name, 23, { textAlign: 'center', color: '#FFFFFF' }),
+          text(K_, { x: x + 20, y: 436, width: 296, height: 24 }, role, 15, { textAlign: 'center', color: '#FDBA74', fontWeight: 'bold' }),
+          text(K_, { x: x + 36, y: 468, width: 264, height: 60 }, line, 14, { textAlign: 'center', color: 'rgba(255,255,255,0.85)' }),
+        ];
+      }),
+    ],
+  }),
+
+  // team.numbers: four figures on top, three horizontal member cards under them.
+  () => ({
+    aiTemplate: 'team.numbers', name: 'فريق أرقام وأشخاص', height: 680, mobileHeight: 680, backgroundColor: L_.card,
+    elements: [
+      eyebrow(L_, { x: 96, y: 56, width: 1088, height: 26 }, 'فريق العمل'),
+      heading(L_, { x: 96, y: 86, width: 1088, height: 62 }, 'أرقام تحكي عنا', 46),
+      line({ x: 944, y: 156, width: 240, height: 4 }, 'line-gradient', GOLD),
+      ...[['40+', 'عضو بالفريق'], ['15', 'سنة بالسوق'], ['900', 'مشروع منفّذ'], ['4.9', 'تقييم الزبائن']].flatMap(([n, label], i) => {
+        const x = 934 - i * 279;
+        return [
+          cardShape(L_, { x, y: 190, width: 250, height: 120 }, { borderRadius: 20 }, 'rgba(212,175,55,0.18)'),
+          heading(L_, { x: x + 16, y: 204, width: 218, height: 56 }, n, 44, { color: GOLD, textAlign: 'center', animation: 'slide-up', animationTrigger: 'once' }),
+          text(L_, { x: x + 16, y: 266, width: 218, height: 26 }, label, 15, { textAlign: 'center', color: L_.ink }),
+        ];
+      }),
+      ...MEMBERS.slice(0, 3).flatMap(([name, role, line_], i) => {
+        const x = 848 - i * 376;
+        return [
+          cardShape(L_, { x, y: 350, width: 336, height: 290 }, { borderRadius: 24 }, 'rgba(6,182,212,0.18)'),
+          person({ x: x + 196, y: 372, width: 120, height: 246 }, i, { borderRadius: 20, imageFilter: i === 1 ? 'grayscale' : undefined }),
+          heading(L_, { x: x + 20, y: 392, width: 166, height: 54 }, name, 22),
+          text(L_, { x: x + 20, y: 450, width: 166, height: 24 }, role, 14, { color: L_.accent, fontWeight: 'bold' }),
+          text(L_, { x: x + 20, y: 486, width: 166, height: 100 }, line_, 14),
+        ];
+      }),
+    ],
+  }),
+
+  // team.orbit: a round heading with five avatars on its orbit, each with a name pill.
+  () => ({
+    aiTemplate: 'team.orbit', name: 'فريق مدار دائري', height: 680, mobileHeight: 680, backgroundColor: P_.bg,
+    elements: [
+      shape('دائرة زخرفية', { x: 40, y: 480, width: 200, height: 200 }, { backgroundColor: P_.soft, borderRadius: 9999, animation: 'float', animationTrigger: 'loop' }),
+      shape('دائرة زخرفية', { x: 1060, y: 40, width: 160, height: 160 }, { backgroundColor: 'rgba(13,148,136,0.14)', borderRadius: 9999, animation: 'float', animationTrigger: 'loop' }),
+      shape('مدار', { x: 390, y: 100, width: 500, height: 500 }, { backgroundColor: P_.card, borderColor: P_.accent, borderWidth: 2, borderStyle: 'dashed', borderRadius: 9999, glowIntensity: 22, glowColor: 'rgba(13,148,136,0.22)', glowPosition: 'center' }),
+      eyebrow(P_, { x: 470, y: 240, width: 340, height: 26 }, 'فريق العمل', { textAlign: 'center' }),
+      heading(P_, { x: 470, y: 272, width: 340, height: 100 }, 'كل واحد عنده دور', 36, { textAlign: 'center' }),
+      text(P_, { x: 480, y: 384, width: 320, height: 84 }, 'خمسة أشخاص يدورون حول شيء واحد: أن يخرج شغلك أحسن مما تتوقع.', 16, { textAlign: 'center' }),
+      ...([[640, 100, 'right'], [878, 273, 'right'], [786, 552, 'right'], [494, 552, 'left'], [402, 273, 'left']] as [number, number, 'right' | 'left'][]).flatMap(([cx, cy, side], i) => {
+        const m = MEMBERS[i];
+        return [
+          ...(i < 3 ? [person({ x: cx - 50, y: cy - 50, width: 100, height: 100 }, i, ring(P_, { borderColor: '#FFFFFF', borderWidth: 5, glowIntensity: 14, glowColor: 'rgba(13,148,136,0.4)', glowPosition: 'bottom' }))] : initial(P_, { x: cx - 50, y: cy - 50, width: 100, height: 100 }, 'mdi:account', P_.accent, '#FFFFFF')),
+          el('badge', 'اسم', { x: side === 'right' ? cx + 60 : cx - 60 - 150, y: cy - 26, width: 150, height: 52 }, `${m[0]}\n${m[1]}`, { backgroundColor: P_.card, color: P_.ink, fontSize: 13, borderRadius: 14, textAlign: 'center', fontFamily: P_.body, borderColor: P_.line, borderWidth: 1, borderStyle: 'solid' }),
+        ];
+      }),
+    ],
+  }),
+
+  // team.join: open roles on one side, the invitation and the stacked avatars on the other.
+  () => ({
+    aiTemplate: 'team.join', name: 'فريق انضم إلينا', height: 600, mobileHeight: 600, backgroundColor: K_.soft,
+    elements: [
+      shape('دائرة زخرفية', { x: 1000, y: 380, width: 340, height: 340 }, { backgroundColor: 'rgba(154,52,18,0.1)', borderRadius: 9999 }),
+      eyebrow(K_, { x: 640, y: 84, width: 544, height: 26 }, 'انضم إلينا'),
+      heading(K_, { x: 640, y: 114, width: 544, height: 130 }, 'عندنا مكان لموهبتك', 50, { textEffect: 'marker', textEffectColor: 'rgba(154,52,18,0.3)' }),
+      text(K_, { x: 640, y: 258, width: 544, height: 84 }, 'نبحث عن ناس يحبون شغلهم ويتعلمون بسرعة. إذا تشبهنا، فتّح لنا باب الحديث.', 18),
+      button(K_, { x: 984, y: 366, width: 200, height: 52 }, 'قدّم طلبك'),
+      el('button', 'زر واتساب', { x: 754, y: 366, width: 210, height: 52 }, 'تواصل واتساب', { backgroundColor: WHATSAPP_GREEN, color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', borderRadius: 9999, textAlign: 'center', fontFamily: K_.body }),
+      ...[0, 1, 2].map((i) => person({ x: 1128 - i * 40, y: 462, width: 56, height: 56 }, i, { borderWidth: 4, borderStyle: 'solid', borderColor: K_.soft })),
+      ...initial(K_, { x: 1008, y: 462, width: 56, height: 56 }, 'mdi:plus', K_.accent, '#FFFFFF'),
+      text(K_, { x: 770, y: 474, width: 220, height: 28 }, 'انضم لأكثر من اثني عشر زميلاً', 15, { color: K_.ink }),
+      ...[['mdi:palette-outline', 'مصمم/ة واجهات', 'دوام كامل · عن بعد'], ['mdi:headset', 'خدمة زبائن', 'دوام جزئي'], ['mdi:wrench-outline', 'فني تركيب', 'دوام كامل']].flatMap(([ic, title, meta], i) => [
+        cardShape(K_, { x: 96, y: 80 + i * 160, width: 480, height: 136 }, { borderRadius: 22, animation: 'slide-up', animationTrigger: 'once' }, 'rgba(154,52,18,0.2)'),
+        shape('خلفية الأيقونة', { x: 504, y: 112 + i * 160, width: 56, height: 56 }, { backgroundColor: K_.soft, borderRadius: 16 }),
+        icon({ x: 518, y: 126 + i * 160, width: 28, height: 28 }, ic, K_.accent),
+        heading(K_, { x: 196, y: 108 + i * 160, width: 290, height: 34 }, title, 22),
+        text(K_, { x: 196, y: 148 + i * 160, width: 290, height: 24 }, meta, 15),
+        icon({ x: 120, y: 126 + i * 160, width: 28, height: 28 }, 'mdi:arrow-left', K_.accent),
+      ]),
+    ],
+  }),
+];
+
 // Cards, frames and question boxes arrive as groups with what lies on them (the constitution's
 // grouping rule); icon backgrounds and header strips inside a card stay plain shapes.
 const CARD_NAMES = ['بطاقة', 'إطار', 'سؤال'];
@@ -632,7 +894,7 @@ const grouped = (make: () => WeeSlide) => (): WeeSlide => {
 
 // Ready-slide categories the designs open, first in their category's list.
 export const WEE_SLIDES: Record<string, (() => WeeSlide)[]> = Object.fromEntries(
-  Object.entries({ intro: HERO, about: ABOUT, prices: PRICES, gallery: GALLERY, contact: CONTACT, privacy: LEGAL }).map(([id, list]) => [id, list.map(grouped)]),
+  Object.entries({ intro: HERO, about: ABOUT, prices: PRICES, gallery: GALLERY, contact: CONTACT, privacy: LEGAL, team: TEAM }).map(([id, list]) => [id, list.map(grouped)]),
 );
 
 export const weeSlideCount = (categoryId: string) => WEE_SLIDES[categoryId]?.length || 0;

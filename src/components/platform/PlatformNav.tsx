@@ -50,7 +50,7 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
         </button>
         <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
           <button type="button" onClick={onHome} aria-current={current === 'home' ? 'page' : undefined} className={itemCls(current === 'home')}>الرئيسية</button>
-          <button type="button" onClick={onStart} aria-current={current === 'start' ? 'page' : undefined} className={itemCls(current === 'start')}>اعمل صفحتك</button>
+          <button type="button" onClick={onStart} aria-current={current === 'start' ? 'page' : undefined} className={itemCls(current === 'start')}>اعمل مشروعك</button>
           {signedIn && <button type="button" onClick={onOpenMyPage} className={itemCls(false)}>مشروعي</button>}
           {extra}
           <button type="button" onClick={onLaw} aria-current={current === 'law' ? 'page' : undefined} className={itemCls(current === 'law')}>قانون الصفحة</button>

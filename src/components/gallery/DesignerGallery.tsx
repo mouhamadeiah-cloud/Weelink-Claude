@@ -154,7 +154,7 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
 
   const addToMyPage = async (slide: GallerySlide) => {
     if (!signedIn || !user) {
-      setAddResult({ ok: false, message: 'سجّل دخولك لتضيف التصميم لصفحتك.' });
+      setAddResult({ ok: false, message: 'سجّل دخولك لتضيف التصميم لمشروعك.' });
       return;
     }
     if (!onAddToMyPage) return;
@@ -176,9 +176,9 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
     const own = !!user && user.uid === s.designerUid;
     const items: MenuItem[] = [
       ...(!large ? [{ id: 'open', label: 'فتح كبيراً', icon: <Maximize2 size={14} />, onClick: () => setOpenId(s.id) }] : []),
-      { id: 'add', label: adding ? 'جارٍ الإضافة…' : 'أضف لصفحتي مجاناً', icon: <Plus size={14} />, onClick: () => addToMyPage(s), disabled: adding || !onAddToMyPage },
-      { id: 'fit', label: 'بألوان وخطوط ستايل صفحتي', icon: <Palette size={14} />, onClick: () => setFit((v) => !v), checked: fit },
-      ...(!s.official ? [{ id: 'hire', label: `اطلب ${s.designerName || 'المصمم'} لصفحتي`, icon: <MessageCircle size={14} />, onClick: () => (signedIn ? setHiring(s) : setAddResult({ ok: false, message: 'سجّل دخولك لتطلب مصمماً.' })), disabled: own }] : []),
+      { id: 'add', label: adding ? 'جارٍ الإضافة…' : 'أضف لمشروعي مجاناً', icon: <Plus size={14} />, onClick: () => addToMyPage(s), disabled: adding || !onAddToMyPage },
+      { id: 'fit', label: 'بألوان وخطوط ستايل مشروعي', icon: <Palette size={14} />, onClick: () => setFit((v) => !v), checked: fit },
+      ...(!s.official ? [{ id: 'hire', label: `اطلب ${s.designerName || 'المصمم'} لمشروعي`, icon: <MessageCircle size={14} />, onClick: () => (signedIn ? setHiring(s) : setAddResult({ ok: false, message: 'سجّل دخولك لتطلب مصمماً.' })), disabled: own }] : []),
       { id: 'more', label: `المزيد من ${s.designerName || 'المصمم'}`, icon: <UserRound size={14} />, onClick: () => { setDesigner({ uid: s.designerUid, name: s.designerName || 'المصمم' }); setKind('all'); setCategory('all'); setOpenId(''); } },
       ...(onEditDesign && own && !s.official ? [{ id: 'edit', label: `تعديل ${s.kind === 'page' ? 'الصفحة' : 'الشريحة'} وإعادة نشرها`, icon: <Pencil size={14} />, onClick: () => onEditDesign(s) }] : []),
     ];

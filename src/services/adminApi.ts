@@ -172,10 +172,10 @@ export interface GallerySlideRow {
   kind: 'slide' | 'page'; slide: any; page: any; elements: any[];
 }
 export const adminSlides = (status: SlideStatus) => call<{ rows: GallerySlideRow[]; counts: { pending: number } }>({ action: 'slides-review-list', status });
-export interface SeedStatus { total: number; published: number; searchesLeft: number; unsplash: boolean }
+export interface SeedStatus { total: number; published: number; staged: number; searchesLeft: number; unsplash: boolean }
 export interface SeedResult { published: string[]; waiting: string[]; limited: boolean; spent: number; failed: string[] }
 export const adminSeedStatus = () => call<SeedStatus>({ action: 'gallery-seed-status' });
-export const adminSeed = (opts: { overwrite?: boolean } = {}) => call<SeedResult>({ action: 'gallery-seed', overwrite: !!opts.overwrite });
+export const adminSeed = (opts: { overwrite?: boolean; publish?: boolean } = {}) => call<SeedResult>({ action: 'gallery-seed', overwrite: !!opts.overwrite, publish: !!opts.publish });
 export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });
 
 // Hiring a designer: the office takes the customer's money, holds it until the design is confirmed, then pays the

@@ -3,7 +3,9 @@
 // each search is run once on Unsplash and its first ten results are kept in platformSettings/galleryPhotos, so a
 // page is published only when all its photos are found, and a rate limit (a demo Unsplash key allows 50 searches an
 // hour) only means «run it again later»: what was found is not asked for twice.
-// A published page is gallerySlides/weelink-ai_<key>: designer «Weelink AI», approved, official (it cannot be hired).
+// A page is saved as gallerySlides/weelink-ai_<key>: designer «Weelink AI», official (it cannot be hired). It is staged as
+// «بانتظار المراجعة» (Eyad, 15 Oct: the owner looks at each, edits it in the designer's panel, then approves it); `publish`
+// saves it approved at once. A page the admin edited by hand (editedBy) is never rebuilt, whatever `overwrite` says.
 import { FieldValue } from 'firebase-admin/firestore';
 import pagesFile from '../src/data/galleryPages/pages.json' with { type: 'json' };
 
@@ -60,11 +62,15 @@ export const gallerySeedStatus = async (db: any) => {
   const have = new Set<string>(done.docs.map((d: any) => String(d.data().key || '')));
   const need = new Set<string>();
   for (const p of PAGES) for (const q of queriesOf(p)) if (!cache[q]) need.add(q);
-  return { total: PAGES.length, published: PAGES.filter((p) => have.has(p.key)).length, searchesLeft: need.size, unsplash: !!accessKey() };
+  const state = new Map<string, string>(done.docs.map((d: any) => [String(d.data().key || ''), String(d.data().status || '')]));
+  return {
+    total: PAGES.length, published: PAGES.filter((p) => state.get(p.key) === 'approved').length, staged: PAGES.filter((p) => have.has(p.key) && state.get(p.key) !== 'approved').length,
+    searchesLeft: need.size, unsplash: !!accessKey(),
+  };
 };
 
 // Runs the missing searches (at most `budget`), then publishes every page whose photos are all found.
-export const gallerySeed = async (db: any, opts: { budget: number; overwrite: boolean; only?: string }) => {
+export const gallerySeed = async (db: any, opts: { budget: number; overwrite: boolean; only?: string; publish?: boolean }) => {
   const key = accessKey();
   if (!key) return { error: 'no-unsplash-key' as const };
   const cacheRef = db.collection('platformSettings').doc('galleryPhotos');
@@ -95,7 +101,7 @@ export const gallerySeed = async (db: any, opts: { budget: number; overwrite: bo
     }
     const ref = db.collection('gallerySlides').doc(`${OFFICIAL_UID}_${p.key}`);
     const existing = (await ref.get()).data();
-    if (existing && !opts.overwrite) {
+    if (existing && (!opts.overwrite || existing.editedBy)) {
       published.push(p.key);
       continue;
     }
@@ -103,7 +109,7 @@ export const gallerySeed = async (db: any, opts: { budget: number; overwrite: bo
     await ref.set({
       key: p.key, designerUid: OFFICIAL_UID, designerName: OFFICIAL_NAME, official: true,
       name: p.name, category: p.category, kind: 'page', draftSlot: '', slide: built.page.slides[0], page: built.page, elements: built.elements,
-      photoCredits: built.credits, status: 'approved', lawVersion: 0, approvedAt: existing?.approvedAt || now, reviewedBy: 'weelink-ai', reviewedAt: now,
+      photoCredits: built.credits, status: opts.publish ? 'approved' : (existing?.status || 'pending'), lawVersion: 0, ...(opts.publish ? { approvedAt: existing?.approvedAt || now, reviewedBy: 'weelink-ai', reviewedAt: now } : {}),
       likes: Number(existing?.likes) || 0, dislikes: Number(existing?.dislikes) || 0, uses: Number(existing?.uses) || 0,
       createdAt: existing?.createdAt || FieldValue.serverTimestamp(),
     });

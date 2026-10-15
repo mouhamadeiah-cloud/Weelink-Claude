@@ -8,6 +8,7 @@ const apply = (cur: any, patch: any) => { const next = clone(cur || {}); for (co
 const docRef = (path: string) => ({
   id: path.split('/').pop()!,
   async get() { const d = store.get(path); return { exists: d !== undefined, id: path.split('/').pop()!, data: () => (d === undefined ? undefined : clone(d)) }; },
+  async delete() { store.delete(path); },
   async set(data: any, opts?: any) { store.set(path, opts?.merge ? apply(store.get(path), data) : clone(data)); },
   async update(patch: any) { if (!store.has(path)) throw new Error('no doc'); store.set(path, apply(store.get(path), patch)); },
   collection(sub: string) { return colRef(`${path}/${sub}`); },

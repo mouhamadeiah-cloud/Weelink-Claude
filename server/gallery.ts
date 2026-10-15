@@ -9,6 +9,10 @@
 //        → a customer added the slide (or page) to their own page: counted once per account and slide,
 //          for «استُخدمت N مرة».                                 → { uses } | { error }
 //
+//   POST /api/gallery  { action: 'edit-open', id } → { design, pendingEdit, editRejected }  and
+//                      { action: 'edit-save', id, page, elements, name?, category? } → { ok, mode: 'review' | 'direct' }
+//        (a designer edits a design of their own; see server/galleryEdit.ts)
+//
 //   gallerySlides/{id}.likes / .dislikes / .uses   the counters, written here only (the rules deny the browser)
 //   galleryVotes/{uid} = { votes: { [slideId]: 1 | -1 }, last }   the voter reads their own
 //   galleryUses/{uid} = { slides: { [slideId]: true } }            server only
@@ -18,6 +22,7 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { designerSave, loadForEdit } from './galleryEdit.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 const MIN_GAP_MS = 700;
@@ -55,16 +60,34 @@ export default {
     } catch {
       return json({ error: 'bad_request' }, 400);
     }
-    if (body.action !== 'vote' && body.action !== 'use') return json({ error: 'unknown_action' }, 400);
+    if (!['vote', 'use', 'edit-open', 'edit-save'].includes(String(body.action))) return json({ error: 'unknown_action' }, 400);
 
     const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     const user = token ? await admin.auth.verifyIdToken(token).catch(() => null) : null;
     if (!user) return json({ error: 'unauthorized' }, 401);
     if (!user.email_verified) return json({ error: 'unverified' }, 403);
 
+    const { db } = admin;
+
+    // A designer edits a design of their own (server/galleryEdit.ts): open it, then save it back.
+    if (body.action === 'edit-open' || body.action === 'edit-save') {
+      const id = body.id;
+      if (!validId(id)) return json({ error: 'bad_request' }, 400);
+      try {
+        if (body.action === 'edit-open') {
+          const r = await loadForEdit(db, id, { designerUid: user.uid });
+          return 'error' in r ? json({ error: r.error }, 404) : json(r);
+        }
+        const r = await designerSave(db, user.uid, id, { page: body.page as any, elements: body.elements as any, name: body.name, category: body.category });
+        return 'error' in r ? json({ error: r.error, kinds: (r as any).kinds }, r.error === 'not_found' ? 404 : 400) : json(r);
+      } catch (e) {
+        console.error('edit failed:', e);
+        return json({ error: 'failed' }, 500);
+      }
+    }
+
     const slideId = body.slideId;
     if (!validId(slideId)) return json({ error: 'bad_request' }, 400);
-    const { db } = admin;
     const slideRef = db.collection('gallerySlides').doc(slideId);
 
     if (body.action === 'use') {

@@ -41,12 +41,27 @@ test('running again finishes: every page published, no photo placeholder left, o
   assert.equal(docs.length, r.published.length);
   for (const d of docs) {
     assert.equal(d.official, true);
-    assert.equal(d.status, 'approved');
+    assert.equal(d.status, 'pending');
     assert.equal(d.designerName, 'Weelink AI');
     assert.equal(d.kind, 'page');
     assert.ok(!JSON.stringify(d).includes('photo:'), `${d.key} still has a photo placeholder`);
     assert.ok(d.page.slides.length <= 3);
   }
+});
+
+test('publish: true approves them', async () => {
+  const r = (await gallerySeed(db, { budget: 40, overwrite: true, publish: true })) as any;
+  assert.ok(r.published.length > 0);
+  const d = store.get(`gallerySlides/${OFFICIAL_UID}_${r.published[0]}`);
+  assert.equal(d.status, 'approved');
+  assert.ok(d.approvedAt > 0);
+});
+
+test('a page the admin edited by hand is never rebuilt', async () => {
+  const [path, doc] = [...store.entries()].find(([k]) => k.startsWith(`gallerySlides/${OFFICIAL_UID}_`))!;
+  store.set(path, { ...doc, name: 'معدّل يدوياً', editedBy: 'admin:x' });
+  await gallerySeed(db, { budget: 40, overwrite: true });
+  assert.equal(store.get(path).name, 'معدّل يدوياً');
 });
 
 test('a second run asks Unsplash for nothing and keeps the likes', async () => {

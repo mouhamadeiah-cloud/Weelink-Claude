@@ -28,10 +28,11 @@ import { adminEditOpen, adminEditSave, designerEditOpen, designerEditSave, editE
 import { DesignerDashboard } from './components/designer/DesignerDashboard';
 import { DesignOrdersPanel } from './components/designOrders/DesignOrdersPanel';
 import { insertDesign } from './services/fitDesign';
-import type { GallerySlide } from './services/galleryView';
+import { recordUse, type GallerySlide } from './services/galleryView';
 import { DESIGN_KIND_LABEL, PAGE_MAX_SLIDES, type DesignKind } from './data/slideCategories';
 import { ExportSlideModal } from './components/designer/ExportSlideModal';
 import { HomePage } from './components/home/HomePage';
+import { LawPage } from './components/platform/LawPage';
 import { StartPage } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
 import { readCatalogAnswer, sampleRestaurantAdmin, sampleShopAdmin } from './services/sampleItems';
@@ -64,7 +65,6 @@ import type { PageLook } from './data/pageLooks';
 import { KIND_OF_PROJECT, buildPageFromPlan, emptyMainPage, buildProfile, pageAssets, requestPagePlan } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
-import { getFreeStarterTemplate } from './data/freeStarterTemplate';
 import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
 import { withPhoneLayouts } from './utils/mobileLayout';
 import { withTemplateGroups } from './utils/templateGroups';
@@ -215,6 +215,8 @@ export default function App() {
   // «اعمل صفحتك»: the kind of page picked before the questions, then Wee AI's questions. Everyone
   // answers them there (Eyad, 12 Oct); the editor's panel only shows the answers and builds.
   const [isStartActive, setIsStartActive] = useState<boolean>(false);
+  // «قانون الصفحة»: a screen of its own under Weelink's top bar.
+  const [isLawActive, setIsLawActive] = useState<boolean>(false);
   // The kind the start page opens on (from «عدّل إجاباتي» in the editor), else the kinds.
   const [startKind, setStartKind] = useState<ProjectType | null>(null);
   // Which form the sign-in screen opens on: the designers' sign-up comes from the start page's fifth card.
@@ -257,7 +259,7 @@ export default function App() {
   // The project just loaded had nothing saved and started from its template.
   const freshProjectRef = useRef(false);
   // What the build after the questions is doing, shown over the editor.
-  const [buildNotice, setBuildNotice] = useState<{ busy: boolean; ok?: boolean; message: string } | null>(null);
+  const [buildNotice, setBuildNotice] = useState<{ busy: boolean; ok?: boolean; message: string; undo?: () => void } | null>(null);
   const [hasBuildBackup, setHasBuildBackup] = useState(false);
   // The kind a guest answered Wee AI for: after signing up, the answers move to the account and it opens.
   const pendingBuildRef = useRef<ProjectType | null>(null);
@@ -1425,6 +1427,8 @@ export default function App() {
     else if (kinds.length === 1 && !owned.page) target = kinds[0];
     else if (kinds.length === 0 && owned.page) target = 'page';
     setIsHomeActive(false);
+    setIsStartActive(false);
+    setIsLawActive(false);
     setIsAuthActive(false);
     setIsProjectChosen(false);
     // The owner sees their page as visitors do, with «الإدارة» in its navbar (Eyad, 13 Oct); the
@@ -1765,6 +1769,7 @@ export default function App() {
         setRestaurantAdmin(createEmptyRestaurantAdmin());
         ownedRef.current = { page: false, shop: false, cars: false, restaurant: false };
         setIsAuthActive(true);
+        setIsLawActive(false);
         setIsHomeActive(true);
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
@@ -3624,9 +3629,12 @@ export default function App() {
   // reference (navbar items, navbar CTA, element links) is remapped to the new ids.
   const applySiteTemplate = (
     template: { pages: Page[]; elements: CanvasElement[] },
-    confirmMessage: string
+    confirmMessage: string,
+    doneMessage?: string
   ) => {
     if (!window.confirm(confirmMessage)) return;
+    // What the page was before, kept for «تراجع».
+    const before = { pages: pagesRef.current, elements: elementsRef.current, pageId: activePageId, slideId: activeSlideId };
 
     const { pages: templatePages, elements: templateElements } = template;
     const suffix = Date.now();
@@ -3643,11 +3651,12 @@ export default function App() {
       slides: p.slides.map((s) => ({ ...s, id: idMap[s.id] })),
       navbar: {
         ...p.navbar,
-        items: p.navbar.items.map((item) => ({
-          ...item,
-          linkTargetId: item.linkTargetId ? (idMap[item.linkTargetId] || item.linkTargetId) : item.linkTargetId,
-        })),
+        items: p.navbar.items.map((item) => {
+          const to = item.linkTargetId ? (idMap[item.linkTargetId] || item.linkTargetId) : item.linkTargetId;
+          return { ...item, linkTargetId: to, href: to && (item.linkType === 'page' || item.linkType === 'slide') ? `#${item.linkType}-${to}` : item.href };
+        }),
         ctaLinkTargetId: p.navbar.ctaLinkTargetId ? (idMap[p.navbar.ctaLinkTargetId] || p.navbar.ctaLinkTargetId) : p.navbar.ctaLinkTargetId,
+        ctaHref: p.navbar.ctaLinkTargetId && (p.navbar.ctaLinkType === 'page' || p.navbar.ctaLinkType === 'slide') ? `#${p.navbar.ctaLinkType}-${idMap[p.navbar.ctaLinkTargetId] || p.navbar.ctaLinkTargetId}` : p.navbar.ctaHref,
       },
     }));
 
@@ -3667,17 +3676,62 @@ export default function App() {
     setElements(newElements);
     setActivePageId(newPages[0].id);
     setActiveSlideId(newPages[0].slides[0].id);
+    setSelectedElementId(null);
+    setBuildNotice({
+      busy: false,
+      ok: true,
+      message: doneMessage || 'استُبدلت صفحاتك بالقالب.',
+      undo: () => {
+        setPages(before.pages);
+        setElements(before.elements);
+        setActivePageId(before.pageId);
+        setActiveSlideId(before.slideId);
+        setSelectedElementId(null);
+        setBuildNotice(null);
+      },
+    });
   };
 
-  const handleApplyFreeStarterTemplate = () => applySiteTemplate(
-    getFreeStarterTemplate(),
-    'سيتم استبدال كل صفحات موقعك الحالية بقالب جاهز من خمس صفحات (مدخل، من نحن، أعمالنا، الأسعار، اتصال). هل تريد المتابعة؟'
-  );
+  // «من معرض التصاميم» in the add panel: a slide goes to the end of the open page.
+  const handleAddGallerySlide = (g: GallerySlide, fit: boolean) => {
+    const result = insertDesign(pagesRef.current, elementsRef.current, { slides: [g.slide], elements: g.elements }, { pageId: activePageId, fit });
+    if (!result) {
+      setBuildNotice({ busy: false, ok: false, message: 'ما قدرت أضيف الشريحة. جرّب مرة ثانية.' });
+      return;
+    }
+    const before = { pages: pagesRef.current, elements: elementsRef.current, pageId: activePageId, slideId: activeSlideId };
+    setPages(result.pages);
+    pushToHistoryRef.current(result.elements);
+    setActiveSlideId(result.firstSlideId);
+    setSelectedElementId(null);
+    const user = auth.currentUser;
+    if (user && !user.isAnonymous) recordUse(user, g.id).catch(() => {});
+    setBuildNotice({
+      busy: false,
+      ok: true,
+      message: `أُضيفت «${g.name}" لصفحتك${fit ? ' بألوان وخطوط ستايلها' : ''}.`.replace('"', '»'),
+      undo: () => {
+        setPages(before.pages);
+        pushToHistoryRef.current(before.elements);
+        setActivePageId(before.pageId);
+        setActiveSlideId(before.slideId);
+        setBuildNotice(null);
+      },
+    });
+  };
 
-  const handleApplyOnlineShopTemplate = () => applySiteTemplate(
-    getOnlineShopTemplate(),
-    'سيتم استبدال كل صفحات موقعك الحالية بقالب متجر إلكتروني من خمس صفحات (الرئيسية، المنتجات، السلة، طريقة الطلب، تواصل معنا). هل تريد المتابعة؟'
-  );
+  // A gallery page replaces the main page with its navbar (a page cannot have two navbars); asked first, undoable.
+  const handleReplaceWithGalleryPage = (g: GallerySlide) => {
+    if (!g.page?.slides?.length || !g.page.navbar) return;
+    const stamp = `gp${Date.now().toString(36)}`;
+    applySiteTemplate(
+      { pages: [{ id: 'page-home', name: 'الرئيسية', slug: '/', navbar: g.page.navbar, slides: g.page.slides } as Page], elements: g.elements.map((e) => ({ ...e, id: `${e.id}-${stamp}` })) },
+      `سيستبدل هذا صفحتك الأساسية وشريطها العلوي بـ«${g.name}». الصفحات الأخرى في مشروعك تُحذف أيضاً. يمكنك التراجع بعدها. هل تريد المتابعة؟`,
+      `استُبدلت صفحتك بـ«${g.name}».`,
+    );
+    const user = auth.currentUser;
+    if (user && !user.isAnonymous) recordUse(user, g.id).catch(() => {});
+  };
 
   const handleUpdatePage = (updates: Partial<Page>) => {
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, ...updates } : p));
@@ -3856,7 +3910,7 @@ export default function App() {
   // The browser's back button walks back through Weelink's screens (home, the start page and its
   // questions, sign-in, the editor) instead of leaving the site: each screen is an
   // entry in the browser's history.
-  const screen = isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'start' : 'editor';
+  const screen = isLawActive ? 'law' : isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'start' : 'editor';
   const screenRef = useRef(screen);
   screenRef.current = screen;
   // Customers' page fonts load once the editor opens (Weelink's own screens don't use them).
@@ -3870,6 +3924,7 @@ export default function App() {
     const asked = target === 'chooser' ? 'start' : target; // the old projects page's entries
     const to = !signedIn && asked === 'editor' ? 'home' : signedIn && asked === 'auth' ? 'home' : asked;
     if (screenRef.current === 'editor' && to !== 'editor') flushProjectSave();
+    setIsLawActive(to === 'law');
     setIsHomeActive(to === 'home');
     setIsStartActive(to === 'start');
     if (to === 'start') setStartKind(kind || null);
@@ -3906,6 +3961,34 @@ export default function App() {
     );
   }
 
+  if (isLawActive) {
+    return (
+      <LawPage
+        user={currentUser}
+        onHome={() => {
+          setIsLawActive(false);
+          setIsStartActive(false);
+          setIsHomeActive(true);
+        }}
+        onStart={() => {
+          setIsLawActive(false);
+          setStartKind(null);
+          setIsStartActive(true);
+        }}
+        onOpenMyPage={() => openMyPage(activeUserUid)}
+        onLaw={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onAccount={() => {
+          setAuthMode('login');
+          afterSignInRef.current = 'account';
+          pendingBuildRef.current = null;
+          setIsLawActive(false);
+          setIsAuthActive(true);
+        }}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   if (isHomeActive) {
     return (
       <HomePage
@@ -3924,6 +4007,10 @@ export default function App() {
           setIsStartActive(true);
         }}
         onOpenMyPage={() => openMyPage(activeUserUid)}
+        onLaw={() => {
+          setIsHomeActive(false);
+          setIsLawActive(true);
+        }}
         onLogout={handleLogout}
       />
     );
@@ -3945,6 +4032,10 @@ export default function App() {
           setIsHomeActive(true);
         }}
         onOpenMyPage={() => openMyPage(activeUserUid)}
+        onLaw={() => {
+          setIsStartActive(false);
+          setIsLawActive(true);
+        }}
         onAccount={() => {
           setAuthMode('login');
           afterSignInRef.current = 'account';
@@ -3984,7 +4075,7 @@ export default function App() {
         />
         <button
           type="button"
-          onClick={() => setIsHomeActive(true)}
+          onClick={() => { setIsLawActive(false); setIsHomeActive(true); }}
           className="fixed top-3 right-3 z-[60] bg-surface border border-line rounded-full px-3.5 py-1.5 text-xs font-bold text-muted hover:text-ink"
           dir="rtl"
         >
@@ -4025,6 +4116,7 @@ export default function App() {
         <div dir="rtl" role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[99999] max-w-[92vw] w-[26rem] bg-white border border-neutral-200 shadow-[0_16px_40px_rgba(0,0,0,0.18)] rounded-2xl px-4 py-3 flex items-start gap-3 text-xs font-semibold text-neutral-800">
           {buildNotice.busy ? <Loader2 size={16} className="animate-spin text-brand shrink-0 mt-0.5" /> : <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${buildNotice.ok ? 'bg-green-500' : 'bg-rose-500'}`} />}
           <p className="flex-1 leading-relaxed">{buildNotice.message}</p>
+          {buildNotice.undo && <button type="button" onClick={buildNotice.undo} className="shrink-0 rounded-lg bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand hover:bg-brand/20">تراجع</button>}
           {!buildNotice.busy && (
             <button type="button" onClick={() => setBuildNotice(null)} className="text-neutral-400 hover:text-neutral-800 font-bold" aria-label="إغلاق">✕</button>
           )}
@@ -4326,8 +4418,8 @@ export default function App() {
         onCopyCurrentPage={handleCopyCurrentPage}
         onAddSlideTemplate={handleAddSlideTemplate}
         onAddPageTemplate={handleAddPageTemplate}
-        onApplyFreeStarterTemplate={handleApplyFreeStarterTemplate}
-        onApplyOnlineShopTemplate={handleApplyOnlineShopTemplate}
+        onAddGallerySlide={handleAddGallerySlide}
+        onReplaceWithGalleryPage={handleReplaceWithGalleryPage}
         onDeleteSlide={handleDeleteSlide}
         onUpdateSlideHeight={handleUpdateSlideHeight}
         onAddElement={(type, customContent, customStyles, extraData) => {

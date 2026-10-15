@@ -419,7 +419,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           type="button"
           onClick={onOpenProjects}
           className="flex items-center gap-2 group cursor-pointer"
-          title="المشاريع: التبديل بين الصفحة المجانية والمتجر"
+          title="العودة إلى Weelink (يُحفظ عملك)"
         >
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand to-[#40a9ff] text-white flex items-center justify-center shadow-[0_2px_8px_rgba(0,113,227,0.3)] transition-transform group-hover:scale-105">
             <span className="text-sm font-bold tracking-tighter">W</span>

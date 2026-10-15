@@ -3,6 +3,7 @@
 // answers move to the new account (services/guestAnswers.ts). A signed-in owner answers under their
 // account, with their earlier answers filled in, and the editor opens and builds the page.
 // The browser's back button goes from the questions back to the kinds.
+import { PlatformNav } from '../platform/PlatformNav';
 import React, { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { ArrowLeft, CarFront, Check, ClipboardList, FileText, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
@@ -65,6 +66,10 @@ interface StartPageProps {
   // Opens straight on this kind's questions (from «عدّل إجاباتي» in the editor).
   initialKind?: ProjectType | null;
   onHome: () => void;
+  // The top bar's account entries (the same bar as the front page).
+  onOpenMyPage?: () => void;
+  onAccount?: () => void;
+  onLogout?: () => void;
   // A signed-in owner finished the questions: open this kind and build it from the answers.
   onBuild: (kind: ProjectType, answers: any) => void;
   // A guest finished the questions: sign up, then open this kind.
@@ -81,7 +86,7 @@ interface StartPageProps {
   onOpen?: (kind: ProjectType) => void;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [], onOpen }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onOpenMyPage, onAccount, onLogout, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [], onOpen }) => {
   const signedIn = !!user && !user.isAnonymous;
   const attention = useOrderAttention(signedIn && user ? user.uid : '');
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
@@ -135,23 +140,27 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
 
   return (
     <div className="min-h-screen bg-bg text-ink" dir="rtl">
-      <header className="sticky top-0 z-30 bg-bg/90 backdrop-blur border-b border-line">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <button type="button" onClick={kind ? stepBack : onHome} className="inline-flex items-center gap-1.5 text-sm font-bold text-muted hover:text-brand transition">
-            → {!kind ? 'الرئيسية' : stage === 'questions' && !initialKind ? 'الباقات' : 'نوع الصفحة'}
+      <PlatformNav
+        current="start"
+        user={user}
+        onHome={onHome}
+        onStart={() => { if (kind) setKind(null); else window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+        onOpenMyPage={onOpenMyPage || onHome}
+        onAccount={onAccount || onHome}
+        onLogout={onLogout || onHome}
+        extra={signedIn && !kind ? (
+          <button type="button" onClick={() => setOrders({ id: '' })} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-ink">
+            <ClipboardList size={14} /> طلبات التصميم <AttentionDot n={attention} />
           </button>
-          <div className="flex-1" />
-          {signedIn && !kind && (
-            <button type="button" onClick={() => setOrders({ id: '' })} className="inline-flex items-center gap-1.5 text-sm font-bold text-muted hover:text-brand transition">
-              <ClipboardList size={16} /> طلبات التصميم <AttentionDot n={attention} />
-            </button>
-          )}
-          <span className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-ctl bg-brand text-white flex items-center justify-center font-bold">W</span>
-            <span className="text-lg font-bold tracking-tight font-logo">weelink</span>
-          </span>
+        ) : undefined}
+      />
+      {kind && (
+        <div className="mx-auto max-w-6xl px-4 pt-3">
+          <button type="button" onClick={stepBack} className="inline-flex items-center gap-1.5 text-sm font-bold text-muted transition hover:text-brand">
+            → {stage === 'questions' && !initialKind ? 'الباقات' : 'نوع الصفحة'}
+          </button>
         </div>
-      </header>
+      )}
 
       {!chosen ? (
         <main key="kinds" className="max-w-6xl mx-auto px-4 py-5 sm:py-8 space-y-6 sm:space-y-8">

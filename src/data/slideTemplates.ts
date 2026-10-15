@@ -255,7 +255,7 @@ export const customizeElementsForIndex = (elements: any[], categoryId: string, i
 // How many ready slides a category offers.
 // The approved designs of weeSlideTemplates come first in their categories.
 export const slideTemplateCount = (categoryId: string) =>
-  categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : categoryId === 'restaurant' ? REST_SLIDE_COUNT : categoryId === 'team' ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
+  categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : categoryId === 'restaurant' ? REST_SLIDE_COUNT : (categoryId === 'team' || categoryId === 'special_offer') ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
 
 export const getSlideTemplatePayload = (categoryId: string, index: number, catName: string) => {
   const wee = weeSlideCount(categoryId);
@@ -2208,123 +2208,6 @@ const getOlderSlidePayload = (categoryId: string, index: number, catName: string
     }
   }
 
-  // ==========================================
-  // SPECIAL OFFER SLIDES (شريحة عرض خاص)
-  // ==========================================
-  else if (categoryId === 'special_offer') {
-    elements = [
-      {
-        type: 'shape',
-        name: 'خلفية الشريحة',
-        x: 0,
-        y: 0,
-        width: 800,
-        height: 580,
-        styles: { backgroundColor: col.bg, borderRadius: 0 }
-      },
-      // Overlapping shapes to represent discount coupon background (System Layering)
-      {
-        type: 'shape',
-        name: 'شكل تراكبي مدمج ملون',
-        x: 60,
-        y: 80,
-        width: 680,
-        height: 420,
-        styles: { backgroundColor: col.card, borderRadius: 32, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom', borderColor: col.accent + '30', borderWidth: 1.5 }
-      },
-      // Dotted/Dashed coupon divider
-      {
-        type: 'divider',
-        name: 'فاصل الكوبون المنقط',
-        x: 500,
-        y: 110,
-        width: 1,
-        height: 360,
-        styles: { borderColor: col.accent + '40', borderWidth: 2 }
-      },
-      // Left side of coupon (discount and code)
-      {
-        type: 'heading',
-        name: 'نسبة الحسم',
-        x: 520,
-        y: 150,
-        width: 200,
-        height: 80,
-        content: '%50 حسم',
-        styles: { fontSize: 36, color: col.accent, fontWeight: 'bold', textAlign: 'center' }
-      },
-      {
-        type: 'paragraph',
-        name: 'تاريخ الصلاحية',
-        x: 520,
-        y: 240,
-        width: 200,
-        height: 40,
-        content: 'ساري حتى نهاية الأسبوع الحالي',
-        styles: { fontSize: 11, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'center' }
-      },
-      {
-        type: 'shape',
-        name: 'رمز الكوبون الإنشائي',
-        x: 530,
-        y: 290,
-        width: 180,
-        height: 46,
-        styles: { backgroundColor: col.bgShape, borderRadius: 12, borderColor: col.accent + '25', borderWidth: 1 }
-      },
-      {
-        type: 'heading',
-        name: 'نص الكوبون',
-        x: 540,
-        y: 300,
-        width: 160,
-        height: 30,
-        content: 'WEELINK50',
-        styles: { fontSize: 15, color: col.accent, fontWeight: 'bold', textAlign: 'center' }
-      },
-      {
-        type: 'button',
-        name: 'زر نسخ الكوبون',
-        x: 530,
-        y: 360,
-        width: 180,
-        height: 44,
-        content: 'احجز العرض فوراً 🎁',
-        styles: { fontSize: 13, backgroundColor: col.accent, color: '#ffffff', borderRadius: 10, textAlign: 'center', fontWeight: 'bold' }
-      },
-      // Right side of coupon (offer title & description)
-      {
-        type: 'badge',
-        name: 'شارة العرض',
-        x: 100,
-        y: 130,
-        width: 130,
-        height: 28,
-        content: '✦ عروض حصرية ومغرية',
-        styles: { fontSize: 11, backgroundColor: col.bgShape, color: col.accent, borderRadius: 8, textAlign: 'center' }
-      },
-      {
-        type: 'heading',
-        name: 'عنوان العرض الخاص',
-        x: 100,
-        y: 175,
-        width: 380,
-        height: 90,
-        content: 'باقة الويب الفضية المتكاملة بنصف السعر!',
-        styles: { fontSize: 26, color: col.text, fontWeight: 'bold', textAlign: 'right', lineHeight: 1.3 }
-      },
-      {
-        type: 'paragraph',
-        name: 'تفاصيل العرض الخاص',
-        x: 100,
-        y: 280,
-        width: 380,
-        height: 140,
-        content: 'احصل الآن على تصميم موقعك مع نطاق مجاني، واستضافة سحابية سريعة، وربط مباشر برقم الواتساب والفيسبوك الخاص بمشروعك، بالإضافة لتدريب كامل ومجاني ومستندات حية لتعديل محتوى الصفحة بنقرة إصبع واحدة ميسرة.',
-        styles: { fontSize: 13, color: col.text === '#ffffff' ? '#bfbfbf' : '#636366', textAlign: 'right', lineHeight: 1.6 }
-      }
-    ];
-  }
 
   // ==========================================
   // PRICE LIST SLIDES (شريحة قائمة أسعار)

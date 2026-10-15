@@ -884,6 +884,201 @@ const TEAM: (() => WeeSlide)[] = [
   }),
 ];
 
+// ==========================================
+// «عرض خاص»: ten offers for ten trades. Each design carries its own mix of motion: on hover,
+// once when the page opens, or looping, and of text effects, so the offers catch the eye.
+// ==========================================
+const HOME_FOOD = 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=900&q=80';
+const RESTAURANT_FOOD = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1400&q=80';
+const DENTAL = 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=900&q=80';
+
+const OFFER_LOOKS: Record<string, Look> = {
+  fire: { bg: '#140B07', card: '#241410', line: '#4A2A1C', ink: '#FFF4E6', muted: '#D9B99B', accent: '#F59E0B', soft: '#2E1A10', head: 'Lalezar', body: 'Tajawal' },
+  shop: { bg: '#0F0A2A', card: '#1A1445', line: '#3B2F8F', ink: '#F5F3FF', muted: '#B8B0F0', accent: '#EC4899', soft: '#241A5E', head: 'Cairo', body: 'Almarai' },
+  dental: { bg: '#F2FBFF', card: '#FFFFFF', line: '#BFE6F5', ink: '#0B3B52', muted: '#4D7C93', accent: '#0891B2', soft: '#DDF3FA', head: 'Cairo', body: 'Tajawal' },
+  salon: { bg: '#FFF1F5', card: '#FFFFFF', line: '#FBCFE0', ink: '#4A1231', muted: '#8A5470', accent: '#DB2777', soft: '#FDE2EC', head: 'Reem Kufi', body: 'Almarai' },
+  gym: { bg: '#07090B', card: '#12171C', line: '#27313A', ink: '#F4F7F5', muted: '#9AA9A2', accent: '#A3E635', soft: '#16210D', head: 'Changa', body: 'Cairo' },
+  garage: { bg: '#0E1116', card: '#181D25', line: '#2C3541', ink: '#EEF2F7', muted: '#97A3B3', accent: '#EF4444', soft: '#2A1417', head: 'Cairo', body: 'Tajawal' },
+  flower: { bg: '#F6FFF7', card: '#FFFFFF', line: '#CDEBD3', ink: '#1F4A2C', muted: '#5E8068', accent: '#E11D74', soft: '#E4F6E8', head: 'Aref Ruqaa', body: 'Tajawal' },
+  school: { bg: '#FFFBEB', card: '#FFFFFF', line: '#FCE3A1', ink: '#3B2A05', muted: '#7C6A3A', accent: '#2563EB', soft: '#FEF1C7', head: 'Cairo', body: 'Almarai' },
+  wood: { bg: '#F5EFE6', card: '#FFFFFF', line: '#DCCDB5', ink: '#2E2318', muted: '#74634E', accent: '#B45309', soft: '#EADFCB', head: 'Amiri', body: 'Tajawal' },
+};
+const F = OFFER_LOOKS.fire, S = OFFER_LOOKS.shop, D = OFFER_LOOKS.dental, SA = OFFER_LOOKS.salon, G = OFFER_LOOKS.gym, GA = OFFER_LOOKS.garage, FL = OFFER_LOOKS.flower, SC = OFFER_LOOKS.school, W = OFFER_LOOKS.wood;
+
+// A feature line: a tick icon at the right and its label beside it.
+const tick = (L: Look, x: number, y: number, label: string, ic = 'mdi:check-circle', width = 340) => [
+  icon({ x: x + width - 28, y, width: 28, height: 28 }, ic, L.accent),
+  text(L, { x, y, width: width - 40, height: 28 }, label, 18, { color: L.ink, fontWeight: 'bold' }),
+];
+
+const OFFER: (() => WeeSlide)[] = [
+  // offer.homecook: home cooking. A rotating stamp, a floating plate, a marker under the offer.
+  () => ({
+    aiTemplate: 'offer.homecook', name: 'عرض طبخ منزلي', height: 600, mobileHeight: 640, backgroundColor: K_.bg,
+    elements: [
+      shape('دائرة زخرفية', { x: -120, y: 380, width: 360, height: 360 }, { backgroundColor: K_.soft, borderRadius: 9999, animation: 'spin-slow', animationTrigger: 'loop' }),
+      image({ x: 96, y: 70, width: 470, height: 460 }, HOME_FOOD, { borderRadius: 40, glowIntensity: 26, glowColor: 'rgba(154,52,18,0.3)', glowPosition: 'bottom', animation: 'float', animationTrigger: 'loop' }),
+      el('badge', 'ختم الحسم', { x: 470, y: 60, width: 150, height: 150 }, '30% حسم', { backgroundColor: K_.accent, color: '#FFFFFF', fontSize: 26, fontWeight: 'bold', borderRadius: 9999, textAlign: 'center', fontFamily: K_.head, rotation: -12, animation: 'swing', animationTrigger: 'hover' }),
+      eyebrow(K_, { x: 640, y: 76, width: 544, height: 26 }, 'من مطبخ البيت إلى بيتك'),
+      heading(K_, { x: 640, y: 106, width: 544, height: 130 }, 'أكلة أمي بخصم الأسبوع', 52, { textEffect: 'marker', textEffectColor: 'rgba(154,52,18,0.3)', animation: 'slide-left', animationTrigger: 'once' }),
+      text(K_, { x: 640, y: 252, width: 544, height: 84 }, 'محاشي، مقلوبة، كبة وتبولة بنكهة البيت. اطلب قبل الخميس واستلم الجمعة طازجاً على الباب.', 18),
+      ...tick(K_, 640, 364, 'طبخ يومي طازج', 'mdi:chef-hat', 544),
+      ...tick(K_, 640, 408, 'توصيل مجاني فوق ٢٠ دولاراً', 'mdi:moped', 544),
+      button(K_, { x: 954, y: 470, width: 230, height: 56 }, 'اطلب الآن', { fontSize: 18, animation: 'rubberband', animationTrigger: 'hover' }),
+      whatsapp(K_, { x: 700, y: 470, width: 230, height: 56 }, { animation: 'pulse', animationTrigger: 'loop' }),
+    ],
+  }),
+
+  // offer.restaurant: a restaurant. Dark photo, glowing sign, gold price and a ticker of dishes.
+  () => ({
+    aiTemplate: 'offer.restaurant', name: 'عرض مطعم', height: 620, mobileHeight: 660, backgroundColor: '#0B0705', backgroundImage: RESTAURANT_FOOD,
+    elements: [
+      shape('تعتيم', { x: 0, y: 0, width: 1280, height: 620 }, { backgroundColor: 'rgba(11,7,5,0.68)' }),
+      heading(F, { x: 96, y: 70, width: 1088, height: 40 }, 'مطعم الليل', 26, { textAlign: 'center', textEffect: 'soft-glow', textEffectColor: '#F59E0B', animation: 'fade', animationTrigger: 'once' }),
+      heading(F, { x: 96, y: 124, width: 1088, height: 120 }, 'وجبة العائلة', 88, { textAlign: 'center', textEffect: 'neon-pulse', textEffectColor: '#F59E0B', animation: 'scale-up', animationTrigger: 'once' }),
+      text(F, { x: 240, y: 256, width: 800, height: 52 }, 'ستة أطباق رئيسية، مقبلات وحلويات وعصير لأربعة أشخاص', 22, { textAlign: 'center', color: F.ink }),
+      heading(F, { x: 340, y: 328, width: 600, height: 96 }, '٤٩ دولاراً فقط', 64, { textAlign: 'center', textEffect: 'gold-glow', textEffectColor: '#F59E0B', animation: 'bounce', animationTrigger: 'loop' }),
+      text(F, { x: 500, y: 436, width: 280, height: 34 }, 'بدل ٨٠ دولاراً', 17, { textAlign: 'center', textDecoration: 'line-through' }),
+      button(F, { x: 500, y: 486, width: 280, height: 58 }, 'احجز طاولتك', { fontSize: 19, color: '#1A0F05', textEffect: 'shine', animation: 'brightness', animationTrigger: 'loop' }),
+      text(F, { x: 0, y: 576, width: 1280, height: 34 }, 'مشاوي  •  مقبلات  •  كبة  •  فتة  •  حلويات شرقية  •  عصائر طبيعية  •  مشاوي  •  مقبلات', 20, { color: F.accent, fontWeight: 'bold', textAlign: 'center', animation: 'marquee-rtl', animationTrigger: 'loop' }),
+    ],
+  }),
+
+  // offer.shop: an online shop. A flash-sale sign, a looping ticker, a shaking button, gradient letters.
+  () => ({
+    aiTemplate: 'offer.shop', name: 'عرض متجر إلكتروني', height: 620, mobileHeight: 660, backgroundColor: S.bg,
+    elements: [
+      shape('هالة', { x: 760, y: -120, width: 560, height: 560 }, { backgroundColor: 'rgba(236,72,153,0.22)', borderRadius: 9999, animation: 'pulse', animationTrigger: 'loop' }),
+      shape('هالة', { x: -160, y: 330, width: 520, height: 520 }, { backgroundColor: 'rgba(99,102,241,0.2)', borderRadius: 9999, animation: 'float', animationTrigger: 'loop' }),
+      text(S, { x: 0, y: 8, width: 1280, height: 28 }, 'شحن مجاني  •  دفع عند الاستلام  •  إرجاع خلال ١٤ يوماً  •  شحن مجاني  •  دفع عند الاستلام  •  إرجاع خلال ١٤ يوماً', 16, { color: '#F9A8D4', fontWeight: 'bold', textAlign: 'center', animation: 'marquee-ltr', animationTrigger: 'loop' }),
+      el('badge', 'وسم', { x: 940, y: 100, width: 244, height: 40 }, 'تخفيضات الـ ٢٤ ساعة', { backgroundColor: 'rgba(236,72,153,0.2)', color: '#F9A8D4', fontSize: 16, fontWeight: 'bold', borderRadius: 9999, textAlign: 'center', fontFamily: S.body, borderWidth: 1, borderStyle: 'solid', borderColor: S.accent, animation: 'flash', animationTrigger: 'loop' }),
+      heading(S, { x: 96, y: 150, width: 1088, height: 150 }, 'فلاش سيل', 120, { textEffect: 'gradient-move', textEffectColor: '#EC4899', textEffectColor2: '#8B5CF6', animation: 'slide-down', animationTrigger: 'once' }),
+      heading(S, { x: 96, y: 310, width: 700, height: 80 }, 'خصم يصل إلى ٦٠٪', 58, { textEffect: 'dual-glow', textEffectColor: '#F472B6', textEffectColor2: '#818CF8' }),
+      text(S, { x: 96, y: 402, width: 640, height: 60 }, 'سماعات، ساعات ذكية وإكسسوارات بأقل الأسعار. الكمية محدودة والعرض ينتهي منتصف الليل.', 19),
+      ...['٠٢ ساعة', '٣٤ دقيقة', '١٢ ثانية'].map((t, i) => el('badge', 'عدّاد', { x: 96 + i * 140, y: 490, width: 124, height: 56 }, t, { backgroundColor: S.card, color: S.ink, fontSize: 17, fontWeight: 'bold', borderRadius: 14, textAlign: 'center', fontFamily: S.body, borderWidth: 1, borderStyle: 'solid', borderColor: S.line, animation: 'pulse', animationTrigger: 'loop' })),
+      el('badge', 'سعر', { x: 880, y: 330, width: 304, height: 120 }, '٢٩٫٩٩ $', { backgroundColor: S.accent, color: '#FFFFFF', fontSize: 54, fontWeight: 'bold', borderRadius: 28, textAlign: 'center', fontFamily: S.head, rotation: 4, glowIntensity: 30, glowColor: 'rgba(236,72,153,0.6)', glowPosition: 'bottom', animation: 'jello', animationTrigger: 'hover' }),
+      button(S, { x: 880, y: 484, width: 304, height: 62 }, 'تسوّق الآن', { fontSize: 20, backgroundColor: '#FFFFFF', color: '#1A1445', animation: 'shake', animationTrigger: 'hover' }),
+    ],
+  }),
+
+  // offer.dental: a dental clinic. A clean sheet, a tooth that beats, a soft glowing 50%.
+  () => ({
+    aiTemplate: 'offer.dental', name: 'عرض عيادة أسنان', height: 600, mobileHeight: 640, backgroundColor: D.bg,
+    elements: [
+      shape('لوح', { x: 560, y: 0, width: 720, height: 600 }, { backgroundColor: D.soft }),
+      image({ x: 96, y: 70, width: 430, height: 460 }, DENTAL, { borderRadius: 220, glowIntensity: 24, glowColor: 'rgba(8,145,178,0.3)', glowPosition: 'bottom', animation: 'scale-up', animationTrigger: 'once' }),
+      icon({ x: 462, y: 56, width: 76, height: 76 }, 'mdi:tooth-outline', D.accent, { animation: 'heartbeat', animationTrigger: 'loop' }),
+      eyebrow(D, { x: 620, y: 78, width: 564, height: 26 }, 'عيادة الابتسامة'),
+      heading(D, { x: 620, y: 108, width: 564, height: 100 }, 'ابتسامة بنصف السعر', 54, { textEffect: 'soft-glow', textEffectColor: '#38BDF8', animation: 'slide-up', animationTrigger: 'once' }),
+      text(D, { x: 620, y: 222, width: 564, height: 78 }, 'تنظيف وتلميع وفحص شامل مع أشعة، بنصف السعر لكل من يحجز هذا الشهر.', 19),
+      heading(D, { x: 1014, y: 318, width: 170, height: 100 }, '٥٠٪', 70, { color: D.accent, textEffect: 'shadow-soft', animation: 'jello', animationTrigger: 'hover' }),
+      ...tick(D, 620, 326, 'فحص شامل وأشعة', 'mdi:check-circle', 360),
+      ...tick(D, 620, 370, 'تنظيف وإزالة الجير', 'mdi:check-circle', 360),
+      ...tick(D, 620, 414, 'تلميع وتقييم التبييض', 'mdi:check-circle', 360),
+      button(D, { x: 954, y: 482, width: 230, height: 56 }, 'احجز موعدك', { fontSize: 18, animation: 'bounce', animationTrigger: 'hover' }),
+      text(D, { x: 620, y: 496, width: 300, height: 28 }, 'الأماكن محدودة هذا الشهر', 15, { color: D.muted }),
+    ],
+  }),
+
+  // offer.salon: a beauty salon. Turning ornaments, a rainbow word and an arched frame.
+  () => ({
+    aiTemplate: 'offer.salon', name: 'عرض صالون تجميل', height: 600, mobileHeight: 640, backgroundColor: SA.bg,
+    elements: [
+      shape('دائرة', { x: 820, y: -170, width: 560, height: 560 }, { backgroundColor: SA.soft, borderRadius: 9999, animation: 'spin-slow', animationTrigger: 'loop' }),
+      icon({ x: 930, y: 70, width: 90, height: 90 }, 'mdi:flower-tulip-outline', SA.accent, { animation: 'rotate', animationTrigger: 'loop' }),
+      icon({ x: 120, y: 440, width: 64, height: 64 }, 'mdi:content-cut', SA.accent, { animation: 'swing', animationTrigger: 'loop' }),
+      icon({ x: 1100, y: 420, width: 56, height: 56 }, 'mdi:hair-dryer-outline', SA.accent, { animation: 'shake', animationTrigger: 'hover' }),
+      shape('إطار', { x: 200, y: 90, width: 880, height: 420 }, { backgroundColor: SA.card, borderRadius: 220, borderColor: SA.accent, borderWidth: 2, borderStyle: 'solid', glowIntensity: 26, glowColor: 'rgba(219,39,119,0.25)', glowPosition: 'bottom' }),
+      eyebrow(SA, { x: 340, y: 130, width: 600, height: 26 }, 'صالون لمسة جمال', { textAlign: 'center' }),
+      heading(SA, { x: 300, y: 164, width: 680, height: 100 }, 'ليلة العروس', 76, { textAlign: 'center', textEffect: 'rainbow', animation: 'pulse', animationTrigger: 'loop' }),
+      text(SA, { x: 320, y: 282, width: 640, height: 60 }, 'مكياج وتسريحة وعناية بالبشرة بباقة واحدة، وهدية مانيكير لكل صديقة تحضر معك.', 19, { textAlign: 'center' }),
+      heading(SA, { x: 420, y: 356, width: 440, height: 70 }, 'ابتداءً من ١٢٠ $', 44, { textAlign: 'center', textEffect: 'underline-color', textEffectColor: '#DB2777', animation: 'rubberband', animationTrigger: 'hover' }),
+      button(SA, { x: 500, y: 440, width: 280, height: 54 }, 'احجزي الآن', { fontSize: 18, animation: 'heartbeat', animationTrigger: 'loop' }),
+    ],
+  }),
+
+  // offer.gym: a gym. Dark, laser-green letters, a flashing tag and a sliding bar.
+  () => ({
+    aiTemplate: 'offer.gym', name: 'عرض نادي رياضي', height: 600, mobileHeight: 640, backgroundColor: G.bg,
+    elements: [
+      shape('شريط مائل', { x: -100, y: 120, width: 1500, height: 140 }, { backgroundColor: G.soft, rotation: -6 }),
+      shape('شريط مائل', { x: -100, y: 450, width: 1500, height: 24 }, { backgroundColor: G.accent, rotation: -6, animation: 'slide-right', animationTrigger: 'once' }),
+      el('badge', 'وسم', { x: 944, y: 64, width: 240, height: 38 }, 'اشتراك الصيف', { backgroundColor: G.accent, color: '#0A1204', fontSize: 17, fontWeight: 'bold', borderRadius: 8, textAlign: 'center', fontFamily: G.body, animation: 'flash', animationTrigger: 'loop' }),
+      heading(G, { x: 96, y: 100, width: 800, height: 130 }, 'جسمك يبدأ اليوم', 76, { textEffect: 'laser', textEffectColor: '#A3E635', animation: 'slide-left', animationTrigger: 'once' }),
+      heading(G, { x: 96, y: 250, width: 540, height: 80 }, '٣ أشهر بسعر شهرين', 44, { textEffect: 'shadow-hard', textEffectColor: '#A3E635', animation: 'slide-up', animationTrigger: 'once' }),
+      text(G, { x: 96, y: 346, width: 560, height: 60 }, 'أجهزة حديثة، مدرّب شخصي في الشهر الأول مجاناً وحصص جماعية بلا حدود.', 19),
+      ...['٢٤ ساعة', '٣٠ مدرّباً', '٥٠٠ عضو'].map((t, i) =>
+        heading(G, { x: 1010 - i * 190, y: 262, width: 174, height: 56 }, t, 30, { color: G.accent, textAlign: 'center', animation: 'pulse', animationTrigger: 'loop' })),
+      icon({ x: 700, y: 490, width: 70, height: 70 }, 'mdi:dumbbell', G.accent, { animation: 'bounce', animationTrigger: 'loop' }),
+      button(G, { x: 954, y: 500, width: 230, height: 58 }, 'سجّل الآن', { fontSize: 19, color: '#0A1204', borderRadius: 10, animation: 'shake', animationTrigger: 'hover' }),
+    ],
+  }),
+
+  // offer.garage: a car workshop. Chrome letters, a turning wheel and a ticker of services.
+  () => ({
+    aiTemplate: 'offer.garage', name: 'عرض ورشة سيارات', height: 620, mobileHeight: 640, backgroundColor: GA.bg,
+    elements: [
+      shape('هالة', { x: 650, y: 60, width: 520, height: 520 }, { backgroundColor: GA.soft, borderRadius: 9999 }),
+      icon({ x: 710, y: 110, width: 400, height: 400 }, 'mdi:car-wheel', '#3A4452', { animation: 'spin-slow', animationTrigger: 'loop' }),
+      icon({ x: 820, y: 220, width: 180, height: 180 }, 'mdi:car-sports', GA.accent, { animation: 'float', animationTrigger: 'loop' }),
+      eyebrow(GA, { x: 96, y: 76, width: 560, height: 26 }, 'ورشة السرعة'),
+      heading(GA, { x: 96, y: 108, width: 580, height: 100 }, 'فحص شامل', 80, { textEffect: 'chrome', animation: 'slide-right', animationTrigger: 'once' }),
+      heading(GA, { x: 96, y: 214, width: 580, height: 100 }, 'مجاناً', 80, { textEffect: 'hollow-shadow', textEffectColor: '#EF4444', textEffectColor2: '#7F1D1D', animation: 'scale-down', animationTrigger: 'once' }),
+      text(GA, { x: 96, y: 330, width: 540, height: 60 }, 'مع كل تغيير زيت: فحص ثلاثين نقطة للمحرك والفرامل والإطارات يوصلك بالراحة.', 19),
+      button(GA, { x: 96, y: 424, width: 230, height: 56 }, 'احجز دورك', { fontSize: 18, animation: 'rubberband', animationTrigger: 'hover' }),
+      text(GA, { x: 346, y: 438, width: 300, height: 28 }, 'العرض حتى نهاية الشهر', 15),
+      text(GA, { x: 0, y: 562, width: 1280, height: 36 }, 'زيت وفلتر  •  فرامل  •  كهرباء  •  تكييف  •  إطارات  •  زيت وفلتر  •  فرامل  •  كهرباء  •  تكييف', 21, { color: GA.accent, fontWeight: 'bold', textAlign: 'center', animation: 'marquee-rtl', animationTrigger: 'loop' }),
+    ],
+  }),
+
+  // offer.flowers: a florist. Floating petals, a wavy title and a swinging gift tag.
+  () => ({
+    aiTemplate: 'offer.flowers', name: 'عرض محل ورد', height: 600, mobileHeight: 640, backgroundColor: FL.bg,
+    elements: [
+      ...[[110, 90, 80], [240, 400, 56], [1080, 80, 64], [1000, 440, 90], [620, 500, 44]].map(([x, y, s], i) =>
+        icon({ x, y, width: s, height: s }, i % 2 ? 'mdi:flower-pollen' : 'mdi:flower-tulip', i % 2 ? '#F9A8D4' : FL.accent, { animation: i % 2 ? 'float' : 'spin-slow', animationTrigger: 'loop' })),
+      eyebrow(FL, { x: 340, y: 90, width: 600, height: 26 }, 'ورد وهدايا', { textAlign: 'center' }),
+      heading(FL, { x: 190, y: 124, width: 900, height: 120 }, 'ازرع ابتسامة', 86, { textAlign: 'center', textEffect: 'wave', textEffectColor: '#E11D74', animation: 'fade', animationTrigger: 'once' }),
+      text(FL, { x: 310, y: 262, width: 660, height: 64 }, 'باقة ورد طبيعي مع بطاقة إهداء مكتوبة بخط اليد، وتوصيل مجاني داخل المدينة.', 20, { textAlign: 'center' }),
+      el('badge', 'بطاقة هدية', { x: 490, y: 346, width: 300, height: 84 }, 'الثانية مجاناً', { backgroundColor: FL.accent, color: '#FFFFFF', fontSize: 32, fontWeight: 'bold', borderRadius: 18, textAlign: 'center', fontFamily: FL.head, rotation: -4, animation: 'swing', animationTrigger: 'loop' }),
+      button(FL, { x: 500, y: 456, width: 280, height: 56 }, 'اطلبي باقتك', { fontSize: 18, animation: 'jello', animationTrigger: 'hover' }),
+    ],
+  }),
+
+  // offer.school: language courses. Letters typed on, a boxed word and a glowing translate sign.
+  () => ({
+    aiTemplate: 'offer.school', name: 'عرض دورات لغات', height: 600, mobileHeight: 640, backgroundColor: SC.bg,
+    elements: [
+      shape('لوح', { x: 760, y: 0, width: 520, height: 600 }, { backgroundColor: SC.accent }),
+      icon({ x: 910, y: 100, width: 220, height: 220 }, 'mdi:translate', '#FFFFFF', { animation: 'brightness', animationTrigger: 'loop' }),
+      ...['Hello', 'Bonjour', 'Hola'].map((w, i) => el('badge', 'كلمة', { x: 1080 - i * 140, y: 380 + (i % 2) * 40, width: 124, height: 44 }, w, { backgroundColor: 'rgba(255,255,255,0.18)', color: '#FFFFFF', fontSize: 19, fontWeight: 'bold', borderRadius: 12, textAlign: 'center', fontFamily: SC.body, animation: 'bounce', animationTrigger: 'hover' })),
+      eyebrow(SC, { x: 96, y: 80, width: 584, height: 26 }, 'أكاديمية لسان'),
+      heading(SC, { x: 96, y: 112, width: 584, height: 90 }, 'تعلّم لغة جديدة', 54, { textEffect: 'typewriter', animation: 'fade', animationTrigger: 'once' }),
+      heading(SC, { x: 96, y: 212, width: 584, height: 80 }, 'الشهر الأول مجاناً', 44, { color: SC.accent, textEffect: 'box', textEffectColor: '#2563EB' }),
+      text(SC, { x: 96, y: 316, width: 584, height: 80 }, 'إنكليزي، فرنسي، ألماني وتركي. مجموعات صغيرة ومعلّمون ناطقون بها ومتابعة أسبوعية.', 19),
+      button(SC, { x: 450, y: 440, width: 230, height: 56 }, 'سجّل الآن', { fontSize: 18, animation: 'pulse', animationTrigger: 'loop' }),
+      text(SC, { x: 96, y: 454, width: 330, height: 28 }, 'تسجيل مبكر حتى آخر الشهر', 15, { color: SC.muted }),
+    ],
+  }),
+
+  // offer.furniture: a carpenter's workshop. Engraved wood, a lifted price tag and a swinging tool.
+  () => ({
+    aiTemplate: 'offer.furniture', name: 'عرض نجارة وأثاث', height: 600, mobileHeight: 640, backgroundColor: W.bg,
+    elements: [
+      shape('شريط', { x: 0, y: 0, width: 1280, height: 24 }, { backgroundColor: W.accent }),
+      shape('بطاقة كبيرة', { x: 96, y: 80, width: 1088, height: 440 }, { backgroundColor: W.card, borderRadius: 18, borderColor: W.line, borderWidth: 2, borderStyle: 'solid', glowIntensity: 24, glowColor: 'rgba(46,35,24,0.18)', glowPosition: 'bottom' }),
+      icon({ x: 130, y: 120, width: 220, height: 220 }, 'mdi:sofa-outline', W.accent, { animation: 'float', animationTrigger: 'loop' }),
+      icon({ x: 230, y: 360, width: 110, height: 110 }, 'mdi:hammer-wrench', W.muted, { animation: 'swing', animationTrigger: 'hover' }),
+      eyebrow(W, { x: 440, y: 112, width: 704, height: 26 }, 'نجارة الأصيل'),
+      heading(W, { x: 440, y: 142, width: 704, height: 100 }, 'غرفة نوم كاملة', 62, { textEffect: 'engraved', textEffectColor: '#FFFFFF', animation: 'slide-left', animationTrigger: 'once' }),
+      heading(W, { x: 440, y: 244, width: 704, height: 80 }, 'بأسعار المصنع', 50, { color: W.accent, textEffect: 'outline-fill', textEffectColor: '#B45309' }),
+      text(W, { x: 440, y: 338, width: 704, height: 70 }, 'خشب زان طبيعي، تفصيل على قياس غرفتك وتركيب مجاني، مع ضمان خمس سنوات.', 19),
+      el('badge', 'سعر', { x: 944, y: 424, width: 200, height: 64 }, '٩٩٠ $', { backgroundColor: W.accent, color: '#FFFFFF', fontSize: 32, fontWeight: 'bold', borderRadius: 12, textAlign: 'center', fontFamily: W.head, rotation: -3, textEffect: 'lifted', animation: 'rubberband', animationTrigger: 'hover' }),
+      button(W, { x: 440, y: 424, width: 230, height: 58 }, 'اطلب عرض سعر', { fontSize: 18, borderRadius: 12, backgroundColor: W.ink, animation: 'scale-up', animationTrigger: 'hover' }),
+    ],
+  }),
+];
+
 // Cards, frames and question boxes arrive as groups with what lies on them (the constitution's
 // grouping rule); icon backgrounds and header strips inside a card stay plain shapes.
 const CARD_NAMES = ['بطاقة', 'إطار', 'سؤال'];
@@ -894,7 +1089,7 @@ const grouped = (make: () => WeeSlide) => (): WeeSlide => {
 
 // Ready-slide categories the designs open, first in their category's list.
 export const WEE_SLIDES: Record<string, (() => WeeSlide)[]> = Object.fromEntries(
-  Object.entries({ intro: HERO, about: ABOUT, prices: PRICES, gallery: GALLERY, contact: CONTACT, privacy: LEGAL, team: TEAM }).map(([id, list]) => [id, list.map(grouped)]),
+  Object.entries({ intro: HERO, about: ABOUT, prices: PRICES, gallery: GALLERY, contact: CONTACT, privacy: LEGAL, team: TEAM, special_offer: OFFER }).map(([id, list]) => [id, list.map(grouped)]),
 );
 
 export const weeSlideCount = (categoryId: string) => WEE_SLIDES[categoryId]?.length || 0;

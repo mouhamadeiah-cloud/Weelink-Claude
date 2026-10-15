@@ -6,10 +6,10 @@
 // into the visitor's page (fitted to its style, or as it is); «اطلب المصمم» makes an order (HireDialog):
 // the visitor pays the office and talks to the designer in the order once it is paid. The section stays out of the way when
 // the gallery has nothing yet.
-import { FloatingTools } from '../ui/FloatingTools';
+import { ToolBar, ToolButton, ToolMenu, ToolSpacer, type MenuItem } from '../ui/FloatingTools';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { BadgeCheck, Heart, Loader2, MessageCircle, Pencil, Plus, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { BadgeCheck, Heart, Loader2, Maximize2, MessageCircle, Palette, Pencil, Plus, Star, ThumbsDown, ThumbsUp, UserRound, X } from 'lucide-react';
 import { LivePage, LiveSlide } from './LiveSlide';
 import { HireDialog } from '../designOrders/HireDialog';
 import { PAGE_CATEGORIES, SLIDE_CATEGORIES, categoryLabel, slidesWord, type DesignKind } from '../../data/slideCategories';
@@ -177,6 +177,34 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
 
   const chip = (active: boolean) => `shrink-0 h-9 px-3.5 rounded-full border text-xs font-bold transition cursor-pointer ${active ? 'bg-ink text-white border-ink' : 'bg-surface text-ink border-line hover:border-ink/40'}`;
 
+  // Everything about a design lives in one light row over it: the votes, and a small menu for the rest.
+  const designBar = (s: GallerySlide, large: boolean) => {
+    const own = !!user && user.uid === s.designerUid;
+    const items: MenuItem[] = [
+      ...(!large ? [{ id: 'open', label: 'فتح كبيراً', icon: <Maximize2 size={14} />, onClick: () => setOpenId(s.id) }] : []),
+      { id: 'add', label: adding ? 'جارٍ الإضافة…' : 'أضف لصفحتي مجاناً', icon: <Plus size={14} />, onClick: () => addToMyPage(s), disabled: adding || !onAddToMyPage },
+      { id: 'fit', label: 'بألوان وخطوط ستايل صفحتي', icon: <Palette size={14} />, onClick: () => setFit((v) => !v), checked: fit },
+      ...(!s.official ? [{ id: 'hire', label: `اطلب ${s.designerName || 'المصمم'} لصفحتي`, icon: <MessageCircle size={14} />, onClick: () => (signedIn ? setHiring(s) : setAddResult({ ok: false, message: 'سجّل دخولك لتطلب مصمماً.' })), disabled: own }] : []),
+      { id: 'more', label: `المزيد من ${s.designerName || 'المصمم'}`, icon: <UserRound size={14} />, onClick: () => { setDesigner({ uid: s.designerUid, name: s.designerName || 'المصمم' }); setKind('all'); setCategory('all'); setOpenId(''); } },
+      ...(onEditDesign && own && !s.official ? [{ id: 'edit', label: `تعديل ${s.kind === 'page' ? 'الصفحة' : 'الشريحة'} وإعادة نشرها`, icon: <Pencil size={14} />, onClick: () => onEditDesign(s) }] : []),
+    ];
+    const header = (
+      <div className="space-y-1">
+        <p className="truncate text-sm font-bold">{s.name}</p>
+        <DesignerLine slide={s} total={totals[s.designerUid] || 0} />
+        <p className="text-tiny text-faint">{s.kind === 'page' ? `صفحة بـ${slidesWord(s.page?.slides?.length || 1)} · ` : ''}{categoryLabel(s.category)}{s.uses > 0 ? ` · استُخدمت ${nf(s.uses)}` : ''}</p>
+      </div>
+    );
+    return (
+      <ToolBar>
+        <ToolButton label={own ? 'هذا تصميمك' : 'إعجاب'} icon={<ThumbsUp size={large ? 18 : 16} />} count={nf(s.likes)} active={(votes[s.id] || 0) === 1} disabled={own} onClick={() => vote(s, 1)} />
+        <ToolButton label={own ? 'هذا تصميمك' : 'عدم إعجاب'} icon={<ThumbsDown size={large ? 18 : 16} />} count={nf(s.dislikes)} active={(votes[s.id] || 0) === -1} disabled={own} onClick={() => vote(s, -1)} />
+        <ToolSpacer />
+        <ToolMenu header={header} items={items} />
+      </ToolBar>
+    );
+  };
+
   return (
     <section aria-labelledby="designers-gallery-title" className="space-y-4 pb-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -216,26 +244,18 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 items-start">
           {shown.map((s) => (
-            <article key={s.id} className="rounded-card bg-surface border border-line overflow-hidden flex flex-col">
+            <article key={s.id} className="group relative overflow-hidden rounded-card border border-line bg-surface shadow-sm transition-shadow hover:shadow-lg">
               <button type="button" onClick={() => setOpenId(s.id)} aria-label={`افتح ${s.name}`} className="block w-full text-right cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40">
                 {preview(s, true)}
               </button>
-              <div className="p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold truncate flex-1">{s.name}</h3>
-                  {isNewSlide(s) && <span className="shrink-0 rounded-full bg-success/10 text-success text-xs font-bold px-2 py-0.5">جديد</span>}
-                  {s.uses > 0 && <span className="shrink-0 text-xs text-faint" title="كم مرة أُضيفت لصفحات">↻ {nf(s.uses)}</span>}
-                  <span className="shrink-0 text-xs text-faint">{s.kind === 'page' ? `صفحة · ${categoryLabel(s.category)}` : categoryLabel(s.category)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <DesignerLine slide={s} total={totals[s.designerUid] || 0} />
-                  <VoteButtons slide={s} mine={votes[s.id] || 0} own={!!user && user.uid === s.designerUid} onVote={vote} />
-                </div>
-              </div>
+              {isNewSlide(s) && <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-success px-2 py-0.5 text-tiny font-bold text-white shadow">جديد</span>}
+              {designBar(s, false)}
             </article>
           ))}
         </div>
       )}
+
+      {!open && addResult && <p role="status" className={`fixed inset-x-4 bottom-4 z-[55] mx-auto w-fit max-w-full rounded-full bg-surface px-4 py-2 text-center text-sm font-bold shadow-xl ${addResult.ok ? 'text-success' : 'text-danger'}`}>{addResult.message}</p>}
 
       {hiring && user && (
         <HireDialog
@@ -250,43 +270,12 @@ export const DesignerGallery: React.FC<DesignerGalleryProps> = ({ user, onAddToM
       )}
 
       {open && (
-        <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={open.name} onClick={() => setOpenId('')}>
-          <div className="w-full sm:max-w-4xl max-h-[94vh] overflow-y-auto rounded-t-card sm:rounded-card bg-surface" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line">
-              <div className="min-w-0 space-y-0.5">
-                <h3 className="text-heading font-bold truncate">{open.name}</h3>
-                <div className="flex items-center gap-2"><DesignerLine slide={open} total={totals[open.designerUid] || 0} /><span className="text-xs text-faint">· {open.kind === 'page' ? `صفحة بـ${slidesWord(open.page?.slides?.length || 1)} · ` : ''}{categoryLabel(open.category)}</span></div>
-              </div>
-              <button type="button" onClick={() => setOpenId('')} aria-label="إغلاق" className="shrink-0 w-9 h-9 rounded-ctl flex items-center justify-center text-muted hover:text-ink hover:bg-bg cursor-pointer"><X size={18} /></button>
-            </div>
-            <div className="group relative p-4 sm:p-5">
-              {onEditDesign && !!user && user.uid === open.designerUid && !open.official && <FloatingTools tools={[{ id: 'edit', label: `تعديل ${open.kind === 'page' ? 'الصفحة' : 'الشريحة'} وإعادة نشرها`, icon: <Pencil size={16} />, onClick: () => onEditDesign(open) }]} />}
-              {preview(open)}
-            </div>
-            {/* The actions stay at the bottom of the window while a long page is scrolled */}
-            <div className="sticky bottom-0 bg-surface border-t border-line px-5 pt-3 pb-4 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              {!open.official && <button
-                type="button"
-                disabled={!!user && user.uid === open.designerUid}
-                onClick={() => (signedIn ? setHiring(open) : setAddResult({ ok: false, message: 'سجّل دخولك لتطلب مصمماً.' }))}
-                title={user && user.uid === open.designerUid ? 'هذا تصميمك' : 'اطلب من هذا المصمم تصميم صفحتك: يُفتح التواصل بعد الدفع'}
-                className="h-10 px-4 rounded-ctl border border-brand text-brand text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer hover:bg-brand/5 disabled:opacity-50 disabled:cursor-not-allowed"
-              ><MessageCircle size={16} /> اطلب {open.designerName || 'المصمم'} لصفحتي</button>}
-              <button type="button" disabled={adding || !onAddToMyPage} onClick={() => addToMyPage(open)} title="انسخها لصفحتك مجاناً" className="h-10 px-4 rounded-ctl bg-brand hover:bg-brand-hover text-white text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait">{adding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} أضف {open.kind === 'page' ? 'الصفحة' : 'الشريحة'} لصفحتي مجاناً</button>
-              <button type="button" onClick={() => { setDesigner({ uid: open.designerUid, name: open.designerName || 'المصمم' }); setKind('all'); setCategory('all'); setOpenId(''); }} className="h-10 px-4 rounded-ctl bg-brand/10 text-brand text-sm font-bold cursor-pointer mr-auto">المزيد من {open.designerName || 'المصمم'}</button>
-            </div>
-            <div className="space-y-2">
-              <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={fit} onChange={(e) => setFit(e.target.checked)} className="w-4 h-4 accent-[var(--color-brand)]" />
-                بألوان وخطوط ستايل صفحتي (تعديل تلقائي)
-              </label>
-              {open.uses > 0 && <p className="text-xs text-muted">استُخدمت {nf(open.uses)} {open.uses === 1 ? 'مرة' : 'مرات'}.</p>}
-              {open.kind === 'page' && <p className="text-xs text-muted">تُضاف شرائح الصفحة إلى صفحتك، من دون شريط التنقل.</p>}
-              {addResult && <p role="status" className={`text-sm font-bold ${addResult.ok ? 'text-success' : 'text-danger'}`}>{addResult.message}</p>}
-              {notice && <p role="status" className="text-sm font-bold text-danger">{notice}</p>}
-            </div>
-            </div>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={open.name} onClick={() => setOpenId('')}>
+          <div className="group relative w-full sm:max-w-4xl" onClick={(e) => e.stopPropagation()}>
+            <div className="max-h-[94vh] overflow-y-auto rounded-t-card bg-surface pb-9 sm:rounded-card">{preview(open)}</div>
+            <button type="button" onClick={() => setOpenId('')} aria-label="إغلاق" className="absolute left-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.75)] opacity-0 transition hover:scale-110 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"><X size={20} /></button>
+            {designBar(open, true)}
+            {(addResult || notice) && <p role="status" className={`absolute inset-x-6 bottom-11 z-20 rounded-full bg-surface px-3 py-1.5 text-center text-xs font-bold shadow-lg ${addResult?.ok ? 'text-success' : 'text-danger'}`}>{addResult?.message || notice}</p>}
           </div>
         </div>
       )}

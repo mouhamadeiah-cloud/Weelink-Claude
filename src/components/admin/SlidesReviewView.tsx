@@ -2,8 +2,8 @@
 // until the platform approves or rejects them. A rejection needs a reason. The preview is the live
 // slide, drawn the way the gallery will draw it (videos and motion play). Only an approved slide ever appears in the gallery.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Eye, Info, Loader2, Pencil, ShieldCheck, Trash2, X } from 'lucide-react';
-import { FloatingTools, FloatingTool } from '../ui/FloatingTools';
+import { Check, Eye, FileText, Loader2, Pencil, ShieldCheck, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react';
+import { ToolBar, ToolButton, ToolMenu, ToolSpacer, type MenuItem } from '../ui/FloatingTools';
 import { AdminError, GallerySlideRow, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
 import { PagePreviewModal } from './PagePreviewModal';
 import { categoriesFor, categoryLabel, slidesWord } from '../../data/slideCategories';
@@ -17,6 +17,7 @@ const date = (ms: number) => (ms ? new Date(ms).toLocaleString('ar-SY', { year: 
 const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessionEnd: () => void }> = ({ row, onChanged, onSessionEnd }) => {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [details, setDetails] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   const [viewing, setViewing] = useState(false);
@@ -72,76 +73,78 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSessi
     if (!openGalleryEditor(row.id)) setError('تعذّر فتح لوحة المصمم. اسمح للنوافذ المنبثقة وجرّب مرة ثانية.');
   };
 
-  const tools: FloatingTool[] = [
-    { id: 'view', label: 'دخول الصفحة والتنقل فيها', icon: <Eye className="h-4 w-4" />, onClick: () => setViewing(true) },
-    ...(row.isEdit ? [] : [
-      { id: 'edit', label: 'تعديل في لوحة المصمم', icon: <Pencil className="h-4 w-4" />, onClick: edit },
-      { id: 'info', label: 'بيانات (الاسم والتصنيف)', icon: <Info className="h-4 w-4" />, onClick: () => setEditingInfo((v) => !v) },
-      { id: 'del', label: 'حذف', icon: <Trash2 className="h-4 w-4" />, onClick: remove, danger: true, disabled: busy },
-    ]),
+  const panelOpen = details || editingInfo || rejecting || !!error;
+  const items: MenuItem[] = [
+    { id: 'details', label: 'التفاصيل', icon: <FileText size={14} />, onClick: () => setDetails((v) => !v) },
+    ...(row.isEdit ? [] : [{ id: 'info', label: 'الاسم والتصنيف والمصمم', icon: <SlidersHorizontal size={14} />, onClick: () => setEditingInfo((v) => !v) }]),
+    ...(row.status === 'pending' ? [{ id: 'reject', label: 'رفض', icon: <X size={14} />, onClick: () => setRejecting(true), danger: true }] : []),
+    ...(row.status === 'approved' ? [{ id: 'withdraw', label: 'سحبها من المعرض', icon: <Undo2 size={14} />, onClick: () => setRejecting(true), danger: true }] : []),
+    ...(row.isEdit ? [] : [{ id: 'del', label: 'حذف نهائي', icon: <Trash2 size={14} />, onClick: remove, danger: true }]),
   ];
 
   return (
-    <article className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
+    <article className="group relative overflow-hidden rounded-card border border-line bg-surface shadow-sm transition-shadow hover:shadow-lg">
       {viewing && <PagePreviewModal title={row.name} kind={row.kind} slide={row.slide} page={row.page} elements={row.elements} onClose={() => setViewing(false)} onEdit={row.isEdit ? undefined : edit} />}
-      {row.isEdit && <p className="rounded-ctl bg-warn/10 p-2 text-small font-medium text-warn">تعديل من المصمم على تصميم منشور: يبقى القديم في المعرض حتى تقبله.</p>}
-      <div className="group relative overflow-hidden rounded-ctl border border-line"><FloatingTools tools={tools} />{row.kind === 'page' && row.page ? <LivePage page={row.page} elements={elements} maxHeight={420} /> : <LiveSlide slide={row.slide} elements={elements} />}</div>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-small">
-        <dt className="text-muted">المصمم</dt><dd>{row.designerName || '—'} {row.official ? <span className="rounded-full bg-brand/10 px-2 py-0.5 text-tiny font-bold text-brand">رسمي</span> : <span className="text-tiny text-faint" dir="ltr">{row.designerUid.slice(0, 8)}</span>}</dd>
-        <dt className="text-muted">النوع</dt><dd>{row.kind === 'page' ? `صفحة (${slidesWord(row.page?.slides?.length || 1)} مع شريط تنقل) · ` : 'شريحة · '}{categoryLabel(row.category)}</dd>
-        <dt className="text-muted">التصدير</dt><dd>{date(row.createdAt)}</dd>
-        <dt className="text-muted">وافق على القانون</dt><dd>النسخة {row.lawVersion} · {row.acceptedAt ? date(Date.parse(row.acceptedAt)) : '—'}</dd>
-        {row.status === 'rejected' && <><dt className="text-muted">سبب الرفض</dt><dd className="text-danger">{row.reason || '—'}</dd></>}
-        {row.reviewedBy && <><dt className="text-muted">راجعها</dt><dd>{row.reviewedBy}</dd></>}
-        {row.editedBy && <><dt className="text-muted">آخر تعديل</dt><dd>{row.editedBy.startsWith('admin:') ? `الإدارة (${row.editedBy.slice(6)})` : 'المصمم'}</dd></>}
-      </dl>
-      {contact.length > 0 && (
-        <p className="rounded-ctl bg-danger/5 p-2 text-small text-danger">فيها بيانات تواصل: {contact.map((c) => CONTACT_KIND_LABEL[c.kind]).join('، ')}</p>
-      )}
-      {error && <p role="alert" className="text-small text-danger">{error}</p>}
+      {row.kind === 'page' && row.page ? <LivePage page={row.page} elements={elements} maxHeight={420} /> : <LiveSlide slide={row.slide} elements={elements} />}
 
-      {editingInfo && (
-        <div className="flex flex-col gap-2 rounded-ctl border border-line bg-bg p-3">
-          <label className="flex flex-col gap-1 text-small">الاسم<input value={info.name} maxLength={60} onChange={(e) => setInfo({ ...info, name: e.target.value })} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand" /></label>
-          <label className="flex flex-col gap-1 text-small">التصنيف
-            <select value={info.category} onChange={(e) => setInfo({ ...info, category: e.target.value })} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand">
-              {categoriesFor(row.kind).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-small">اسم المصمم المعروض<input value={info.designerName} maxLength={60} onChange={(e) => setInfo({ ...info, designerName: e.target.value })} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand" /></label>
-          <div className="flex gap-2">
-            <button type="button" disabled={busy} onClick={saveInfo} className="rounded-ctl bg-brand px-4 py-2 text-small font-medium text-white disabled:opacity-50">حفظ</button>
-            <button type="button" onClick={() => setEditingInfo(false)} className="rounded-ctl px-4 py-2 text-small text-muted hover:bg-surface">إلغاء</button>
+      <div className="pointer-events-none absolute right-2 top-2 z-10 flex flex-wrap gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        {row.isEdit && <span className="rounded-full bg-warn px-2 py-0.5 text-tiny font-bold text-white shadow">تعديل من المصمم</span>}
+        {contact.length > 0 && <span className="rounded-full bg-danger px-2 py-0.5 text-tiny font-bold text-white shadow">فيها بيانات تواصل</span>}
+      </div>
+
+      {panelOpen && (
+        <div dir="rtl" className="absolute inset-x-2 bottom-11 z-20 flex max-h-[80%] flex-col gap-2 overflow-y-auto rounded-xl border border-line bg-surface p-3 text-small text-ink shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between">
+            <p className="truncate font-semibold">{row.name}</p>
+            <button type="button" aria-label="إغلاق" onClick={() => { setDetails(false); setEditingInfo(false); setRejecting(false); setReason(''); setError(''); }} className="rounded-full p-1 text-muted hover:bg-bg"><X className="h-4 w-4" /></button>
           </div>
-        </div>
-      )}
-
-      {row.status !== 'approved' && !rejecting && (
-        <div className="flex flex-wrap gap-2">
-          <button disabled={busy} onClick={() => review('approve')} className="inline-flex items-center gap-1.5 rounded-ctl bg-success px-4 py-2 text-small font-medium text-white hover:opacity-90 disabled:opacity-50">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {row.isEdit ? 'قبول التعديل ونشره' : 'قبول ونشر في المعرض'}
-          </button>
-          {(row.status === 'pending') && (
-            <button disabled={busy} onClick={() => setRejecting(true)} className="inline-flex items-center gap-1.5 rounded-ctl border border-line px-4 py-2 text-small font-medium text-danger hover:bg-bg disabled:opacity-50">
-              <X className="h-4 w-4" /> رفض
-            </button>
+          {error && <p role="alert" className="text-danger">{error}</p>}
+          {details && (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+              <dt className="text-muted">المصمم</dt><dd>{row.designerName || '—'} {row.official ? <span className="rounded-full bg-brand/10 px-2 py-0.5 text-tiny font-bold text-brand">رسمي</span> : <span className="text-tiny text-faint" dir="ltr">{row.designerUid.slice(0, 8)}</span>}</dd>
+              <dt className="text-muted">النوع</dt><dd>{row.kind === 'page' ? `صفحة (${slidesWord(row.page?.slides?.length || 1)} مع شريط تنقل) · ` : 'شريحة · '}{categoryLabel(row.category)}</dd>
+              <dt className="text-muted">التصدير</dt><dd>{date(row.createdAt)}</dd>
+              <dt className="text-muted">وافق على القانون</dt><dd>النسخة {row.lawVersion} · {row.acceptedAt ? date(Date.parse(row.acceptedAt)) : '—'}</dd>
+              {row.status === 'rejected' && <><dt className="text-muted">سبب الرفض</dt><dd className="text-danger">{row.reason || '—'}</dd></>}
+              {row.reviewedBy && <><dt className="text-muted">راجعها</dt><dd>{row.reviewedBy}</dd></>}
+              {row.editedBy && <><dt className="text-muted">آخر تعديل</dt><dd>{row.editedBy.startsWith('admin:') ? `الإدارة (${row.editedBy.slice(6)})` : 'المصمم'}</dd></>}
+            </dl>
+          )}
+          {details && contact.length > 0 && <p className="rounded-ctl bg-danger/5 p-2 text-danger">فيها بيانات تواصل: {contact.map((c) => CONTACT_KIND_LABEL[c.kind]).join('، ')}</p>}
+          {editingInfo && (
+            <div className="flex flex-col gap-2">
+              <label className="flex flex-col gap-1">الاسم<input value={info.name} maxLength={60} onChange={(e) => setInfo({ ...info, name: e.target.value })} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand" /></label>
+              <label className="flex flex-col gap-1">التصنيف
+                <select value={info.category} onChange={(e) => setInfo({ ...info, category: e.target.value })} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand">
+                  {categoriesFor(row.kind).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">اسم المصمم المعروض<input value={info.designerName} maxLength={60} onChange={(e) => setInfo({ ...info, designerName: e.target.value })} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand" /></label>
+              <div className="flex gap-2">
+                <button type="button" disabled={busy} onClick={saveInfo} className="rounded-ctl bg-brand px-4 py-1.5 font-medium text-white disabled:opacity-50">حفظ</button>
+                <button type="button" onClick={() => setEditingInfo(false)} className="rounded-ctl px-4 py-1.5 text-muted hover:bg-bg">إلغاء</button>
+              </div>
+            </div>
+          )}
+          {rejecting && (
+            <div className="flex flex-col gap-2">
+              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={500} placeholder={row.status === 'approved' ? 'سبب سحبها (يُحفظ مع التصميم)' : 'سبب الرفض (يُحفظ مع التصميم)'} className="w-full rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand" />
+              <div className="flex gap-2">
+                <button disabled={busy || reason.trim().length < 3} onClick={() => review('reject')} className="inline-flex items-center gap-1.5 rounded-ctl bg-danger px-4 py-1.5 font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} تأكيد</button>
+                <button disabled={busy} onClick={() => { setRejecting(false); setReason(''); }} className="rounded-ctl px-4 py-1.5 text-muted hover:bg-bg">إلغاء</button>
+              </div>
+            </div>
           )}
         </div>
       )}
-      {row.status === 'approved' && (
-        <button disabled={busy} onClick={() => setRejecting(true)} className="self-start rounded-ctl border border-line px-4 py-2 text-small text-danger hover:bg-bg disabled:opacity-50">سحبها من المعرض</button>
-      )}
-      {rejecting && (
-        <div className="flex flex-col gap-2">
-          <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={500} placeholder="سبب الرفض (يُحفظ مع الشريحة)" className="w-full rounded-ctl border border-line bg-surface p-2.5 text-small outline-none focus:border-brand" />
-          <div className="flex gap-2">
-            <button disabled={busy || reason.trim().length < 3} onClick={() => review('reject')} className="inline-flex items-center gap-1.5 rounded-ctl bg-danger px-4 py-2 text-small font-medium text-white hover:opacity-90 disabled:opacity-50">
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />} تأكيد الرفض
-            </button>
-            <button disabled={busy} onClick={() => { setRejecting(false); setReason(''); }} className="rounded-ctl px-4 py-2 text-small text-muted hover:bg-bg">إلغاء</button>
-          </div>
-        </div>
-      )}
+
+      <ToolBar pinned={panelOpen || busy}>
+        <ToolButton label="دخول الصفحة والتنقل فيها" icon={<Eye size={18} />} onClick={() => setViewing(true)} />
+        {!row.isEdit && <ToolButton label="تعديل في لوحة المصمم" icon={<Pencil size={18} />} onClick={edit} />}
+        <ToolSpacer />
+        {row.status !== 'approved' && <ToolButton label={row.isEdit ? 'قبول التعديل ونشره' : 'قبول ونشر في المعرض'} icon={busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={20} />} onClick={() => review('approve')} disabled={busy} />}
+        <ToolMenu items={items} />
+      </ToolBar>
     </article>
   );
 };

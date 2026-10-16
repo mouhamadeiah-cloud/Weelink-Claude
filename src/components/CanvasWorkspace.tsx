@@ -206,7 +206,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
         setBookError('انحجز هذا الوقت قبل لحظات. اختر وقتاً غيره.');
         setTakenTick((n) => n + 1);
       } else if (out.error === 'bad_email') setBookError('تأكد من الإيميل.');
-      else setBookError('ما قدرنا نحفظ الحجز. تأكد من الإنترنت وجرّب مرة ثانية.');
+      else setBookError(`ما قدرنا نحفظ الحجز. تأكد من الإنترنت وجرّب مرة ثانية. (رمز: ${out.error === 'offline' ? 'offline' : `${out.error}/${'reason' in out ? out.reason : ''}`})`);
       return;
     }
     setSavedStatus(out.status === 'confirmed' ? 'confirmed' : 'new');

@@ -23,9 +23,7 @@
 // Needs FIREBASE_SERVICE_ACCOUNT (the same one the other functions use).
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore } from './firebase.js';
 import { mailOrder } from './orderMail.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 

@@ -17,9 +17,7 @@
 //   VERCEL_TEAM_ID      the team (team_...), when the project belongs to one
 // While any is missing, every action answers 503 { error: 'not_configured' }.
 
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { cert, getApps, initializeApp, getAuth, getFirestore } from '../server/firebase.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 const PROJECTS = ['page', 'shop', 'cars', 'restaurant'];

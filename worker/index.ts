@@ -3,8 +3,7 @@
 // /api/<name> goes to the same api/*.ts handlers Vercel runs, since they already speak
 // fetch(Request) → Response. The daily jobs in vercel.json's "crons" become Cron Triggers here.
 // Secrets and vars reach the handlers as process.env through the nodejs_compat flag.
-// Known gap: handlers that use firebase-admin's Firestore do not run on Workers yet
-// (see /mnt/project-files/cloudflare/plan.md); geocode, photos and send-email do.
+// Firebase goes through server/firebase.ts (REST + fetch), since firebase-admin's Firestore cannot run here.
 import admin from '../api/admin.js';
 import booking from '../api/booking.js';
 import buildPage from '../api/build-page.js';

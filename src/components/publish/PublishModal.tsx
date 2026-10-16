@@ -10,7 +10,7 @@ import {
   CheckCircle2, ChevronDown, Copy, Download, ExternalLink, Globe, ImagePlus, Link2, Loader2, Maximize2, Monitor, RefreshCw, Search, Share2, ShoppingCart, Smartphone, Trash2, X, XCircle,
 } from 'lucide-react';
 import type { CanvasElement, Page } from '../../types';
-import type { ProjectType } from '../shop/shopTypes';
+import { isFirstOfKind, kindOf, type ProjectKey } from '../../utils/projectKeys';
 import {
   CustomDomainState, DomainContact, NameState, PublishedSite, SEO_LIMITS, SITE_DOMAIN, SiteSeo, checkDomain, checkSiteName, connectDomain,
   contentHash, domainPrice, isValidDomain, letterIcon, makeSiteIcon, normalizeDomain, normalizeKeywords, normalizeSiteName, publishSite,
@@ -26,7 +26,7 @@ interface PublishModalProps {
   open: boolean;
   onClose: () => void;
   owner: string;
-  project: ProjectType;
+  project: ProjectKey;
   pages: Page[];
   elements: CanvasElement[];
   data: any; // the project's public data (see publicData.ts)
@@ -83,7 +83,7 @@ const CopyButton: React.FC<{ text: string; label?: string }> = ({ text, label: l
 
 // ---------- The customer's own domain ----------
 
-const ConnectDomain: React.FC<{ owner: string; project: ProjectType; site: PublishedSite | null; onChange: (d: CustomDomainState | null) => void }> = ({ owner, project, site, onChange }) => {
+const ConnectDomain: React.FC<{ owner: string; project: ProjectKey; site: PublishedSite | null; onChange: (d: CustomDomainState | null) => void }> = ({ owner, project, site, onChange }) => {
   const current = site?.customDomain || null;
   const [domain, setDomain] = useState(current?.name || '');
   const [busy, setBusy] = useState(false);
@@ -186,7 +186,7 @@ const COUNTRIES: [string, string][] = [
   ['EG', 'مصر'], ['DE', 'ألمانيا'], ['NL', 'هولندا'], ['SE', 'السويد'], ['AT', 'النمسا'], ['FR', 'فرنسا'], ['GB', 'بريطانيا'], ['US', 'أمريكا'],
 ];
 
-const BuyDomain: React.FC<{ owner: string; project: ProjectType; suggested: string }> = ({ owner, project, suggested }) => {
+const BuyDomain: React.FC<{ owner: string; project: ProjectKey; suggested: string }> = ({ owner, project, suggested }) => {
   const [domain, setDomain] = useState(suggested ? `${suggested}.com` : '');
   const [years, setYears] = useState(1);
   const [quote, setQuote] = useState<{ available: boolean; price: number | null } | null>(null);
@@ -360,7 +360,7 @@ const Scaled: React.FC<{ device: Device; scale: number; children: React.ReactNod
   );
 };
 
-interface Draft { project: ProjectType; pages: Page[]; elements: CanvasElement[]; data: any }
+interface Draft { project: ProjectKey; pages: Page[]; elements: CanvasElement[]; data: any }
 
 // The page as it is now in the editor (what «نشر» publishes): its first page in a computer and a
 // phone. A click opens it full size.
@@ -500,13 +500,13 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
 
   // What «نشر» publishes. A restaurant's site is already live (restaurants/{uid}); it only gets a name.
   const content = useMemo(
-    () => (open ? (project === 'restaurant' ? { pages: [], elements: [], data: null } : { pages, elements, data }) : null),
+    () => (open ? (kindOf(project) === 'restaurant' ? { pages: [], elements: [], data: null } : { pages, elements, data }) : null),
     [open, project, pages, elements, data]
   );
   const hash = useMemo(() => (content ? contentHash(content) : ''), [content]);
   // What the previews show: the editor's content as visitors will see it.
   const draft = useMemo<Draft | null>(
-    () => (open && project !== 'restaurant' ? { project, pages, elements: elements.map(withLocalGraphics), data } : null),
+    () => (open && kindOf(project) !== 'restaurant' ? { project, pages, elements: elements.map(withLocalGraphics), data } : null),
     [open, project, pages, elements, data]
   );
 
@@ -525,7 +525,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
         getDoc(doc(db, 'platform_directory', owner))
           .then((snap) => {
             const d = snap.data();
-            if (!d?.catalogInfo || categorySourceOf(d.pageKind || 'page') !== categorySourceOf(project)) return;
+            if (!d?.catalogInfo || categorySourceOf(d.pageKind || 'page') !== categorySourceOf(kindOf(project))) return;
             const own = s?.seo?.keywords || [];
             const next = withCategoryKeywords(d.catalogInfo, own);
             if (next.join() !== own.join()) setKeywords(next.join('، '));
@@ -576,7 +576,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     setBusy(true);
     setError('');
     try {
-      if (published && !changed && !renaming && seoChanged && project !== 'restaurant') {
+      if (published && !changed && !renaming && seoChanged && kindOf(project) !== 'restaurant') {
         // Only the search texts changed: no need to publish the page again.
         const saved = await setSiteSeo(owner, project, published.name, nextSeo);
         setSite({ ...published, seo: saved });
@@ -614,7 +614,9 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     setSite({ ...published, icon: next });
     setSiteIcon(owner, project, next).catch(() => setError('تعذر حفظ الأيقونة. حاول مرة أخرى.'));
   };
-  const changed = !!published && project !== 'restaurant' && published.hash !== hash;
+  const changed = !!published && kindOf(project) !== 'restaurant' && published.hash !== hash;
+  // A second restaurant has no live site or tablets of its own yet (restaurants/{uid} is the first one's).
+  const laterRestaurant = kindOf(project) === 'restaurant' && !isFirstOfKind(project);
   const renaming = !!published && name !== published.name;
   const shareText = `${suggestedName ? `${suggestedName}: ` : ''}${link}`;
   const share = async () => {
@@ -693,13 +695,14 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
               <button
                 type="button"
                 onClick={publish}
-                disabled={busy || !!problem || state === 'taken' || state === 'checking'}
+                disabled={busy || !!problem || state === 'taken' || state === 'checking' || laterRestaurant}
                 className="w-full h-12 rounded-xl bg-brand hover:bg-brand-hover text-white text-base font-black cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-2 transition"
               >
                 {busy ? <Loader2 size={18} className="animate-spin" /> : <Globe size={18} />}
-                {!published ? 'نشر الصفحة' : renaming ? 'نشر بالاسم الجديد' : project === 'restaurant' ? 'حفظ' : changed ? 'تحديث النشر' : seoChanged ? 'حفظ بيانات البحث' : 'تحديث النشر'}
+                {!published ? 'نشر الصفحة' : renaming ? 'نشر بالاسم الجديد' : kindOf(project) === 'restaurant' ? 'حفظ' : changed ? 'تحديث النشر' : seoChanged ? 'حفظ بيانات البحث' : 'تحديث النشر'}
               </button>
-              {project === 'restaurant' && <p className="text-xs text-neutral-500">موقع المطعم يتحدّث تلقائياً مع كل تعديل؛ النشر هنا يعطيه اسمه ورابطه.</p>}
+              {kindOf(project) === 'restaurant' && <p className="text-xs text-neutral-500">موقع المطعم يتحدّث تلقائياً مع كل تعديل؛ النشر هنا يعطيه اسمه ورابطه.</p>}
+              {laterRestaurant && <p className="text-xs font-bold text-[#a34a00]">نشر مطعم تاني بحسابك، مع أجهزتو وطلباتو، جاي بخطوة قريبة.</p>}
             </section>
 
             {published && (

@@ -44,7 +44,8 @@ const text = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\
 const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
-const PROJECTS = ['page', 'shop', 'cars', 'restaurant'];
+// A project key: the kind, or the kind and the project's own id (src/utils/projectKeys.ts).
+const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/.test(p);
 const MEETING: Record<string, string> = { personal: 'حضور شخصي بالمقر', phone: 'مكالمة هاتفية', whatsapp: 'اتصال فيديو واتساب' };
 const STATUS: Record<string, string> = { new: 'بانتظار التأكيد', confirmed: 'مؤكد', done: 'منجز', cancelled: 'ملغى' };
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -144,7 +145,7 @@ const create = async (admin: Admin, body: any) => {
   const project = body.project;
   const date = body.date;
   const startMin = Number(body.startMin);
-  if (!validId(owner) || !PROJECTS.includes(project) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: 'bad_request' }, 400);
+  if (!validId(owner) || !isProjectKey(project) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: 'bad_request' }, 400);
   if (!Number.isInteger(startMin) || startMin < 0 || startMin > 1439) return json({ error: 'bad_request' }, 400);
   // From yesterday (a visitor ahead of Damascus' clock) up to a year ahead.
   if (date < dayIn(-1) || date > dayIn(366)) return json({ error: 'bad_date' }, 400);

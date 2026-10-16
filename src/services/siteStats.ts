@@ -4,20 +4,20 @@
 // A visitor adds 1 at a time (the rules allow nothing else); only the owner and members read them.
 import { collection, doc, documentId, getDocs, increment, query, setDoc, where } from 'firebase/firestore';
 import { db } from './firebase';
-import type { ProjectType } from '../components/shop/shopTypes';
+import type { ProjectKey } from '../utils/projectKeys';
 
 export type DayStats = { day: string; visits: number; contacts: number };
 
 const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const dayRef = (owner: string, project: ProjectType) => doc(db, 'siteStats', owner, 'days', `${project}_${dayKey(new Date())}`);
+const dayRef = (owner: string, project: ProjectKey) => doc(db, 'siteStats', owner, 'days', `${project}_${dayKey(new Date())}`);
 
-const bump = (owner: string, project: ProjectType, field: 'visits' | 'contacts') =>
+const bump = (owner: string, project: ProjectKey, field: 'visits' | 'contacts') =>
   setDoc(dayRef(owner, project), { [field]: increment(1) }, { merge: true }).catch(() => {
     // a counter that could not be written is not worth bothering the visitor about
   });
 
 // Once per visitor and tab, however many pages of the site they open.
-export const countVisit = (owner: string, project: ProjectType) => {
+export const countVisit = (owner: string, project: ProjectKey) => {
   const key = `weelink_visit_${owner}_${project}`;
   try {
     if (sessionStorage.getItem(key)) return;
@@ -30,10 +30,10 @@ export const countVisit = (owner: string, project: ProjectType) => {
 
 // A WhatsApp, call or email link on the page (or a link to a messenger).
 export const isContactLink = (url: string) => /^(tel:|mailto:|sms:)|^https?:\/\/(wa\.me|api\.whatsapp\.com|m\.me|t\.me)\//i.test(url);
-export const countContact = (owner: string, project: ProjectType) => bump(owner, project, 'contacts');
+export const countContact = (owner: string, project: ProjectKey) => bump(owner, project, 'contacts');
 
 // The last `days` days, oldest first, with the days nobody came as zeros.
-export const readStats = async (owner: string, project: ProjectType, days = 30): Promise<DayStats[]> => {
+export const readStats = async (owner: string, project: ProjectKey, days = 30): Promise<DayStats[]> => {
   const from = new Date();
   from.setDate(from.getDate() - (days - 1));
   const snap = await getDocs(

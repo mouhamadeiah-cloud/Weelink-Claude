@@ -3,6 +3,9 @@
 // its own key, the kind and a short id ('restaurant-k3x9q2'), and lives in designs/{uid}/projects/{key}.
 import type { ProjectType } from '../components/shop/shopTypes';
 
+/** A project key; its kind is kindOf(key). */
+export type ProjectKey = string;
+
 export const PROJECT_KINDS: ProjectType[] = ['page', 'shop', 'cars', 'restaurant'];
 
 const KEY = /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/;

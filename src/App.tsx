@@ -33,17 +33,17 @@ import { DESIGN_KIND_LABEL, PAGE_MAX_SLIDES, type DesignKind } from './data/slid
 import { ExportSlideModal } from './components/designer/ExportSlideModal';
 import { HomePage } from './components/home/HomePage';
 import { LawPage } from './components/platform/LawPage';
-import { StartPage } from './components/onboarding/StartPage';
+import { StartPage, type MyProject } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
 import { readCatalogAnswer, sampleRestaurantAdmin, sampleShopAdmin } from './services/sampleItems';
 import { PublishModal } from './components/publish/PublishModal';
 import { publicDataFor } from './components/publish/publicData';
-import { readMySite } from './services/sites';
+import { readMySite, siteUrl, unpublishSite } from './services/sites';
 import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
 import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
-import { laterProjectFields, projectDoc } from './services/projects';
-import { isFirstOfKind, kindOf, localPrefixOf } from './utils/projectKeys';
+import { laterProjectFields, listProjects, projectDoc } from './services/projects';
+import { isFirstOfKind, kindOf, localPrefixOf, newProjectKey } from './utils/projectKeys';
 import { CarAdminPanel } from './components/cars/CarAdminPanel';
 import { CarDataContext, CarRequestContext } from './components/cars/store/CarDataContext';
 import { submitRequest, RequestInput } from './components/cars/carMoney';
@@ -340,8 +340,8 @@ export default function App() {
   // view of their page saves real bookings; the editor shows the calendar as a preview.
   const bookingBrand = pages[0]?.navbar?.brandName || '';
   const bookingPage = useMemo<BookingPage | null>(
-    () => (ownerUid ? { owner: ownerUid, project, pageName: bookingBrand, live: isOwnerView } : null),
-    [ownerUid, project, bookingBrand, isOwnerView]
+    () => (ownerUid ? { owner: ownerUid, project: projectKey, pageName: bookingBrand, live: isOwnerView } : null),
+    [ownerUid, projectKey, bookingBrand, isOwnerView]
   );
   // Whether the signed-in account is a designer (designers/{uid}), and the name the gallery shows.
   useEffect(() => {
@@ -362,13 +362,40 @@ export default function App() {
     setPublishedName(null);
     if (!isProjectChosen || !currentUser || currentUser.isAnonymous) return;
     let alive = true;
-    readMySite(ownerUid, project)
+    readMySite(ownerUid, projectKey)
       .then((s) => alive && setPublishedName(s?.name || null))
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [ownerUid, project, isProjectChosen, currentUser]);
+  }, [ownerUid, projectKey, isProjectChosen, currentUser]);
+  // «مشاريعي» on the start page: the account's projects and whether each is published.
+  const [myProjects, setMyProjects] = useState<MyProject[] | null>(null);
+  const [myProjectsTick, setMyProjectsTick] = useState(0);
+  const startShowing = isStartActive || (!isProjectChosen && !isAuthActive);
+  useEffect(() => {
+    if (!startShowing || !currentUser || currentUser.isAnonymous) return;
+    let alive = true;
+    const uid = activeUserUid;
+    listProjects(uid)
+      .then((list) =>
+        Promise.all(
+          list.map(async (p): Promise<MyProject> => {
+            const site = await readMySite(uid, p.key).catch(() => null);
+            const url = site ? (p.kind === 'restaurant' ? restaurantSiteUrl(uid) : siteUrl(site.name)) : null;
+            return { key: p.key, kind: p.kind, name: p.name || site?.name || '', published: site?.name || null, url };
+          })
+        )
+      )
+      .then((rows) => alive && setMyProjects(rows))
+      .catch((e) => {
+        console.warn('Could not list the projects:', e);
+        if (alive) setMyProjects([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [startShowing, currentUser, activeUserUid, myProjectsTick]);
   // The owner sees everything; a management member what the owner allowed (services/members.ts).
   const [access, setAccess] = useState<Access>(OWNER_ACCESS);
   useEffect(() => {
@@ -1707,10 +1734,11 @@ export default function App() {
   };
 
   // The questions finished on the start page: open the kind on an empty page (nothing is built yet).
+  // A kind the account has a project of already gets a new project with its own key (Eyad, 17 Oct).
   const openAfterQuestions = async (kind: ProjectType) => {
     afterQuestionsRef.current = kind;
     setIsAuthActive(false);
-    await handleChooseProject(kind);
+    await handleChooseProject(ownedRef.current[kind] ? newProjectKey(kind) : kind);
     setIsStartActive(false);
   };
 
@@ -4102,11 +4130,21 @@ export default function App() {
         onLogout={handleLogout}
         onBuild={openAfterQuestions}
         owned={(Object.keys(ownedRef.current) as ProjectType[]).filter((k) => ownedRef.current[k])}
-        onOpen={async (kind) => {
+        projects={myProjects}
+        onOpenProject={async (key) => {
           setIsAuthActive(false);
-          await handleChooseProject(kind);
+          await handleChooseProject(key);
           setIsStartActive(false);
         }}
+        onUnpublish={(key) =>
+          unpublishSite(activeUserUid, key).then(
+            () => {
+              setMyProjectsTick((n) => n + 1);
+              return true;
+            },
+            () => false
+          )
+        }
         onDesigner={joinDesigners}
         onAddDesign={addGalleryDesign}
         onEditDesign={isDesigner ? editMyDesign : undefined}
@@ -4573,7 +4611,7 @@ export default function App() {
           open={isPageAdminOpen}
           onClose={() => setIsPageAdminOpen(false)}
           owner={ownerUid}
-          project={project}
+          project={projectKey}
           pageName={currentPage.navbar.brandName || ''}
           published={!!publishedName}
           onEditPage={isPreviewActive ? editPageFromAdmin : undefined}
@@ -4621,7 +4659,7 @@ export default function App() {
         open={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}
         owner={ownerUid}
-        project={project}
+        project={projectKey}
         pages={pages}
         elements={elements}
         data={isPublishOpen ? publicDataFor(project, shopAdmin, carAdmin) : null}

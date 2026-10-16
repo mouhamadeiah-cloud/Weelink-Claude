@@ -8,12 +8,13 @@ import { searchSites, siteFallbackUrl } from './sites';
 import { categoryKeyword } from '../utils/businessCategories';
 import { loadPublishedRestaurant, restaurantSiteUrl } from '../components/restaurant/restaurantCloud';
 import type { ProjectType } from '../components/shop/shopTypes';
+import { kindOf, type ProjectKey } from '../utils/projectKeys';
 import type { Intent } from './homeActivity';
 
 export interface DirectoryEntry {
   name: string;
   owner: string;
-  project: ProjectType;
+  project: ProjectKey;
   title: string;
   description: string;
 }
@@ -40,11 +41,15 @@ const toEntry = (name: string, d: any): DirectoryEntry => ({
   description: typeof d?.description === 'string' ? d.description : '',
 });
 
-export const entryUrl = (e: DirectoryEntry) => (e.project === 'restaurant' ? restaurantSiteUrl(e.owner) : siteFallbackUrl(e.name));
+export const entryUrl = (e: DirectoryEntry) => (kindOf(e.project) === 'restaurant' ? restaurantSiteUrl(e.owner) : siteFallbackUrl(e.name));
 
+// The first project of a kind is named by its kind; later ones carry `kind` (see sites.ts).
 export const listByKind = async (kind: ProjectType, n = 24): Promise<DirectoryEntry[]> => {
-  const snap = await getDocs(query(collection(db, 'siteNames'), where('project', '==', kind), limit(n)));
-  return snap.docs.map((d) => toEntry(d.id, d.data()));
+  const [first, later] = await Promise.all([
+    getDocs(query(collection(db, 'siteNames'), where('project', '==', kind), limit(n))),
+    getDocs(query(collection(db, 'siteNames'), where('kind', '==', kind), limit(n))).catch(() => null),
+  ]);
+  return [...first.docs, ...(later?.docs || [])].slice(0, n).map((d) => toEntry(d.id, d.data()));
 };
 
 // The pages of one kind filed under a category: on «نشر» a page's catalog names become its first
@@ -53,7 +58,7 @@ export const listByCategory = async (kind: ProjectType, name: string): Promise<D
   const k = categoryKeyword(name);
   if (!k) return [];
   const snap = await getDocs(query(collection(db, 'siteNames'), where('keywords', 'array-contains', k), limit(50)));
-  return snap.docs.filter((d) => d.data()?.project === kind).map((d) => toEntry(d.id, d.data()));
+  return snap.docs.filter((d) => kindOf(String(d.data()?.project || '')) === kind).map((d) => toEntry(d.id, d.data()));
 };
 
 // The pages whose keywords hold any of the first three words typed.

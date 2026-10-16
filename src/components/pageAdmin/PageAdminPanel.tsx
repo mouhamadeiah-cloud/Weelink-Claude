@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart3, CalendarDays, Globe2, Loader2, MessageCircle, PencilLine, Sparkles, Star, Users, X } from 'lucide-react';
 import { DayStats, readStats } from '../../services/siteStats';
-import type { ProjectType } from '../shop/shopTypes';
+import type { ProjectKey } from '../../utils/projectKeys';
 import { BookingsSection } from './BookingsSection';
 import { RatingsSection } from './RatingsSection';
 import { watchBookings } from '../../services/bookings';
@@ -15,7 +15,7 @@ interface PageAdminPanelProps {
   open: boolean;
   onClose: () => void;
   owner: string;
-  project: ProjectType;
+  project: ProjectKey;
   pageName: string;
   published: boolean;
   // «تعديل الصفحة»: when the admin was opened from the page's navbar; the editor's own door leaves it out.

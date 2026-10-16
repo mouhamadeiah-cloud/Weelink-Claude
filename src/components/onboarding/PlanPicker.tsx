@@ -14,9 +14,11 @@ interface PlanPickerProps {
   owner: string;
   title: string;
   onPicked: (planId: string) => void;
+  // The account has its free project already: the free package is once per account (Eyad, 17 Oct).
+  freeTaken?: boolean;
 }
 
-export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPicked }) => {
+export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPicked, freeTaken = false }) => {
   const plans = PLANS[kind];
   const [yearly, setYearly] = useState(false);
   const before = readPlan(owner, kind);
@@ -52,6 +54,7 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPi
       <div className={`grid gap-3 sm:gap-4 ${plans.length === 2 ? 'sm:grid-cols-2 max-w-3xl' : 'sm:grid-cols-3'}`}>
         {plans.map((p, i) => {
           const was = before === p.id;
+          const closed = freeTaken && p.monthly === 0;
           return (
             <article
               key={p.id}
@@ -95,10 +98,11 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPi
               <button
                 type="button"
                 onClick={() => pick(p.id)}
-                className={`mt-5 w-full inline-flex items-center justify-center gap-1.5 rounded-ctl py-3 text-sm font-bold transition ${p.popular ? 'bg-brand hover:bg-brand-hover text-white' : 'bg-bg text-ink hover:bg-line'}`}
+                disabled={closed}
+                className={`mt-5 w-full inline-flex items-center justify-center gap-1.5 rounded-ctl py-3 text-sm font-bold transition disabled:opacity-60 disabled:cursor-not-allowed ${p.popular ? 'bg-brand hover:bg-brand-hover text-white' : 'bg-bg text-ink hover:bg-line'}`}
               >
-                {was ? 'كمّل بهالباقة' : 'اختار هالباقة'}
-                <ArrowLeft size={15} />
+                {closed ? 'عندك مشروع مجاني بحسابك' : was ? 'كمّل بهالباقة' : 'اختار هالباقة'}
+                {!closed && <ArrowLeft size={15} />}
               </button>
             </article>
           );

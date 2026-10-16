@@ -15,7 +15,7 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, runTransaction, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import type { CanvasElement, Page } from '../types';
-import type { ProjectType } from '../components/shop/shopTypes';
+import { isFirstOfKind, kindOf, type ProjectKey } from '../utils/projectKeys';
 
 // The domain under which every published page gets its free address. Changing it changes every
 // address at once (only the short names are stored).
@@ -43,11 +43,11 @@ export const siteUrl = (name: string) => `https://${name}.${SITE_DOMAIN}`;
 // Works before the free addresses (*.testweelink.de) are set up in Vercel.
 export const siteFallbackUrl = (name: string) => `${window.location.origin}/?s=${encodeURIComponent(name)}`;
 
-const siteId = (owner: string, project: ProjectType) => `${owner}__${project}`;
+const siteId = (owner: string, project: ProjectKey) => `${owner}__${project}`;
 
 export type NameState = 'free' | 'mine' | 'taken';
 
-export const checkSiteName = async (name: string, owner: string, project: ProjectType): Promise<NameState> => {
+export const checkSiteName = async (name: string, owner: string, project: ProjectKey): Promise<NameState> => {
   const snap = await getDoc(doc(db, 'siteNames', name));
   if (!snap.exists()) return 'free';
   const d = snap.data();
@@ -87,7 +87,7 @@ const cleanSeo = (seo: SiteSeo): SiteSeo => ({
 
 export interface PublishedSite {
   name: string;
-  project: ProjectType;
+  project: ProjectKey;
   owner: string;
   pages: Page[];
   elements: CanvasElement[];
@@ -99,7 +99,7 @@ export interface PublishedSite {
   seo?: SiteSeo;
 }
 
-export const readMySite = async (owner: string, project: ProjectType): Promise<PublishedSite | null> => {
+export const readMySite = async (owner: string, project: ProjectKey): Promise<PublishedSite | null> => {
   const snap = await getDoc(doc(db, 'publishedSites', siteId(owner, project)));
   return snap.exists() ? (snap.data() as PublishedSite) : null;
 };
@@ -118,7 +118,7 @@ const clean = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 // Publishes (or republishes) the project under `name`, taking the name over from the old one.
 export const publishSite = async (
   owner: string,
-  project: ProjectType,
+  project: ProjectKey,
   name: string,
   content: { pages: Page[]; elements: CanvasElement[]; data: any },
   seo: SiteSeo
@@ -131,7 +131,8 @@ export const publishSite = async (
     const [taken, current] = await Promise.all([tx.get(nameRef), tx.get(ref)]);
     if (taken.exists() && (taken.data().owner !== owner || taken.data().project !== project)) throw new Error('name-taken');
     const oldName = current.exists() ? current.data().name : '';
-    if (!taken.exists()) tx.set(nameRef, { owner, project, at: now, ...search });
+    // A later project's name also says its kind, for Weelink's lists by kind (directory.ts).
+    if (!taken.exists()) tx.set(nameRef, { owner, project, ...(isFirstOfKind(project) ? {} : { kind: kindOf(project) }), at: now, ...search });
     else tx.update(nameRef, { ...search });
     if (oldName && oldName !== name) tx.delete(doc(db, 'siteNames', oldName));
     tx.set(ref, {
@@ -151,11 +152,11 @@ export const publishSite = async (
 };
 
 // The browser tab's icon, changed without publishing again.
-export const setSiteIcon = (owner: string, project: ProjectType, icon: string) =>
+export const setSiteIcon = (owner: string, project: ProjectKey, icon: string) =>
   updateDoc(doc(db, 'publishedSites', siteId(owner, project)), { icon });
 
 // The title, description and keywords, changed without publishing again.
-export const setSiteSeo = async (owner: string, project: ProjectType, name: string, seo: SiteSeo) => {
+export const setSiteSeo = async (owner: string, project: ProjectKey, name: string, seo: SiteSeo) => {
   const search = cleanSeo(seo);
   const batch = writeBatch(db);
   batch.update(doc(db, 'publishedSites', siteId(owner, project)), { seo: search });
@@ -169,7 +170,7 @@ export const searchSites = async (word: string) => {
   const k = normalizeKeywords(word)[0];
   if (!k) return [];
   const snap = await getDocs(query(collection(db, 'siteNames'), where('keywords', 'array-contains', k), limit(20)));
-  return snap.docs.map((d) => ({ name: d.id, ...(d.data() as { owner: string; project: ProjectType; title?: string; description?: string }) }));
+  return snap.docs.map((d) => ({ name: d.id, ...(d.data() as { owner: string; project: ProjectKey; title?: string; description?: string }) }));
 };
 
 // A logo picked by the customer, as a 192×192 PNG (the image fills the square, centred).
@@ -218,7 +219,7 @@ export const letterIcon = (name: string) => {
   return c.toDataURL('image/png');
 };
 
-export const unpublishSite = async (owner: string, project: ProjectType) => {
+export const unpublishSite = async (owner: string, project: ProjectKey) => {
   const ref = doc(db, 'publishedSites', siteId(owner, project));
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
@@ -288,12 +289,12 @@ export const normalizeDomain = (raw: string) =>
 export const isValidDomain = (d: string) => /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(d);
 
 // The customer's own domain: added to Weelink's Vercel project; returns the DNS records to set.
-export const connectDomain = (owner: string, project: ProjectType, domain: string) =>
+export const connectDomain = (owner: string, project: ProjectKey, domain: string) =>
   callDomains<{ domain: CustomDomainState }>({ action: 'connect', owner, project, domain });
 
-export const checkDomain = (owner: string, project: ProjectType) => callDomains<{ domain: CustomDomainState }>({ action: 'check', owner, project });
+export const checkDomain = (owner: string, project: ProjectKey) => callDomains<{ domain: CustomDomainState }>({ action: 'check', owner, project });
 
-export const removeDomain = (owner: string, project: ProjectType) => callDomains<{ removed: true }>({ action: 'remove', owner, project });
+export const removeDomain = (owner: string, project: ProjectKey) => callDomains<{ removed: true }>({ action: 'remove', owner, project });
 
 // Whether a domain can be bought, and for how much (through Weelink's Vercel account).
 export const domainPrice = (domain: string) =>
@@ -312,7 +313,7 @@ export interface DomainContact {
 
 // A request to buy a domain through Weelink. It is paid at the office and bought by Weelink; the
 // purchase itself is not automatic yet.
-export const requestDomainPurchase = async (owner: string, project: ProjectType, domain: string, years: number, contact: DomainContact, price: number | null) => {
+export const requestDomainPurchase = async (owner: string, project: ProjectKey, domain: string, years: number, contact: DomainContact, price: number | null) => {
   const ref = doc(collection(db, 'domainOrders'));
   await setDoc(ref, {
     owner,

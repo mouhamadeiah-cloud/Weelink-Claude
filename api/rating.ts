@@ -50,7 +50,8 @@ const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 
-const PROJECTS = ['page', 'shop', 'cars', 'restaurant'];
+// A project key: the kind, or the kind and the project's own id (src/utils/projectKeys.ts).
+const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/.test(p);
 const starsText = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
 const ownerEmail = async (admin: Admin, owner: string) => {
@@ -102,7 +103,7 @@ const start = async (admin: Admin, body: any) => {
   const email = text(body.email, 120).toLowerCase();
   const name = text(body.name, 60);
   const words = text(body.text, 800);
-  if (!validId(owner) || !PROJECTS.includes(project) || !Number.isInteger(stars) || stars < 1 || stars > 5) return json({ error: 'bad_request' }, 400);
+  if (!validId(owner) || !isProjectKey(project) || !Number.isInteger(stars) || stars < 1 || stars > 5) return json({ error: 'bad_request' }, 400);
   if (name.length < 2) return json({ error: 'missing_name' }, 400);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'bad_email' }, 400);
   if (!(await admin.auth.getUser(owner).catch(() => null)) && !(await admin.db.collection('accounts').doc(owner).get()).exists) return json({ error: 'not_found' }, 404);

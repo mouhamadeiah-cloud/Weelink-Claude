@@ -2,7 +2,7 @@
 // choose a new password the first time, then the subscribers list with search and filters.
 // All data comes from /api/admin; nothing here reads Firebase directly.
 import React, { useCallback, useEffect, useState } from 'react';
-import { Activity, BarChart3, ChevronDown, Coins, CreditCard, KeyRound, Loader2, LogOut, Menu, Search, ShieldCheck, UserCog, Users, X } from 'lucide-react';
+import { Activity, BarChart3, ChevronDown, Coins, CreditCard, KeyRound, Loader2, LogOut, Menu, Palette, Search, ShieldCheck, UserCog, Users, X } from 'lucide-react';
 import { SubscriberDetail } from './SubscriberDetail';
 import { PaymentsView } from './PaymentsView';
 import { BillingSettings } from './BillingSettings';
@@ -15,6 +15,9 @@ import { ReportsView } from './ReportsView';
 import { HealthView } from './HealthView';
 import { CouponsView } from './CouponsView';
 import { AnnounceView } from './AnnounceView';
+import { PageLawView } from './PageLawView';
+import { SlidesReviewView } from './SlidesReviewView';
+import { DesignOrdersView } from './DesignOrdersView';
 import {
   AdminError, AdminInfo, SubscriberQuery, SubscribersResult,
   adminChangePassword, adminLogin, adminMe, adminSubscribers, getAdminToken, setAdminToken,
@@ -38,10 +41,10 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   const [drawer, setDrawer] = useState(false);
   return (
     <div dir="rtl" className="min-h-screen bg-bg font-sans text-ink">
-      <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-3 sm:px-6">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2 font-logo text-heading font-semibold">
           {menu && <button onClick={() => setDrawer(true)} className="rounded-ctl p-1 hover:bg-bg lg:hidden" aria-label="القائمة"><Menu className="h-5 w-5" /></button>}
-          <ShieldCheck className="h-5 w-5 text-brand" /> Weelink · الإدارة
+          <ShieldCheck className="h-5 w-5 text-brand" /> <a href={`${window.location.protocol}//${window.location.hostname.replace(/^admin\./i, '')}${window.location.port ? `:${window.location.port}` : ''}/`} target="_blank" rel="noopener noreferrer" title="فتح موقع Weelink في تبويب جديد" className="rounded-ctl px-1 hover:text-brand">Weelink</a> · الإدارة
         </div>
         {admin && (
           <div className="flex items-center gap-3 text-small text-muted">
@@ -56,7 +59,7 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
         {menu && (
           <>
             {drawer && <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setDrawer(false)} />}
-            <aside dir="rtl" className={`fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-line bg-surface p-3 transition-transform lg:static lg:z-auto lg:min-h-[calc(100vh-57px)] lg:translate-x-0 ${drawer ? 'translate-x-0' : '-translate-x-full'}`}>
+            <aside dir="rtl" className={`fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-line bg-surface p-3 transition-transform lg:sticky lg:top-[57px] lg:z-auto lg:h-[calc(100vh-57px)] lg:self-start lg:translate-x-0 ${drawer ? 'translate-x-0' : '-translate-x-full'}`}>
               <button onClick={() => setDrawer(false)} className="mb-2 rounded-ctl p-1 hover:bg-bg lg:hidden" aria-label="إغلاق"><X className="h-5 w-5" /></button>
               <div onClick={() => setDrawer(false)}>{menu}</div>
             </aside>
@@ -67,7 +70,7 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   );
 };
 
-type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'dashboard' | 'reports' | 'coupons' | 'announce' | 'health' | 'password';
+type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'dashboard' | 'reports' | 'coupons' | 'announce' | 'health' | 'page-law' | 'slides' | 'design-orders' | 'password';
 interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View; needs?: string }[] }
 // Every group starts folded; the admin opens what he needs. Items without a view are the next phases.
 const MENU: MenuGroup[] = [
@@ -75,6 +78,7 @@ const MENU: MenuGroup[] = [
   { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'payments', label: 'كل الدفعات والفواتير', view: 'payments', needs: 'payments' }, { id: 'billing', label: 'إعدادات الفوترة', view: 'billing', needs: 'get-company' }] },
   { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'usage', label: 'الاستهلاك والأسعار', view: 'tokens', needs: 'tokens-overview' }] },
   { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات', view: 'team', needs: 'admins-list' }, { id: 'my-tasks', label: 'مهامي', view: 'my-tasks' }, { id: 'all-tasks', label: 'كل المهام', view: 'all-tasks', needs: 'task-create' }, { id: 'chat', label: 'لوحة التواصل', view: 'chat' }] },
+  { id: 'designers', title: 'معرض المصممين', icon: Palette, items: [{ id: 'slides', label: 'مراجعة الشرائح', view: 'slides', needs: 'slides-review-list' }, { id: 'orders', label: 'طلبات التصميم', view: 'design-orders', needs: 'design-orders' }, { id: 'law', label: 'قانون الصفحة', view: 'page-law', needs: 'page-law-get' }] },
   { id: 'books', title: 'الحسابات والداشبورد', icon: BarChart3, items: [{ id: 'dash', label: 'الداشبورد والتصدير', view: 'dashboard', needs: 'dashboard' }, { id: 'coupons', label: 'الكوبونات والتجربة', view: 'coupons', needs: 'coupons' }, { id: 'announce', label: 'إعلان بالإيميل', view: 'announce', needs: 'announce' }] },
   { id: 'watch', title: 'المراجعة والمتابعة', icon: Activity, items: [{ id: 'reports', label: 'بلاغات التقييمات', view: 'reports', needs: 'reports' }, { id: 'health', label: 'صحة النظام', view: 'health', needs: 'health' }] },
   { id: 'me', title: 'حسابي', icon: KeyRound, items: [{ id: 'pw', label: 'تغيير كلمة السر', view: 'password' }] },
@@ -313,6 +317,9 @@ export const AdminSite: React.FC = () => {
         : view === 'coupons' ? <CouponsView onSessionEnd={logout} />
         : view === 'announce' ? <AnnounceView onSessionEnd={logout} />
         : view === 'health' ? <HealthView onSessionEnd={logout} />
+        : view === 'page-law' ? <PageLawView onSessionEnd={logout} />
+        : view === 'slides' ? <SlidesReviewView onSessionEnd={logout} />
+        : view === 'design-orders' ? <DesignOrdersView onSessionEnd={logout} />
         : view === 'team' ? <TeamView onSessionEnd={logout} me={admin.username} />
         : view === 'password' ? <ChangePassword forced={false} onDone={(a) => { setAdmin(a); setView(null); }} />
         : <p className="mt-16 text-center text-muted">أهلاً {admin.name}. افتح قسماً من القائمة على اليسار.</p>}

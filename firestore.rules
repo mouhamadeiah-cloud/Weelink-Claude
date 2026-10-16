@@ -398,6 +398,97 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    // The designers' programme (src/services/designers.ts): a public profile per designer, shown in the
+    // gallery. A designer writes only their own name and line; likes, ratings and the approved badge are
+    // written by the server in later phases, so the rules keep them out of this document.
+    match /designers/{uid} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == uid && isValidId(uid)
+        && incoming().keys().hasOnly(['name', 'bio', 'createdAt'])
+        && incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 60
+        && incoming().bio is string && incoming().bio.size() <= 200
+        && incoming().createdAt is string && incoming().createdAt.size() <= 40;
+      allow update: if isSignedIn() && request.auth.uid == uid
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'bio'])
+        && incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 60
+        && incoming().bio is string && incoming().bio.size() <= 200;
+      allow delete: if false;
+    }
+
+    // The designers' drafts (src/services/designerDrafts.ts): up to ten slides a designer works on in
+    // «وضع المصمم», apart from their own page. Only the designer reads and writes them, and only in
+    // the ten slots d1..d10.
+    match /designerDrafts/{uid}/items/{slot} {
+      function isDesignerAccount() {
+        return exists(/databases/$(database)/documents/designers/$(uid));
+      }
+
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create, update: if isSignedIn() && request.auth.uid == uid && isDesignerAccount()
+        && slot in ['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9', 'd10']
+        && incoming().keys().hasOnly(['name', 'kind', 'pages', 'elements', 'updatedAt'])
+        && (!('kind' in incoming()) || incoming().kind in ['slide', 'page'])
+        && incoming().name is string && incoming().name.size() <= 60
+        && incoming().pages is list && incoming().pages.size() <= 5
+        && incoming().elements is list && incoming().elements.size() <= 400;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // The gallery's slides and pages (src/services/gallery.ts). A designer exports a design as 'pending', having
+    // agreed to the current version of the page's law; only the platform's admin (api/admin.ts)
+    // approves or rejects it, so nobody changes a slide's status from the browser. The gallery
+    // reads approved slides; a designer reads their own, whatever their status.
+    match /gallerySlides/{slideId} {
+      allow get: if resource.data.status == 'approved' || (isSignedIn() && resource.data.designerUid == request.auth.uid);
+      allow list: if resource.data.status == 'approved' || (isSignedIn() && resource.data.designerUid == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(slideId)
+        && exists(/databases/$(database)/documents/designers/$(request.auth.uid))
+        && incoming().keys().hasOnly(['designerUid', 'designerName', 'name', 'category', 'draftSlot', 'kind', 'slide', 'page', 'elements', 'status', 'lawVersion', 'acceptedAt', 'createdAt'])
+        && incoming().kind in ['slide', 'page']
+        // A page is its navbar and one to three slides; a slide has no page.
+        && (incoming().kind == 'page'
+          ? (incoming().page is map && incoming().page.slides is list && incoming().page.slides.size() >= 1 && incoming().page.slides.size() <= 3)
+          : !('page' in incoming()))
+        && incoming().designerUid == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 60
+        && incoming().designerName is string && incoming().designerName.size() <= 60
+        && incoming().category is string && incoming().category.size() <= 30
+        && incoming().draftSlot is string && incoming().draftSlot.size() <= 4
+        && incoming().slide is map
+        && incoming().elements is list && incoming().elements.size() <= 400
+        && incoming().lawVersion is int
+        && incoming().lawVersion == get(/databases/$(database)/documents/platformSettings/pageLaw).data.version
+        && incoming().acceptedAt is string && incoming().acceptedAt.size() <= 40
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isSignedIn() && resource.data.designerUid == request.auth.uid;
+    }
+
+    // A voter's likes and dislikes on gallery slides (api/gallery.ts writes them, with the slides'
+    // counters): they read their own, to show which slides they voted on.
+    match /galleryVotes/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Hiring a designer (api/design-orders.ts writes everything here, the browser nothing): the customer
+    // and the designer of an order read it and its messages. The customer's name and email are not in it.
+    match /designOrders/{orderId} {
+      allow get: if isSignedIn() && (resource.data.customerUid == request.auth.uid || resource.data.designerUid == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.customerUid == request.auth.uid || resource.data.designerUid == request.auth.uid);
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (get(/databases/$(database)/documents/designOrders/$(orderId)).data.customerUid == request.auth.uid
+          || get(/databases/$(database)/documents/designOrders/$(orderId)).data.designerUid == request.auth.uid);
+      }
+    }
+
+    // Platform settings the browser may read: the page's law (written by the admin site only).
+    match /platformSettings/{docId} {
+      allow get: if docId == 'pageLaw';
+    }
+
     // A frozen or cancelled subscriber (the admin site, api/admin.ts writes it): anyone may check
     // whether a workspace id is in the list, so its published pages show «غير متاحة مؤقتاً».
     match /suspendedAccounts/{accountId} {

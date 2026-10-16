@@ -1,0 +1,4 @@
+// Test setup: the server modules (server/*.ts) import firebase-admin and the mail helper; in the tests they get an
+// in-memory stand-in (tests/fakeAdmin.ts) and a recorder (tests/mailRecorder.ts) instead.
+import { register } from 'node:module';
+register('./aliasHooks.mjs', import.meta.url);

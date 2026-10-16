@@ -14,7 +14,9 @@ import {
   Globe,
   CloudUpload,
   CloudCheck,
-  CloudOff
+  CloudOff,
+  Palette,
+  Upload
 } from 'lucide-react';
 import { DevicePreviewMode, Page } from '../types';
 
@@ -48,6 +50,12 @@ interface ControlBarProps {
   // «نشر»: opens the publish window (the page's name, its link, QR code and domain).
   onPublish?: () => void;
   isPublished?: boolean;
+  // The designers' programme: a designer's account has «وضع المصمم» here; inside it the page's own
+  // publish button gives way to «تصدير الشريحة للمعرض».
+  isDesigner?: boolean;
+  isDesignerMode?: boolean;
+  onToggleDesignerMode?: () => void;
+  onExportSlide?: () => void;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = ({
@@ -76,6 +84,10 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   onOpenProjectSettings,
   onPublish,
   isPublished,
+  isDesigner,
+  isDesignerMode,
+  onToggleDesignerMode,
+  onExportSlide,
 }) => {
   const [isPagesDropdownOpen, setIsPagesDropdownOpen] = useState(false);
   const [newPageName, setNewPageName] = useState('');
@@ -113,7 +125,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
       {/* Right side items (in RTL: Right to Left) */}
       <div className="flex items-center gap-2 sm:gap-3.5 flex-shrink-0">
         {/* 0. The project's name + the gear of the project's settings */}
-        {projectName !== undefined && !isPreviewActive && (
+        {projectName !== undefined && !isPreviewActive && !isDesignerMode && (
           <div className="flex items-center gap-1 bg-neutral-100/90 rounded-xl p-1 border border-black/[0.05]">
             <button
               type="button"
@@ -134,7 +146,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             </button>
           </div>
         )}
-        {projectName !== undefined && !isPreviewActive && <span className="text-neutral-300 text-lg -mx-1 select-none">/</span>}
+        {projectName !== undefined && !isPreviewActive && !isDesignerMode && <span className="text-neutral-300 text-lg -mx-1 select-none">/</span>}
 
         {/* 1. Current Page Name in a Dropdown Box + Settings Gear */}
         <div className="flex items-center gap-1.5 bg-neutral-100/90 hover:bg-neutral-200/70 rounded-xl p-1 border border-black/[0.05] transition-colors relative">
@@ -321,7 +333,30 @@ export const ControlBar: React.FC<ControlBarProps> = ({
 
       {/* Left side: Logo Weelink & User Auth / Cloud Sync Status */}
       <div className="flex items-center gap-3.5 flex-shrink-0">
-        {onPublish && !isPreviewActive && (
+        {isDesigner && onToggleDesignerMode && !isPreviewActive && (
+          <button
+            type="button"
+            onClick={onToggleDesignerMode}
+            aria-pressed={!!isDesignerMode}
+            className={`h-9 px-3 rounded-xl border text-xs sm:text-sm font-black active:scale-95 flex items-center gap-1.5 transition-all cursor-pointer ${isDesignerMode ? 'bg-ink text-white border-ink' : 'bg-neutral-100/80 border-black/[0.05] text-neutral-700 hover:bg-white hover:text-brand'}`}
+            title={isDesignerMode ? 'العودة لصفحتك' : 'وضع المصمم: صمّم شرائح وصدّرها لمعرض Weelink'}
+          >
+            <Palette size={15} strokeWidth={2.3} />
+            {isDesignerMode ? 'صفحتي' : 'وضع المصمم'}
+          </button>
+        )}
+        {isDesignerMode && onExportSlide && !isPreviewActive && (
+          <button
+            type="button"
+            onClick={onExportSlide}
+            className="h-9 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-xs sm:text-sm font-black shadow-sm active:scale-95 flex items-center gap-1.5 transition-all cursor-pointer"
+            title="أرسل هذه الشريحة إلى معرض المصممين (تُراجع قبل أن تظهر)"
+          >
+            <Upload size={15} strokeWidth={2.4} />
+            تصدير الشريحة للمعرض
+          </button>
+        )}
+        {onPublish && !isDesignerMode && !isPreviewActive && (
           <button
             type="button"
             onClick={onPublish}
@@ -384,7 +419,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           type="button"
           onClick={onOpenProjects}
           className="flex items-center gap-2 group cursor-pointer"
-          title="المشاريع: التبديل بين الصفحة المجانية والمتجر"
+          title="العودة إلى Weelink (يُحفظ عملك)"
         >
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand to-[#40a9ff] text-white flex items-center justify-center shadow-[0_2px_8px_rgba(0,113,227,0.3)] transition-transform group-hover:scale-105">
             <span className="text-sm font-bold tracking-tighter">W</span>

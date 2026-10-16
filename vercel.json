@@ -18,6 +18,24 @@
     {
       "path": "/api/admin",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/designers?area=orders",
+      "schedule": "0 8 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/gallery",
+      "destination": "/api/designers?area=gallery"
+    },
+    {
+      "source": "/api/design-orders",
+      "destination": "/api/designers?area=orders"
+    },
+    {
+      "source": "/api/design-access",
+      "destination": "/api/designers?area=access"
     }
   ]
 }

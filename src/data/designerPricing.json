@@ -1,0 +1,17 @@
+{
+  "_comment": "What an owner pays a designer to take over their page, by the package the owner's page has (the ids of data/plans.ts), in Syrian pounds per design, and the platform's share of it (Eyad, 14 Oct). Prices and the share live here only; src/data/designerPricing.ts and api/design-orders.ts both read this file.",
+  "platformShare": 0.3,
+  "prices": {
+    "page-free": 199000,
+    "page-pro": 699000,
+    "restaurant-30": 699000,
+    "cars-30": 699000,
+    "shop-30": 699000,
+    "restaurant-60": 899000,
+    "cars-60": 899000,
+    "shop-60": 899000,
+    "restaurant-pro": 1400000,
+    "cars-pro": 1400000,
+    "shop-pro": 1400000
+  }
+}

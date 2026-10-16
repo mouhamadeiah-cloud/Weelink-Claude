@@ -3,11 +3,16 @@
 // answers move to the new account (services/guestAnswers.ts). A signed-in owner answers under their
 // account, with their earlier answers filled in, and the editor opens and builds the page.
 // The browser's back button goes from the questions back to the kinds.
+import { PlatformNav } from '../platform/PlatformNav';
 import React, { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { ArrowLeft, CarFront, Check, FileText, Loader2, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
+import { ArrowLeft, CarFront, Check, ClipboardList, FileText, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
+import { DesignerGallery } from '../gallery/DesignerGallery';
+import { AttentionDot, useOrderAttention } from '../../services/orderAttention';
+import { DesignOrdersPanel } from '../designOrders/DesignOrdersPanel';
+import type { GallerySlide } from '../../services/galleryView';
 import { guestKindOf, readGuestAnswers, setGuestKind } from '../../services/guestAnswers';
 import { CAR_PHOTOS, carPhoto } from '../../data/carShowroomTemplate';
 import type { ProjectType } from '../shop/shopTypes';
@@ -15,15 +20,15 @@ import type { ProjectType } from '../shop/shopTypes';
 const photo = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`;
 
 const HERO = photo('1522071820081-009f0129c71c', 1600);
-const STEPS = ['اختار نوع صفحتك', 'اختار باقتك', 'جاوب على أسئلة Wee AI', 'اعمل حسابك وصفحتك جاهزة'];
+const STEPS = ['اختار نوع مشروعك', 'اختار باقتك', 'جاوب على أسئلة Wee AI', 'اعمل حسابك ومشروعك جاهز'];
 const QUESTION_COUNT = 12;
 
 // Photos of running the business, unlike the home page's search and order cards (Eyad, 12 Oct).
 const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; icon: React.ElementType; image: string }[] = [
   {
     type: 'page',
-    title: 'صفحة لعملك',
-    line: 'طبيب، محامي، كهربائي، مدرّس… صفحة تعرّف بك وبخدماتك.',
+    title: 'مشروع لعملك',
+    line: 'طبيب، محامي، كهربائي، مدرّس… مشروع يعرّف بك وبخدماتك.',
     perks: ['خدماتك وأسعارك', 'عنوانك على الخريطة', 'واتساب واتصال مباشر'],
     icon: FileText,
     image: photo('1454165804606-c3d57bc86b40'),
@@ -61,23 +66,37 @@ interface StartPageProps {
   // Opens straight on this kind's questions (from «عدّل إجاباتي» in the editor).
   initialKind?: ProjectType | null;
   onHome: () => void;
+  // The top bar's account entries (the same bar as the front page).
+  onOpenMyPage?: () => void;
+  onLaw?: () => void;
+  onAccount?: () => void;
+  onLogout?: () => void;
   // A signed-in owner finished the questions: open this kind and build it from the answers.
   onBuild: (kind: ProjectType, answers: any) => void;
   // A guest finished the questions: sign up, then open this kind.
   onSignUp: (kind: ProjectType) => void;
+  // «انضم لمصممينا»: a visitor signs up as a designer; a signed-in owner becomes one.
+  onDesigner: () => void;
+  // «أضف لصفحتي مجاناً» on a gallery design: it goes into the signed-in owner's own page.
+  onAddDesign?: (slide: GallerySlide, fit: boolean) => Promise<{ ok: boolean; message: string }>;
+  // «تعديل» on a design of the signed-in designer's own: the editor opens on it.
+  onEditDesign?: (slide: GallerySlide) => void;
   loadingType?: ProjectType | null;
   // The kinds this account already has a page of: picking one opens it, not the questions again.
   owned?: ProjectType[];
   onOpen?: (kind: ProjectType) => void;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onBuild, onSignUp, loadingType, owned = [], onOpen }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onOpenMyPage, onLaw, onAccount, onLogout, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [], onOpen }) => {
   const signedIn = !!user && !user.isAnonymous;
+  const attention = useOrderAttention(signedIn && user ? user.uid : '');
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
   // After the kind come its packages, then the questions (Eyad, 12 Oct). Editing the answers from
   // the editor opens straight on the questions.
   const [stage, setStage] = useState<'plans' | 'questions'>(initialKind ? 'questions' : 'plans');
   const [step, setStep] = useState(1);
+  // The design orders window («طلبات التصميم»), open on an order or on the list.
+  const [orders, setOrders] = useState<{ id: string } | null>(null);
   const saved = signedIn ? null : guestKindOf(readGuestAnswers());
 
   // The questions are a step of their own in the browser's history: back returns to the kinds.
@@ -122,18 +141,28 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
 
   return (
     <div className="min-h-screen bg-bg text-ink" dir="rtl">
-      <header className="sticky top-0 z-30 bg-bg/90 backdrop-blur border-b border-line">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-3">
-          <button type="button" onClick={kind ? stepBack : onHome} className="inline-flex items-center gap-1.5 text-sm font-bold text-muted hover:text-brand transition">
-            → {!kind ? 'الرئيسية' : stage === 'questions' && !initialKind ? 'الباقات' : 'نوع الصفحة'}
+      <PlatformNav
+        current="start"
+        user={user}
+        onHome={onHome}
+        onStart={() => { if (kind) setKind(null); else window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+        onOpenMyPage={onOpenMyPage || onHome}
+        onLaw={onLaw || onHome}
+        onAccount={onAccount || onHome}
+        onLogout={onLogout || onHome}
+        extra={signedIn && !kind ? (
+          <button type="button" onClick={() => setOrders({ id: '' })} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-ink">
+            <ClipboardList size={14} /> طلبات التصميم <AttentionDot n={attention} />
           </button>
-          <div className="flex-1" />
-          <span className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-ctl bg-brand text-white flex items-center justify-center font-bold">W</span>
-            <span className="text-lg font-bold tracking-tight font-logo">weelink</span>
-          </span>
+        ) : undefined}
+      />
+      {kind && (
+        <div className="mx-auto max-w-6xl px-4 pt-3">
+          <button type="button" onClick={stepBack} className="inline-flex items-center gap-1.5 text-sm font-bold text-muted transition hover:text-brand">
+            → {stage === 'questions' && !initialKind ? 'الباقات' : 'نوع المشروع'}
+          </button>
         </div>
-      </header>
+      )}
 
       {!chosen ? (
         <main key="kinds" className="max-w-6xl mx-auto px-4 py-5 sm:py-8 space-y-6 sm:space-y-8">
@@ -147,7 +176,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               </span>
               <h1 className="text-title sm:text-display font-bold">شو بدك تعمل؟</h1>
               <p className="text-sm sm:text-base opacity-90 max-w-xl leading-relaxed">
-                {signedIn ? 'اختر نوع صفحتك وباقتك وجاوب على كم سؤال، وبعدين بتصممها بإيدك أو بيبنيها إلك Wee AI. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع صفحتك وباقتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
+                {signedIn ? 'اختر نوع مشروعك وباقتك وجاوب على كم سؤال، وبعدين بتصممها بإيدك أو بيبنيها إلك Wee AI. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع مشروعك وباقتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
               </p>
               {!signedIn && (
                 <ol className="flex flex-wrap gap-2">
@@ -163,7 +192,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </section>
 
           {/* The four kinds, as photo cards */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             {KINDS.map((k, i) => (
               <button
                 key={k.type}
@@ -176,7 +205,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                 <img src={k.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/5" />
                 {signedIn && owned.includes(k.type) && (
-                  <span className="absolute top-3 right-3 bg-surface text-brand text-xs font-bold rounded-full px-2.5 py-1">صفحتك محفوظة</span>
+                  <span className="absolute top-3 right-3 bg-surface text-brand text-xs font-bold rounded-full px-2.5 py-1">مشروعك محفوظ</span>
                 )}
                 {saved === k.type && (
                   <span className="absolute top-3 right-3 bg-surface text-brand text-xs font-bold rounded-full px-2.5 py-1">إجاباتك محفوظة</span>
@@ -191,13 +220,41 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold pt-1">
                     {loadingType === k.type ? <Loader2 size={14} className="animate-spin" /> : null}
-                    {signedIn && owned.includes(k.type) ? 'كمّل صفحتك' : 'ابدأ'}
+                    {signedIn && owned.includes(k.type) ? 'كمّل مشروعك' : 'ابدأ'}
                     <ArrowLeft size={14} className="transition group-hover:-translate-x-1.5" />
                   </span>
                 </span>
               </button>
             ))}
+
+            {/* The fifth card: designers join here (their own sign-up, a free page with a gallery of their slides) */}
+            <button
+              type="button"
+              disabled={!!loadingType}
+              onClick={onDesigner}
+              style={{ animationDelay: `${120 + KINDS.length * 90}ms` }}
+              className="wl-rise group relative rounded-card overflow-hidden text-right text-white bg-ink min-h-[220px] sm:min-h-[340px] sm:col-span-2 lg:col-span-1 flex items-end transition duration-300 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
+            >
+              <img src="/designers/designer-card.jpg" alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover object-[25%_70%] transition duration-700 group-hover:scale-110" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/5" />
+              <span className="relative p-5 w-full space-y-2">
+                <span className="flex items-center gap-2 text-heading font-bold"><Palette size={20} className="shrink-0" />انضم لمصممينا</span>
+                <span className="block text-xs opacity-90 leading-relaxed">اعمل مشروعك مجاناً واكسب من التصميم للزبائن.</span>
+                <span className="hidden sm:grid gap-1 pt-1 max-h-0 opacity-0 group-hover:max-h-24 group-hover:opacity-100 transition-all duration-500 overflow-hidden">
+                  {['معرض لشرائحك باسمك', 'زبائن يضيفون شرائحك لمشاريعهم', 'أرباح من تصميم مشاريع الزبائن'].map((p) => (
+                    <span key={p} className="flex items-center gap-1.5 text-xs font-bold"><Check size={12} /> {p}</span>
+                  ))}
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold pt-1">
+                  انضم
+                  <ArrowLeft size={14} className="transition group-hover:-translate-x-1.5" />
+                </span>
+              </span>
+            </button>
           </section>
+
+          {/* The designers' approved slides, under the cards */}
+          <DesignerGallery user={user} onEditDesign={onEditDesign} onAddToMyPage={onAddDesign} onOpenOrders={(id) => setOrders({ id: id || '' })} />
         </main>
       ) : stage === 'plans' ? (
         <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} title={chosen.title} onPicked={startQuestions} />
@@ -250,6 +307,8 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </div>
         </main>
       )}
+
+      {orders && user && !user.isAnonymous && <DesignOrdersPanel user={user} initialOrderId={orders.id} onClose={() => setOrders(null)} />}
     </div>
   );
 };

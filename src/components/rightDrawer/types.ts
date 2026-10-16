@@ -1,3 +1,4 @@
+import type { GallerySlide } from '../../services/galleryView';
 import type React from 'react';
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape } from '../../types';
 import type { NavbarPart } from '../../utils/navbarParts';
@@ -59,8 +60,9 @@ export interface RightDrawerProps {
   isCarProject?: boolean;
   isRestaurantProject?: boolean; // restaurant project: the restaurant slide category is offered // Online Shop project: the online-shop slide category is offered
   onAddPageTemplate?: (template: any) => void;
-  onApplyFreeStarterTemplate?: () => void;
-  onApplyOnlineShopTemplate?: () => void;
+  // «من معرض التصاميم»: a gallery slide added to the open page, or a gallery design (a navbar and slides) added as a new page of the project.
+  onAddGallerySlide?: (g: GallerySlide, fit: boolean) => void;
+  onAddGalleryPage?: (g: GallerySlide, options: { name: string; fit: boolean; navbar: 'mine' | 'design' }) => void;
   onDeleteSlide: (slideId: string) => void;
   onUpdateSlideHeight: (slideId: string, height: number) => void;
   onAddElement: (type: ElementType, customContent?: string, customStyles?: any, extraData?: Partial<CanvasElement>) => void;

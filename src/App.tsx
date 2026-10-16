@@ -18,7 +18,21 @@ import { RightDrawer, DrawerSection } from './components/RightDrawer';
 import { ProjectSettingsSection } from './components/rightDrawer/sections/ProjectSettingsSection';
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
+import { becomeDesigner, readDesigner } from './services/designers';
+import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
+import { DesignerBar } from './components/designer/DesignerBar';
+import { openClientPage, saveClientPage, accessErrorText, activeAccess, revokeAccessCode } from './services/designAccess';
+import { useOrderAttention } from './services/orderAttention';
+import { GalleryEditBar } from './components/designer/GalleryEditBar';
+import { adminEditOpen, adminEditSave, designerEditOpen, designerEditSave, editErrorText, takeAdminHandoff, type EditableDesign } from './services/galleryEdit';
+import { DesignerDashboard } from './components/designer/DesignerDashboard';
+import { DesignOrdersPanel } from './components/designOrders/DesignOrdersPanel';
+import { insertDesign } from './services/fitDesign';
+import { recordUse, type GallerySlide } from './services/galleryView';
+import { DESIGN_KIND_LABEL, PAGE_MAX_SLIDES, type DesignKind } from './data/slideCategories';
+import { ExportSlideModal } from './components/designer/ExportSlideModal';
 import { HomePage } from './components/home/HomePage';
+import { LawPage } from './components/platform/LawPage';
 import { StartPage } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
 import { readCatalogAnswer, sampleRestaurantAdmin, sampleShopAdmin } from './services/sampleItems';
@@ -51,11 +65,11 @@ import type { PageLook } from './data/pageLooks';
 import { KIND_OF_PROJECT, buildPageFromPlan, emptyMainPage, buildProfile, pageAssets, requestPagePlan } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
-import { getFreeStarterTemplate } from './data/freeStarterTemplate';
 import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
 import { withPhoneLayouts } from './utils/mobileLayout';
 import { withTemplateGroups } from './utils/templateGroups';
 import { withLocalGraphics } from './utils/localGraphics';
+import { deserializeElements, sanitizeData, serializeElements } from './utils/elementStorage';
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
@@ -67,72 +81,6 @@ import { SelectionBar } from './components/SelectionBar';
 import { loadPageFonts } from './services/pageFonts';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-const sanitizeData = (data: any): any => {
-  if (data === null || data === undefined) return null;
-  if (Array.isArray(data)) {
-    return data.map(sanitizeData);
-  }
-  if (typeof data === 'object') {
-    const cleaned: any = {};
-    for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        const val = data[key];
-        if (val !== undefined) {
-          cleaned[key] = sanitizeData(val);
-        }
-      }
-    }
-    return cleaned;
-  }
-  return data;
-};
-
-// Converts string[][] table cells to [{ row: string[] }] to avoid nested arrays (unsupported by Firestore)
-const serializeElements = (elements: CanvasElement[]): any[] => {
-  const mapped = elements.map(el => {
-    if (el.tableConfig) {
-      const { cells, ...rest } = el.tableConfig;
-      return {
-        ...el,
-        tableConfig: {
-          ...rest,
-          cells: cells ? cells.map(row => ({ row })) : []
-        }
-      };
-    }
-    return el;
-  });
-  return sanitizeData(mapped);
-};
-
-const deserializeElements = (dataElements: any[]): CanvasElement[] => {
-  if (!dataElements) return [];
-  return dataElements.map(withLocalGraphics).map(el => {
-    if (el.tableConfig) {
-      const { cells, ...rest } = el.tableConfig;
-      let restoredCells: string[][] = [];
-      if (Array.isArray(cells)) {
-        restoredCells = cells.map((item: any) => {
-          if (item && Array.isArray(item.row)) {
-            return item.row;
-          }
-          if (Array.isArray(item)) {
-            return item;
-          }
-          return [];
-        });
-      }
-      return {
-        ...el,
-        tableConfig: {
-          ...rest,
-          cells: restoredCells
-        }
-      } as CanvasElement;
-    }
-    return el;
-  });
-};
 
 const initialPage: Page = {
   id: 'page-home',
@@ -267,15 +215,51 @@ export default function App() {
   // «اعمل صفحتك»: the kind of page picked before the questions, then Wee AI's questions. Everyone
   // answers them there (Eyad, 12 Oct); the editor's panel only shows the answers and builds.
   const [isStartActive, setIsStartActive] = useState<boolean>(false);
+  // «قانون الصفحة»: a screen of its own under Weelink's top bar.
+  const [isLawActive, setIsLawActive] = useState<boolean>(false);
   // The kind the start page opens on (from «عدّل إجاباتي» in the editor), else the kinds.
   const [startKind, setStartKind] = useState<ProjectType | null>(null);
+  // Which form the sign-in screen opens on: the designers' sign-up comes from the start page's fifth card.
+  const [authMode, setAuthMode] = useState<'login' | 'designer'>('login');
+  // The designers' programme: a designer account (designers/{uid}), and «وضع المصمم»: the editor
+  // holds one of the designer's drafts (a single slide) instead of their page; the page's own autosave
+  // is off meanwhile (designerModeRef) and the draft saves to designerDrafts/{uid}/items/{slot}.
+  const [isDesigner, setIsDesigner] = useState(false);
+  const [designerName, setDesignerName] = useState('');
+  const [designerMode, setDesignerMode] = useState(false);
+  const designerModeRef = useRef(false);
+  const draftReadyRef = useRef(false);
+  const [drafts, setDrafts] = useState<DraftMeta[]>([]);
+  const draftsRef = useRef<DraftMeta[]>([]);
+  const [activeSlot, setActiveSlot] = useState('d1');
+  const activeSlotRef = useRef('d1');
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const orderAttention = useOrderAttention(currentUser && !currentUser.isAnonymous && designerMode ? currentUser.uid : '');
+  // The hired designer inside a customer's page with the 3-day code: the editor holds that page, saves go
+  // to /api/design-access, and nothing can be exported from it.
+  const [clientSession, setClientSession] = useState<{ orderId: string; code: string; expiresAt: number } | null>(null);
+  // A designer is inside this account's page with a code (api/design-access): the page is locked here, so a
+  // save from this editor cannot overwrite the designer's work. It is read again when the code ends.
+  const [designerLock, setDesignerLock] = useState<{ id: string; designerName: string; expiresAt: number } | null>(null);
+  const pageLockRef = useRef(false);
+  // A design of the gallery open in the editor (services/galleryEdit.ts): the admin edits any of them, a designer their own.
+  const [galleryEdit, setGalleryEdit] = useState<{ id: string; as: 'admin' | 'designer'; name: string; kind: DesignKind; status: string; pendingEdit: boolean } | null>(null);
+  const galleryEditRef = useRef<{ id: string; as: 'admin' | 'designer'; kind: DesignKind; token?: string } | null>(null);
+  const galleryBaselineRef = useRef('');
+  const [gallerySaving, setGallerySaving] = useState(false);
+  const [gallerySavedNote, setGallerySavedNote] = useState('');
+  const clientSessionRef = useRef<{ orderId: string; code: string; expiresAt: number } | null>(null);
+  const prevProjectRef = useRef<ProjectType>('page');
   // A page to build as soon as its kind is open in the editor: the questions just finished.
   // The kind whose questions just finished: the editor opens on it with an empty page and Wee AI's panel.
   const afterQuestionsRef = useRef<ProjectType | null>(null);
   // The project just loaded had nothing saved and started from its template.
   const freshProjectRef = useRef(false);
   // What the build after the questions is doing, shown over the editor.
-  const [buildNotice, setBuildNotice] = useState<{ busy: boolean; ok?: boolean; message: string } | null>(null);
+  const [buildNotice, setBuildNotice] = useState<{ busy: boolean; ok?: boolean; message: string; undo?: () => void } | null>(null);
   const [hasBuildBackup, setHasBuildBackup] = useState(false);
   // The kind a guest answered Wee AI for: after signing up, the answers move to the account and it opens.
   const pendingBuildRef = useRef<ProjectType | null>(null);
@@ -332,7 +316,7 @@ export default function App() {
     ]);
   }, []);
   useEffect(() => {
-    if (!projectReadyRef.current || !pages[0]) return;
+    if (!projectReadyRef.current || !pages[0] || designerModeRef.current) return;
     if (project === 'page') {
       if (!hasRatings) addRatingsSlide();
     } else if (!pages[0].ratingsSuggested) {
@@ -354,6 +338,20 @@ export default function App() {
     () => (ownerUid ? { owner: ownerUid, project, pageName: bookingBrand, live: isOwnerView } : null),
     [ownerUid, project, bookingBrand, isOwnerView]
   );
+  // Whether the signed-in account is a designer (designers/{uid}), and the name the gallery shows.
+  useEffect(() => {
+    setIsDesigner(false);
+    if (!currentUser || currentUser.isAnonymous) return;
+    let alive = true;
+    readDesigner(currentUser.uid).then((d) => {
+      if (!alive) return;
+      setIsDesigner(!!d);
+      setDesignerName(d?.name || '');
+    });
+    return () => {
+      alive = false;
+    };
+  }, [currentUser]);
   // Whether the open project is published (the «نشر» button shows «منشورة»).
   useEffect(() => {
     setPublishedName(null);
@@ -792,6 +790,7 @@ export default function App() {
       localStorage.removeItem('weelink_simulated_user_email');
       localStorage.removeItem('weelink_last_login_account');
       const accountId = user ? await resolveAccountId(user) : 'mouhamadeiah';
+      resetAccountMemory();
       setActiveUserUid(accountId);
       await loadUserWorkspace(accountId);
       const problem = takeInviteProblem();
@@ -806,11 +805,13 @@ export default function App() {
   // 2. Debounced auto-save to LocalStorage whenever pages or elements change
   useEffect(() => {
     // Skip saving during initial boot/loading to prevent overwrite races
-    if (!isInitialLoadComplete.current || isFirebaseLoading) {
+    // (and in the designer's mode, where the editor holds a draft, not the page)
+    if (!isInitialLoadComplete.current || !projectReadyRef.current || isFirebaseLoading || designerModeRef.current || (pageLockRef.current && project === 'page')) {
       return;
     }
 
     const delayDebounceFn = setTimeout(() => {
+      if (!projectReadyRef.current || designerModeRef.current || (pageLockRef.current && project === 'page')) return;
       try {
         const targetUserId = activeUserUid;
         const { localPrefix } = PROJECT_STORAGE[project];
@@ -829,12 +830,13 @@ export default function App() {
   // 3. Debounced live auto-save to Firebase whenever pages or elements change
   useEffect(() => {
     // Skip saving during initial boot/loading to prevent overwrite races
-    if (!isInitialLoadComplete.current || isFirebaseLoading) {
+    if (!isInitialLoadComplete.current || !projectReadyRef.current || isFirebaseLoading || designerModeRef.current || (pageLockRef.current && project === 'page')) {
       return;
     }
 
     const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
+      if (!projectReadyRef.current || designerModeRef.current || (pageLockRef.current && project === 'page')) return;
       try {
         setIsSavingCloud(true);
         const { pagesField, elementsField } = PROJECT_STORAGE[project];
@@ -966,6 +968,9 @@ export default function App() {
   // Saves the open project right away (the debounced saves above would be
   // cancelled when another project's data replaces it).
   const flushProjectSave = (): Promise<boolean> => {
+    // In the designer's mode the cloud button saves the open draft, never over the page.
+    if (designerModeRef.current) return saveActiveDraft();
+    if (pageLockRef.current && project === 'page') return Promise.resolve(false);
     if (!projectReadyRef.current) return Promise.resolve(false);
     const targetUserId = activeUserUid;
     const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE[project];
@@ -993,11 +998,402 @@ export default function App() {
     });
   };
 
+  // While a designer is inside the page with a code the page is locked here (see designerLock above): ask
+  // now and every 45 seconds; when the code ends, the page is read again, with the designer's changes.
+  useEffect(() => {
+    if (!currentUser || currentUser.isAnonymous || project !== 'page' || designerMode) return;
+    let alive = true;
+    const check = async () => {
+      try {
+        const { rows } = await activeAccess(currentUser);
+        if (!alive) return;
+        const lock = rows[0] || null;
+        const was = pageLockRef.current;
+        pageLockRef.current = !!lock;
+        setDesignerLock(lock);
+        if (was && !lock) loadUserWorkspace(activeUserUid).catch(() => {});
+      } catch {
+        // offline or no server: the page stays as it is
+      }
+    };
+    check();
+    const timer = window.setInterval(check, 45000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, [currentUser, project, designerMode, activeUserUid]);
+
+  // ---------- «وضع المصمم» ----------
+  // A draft is a slide or a page (Eyad, 14 Oct). The editor works on either as on any page: a slide
+  // draft is one page with one empty slide, and the slide being edited is what is exported; a page
+  // draft is one page with a navbar and up to three slides (it starts with three empty ones), exported whole.
+  const blankDraftPages = (kind: DesignKind = 'slide'): Page[] => [{
+    id: 'page-home',
+    name: kind === 'page' ? 'الرئيسية' : 'الشريحة',
+    slug: '/',
+    navbar: { brandName: kind === 'page' ? 'اسم الصفحة' : '', items: [], ctaText: '', ctaHref: '', bgColor: '#ffffff', textColor: '#1d1d1f', isSticky: true },
+    slides: kind === 'page'
+      ? Array.from({ length: PAGE_MAX_SLIDES }, (_, i) => ({ id: `slide-${i + 1}`, name: `شريحة ${i + 1}`, height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' as const }))
+      : [{ id: 'slide-1', name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' }],
+    ratingsSuggested: true,
+  }];
+  const draftName = (slot: string, kind: DesignKind = 'slide') => `${DESIGN_KIND_LABEL[kind]} ${DRAFT_SLOTS.indexOf(slot) + 1}`;
+  const activeKindRef = useRef<DesignKind>('slide');
+  const setDraftList = (list: DraftMeta[]) => {
+    draftsRef.current = list;
+    setDrafts(list);
+  };
+
+  // Saves the open draft now; the page itself is never touched.
+  const saveActiveDraft = async (): Promise<boolean> => {
+    // A gallery design is saved only by its own «حفظ» button: a switch of draft must not send it to review by itself.
+    if (galleryEditRef.current) return false;
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || !draftReadyRef.current) return false;
+    const client = clientSessionRef.current;
+    if (client) {
+      setIsSavingCloud(true);
+      try {
+        await saveClientPage(user, client.orderId, client.code, sanitizeData(pagesRef.current), serializeElements(elementsRef.current));
+        return true;
+      } catch (e) {
+        console.warn('Could not save the customer page:', e);
+        window.alert(accessErrorText(e));
+        return false;
+      } finally {
+        setIsSavingCloud(false);
+      }
+    }
+    const slot = activeSlotRef.current;
+    const meta = draftsRef.current.find((d) => d.slot === slot);
+    const kind = activeKindRef.current;
+    const name = meta?.name || draftName(slot, kind);
+    setIsSavingCloud(true);
+    try {
+      await saveDraft(user.uid, slot, { name, kind, pages: sanitizeData(pagesRef.current), elements: serializeElements(elementsRef.current) });
+      return true;
+    } catch (e) {
+      console.warn('Could not save the draft:', e);
+      return false;
+    } finally {
+      setIsSavingCloud(false);
+    }
+  };
+
+  // Puts a draft (or a blank one) in the editor.
+  const openDraft = async (uid: string, slot: string) => {
+    draftReadyRef.current = false;
+    clientSessionRef.current = null;
+    setClientSession(null);
+    galleryEditRef.current = null;
+    setGalleryEdit(null);
+    let loaded: Awaited<ReturnType<typeof readDraft>> = null;
+    try {
+      loaded = await readDraft(uid, slot);
+    } catch (e) {
+      console.warn('Could not read the draft:', e);
+    }
+    const kind: DesignKind = loaded?.kind || draftsRef.current.find((d) => d.slot === slot)?.kind || 'slide';
+    const draftPages: Page[] = loaded && loaded.pages.length > 0 ? normalizeLegacyNavbarDefaults(loaded.pages) : blankDraftPages(kind);
+    const draftElements = loaded ? deserializeElements(loaded.elements) : [];
+    loadSeqRef.current++;
+    setPages(draftPages);
+    setElements(draftElements);
+    setHistory([draftElements]);
+    setHistoryIndex(0);
+    setActivePageId(draftPages[0].id);
+    setActiveSlideId(draftPages[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    activeSlotRef.current = slot;
+    activeKindRef.current = kind;
+    setActiveSlot(slot);
+    try {
+      localStorage.setItem(`weelink_last_draft_${uid}`, slot);
+    } catch {
+      // storage unavailable: the first draft opens next time
+    }
+    draftReadyRef.current = true;
+  };
+
+  // The hired designer opens the customer's page with the code the customer gave (designer mode only).
+  const openClientSession = async (orderId: string, code: string): Promise<{ ok: boolean; message: string }> => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || draftBusy || !designerModeRef.current) return { ok: false, message: 'افتح وضع المصمم أولاً.' };
+    setDraftBusy(true);
+    try {
+      const loaded = await openClientPage(user, orderId, code);
+      await saveActiveDraft();
+      const pagesIn: Page[] = loaded.pages.length > 0 ? normalizeLegacyNavbarDefaults(loaded.pages) : blankDraftPages('page');
+      const elementsIn = deserializeElements(loaded.elements);
+      draftReadyRef.current = false;
+      loadSeqRef.current++;
+      setPages(pagesIn);
+      setElements(elementsIn);
+      setHistory([elementsIn]);
+      setHistoryIndex(0);
+      setActivePageId(pagesIn[0].id);
+      setActiveSlideId(pagesIn[0].slides[0]?.id || 'slide-1');
+      setSelectedElementId(null);
+      const session = { orderId, code, expiresAt: loaded.expiresAt };
+      clientSessionRef.current = session;
+      setClientSession(session);
+      activeSlotRef.current = `client-${orderId}`;
+      activeKindRef.current = 'page';
+      setActiveSlot(`client-${orderId}`);
+      draftReadyRef.current = true;
+      return { ok: true, message: '' };
+    } catch (e) {
+      return { ok: false, message: accessErrorText(e) };
+    } finally {
+      setDraftBusy(false);
+    }
+  };
+
+  // ---------- Editing a design of the gallery ----------
+  const confirmLeaveGalleryEdit = () => !galleryEditRef.current || JSON.stringify({ pages, elements }) === galleryBaselineRef.current || window.confirm('عندك تعديلات لم تُحفظ على هذا التصميم. تتركها؟');
+
+  const loadGalleryDesign = (d: EditableDesign, as: 'admin' | 'designer', pendingEdit: boolean, token?: string) => {
+    const base = blankDraftPages(d.kind)[0];
+    const pageIn: Page = d.kind === 'page'
+      ? { ...base, navbar: d.page?.navbar || base.navbar, slides: d.page?.slides?.length ? d.page.slides : base.slides }
+      : { ...base, slides: [d.slide] };
+    const pagesIn: Page[] = normalizeLegacyNavbarDefaults([pageIn]);
+    const elementsIn = deserializeElements(d.elements);
+    draftReadyRef.current = false;
+    loadSeqRef.current++;
+    setPages(pagesIn);
+    setElements(elementsIn);
+    setHistory([elementsIn]);
+    setHistoryIndex(0);
+    setActivePageId(pagesIn[0].id);
+    setActiveSlideId(pagesIn[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    galleryBaselineRef.current = JSON.stringify({ pages: pagesIn, elements: elementsIn });
+    galleryEditRef.current = { id: d.id, as, kind: d.kind, token };
+    setGalleryEdit({ id: d.id, as, name: d.name, kind: d.kind, status: d.status, pendingEdit });
+    setGallerySavedNote('');
+    activeSlotRef.current = `gallery-${d.id}`;
+    activeKindRef.current = d.kind;
+    setActiveSlot(`gallery-${d.id}`);
+    draftReadyRef.current = true;
+  };
+
+  // What is saved: the page's navbar and slides (a slide design: the open slide) with their elements.
+  const galleryPayload = () => {
+    const kind = galleryEditRef.current?.kind || 'slide';
+    const slides = kind === 'page' ? pages.flatMap((p) => p.slides) : [currentSlide];
+    const ids = new Set(slides.map((sl) => sl.id));
+    const problem = kind !== 'page' ? '' : pages.length !== 1 ? 'تصميم الصفحة هو صفحة واحدة (حتى ثلاث شرائح). احذف الصفحات الزائدة من قائمة الصفحات.' : slides.length > PAGE_MAX_SLIDES ? `الصفحة حتى ${PAGE_MAX_SLIDES} شرائح، وعندك ${slides.length}.` : '';
+    return { problem, page: sanitizeData(kind === 'page' ? { navbar: pages[0].navbar, slides } : { slides }), elements: serializeElements(elements.filter((e) => ids.has(e.slideId))) };
+  };
+
+  const saveGalleryEdit = async (): Promise<boolean> => {
+    const session = galleryEditRef.current;
+    if (!session || gallerySaving) return false;
+    const payload = galleryPayload();
+    if (payload.problem) {
+      window.alert(payload.problem);
+      return false;
+    }
+    setGallerySaving(true);
+    setGallerySavedNote('');
+    try {
+      if (session.as === 'admin') await adminEditSave(session.token || '', session.id, payload);
+      else {
+        const user = auth.currentUser;
+        if (!user) throw new Error('unauthorized');
+        const r = await designerEditSave(user, session.id, payload);
+        setGallerySavedNote(r.mode === 'review' ? 'أُرسل للمراجعة' : 'حُفظ وعاد للمراجعة');
+      }
+      if (session.as === 'admin') setGallerySavedNote('حُفظ');
+      galleryBaselineRef.current = JSON.stringify({ pages, elements });
+      return true;
+    } catch (e) {
+      window.alert(editErrorText(e));
+      return false;
+    } finally {
+      setGallerySaving(false);
+    }
+  };
+
+  const leaveGalleryEdit = async () => {
+    const session = galleryEditRef.current;
+    if (!session || !confirmLeaveGalleryEdit()) return;
+    if (session.as === 'admin') {
+      galleryEditRef.current = null;
+      window.close();
+      window.location.href = '/?admin';
+      return;
+    }
+    const user = auth.currentUser;
+    if (user && draftsRef.current[0]) {
+      setDraftBusy(true);
+      await openDraft(user.uid, draftsRef.current[0].slot);
+      setDraftBusy(false);
+    }
+  };
+
+  // The admin's editor tab (opened by «تعديل في لوحة المصمم» in the admin site) starts here, once the sign-in check is done.
+  const adminEditStarted = useRef(false);
+  useEffect(() => {
+    if (isFirebaseLoading || adminEditStarted.current || !new URLSearchParams(window.location.search).has('edit-gallery')) return;
+    adminEditStarted.current = true;
+    const handoff = takeAdminHandoff();
+    if (!handoff) {
+      window.alert('انتهت مهلة فتح التعديل. افتح الإدارة واضغط «تعديل في لوحة المصمم» من جديد.');
+      return;
+    }
+    (async () => {
+      try {
+        designerModeRef.current = true;
+        const r = await adminEditOpen(handoff.token, handoff.id);
+        setProject('page');
+        loadGalleryDesign(r.design, 'admin', false, handoff.token);
+        setIsHomeActive(false);
+        setIsStartActive(false);
+        setIsAuthActive(false);
+        setIsProjectChosen(true);
+        setDesignerMode(true);
+        setIsPreviewActive(false);
+      } catch (e) {
+        designerModeRef.current = false;
+        window.alert(editErrorText(e));
+      }
+    })();
+  }, [isFirebaseLoading]);
+
+  // «تعديل» on a design of the designer's own in the gallery: the editor opens on it in the designer's mode.
+  const editMyDesign = async (slide: { id: string }) => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || !isDesigner) return;
+    try {
+      const r = await designerEditOpen(user, slide.id);
+      setIsAuthActive(false);
+      await handleChooseProject('page');
+      setIsStartActive(false);
+      await enterDesignerMode();
+      if (!designerModeRef.current) return;
+      loadGalleryDesign(r.design, 'designer', r.pendingEdit);
+    } catch (e) {
+      window.alert(editErrorText(e));
+    }
+  };
+
+  const enterDesignerMode = async () => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || draftBusy || designerModeRef.current) return;
+    setDraftBusy(true);
+    try {
+      await flushProjectSave(); // the designer's own page first
+      prevProjectRef.current = project;
+      let list = await listDrafts(user.uid);
+      if (!list.length) {
+        await saveDraft(user.uid, 'd1', { name: draftName('d1'), kind: 'slide', pages: sanitizeData(blankDraftPages()), elements: [] });
+        list = [{ slot: 'd1', name: draftName('d1'), kind: 'slide', updatedAt: Date.now() }];
+      }
+      let last = '';
+      try {
+        last = localStorage.getItem(`weelink_last_draft_${user.uid}`) || '';
+      } catch {
+        last = '';
+      }
+      designerModeRef.current = true;
+      setProject('page');
+      setDraftList(list);
+      await openDraft(user.uid, list.find((d) => d.slot === last)?.slot || list[0].slot);
+      setDesignerMode(true);
+      setIsPreviewActive(false);
+      setIsChatActive(false);
+      setIsPageAdminOpen(false);
+    } catch (e) {
+      console.warn('Could not open the designer mode:', e);
+      designerModeRef.current = false;
+      draftReadyRef.current = false;
+      window.alert('تعذّر فتح وضع المصمم. تأكد من اتصالك وجرّب مرة ثانية.');
+    } finally {
+      setDraftBusy(false);
+    }
+  };
+
+  const exitDesignerMode = async () => {
+    if (draftBusy || !designerModeRef.current || !confirmLeaveGalleryEdit()) return;
+    setDraftBusy(true);
+    await saveActiveDraft();
+    draftReadyRef.current = false;
+    setIsExportOpen(false);
+    const uid = activeUserUid;
+    const kind = prevProjectRef.current;
+    try {
+      // The page the designer left comes back from the cloud, as it was saved.
+      if (kind === 'shop') await loadShopWorkspace(uid);
+      else if (kind === 'cars') await loadCarsWorkspace(uid);
+      else if (kind === 'restaurant') await loadRestaurantWorkspace(uid);
+      else await loadUserWorkspace(uid);
+    } catch (e) {
+      console.warn('Could not bring the page back:', e);
+    }
+    designerModeRef.current = false;
+    setDesignerMode(false);
+    setDraftBusy(false);
+  };
+
+  const switchDraft = async (slot: string) => {
+    const user = auth.currentUser;
+    if (!user || draftBusy || slot === activeSlotRef.current || !confirmLeaveGalleryEdit()) return;
+    setDraftBusy(true);
+    await saveActiveDraft();
+    await openDraft(user.uid, slot);
+    setDraftBusy(false);
+  };
+
+  const newDraft = async (kind: DesignKind) => {
+    const user = auth.currentUser;
+    const slot = freeSlot(draftsRef.current);
+    if (!user || draftBusy || !slot || !confirmLeaveGalleryEdit()) return;
+    setDraftBusy(true);
+    await saveActiveDraft();
+    try {
+      await saveDraft(user.uid, slot, { name: draftName(slot, kind), kind, pages: sanitizeData(blankDraftPages(kind)), elements: [] });
+      setDraftList([...draftsRef.current, { slot, name: draftName(slot, kind), kind, updatedAt: Date.now() }].sort((a, b) => DRAFT_SLOTS.indexOf(a.slot) - DRAFT_SLOTS.indexOf(b.slot)));
+      await openDraft(user.uid, slot);
+    } catch (e) {
+      console.warn('Could not make a new draft:', e);
+      window.alert('تعذّر إنشاء مسودة جديدة. جرّب مرة ثانية.');
+    }
+    setDraftBusy(false);
+  };
+
+  const removeDraft = async (slot: string) => {
+    const user = auth.currentUser;
+    if (!user || draftBusy || draftsRef.current.length <= 1) return;
+    const name = draftsRef.current.find((d) => d.slot === slot)?.name || draftName(slot, draftsRef.current.find((d) => d.slot === slot)?.kind);
+    if (!window.confirm(`حذف «${name}» نهائياً؟ ما بتقدر ترجعها.`)) return;
+    setDraftBusy(true);
+    try {
+      await deleteDraft(user.uid, slot);
+      const rest = draftsRef.current.filter((d) => d.slot !== slot);
+      setDraftList(rest);
+      if (slot === activeSlotRef.current) await openDraft(user.uid, rest[0].slot);
+    } catch (e) {
+      console.warn('Could not delete the draft:', e);
+      window.alert('تعذّر حذف المسودة. جرّب مرة ثانية.');
+    }
+    setDraftBusy(false);
+  };
+
   const handleChooseProject = async (type: ProjectType, targetUserId: string = activeUserUid) => {
     if (projectLoading) return;
+    // Leaving «وضع المصمم» (the editor holds a draft, not the page): the draft is saved, and the
+    // project asked for is then loaded from the cloud like any other switch.
+    const fromDesignerMode = designerModeRef.current;
+    if (fromDesignerMode) {
+      if (draftBusy) return;
+      await exitDesignerMode();
+    }
     setProjectLoading(type);
     try {
-      if (type !== project || targetUserId !== activeUserUid) {
+      if (fromDesignerMode || type !== project || targetUserId !== activeUserUid) {
         flushProjectSave();
         if (type === 'shop') await loadShopWorkspace(targetUserId);
         else if (type === 'cars') await loadCarsWorkspace(targetUserId);
@@ -1032,6 +1428,8 @@ export default function App() {
     else if (kinds.length === 1 && !owned.page) target = kinds[0];
     else if (kinds.length === 0 && owned.page) target = 'page';
     setIsHomeActive(false);
+    setIsStartActive(false);
+    setIsLawActive(false);
     setIsAuthActive(false);
     setIsProjectChosen(false);
     // The owner sees their page as visitors do, with «الإدارة» in its navbar (Eyad, 13 Oct); the
@@ -1101,8 +1499,10 @@ export default function App() {
     }
   };
 
-  const handleAuthSuccess = (userUid: string, isNewUser: boolean) => {
+  const handleAuthSuccess = (userUid: string, isNewUser: boolean, asDesigner = false) => {
     handledAuthUid.current = auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser.uid : null;
+    resetAccountMemory();
+    setAuthMode('login');
     setActiveUserUid(userUid);
     const inviteProblem = takeInviteProblem();
     if (inviteProblem) window.setTimeout(() => window.alert(inviteProblem), 300);
@@ -1152,8 +1552,9 @@ export default function App() {
       setHistoryIndex(0);
       setIsChatActive(false);
       // A new account answers Wee AI's questions on the start page, then the editor builds its page.
+      // A designer answers the same questions as everyone (for the free page), then lands on an empty slide.
       if (!pendingBuildRef.current) {
-        setStartKind(null);
+        setStartKind(asDesigner ? 'page' : null);
         setIsHomeActive(false);
         setIsStartActive(true);
       }
@@ -1189,14 +1590,25 @@ export default function App() {
       }
     } else {
       // Existing user: fetch their page, then open it when they came for their account.
-      loadUserWorkspace(userUid).then(() => {
+      loadUserWorkspace(userUid).then(async () => {
+        isInitialLoadComplete.current = true;
         if (pendingBuildRef.current) openGuestBuild(userUid);
         else if (afterSignInRef.current === 'account') openMyPage(userUid);
+        // A returning designer comes back to their page, in the editor.
+        else if (auth.currentUser && (await readDesigner(auth.currentUser.uid))) {
+          setIsHomeActive(false);
+          setIsStartActive(false);
+          handleChooseProject('page', userUid);
+        }
       });
     }
     if (isNewUser && pendingBuildRef.current) openGuestBuild(userUid);
+    if (asDesigner) {
+      setIsDesigner(true);
+      if (auth.currentUser) readDesigner(auth.currentUser.uid).then((d) => setDesignerName(d?.name || ''));
+    }
     setIsSavingCloud(false);
-    isInitialLoadComplete.current = true;
+    if (isNewUser) isInitialLoadComplete.current = true;
     setIsAuthActive(false); // Hide login screen, go straight to builder/chat!
     // A phone sees its page first; the panel waits behind the bar at the bottom.
     setIsRightDrawerOpen(window.innerWidth >= 1024);
@@ -1225,6 +1637,72 @@ export default function App() {
     setIsStartActive(false);
   };
 
+  // «انضم لمصممينا» on the start page: a visitor goes to the designers' sign-up; a signed-in owner
+  // becomes a designer (their name for the gallery asked once) and lands on their page in the editor.
+  const joinDesigners = async () => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) {
+      afterSignInRef.current = 'build';
+      pendingBuildRef.current = null;
+      setAuthMode('designer');
+      setIsStartActive(false);
+      setIsAuthActive(true);
+      return;
+    }
+    try {
+      const have = await readDesigner(user.uid);
+      if (have) setDesignerName(have.name);
+      else {
+        const name = (window.prompt('اسمك كما سيظهر للزبائن في معرض المصممين:') || '').trim();
+        if (name.length < 2) return;
+        setDesignerName((await becomeDesigner(user.uid, name)).name);
+      }
+    } catch (err) {
+      console.warn('Could not make the designer profile:', err);
+      window.alert('تعذّر إنشاء حساب المصمم. حاول مرة ثانية بعد قليل.');
+      return;
+    }
+    setIsDesigner(true);
+    // Questions first, like any new page of the free kind (name, address, city, work); an owner who
+    // already has a page goes straight to it.
+    if (ownedRef.current.page) {
+      setIsStartActive(false);
+      await handleChooseProject('page', activeUserUid);
+    } else {
+      setStartKind('page');
+      setIsStartActive(true);
+    }
+  };
+
+  // «أضف لصفحتي مجاناً» on a gallery design: the signed-in owner's page opens, and the design (its
+  // slides, or the slides of a page, without the navbar) is added at the end of the page's first page,
+  // fitted to the page's style unless the visitor asked for it as it is. A page that is still one empty
+  // slide gives that slide up to it. The editor's own autosave and undo take it from there.
+  const addGalleryDesign = async (g: GallerySlide, fit: boolean): Promise<{ ok: boolean; message: string }> => {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) return { ok: false, message: 'سجّل دخولك لتضيف التصميم لصفحتك.' };
+    try {
+      await handleChooseProject('page', activeUserUid);
+      setIsStartActive(false);
+      // Wait for the loaded page to reach the refs the editor keeps of it.
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+      const design = g.kind === 'page' && g.page?.slides?.length ? { slides: g.page.slides, elements: g.elements } : { slides: [g.slide], elements: g.elements };
+      const result = insertDesign(pagesRef.current, elementsRef.current, design, { fit });
+      if (!result) return { ok: false, message: 'ما قدرت أضيف التصميم. جرّب مرة ثانية.' };
+      setPages(result.pages);
+      pushToHistoryRef.current(result.elements);
+      setActivePageId(result.pages[0].id);
+      setActiveSlideId(result.firstSlideId);
+      setSelectedElementId(null);
+      const word = result.added === 1 ? 'شريحة' : `${result.added} شرائح`;
+      setBuildNotice({ busy: false, ok: true, message: `أُضيفت ${word} من «${g.name}» لصفحتك${fit ? ' بألوان وخطوط ستايلها' : ''}. إذا ما عجبتك اكبس تراجع (${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}+Z).` });
+      return { ok: true, message: 'أُضيفت لصفحتك.' };
+    } catch (err) {
+      console.warn('Could not add the gallery design to the page:', err);
+      return { ok: false, message: 'تعذّرت الإضافة. جرّب مرة ثانية.' };
+    }
+  };
+
   // «عدّل إجاباتي»: back to the questions of the open kind.
   const openQuestions = () => {
     flushProjectSave();
@@ -1249,7 +1727,7 @@ export default function App() {
 
   // The cloud in the top bar: saves the open project to the cloud now (it also saves itself a
   // moment after every change). Resolves once Firebase has it, or false when it could not.
-  const handleManualSave = () => flushProjectSave();
+  const handleManualSave = () => (galleryEditRef.current ? saveGalleryEdit() : flushProjectSave());
 
   const handleStepChange = (_stepNum: number) => {
     setIsCanvasLoading(true);
@@ -1261,32 +1739,24 @@ export default function App() {
   const handleLogout = async () => {
     if (confirm('هل أنت متأكد من رغبتك في تسجيل الخروج من الحساب السحابي؟')) {
       try {
+        if (designerModeRef.current) await saveActiveDraft();
         await logoutUser();
         // Critical: clear the in-memory design when logging out. Without this,
         // the previous account's pages/elements stay in React state, and if a
         // DIFFERENT person then signs up as a new user on this same browser
         // without a page refresh, handleAuthSuccess's "preserve current design
         // for the new user" logic would hand them the previous user's page.
-        setPages([initialPage]);
-        setElements([]);
-        setSelectedElementId(null);
-        setActivePageId('page-home');
-        setActiveSlideId('slide-1');
-        setHistory([[]]);
-        setHistoryIndex(0);
+        resetAccountMemory();
+        designerModeRef.current = false;
+        draftReadyRef.current = false;
+        setDesignerMode(false);
+        setIsDesigner(false);
+        setIsExportOpen(false);
+        setIsOrdersOpen(false);
         setActiveUserUid('mouhamadeiah');
-        loadSeqRef.current++;
-        projectReadyRef.current = false;
-        setProject('page');
         setIsProjectChosen(false);
-        setHasShop(false);
-        setShopAdmin(createEmptyShopAdmin());
-        setHasCars(false);
-        setCarAdmin(createEmptyCarAdmin());
-        setHasRestaurant(false);
-        setRestaurantAdmin(createEmptyRestaurantAdmin());
-        ownedRef.current = { page: false, shop: false, cars: false, restaurant: false };
         setIsAuthActive(true);
+        setIsLawActive(false);
         setIsHomeActive(true);
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
@@ -1319,7 +1789,9 @@ export default function App() {
   // undo takes back. The answer can take a while, so it is applied to the elements as they are then.
   const pushToHistoryRef = useRef(pushToHistory);
   pushToHistoryRef.current = pushToHistory;
+  const DESIGNER_AI_NOTE = 'Wee AI في وضع المصمم يحتاج رصيد توكنز، وشراء التوكنز غير متاح حالياً. التصميم اليدوي مفتوح.';
   const handleWriteTexts = async (answers: WeeAnswers) => {
+    if (designerModeRef.current) return { ok: false, message: DESIGNER_AI_NOTE };
     const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
     const items = pageTextItems(elementsRef.current, page.slides);
     if (!items.length) return { ok: false, message: 'ما في نصوص بهالصفحة ليكتبها Wee AI. أضف عنوان أو فقرة أولاً.' };
@@ -1335,8 +1807,9 @@ export default function App() {
   // palette, texts, photos and links) and replaces the page's slides; a store's other pages take
   // the new colours and fonts. Undo works on elements only, so the page as it was is kept here
   // and «رجّع صفحتي متل ما كانت» brings it back.
-  const builtBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; activePageId: string } | null>(null);
+  const builtBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; activePageId: string; uid: string; project: ProjectType } | null>(null);
   const handleBuildPage = async (given: WeeAnswers, auto = false) => {
+    if (designerModeRef.current) return { ok: false, message: DESIGNER_AI_NOTE };
     const kind = KIND_OF_PROJECT[project];
     const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
     const siteName = page.navbar.brandName || PROJECT_KIND_LABEL[project];
@@ -1352,7 +1825,7 @@ export default function App() {
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
     const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId });
     if (!built.ok) return { ok: false, message: built.message };
-    builtBackupRef.current = before;
+    builtBackupRef.current = { ...before, uid: activeUserUid, project };
     setHasBuildBackup(true);
     setPages(built.pages);
     setElements(built.elements);
@@ -1365,10 +1838,10 @@ export default function App() {
   };
   // «ستايل الصفحة»: a look restyles every page of the site at once. Undo works on elements only,
   // so the site as it was before the last pick is kept for «رجّع الستايل اللي قبل».
-  const lookBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[] } | null>(null);
+  const lookBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; uid: string; project: ProjectType } | null>(null);
   const [hasLookBackup, setHasLookBackup] = useState(false);
   const handleApplyPageLook = (look: PageLook) => {
-    lookBackupRef.current = { pages: pagesRef.current, elements: elementsRef.current };
+    lookBackupRef.current = { pages: pagesRef.current, elements: elementsRef.current, uid: activeUserUid, project };
     setHasLookBackup(true);
     const next = applyPageLook(pagesRef.current, elementsRef.current, look, KIND_OF_PROJECT[project]);
     setPages(next.pages);
@@ -1376,16 +1849,46 @@ export default function App() {
   };
   const handleUndoPageLook = () => {
     const backup = lookBackupRef.current;
-    if (!backup) return;
+    if (!backup || backup.uid !== activeUserUid || backup.project !== project) return;
     lookBackupRef.current = null;
     setHasLookBackup(false);
     setPages(backup.pages);
     pushToHistory(backup.elements);
   };
 
+  // Everything the editor holds in memory belongs to one account. When the account changes (sign-in, sign-out) all of it goes, so
+  // nothing of the previous account is shown to, undone into, or saved under the next one (the saving effects wait for the next
+  // account's workspace: projectReadyRef).
+  const resetAccountMemory = () => {
+    loadSeqRef.current++;
+    projectReadyRef.current = false;
+    builtBackupRef.current = null;
+    setHasBuildBackup(false);
+    lookBackupRef.current = null;
+    setHasLookBackup(false);
+    afterQuestionsRef.current = null;
+    setBuildNotice(null);
+    setPages([initialPage]);
+    setElements([]);
+    setHistory([[]]);
+    setHistoryIndex(0);
+    setSelectedElementId(null);
+    setActivePageId('page-home');
+    setActiveSlideId('slide-1');
+    setProject('page');
+    setHasShop(false);
+    setShopAdmin(createEmptyShopAdmin());
+    setHasCars(false);
+    setCarAdmin(createEmptyCarAdmin());
+    setHasRestaurant(false);
+    setRestaurantAdmin(createEmptyRestaurantAdmin());
+    ownedRef.current = { page: false, shop: false, cars: false, restaurant: false };
+  };
+
   const handleRestoreBuiltPage = () => {
     const backup = builtBackupRef.current;
-    if (!backup) return { ok: false, message: 'ما في صفحة قديمة محفوظة.' };
+    // A copy kept for another account (or another project) is never put into this one.
+    if (!backup || backup.uid !== activeUserUid || backup.project !== project) return { ok: false, message: 'ما في صفحة قديمة محفوظة.' };
     builtBackupRef.current = null;
     setHasBuildBackup(false);
     setPages(backup.pages);
@@ -3137,66 +3640,87 @@ export default function App() {
     setActiveSlideId(duplicatedSlides[0].id);
   };
 
-  // Applies a ready-made multi-page site template (pages linked through one shared navbar).
-  // This REPLACES the whole site (all current pages/elements) rather than appending, since it
-  // is a full starter-site action. Template ids get a unique suffix, and every page/slide
-  // reference (navbar items, navbar CTA, element links) is remapped to the new ids.
-  const applySiteTemplate = (
-    template: { pages: Page[]; elements: CanvasElement[] },
-    confirmMessage: string
-  ) => {
-    if (!window.confirm(confirmMessage)) return;
-
-    const { pages: templatePages, elements: templateElements } = template;
-    const suffix = Date.now();
-
-    const idMap: Record<string, string> = {};
-    templatePages.forEach((p) => { idMap[p.id] = `${p.id}-${suffix}`; });
-    templatePages.forEach((p) => {
-      p.slides.forEach((s) => { idMap[s.id] = `${s.id}-${suffix}`; });
-    });
-
-    const newPages: Page[] = templatePages.map((p) => ({
-      ...p,
-      id: idMap[p.id],
-      slides: p.slides.map((s) => ({ ...s, id: idMap[s.id] })),
-      navbar: {
-        ...p.navbar,
-        items: p.navbar.items.map((item) => ({
-          ...item,
-          linkTargetId: item.linkTargetId ? (idMap[item.linkTargetId] || item.linkTargetId) : item.linkTargetId,
-        })),
-        ctaLinkTargetId: p.navbar.ctaLinkTargetId ? (idMap[p.navbar.ctaLinkTargetId] || p.navbar.ctaLinkTargetId) : p.navbar.ctaLinkTargetId,
+  // «من معرض التصاميم» in the add panel: a slide goes to the end of the open page.
+  const handleAddGallerySlide = (g: GallerySlide, fit: boolean) => {
+    const result = insertDesign(pagesRef.current, elementsRef.current, { slides: [g.slide], elements: g.elements }, { pageId: activePageId, fit });
+    if (!result) {
+      setBuildNotice({ busy: false, ok: false, message: 'ما قدرت أضيف الشريحة. جرّب مرة ثانية.' });
+      return;
+    }
+    const before = { pages: pagesRef.current, elements: elementsRef.current, pageId: activePageId, slideId: activeSlideId };
+    setPages(result.pages);
+    pushToHistoryRef.current(result.elements);
+    setActiveSlideId(result.firstSlideId);
+    setSelectedElementId(null);
+    const user = auth.currentUser;
+    if (user && !user.isAnonymous) recordUse(user, g.id).catch(() => {});
+    setBuildNotice({
+      busy: false,
+      ok: true,
+      message: `أُضيفت «${g.name}" لصفحتك${fit ? ' بألوان وخطوط ستايلها' : ''}.`.replace('"', '»'),
+      undo: () => {
+        setPages(before.pages);
+        pushToHistoryRef.current(before.elements);
+        setActivePageId(before.pageId);
+        setActiveSlideId(before.slideId);
+        setBuildNotice(null);
       },
-    }));
-
-    const newElements: CanvasElement[] = templateElements.map((el) => {
-      const linkTargetId = el.linkTargetId ? (idMap[el.linkTargetId] || el.linkTargetId) : el.linkTargetId;
-      const isInternalLink = el.linkType === 'page' || el.linkType === 'slide';
-      return {
-        ...el,
-        id: `${el.id}-${suffix}`,
-        slideId: idMap[el.slideId] || el.slideId,
-        linkTargetId,
-        linkUrl: isInternalLink && linkTargetId ? `#${el.linkType}-${linkTargetId}` : el.linkUrl,
-      };
     });
-
-    setPages(newPages);
-    setElements(newElements);
-    setActivePageId(newPages[0].id);
-    setActiveSlideId(newPages[0].slides[0].id);
   };
 
-  const handleApplyFreeStarterTemplate = () => applySiteTemplate(
-    getFreeStarterTemplate(),
-    'سيتم استبدال كل صفحات موقعك الحالية بقالب جاهز من خمس صفحات (مدخل، من نحن، أعمالنا، الأسعار، اتصال). هل تريد المتابعة؟'
-  );
-
-  const handleApplyOnlineShopTemplate = () => applySiteTemplate(
-    getOnlineShopTemplate(),
-    'سيتم استبدال كل صفحات موقعك الحالية بقالب متجر إلكتروني من خمس صفحات (الرئيسية، المنتجات، السلة، طريقة الطلب، تواصل معنا). هل تريد المتابعة؟'
-  );
+  // A gallery design (a navbar and slides) becomes a new page of the project, with the name the person gave it: the navbar lists
+  // pages by name by itself, so the name appears there and its link opens the page. «شريط التصميم» gives the whole project the
+  // design's navbar look, keeping the project's own name, logo, links and button.
+  const handleAddGalleryPage = (g: GallerySlide, o: { name: string; fit: boolean; navbar: 'mine' | 'design' }) => {
+    if (!g.page?.slides?.length) return;
+    const before = { pages: pagesRef.current, elements: elementsRef.current, pageId: activePageId, slideId: activeSlideId };
+    const base = before.pages.find((p) => p.id === activePageId) || before.pages[0];
+    const stamp = Date.now();
+    const name = (o.name.trim() || g.name).slice(0, 30);
+    const newPage: Page = {
+      ...base,
+      id: `page-${stamp}`,
+      name,
+      slug: `/${name.toLowerCase().replace(/\s+/g, '-')}-${stamp.toString(36)}`,
+      slides: [{ id: `slide-${stamp}`, name: 'شريحة ١', height: 540, backgroundColor: '#ffffff' }],
+    };
+    const result = insertDesign([...before.pages, newPage], before.elements, { slides: g.page.slides, elements: g.elements }, { pageId: newPage.id, fit: o.fit });
+    if (!result) {
+      setBuildNotice({ busy: false, ok: false, message: 'ما قدرت أضيف الصفحة. جرّب مرة ثانية.' });
+      return;
+    }
+    const dn = g.page.navbar;
+    const pagesNext = o.navbar === 'design' && dn
+      ? result.pages.map((p) => ({
+          ...p,
+          navbar: {
+            ...dn,
+            brandName: p.navbar.brandName, brandSubtext: p.navbar.brandSubtext, showBrandName: p.navbar.showBrandName, logoUrl: p.navbar.logoUrl,
+            items: p.navbar.items, ctaText: p.navbar.ctaText, ctaHref: p.navbar.ctaHref, ctaLinkType: p.navbar.ctaLinkType, ctaLinkTargetId: p.navbar.ctaLinkTargetId,
+            partIcons: p.navbar.partIcons,
+          },
+        }))
+      : result.pages;
+    setPages(pagesNext);
+    pushToHistoryRef.current(result.elements);
+    setActivePageId(newPage.id);
+    setActiveSlideId(result.firstSlideId);
+    setSelectedElementId(null);
+    const user = auth.currentUser;
+    if (user && !user.isAnonymous) recordUse(user, g.id).catch(() => {});
+    setBuildNotice({
+      busy: false,
+      ok: true,
+      message: `أُضيفت صفحة «${name}» إلى مشروعك، واسمها في الشريط.`,
+      undo: () => {
+        setPages(before.pages);
+        pushToHistoryRef.current(before.elements);
+        setActivePageId(before.pageId);
+        setActiveSlideId(before.slideId);
+        setBuildNotice(null);
+      },
+    });
+  };
 
   const handleUpdatePage = (updates: Partial<Page>) => {
     setPages(pages.map(p => p.id === currentPage.id ? { ...p, ...updates } : p));
@@ -3375,7 +3899,7 @@ export default function App() {
   // The browser's back button walks back through Weelink's screens (home, the start page and its
   // questions, sign-in, the editor) instead of leaving the site: each screen is an
   // entry in the browser's history.
-  const screen = isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'start' : 'editor';
+  const screen = isLawActive ? 'law' : isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'start' : 'editor';
   const screenRef = useRef(screen);
   screenRef.current = screen;
   // Customers' page fonts load once the editor opens (Weelink's own screens don't use them).
@@ -3389,6 +3913,7 @@ export default function App() {
     const asked = target === 'chooser' ? 'start' : target; // the old projects page's entries
     const to = !signedIn && asked === 'editor' ? 'home' : signedIn && asked === 'auth' ? 'home' : asked;
     if (screenRef.current === 'editor' && to !== 'editor') flushProjectSave();
+    setIsLawActive(to === 'law');
     setIsHomeActive(to === 'home');
     setIsStartActive(to === 'start');
     if (to === 'start') setStartKind(kind || null);
@@ -3425,11 +3950,40 @@ export default function App() {
     );
   }
 
+  if (isLawActive) {
+    return (
+      <LawPage
+        user={currentUser}
+        onHome={() => {
+          setIsLawActive(false);
+          setIsStartActive(false);
+          setIsHomeActive(true);
+        }}
+        onStart={() => {
+          setIsLawActive(false);
+          setStartKind(null);
+          setIsStartActive(true);
+        }}
+        onOpenMyPage={() => openMyPage(activeUserUid)}
+        onLaw={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onAccount={() => {
+          setAuthMode('login');
+          afterSignInRef.current = 'account';
+          pendingBuildRef.current = null;
+          setIsLawActive(false);
+          setIsAuthActive(true);
+        }}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   if (isHomeActive) {
     return (
       <HomePage
         user={currentUser}
         onAccount={() => {
+          setAuthMode('login');
           afterSignInRef.current = 'account';
           pendingBuildRef.current = null;
           setIsHomeActive(false);
@@ -3442,6 +3996,10 @@ export default function App() {
           setIsStartActive(true);
         }}
         onOpenMyPage={() => openMyPage(activeUserUid)}
+        onLaw={() => {
+          setIsHomeActive(false);
+          setIsLawActive(true);
+        }}
         onLogout={handleLogout}
       />
     );
@@ -3462,6 +4020,19 @@ export default function App() {
           setStartKind(null);
           setIsHomeActive(true);
         }}
+        onOpenMyPage={() => openMyPage(activeUserUid)}
+        onLaw={() => {
+          setIsStartActive(false);
+          setIsLawActive(true);
+        }}
+        onAccount={() => {
+          setAuthMode('login');
+          afterSignInRef.current = 'account';
+          pendingBuildRef.current = null;
+          setIsStartActive(false);
+          setIsAuthActive(true);
+        }}
+        onLogout={handleLogout}
         onBuild={openAfterQuestions}
         owned={(Object.keys(ownedRef.current) as ProjectType[]).filter((k) => ownedRef.current[k])}
         onOpen={async (kind) => {
@@ -3469,6 +4040,9 @@ export default function App() {
           await handleChooseProject(kind);
           setIsStartActive(false);
         }}
+        onDesigner={joinDesigners}
+        onAddDesign={addGalleryDesign}
+        onEditDesign={isDesigner ? editMyDesign : undefined}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
           pendingBuildRef.current = kind;
@@ -3483,12 +4057,14 @@ export default function App() {
     return (
       <>
         <StandardAuth
+          key={authMode}
+          initialMode={authMode}
           onLoginWithGoogle={handleLogin}
           onAuthSuccess={handleAuthSuccess}
         />
         <button
           type="button"
-          onClick={() => setIsHomeActive(true)}
+          onClick={() => { setIsLawActive(false); setIsHomeActive(true); }}
           className="fixed top-3 right-3 z-[60] bg-surface border border-line rounded-full px-3.5 py-1.5 text-xs font-bold text-muted hover:text-ink"
           dir="rtl"
         >
@@ -3529,6 +4105,7 @@ export default function App() {
         <div dir="rtl" role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[99999] max-w-[92vw] w-[26rem] bg-white border border-neutral-200 shadow-[0_16px_40px_rgba(0,0,0,0.18)] rounded-2xl px-4 py-3 flex items-start gap-3 text-xs font-semibold text-neutral-800">
           {buildNotice.busy ? <Loader2 size={16} className="animate-spin text-brand shrink-0 mt-0.5" /> : <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${buildNotice.ok ? 'bg-green-500' : 'bg-rose-500'}`} />}
           <p className="flex-1 leading-relaxed">{buildNotice.message}</p>
+          {buildNotice.undo && <button type="button" onClick={buildNotice.undo} className="shrink-0 rounded-lg bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand hover:bg-brand/20">تراجع</button>}
           {!buildNotice.busy && (
             <button type="button" onClick={() => setBuildNotice(null)} className="text-neutral-400 hover:text-neutral-800 font-bold" aria-label="إغلاق">✕</button>
           )}
@@ -3653,7 +4230,17 @@ export default function App() {
           onOpenProjects={handleOpenProjects}
           onPublish={currentUser && !currentUser.isAnonymous ? () => setIsPublishOpen(true) : undefined}
           isPublished={!!publishedName}
+          isDesigner={isDesigner}
+          isDesignerMode={designerMode}
+          onToggleDesignerMode={designerMode ? exitDesignerMode : enterDesignerMode}
+          onExportSlide={clientSession || galleryEdit ? undefined : () => setIsExportOpen(true)}
         />
+        {designerMode && !isPreviewActive && galleryEdit && (
+          <GalleryEditBar as={galleryEdit.as} name={galleryEdit.name} kind={galleryEdit.kind} status={galleryEdit.status} pendingEdit={galleryEdit.pendingEdit} saving={gallerySaving} savedNote={gallerySavedNote} onSave={saveGalleryEdit} onLeave={leaveGalleryEdit} />
+        )}
+        {designerMode && !isPreviewActive && !galleryEdit && (
+          <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} onOrders={() => setIsOrdersOpen(true)} onDashboard={() => setIsDashboardOpen(true)} attention={orderAttention} client={clientSession ? { expiresAt: clientSession.expiresAt, onLeave: () => switchDraft(draftsRef.current[0]?.slot || '') } : undefined} />
+        )}
 
         {/* 2. Secondary Edit Bar directly beneath (narrow screens; wide ones dock it beside the panel) */}
         {!isPreviewActive && !isDocked && !isSheet && <EditBar {...editBarProps} />}
@@ -3796,6 +4383,7 @@ export default function App() {
       {/* Right Control Drawer: docked on a wide screen, floating over the canvas on a narrow one */}
       <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
       <RightDrawer
+        key={activeUserUid}
         isShopProject={project === 'shop'}
         isCarProject={project === 'cars'}
         isRestaurantProject={project === 'restaurant'}
@@ -3820,8 +4408,8 @@ export default function App() {
         onCopyCurrentPage={handleCopyCurrentPage}
         onAddSlideTemplate={handleAddSlideTemplate}
         onAddPageTemplate={handleAddPageTemplate}
-        onApplyFreeStarterTemplate={handleApplyFreeStarterTemplate}
-        onApplyOnlineShopTemplate={handleApplyOnlineShopTemplate}
+        onAddGallerySlide={handleAddGallerySlide}
+        onAddGalleryPage={handleAddGalleryPage}
         onDeleteSlide={handleDeleteSlide}
         onUpdateSlideHeight={handleUpdateSlideHeight}
         onAddElement={(type, customContent, customStyles, extraData) => {
@@ -3929,6 +4517,40 @@ export default function App() {
 
       {/* Workspace Hub Drawer Panel */}
       <WorkspaceHub isOpen={isWorkspaceHubOpen} onClose={() => setIsWorkspaceHubOpen(false)} />
+      {designerLock && screen === 'editor' && !designerMode && project === 'page' && currentUser && (
+        <div className="fixed inset-0 z-[4000020] bg-black/60 flex items-center justify-center p-4" dir="rtl" role="alertdialog" aria-modal="true" aria-label="المصمم يعدّل صفحتك">
+          <div className="w-full max-w-md rounded-card bg-surface border border-line p-6 space-y-3 text-center">
+            <h2 className="text-heading font-bold">{designerLock.designerName} يعدّل صفحتك الآن</h2>
+            <p className="text-sm text-muted leading-relaxed">أُوقف التحرير هنا حتى لا تمحو تعديلاتكما بعضها. ينتهي رمز دخوله {new Date(designerLock.expiresAt).toLocaleString('ar-SY', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}، ثم تعود صفحتك بتعديلاته. تستطيع سحب الرمز الآن إن أردت التعديل بنفسك.</p>
+            <button type="button" onClick={async () => { try { await revokeAccessCode(currentUser, designerLock.id); pageLockRef.current = false; setDesignerLock(null); await loadUserWorkspace(activeUserUid); } catch { window.alert('تعذّر سحب الرمز. جرّب مرة ثانية.'); } }} className="h-11 px-5 rounded-ctl bg-danger text-white text-sm font-bold cursor-pointer">سحب الرمز وتعديل صفحتي</button>
+          </div>
+        </div>
+      )}
+      {designerMode && isDashboardOpen && currentUser && <DesignerDashboard user={currentUser} onClose={() => setIsDashboardOpen(false)} />}
+      {designerMode && isOrdersOpen && currentUser && <DesignOrdersPanel user={currentUser} onClose={() => setIsOrdersOpen(false)} onEnterClientPage={async (id, code) => { const r = await openClientSession(id, code); if (r.ok) setIsOrdersOpen(false); return r; }} />}
+      {designerMode && isExportOpen && currentUser && (() => {
+        // A page draft is exported whole (its navbar and its slides, up to three); a slide draft, the open slide.
+        const kind: DesignKind = drafts.find((d) => d.slot === activeSlot)?.kind || 'slide';
+        const slides = kind === 'page' ? pages.flatMap((p) => p.slides) : [currentSlide];
+        const ids = new Set(slides.map((sl) => sl.id));
+        const mine = elements.filter((e) => ids.has(e.slideId));
+        const problem = kind !== 'page' ? '' : pages.length !== 1 ? 'تصميم الصفحة هو صفحة واحدة (حتى ثلاث شرائح). احذف الصفحات الزائدة من قائمة الصفحات.' : slides.length < 1 || slides.length > PAGE_MAX_SLIDES ? `الصفحة حتى ${PAGE_MAX_SLIDES} شرائح، وعندك ${slides.length}.` : '';
+        return (
+          <ExportSlideModal
+            designerUid={currentUser.uid}
+            designerName={designerName}
+            draftSlot={activeSlot}
+            kind={kind}
+            slide={sanitizeData(slides[0])}
+            page={kind === 'page' ? sanitizeData({ navbar: pages[0].navbar, slides }) : undefined}
+            navbar={kind === 'page' ? pages[0].navbar : undefined}
+            elements={mine}
+            storedElements={serializeElements(mine)}
+            problem={problem}
+            onClose={() => setIsExportOpen(false)}
+          />
+        );
+      })()}
       <PublishModal
         open={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}

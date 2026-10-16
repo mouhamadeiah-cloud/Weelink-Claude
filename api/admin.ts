@@ -22,6 +22,16 @@
 //   POST /api/admin  { action: 'tasks' | 'task' | 'task-status' | 'task-reply' }  (an admin's own tasks) and
 //                    { action: 'task-create' | 'task-update' }  (owner only): the workflow board
 //   POST /api/admin  { action: 'chat', after?, uid? } and { action: 'chat-send', text, uid? }  (the team chat board)
+//   POST /api/admin  { action: 'page-law-get' } → { law }  and { action: 'page-law-set', text } → { law }
+//        (the designers' «قانون الصفحة»: platformSettings/pageLaw, the only text a designer agrees to)
+//   POST /api/admin  { action: 'slides-review-list', status? } → { rows, counts }  (slides and pages)  and
+//                    { action: 'slide-review', id, decision: 'approve'|'reject', reason? } → { status }
+//        (the slides designers exported to the gallery wait as gallerySlides/{id}.status = 'pending')
+//   POST /api/admin  { action: 'design-orders', status? } → { rows, counts }  and { action: 'design-order', id } → { order, messages }
+//   POST /api/admin  { action: 'design-order-paid', id, method, receiptNo?, note? }  the office got the customer's money
+//   POST /api/admin  { action: 'design-order-release', id, note? }                   pays the designer their part (after the customer confirmed, or a complaint)
+//   POST /api/admin  { action: 'design-order-refund', id, reason }                   gives the customer their money back (or cancels an unpaid order)
+//        (hiring a designer, api/design-orders.ts: the money is held by the office until the customer confirms)
 //   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
 //   POST /api/admin  { action: 'dashboard' }  → numbers and 12-month chart; { action: 'export', kind: 'subscribers'|'payments' } → CSV; { action: 'backup' } → one JSON file (owner)
 //   POST /api/admin  { action: 'reports' | 'report-decide' }  rating reports;  'health' (owner);  'coupons' | 'coupon-save' | 'coupon-toggle' | 'coupon-apply';  'announce-preview' | 'announce' (owner)
@@ -55,6 +65,11 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { mailOrder } from '../server/orderMail.js';
+import { recountDesigner } from '../server/designerStats.js';
+import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
+import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
+import designTimers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 const DEFAULT_PASSWORD = '123456';
@@ -218,9 +233,9 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 // The team (Eyad, 14 Oct): the main admin («owner») can do everything; the others have one specialty
 // and only its actions. Checked here on every call; the site only hides what is not allowed.
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
-const FINANCE_ONLY = ['payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply'];
-// The rating reports are for the content reviewer (and the owner).
-const CONTENT_ONLY = ['reports', 'report-decide'];
+const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply'];
+// The designers' gallery and the rating reports are the content reviewers' work (the owner too).
+const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'slide-edit-review', 'reports', 'report-decide'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
@@ -836,6 +851,244 @@ export default {
       await db.collection('platform_settings').doc('company').set(company);
       await audit(session.u, 'set-company');
       return json({ company });
+    }
+
+    // ----- hiring a designer: the orders and the money held by the office -----
+    // designOrders/{id} (made by api/design-orders.ts). The office takes the customer's money (paid), holds it
+    // until the customer confirms the design, and then pays the designer their part (release); a complaint
+    // is decided here too: release to the designer, or refund the customer. Each step is in the order's
+    // history and the audit log, and writes a system message the customer and the designer read.
+    const orderRow = (id: string, d: Record<string, any>) => ({
+      id, customerUid: String(d.customerUid || ''), customerAlias: String(d.customerAlias || ''), designerUid: String(d.designerUid || ''),
+      designerName: String(d.designerName || ''), slideName: String(d.slideName || ''), planId: String(d.planId || ''),
+      price: Number(d.price) || 0, designerShare: Number(d.designerShare) || 0, platformShare: Number(d.platformShare) || 0,
+      status: String(d.status || ''), brief: String(d.brief || ''), disputeReason: String(d.disputeReason || ''),
+      createdAt: Number(d.createdAt) || 0, updatedAt: Number(d.updatedAt) || 0, deliveredAt: Number(d.deliveredAt) || 0,
+      late: String(d.status) === 'disputed' && Date.now() - (Number(d.disputedAt) || Number(d.updatedAt) || Date.now()) > designTimers.disputeLateDays * 86400000,
+      payment: d.payment || null, payout: d.payout || null, refund: d.refund || null,
+    });
+    const emailsOf = async (uids: string[]) => {
+      const list = [...new Set(uids.filter(Boolean))].slice(0, 100);
+      const got = list.length ? await auth.getUsers(list.map((u) => ({ uid: u }))).catch(() => null) : null;
+      return new Map((got?.users || []).map((u) => [u.uid, u.email || u.displayName || u.uid]));
+    };
+
+    if (action === 'design-orders') {
+      const snap = await db.collection('designOrders').orderBy('updatedAt', 'desc').limit(200).get();
+      const all = snap.docs.map((d) => orderRow(d.id, d.data()));
+      const status = String(body.status || '');
+      const rows = (status ? all.filter((o) => o.status === status) : all).slice(0, 100);
+      const counts: Record<string, number> = {};
+      for (const o of all) counts[o.status] = (counts[o.status] || 0) + 1;
+      const emails = await emailsOf(rows.flatMap((o) => [o.customerUid, o.designerUid]));
+      return json({ rows: rows.map((o) => ({ ...o, customerEmail: emails.get(o.customerUid) || '', designerEmail: emails.get(o.designerUid) || '' })), counts });
+    }
+
+    if (action === 'design-order') {
+      const ref = db.collection('designOrders').doc(String(body.id || '').slice(0, 128));
+      const snap = await ref.get();
+      if (!snap.exists) return json({ error: 'not-found' }, 404);
+      const o = orderRow(snap.id, snap.data()!);
+      const emails = await emailsOf([o.customerUid, o.designerUid]);
+      const msgs = await ref.collection('messages').orderBy('at').limit(500).get();
+      return json({
+        order: { ...o, customerEmail: emails.get(o.customerUid) || '', designerEmail: emails.get(o.designerUid) || '', history: snap.data()!.history || [], rating: snap.data()!.rating || null },
+        messages: msgs.docs.map((m) => ({ id: m.id, role: String(m.data().role || ''), text: String(m.data().text || ''), at: Number(m.data().at) || 0 })),
+      });
+    }
+
+    // How the customer pays the office for a design order (account numbers, transfer office, hours): written
+    // here, shown to the customer beside the price and in the unpaid order.
+    if (action === 'payment-info-get') {
+      const d = (await db.collection('platformSettings').doc('paymentInfo').get()).data() as Record<string, any> | undefined;
+      return json({ text: String(d?.text || ''), updatedAt: Number(d?.updatedAt) || 0, updatedBy: String(d?.updatedBy || '') });
+    }
+    if (action === 'payment-info-set') {
+      const text = String(body.text ?? '').trim().slice(0, 1500);
+      await db.collection('platformSettings').doc('paymentInfo').set({ text, updatedAt: Date.now(), updatedBy: session.u });
+      await audit(session.u, 'payment-info-set');
+      return json({ ok: true });
+    }
+
+    // The office recounts a designer's finished orders, ratings and badge from their orders.
+    if (action === 'designer-recount') {
+      const uid = String(body.uid || '').slice(0, 128);
+      if (!uid) return json({ error: 'bad-request' }, 400);
+      const stats = await recountDesigner(db, uid);
+      await audit(session.u, `designer-recount:${uid}`);
+      return json({ stats });
+    }
+
+    if (action === 'design-order-paid' || action === 'design-order-release' || action === 'design-order-refund') {
+      const ref = db.collection('designOrders').doc(String(body.id || '').slice(0, 128));
+      const snap = await ref.get();
+      if (!snap.exists) return json({ error: 'not-found' }, 404);
+      const o = snap.data() as Record<string, any>;
+      const now = Date.now();
+      const clean = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n);
+      const say = (t: string) => ref.collection('messages').add({ role: 'system', text: t, at: now });
+      const step = (status: string, extra: Record<string, unknown>) =>
+        ref.update({ status, updatedAt: now, history: FieldValue.arrayUnion({ at: now, status, by: `admin:${session.u}` }), ...extra });
+
+      if (action === 'design-order-paid') {
+        const method = clean(body.method, 20);
+        if (o.status !== 'awaiting_payment') return json({ error: 'bad-state' }, 409);
+        if (!METHODS[method]) return json({ error: 'bad-method' }, 400);
+        await step('paid', { payment: { at: now, by: session.u, method, receiptNo: clean(body.receiptNo, 40), note: clean(body.note, 300), amount: Number(o.price) || 0 } });
+        await say('أكّد المكتب استلام المبلغ. تقدران تتواصلان هنا الآن، والمبلغ محفوظ عند Weelink إلى أن يستلم الزبون التصميم.');
+        await mailOrder(auth, String(o.designerUid), 'paid', snap.id);
+        await audit(session.u, `design-order-paid:${snap.id}`);
+        return json({ status: 'paid' });
+      }
+      if (action === 'design-order-release') {
+        if (!['confirmed', 'disputed'].includes(o.status)) return json({ error: 'bad-state' }, 409);
+        await step('paid_out', { payout: { at: now, by: session.u, amount: Number(o.designerShare) || 0, note: clean(body.note, 300) } });
+        await say('حوّل المكتب حصة المصمم. اكتمل الطلب.');
+        await recountDesigner(db, String(o.designerUid));
+        await mailOrder(auth, String(o.designerUid), 'paid_out', snap.id);
+        await audit(session.u, `design-order-release:${snap.id}`);
+        return json({ status: 'paid_out' });
+      }
+      const reason = clean(body.reason, 300);
+      if (reason.length < 3) return json({ error: 'reason' }, 400);
+      if (o.status === 'awaiting_payment') {
+        await step('cancelled', { cancelledAt: now, refund: { at: now, by: session.u, amount: 0, reason } });
+        await audit(session.u, `design-order-cancel:${snap.id}`);
+        return json({ status: 'cancelled' });
+      }
+      if (!['paid', 'delivered', 'confirmed', 'disputed'].includes(o.status)) return json({ error: 'bad-state' }, 409);
+      await step('refunded', { refund: { at: now, by: session.u, amount: Number(o.price) || 0, reason } });
+      await say('ردّ المكتب المبلغ للزبون وأُغلق الطلب.');
+      await recountDesigner(db, String(o.designerUid));
+      await mailOrder(auth, String(o.designerUid), 'refunded', snap.id);
+      await mailOrder(auth, String(o.customerUid), 'refunded', snap.id);
+      await audit(session.u, `design-order-refund:${snap.id}`);
+      return json({ status: 'refunded' });
+    }
+
+    // The «Weelink AI» pages (server/gallerySeed.ts): publish them in the gallery, finding their photos on Unsplash.
+    if (action === 'gallery-seed-status') return json(await gallerySeedStatus(db));
+    if (action === 'gallery-seed') {
+      const result = await gallerySeed(db, { budget: Math.min(45, Math.max(1, Number(body.budget) || 40)), overwrite: body.overwrite === true, publish: body.publish === true, only: body.only ? String(body.only).slice(0, 40) : undefined });
+      if ('error' in result) return json({ error: result.error }, 400);
+      await audit(session.u, `gallery-seed:${result.published.length}`);
+      return json(result);
+    }
+
+    // ----- the designers' gallery -----
+    // platformSettings/pageLaw = { text, version, updatedAt, updatedBy }: the law a designer agrees to
+    // when exporting a slide; every save raises the version, and a slide records the version it was
+    // exported under. gallerySlides/{id} (written by the designer, status 'pending') is approved or
+    // rejected here; the rules let nobody else change its status.
+    const SLIDE_STATUSES = ['pending', 'approved', 'rejected'];
+    const lawFromDoc = (d: Record<string, any> | undefined) =>
+      d ? { text: String(d.text || ''), version: Number(d.version) || 0, updatedAt: Number(d.updatedAt) || 0, updatedBy: String(d.updatedBy || '') } : null;
+
+    if (action === 'page-law-get') {
+      return json({ law: lawFromDoc((await db.collection('platformSettings').doc('pageLaw').get()).data()) });
+    }
+
+    if (action === 'page-law-set') {
+      const text = String(body.text || '').trim();
+      if (text.length < 50 || text.length > 20000) return json({ error: 'bad-text' }, 400);
+      const ref = db.collection('platformSettings').doc('pageLaw');
+      const at = Date.now();
+      const version = await db.runTransaction(async (t) => {
+        const cur = (await t.get(ref)).data() as { version?: number } | undefined;
+        const next = (Number(cur?.version) || 0) + 1;
+        t.set(ref, { text, version: next, updatedAt: at, updatedBy: session.u });
+        return next;
+      });
+      await audit(session.u, `page-law-set:v${version}`);
+      return json({ law: { text, version, updatedAt: at, updatedBy: session.u } });
+    }
+
+    if (action === 'slides-review-list') {
+      const status = SLIDE_STATUSES.includes(String(body.status)) ? String(body.status) : 'pending';
+      const [snap, pendingCount] = await Promise.all([
+        db.collection('gallerySlides').where('status', '==', status).limit(240).get(),
+        db.collection('gallerySlides').where('status', '==', 'pending').select('derivedFrom').get(),
+      ]);
+      // The slides taken from a page follow the page's decision: they are listed only among the approved ones.
+      const rows = snap.docs
+        .filter((d) => !d.data().derivedFrom || status === 'approved')
+        .slice(0, 60)
+        .map((d) => {
+          const x = d.data();
+          return {
+            id: d.id, name: String(x.name || ''), category: String(x.category || ''), designerUid: String(x.designerUid || ''),
+            designerName: String(x.designerName || ''), status: String(x.status || 'pending'), lawVersion: Number(x.lawVersion) || 0,
+            acceptedAt: String(x.acceptedAt || ''), createdAt: x.createdAt?.toMillis?.() || 0, reason: String(x.reason || ''),
+            reviewedBy: String(x.reviewedBy || ''), official: x.official === true, editedBy: String(x.editedBy || ''), kind: x.kind === 'page' ? 'page' : 'slide', slide: x.slide || {}, page: x.kind === 'page' ? x.page || null : null,
+            elements: Array.isArray(x.elements) ? x.elements : [],
+          };
+        })
+        .sort((a, b) => b.createdAt - a.createdAt);
+      // A designer's change to a design that is already approved waits here too, beside the new exports.
+      const edits = status === 'pending' ? await pendingEditRows(db) : [];
+      return json({ rows: [...edits, ...rows], counts: { pending: pendingCount.docs.filter((d) => !d.data().derivedFrom).length + (status === 'pending' ? edits.length : (await pendingEditRows(db)).length) } });
+    }
+
+    if (action === 'slide-review') {
+      const id = String(body.id || '').slice(0, 128);
+      const decision = String(body.decision || '');
+      const reason = String(body.reason || '').trim().slice(0, 500);
+      if (!id || !['approve', 'reject'].includes(decision)) return json({ error: 'bad-request' }, 400);
+      if (decision === 'reject' && reason.length < 3) return json({ error: 'reason' }, 400);
+      const ref = db.collection('gallerySlides').doc(id);
+      const snap = await ref.get();
+      if (!snap.exists) return json({ error: 'not-found' }, 404);
+      const ids = snap.data()?.kind === 'page' ? PAGE_CATEGORY_IDS : SLIDE_CATEGORY_IDS;
+      if (decision === 'approve' && !ids.includes(String(snap.data()?.category))) return json({ error: 'bad-category' }, 400);
+      const status = decision === 'approve' ? 'approved' : 'rejected';
+      const cur = snap.data() as { likes?: number; dislikes?: number } | undefined;
+      // An approved slide starts its counters at zero (a withdrawn one that comes back keeps them);
+      // «جديد» in the gallery counts from the approval.
+      await ref.update({
+        status, reason: decision === 'reject' ? reason : '', reviewedBy: session.u, reviewedAt: Date.now(),
+        ...(decision === 'approve' ? { approvedAt: Date.now(), likes: Number(cur?.likes) || 0, dislikes: Number(cur?.dislikes) || 0 } : {}),
+      });
+      // The slides taken from this page (Weelink's own pages) get the same decision.
+      const derived = await db.collection('gallerySlides').where('derivedFrom', '==', id).get();
+      for (const d of derived.docs) {
+        await d.ref.update({
+          status, reason: decision === 'reject' ? reason : '', reviewedBy: session.u, reviewedAt: Date.now(),
+          ...(decision === 'approve' ? { approvedAt: d.data().approvedAt || Date.now() } : {}),
+        });
+      }
+      await audit(session.u, `slide-review:${id}:${status}`);
+      return json({ status });
+    }
+
+    // The admin opens, edits, renames and deletes any design in the gallery (server/galleryEdit.ts).
+    if (action === 'gallery-doc') {
+      const r = await loadForEdit(db, String(body.id || '').slice(0, 128), { admin: true });
+      return 'error' in r ? json({ error: 'not-found' }, 404) : json(r);
+    }
+    if (action === 'gallery-doc-save') {
+      const id = String(body.id || '').slice(0, 128);
+      const r = await adminSave(db, id, { page: body.page as any, elements: body.elements as any, name: body.name, category: body.category, designerName: body.designerName }, session.u);
+      if ('error' in r) return json({ error: r.error, kinds: (r as any).kinds }, r.error === 'not_found' ? 404 : 400);
+      await audit(session.u, `gallery-doc-save:${id}`);
+      return json({ ok: true });
+    }
+    if (action === 'gallery-doc-delete') {
+      const id = String(body.id || '').slice(0, 128);
+      const r = await deleteDesign(db, id);
+      if ('error' in r) return json({ error: 'not-found' }, 404);
+      await audit(session.u, `gallery-doc-delete:${id}`);
+      return json({ ok: true });
+    }
+    if (action === 'slide-edit-review') {
+      const id = String(body.id || '').slice(0, 128);
+      const decision = String(body.decision || '');
+      const reason = String(body.reason || '').trim().slice(0, 500);
+      if (!id || !['approve', 'reject'].includes(decision)) return json({ error: 'bad-request' }, 400);
+      if (decision === 'reject' && reason.length < 3) return json({ error: 'reason' }, 400);
+      const r = await reviewEdit(db, id, decision as 'approve' | 'reject', reason, session.u);
+      if ('error' in r) return json({ error: 'not-found' }, 404);
+      await audit(session.u, `slide-edit-review:${id}:${decision}`);
+      return json({ ok: true });
     }
 
     // ----- tasks (the workflow board) -----

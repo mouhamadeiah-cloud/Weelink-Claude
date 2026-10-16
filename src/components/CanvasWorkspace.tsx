@@ -1,3 +1,4 @@
+import { cleanHtml, isSafeUrl } from '../utils/safeHtml';
 import React, { useRef, useState, useEffect, useMemo, useContext } from 'react';
 import { BackgroundVideo } from './BackgroundVideo';
 import {
@@ -84,6 +85,11 @@ interface CanvasWorkspaceProps {
   // The guests' own view of a published site (no editor around it): fills the browser window
   // edge to edge, with no device frame, in desktop or phone layout.
   isPublicSite?: boolean;
+  // A design shown inside a card (the designers' gallery): the real renderer, so its videos, text
+  // motion and effects play, but no scrolling of its own and only as tall as its content.
+  embedded?: boolean;
+  // With `embedded`, a single slide: no navbar (a page keeps its own).
+  hideNavbar?: boolean;
   // Height of the editor's bars above the workspace (the edit bar under the top bar, or not).
   chromeHeight?: number;
   // Extra entries at the end of the navbar that run an action, not a link: «الإدارة» for the
@@ -819,6 +825,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   isNavbarSelected = false,
   onSelectNavbar,
   isPublicSite = false,
+  embedded = false,
+  hideNavbar = false,
   chromeHeight = 104,
   navActions,
   onContactClick,
@@ -889,7 +897,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const isNavHamburger = navLayout === 'horizontal' && previewMode === 'mobile' && !!navbar.mobileMenu;
   // Height the navbar takes above the slides: only a strip at the top of the screen (posY 0) pushes
   // them down; anywhere else, and as a column or icon, it floats over them.
-  const navFlowHeight = navLayout === 'horizontal' && !navbar.posY ? (navbar.height ?? 60) : 0;
+  const navFlowHeight = !hideNavbar && navLayout === 'horizontal' && !navbar.posY ? (navbar.height ?? 60) : 0;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   useEffect(() => {
     if (!isNavHamburger && !isNavIconOnly) setIsNavMenuOpen(false);
@@ -1061,7 +1069,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     const handleResize = () => {
       if (workspaceRef.current) {
         setWorkspaceWidth(workspaceRef.current.clientWidth);
-        setWorkspaceHeight(workspaceRef.current.clientHeight);
+        // An embedded page (the gallery) is drawn as tall as the whole page: a floating navbar is placed against a screen, not against that.
+        setWorkspaceHeight(embedded ? Math.min(workspaceRef.current.clientHeight, previewMode === 'mobile' ? 700 : 800) : workspaceRef.current.clientHeight);
       }
     };
     handleResize();
@@ -2111,6 +2120,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         targetElem.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
+      if (!isSafeUrl(elem.linkUrl)) return;
       onContactClick?.(elem.linkUrl);
       window.open(elem.linkUrl, '_blank', 'noopener,noreferrer');
     }
@@ -2320,6 +2330,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     );
   };
   const isExternalNavHref = (href?: string) => !!href && /^(https?:|mailto:|tel:)/i.test(href);
+  // A navbar entry or button that points at a slide of this page scrolls to it.
+  const goToNavSlide = (slideId: string) => {
+    onSelectSlide(slideId);
+    document.getElementById(`slide-container-${slideId}`)?.scrollIntoView({ behavior: 'smooth' });
+  };
+  const isNavSlideLink = (item: { linkType?: string; linkTargetId?: string }) => item.linkType === 'slide' && !!item.linkTargetId;
   const navItemPartId = (item: { id: string; linkType?: string; linkTargetId?: string }) =>
     item.linkType === 'page' && item.id.startsWith('page-link-') ? `page-${item.linkTargetId}` : `item-${item.id}`;
 
@@ -2368,8 +2384,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       // still fills the viewport exactly the same way min-height did when content is short, so
       // nothing about the empty/short-content layout changes — only tall content now scrolls where
       // it was always meant to.
-      className={`flex-1 w-full overflow-y-auto transition-colors duration-200 ${
-        isPublicSite
+      className={`flex-1 w-full ${embedded ? 'overflow-hidden' : 'overflow-y-auto'} transition-colors duration-200 ${
+        embedded
+          ? 'bg-transparent p-0 m-0 flex flex-col items-center justify-start'
+          : isPublicSite
           ? 'bg-white p-0 m-0 h-[100dvh] flex flex-col items-center justify-start'
           : previewMode === 'desktop'
           ? (isPreviewActive ? 'bg-white p-0 m-0 h-[calc(100vh-56px)] flex flex-col items-center justify-start' : 'bg-[#ececf0] p-4 sm:p-8 flex flex-col items-center justify-start')
@@ -2417,7 +2435,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         )}
 
         {/* 1. Navbar: a lone hamburger icon (no box), floating where the user dragged it. */}
-        {isNavIconOnly && wrapNav(
+        {!hideNavbar && isNavIconOnly && wrapNav(
           <div className="absolute top-0" style={{ left: `${navLeftPct}%` }} dir="rtl">
             <button
               type="button"
@@ -2462,10 +2480,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       onClick={() => {
                         if (runNavAction(item.id)) {}
                         else if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                        else if (isNavSlideLink(item)) goToNavSlide(item.linkTargetId as string);
                         else if (isPreviewActive && isExternalNavHref(item.href)) window.open(item.href, '_blank', 'noopener,noreferrer');
                         setIsNavMenuOpen(false);
                       }}
-                      className={`px-5 py-2.5 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
+                      className={`px-5 py-2.5 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink || isNavSlideLink(item) ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
                       style={{ fontFamily: navbar.itemsFontFamily || undefined }}
                     >
                       {navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}
@@ -2477,6 +2496,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     type="button"
                     onClick={() => {
                       if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) onSelectPage?.(navbar.ctaLinkTargetId);
+                      else if (navbar.ctaLinkType === 'slide' && navbar.ctaLinkTargetId) goToNavSlide(navbar.ctaLinkTargetId);
                       setIsNavMenuOpen(false);
                     }}
                     className="mx-4 mt-2 px-3.5 py-2 rounded-full text-xs font-semibold bg-[#0071e3] text-white" style={navbar.accentColor ? { backgroundColor: navbar.accentColor, color: navbar.accentTextColor } : undefined}
@@ -2490,7 +2510,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         )}
 
         {/* 1. Navbar - Narrow Strip (نافبار وهو شريحة ضيقة), docked at the top or floating, or a side column */}
-        {!isNavIconOnly && wrapNav(
+        {!hideNavbar && !isNavIconOnly && wrapNav(
         <nav
           ref={navbarRef}
           onPointerDown={startNavMove}
@@ -2640,11 +2660,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       } else if (isPageLink) {
                         e.stopPropagation();
                         onSelectPage?.(item.linkTargetId as string);
+                      } else if (isNavSlideLink(item)) {
+                        e.stopPropagation();
+                        goToNavSlide(item.linkTargetId as string);
                       } else if (isPreviewActive && isExternalNavHref(item.href)) {
                         window.open(item.href, '_blank', 'noopener,noreferrer');
                       }
                     }}
-                    className={`${hasFrame ? 'px-2.5 py-1' : (isNavVertical ? 'py-1' : '')} ${isPageLink ? 'cursor-pointer' : 'cursor-default'}`}
+                    className={`${hasFrame ? 'px-2.5 py-1' : (isNavVertical ? 'py-1' : '')} ${isPageLink || isNavSlideLink(item) ? 'cursor-pointer' : 'cursor-default'}`}
                     style={{
                       fontFamily: navbar.itemsFontFamily || undefined,
                       backgroundColor: navbar.itemsFrameBgColor || undefined,
@@ -2671,6 +2694,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   if (navbar.ctaLinkType === 'page' && navbar.ctaLinkTargetId) {
                     e.stopPropagation();
                     onSelectPage?.(navbar.ctaLinkTargetId);
+                  } else if (navbar.ctaLinkType === 'slide' && navbar.ctaLinkTargetId) {
+                    e.stopPropagation();
+                    goToNavSlide(navbar.ctaLinkTargetId);
                   }
                 }}
                 className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-all shadow-xs active:scale-95 ${isNavVertical ? 'self-center' : ''}`}
@@ -2713,10 +2739,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     onClick={() => {
                       if (runNavAction(item.id)) {}
                       else if (isPageLink) onSelectPage?.(item.linkTargetId as string);
+                      else if (isNavSlideLink(item)) goToNavSlide(item.linkTargetId as string);
                       else if (isPreviewActive && isExternalNavHref(item.href)) window.open(item.href, '_blank', 'noopener,noreferrer');
                       setIsNavMenuOpen(false);
                     }}
-                    className={`px-6 py-3 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
+                    className={`px-6 py-3 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink || isNavSlideLink(item) ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
                     style={{ fontFamily: navbar.itemsFontFamily || undefined }}
                   >
                     {navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}
@@ -4657,7 +4684,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             </div>
                             <div 
                               className="flex-1 p-3 overflow-auto flex items-center justify-center"
-                              dangerouslySetInnerHTML={{ __html: elem.htmlCode || elem.content || '<div style="color:#0071e3; font-weight:bold;">حاوية HTML نشطة</div>' }}
+                              dangerouslySetInnerHTML={{ __html: cleanHtml(elem.htmlCode || elem.content || '<div style="color:#0071e3; font-weight:bold;">حاوية HTML نشطة</div>') }}
                             />
                           </div>
                         )}

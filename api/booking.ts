@@ -170,10 +170,19 @@ const create = async (admin: Admin, body: any) => {
   if (booking.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email)) return json({ error: 'bad_email' }, 400);
 
   const toOwner = await ownerEmail(admin, owner);
-  if (!toOwner && !(await admin.auth.getUser(owner).catch(() => null))) return json({ error: 'not_found' }, 404);
+  if (!toOwner) {
+    // A missing owner is 404; anything else (Google refusing the service account, say) is 500 with its reason.
+    const found = await admin.auth.getUser(owner).then(
+      () => true,
+      (e: any) => (e?.code === 'auth/user-not-found' ? false : String(e?.message || e?.code || 'unknown').slice(0, 60)),
+    );
+    if (found === false) return json({ error: 'not_found' }, 404);
+    if (found !== true) return json({ error: 'error', reason: found }, 500);
+  }
 
   const ref = items(admin, owner).doc();
   const day = dayDoc(admin, booking);
+  let failure = '';
   const result = await admin.db
     .runTransaction(async (tx) => {
       const taken: number[] = (await tx.get(day)).data()?.taken || [];
@@ -185,10 +194,11 @@ const create = async (admin: Admin, body: any) => {
     })
     .catch((e: any) => {
       console.error('Saving a booking failed:', e?.message);
+      failure = String(e?.message || e?.code || 'unknown').slice(0, 60);
       return 'error';
     });
   if (result === 'taken') return json({ error: 'taken' }, 409);
-  if (result !== 'ok') return json({ error: result }, result === 'full' ? 409 : 500);
+  if (result !== 'ok') return json({ error: result, ...(failure ? { reason: failure } : {}) }, result === 'full' ? 409 : 500);
 
   const pageName = booking.pageName || 'صفحتك على Weelink';
   await sendAll([

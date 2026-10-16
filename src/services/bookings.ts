@@ -50,11 +50,11 @@ export const readTaken = async (owner: string, project: ProjectType, date: strin
 export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt'> & { needsConfirmation: boolean };
 
 // 'taken': somebody booked that time a moment before.
-export const createBooking = async (b: NewBooking): Promise<{ id: string; status: BookingStatus } | { error: string }> => {
+export const createBooking = async (b: NewBooking): Promise<{ id: string; status: BookingStatus } | { error: string; reason?: string }> => {
   try {
     const res = await fetch('/api/booking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', ...b }) });
     const out = await res.json().catch(() => ({}));
-    return res.ok ? out : { error: out.error || 'error' };
+    return res.ok ? out : { error: out.error || 'error', reason: out.reason || `http_${res.status}` };
   } catch {
     return { error: 'offline' };
   }

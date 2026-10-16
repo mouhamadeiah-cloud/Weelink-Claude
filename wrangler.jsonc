@@ -1,0 +1,18 @@
+// Cloudflare Workers config (trial). Deploy with `npx wrangler deploy` after `npm run build`.
+// Secrets (RESEND_API_KEY, FIREBASE_SERVICE_ACCOUNT, GEMINI_API_KEY, CRON_SECRET, ...) are set with
+// `npx wrangler secret put NAME` or in the dashboard, never here.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "weelink",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "triggers": { "crons": ["0 6 * * *", "0 7 * * *", "0 8 * * *"] },
+  "observability": { "enabled": true }
+}

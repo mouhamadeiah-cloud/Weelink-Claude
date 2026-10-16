@@ -5,6 +5,7 @@
 // the dish picks its own.
 import { newId } from '../shop/shopTypes';
 import { Worker, normalizeWorker } from './staffTypes';
+import { GIFT_METHOD, GiftCardSettings, DEFAULT_GIFT_SETTINGS, normalizeGiftSettings } from './giftCardLogic';
 
 // A main catalog of the menu: مشاوي، سندويش، مشروبات...
 export interface MenuCategory {
@@ -82,6 +83,7 @@ export interface RestaurantSettings {
   autoLockMinutes: number; // the cashier/waiter screen asks for a PIN again after this idle time (0 = never)
   boardShows: 'takeaway' | 'all'; // the waiting screen: only orders the guest collects, or every order
   kitchenLateMinutes: number; // an order not ready after this long flashes red in the kitchen
+  giftCard: GiftCardSettings; // the cashier's fixed catalog «بطاقة رصيد»
   dayStartHour: number; // يوم العمل: the hour (0-8) a new day starts; the hours after midnight before it belong to the day before
 }
 
@@ -246,6 +248,7 @@ const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   boardShows: 'takeaway',
   kitchenLateMinutes: 5,
   dayStartHour: 4,
+  giftCard: { ...DEFAULT_GIFT_SETTINGS },
 };
 
 export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
@@ -377,7 +380,7 @@ const normalizeDevice = (raw: any): StaffDevice => ({
 export const normalizeOrderRecord = (raw: any): MenuOrder => normalizeOrder(raw);
 
 export const normalizeRestaurantAdmin = (raw: any): RestaurantAdminData => ({
-  settings: { ...DEFAULT_RESTAURANT_SETTINGS, ...(raw?.settings || {}) },
+  settings: { ...DEFAULT_RESTAURANT_SETTINGS, ...(raw?.settings || {}), giftCard: normalizeGiftSettings(raw?.settings?.giftCard) },
   categories: Array.isArray(raw?.categories) ? raw.categories.map(normalizeCategory) : [],
   subCatalogs: Array.isArray(raw?.subCatalogs) ? raw.subCatalogs.map(normalizeSubCatalog) : [],
   dishes: Array.isArray(raw?.dishes) ? raw.dishes.map(normalizeDish) : [],
@@ -433,7 +436,7 @@ export interface LedgerEntry {
 
 export const INCOME_CATEGORIES = ['مبيعات الموقع', 'مبيعات الصالة', 'مبيعات التوصيل', 'إيرادات أخرى'];
 export const EXPENSE_CATEGORIES = ['مواد غذائية', 'خضار ولحوم', 'مشروبات', 'رواتب', 'إيجار', 'كهرباء وماء', 'غاز ومحروقات', 'صيانة', 'تغليف', 'تسويق', 'مصاريف أخرى'];
-export const PAYMENT_METHODS = ['نقدي', 'شام كاش', 'سيريتل كاش', 'MTN كاش', 'تحويل بنكي', 'بطاقة'];
+export const PAYMENT_METHODS = ['نقدي', 'شام كاش', 'سيريتل كاش', 'MTN كاش', 'تحويل بنكي', 'بطاقة', GIFT_METHOD];
 
 // يوم العمل: a restaurant open past midnight keeps the hours after midnight in the day before, until
 // the hour the owner sets. The daily order numbers, the kitchen's and the waiting screen's «today»,

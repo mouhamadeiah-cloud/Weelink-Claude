@@ -3,13 +3,15 @@
 // from. From here the bill goes to the kitchen, gets paid (all or part), moves to another table or
 // merges with it, passes to another worker, gets a discount or a note, and prints.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Send, Wallet, MoveRight, UserRound, Percent, Printer, Minus, Plus, Trash2, Ban, Search, Users, QrCode, StickyNote, X, HandCoins } from 'lucide-react';
+import { CreditCard, ArrowRight, Send, Wallet, MoveRight, UserRound, Percent, Printer, Minus, Plus, Trash2, Ban, Search, Users, QrCode, StickyNote, X, HandCoins } from 'lucide-react';
+import { GiftCard, expiryFrom } from '../giftCardLogic';
 import { Dish, MenuOrder, OrderLine, RestaurantAdminData, allTables, dishSubCatalogs } from '../restaurantTypes';
 import { Actor, ScreenDraft, ScreenPaid, Tab, Worker, itemTotal, openTabId, tabTitle, tabTotals, unsentItems } from '../staffTypes';
-import { addLog, attachOrder, changeTab, closeEmptyTab, moveTab, newItem, payTab, sendToKitchen, TabPlace } from '../staffCloud';
+import { addLog, attachOrder, changeTab, closeEmptyTab, moveTab, newItem, payTab, reserveCardNumber, sendToKitchen, TabPlace } from '../staffCloud';
 import { formatMoney } from '../../shop/adminUi';
 import { DishOptions, lineOfDish } from './DishOptions';
 import { PayDialog, PayRequest } from './PayDialog';
+import { GiftCardPanel } from './GiftCardPanel';
 import { printReceipt } from './receipt';
 import { BigButton, Modal, failText } from './posUi';
 
@@ -19,6 +21,7 @@ export interface PaidInfo {
   total: number;
   paid: number;
   change: number;
+  cards?: GiftCard[]; // the gift cards that started working with this bill (to print)
 }
 
 interface TabViewProps {
@@ -48,6 +51,8 @@ const KITCHEN_STATE: Record<string, [string, string]> = {
   done: ['قُدّم', '#1971C2'],
   cancelled: ['ألغاه المطبخ', '#E03131'],
 };
+
+const GIFT_CAT = '__giftcard';
 
 const minutesSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
 
@@ -132,6 +137,22 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab: serverTab, menu, wor
     });
   };
 
+  // A gift card goes on the bill as its own line: already «sent» (it never reaches the kitchen), no
+  // discount on it, its number booked now and the card starts working when the bill is paid.
+  const addGiftCard = async (amount: number) => {
+    setBusy(true);
+    try {
+      const number = await reserveCardNumber(uid);
+      const line: OrderLine = { dishId: 'giftcard', name: 'بطاقة رصيد', unitPrice: amount, qty: 1, removed: [], extras: [], notes: '' };
+      edit((t) => ({ items: [...t.items, { ...newItem(line, actor), sentAt: new Date().toISOString(), card: number }] }));
+      toast('أُضيفت بطاقة الرصيد إلى الفاتورة');
+      setSide('bill');
+    } catch (e) {
+      toast(failText(e), true);
+    }
+    setBusy(false);
+  };
+
   const pickDish = (d: Dish) => {
     if (!d.available) return;
     if (dishSubCatalogs(d, menu.subCatalogs).length) setOptionsFor(d);
@@ -158,10 +179,10 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab: serverTab, menu, wor
     setBusy(true);
     try {
       await queue.current;
-      const res = await payTab(uid, tab.id, { amount: r.amount, method: r.method, note: r.note, items: r.items, shiftId }, actor);
+      const res = await payTab(uid, tab.id, { amount: r.amount, method: r.method, note: r.note, items: r.items, shiftId, card: r.card, cardExpiresAt: expiryFrom(menu.settings.giftCard) }, actor);
       setDialog('');
       const change = r.given > res.paid ? Math.round((r.given - res.paid) * 100) / 100 : 0;
-      if (res.left <= 0) onClosed({ total: res.total, paid: res.paid, change });
+      if (res.left <= 0) onClosed({ total: res.total, paid: res.paid, change, cards: res.issued });
       else {
         toast(`تم تحصيل ${money(res.paid)}${change ? ` · الباقي للزبون ${money(change)}` : ''}`);
         onPartPaid?.({ amount: res.paid, method: r.method, note: r.note, change, left: res.left, at: new Date().toISOString() });
@@ -236,6 +257,18 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab: serverTab, menu, wor
         ))}
         {tab.items.length === 0 && qrOrders.length === 0 && <div className="py-10 text-center text-sm font-bold text-neutral-400">اختر الأطباق من المنيو</div>}
         {tab.items.map((i) => {
+          if (i.card) {
+            return (
+              <div key={i.id} className={`p-2.5 rounded-2xl border flex items-center gap-2 ${i.voided ? 'border-neutral-100 bg-neutral-50 opacity-60' : 'border-[#A5D8FF] bg-[#E7F5FF]'}`}>
+                <CreditCard size={16} className="text-[#1864AB]" />
+                <div className="flex-1 min-w-0 text-sm font-black text-[#1864AB]">بطاقة رصيد<div className="text-[10px] font-bold text-neutral-500" dir="ltr">····{i.card.slice(-4)}</div></div>
+                <div className="text-sm font-black">{money(itemTotal(i))}</div>
+                {!i.voided && totals.paid === 0 && (
+                  <button type="button" aria-label="حذف البطاقة" disabled={busy} onClick={() => setQty(i.id, 0)} className="w-9 h-9 rounded-xl text-[#E03131] hover:bg-red-50 flex items-center justify-center cursor-pointer"><Trash2 size={15} /></button>
+                )}
+              </div>
+            );
+          }
           if (i.tip) {
             return (
               <div key={i.id} className={`p-2.5 rounded-2xl border flex items-center gap-2 ${i.voided ? 'border-neutral-100 bg-neutral-50 opacity-60' : 'border-[#8CE99A] bg-[#F4FCF5]'}`}>
@@ -318,11 +351,14 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab: serverTab, menu, wor
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ابحث عن طبق" className="w-full h-11 pr-9 pl-3 rounded-2xl border border-neutral-200 bg-white text-sm font-bold outline-none focus:border-neutral-400" />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {[{ id: '', name: 'الكل', icon: '' }, ...menu.categories].map((c) => (
+          {[{ id: '', name: 'الكل', icon: '' }, ...menu.categories, ...(menu.settings.giftCard.enabled ? [{ id: GIFT_CAT, name: 'بطاقة رصيد', icon: '💳' }] : [])].map((c) => (
             <button key={c.id} type="button" onClick={() => { setCat(c.id); setSearch(''); }} className={`shrink-0 h-10 px-4 rounded-2xl text-sm font-black cursor-pointer inline-flex items-center gap-2 ${cat === c.id && !search ? 'bg-[#1d1d1f] text-white' : 'bg-white text-neutral-600 border border-neutral-200'}`}>{'image' in c && c.image ? <img src={c.image} alt="" referrerPolicy="no-referrer" className="w-6 h-6 rounded-full object-cover" /> : c.icon ? <span>{c.icon}</span> : null}{c.name}</button>
           ))}
         </div>
       </div>
+      {cat === GIFT_CAT && !search ? (
+        <GiftCardPanel settings={menu.settings.giftCard} currency={currency} busy={busy} onAdd={addGiftCard} />
+      ) : (
       <div className="flex-1 overflow-y-auto p-3 pt-0 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 content-start bg-[#f5f5f7]">
         {dishes.map((d) => (
           <button
@@ -338,6 +374,7 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab: serverTab, menu, wor
         ))}
         {dishes.length === 0 && <div className="col-span-full py-10 text-center text-sm font-bold text-neutral-400">لا توجد أطباق</div>}
       </div>
+      )}
     </div>
   );
 
@@ -380,7 +417,7 @@ export const TabView: React.FC<TabViewProps> = ({ uid, tab: serverTab, menu, wor
       </div>
 
       {optionsFor && <DishOptions dish={optionsFor} subCatalogs={menu.subCatalogs} currency={currency} onAdd={addLine} onClose={() => setOptionsFor(null)} />}
-      {dialog === 'pay' && <PayDialog tab={tab} currency={currency} busy={busy} onPay={pay} onClose={() => setDialog('')} onDraft={onDraft} />}
+      {dialog === 'pay' && <PayDialog uid={uid} giftEnabled={menu.settings.giftCard.enabled} tab={tab} currency={currency} busy={busy} onPay={pay} onClose={() => setDialog('')} onDraft={onDraft} />}
 
       {dialog === 'move' && (
         <Modal title={`نقل ${tabTitle(tab)} أو دمجها`} onClose={() => setDialog('')} wide>

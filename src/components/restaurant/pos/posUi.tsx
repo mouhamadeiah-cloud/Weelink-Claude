@@ -114,6 +114,11 @@ export const failText = (e: unknown) => {
   const m = (e as any)?.message || '';
   const code = (e as any)?.code || '';
   if (m === 'gone') return 'هذه الفاتورة أُغلقت أو نُقلت من جهاز آخر.';
+  if (m === 'card-missing') return 'رقم بطاقة الرصيد غير موجود في هذا المطعم.';
+  if (m === 'card-expired') return 'انتهت صلاحية بطاقة الرصيد.';
+  if (m === 'card-empty') return 'بطاقة الرصيد فارغة.';
+  if (m === 'card-on-card') return 'لا يمكن شراء بطاقة رصيد بالدفع ببطاقة رصيد.';
+  if (m === 'card-number') return 'تعذر إصدار رقم بطاقة، حاول مرة أخرى.';
   if (m === 'occupied') return 'الطاولة مشغولة الآن بفاتورة أخرى.';
   if (String(code).includes('permission')) return 'قاعدة البيانات رفضت الحفظ: يجب نشر قواعد Firebase الجديدة.';
   return 'تعذر الحفظ. تحقق من الإنترنت وحاول مرة أخرى.';

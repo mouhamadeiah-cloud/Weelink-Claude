@@ -2,8 +2,11 @@
 // equally between several people. The method is picked (cash, Sham Cash...), and for cash the
 // money handed over gives the change. Dishes not yet sent go to the kitchen with the payment.
 import React, { useEffect, useMemo, useState } from 'react';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, ScanLine } from 'lucide-react';
 import { PAYMENT_METHODS } from '../restaurantTypes';
+import { GIFT_METHOD, CARD_STATE_TEXT, GiftCard, cardPayable, cardState, cleanCardNumber, formatCardNumber, isCardNumber } from '../giftCardLogic';
+import { getCard } from '../staffCloud';
+import { CardScanner, canScan } from './CardScanner';
 import { CASH, ScreenDraft, Tab, tabTotals, unsentItems } from '../staffTypes';
 import { formatMoney } from '../../shop/adminUi';
 import { Modal, BigButton } from './posUi';
@@ -28,9 +31,10 @@ export interface PayRequest {
   note: string;
   items?: Record<string, number>;
   given: number; // cash handed over (0 = exact)
+  card?: string; // paying with a gift card: its number
 }
 
-export const PayDialog: React.FC<{ tab: Tab; currency: string; busy: boolean; onPay: (r: PayRequest) => void; onClose: () => void; onDraft?: (d: ScreenDraft | null) => void }> = ({ tab, currency, busy, onPay, onClose, onDraft }) => {
+export const PayDialog: React.FC<{ uid: string; giftEnabled: boolean; tab: Tab; currency: string; busy: boolean; onPay: (r: PayRequest) => void; onClose: () => void; onDraft?: (d: ScreenDraft | null) => void }> = ({ uid, giftEnabled, tab, currency, busy, onPay, onClose, onDraft }) => {
   const { due, total, paid } = tabTotals(tab);
   const [mode, setMode] = useState<Mode>('all');
   const [method, setMethod] = useState(CASH);
@@ -38,11 +42,33 @@ export const PayDialog: React.FC<{ tab: Tab; currency: string; busy: boolean; on
   const [givenText, setGivenText] = useState('');
   const [people, setPeople] = useState(2);
   const [sel, setSel] = useState<Record<string, number>>({});
+  const [cardText, setCardText] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [card, setCard] = useState<GiftCard | null | 'loading'>(null);
+  const sellsCard = tab.items.some((i) => i.card && !i.voided);
+  const methods = PAYMENT_METHODS.filter((m) => m !== GIFT_METHOD || (giftEnabled && !sellsCard));
+  const cardNumber = cleanCardNumber(cardText);
+  // The typed (or scanned) number is looked up as soon as it is complete.
+  useEffect(() => {
+    if (method !== GIFT_METHOD || !isCardNumber(cardNumber)) {
+      setCard(null);
+      return;
+    }
+    let live = true;
+    setCard('loading');
+    getCard(uid, cardNumber).then((c) => live && setCard(c), () => live && setCard(null));
+    return () => {
+      live = false;
+    };
+  }, [method, cardNumber, uid]);
+  const found = card && card !== 'loading' ? card : null;
   const open = useMemo(() => tab.items.filter((i) => !i.voided && i.qty - i.paidQty > 0), [tab.items]);
   const money = (n: number) => formatMoney(n, currency);
 
   const itemsAmount = open.reduce((s, i) => s + (sel[i.id] || 0) * i.unitPrice, 0);
-  const amount = Math.min(due, Math.round((mode === 'all' ? due : mode === 'items' ? itemsAmount : mode === 'amount' ? parse(amountText) : due / people) * 100) / 100);
+  const wanted = Math.min(due, Math.round((mode === 'all' ? due : mode === 'items' ? itemsAmount : mode === 'amount' ? parse(amountText) : due / people) * 100) / 100);
+  // A gift card pays what it holds; the rest of the bill stays open for another method.
+  const amount = method === GIFT_METHOD ? (found && cardState(found) === 'ok' ? cardPayable(found, wanted) : 0) : wanted;
   const given = method === CASH ? parse(givenText) : 0;
   const change = given > amount ? Math.round((given - amount) * 100) / 100 : 0;
   const unsent = unsentItems(tab).length;
@@ -66,7 +92,7 @@ export const PayDialog: React.FC<{ tab: Tab; currency: string; busy: boolean; on
       onClose={onClose}
       wide
       footer={
-        <BigButton tone="green" className="w-full h-14 text-base" disabled={busy || amount <= 0 || (method === CASH && given > 0 && given < amount)} onClick={() => onPay({ amount, method, note, items: mode === 'items' ? sel : undefined, given })}>
+        <BigButton tone="green" className="w-full h-14 text-base" disabled={busy || amount <= 0 || (method === CASH && given > 0 && given < amount)} onClick={() => onPay({ amount, method, note, items: mode === 'items' ? sel : undefined, given, card: method === GIFT_METHOD ? cardNumber : undefined })}>
           {amount >= due ? 'تحصيل وإغلاق الطاولة' : 'تحصيل'} {money(amount)}
         </BigButton>
       }
@@ -126,11 +152,31 @@ export const PayDialog: React.FC<{ tab: Tab; currency: string; busy: boolean; on
       <div className="space-y-2">
         <div className="text-sm font-black">طريقة الدفع</div>
         <div className="flex flex-wrap gap-2">
-          {PAYMENT_METHODS.map((m) => (
+          {methods.map((m) => (
             <button key={m} type="button" onClick={() => setMethod(m)} className={`h-11 px-4 rounded-2xl text-sm font-bold border cursor-pointer ${method === m ? 'bg-[#2F9E44] border-[#2F9E44] text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>{m}</button>
           ))}
         </div>
       </div>
+
+      {method === GIFT_METHOD && (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <input autoFocus dir="ltr" inputMode="numeric" value={formatCardNumber(cardNumber)} onChange={(e) => setCardText(e.target.value)} placeholder="0000 0000 0000 0000" className="flex-1 min-w-0 h-14 px-4 rounded-2xl border border-neutral-200 text-xl font-black tracking-wider outline-none focus:border-neutral-400" />
+            {canScan() && <BigButton tone="light" className="h-14 px-4" onClick={() => setScanning(true)}><ScanLine size={18} /> مسح</BigButton>}
+          </div>
+          {card === 'loading' && <div className="text-sm font-bold text-neutral-400">جارٍ التحقق من البطاقة...</div>}
+          {isCardNumber(cardNumber) && card === null && <div className="text-sm font-bold text-[#E03131]">رقم البطاقة غير موجود في هذا المطعم.</div>}
+          {found && cardState(found) !== 'ok' && <div className="text-sm font-bold text-[#E03131]">{CARD_STATE_TEXT[cardState(found)]}</div>}
+          {found && cardState(found) === 'ok' && (
+            <div className="p-3 rounded-2xl bg-[#EBFBEE] text-[#2B8A3E] text-sm font-black space-y-0.5">
+              <div>رصيد البطاقة {money(found.balance)}{found.expiresAt ? ` · تنتهي ${new Date(found.expiresAt).toLocaleDateString('ar-SY-u-nu-latn')}` : ''}</div>
+              <div>سيُخصم {money(amount)}، ويبقى على البطاقة {money(Math.round((found.balance - amount) * 100) / 100)}</div>
+              {amount < wanted && <div className="text-[#E8590C]">الرصيد لا يكفي: يبقى {money(Math.round((wanted - amount) * 100) / 100)} تدفعه بوسيلة أخرى قبل إغلاق الحساب.</div>}
+            </div>
+          )}
+        </div>
+      )}
+      {scanning && <CardScanner onClose={() => setScanning(false)} onNumber={(n) => { setCardText(n); setScanning(false); }} />}
 
       {method === CASH && amount > 0 && (
         <div className="flex flex-wrap items-center gap-3">

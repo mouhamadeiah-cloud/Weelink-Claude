@@ -2,13 +2,15 @@
 // can write its sales to the same place later. Income and expenses by hand (category, amount,
 // payment method, day, note); every order marked «تم التسليم» adds its sale by itself. A period
 // filter (today, this week, this month, a chosen range) with income, expenses and net, totals by
-// category, the lines themselves, and a CSV export for a spreadsheet.
+// category, the lines themselves, and a CSV export for a spreadsheet. The gift cards sold (GiftCardsTab)
+// sit at the bottom: their sale is income here, their use is not.
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, Download, TrendingUp, TrendingDown, Scale, ReceiptText } from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, LedgerEntry, LedgerKind, PAYMENT_METHODS, todayKey } from '../restaurantTypes';
 import { addLedgerEntry, deleteLedgerEntry, useLedger } from '../restaurantCloud';
 import { Card, Field, inputClass, inputFitClass, PrimaryButton, EmptyState, formatMoney } from '../../shop/adminUi';
 import { CloudNotice, RestaurantTabProps, parseAmount } from './shared';
+import { GiftCardsTab } from './GiftCardsTab';
 
 type Period = 'today' | 'week' | 'month' | 'all' | 'range';
 
@@ -30,7 +32,8 @@ const SOURCE_LABEL: Record<LedgerEntry['source'], string> = { manual: 'يدوي'
 
 const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 
-export const AccountsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }) => {
+export const AccountsTab: React.FC<RestaurantTabProps> = (props) => {
+  const { data, ownerUid } = props;
   const ledger = useLedger(ownerUid);
   const currency = data.settings.currency;
   const [period, setPeriod] = useState<Period>('month');
@@ -187,6 +190,11 @@ export const AccountsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }) =>
           </div>
         </Card>
       )}
+
+      <div className="pt-2">
+        <h3 className="text-base font-black mb-3">بطاقات الرصيد</h3>
+        <GiftCardsTab {...props} />
+      </div>
     </div>
   );
 };

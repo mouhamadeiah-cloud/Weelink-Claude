@@ -6,7 +6,7 @@ import { Minus, Plus, ScanLine } from 'lucide-react';
 import { PAYMENT_METHODS } from '../restaurantTypes';
 import { GIFT_METHOD, CARD_STATE_TEXT, GiftCard, cardPayable, cardState, cleanCardNumber, formatCardNumber, isCardNumber } from '../giftCardLogic';
 import { getCard } from '../staffCloud';
-import { CardScanner, canScan } from './CardScanner';
+import { CardScanner } from './CardScanner';
 import { CASH, ScreenDraft, Tab, tabTotals, unsentItems } from '../staffTypes';
 import { formatMoney } from '../../shop/adminUi';
 import { Modal, BigButton } from './posUi';
@@ -162,7 +162,7 @@ export const PayDialog: React.FC<{ uid: string; giftEnabled: boolean; tab: Tab; 
         <div className="space-y-2">
           <div className="flex gap-2">
             <input autoFocus dir="ltr" inputMode="numeric" value={formatCardNumber(cardNumber)} onChange={(e) => setCardText(e.target.value)} placeholder="0000 0000 0000 0000" className="flex-1 min-w-0 h-14 px-4 rounded-2xl border border-neutral-200 text-xl font-black tracking-wider outline-none focus:border-neutral-400" />
-            {canScan() && <BigButton tone="light" className="h-14 px-4" onClick={() => setScanning(true)}><ScanLine size={18} /> مسح</BigButton>}
+            <BigButton tone="light" className="h-14 px-4" onClick={() => setScanning(true)}><ScanLine size={18} /> مسح</BigButton>
           </div>
           {card === 'loading' && <div className="text-sm font-bold text-neutral-400">جارٍ التحقق من البطاقة...</div>}
           {isCardNumber(cardNumber) && card === null && <div className="text-sm font-bold text-[#E03131]">رقم البطاقة غير موجود في هذا المطعم.</div>}

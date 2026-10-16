@@ -55,3 +55,26 @@ test('a gift card on the bill gets no discount and counts in the total', () => {
   assert.equal(t.discount, 10000);
   assert.equal(t.total, 590000);
 });
+
+test('the QR code of a card reads back as its number (what the scanner decodes)', async () => {
+  const [{ default: QRCode }, { default: jsQR }] = await Promise.all([import('qrcode'), import('jsqr')]);
+  const number = newCardNumber();
+  const qr = QRCode.create(number, { errorCorrectionLevel: 'M' });
+  const size = qr.modules.size;
+  const scale = 8;
+  const margin = 4 * scale;
+  const side = size * scale + margin * 2;
+  const data = new Uint8ClampedArray(side * side * 4).fill(255);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      if (!qr.modules.get(x, y)) continue;
+      for (let dy = 0; dy < scale; dy += 1) {
+        for (let dx = 0; dx < scale; dx += 1) {
+          const i = ((margin + y * scale + dy) * side + margin + x * scale + dx) * 4;
+          data[i] = data[i + 1] = data[i + 2] = 0;
+        }
+      }
+    }
+  }
+  assert.equal(jsQR(data, side, side)?.data, number);
+});

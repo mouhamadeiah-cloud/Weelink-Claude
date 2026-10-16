@@ -179,6 +179,15 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       setBookError(live ? 'اكتب اسمك ورقم هاتفك وإيميلك ليوصلك تأكيد الموعد والتذكير.' : 'الرجاء كتابة الاسم ورقم الهاتف على الأقل لتأكيد حجز الموعد.');
       return;
     }
+    // The same minimums /api/booking checks, so a visitor hears which field to fix.
+    if (name.trim().length < 2) {
+      setBookError('اكتب اسمك كاملاً.');
+      return;
+    }
+    if (phone.replace(/\D/g, '').length < 6) {
+      setBookError('تأكد من رقم الهاتف، لازم يكون 6 أرقام على الأقل.');
+      return;
+    }
     const chosen = slotItems.find((s) => s.label === (selectedSlot || computedSlots[0]));
     if (!chosen || taken.includes(chosen.startMin) || isPastSlot(chosen.startMin)) {
       setBookError('اختر وقتاً متاحاً.');
@@ -206,6 +215,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
         setBookError('انحجز هذا الوقت قبل لحظات. اختر وقتاً غيره.');
         setTakenTick((n) => n + 1);
       } else if (out.error === 'bad_email') setBookError('تأكد من الإيميل.');
+      else if (out.error === 'missing_fields') setBookError('تأكد من الاسم ورقم الهاتف.');
       else setBookError(`ما قدرنا نحفظ الحجز. تأكد من الإنترنت وجرّب مرة ثانية. (رمز: ${out.error === 'offline' ? 'offline' : `${out.error}/${'reason' in out ? out.reason : ''}`})`);
       return;
     }

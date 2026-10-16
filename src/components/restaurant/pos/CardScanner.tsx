@@ -1,10 +1,9 @@
-// Reads a gift card's QR code with the device camera (where the browser can: Chrome on Android and
-// most tablets). Where it cannot, the cashier types the number instead.
+// Reads a gift card's QR code with the device camera. Uses the browser's own detector where there is
+// one (Chrome on Android), and a small JavaScript reader everywhere else (iPhone, iPad, desktop).
 import React, { useEffect, useRef, useState } from 'react';
+import jsQR from 'jsqr';
 import { cleanCardNumber, isCardNumber } from '../giftCardLogic';
 import { Modal } from './posUi';
-
-export const canScan = () => typeof window !== 'undefined' && 'BarcodeDetector' in window && !!navigator.mediaDevices?.getUserMedia;
 
 export const CardScanner: React.FC<{ onNumber: (n: string) => void; onClose: () => void }> = ({ onNumber, onClose }) => {
   const video = useRef<HTMLVideoElement>(null);
@@ -12,19 +11,33 @@ export const CardScanner: React.FC<{ onNumber: (n: string) => void; onClose: () 
   useEffect(() => {
     let stream: MediaStream | null = null;
     let stop = false;
+    const canvas = document.createElement('canvas');
     (async () => {
       try {
-        const Detector = (window as any).BarcodeDetector;
-        const detector = new Detector({ formats: ['qr_code'] });
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('no-camera');
+        const Native = (window as any).BarcodeDetector;
+        const detector = Native ? new Native({ formats: ['qr_code'] }) : null;
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         if (!video.current) return;
         video.current.srcObject = stream;
         await video.current.play();
+        const read = async (): Promise<string> => {
+          const v = video.current!;
+          if (detector) return (await detector.detect(v))[0]?.rawValue || '';
+          if (!v.videoWidth) return '';
+          // A smaller copy of the frame is enough for a QR code and keeps the reader quick.
+          const scale = Math.min(1, 640 / v.videoWidth);
+          canvas.width = Math.round(v.videoWidth * scale);
+          canvas.height = Math.round(v.videoHeight * scale);
+          const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+          ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+          const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          return jsQR(img.data, img.width, img.height)?.data || '';
+        };
         const tick = async () => {
           if (stop || !video.current) return;
           try {
-            const found = await detector.detect(video.current);
-            const n = cleanCardNumber(found[0]?.rawValue || '');
+            const n = cleanCardNumber(await read());
             if (isCardNumber(n)) {
               onNumber(n);
               return;
@@ -32,11 +45,11 @@ export const CardScanner: React.FC<{ onNumber: (n: string) => void; onClose: () 
           } catch {
             /* keep trying */
           }
-          window.setTimeout(tick, 250);
+          window.setTimeout(tick, 200);
         };
         tick();
       } catch {
-        setError('تعذر فتح الكاميرا. اكتب رقم البطاقة بدلًا من ذلك.');
+        setError('تعذر فتح الكاميرا. اسمح للمتصفح باستعمالها أو اكتب رقم البطاقة بدلًا من ذلك.');
       }
     })();
     return () => {

@@ -21,6 +21,7 @@
     "dompurify": "^3.4.17",
     "firebase": "^12.19.0",
     "firebase-admin": "^13.10.0",
+    "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "lottie-web": "^5.13.0",
     "lucide-react": "^0.546.0",

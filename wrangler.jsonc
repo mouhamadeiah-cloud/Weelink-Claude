@@ -1,9 +1,10 @@
-// Cloudflare Workers config (trial). Deploy with `npx wrangler deploy` after `npm run build`.
+// Cloudflare Workers config (trial). "name" must match the Worker project in the Cloudflare dashboard.
+// Workers Builds runs `npm run build` then `npx wrangler deploy`.
 // Secrets (RESEND_API_KEY, FIREBASE_SERVICE_ACCOUNT, GEMINI_API_KEY, CRON_SECRET, ...) are set with
 // `npx wrangler secret put NAME` or in the dashboard, never here.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "weelink",
+  "name": "weelink-claude",
   "main": "worker/index.ts",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],

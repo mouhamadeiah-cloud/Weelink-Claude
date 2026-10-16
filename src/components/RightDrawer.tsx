@@ -67,6 +67,7 @@ import {
   Zap,
   PanelTop,
 } from 'lucide-react';
+import { WeeDots } from './ui/WeeDots';
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape, getGlowShadowStyle, getLightGradientStyle, ContactType } from '../types';
 import { MASK_SHAPES } from '../utils/maskShapes';
 import { Icon } from '@iconify/react';
@@ -176,7 +177,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   userEmail,
   onCompleteChat,
   onStepChange,
-  onWriteTexts,
   onBuildPage,
   onRestorePage,
   onEditAnswers,
@@ -5573,7 +5573,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               }`}
               title={isWeeAiChatCollapsed ? "فتح مساعد الذكاء الاصطناعي" : "طي مساعد الذكاء الاصطناعي"}
             >
-              <Sparkles size={11} className={isWeeAiChatCollapsed ? 'text-brand' : 'text-green-600 animate-pulse'} />
+              <WeeDots size={15} />
               <span>wee ai</span>
               {isWeeAiChatCollapsed ? (
                 <ChevronDown size={11} strokeWidth={2.8} />
@@ -5967,7 +5967,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           isCollapsed={isWeeAiChatCollapsed}
           onToggleCollapse={toggleWeeAiChat}
           onStepChange={onStepChange}
-          onWriteTexts={onWriteTexts}
           onBuildPage={onBuildPage}
           onRestorePage={onRestorePage}
           onEditAnswers={onEditAnswers}

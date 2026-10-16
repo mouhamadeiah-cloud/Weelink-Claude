@@ -108,7 +108,7 @@ const firebaseAdmin = () => {
 
 type Period = 'monthly' | 'yearly';
 const PERIODS: Period[] = ['monthly', 'yearly'];
-// Wee AI tokens (the same numbers as in api/build-page.ts and api/write-texts.ts): the first AI call
+// Wee AI tokens (the same numbers as in api/build-page.ts): the first AI call
 // grants FREE_TOKENS, a payment adds PAID_TOKENS for every month it covers.
 const FREE_TOKENS = 30_000;
 const PAID_TOKENS = 150_000;

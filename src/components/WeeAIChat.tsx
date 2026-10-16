@@ -24,8 +24,6 @@ interface WeeAIChatProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onStepChange?: (stepNum: number) => void;
-  // Wee AI writes the page's texts from these answers; resolves to a message to show the owner.
-  onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
   // «ابن صفحتي»: Wee AI builds the page's slides from the answers; the old page can be brought back.
   onBuildPage?: (answers: any) => Promise<{ ok: boolean; message: string }>;
   onRestorePage?: () => { ok: boolean; message: string };
@@ -168,7 +166,6 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   isCollapsed: externalIsCollapsed,
   onToggleCollapse: externalOnToggleCollapse,
   onStepChange,
-  onWriteTexts,
   onBuildPage,
   onRestorePage,
   pageKind,
@@ -189,7 +186,6 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // Current Step (1 through 12, then 13 = complete)
   const [step, setStep] = useState<number>(1);
-  const [isWriting, setIsWriting] = useState(false);
   const [writeNote, setWriteNote] = useState<{ ok: boolean; message: string } | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [canRestore, setCanRestore] = useState(false);
@@ -343,6 +339,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
     const loadProgress = async () => {
       if (!userId) return;
+      // Another account (or none yet): nothing of the last one stays in the questions; only what
+      // this account saved is put back.
+      finishedRef.current = false;
+      resetToBlankDefaults();
       // The browser's own copy can hold full-size photos even when the cloud copy is fine: shrink it too.
       if (!isGuest) {
         try {
@@ -1490,7 +1490,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       </div>
       )}
 
-      {/* Wee AI builds the page, or writes its texts, from the answers above (after signing up) */}
+      {/* Wee AI builds the page from the answers above (after signing up) */}
       {!isGuest && !embedded && <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0 space-y-2">
         {writeNote && (
           <p role="status" className={`text-xs font-semibold leading-relaxed ${writeNote.ok ? 'text-green-700' : 'text-rose-600'}`}>
@@ -1499,7 +1499,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
         <button
           type="button"
-          disabled={!onBuildPage || step < 13 || isBuilding || isWriting}
+          disabled={!onBuildPage || step < 13 || isBuilding}
           onClick={async () => {
             if (!onBuildPage) return;
             setIsBuilding(true);
@@ -1536,32 +1536,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             رجّع صفحتي متل ما كانت
           </button>
         )}
-        <button
-          type="button"
-          disabled={!onWriteTexts || step < 13 || isWriting || isBuilding}
-          onClick={async () => {
-            if (!onWriteTexts) return;
-            setIsWriting(true);
-            setWriteNote(null);
-            try {
-              setWriteNote(await onWriteTexts({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers }));
-            } finally {
-              setIsWriting(false);
-            }
-          }}
-          className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-            step < 13 || !onWriteTexts
-              ? 'text-neutral-400 bg-neutral-100 border border-neutral-200 cursor-not-allowed'
-              : 'text-neutral-800 bg-white border border-neutral-200 hover:border-neutral-300 cursor-pointer disabled:cursor-wait'
-          }`}
-          title={step < 13 ? 'جاوب على الأسئلة أولاً، وبعدها بيكتب Wee AI نصوص صفحتك' : 'Wee AI يكتب العناوين والفقرات والأزرار من معلوماتك'}
-        >
-          <span className="rounded-full p-0.5 flex">
-            <WeeDots size={16} busy={isWriting} />
-          </span>
-          <span>{isWriting ? 'Wee AI عم يكتب نصوصك…' : 'اكتب نصوص صفحتي'}</span>
-        </button>
-        {step < 13 && !onEditAnswers && <p className="text-xs text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك أو يكتب نصوصها.</p>}
+        {step < 13 && !onEditAnswers && <p className="text-xs text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك.</p>}
       </div>}
 
     </div>

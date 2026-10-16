@@ -57,7 +57,7 @@ import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, restaura
 import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import { Eye, FileText, FolderTree, LayoutTemplate, Loader2, MousePointer2, Plus, Redo2, Settings, SlidersHorizontal, Store, Undo2 } from 'lucide-react';
-import { applyPageTexts, businessFacts, pageTextItems, requestPageTexts, type WeeAnswers } from './services/weeWriter';
+import type { WeeAnswers } from './services/weeWriter';
 import { applyPageLook, inStartingLook } from './services/applyLook';
 import { formatMoney } from './components/shop/adminUi';
 import { PageLookPicker, type LookSample } from './components/rightDrawer/PageLookPicker';
@@ -1785,23 +1785,10 @@ export default function App() {
     setElements(newElements);
   }, [history, historyIndex]);
 
-  // Wee AI writes the texts of the page being edited from the owner's answers, as one step that
-  // undo takes back. The answer can take a while, so it is applied to the elements as they are then.
+  // The latest pushToHistory, for answers that arrive after a wait.
   const pushToHistoryRef = useRef(pushToHistory);
   pushToHistoryRef.current = pushToHistory;
   const DESIGNER_AI_NOTE = 'Wee AI في وضع المصمم يحتاج رصيد توكنز، وشراء التوكنز غير متاح حالياً. التصميم اليدوي مفتوح.';
-  const handleWriteTexts = async (answers: WeeAnswers) => {
-    if (designerModeRef.current) return { ok: false, message: DESIGNER_AI_NOTE };
-    const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
-    const items = pageTextItems(elementsRef.current, page.slides);
-    if (!items.length) return { ok: false, message: 'ما في نصوص بهالصفحة ليكتبها Wee AI. أضف عنوان أو فقرة أولاً.' };
-    const result = await requestPageTexts(businessFacts(answers, page.navbar.brandName || PROJECT_KIND_LABEL[project]), items);
-    if (!result.ok) return { ok: false, message: result.message };
-    const { next, changed } = applyPageTexts(elementsRef.current, result.texts);
-    if (!changed) return { ok: false, message: 'ما رجع Wee AI بنصوص جديدة. جرّب مرة ثانية.' };
-    pushToHistoryRef.current(next);
-    return { ok: true, message: `كتب Wee AI ${changed} نص بصفحة «${page.name}». إذا ما عجبوك اكبس تراجع (${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}+Z).` };
-  };
 
   // «ابن صفحتي»: Wee AI designs the page from the owner's answers (ready slides in the owner's
   // palette, texts, photos and links) and replaces the page's slides; a store's other pages take
@@ -4455,7 +4442,6 @@ export default function App() {
         userEmail={currentUser?.email || ''}
         onCompleteChat={handleCompleteChat}
         onStepChange={handleStepChange}
-        onWriteTexts={handleWriteTexts}
         onBuildPage={handleBuildPage}
         onRestorePage={handleRestoreBuiltPage}
         onEditAnswers={openQuestions}

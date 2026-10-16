@@ -77,6 +77,18 @@ service cloud.firestore {
         && (!('createdAt' in incoming()) || incoming().createdAt == request.time || incoming().createdAt is string);
         
       allow delete: if isOwner(userId) || isDemo(userId);
+
+      // The account's later projects, one doc each (see src/services/projects.ts). The first project
+      // of each kind stays in the doc above.
+      match /projects/{key} {
+        allow read: if canManage(userId);
+        allow create, update: if canManage(userId)
+          && key.matches('^(page|shop|cars|restaurant)-[a-z0-9]{4,12}$')
+          && (!('kind' in incoming()) || incoming().kind == key.split('-')[0])
+          && isValidDesign(incoming(), userId)
+          && (!('createdAt' in incoming()) || incoming().createdAt == request.time || incoming().createdAt is string);
+        allow delete: if isOwner(userId);
+      }
     }
 
     // Restaurant projects (see src/components/restaurant/restaurantCloud.ts).

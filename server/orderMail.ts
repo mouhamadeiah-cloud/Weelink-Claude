@@ -31,8 +31,15 @@ const page = (line: string, orderId: string) => `<div dir="rtl" style="font-fami
 <p>رقم الطلب: <b dir="ltr">${escape(orderId.slice(0, 6).toUpperCase())}</b>. ادخل إلى Weelink ثم «طلبات التصميم».</p>
 <p style="color:#86868b;font-size:12px">رسالة آلية من Weelink.</p></div>`;
 
+// Tests set a tap to record mails instead of sending them (no loader tricks, so it behaves the same everywhere).
+// The tap lives on globalThis so a second loaded copy of this module still sees it.
+type Tap = ((entry: string) => void) | null;
+const holder = globalThis as { __mailTap?: Tap };
+export const setMailTap = (fn: Tap) => { holder.__mailTap = fn; };
+
 // Mails the person behind `uid`. `auth` is firebase-admin's Auth. Never throws.
 export const mailOrder = async (auth: { getUser: (uid: string) => Promise<{ email?: string }> }, uid: string, event: OrderEvent, orderId: string): Promise<'sent' | 'skipped' | 'failed'> => {
+  if (holder.__mailTap) { holder.__mailTap(`${uid}:${event}`); return 'sent'; }
   const from = process.env.EMAIL_FROM;
   const key = process.env.RESEND_API_KEY;
   if (!from || !key || !uid) return 'skipped';
@@ -53,6 +60,7 @@ export const mailOrder = async (auth: { getUser: (uid: string) => Promise<{ emai
 
 // The office's own alert for a complaint that waited too long.
 export const mailOffice = async (orderId: string, text: string): Promise<void> => {
+  if (holder.__mailTap) { holder.__mailTap(`office:${orderId}`); return; }
   const from = process.env.EMAIL_FROM;
   const key = process.env.RESEND_API_KEY;
   const to = process.env.DESIGN_ALERT_EMAIL;

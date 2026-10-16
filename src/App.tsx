@@ -205,16 +205,16 @@ export default function App() {
 
   // Firebase Auth & Cloud Sync States
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isFirebaseLoading, setIsFirebaseLoading] = useState<boolean>(true);
+  const [isFirebaseLoading, setIsFirebaseLoading] = useState<boolean>(false);
   const [isSavingCloud, setIsSavingCloud] = useState<boolean>(false);
   const [isAuthActive, setIsAuthActive] = useState<boolean>(true);
-  // Weelink opens on its home page (search for visitors, the way in for owners). What the sign-in
-  // screen leads to: 'account' = straight to the person's own page, 'build' = choosing what to build.
-  const [isHomeActive, setIsHomeActive] = useState<boolean>(true);
+  // Weelink opens on «اعمل مشروعك» (the start page); the old home page (search for visitors) is
+  // «خدماتنا». What the sign-in screen leads to: 'account' = straight to the person's own page, 'build' = choosing what to build.
+  const [isHomeActive, setIsHomeActive] = useState<boolean>(false);
   const afterSignInRef = useRef<'account' | 'build'>('account');
   // «اعمل صفحتك»: the kind of page picked before the questions, then Wee AI's questions. Everyone
   // answers them there (Eyad, 12 Oct); the editor's panel only shows the answers and builds.
-  const [isStartActive, setIsStartActive] = useState<boolean>(false);
+  const [isStartActive, setIsStartActive] = useState<boolean>(true);
   // «قانون الصفحة»: a screen of its own under Weelink's top bar.
   const [isLawActive, setIsLawActive] = useState<boolean>(false);
   // The kind the start page opens on (from «عدّل إجاباتي» in the editor), else the kinds.
@@ -1757,7 +1757,9 @@ export default function App() {
         setIsProjectChosen(false);
         setIsAuthActive(true);
         setIsLawActive(false);
-        setIsHomeActive(true);
+        setIsHomeActive(false);
+        setStartKind(null);
+        setIsStartActive(true);
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
       }
@@ -3898,7 +3900,7 @@ export default function App() {
   goToScreenRef.current = (target, kind) => {
     const signedIn = !!currentUser && !currentUser.isAnonymous;
     const asked = target === 'chooser' ? 'start' : target; // the old projects page's entries
-    const to = !signedIn && asked === 'editor' ? 'home' : signedIn && asked === 'auth' ? 'home' : asked;
+    const to = !signedIn && asked === 'editor' ? 'start' : signedIn && asked === 'auth' ? 'start' : asked;
     if (screenRef.current === 'editor' && to !== 'editor') flushProjectSave();
     setIsLawActive(to === 'law');
     setIsHomeActive(to === 'home');
@@ -4051,7 +4053,7 @@ export default function App() {
         />
         <button
           type="button"
-          onClick={() => { setIsLawActive(false); setIsHomeActive(true); }}
+          onClick={() => { setIsLawActive(false); setStartKind(null); setIsStartActive(true); }}
           className="fixed top-3 right-3 z-[60] bg-surface border border-line rounded-full px-3.5 py-1.5 text-xs font-bold text-muted hover:text-ink"
           dir="rtl"
         >

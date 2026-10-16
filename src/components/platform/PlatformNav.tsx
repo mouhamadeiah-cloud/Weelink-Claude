@@ -1,4 +1,5 @@
-// The one top bar of Weelink's own screens (the front page, the start page): fixed at the top, small text, no buttons.
+// The one top bar of Weelink's own screens (the start page «اعمل مشروعك» is the main one, «خدماتنا» is the
+// services page): fixed at the top, small text, no buttons. The logo leads to the main page.
 // The screen you are on carries a light blue frame. «حسابي» is a small menu that closes on a click outside it.
 import React, { useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
@@ -44,13 +45,13 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
   return (
     <header dir="rtl" className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
       <nav className="mx-auto flex h-12 max-w-6xl items-center gap-1 px-3 sm:px-4" aria-label="Weelink">
-        <button type="button" onClick={onHome} className="me-2 flex shrink-0 items-center gap-2" aria-label="weelink">
+        <button type="button" onClick={onStart} className="me-2 flex shrink-0 items-center gap-2" aria-label="weelink">
           <span className="flex h-7 w-7 items-center justify-center rounded-ctl bg-brand text-sm font-bold text-white">W</span>
           <span className="hidden font-logo text-base font-bold tracking-tight sm:inline">weelink</span>
         </button>
         <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
-          <button type="button" onClick={onHome} aria-current={current === 'home' ? 'page' : undefined} className={itemCls(current === 'home')}>الرئيسية</button>
           <button type="button" onClick={onStart} aria-current={current === 'start' ? 'page' : undefined} className={itemCls(current === 'start')}>اعمل مشروعك</button>
+          <button type="button" onClick={onHome} aria-current={current === 'home' ? 'page' : undefined} className={itemCls(current === 'home')}>خدماتنا</button>
           {signedIn && <button type="button" onClick={onOpenMyPage} className={itemCls(false)}>مشروعي</button>}
           {extra}
           <button type="button" onClick={onLaw} aria-current={current === 'law' ? 'page' : undefined} className={itemCls(current === 'law')}>قانون الصفحة</button>

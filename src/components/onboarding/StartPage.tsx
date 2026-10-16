@@ -119,6 +119,11 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
 
   // A kind always starts a new project; the ones started before open from «مشاريعي».
   const choose = (type: ProjectType) => {
+    // A second restaurant needs its own tablets, orders and live site, which come in a later step.
+    if (signedIn && type === 'restaurant' && owned.includes('restaurant')) {
+      window.alert('مطعم تاني بنفس الحساب، مع أجهزتو وطلباتو، جاي بخطوة قريبة. مطعمك الحالي تحت «مشاريعي».');
+      return;
+    }
     if (!signedIn) setGuestKind(type);
     setStep(1);
     setKind(type);

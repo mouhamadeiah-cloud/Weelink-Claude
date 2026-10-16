@@ -127,7 +127,7 @@ export const adminSubscriber = (uid: string) => call<SubscriberDetail>({ action:
 export const adminSetStatus = (uid: string, status: SubscriberStatus, reason: string) => call<{ status: SubscriberStatus }>({ action: 'set-status', uid, status, reason });
 export const adminAddNote = (uid: string, text: string) => call<{ ok: true }>({ action: 'add-note', uid, text });
 
-export const adminAddPayment = (body: { uid: string; plan: string; planName: string; period: Period; amount: number; method: PayMethod; receiptNo: string; note: string }) =>
+export const adminAddPayment = (body: { uid: string; plan: string; planName: string; period: Period; amount: number; method: PayMethod; receiptNo: string; note: string; coupon?: string }) =>
   call<{ payment: Payment }>({ action: 'add-payment', ...body });
 export const adminPostponeFreeze = (uid: string, date: string, reason: string) => call<{ freezeAt: number }>({ action: 'postpone-freeze', uid, date, reason });
 export const adminPayments = (q: { month: string; method: string; q: string }) => call<{ rows: Payment[]; matched: number; total: number }>({ action: 'payments', ...q });
@@ -223,3 +223,52 @@ export const adminRecountDesigner = (uid: string) => call<{ stats: { completed: 
 export const adminOrderPaid = (id: string, method: PayMethod, receiptNo: string, note: string) => call<{ status: string }>({ action: 'design-order-paid', id, method, receiptNo, note });
 export const adminOrderRelease = (id: string, note: string) => call<{ status: string }>({ action: 'design-order-release', id, note });
 export const adminOrderRefund = (id: string, reason: string) => call<{ status: string }>({ action: 'design-order-refund', id, reason });
+
+// ----- phase 6: accounts, dashboard, reports, health, coupons, announcements -----
+export interface Dashboard {
+  totals: { users: number; paidActive: number; expiring30: number; overdue: number; frozen: number; cancelled: number; due30: number; tokensUsedAll: number; newThisMonth: number; revenueThisMonth: number; revenue12: number; reportsOpen: number };
+  chart: { month: string; newUsers: number; revenue: number; payments: number }[];
+  renewal: { matured: number; renewed: number; rate: number | null; days: number };
+  expiring: { uid: string; name: string; email: string; planName: string; freezeAt: number; left: number; amount: number }[];
+  top: { uid: string; name: string; used: number; balance: number }[];
+  truncated: boolean;
+}
+export const adminDashboard = () => call<Dashboard>({ action: 'dashboard' });
+export const adminExport = (kind: 'subscribers' | 'payments') => call<{ filename: string; csv: string; rows: number }>({ action: 'export', kind });
+export const adminBackup = () => call<{ filename: string; json: string; counts: Record<string, number> }>({ action: 'backup' });
+
+export interface RatingReport { id: string; owner: string; project: string; stars: number; text: string; rater: string; reason: string; by: string; reporter: string; at: string }
+export const adminReports = () => call<{ rows: RatingReport[] }>({ action: 'reports' });
+export const adminReportDecide = (id: string, decision: 'keep' | 'remove', note: string) => call<{ ok: true }>({ action: 'report-decide', id, decision, note });
+
+export interface Health {
+  config: { serviceAccount: boolean; resend: boolean; emailFrom: boolean; cron: boolean; gemini: boolean };
+  ai: { calls: number; failed: number; reasons: Record<string, number>; quotaHit: boolean; lastFailures: { at: number; kind: string; reason: string }[] };
+  daily: { at: number; checked: number; frozen: number; reminded: number; skipped: number; failed: number }[];
+  mailFails: { at: number; admin: string; action: string }[];
+  loginFails: number;
+}
+export const adminHealth = () => call<Health>({ action: 'health' });
+
+export type CouponKind = 'trial' | 'tokens' | 'discount';
+export interface Coupon { code: string; kind: CouponKind; value: number; plan: string; planName: string; maxUses: number; used: number; expiresAt: number; active: boolean; note: string; createdAt: number; by: string }
+export const adminCoupons = () => call<{ rows: Coupon[]; kinds: Record<CouponKind, string> }>({ action: 'coupons' });
+export const adminCouponSave = (b: { code: string; kind: CouponKind; value: number; maxUses: number; expires: string; note: string }) => call<{ code: string }>({ action: 'coupon-save', ...b });
+export const adminCouponToggle = (code: string, active: boolean) => call<{ ok: true }>({ action: 'coupon-toggle', code, active });
+export const adminCouponApply = (uid: string, code: string) => call<{ ok: true; text: string }>({ action: 'coupon-apply', uid, code });
+
+export interface AnnouncePreview { count: number; audiences: Record<string, string>; max: number; history: { id: string; at: number; subject: string; audience: string; count: number; sent: number; failed: number; by: string }[] }
+export const adminAnnouncePreview = (audience: string) => call<AnnouncePreview>({ action: 'announce-preview', audience });
+export const adminAnnounce = (b: { audience: string; subject: string; text: string; confirm?: number; testTo?: string }) => call<{ count?: number; sent: number; failed?: number; test?: boolean }>({ action: 'announce', ...b });
+
+// A file the browser saves (a CSV with a byte-order mark so Excel reads Arabic right, or the JSON backup).
+export const saveTextFile = (filename: string, text: string, type: string, bom = false) => {
+  const url = URL.createObjectURL(new Blob([bom ? '﻿' : '', text], { type }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};

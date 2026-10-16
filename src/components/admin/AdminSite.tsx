@@ -2,7 +2,7 @@
 // choose a new password the first time, then the subscribers list with search and filters.
 // All data comes from /api/admin; nothing here reads Firebase directly.
 import React, { useCallback, useEffect, useState } from 'react';
-import { BarChart3, ChevronDown, Coins, CreditCard, KeyRound, Loader2, LogOut, Menu, Palette, Search, ShieldCheck, UserCog, Users, X } from 'lucide-react';
+import { Activity, BarChart3, ChevronDown, Coins, CreditCard, KeyRound, Loader2, LogOut, Menu, Palette, Search, ShieldCheck, UserCog, Users, X } from 'lucide-react';
 import { SubscriberDetail } from './SubscriberDetail';
 import { PaymentsView } from './PaymentsView';
 import { BillingSettings } from './BillingSettings';
@@ -10,6 +10,11 @@ import { TokensView } from './TokensView';
 import { TeamView } from './TeamView';
 import { TasksView } from './TasksView';
 import { ChatView } from './ChatView';
+import { DashboardView } from './DashboardView';
+import { ReportsView } from './ReportsView';
+import { HealthView } from './HealthView';
+import { CouponsView } from './CouponsView';
+import { AnnounceView } from './AnnounceView';
 import { PageLawView } from './PageLawView';
 import { SlidesReviewView } from './SlidesReviewView';
 import { DesignOrdersView } from './DesignOrdersView';
@@ -65,7 +70,7 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   );
 };
 
-type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'page-law' | 'slides' | 'design-orders' | 'password';
+type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'dashboard' | 'reports' | 'coupons' | 'announce' | 'health' | 'page-law' | 'slides' | 'design-orders' | 'password';
 interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View; needs?: string }[] }
 // Every group starts folded; the admin opens what he needs. Items without a view are the next phases.
 const MENU: MenuGroup[] = [
@@ -74,7 +79,8 @@ const MENU: MenuGroup[] = [
   { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'usage', label: 'الاستهلاك والأسعار', view: 'tokens', needs: 'tokens-overview' }] },
   { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات', view: 'team', needs: 'admins-list' }, { id: 'my-tasks', label: 'مهامي', view: 'my-tasks' }, { id: 'all-tasks', label: 'كل المهام', view: 'all-tasks', needs: 'task-create' }, { id: 'chat', label: 'لوحة التواصل', view: 'chat' }] },
   { id: 'designers', title: 'معرض المصممين', icon: Palette, items: [{ id: 'slides', label: 'مراجعة الشرائح', view: 'slides', needs: 'slides-review-list' }, { id: 'orders', label: 'طلبات التصميم', view: 'design-orders', needs: 'design-orders' }, { id: 'law', label: 'قانون الصفحة', view: 'page-law', needs: 'page-law-get' }] },
-  { id: 'books', title: 'الحسابات والداشبورد', icon: BarChart3, items: [{ id: 'dash', label: 'الداشبورد' }] },
+  { id: 'books', title: 'الحسابات والداشبورد', icon: BarChart3, items: [{ id: 'dash', label: 'الداشبورد والتصدير', view: 'dashboard', needs: 'dashboard' }, { id: 'coupons', label: 'الكوبونات والتجربة', view: 'coupons', needs: 'coupons' }, { id: 'announce', label: 'إعلان بالإيميل', view: 'announce', needs: 'announce' }] },
+  { id: 'watch', title: 'المراجعة والمتابعة', icon: Activity, items: [{ id: 'reports', label: 'بلاغات التقييمات', view: 'reports', needs: 'reports' }, { id: 'health', label: 'صحة النظام', view: 'health', needs: 'health' }] },
   { id: 'me', title: 'حسابي', icon: KeyRound, items: [{ id: 'pw', label: 'تغيير كلمة السر', view: 'password' }] },
 ];
 
@@ -306,6 +312,11 @@ export const AdminSite: React.FC = () => {
         : view === 'my-tasks' ? <TasksView key="mine" onSessionEnd={logout} owner={false} />
         : view === 'all-tasks' ? <TasksView key="all" onSessionEnd={logout} owner />
         : view === 'chat' ? <ChatView onSessionEnd={logout} />
+        : view === 'dashboard' ? <DashboardView onSessionEnd={logout} can={admin.can} />
+        : view === 'reports' ? <ReportsView onSessionEnd={logout} />
+        : view === 'coupons' ? <CouponsView onSessionEnd={logout} />
+        : view === 'announce' ? <AnnounceView onSessionEnd={logout} />
+        : view === 'health' ? <HealthView onSessionEnd={logout} />
         : view === 'page-law' ? <PageLawView onSessionEnd={logout} />
         : view === 'slides' ? <SlidesReviewView onSessionEnd={logout} />
         : view === 'design-orders' ? <DesignOrdersView onSessionEnd={logout} />

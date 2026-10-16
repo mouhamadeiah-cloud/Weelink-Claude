@@ -5,7 +5,7 @@ import { Loader2, X } from 'lucide-react';
 import { PLANS, formatPounds, yearlyPrice } from '../../data/plans';
 import {
   AdminError, PAY_METHODS, PayMethod, Period, SubscriberDetail as Detail, SubscriberStatus,
-  adminAddNote, adminAddPayment, adminInvoiceSend, adminPostponeFreeze, adminSetStatus, adminSubscriber, adminTokensAdjust, invoiceUrl,
+  adminAddNote, adminAddPayment, adminCouponApply, adminInvoiceSend, adminPostponeFreeze, adminSetStatus, adminSubscriber, adminTokensAdjust, invoiceUrl,
 } from '../../services/adminApi';
 import { SEND_ERRORS } from './PaymentsView';
 
@@ -34,6 +34,11 @@ const money = (n: number) => formatPounds(n);
 
 const inputCls = 'w-full rounded-ctl border border-line bg-surface px-3 py-2 text-small text-ink outline-none focus:border-brand';
 
+const COUPON_ERRORS: Record<string, string> = {
+  'coupon-not-found': 'الكوبون غير موجود.', 'coupon-inactive': 'الكوبون متوقف.', 'coupon-expired': 'انتهت صلاحية الكوبون.', 'coupon-used-up': 'استُنفدت استعمالات الكوبون.',
+  'coupon-already-used': 'هذا المشترك استعمل الكوبون من قبل.', 'coupon-discount': 'هذا كوبون خصم: اكتبه في نموذج الدفعة.', 'coupon-kind': 'هذا الكوبون ليس خصماً: استعمله من زر «كوبون».',
+};
+
 export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: () => void; onChanged: () => void; onSessionEnd: () => void }> = ({ uid, can, onClose, onChanged, onSessionEnd }) => {
   const [data, setData] = useState<Detail | null>(null);
   const [error, setError] = useState('');
@@ -41,7 +46,8 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const [pay, setPay] = useState<{ plan: string; period: Period; amount: string; method: PayMethod; receiptNo: string; note: string } | null>(null);
+  const [pay, setPay] = useState<{ plan: string; period: Period; amount: string; method: PayMethod; receiptNo: string; note: string; coupon: string } | null>(null);
+  const [cpn, setCpn] = useState<string | null>(null);
   const [postpone, setPostpone] = useState<{ date: string; reason: string } | null>(null);
   const [info, setInfo] = useState('');
   const [tok, setTok] = useState<{ delta: string; reason: string } | null>(null);
@@ -49,7 +55,7 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
   const fail = useCallback((e: unknown, fallback: string) => {
     if ((e as AdminError)?.code === 'session') return onSessionEnd();
     const code = (e as AdminError)?.code;
-    setError(code === 'reason' ? 'اكتب سبباً (3 أحرف على الأقل).' : code === 'past-date' ? 'اختر تاريخاً بعد اليوم.' : SEND_ERRORS[code] || fallback);
+    setError(code === 'reason' ? 'اكتب سبباً (3 أحرف على الأقل).' : code === 'past-date' ? 'اختر تاريخاً بعد اليوم.' : COUPON_ERRORS[code] || SEND_ERRORS[code] || fallback);
   }, [onSessionEnd]);
 
   const load = useCallback(async () => {
@@ -98,7 +104,7 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
   const openPay = () => {
     const plan = data?.subscription?.plan || PAID_PLANS[0].id;
     const period = data?.subscription?.period || 'monthly';
-    setPay({ plan, period, amount: choosePlan(plan, period), method: 'office', receiptNo: '', note: '' });
+    setPay({ plan, period, amount: choosePlan(plan, period), method: 'office', receiptNo: '', note: '', coupon: '' });
     setError('');
     setInfo('');
   };
@@ -108,13 +114,28 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
     setError('');
     try {
       const planName = PAID_PLANS.find((x) => x.id === pay.plan)?.name || pay.plan;
-      const r = await adminAddPayment({ uid, plan: pay.plan, planName, period: pay.period, amount: Number(pay.amount) || 0, method: pay.method, receiptNo: pay.receiptNo, note: pay.note });
+      const r = await adminAddPayment({ uid, plan: pay.plan, planName, period: pay.period, amount: Number(pay.amount) || 0, method: pay.method, receiptNo: pay.receiptNo, note: pay.note, coupon: pay.coupon.trim() || undefined });
       setPay(null);
       setInfo(`سُجّلت الدفعة وصدرت الفاتورة ${r.payment.invoiceNo}. الاشتراك حتى ${day(r.payment.coversTo)}.`);
       await load();
       onChanged();
     } catch (e) {
       fail(e, 'تعذّر تسجيل الدفعة.');
+    }
+    setBusy(false);
+  };
+  const applyCoupon = async () => {
+    if (!cpn?.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      const r = await adminCouponApply(uid, cpn);
+      setCpn(null);
+      setInfo(r.text);
+      await load();
+      onChanged();
+    } catch (e) {
+      fail(e, 'تعذّر تطبيق الكوبون.');
     }
     setBusy(false);
   };
@@ -218,10 +239,20 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
                   <input type="number" min={0} value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} placeholder="المبلغ بالليرة" className={inputCls} />
                   <input value={pay.receiptNo} onChange={(e) => setPay({ ...pay, receiptNo: e.target.value })} placeholder="رقم الإيصال (اختياري)" className={inputCls} />
                   <input value={pay.note} onChange={(e) => setPay({ ...pay, note: e.target.value })} placeholder="ملاحظة (اختياري)" className={inputCls} />
+                  {can.includes('coupon-apply') && <input dir="ltr" value={pay.coupon} onChange={(e) => setPay({ ...pay, coupon: e.target.value })} placeholder="كوبون خصم (اختياري)" className={inputCls} />}
                   <p className="text-tiny text-faint">الاشتراك يمتد من نهاية اشتراكه الحالي (أو من اليوم إن انتهى) ويصير موعد التجميد عند انتهائه.</p>
                   <div className="flex gap-2">
                     <button disabled={busy} onClick={savePay} className="inline-flex items-center gap-1 rounded-ctl bg-brand px-3 py-1.5 text-white hover:bg-brand-hover disabled:opacity-50">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} تسجيل الدفعة</button>
                     <button onClick={() => setPay(null)} className="rounded-ctl px-3 py-1.5 hover:bg-surface">رجوع</button>
+                  </div>
+                </div>
+              ) : cpn !== null ? (
+                <div className="flex flex-col gap-2 rounded-ctl border border-line bg-bg p-3">
+                  <input dir="ltr" autoFocus value={cpn} onChange={(e) => setCpn(e.target.value)} placeholder="رمز الكوبون (تجربة أو توكنز)" className={inputCls} />
+                  <p className="text-tiny text-faint">كوبون التجربة يمدّ الاشتراك بالأيام، وكوبون التوكنز يزيد الرصيد. كوبون الخصم يُكتب في نموذج الدفعة.</p>
+                  <div className="flex gap-2">
+                    <button disabled={busy || !cpn.trim()} onClick={applyCoupon} className="inline-flex items-center gap-1 rounded-ctl bg-brand px-3 py-1.5 text-white hover:bg-brand-hover disabled:opacity-50">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} تطبيق</button>
+                    <button onClick={() => setCpn(null)} className="rounded-ctl px-3 py-1.5 hover:bg-surface">رجوع</button>
                   </div>
                 </div>
               ) : postpone ? (
@@ -238,6 +269,7 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {can.includes('add-payment') && <button onClick={openPay} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">تسجيل دفعة</button>}
+                  {can.includes('coupon-apply') && <button onClick={() => { setCpn(''); setError(''); setInfo(''); }} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">كوبون</button>}
                   {can.includes('postpone-freeze') && <button onClick={() => { setPostpone({ date: '', reason: '' }); setError(''); setInfo(''); }} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg">تأجيل التجميد</button>}
                 </div>
               )}

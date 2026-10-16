@@ -7,9 +7,9 @@ import { AdminError, TeamAdmin, adminAddAdmin, adminResetPassword, adminTeam, ad
 const inputCls = 'rounded-ctl border border-line bg-surface px-3 py-2 text-small text-ink outline-none focus:border-brand';
 const GRANTS: Record<string, string> = {
   support: 'يشوف المشتركين ويكتب الملاحظات.',
-  finance: 'كالدعم، ويسجّل الدفعات والفواتير ويشحن التوكنز ويؤجّل التجميد.',
+  finance: 'كالدعم، ويسجّل الدفعات والفواتير ويشحن التوكنز ويؤجّل التجميد، ويشوف الداشبورد ويصدّر CSV ويدير الكوبونات.',
   domains: 'يشوف المشتركين ويكتب الملاحظات (طلبات الدومين تأتي مع سير العمل).',
-  content: 'يشوف المشتركين ويكتب الملاحظات (مراجعة التقييمات تأتي لاحقاً).',
+  content: 'كالدعم، ويراجع بلاغات التقييمات (يبقي التقييم أو يحذفه).',
 };
 const ERRORS: Record<string, string> = {
   'bad-username': 'اسم الدخول: 3 أحرف أو أكثر، إنكليزي وأرقام و - و _.',

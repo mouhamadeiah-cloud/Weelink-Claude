@@ -2,8 +2,8 @@
 // Loaded on demand so the editor bundle does not carry it.
 import { ProductOption, OptionValue, newId } from './shopTypes';
 
-export interface ArtikelItem { id: number; name_ar: string; name_en: string; keywords: string[] }
-export interface ArtikelSub { id: number; slug: string; name_ar: string; name_en: string; keywords: string[]; items: ArtikelItem[] }
+interface ArtikelItem { id: number; name_ar: string; name_en: string; keywords: string[] }
+interface ArtikelSub { id: number; slug: string; name_ar: string; name_en: string; keywords: string[]; items: ArtikelItem[] }
 export interface ArtikelCatalog { id: number; slug: string; name_ar: string; name_en: string; keywords: string[]; subcategories: ArtikelSub[] }
 
 let cache: Promise<ArtikelCatalog[]> | null = null;

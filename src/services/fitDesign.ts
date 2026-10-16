@@ -51,7 +51,7 @@ interface Use {
 const TEXT_TYPES = new Set(['heading', 'paragraph', 'button', 'badge', 'input', 'pricing', 'card', 'table']);
 
 /** The roles of a design's own colours (see the top of this file). */
-export const deriveSource = (slide: Slide, elements: CanvasElement[]): SourceLook => {
+const deriveSource = (slide: Slide, elements: CanvasElement[]): SourceLook => {
   const uses = new Map<string, Use>();
   const note = (c: unknown, kind: 'fill' | 'text' | 'line', w: number) => {
     const rgb = parse(c);
@@ -132,13 +132,13 @@ export const deriveSource = (slide: Slide, elements: CanvasElement[]): SourceLoo
 const fontName = (f: unknown) => (typeof f === 'string' ? f.split(',')[0].replace(/['"]/g, '').trim() : '');
 const elementsHeadFont = (elements: CanvasElement[]) => fontName(elements.find((e) => e.type === 'heading' && e.styles?.fontFamily)?.styles.fontFamily);
 
-export interface FitTarget {
+interface FitTarget {
   look?: PageLook;
   colours: TargetColours;
 }
 
 /** What the customer's page is drawn in: its look, or its palette; none when it has neither. */
-export const targetOf = (page: Page | undefined): FitTarget | null => {
+const targetOf = (page: Page | undefined): FitTarget | null => {
   const look = pageLookById(page?.styleLook);
   if (look) return { look, colours: lookColours(look) };
   if (page?.colorPalette) return { colours: targetColours(page.colorPalette) };
@@ -148,7 +148,7 @@ export const targetOf = (page: Page | undefined): FitTarget | null => {
 const hasPhoto = (s: Slide) => !!(s.backgroundImage || s.backgroundVideo);
 
 /** A design (slides and their elements) fitted to the customer's page style; as it is when the page has none. */
-export const fitDesign = (slides: Slide[], elements: CanvasElement[], target: FitTarget | null): { slides: Slide[]; elements: CanvasElement[] } => {
+const fitDesign = (slides: Slide[], elements: CanvasElement[], target: FitTarget | null): { slides: Slide[]; elements: CanvasElement[] } => {
   if (!target) return { slides, elements };
   try {
     const { look, colours } = target;

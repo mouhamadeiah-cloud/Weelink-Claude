@@ -51,7 +51,7 @@ const uploadDataUrlToStorage = async (dataurl: string, baseName: string): Promis
   return await getDownloadURL(snapshot.ref);
 };
 
-export type ImageDoorType = 'device' | 'gallery' | 'graphics';
+type ImageDoorType = 'device' | 'gallery' | 'graphics';
 
 interface ImageDrawerSectionProps {
   onAddImage: (imageUrl: string, title?: string, width?: number, height?: number, isGraphic?: boolean) => void;

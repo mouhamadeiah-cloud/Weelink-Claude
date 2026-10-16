@@ -12,7 +12,7 @@ export const carSubtitle = (c: Car) => [c.trim, c.year ? String(c.year) : ''].fi
 
 export const formatKm = (km: number) => `${Math.round(km).toLocaleString('en-US')} كم`;
 
-export const carPrice = (c: Car) => (c.price > 0 ? formatMoney(c.price, c.currency) : '');
+const carPrice = (c: Car) => (c.price > 0 ? formatMoney(c.price, c.currency) : '');
 
 // What the visitor sees as the price.
 export const carPriceLabel = (c: Car) => (c.showPrice && c.price > 0 ? carPrice(c) : 'السعر عند التواصل');

@@ -12,7 +12,7 @@ export interface Stats {
   ratingSum: number;
 }
 
-export const isVerified = (st: Stats) =>
+const isVerified = (st: Stats) =>
   st.completed >= badge.minCompleted && st.ratingCount >= badge.minRatings && st.ratingSum / Math.max(1, st.ratingCount) >= badge.minAverage;
 
 export const recountDesigner = async (db: any, uid: string): Promise<Stats & { verified: boolean }> => {

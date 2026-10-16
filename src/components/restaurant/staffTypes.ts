@@ -247,7 +247,7 @@ export const shiftTips = (tabs: Tab[], shiftId: string) =>
   round(tabs.filter((t) => t.payments.some((p) => p.shiftId === shiftId)).reduce((s, t) => s + tipTotal(t), 0));
 
 // The payments of a list of tabs, newest first, each with its tab.
-export const paymentsOf = (tabs: Tab[]) =>
+const paymentsOf = (tabs: Tab[]) =>
   tabs.flatMap((t) => t.payments.map((p) => ({ ...p, tab: t }))).sort((a, b) => b.at.localeCompare(a.at));
 
 // Sums by method: [{method, amount}], cash first.
@@ -340,7 +340,7 @@ export const dayRange = (back: number) => {
 // and gets a random four-digit code. The waiter types it on his tablet, which ends the handover (an
 // electronic signature of both devices). Its id is the waiter's shift id.
 
-export type HandoverStatus = 'requested' | 'received' | 'confirmed' | 'skipped';
+type HandoverStatus = 'requested' | 'received' | 'confirmed' | 'skipped';
 
 export interface Handover {
   id: string;

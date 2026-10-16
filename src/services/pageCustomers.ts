@@ -56,7 +56,7 @@ const toCustomer = (uid: string, raw: any): PageCustomer => ({
 export const pageUrl = (kind: PageKind, ownerUid: string) =>
   kind === 'restaurant' ? `${window.location.origin}/?r=${encodeURIComponent(ownerUid)}` : '';
 
-export const PAGE_KIND_LABELS: Record<PageKind, string> = { restaurant: 'مطعم', shop: 'متجر', cars: 'معرض سيارات' };
+const PAGE_KIND_LABELS: Record<PageKind, string> = { restaurant: 'مطعم', shop: 'متجر', cars: 'معرض سيارات' };
 
 // This customer's profile on that page, or null before they joined it.
 export const readMyCustomerProfile = async (ownerUid: string, user: User): Promise<PageCustomer | null> => {

@@ -32,7 +32,7 @@ export interface GallerySlide {
 }
 
 // A slide is «جديد» for a week after it appears, so a good new designer is seen next to the old ones.
-export const NEW_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+const NEW_FOR_MS = 7 * 24 * 60 * 60 * 1000;
 export const isNewSlide = (s: GallerySlide) => Date.now() - s.at < NEW_FOR_MS;
 
 // The first approved slides. A page of the gallery for now: more come with paging.
@@ -73,7 +73,7 @@ export const readMyVotes = async (uid: string): Promise<Record<string, number>> 
   return Object.fromEntries(Object.entries(votes).filter(([, v]) => v === 1 || v === -1));
 };
 
-export class VoteError extends Error {
+class VoteError extends Error {
   constructor(public kind: 'unverified' | 'own' | 'too_fast' | 'unauthorized' | 'network') {
     super(kind);
   }

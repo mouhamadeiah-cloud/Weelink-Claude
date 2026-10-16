@@ -68,7 +68,7 @@ export const restaurantSiteUrl = (uid: string, table?: string | number) => {
   return table ? `${base}&t=${encodeURIComponent(String(table))}` : base;
 };
 
-export const kitchenScreenUrl = (uid: string) => `${window.location.origin}/?kitchen=${encodeURIComponent(uid)}`;
+const kitchenScreenUrl = (uid: string) => `${window.location.origin}/?kitchen=${encodeURIComponent(uid)}`;
 
 // The address every restaurant tablet opens once; its code then picks its screen.
 export const deviceUrl = (uid: string) => `${window.location.origin}/?device=${encodeURIComponent(uid)}`;

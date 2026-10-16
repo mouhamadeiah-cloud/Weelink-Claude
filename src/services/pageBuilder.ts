@@ -25,7 +25,7 @@ export type BuildKind = 'free' | 'restaurant' | 'shop' | 'cars';
 export const KIND_OF_PROJECT: Record<ProjectType, BuildKind> = { page: 'free', restaurant: 'restaurant', shop: 'shop', cars: 'cars' };
 
 // As api/build-page.ts returns it.
-export interface PlannedSection {
+interface PlannedSection {
   section: string;
   template: string;
   tone: 'light' | 'tint' | 'dark';
@@ -139,7 +139,7 @@ export const requestPagePlan = async (kind: BuildKind, profile: Record<string, s
 type Draft = Omit<CanvasElement, 'id' | 'slideId'> & { id?: string; slideId?: string };
 
 /** A ready slide by its AI id, fresh. */
-export const readySlide = (template: string): (Record<string, any> & { elements: Draft[] }) | null => {
+const readySlide = (template: string): (Record<string, any> & { elements: Draft[] }) | null => {
   if (WEE_SLIDE_BY_ID[template]) return JSON.parse(JSON.stringify(WEE_SLIDE_BY_ID[template]()));
   for (const [kind, ids] of Object.entries(STORE_SLIDE_IDS)) {
     const i = ids.indexOf(template);

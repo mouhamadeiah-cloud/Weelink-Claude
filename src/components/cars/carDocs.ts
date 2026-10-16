@@ -140,10 +140,10 @@ export const SIGNER_LABELS: Record<CarDocType, [string, string]> = {
 
 export const docTypeLabel = (t: CarDocType) => CAR_DOC_TYPES.find((x) => x.id === t)!.label;
 
-export const termsFor = (type: CarDocType, data: CarAdminData) =>
+const termsFor = (type: CarDocType, data: CarAdminData) =>
   type === 'contract' ? data.settings.contractTerms : type === 'testDrive' ? data.settings.testDriveTerms : data.settings.handoverTerms;
 
-export const nextDocNumber = (docs: CarDocument[], type: CarDocType) => {
+const nextDocNumber = (docs: CarDocument[], type: CarDocType) => {
   const prefix = CAR_DOC_TYPES.find((x) => x.id === type)!.prefix;
   const max = docs.filter((d) => d.type === type).reduce((m, d) => Math.max(m, parseInt(d.number.split('-')[1] || '0', 10) || 0), 0);
   return `${prefix}-${String(max + 1).padStart(4, '0')}`;

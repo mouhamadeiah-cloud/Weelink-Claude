@@ -6,7 +6,7 @@ import type { GalleryLayout } from '../../types';
 import { newId } from '../shop/shopTypes';
 
 export type CarStatus = 'available' | 'reserved' | 'preparing' | 'sold';
-export type CarCondition = 'new' | 'used';
+type CarCondition = 'new' | 'used';
 export type CarPaint = 'original' | 'partial' | 'full';
 export type CarAccidents = 'none' | 'minor' | 'major';
 
@@ -137,7 +137,7 @@ export interface CarSalePayment {
 // «حجز بعربون»: a customer holds the car with a deposit (it may be 0). The deposit is income at once;
 // on the sale it is counted from the price, and on a cancelled reservation it is either refunded or
 // kept by the showroom.
-export interface CarReservation {
+interface CarReservation {
   date: string;
   customerId: string;
   deposit: number; // in the car's currency
@@ -146,7 +146,7 @@ export interface CarReservation {
   txId: string; // '' when the deposit is 0
 }
 
-export interface CarSale {
+interface CarSale {
   date: string;
   price: number; // in the car's currency
   customerId: string;
@@ -278,7 +278,7 @@ export const CAR_FEATURE_GROUPS: { title: string; items: string[] }[] = [
   { title: 'الخارج', items: ['جنط ألمنيوم', 'أضواء LED', 'أضواء زينون', 'ضباب أمامي', 'سبويلر', 'خطاف سحب', 'زجاج معتم'] },
 ];
 
-export const DEFAULT_CAR_SETTINGS: CarSettings = {
+const DEFAULT_CAR_SETTINGS: CarSettings = {
   showroomName: '',
   currency: '$',
   whatsappNumber: '',
@@ -368,7 +368,7 @@ const num = (v: unknown, fallback = 0) => (typeof v === 'number' && isFinite(v) 
 const str = (v: unknown, fallback = '') => (typeof v === 'string' ? v : fallback);
 const oneOf = <T extends string>(v: unknown, ids: readonly T[], fallback: T): T => (ids.includes(v as T) ? (v as T) : fallback);
 
-export const normalizeCar = (raw: any, currency: string): Car => {
+const normalizeCar = (raw: any, currency: string): Car => {
   const base = emptyCar(currency);
   return {
     ...base,

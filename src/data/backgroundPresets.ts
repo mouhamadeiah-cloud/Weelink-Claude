@@ -120,7 +120,7 @@ export const RICH_MULTI_GRADIENTS: GradientPreset[] = [
 ];
 
 // Combine all gradients for backward compatibility and full export
-export const TWENTY_FIVE_GRADIENTS: GradientPreset[] = [
+const TWENTY_FIVE_GRADIENTS: GradientPreset[] = [
   ...PASTEL_SOFT_GRADIENTS,
   ...RICH_MULTI_GRADIENTS
 ];

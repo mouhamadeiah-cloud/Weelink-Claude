@@ -21,7 +21,7 @@ import { useShopSearch, clearShopSearch, matchesSearch, takeReveal } from './sho
 // share one height whatever their text.
 const BASE_WIDTH: Record<string, number> = { grid: 130, spotlight: 135, large: 200, small: 85, wide: 270 };
 
-export const MAX_PAGE_SIZE = 30;
+const MAX_PAGE_SIZE = 30;
 const PAGE_SIZES = [20, 30];
 const CHIP_MIN = 200;
 const CHIP_GAP = 16;

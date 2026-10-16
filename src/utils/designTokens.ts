@@ -42,7 +42,7 @@ export const EDITOR_COLORS = {
 } as const;
 
 /** Tailwind-friendly class fragments for the few cases that need classes rather than inline style. */
-export const EDITOR_CLASSES = {
+const EDITOR_CLASSES = {
   accentText: 'text-[#0071e3]',
   accentBg: 'bg-[#0071e3]',
   accentRing: 'ring-[#0071e3]',
@@ -51,7 +51,7 @@ export const EDITOR_CLASSES = {
 } as const;
 
 /** Standard sizes for chrome icons, by role — stops the size/strokeWidth drift. */
-export const ICON_SIZE = {
+const ICON_SIZE = {
   /** Small inline action icon inside a row (e.g. delete/duplicate on a layer row) */
   inline: 14,
   /** Icon-only toolbar button */
@@ -60,7 +60,7 @@ export const ICON_SIZE = {
   section: 18,
 } as const;
 
-export const ICON_STROKE = {
+const ICON_STROKE = {
   inline: 2.2,
   tool: 2,
   section: 2,

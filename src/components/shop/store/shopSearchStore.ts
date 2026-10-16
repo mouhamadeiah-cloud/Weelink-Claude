@@ -38,7 +38,7 @@ export const useShopSearch = () =>
   );
 
 // Arabic-aware matching: alef forms, taa marbuta and alef maqsura count as the same letter.
-export const normalizeSearch = (s: string) =>
+const normalizeSearch = (s: string) =>
   s.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').trim();
 
 export const matchesSearch = (fields: (string | undefined)[], query: string) => {

@@ -9,7 +9,7 @@ import { Card, EmptyState, formatDate } from '../../shop/adminUi';
 import { CarTabProps } from './CarEditor';
 import { customerWhatsapp } from './moneyUi';
 
-export const REQUEST_STATUSES: { id: CarRequestStatus; label: string; color: string }[] = [
+const REQUEST_STATUSES: { id: CarRequestStatus; label: string; color: string }[] = [
   { id: 'new', label: 'جديد', color: '#0071e3' },
   { id: 'contacted', label: 'تم التواصل', color: '#b06f00' },
   { id: 'done', label: 'منتهٍ', color: '#1e7a34' },

@@ -10,7 +10,7 @@ import { dayKey } from '../orderModel';
 import { printReport } from './accountsReport';
 
 type Range = 'today' | '7d' | '30d' | 'year' | 'all' | 'custom';
-export type AccountsView = 'page' | 'side' | 'all';
+type AccountsView = 'page' | 'side' | 'all';
 
 const RANGES: { id: Range; label: string }[] = [
   { id: 'today', label: 'اليوم' },
@@ -21,7 +21,7 @@ const RANGES: { id: Range; label: string }[] = [
   { id: 'custom', label: 'من تاريخ إلى تاريخ' },
 ];
 
-export const VIEWS: { id: AccountsView; label: string }[] = [
+const VIEWS: { id: AccountsView; label: string }[] = [
   { id: 'page', label: 'حسابات الصفحة' },
   { id: 'side', label: 'الحسابات الجانبية' },
   { id: 'all', label: 'الحسابات الكلية' },

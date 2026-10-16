@@ -37,7 +37,7 @@ export interface ProductVariant {
 }
 
 // "عند شراء 3 أو أكثر: 2500 للقطعة".
-export interface PriceTier {
+interface PriceTier {
   minQty: number;
   price: number;
 }
@@ -138,7 +138,7 @@ export interface ShopOrderItem {
 }
 
 // The visitor's details from the checkout page, kept on the order even without an account.
-export interface OrderContact {
+interface OrderContact {
   name: string;
   province?: string;
   address: string;
@@ -147,7 +147,7 @@ export interface OrderContact {
 }
 
 // What the visitor sent after paying with an e-wallet.
-export interface OrderPayment {
+interface OrderPayment {
   fee: number; // the wallet's extra fee, included in the order total
   transactionId: string;
   screenshot: string; // image URL

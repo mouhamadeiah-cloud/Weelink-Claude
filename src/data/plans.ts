@@ -24,7 +24,7 @@ export const yearlyPrice = (monthly: number) => Math.round((monthly * 12 * (1 - 
 export const formatPounds = (n: number) => `${n.toLocaleString('ar-SY')} ل.س`;
 
 // One more tablet or screen for the restaurant (cashier, kitchen, bar, waiter), each month.
-export const EXTRA_DEVICE = 75000;
+const EXTRA_DEVICE = 75000;
 
 const FREE_SLIDES = 'واجهة بصورة، من نحن، الأسعار، معرض صور، التواصل، الشروط والخصوصية';
 

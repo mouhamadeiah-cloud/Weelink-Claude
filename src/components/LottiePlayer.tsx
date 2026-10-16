@@ -23,7 +23,7 @@ const loadFile = (url: string) => {
   return p;
 };
 
-export type LottieTrigger = 'auto' | 'hover' | 'view';
+type LottieTrigger = 'auto' | 'hover' | 'view';
 
 interface Props {
   animationId?: string;

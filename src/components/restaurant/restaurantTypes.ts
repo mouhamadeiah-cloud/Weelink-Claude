@@ -16,7 +16,7 @@ export interface MenuCategory {
   stationId: string; // the kitchen section that prepares its dishes ('' = the first one)
 }
 
-export interface SubCatalogItem {
+interface SubCatalogItem {
   id: string;
   name: string;
   price: number; // extras only: added to the dish's price when picked
@@ -133,7 +133,7 @@ export interface StaffDevice {
 
 export const STATION_COLORS = ['#E8590C', '#1971C2', '#2F9E44', '#C2255C', '#7048E8', '#F08C00', '#0C8599', '#868E96'];
 
-export const DEFAULT_STATIONS: KitchenStation[] = [
+const DEFAULT_STATIONS: KitchenStation[] = [
   { id: 'st-kitchen', name: 'المطبخ', color: '#E8590C' },
   { id: 'st-bar', name: 'البار والمشروبات', color: '#1971C2' },
 ];
@@ -141,7 +141,7 @@ export const DEFAULT_STATIONS: KitchenStation[] = [
 const tablesOf = (prefix: string, from: number, count: number): RestTable[] =>
   Array.from({ length: count }, (_, i) => ({ id: `${prefix}-${from + i}`, name: String(from + i), seats: 4 }));
 
-export const defaultHalls = (tables: number): Hall[] => [{ id: 'hall-main', name: 'الصالة الرئيسية', tables: tablesOf('tbl', 1, Math.max(0, Math.min(100, tables))) }];
+const defaultHalls = (tables: number): Hall[] => [{ id: 'hall-main', name: 'الصالة الرئيسية', tables: tablesOf('tbl', 1, Math.max(0, Math.min(100, tables))) }];
 
 export const allTables = (halls: Hall[]) => halls.flatMap((h) => h.tables.map((t) => ({ ...t, hallId: h.id, hallName: h.name })));
 
@@ -188,7 +188,7 @@ export interface OrderLine {
 export type OrderType = 'delivery' | 'pickup' | 'table';
 
 // Where an order came from: the website, a table's QR code, or the staff (cashier, waiter).
-export type OrderSource = 'website' | 'qr' | 'staff';
+type OrderSource = 'website' | 'qr' | 'staff';
 
 export interface MenuOrder {
   id: string;
@@ -226,7 +226,7 @@ export interface RestaurantAdminData {
   workers: Worker[];
 }
 
-export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
+const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   name: '',
   currency: 'ل.س',
   whatsapp: '',
@@ -416,7 +416,7 @@ export const submitOrder = (d: RestaurantAdminData, order: MenuOrder): Restauran
 // themselves (source 'order'); the cashier will add its sales the same way (source 'cashier').
 
 export type LedgerKind = 'income' | 'expense';
-export type LedgerSource = 'manual' | 'order' | 'cashier';
+type LedgerSource = 'manual' | 'order' | 'cashier';
 
 export interface LedgerEntry {
   id: string;

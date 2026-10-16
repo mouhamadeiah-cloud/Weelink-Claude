@@ -224,7 +224,7 @@ export const newItem = (line: OrderLine, actor: Actor): TabItem => ({
   voidNote: '',
 });
 
-export const addItems = (uid: string, tabId: string, lines: OrderLine[], actor: Actor) =>
+const addItems = (uid: string, tabId: string, lines: OrderLine[], actor: Actor) =>
   changeTab(uid, tabId, (t) => ({ items: [...t.items, ...lines.map((l) => newItem(l, actor))] }));
 
 export const sendToKitchen = (uid: string, tabId: string, actor: Actor) =>
@@ -413,7 +413,7 @@ export const confirmHandover = async (uid: string, h: Handover) => {
 };
 
 // The cashier hands out the amount he opened the day with, or a handover that never came is dropped.
-export const cancelHandover = (uid: string, id: string) => updateDoc(handoverDoc(uid, id), { status: 'skipped' });
+const cancelHandover = (uid: string, id: string) => updateDoc(handoverDoc(uid, id), { status: 'skipped' });
 
 // ---------- The main cashier's session (see cashDay.ts) ----------
 

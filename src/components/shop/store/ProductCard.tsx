@@ -67,7 +67,7 @@ const CORNERS: Record<CardCorners, string> = {
 };
 
 // The card's look from the product's card settings (frame, text colours, corners).
-export const cardLook = (product: ShopProduct) => {
+const cardLook = (product: ShopProduct) => {
   const st = product.cardStyle || DEFAULT_CARD_STYLE;
   return {
     radius: CORNERS[st.corners] || CORNERS.rounded,

@@ -4,7 +4,7 @@ import type { LinkType, NavbarConfig, NavbarItem, Page } from '../types';
 // "parts", so the user can copy a part's link onto an element on a slide, or show the part as an
 // icon (navbar.partIcons is keyed by the part ids). Used by the navbar settings panel.
 
-export interface NavbarPartLink {
+interface NavbarPartLink {
   linkType: LinkType;
   linkTargetId?: string;
   linkUrl: string;

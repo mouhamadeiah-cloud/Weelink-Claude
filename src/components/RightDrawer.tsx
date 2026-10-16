@@ -120,7 +120,6 @@ import { NavbarOpacitySection } from './rightDrawer/sections/NavbarOpacitySectio
 export type { DrawerSection } from './rightDrawer/types';
 export { SIXTY_FONTS, READY_SLIDE_CATEGORIES, customizeElementsForIndex, getSlideTemplatePayload } from '../data/slideTemplates';
 
-// (old primitive SLIDE_TEMPLATES / PAGE_TEMPLATES removed — replaced by the free starter template in src/data/freeStarterTemplate.ts)
 
 export const RightDrawer: React.FC<RightDrawerProps> = ({
   isOpen,

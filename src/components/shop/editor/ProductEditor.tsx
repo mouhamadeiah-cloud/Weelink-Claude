@@ -21,7 +21,7 @@ import { ProductCard, ProductSlide } from '../store/ProductCard';
 import { CardStyleSettings } from './CardStyleSettings';
 import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 
-export const newProductDraft = (currency: string): ShopProduct => ({
+const newProductDraft = (currency: string): ShopProduct => ({
   id: '',
   name: '',
   description: '',

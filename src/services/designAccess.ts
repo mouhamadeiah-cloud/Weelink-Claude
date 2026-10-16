@@ -4,7 +4,7 @@
 // file for what the designer can never reach.
 import type { User } from 'firebase/auth';
 
-export class AccessError extends Error {
+class AccessError extends Error {
   constructor(public code: string) {
     super(code);
   }

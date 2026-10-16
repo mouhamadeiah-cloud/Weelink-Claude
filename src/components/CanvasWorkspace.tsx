@@ -109,7 +109,7 @@ interface InteractiveCalendarWidgetProps {
   elem: CanvasElement;
 }
 
-export const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) => {
+const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) => {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');

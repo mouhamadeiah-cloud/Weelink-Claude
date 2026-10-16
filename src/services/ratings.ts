@@ -26,7 +26,7 @@ export interface RatingSummary {
   byStars: Record<1 | 2 | 3 | 4 | 5, number>;
 }
 
-export const EMPTY_SUMMARY: RatingSummary = { count: 0, average: 0, byStars: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+const EMPTY_SUMMARY: RatingSummary = { count: 0, average: 0, byStars: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
 
 const toSummary = (d: any): RatingSummary => {
   const count = Math.max(0, Number(d?.count) || 0);
@@ -37,10 +37,10 @@ const toSummary = (d: any): RatingSummary => {
   };
 };
 
-export const watchSummary = (owner: string, project: ProjectType, onData: (s: RatingSummary) => void) =>
+const watchSummary = (owner: string, project: ProjectType, onData: (s: RatingSummary) => void) =>
   onSnapshot(doc(db, 'ratingSummary', `${owner}_${project}`), (snap) => onData(toSummary(snap.data())), () => onData(EMPTY_SUMMARY));
 
-export const watchRatings = (owner: string, project: ProjectType, onData: (rows: Rating[]) => void, onError: () => void) =>
+const watchRatings = (owner: string, project: ProjectType, onData: (rows: Rating[]) => void, onError: () => void) =>
   onSnapshot(
     query(collection(db, 'ratings', owner, 'items'), where('project', '==', project)),
     (snap) => {

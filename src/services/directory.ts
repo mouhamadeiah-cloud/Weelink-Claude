@@ -57,7 +57,7 @@ export const listByCategory = async (kind: ProjectType, name: string): Promise<D
 };
 
 // The pages whose keywords hold any of the first three words typed.
-export const searchDirectory = async (text: string): Promise<DirectoryEntry[]> => {
+const searchDirectory = async (text: string): Promise<DirectoryEntry[]> => {
   const words = Array.from(new Set(text.trim().split(/\s+/).filter((w) => w.length > 1))).slice(0, 3);
   const all = [text.trim(), ...words];
   const found = await Promise.all(all.map((w) => searchSites(w).catch(() => [])));

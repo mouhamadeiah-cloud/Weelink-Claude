@@ -33,7 +33,7 @@ export const addOrder = (d: ShopAdminData, order: ShopOrder): ShopAdminData => {
   return { ...next, orders: [order, ...next.orders] };
 };
 
-export const walletOf = (method: PaymentMethodId) => WALLETS.find((w) => w.method === method);
+const walletOf = (method: PaymentMethodId) => WALLETS.find((w) => w.method === method);
 
 // The e-wallets the visitor can choose (cash on delivery aside).
 export const enabledWallets = (d: ShopAdminData) =>
@@ -54,7 +54,7 @@ export const walletFee = (w: WalletSettings, amount: number) => {
   return Math.round(fee * 100) / 100;
 };
 
-export const walletSettings = (d: ShopAdminData, id: WalletId) => d.settings.payments.wallets[id];
+const walletSettings = (d: ShopAdminData, id: WalletId) => d.settings.payments.wallets[id];
 
 // The visitor's WhatsApp message for an order, from the confirmation template.
 export const orderConfirmationText = (d: ShopAdminData, order: ShopOrder) =>

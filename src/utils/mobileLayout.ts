@@ -360,7 +360,7 @@ export const arrangeSlideForMobile = (
 };
 
 /** Arranges every given slide for phones; returns updated elements and slides. */
-export const arrangeForMobile = (
+const arrangeForMobile = (
   slides: Slide[],
   elements: CanvasElement[]
 ): { elements: CanvasElement[]; slides: Slide[] } => {

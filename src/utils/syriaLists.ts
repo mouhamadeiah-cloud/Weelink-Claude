@@ -20,14 +20,14 @@ export interface GovernoratePlaces {
   districts: { name: string; subdistricts: { name: string; villages: string[] }[] }[];
 }
 
-export interface OccupationCatalog {
+interface OccupationCatalog {
   name: string;
   subs: { name: string; jobs: string[] }[];
 }
 
 const governorateFiles = import.meta.glob<GovernoratePlaces>('../data/syria/*.json', { import: 'default' });
 
-export const loadGovernorate = (name: string): Promise<GovernoratePlaces | null> => {
+const loadGovernorate = (name: string): Promise<GovernoratePlaces | null> => {
   const n = SYRIAN_GOVERNORATES.indexOf(name) + 1;
   const load = n > 0 ? governorateFiles[`../data/syria/${String(n).padStart(2, '0')}.json`] : undefined;
   return load ? load() : Promise.resolve(null);
@@ -55,7 +55,7 @@ export const useGovernoratePlaces = (governorate: string) => {
   return places;
 };
 
-export const useOccupations = (enabled = true) => {
+const useOccupations = (enabled = true) => {
   const [list, setList] = useState<OccupationCatalog[] | null>(null);
   useEffect(() => {
     if (!enabled) return;

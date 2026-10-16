@@ -11,7 +11,7 @@ type LottiePatch = Partial<Pick<CanvasElement, 'lottieId' | 'lottieUrl' | 'lotti
 
 // Picking an animation starts from its own colours and drops a linked file. The element takes the
 // animation's name unless the user named it themselves.
-export const pickLottie = (def: LottieDef, el: CanvasElement): LottiePatch => {
+const pickLottie = (def: LottieDef, el: CanvasElement): LottiePatch => {
   const autoName = !el.name || el.name === 'رسم متحرك' || el.name === lottieById(el.lottieId)?.name;
   return { lottieId: def.id, lottieUrl: undefined, lottieColor: undefined, lottieColor2: undefined, ...(autoName ? { name: def.name } : {}) };
 };
@@ -25,7 +25,7 @@ interface TileProps {
   color2?: string;
 }
 
-export const LottieTile: React.FC<TileProps> = ({ def, selected, onPick, size = 'sm', color, color2 }) => (
+const LottieTile: React.FC<TileProps> = ({ def, selected, onPick, size = 'sm', color, color2 }) => (
   <button
     type="button"
     onClick={onPick}

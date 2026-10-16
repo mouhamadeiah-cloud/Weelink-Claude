@@ -100,7 +100,7 @@ export const subscribeMessages = (orderId: string, onChange: (rows: OrderMessage
     }));
   }, () => {});
 
-export class OrderError extends Error {
+class OrderError extends Error {
   constructor(public code: string, public kinds: string[] = []) {
     super(code);
   }

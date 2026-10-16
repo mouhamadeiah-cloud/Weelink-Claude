@@ -32,7 +32,7 @@ export interface SlidePayload {
 }
 
 // What a slide does, with the colour its name and tag are drawn in.
-export const SLIDE_KINDS = {
+const SLIDE_KINDS = {
   moving: { label: 'شريط متحرك', color: '#7c3aed', bg: '#f3e8ff' },
   textStrip: { label: 'شريط نص متحرك', color: '#c026d3', bg: '#fae8ff' },
   shake: { label: 'حركة اهتزاز', color: '#ea580c', bg: '#ffedd5' },
@@ -46,7 +46,7 @@ export const SLIDE_KINDS = {
   info: { label: 'محتوى تعريفي', color: '#475569', bg: '#f1f5f9' },
 } as const;
 
-export type SlideKind = keyof typeof SLIDE_KINDS;
+type SlideKind = keyof typeof SLIDE_KINDS;
 
 const CATEGORY_KINDS: Record<string, SlideKind> = {
   intro: 'hero',
@@ -62,7 +62,7 @@ const CATEGORY_KINDS: Record<string, SlideKind> = {
 
 const LISTS = ['shopProducts', 'carListings', 'menuList'];
 
-export const slideKindOf = (payload: SlidePayload, categoryId: string, index: number): SlideKind => {
+const slideKindOf = (payload: SlidePayload, categoryId: string, index: number): SlideKind => {
   const els = payload.elements || [];
   const lists = els.filter((e) => LISTS.includes(e.type));
   if (lists.some((e) => e.shopLayout === 'marquee' || e.carLayout === 'marquee' || e.menuLayout === 'marquee')) return 'moving';

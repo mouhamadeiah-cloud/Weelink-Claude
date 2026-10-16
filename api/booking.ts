@@ -15,9 +15,7 @@
 // writes it. The cron finds tomorrow's and the old bookings through it.
 // Needs FIREBASE_SERVICE_ACCOUNT, EMAIL_FROM, RESEND_API_KEY, and CRON_SECRET for the cron.
 
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
@@ -131,7 +129,7 @@ const dayDoc = (admin: Admin, b: { owner: string; project: string; date: string 
   admin.db.collection('bookingDays').doc(`${b.owner}_${b.project}_${b.date}`);
 const items = (admin: Admin, owner: string) => admin.db.collection('bookings').doc(owner).collection('items');
 // The bookings of the days a bookingDays query found.
-const bookingsOf = async (admin: Admin, days: FirebaseFirestore.QuerySnapshot) => {
+const bookingsOf = async (admin: Admin, days: QuerySnapshot) => {
   const lists = await Promise.all(
     days.docs.map((d) => {
       const { owner, project, date } = d.data();

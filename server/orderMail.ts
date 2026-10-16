@@ -37,7 +37,7 @@ type Tap = ((entry: string) => void) | null;
 const holder = globalThis as { __mailTap?: Tap };
 export const setMailTap = (fn: Tap) => { holder.__mailTap = fn; };
 
-// Mails the person behind `uid`. `auth` is firebase-admin's Auth. Never throws.
+// Mails the person behind `uid`. `auth` is the Auth from server/firebase.ts. Never throws.
 export const mailOrder = async (auth: { getUser: (uid: string) => Promise<{ email?: string }> }, uid: string, event: OrderEvent, orderId: string): Promise<'sent' | 'skipped' | 'failed'> => {
   if (holder.__mailTap) { holder.__mailTap(`${uid}:${event}`); return 'sent'; }
   const from = process.env.EMAIL_FROM;

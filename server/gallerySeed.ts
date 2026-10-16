@@ -6,7 +6,7 @@
 // A page is saved as gallerySlides/weelink-ai_<key>: designer «Weelink AI», official (it cannot be hired). It is staged as
 // «بانتظار المراجعة» (Eyad, 15 Oct: the owner looks at each, edits it in the designer's panel, then approves it); `publish`
 // saves it approved at once. A page the admin edited by hand (editedBy) is never rebuilt, whatever `overwrite` says.
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue } from './firebase.js';
 import pagesFile from '../src/data/galleryPages/pages.json' with { type: 'json' };
 
 export const OFFICIAL_UID = 'weelink-ai';

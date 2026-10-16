@@ -18,8 +18,7 @@
 // account today is a test account with unlimited use.
 
 import { GoogleGenAI, type ThinkingLevel } from '@google/genai';
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { cert, getApps, initializeApp, getFirestore } from '../server/firebase.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
 import designer from '../src/data/ai/weelinkDesigner.json' with { type: 'json' };

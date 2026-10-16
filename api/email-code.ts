@@ -18,9 +18,7 @@
 // While either is missing, 'send' answers { skipped: true } and the sign-up goes on without a code.
 
 import { createHash, randomInt } from 'node:crypto';
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { cert, getApps, initializeApp, getAuth, getFirestore } from '../server/firebase.js';
 import { Resend } from 'resend';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 

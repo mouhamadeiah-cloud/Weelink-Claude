@@ -1,4 +1,4 @@
-// A tiny in-memory stand-in for firebase-admin, enough for api/design-orders.ts.
+// A tiny in-memory stand-in for server/firebase.ts (the firebase-admin-shaped layer), enough for api/design-orders.ts.
 export const store = new Map<string, any>();
 let counter = 0;
 const clone = (x: any) => JSON.parse(JSON.stringify(x));

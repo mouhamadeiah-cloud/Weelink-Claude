@@ -19,9 +19,7 @@
 // The counters are never taken from the browser: a designer cannot raise their own numbers.
 // Needs FIREBASE_SERVICE_ACCOUNT (the same one the other functions use).
 
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore } from './firebase.js';
 import { designerSave, loadForEdit } from './galleryEdit.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 

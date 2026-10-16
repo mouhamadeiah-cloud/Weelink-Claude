@@ -26,9 +26,7 @@
 // The customer's name and email are never in the order: the designer sees «زبون ABCD».
 // Needs FIREBASE_SERVICE_ACCOUNT (the same one the other functions use).
 
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore } from './firebase.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import pricing from '../src/data/designerPricing.json' with { type: 'json' };
 import { mailOffice, mailOrder } from './orderMail.js';

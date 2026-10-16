@@ -132,8 +132,8 @@ const cleanAssets = (raw: any): Assets => ({
 // ---------- Token meter (the platform admin's «التوكنز والتكلفة») ----------
 // Every Gemini call is logged in platform_ai_calls and taken off the account's balance
 // (platform_subscribers/{uid}.tokens). The first call grants the opening balance: the free
-// amount, or the paid one while a subscription runs. Same block as in api/write-texts.ts and
-// api/build-page.ts (a function file cannot safely import a sibling). Without
+// amount, or the paid one while a subscription runs. Same block as in
+// api/admin.ts (a function file cannot safely import a sibling). Without
 // FIREBASE_SERVICE_ACCOUNT nothing is metered and nothing is blocked.
 const FREE_TOKENS = 30_000;
 const PAID_TOKENS = 150_000;

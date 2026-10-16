@@ -118,8 +118,6 @@ export interface RightDrawerProps {
   userEmail?: string;
   onCompleteChat?: (collectedData: any) => void;
   onStepChange?: (stepNum: number) => void;
-  // Wee AI writing the page's texts from the owner's answers.
-  onWriteTexts?: (answers: any) => Promise<{ ok: boolean; message: string }>;
   // «ابن صفحتي»: Wee AI building the page from the answers, and bringing the old page back.
   onBuildPage?: (answers: any) => Promise<{ ok: boolean; message: string }>;
   onRestorePage?: () => { ok: boolean; message: string };

@@ -289,7 +289,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </aside>
           <div className="wl-rise relative h-[calc(100dvh-14rem)] lg:h-[calc(100dvh-7rem)] min-h-[440px] rounded-card overflow-hidden border border-line bg-surface lg:order-1" style={{ animationDelay: '120ms' }}>
             <WeeAIChat
-              key={chosen.type}
+              key={`${chosen.type}-${signedIn ? accountId : WEE_GUEST_ID}`}
               userId={signedIn ? accountId : WEE_GUEST_ID}
               userEmail={signedIn ? user?.email || "" : ""}
               pageKind={chosen.type}

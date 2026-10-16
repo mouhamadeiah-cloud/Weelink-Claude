@@ -12,12 +12,12 @@ import { Card, EmptyState, formatMoney } from '../../shop/adminUi';
 import { whatsappHref } from '../../cars/carModel';
 import { CloudNotice, RestaurantTabProps } from './shared';
 
-export const orderTime = (iso: string) => {
+const orderTime = (iso: string) => {
   const d = new Date(iso);
   return isNaN(d.getTime()) ? '' : d.toLocaleString('ar-SY-u-nu-latn', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-export const orderPlace = (o: MenuOrder) => (o.type === 'table' ? `طاولة ${o.table}` : o.type === 'delivery' ? 'توصيل' : 'استلام');
+const orderPlace = (o: MenuOrder) => (o.type === 'table' ? `طاولة ${o.table}` : o.type === 'delivery' ? 'توصيل' : 'استلام');
 
 // A Syrian number written as 09… becomes 9639… for WhatsApp.
 const waNumber = (phone: string) => {

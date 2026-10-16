@@ -8,7 +8,7 @@ export interface PassengerBrand {
   models: string[];
 }
 
-export interface NamedItem {
+interface NamedItem {
   name_ar: string;
   name_de: string;
 }
@@ -26,7 +26,7 @@ export interface VehicleLists {
 }
 
 // «غير ذلك» / «Andere» in the lists means "not in the list": the field then takes any typed text.
-export const OTHER = 'غير ذلك';
+const OTHER = 'غير ذلك';
 export const isOther = (name: string) => name === OTHER || name === 'Andere';
 
 let cache: Promise<VehicleLists> | null = null;

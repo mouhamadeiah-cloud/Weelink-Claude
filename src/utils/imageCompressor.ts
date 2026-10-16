@@ -18,7 +18,7 @@ const MAX_TARGET_BYTES = 150 * 1024; // 150 KB (153,600 bytes)
 /**
  * Optimizes Unsplash CDN query parameters for fast transfer and initial server-side compression
  */
-export function getOptimizedUnsplashUrl(
+function getOptimizedUnsplashUrl(
   rawUrl: string,
   maxWidth = 1200,
   initialQuality = 80

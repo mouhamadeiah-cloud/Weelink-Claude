@@ -4,12 +4,12 @@
 // package the owner's page has (the ids of data/plans.ts).
 import pricing from './designerPricing.json';
 
-export const PLATFORM_SHARE: number = pricing.platformShare;
+const PLATFORM_SHARE: number = pricing.platformShare;
 
-export const DESIGNER_PRICES: Record<string, number> = pricing.prices;
+const DESIGNER_PRICES: Record<string, number> = pricing.prices;
 
 // The price for a page on that package, or null for a package that has none.
-export const designerPrice = (planId: string): number | null => DESIGNER_PRICES[planId] ?? null;
+const designerPrice = (planId: string): number | null => DESIGNER_PRICES[planId] ?? null;
 
 // The designer's part of a price, and the platform's.
 export const splitPrice = (price: number) => {

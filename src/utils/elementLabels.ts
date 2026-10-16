@@ -2,7 +2,7 @@
 // type ("heading", "image"); those show this name instead.
 import type { CanvasElement, ElementType } from '../types';
 
-export const ELEMENT_TYPE_LABEL: Record<ElementType, string> = {
+const ELEMENT_TYPE_LABEL: Record<ElementType, string> = {
   heading: 'عنوان',
   paragraph: 'نص',
   button: 'زر',

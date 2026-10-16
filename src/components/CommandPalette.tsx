@@ -18,7 +18,7 @@ export interface PaletteCommand {
 
 // Arabic is typed many ways: drop the short vowels and tatweel, and make the hamza forms, taa
 // marbuta and alif maqsura match their plain letters.
-export const normalizeSearch = (s: string) =>
+const normalizeSearch = (s: string) =>
   s
     .toLowerCase()
     .replace(/[ً-ْـ]/g, '')

@@ -15,7 +15,7 @@ import { useShopSearch, clearShopSearch, matchesSearch, takeReveal, bumpShopReve
 import { CarAdvancedSearch } from './CarAdvancedSearch';
 import { carFilterChips, carMatchesFilters, clearCarFilters, CarFilters, setCarFilters, useCarFilters, withoutChip } from './carFilterStore';
 
-export const MAX_CARS_PER_PAGE = 30;
+const MAX_CARS_PER_PAGE = 30;
 const CARD_WIDTH: Record<string, number> = { grid: 290, large: 400 };
 const CHIP_WIDTH = 260;
 const CHIP_MAX_HEIGHT = 96;
@@ -39,7 +39,7 @@ interface CarListingsViewProps {
   showsSearch?: boolean;
 }
 
-export const carLookOf = (elem: CanvasElement): CarLook => ({
+const carLookOf = (elem: CanvasElement): CarLook => ({
   accent: elem.styles.color || '#C8102E',
   cardBg: elem.carCardBg || '#FFFFFF',
   text: elem.carCardText || '#1d1d1f',

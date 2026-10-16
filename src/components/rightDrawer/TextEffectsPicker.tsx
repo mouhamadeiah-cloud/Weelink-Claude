@@ -25,7 +25,7 @@ interface TileProps {
 }
 
 // One effect drawn on a word in the text's own font.
-export const TextEffectTile: React.FC<TileProps> = ({ def, styles, selected, onPick, size = 'sm' }) => {
+const TextEffectTile: React.FC<TileProps> = ({ def, styles, selected, onPick, size = 'sm' }) => {
   const sample: ElementStyles = {
     color: def.dark ? '#ffffff' : '#1d1d1f',
     textEffect: def.id,

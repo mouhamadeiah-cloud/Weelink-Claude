@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Monitor, Smartphone, X } from 'lucide-react'
 import { LiveDesign } from './LiveSlide';
 import type { CanvasElement, Slide } from '../../types';
 
-export interface ViewerItem { id: string; name: string; kind: 'slide' | 'page'; slide: any; page: any; elements: CanvasElement[] }
+interface ViewerItem { id: string; name: string; kind: 'slide' | 'page'; slide: any; page: any; elements: CanvasElement[] }
 
 interface Props {
   items: ViewerItem[];

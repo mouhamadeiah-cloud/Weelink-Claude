@@ -170,6 +170,14 @@ service cloud.firestore {
         allow write: if staffCollection in ['tabs', 'shifts', 'screens', 'log', 'sessions', 'handovers'] && isStaff() && isValidId(docId);
       }
 
+      // Gift cards (بطاقة رصيد): staff read and write them. A card can be fetched by its exact number (never listed),
+      // which is how the website checks a number a guest typed; spending is booked by staff only.
+      match /giftCards/{number} {
+        allow get: if number.matches('^[0-9]{16}$');
+        allow list: if isStaff();
+        allow write: if isStaff() && number.matches('^[0-9]{16}$');
+      }
+
       // The main cashier's sessions and their reports (kept two years): the devices write them, the accounts' readers read them.
       match /cashDays/{dayId} {
         allow read: if isStaff() || memberCan(userId, 'accounts');
@@ -181,6 +189,15 @@ service cloud.firestore {
         allow read: if isOwner(userId) || memberCan(userId, 'accounts');
         allow write: if isStaff() && isValidId(entryId);
       }
+    }
+
+    // Every gift card number ever issued, by any restaurant, so one is never issued twice. Anyone signed in (the
+    // cashier devices sign in anonymously) can book a new number; a booked number can never change.
+    match /giftCardNumbers/{number} {
+      allow get: if isSignedIn();
+      allow create: if isSignedIn() && number.matches('^[0-9]{16}$')
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid is string && request.resource.data.uid.size() <= 128;
     }
 
     // The old accounts (before Firebase sign-in) and their move to Firebase users, see

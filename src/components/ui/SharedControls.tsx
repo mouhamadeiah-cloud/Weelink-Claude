@@ -14,7 +14,7 @@ import { EDITOR_COLORS } from '../../utils/designTokens';
 // ColorSwatchPicker
 // ---------------------------------------------------------------------------
 
-export interface ColorSwatch {
+interface ColorSwatch {
   /** CSS color / gradient / image-url background value */
   value: string;
   /** Optional accessible label (also used as title attribute) */
@@ -134,7 +134,7 @@ export const Slider: React.FC<SliderProps> = ({
 // PillTabs (one canonical segmented-tab switcher)
 // ---------------------------------------------------------------------------
 
-export interface PillTabOption<T extends string = string> {
+interface PillTabOption<T extends string = string> {
   value: T;
   label: string;
 }

@@ -5,13 +5,13 @@ import { CarAdminData, normalizeCarAdmin } from '../cars/carTypes';
 import { ShopAdminData, normalizeShopAdmin } from '../shop/shopTypes';
 import type { ProjectType } from '../shop/shopTypes';
 
-export const publicShopData = (shop: ShopAdminData) => ({
+const publicShopData = (shop: ShopAdminData) => ({
   catalogs: shop.catalogs,
   products: shop.products.filter((p) => p.published).map(({ cost: _cost, ...p }) => ({ ...p, cost: 0 })),
   settings: shop.settings,
 });
 
-export const publicCarData = (cars: CarAdminData) => ({
+const publicCarData = (cars: CarAdminData) => ({
   cars: cars.cars
     .filter((c) => c.published && (c.status !== 'sold' || cars.settings.showSold))
     .map((c) => ({

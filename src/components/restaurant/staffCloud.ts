@@ -13,13 +13,14 @@
 // Every change of a bill runs in a transaction, so devices working on the same table at the same
 // time never overwrite each other. A payment also books its sale in the accounts (ledger).
 import { useEffect, useState } from 'react';
-import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where, Transaction } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where, Transaction } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { newId } from '../shop/shopTypes';
 import { MenuOrder, OrderLine, orderNumberNow, todayKey } from './restaurantTypes';
 import type { LiveState } from './restaurantCloud';
 import { NextNumber, readNextNumber } from './orderNumbers';
 import { CashDay, CashReport, newCashDay, normalizeCashDay } from './cashDay';
+import { CardUse, GIFT_METHOD, GiftCard, cardPayable, cardState, newCardNumber, normalizeCard } from './giftCardLogic';
 import { Actor, Handover, LogEntry, ScreenState, SessionOpenTab, Shift, Tab, TabItem, TabKind, TabPayment, normalizeHandover, normalizeLog, normalizeScreen, normalizeSession, normalizeShift, normalizeTab, openTabId, tabTitle, tabTotals, unsentItems } from './staffTypes';
 
 const col = (uid: string, name: string) => collection(db, 'restaurants', uid, name);
@@ -224,7 +225,7 @@ export const newItem = (line: OrderLine, actor: Actor): TabItem => ({
   voidNote: '',
 });
 
-export const addItems = (uid: string, tabId: string, lines: OrderLine[], actor: Actor) =>
+const addItems = (uid: string, tabId: string, lines: OrderLine[], actor: Actor) =>
   changeTab(uid, tabId, (t) => ({ items: [...t.items, ...lines.map((l) => newItem(l, actor))] }));
 
 export const sendToKitchen = (uid: string, tabId: string, actor: Actor) =>
@@ -239,12 +240,43 @@ const closeInTx = (tx: Transaction, uid: string, t: Tab, actor: Actor) => {
   tx.delete(tabDoc(uid, t.id));
 };
 
+// ---------- Gift cards ----------
+
+const cardDoc = (uid: string, number: string) => doc(db, 'restaurants', uid, 'giftCards', number);
+
+// A card number nobody has: the number is booked in a registry shared by all the restaurants (so it is
+// never issued twice anywhere) the moment a card is put on a bill. The card itself is created when the
+// bill is paid.
+export const reserveCardNumber = async (uid: string): Promise<string> => {
+  for (let i = 0; i < 6; i += 1) {
+    const number = newCardNumber();
+    const taken = await runTransaction(db, async (tx) => {
+      const ref = doc(db, 'giftCardNumbers', number);
+      if ((await tx.get(ref)).exists()) return true;
+      tx.set(ref, { uid });
+      return false;
+    });
+    if (!taken) return number;
+  }
+  throw new Error('card-number');
+};
+
+// A card as the restaurant holds it, or null when this restaurant never sold such a number.
+export const getCard = async (uid: string, number: string): Promise<GiftCard | null> => {
+  const s = await getDoc(cardDoc(uid, number));
+  return s.exists() ? normalizeCard(number, s.data()) : null;
+};
+
+export const useCards = (uid: string | null) => useLive(() => (uid ? query(col(uid, 'giftCards'), orderBy('issuedAt', 'desc'), limit(300)) : null), (id, d) => normalizeCard(id, d), [uid]);
+
 export interface PayInput {
   amount: number;
   method: string;
   note: string;
   items?: Record<string, number>; // paying by items: item id → how many
   shiftId: string;
+  card?: string; // paying with a gift card: its number
+  cardExpiresAt?: string; // when the cards sold on this bill expire ('' = never)
 }
 
 // Takes a payment: unsent dishes go to the kitchen first, the sale is booked in the accounts, and the
@@ -252,12 +284,24 @@ export interface PayInput {
 export const payTab = (uid: string, tabId: string, input: PayInput, actor: Actor) =>
   runTransaction(db, async (tx) => {
     const [t, seq] = await readTabAndNumber(tx, uid, tabId);
+    // The gift card being spent is read before anything is written.
+    let card: GiftCard | null = null;
+    if (input.method === GIFT_METHOD) {
+      if (t.items.some((i) => i.card && !i.voided)) throw new Error('card-on-card');
+      const snap = input.card ? await tx.get(cardDoc(uid, input.card)) : null;
+      if (!snap?.exists()) throw new Error('card-missing');
+      card = normalizeCard(snap.id, snap.data());
+      const state = cardState(card);
+      if (state !== 'ok') throw new Error(`card-${state}`);
+    }
     const items = sendUnsent(tx, uid, t, actor, seq).map((i) => (input.items?.[i.id] ? { ...i, paidQty: Math.min(i.qty, i.paidQty + input.items[i.id]) } : i));
     const due = tabTotals(t).due;
-    const amount = Math.min(due, Math.max(0, Math.round(input.amount * 100) / 100));
+    let amount = Math.min(due, Math.max(0, Math.round(input.amount * 100) / 100));
+    if (card) amount = cardPayable(card, amount);
+    const now = new Date().toISOString();
     const payment: TabPayment = {
       id: newId('pay'),
-      at: new Date().toISOString(),
+      at: now,
       amount,
       method: input.method,
       workerId: actor.workerId,
@@ -265,10 +309,15 @@ export const payTab = (uid: string, tabId: string, input: PayInput, actor: Actor
       deviceId: actor.deviceId,
       deviceName: actor.deviceName,
       shiftId: input.shiftId,
-      note: input.note,
+      note: card ? [input.note, `بطاقة ····${card.number.slice(-4)}`].filter(Boolean).join(' · ') : input.note,
     };
     const next: Tab = { ...t, items, payments: amount > 0 ? [...t.payments, payment] : t.payments };
-    if (amount > 0) {
+    if (card && amount > 0) {
+      const use: CardUse = { at: now, amount, place: `${tabTitle(t)} · ${actor.workerName}` };
+      tx.update(cardDoc(uid, card.number), { balance: Math.round((card.balance - amount) * 100) / 100, uses: clean([...card.uses, use].slice(-100)) });
+    }
+    // Spending a card is not a new sale (the sale was booked when the card was bought).
+    if (amount > 0 && input.method !== GIFT_METHOD) {
       tx.set(doc(col(uid, 'ledger'), `pay_${payment.id}`), clean({
         kind: 'income',
         date: todayKey(),
@@ -282,9 +331,18 @@ export const payTab = (uid: string, tabId: string, input: PayInput, actor: Actor
       }));
     }
     const left = tabTotals(next).due;
-    if (left <= 0) closeInTx(tx, uid, next, actor);
-    else tx.update(tabDoc(uid, tabId), { items: clean(next.items), payments: clean(next.payments) });
-    return { paid: amount, left, total: tabTotals(next).total };
+    // The cards sold on the bill start working once it is fully paid.
+    const issued: GiftCard[] = [];
+    if (left <= 0) {
+      for (const i of next.items) {
+        if (!i.card || i.voided) continue;
+        const c: GiftCard = { number: i.card, initial: i.unitPrice, balance: i.unitPrice, issuedAt: now, expiresAt: input.cardExpiresAt || '', issuedBy: actor.workerName, uses: [] };
+        tx.set(cardDoc(uid, c.number), clean(c));
+        issued.push(c);
+      }
+      closeInTx(tx, uid, next, actor);
+    } else tx.update(tabDoc(uid, tabId), { items: clean(next.items), payments: clean(next.payments) });
+    return { paid: amount, left, total: tabTotals(next).total, issued };
   });
 
 // Closes a bill with nothing to pay (opened by mistake, or every dish cancelled).
@@ -413,7 +471,7 @@ export const confirmHandover = async (uid: string, h: Handover) => {
 };
 
 // The cashier hands out the amount he opened the day with, or a handover that never came is dropped.
-export const cancelHandover = (uid: string, id: string) => updateDoc(handoverDoc(uid, id), { status: 'skipped' });
+const cancelHandover = (uid: string, id: string) => updateDoc(handoverDoc(uid, id), { status: 'skipped' });
 
 // ---------- The main cashier's session (see cashDay.ts) ----------
 

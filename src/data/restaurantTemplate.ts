@@ -46,10 +46,10 @@ const button = (id: string, slideId: string, box: Box, text: string, solid: bool
     : { backgroundColor: dark ? 'rgba(255,255,255,0.1)' : 'transparent', color: dark ? '#FFFFFF' : C.ink, borderColor: dark ? 'rgba(255,255,255,0.55)' : C.ink, borderWidth: 1, fontSize: 16, fontWeight: '600', borderRadius: 9999, textAlign: 'center', fontFamily: REST_BODY_FONT },
   link);
 
-export const menuList = (id: string, slideId: string, box: Box, extra: Partial<CanvasElement> = {}): CanvasElement =>
+const menuList = (id: string, slideId: string, box: Box, extra: Partial<CanvasElement> = {}): CanvasElement =>
   el(id, 'menuList', slideId, box, '', { color: C.accent }, { name: 'منيو المطعم', menuLayout: 'grid', ...extra });
 
-export const menuCart = (id: string, slideId: string, box: Box): CanvasElement =>
+const menuCart = (id: string, slideId: string, box: Box): CanvasElement =>
   el(id, 'menuCart', slideId, box, '', { color: C.accent }, { name: 'سلة الطلب' });
 
 function buildNavbar(): NavbarConfig {

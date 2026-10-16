@@ -16,7 +16,7 @@ export interface EditableDesign {
   elements: any[];
 }
 
-export class EditError extends Error {
+class EditError extends Error {
   constructor(public code: string, public kinds: string[] = []) {
     super(code);
   }

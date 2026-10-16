@@ -14,7 +14,7 @@ export interface DesignerProfile {
 }
 
 export const DESIGNER_NAME_MAX = 60;
-export const DESIGNER_BIO_MAX = 200;
+const DESIGNER_BIO_MAX = 200;
 
 export const readDesigner = async (uid: string): Promise<DesignerProfile | null> => {
   try {
@@ -45,7 +45,7 @@ export const becomeDesigner = async (uid: string, name: string): Promise<Designe
   return profile;
 };
 
-export const updateDesignerProfile = (uid: string, fields: Partial<Pick<DesignerProfile, 'name' | 'bio'>>) =>
+const updateDesignerProfile = (uid: string, fields: Partial<Pick<DesignerProfile, 'name' | 'bio'>>) =>
   updateDoc(doc(db, 'designers', uid), {
     ...(fields.name !== undefined ? { name: fields.name.trim().slice(0, DESIGNER_NAME_MAX) } : {}),
     ...(fields.bio !== undefined ? { bio: fields.bio.trim().slice(0, DESIGNER_BIO_MAX) } : {}),
@@ -58,7 +58,7 @@ export interface DesignerPublic extends DesignerStats {
   average: number;
 }
 
-export const toPublicStats = (d: any): DesignerPublic => {
+const toPublicStats = (d: any): DesignerPublic => {
   const st: DesignerStats = { completed: Number(d?.completed) || 0, ratingCount: Number(d?.ratingCount) || 0, ratingSum: Number(d?.ratingSum) || 0 };
   return { ...st, verified: d?.verified === true && isApproved(st), average: averageRating(st) };
 };

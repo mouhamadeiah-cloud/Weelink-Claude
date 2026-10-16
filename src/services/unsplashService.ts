@@ -1,7 +1,7 @@
 import { GalleryImageItem, UNSPLASH_GALLERY_PHOTOS } from '../data/graphicsPresets';
 
 // Safe retrieval of Unsplash Access Key
-export const getUnsplashAccessKey = (): string => {
+const getUnsplashAccessKey = (): string => {
   if (typeof window !== 'undefined') {
     const userOverride = localStorage.getItem('weelink_unsplash_access_key');
     if (userOverride && userOverride.trim()) {

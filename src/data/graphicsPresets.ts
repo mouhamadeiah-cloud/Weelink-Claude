@@ -298,7 +298,7 @@ export const UNSPLASH_GALLERY_PHOTOS: GalleryImageItem[] = [
 ];
 
 // Helper to search Unsplash dynamic collection or query
-export const getUnsplashSearchUrl = (query: string, page = 1) => {
+const getUnsplashSearchUrl = (query: string, page = 1) => {
   const clean = encodeURIComponent(query.trim() || 'minimal');
   return `https://images.unsplash.com/photo-${clean}?auto=format&fit=crop&w=1000&q=80`;
 };

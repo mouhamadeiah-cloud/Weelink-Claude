@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { LogOut } from 'lucide-react';
 
-export type NavScreen = 'home' | 'start' | 'law';
+type NavScreen = 'home' | 'start' | 'law';
 
 interface Props {
   current: NavScreen;

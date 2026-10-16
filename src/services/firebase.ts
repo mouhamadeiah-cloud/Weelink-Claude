@@ -12,7 +12,7 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
-export enum OperationType {
+enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
   DELETE = 'delete',
@@ -21,7 +21,7 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-export interface FirestoreErrorInfo {
+interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
   path: string | null;
@@ -38,7 +38,7 @@ export interface FirestoreErrorInfo {
   }
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -92,7 +92,7 @@ export async function logoutUser() {
 }
 
 // Test Connection on boot
-export async function testConnection() {
+async function testConnection() {
   try {
     const testDoc = doc(db, 'test', 'connection');
     await getDoc(testDoc);
@@ -106,7 +106,7 @@ export async function testConnection() {
 testConnection();
 
 // Function to log in with email and password
-export async function loginWithEmail(email: string, password: string) {
+async function loginWithEmail(email: string, password: string) {
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
     return result.user;
@@ -117,7 +117,7 @@ export async function loginWithEmail(email: string, password: string) {
 }
 
 // Function to register with email and password
-export async function registerWithEmail(email: string, password: string) {
+async function registerWithEmail(email: string, password: string) {
   try {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     return result.user;

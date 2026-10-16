@@ -20,10 +20,10 @@ export const PERMS: { id: PermId; label: string; hint: string }[] = [
   { id: 'settings', label: 'الإعدادات', hint: 'إعدادات المطعم' },
 ];
 
-export const NO_PERMS: Perms = { orders: false, menu: false, tables: false, staff: false, accounts: false, settings: false };
+const NO_PERMS: Perms = { orders: false, menu: false, tables: false, staff: false, accounts: false, settings: false };
 export const ALL_PERMS: Perms = { orders: true, menu: true, tables: true, staff: true, accounts: true, settings: true };
 
-export const normalizePerms = (raw: any): Perms => {
+const normalizePerms = (raw: any): Perms => {
   const p = { ...NO_PERMS };
   for (const { id } of PERMS) p[id] = raw?.[id] === true;
   return p;

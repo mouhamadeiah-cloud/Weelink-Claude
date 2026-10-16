@@ -5,6 +5,7 @@
 // the dish picks its own.
 import { newId } from '../shop/shopTypes';
 import { Worker, normalizeWorker } from './staffTypes';
+import { GIFT_METHOD, GiftCardSettings, DEFAULT_GIFT_SETTINGS, normalizeGiftSettings } from './giftCardLogic';
 
 // A main catalog of the menu: مشاوي، سندويش، مشروبات...
 export interface MenuCategory {
@@ -16,7 +17,7 @@ export interface MenuCategory {
   stationId: string; // the kitchen section that prepares its dishes ('' = the first one)
 }
 
-export interface SubCatalogItem {
+interface SubCatalogItem {
   id: string;
   name: string;
   price: number; // extras only: added to the dish's price when picked
@@ -82,6 +83,7 @@ export interface RestaurantSettings {
   autoLockMinutes: number; // the cashier/waiter screen asks for a PIN again after this idle time (0 = never)
   boardShows: 'takeaway' | 'all'; // the waiting screen: only orders the guest collects, or every order
   kitchenLateMinutes: number; // an order not ready after this long flashes red in the kitchen
+  giftCard: GiftCardSettings; // the cashier's fixed catalog «بطاقة رصيد»
   dayStartHour: number; // يوم العمل: the hour (0-8) a new day starts; the hours after midnight before it belong to the day before
 }
 
@@ -133,7 +135,7 @@ export interface StaffDevice {
 
 export const STATION_COLORS = ['#E8590C', '#1971C2', '#2F9E44', '#C2255C', '#7048E8', '#F08C00', '#0C8599', '#868E96'];
 
-export const DEFAULT_STATIONS: KitchenStation[] = [
+const DEFAULT_STATIONS: KitchenStation[] = [
   { id: 'st-kitchen', name: 'المطبخ', color: '#E8590C' },
   { id: 'st-bar', name: 'البار والمشروبات', color: '#1971C2' },
 ];
@@ -141,7 +143,7 @@ export const DEFAULT_STATIONS: KitchenStation[] = [
 const tablesOf = (prefix: string, from: number, count: number): RestTable[] =>
   Array.from({ length: count }, (_, i) => ({ id: `${prefix}-${from + i}`, name: String(from + i), seats: 4 }));
 
-export const defaultHalls = (tables: number): Hall[] => [{ id: 'hall-main', name: 'الصالة الرئيسية', tables: tablesOf('tbl', 1, Math.max(0, Math.min(100, tables))) }];
+const defaultHalls = (tables: number): Hall[] => [{ id: 'hall-main', name: 'الصالة الرئيسية', tables: tablesOf('tbl', 1, Math.max(0, Math.min(100, tables))) }];
 
 export const allTables = (halls: Hall[]) => halls.flatMap((h) => h.tables.map((t) => ({ ...t, hallId: h.id, hallName: h.name })));
 
@@ -188,7 +190,7 @@ export interface OrderLine {
 export type OrderType = 'delivery' | 'pickup' | 'table';
 
 // Where an order came from: the website, a table's QR code, or the staff (cashier, waiter).
-export type OrderSource = 'website' | 'qr' | 'staff';
+type OrderSource = 'website' | 'qr' | 'staff';
 
 export interface MenuOrder {
   id: string;
@@ -226,7 +228,7 @@ export interface RestaurantAdminData {
   workers: Worker[];
 }
 
-export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
+const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   name: '',
   currency: 'ل.س',
   whatsapp: '',
@@ -246,6 +248,7 @@ export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   boardShows: 'takeaway',
   kitchenLateMinutes: 5,
   dayStartHour: 4,
+  giftCard: { ...DEFAULT_GIFT_SETTINGS },
 };
 
 export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
@@ -377,7 +380,7 @@ const normalizeDevice = (raw: any): StaffDevice => ({
 export const normalizeOrderRecord = (raw: any): MenuOrder => normalizeOrder(raw);
 
 export const normalizeRestaurantAdmin = (raw: any): RestaurantAdminData => ({
-  settings: { ...DEFAULT_RESTAURANT_SETTINGS, ...(raw?.settings || {}) },
+  settings: { ...DEFAULT_RESTAURANT_SETTINGS, ...(raw?.settings || {}), giftCard: normalizeGiftSettings(raw?.settings?.giftCard) },
   categories: Array.isArray(raw?.categories) ? raw.categories.map(normalizeCategory) : [],
   subCatalogs: Array.isArray(raw?.subCatalogs) ? raw.subCatalogs.map(normalizeSubCatalog) : [],
   dishes: Array.isArray(raw?.dishes) ? raw.dishes.map(normalizeDish) : [],
@@ -416,7 +419,7 @@ export const submitOrder = (d: RestaurantAdminData, order: MenuOrder): Restauran
 // themselves (source 'order'); the cashier will add its sales the same way (source 'cashier').
 
 export type LedgerKind = 'income' | 'expense';
-export type LedgerSource = 'manual' | 'order' | 'cashier';
+type LedgerSource = 'manual' | 'order' | 'cashier';
 
 export interface LedgerEntry {
   id: string;
@@ -433,7 +436,7 @@ export interface LedgerEntry {
 
 export const INCOME_CATEGORIES = ['مبيعات الموقع', 'مبيعات الصالة', 'مبيعات التوصيل', 'إيرادات أخرى'];
 export const EXPENSE_CATEGORIES = ['مواد غذائية', 'خضار ولحوم', 'مشروبات', 'رواتب', 'إيجار', 'كهرباء وماء', 'غاز ومحروقات', 'صيانة', 'تغليف', 'تسويق', 'مصاريف أخرى'];
-export const PAYMENT_METHODS = ['نقدي', 'شام كاش', 'سيريتل كاش', 'MTN كاش', 'تحويل بنكي', 'بطاقة'];
+export const PAYMENT_METHODS = ['نقدي', 'شام كاش', 'سيريتل كاش', 'MTN كاش', 'تحويل بنكي', 'بطاقة', GIFT_METHOD];
 
 // يوم العمل: a restaurant open past midnight keeps the hours after midnight in the day before, until
 // the hour the owner sets. The daily order numbers, the kitchen's and the waiting screen's «today»,

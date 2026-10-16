@@ -11,7 +11,7 @@ const ALIGN_NEXT = { right: 'center', center: 'left', left: 'right' } as const;
 
 // Shown in the buttons' tooltips; the shortcuts themselves live in App.
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
-export const MOD_KEY = isMac ? '⌘' : 'Ctrl';
+const MOD_KEY = isMac ? '⌘' : 'Ctrl';
 
 interface SelectionBarProps {
   element: CanvasElement;

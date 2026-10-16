@@ -10,7 +10,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import pagesFile from '../src/data/galleryPages/pages.json' with { type: 'json' };
 
 export const OFFICIAL_UID = 'weelink-ai';
-export const OFFICIAL_NAME = 'Weelink AI';
+const OFFICIAL_NAME = 'Weelink AI';
 
 interface Found { id: string; url: string; by: string; link: string }
 type Cache = Record<string, Found[]>;
@@ -30,7 +30,7 @@ const queriesOf = (p: PageDoc): string[] => {
 // slide is saved with the page's status; the admin's decision on the page is applied to them (api/admin.ts), and a slide the
 // admin edited by hand (editedBy) is never rebuilt.
 const plain = (html: unknown) => String(html || '').replace(/<[^>]*>/g, ' ');
-export const slideRole = (els: any[], index: number, count: number): string => {
+const slideRole = (els: any[], index: number, count: number): string => {
   const types = new Set(els.map((e) => e.type));
   const text = els.filter((e) => e.type === 'heading' || e.type === 'paragraph').map((e) => plain(e.content)).join(' ');
   if (types.has('calendar')) return 'booking';
@@ -53,7 +53,7 @@ const unlink = (e: any) => {
   return rest;
 };
 
-export const derivedSlides = (pageId: string, p: { key: string; name: string }, page: any, elements: any[]) => {
+const derivedSlides = (pageId: string, p: { key: string; name: string }, page: any, elements: any[]) => {
   const slides: any[] = page?.slides || [];
   return slides.map((slide, i) => {
     const els = elements.filter((e) => e.slideId === slide.id);

@@ -51,10 +51,10 @@ const button = (id: string, slideId: string, box: Box, text: string, solid: bool
     : { backgroundColor: dark ? 'rgba(255,255,255,0.1)' : 'transparent', color: dark ? '#FFFFFF' : C.ink, borderColor: dark ? 'rgba(255,255,255,0.5)' : C.ink, borderWidth: 1, fontSize: 16, fontWeight: '600', borderRadius: 9999, textAlign: 'center', fontFamily: CAR_BODY_FONT },
   link);
 
-export const carListings = (id: string, slideId: string, box: Box, extra: Partial<CanvasElement> = {}): CanvasElement =>
+const carListings = (id: string, slideId: string, box: Box, extra: Partial<CanvasElement> = {}): CanvasElement =>
   el(id, 'carListings', slideId, box, '', { color: C.accent }, { name: 'سيارات المعرض', carLayout: 'grid', carLimit: 9, ...extra });
 
-export const carSearch = (id: string, slideId: string, box: Box, look: 'minimal' | 'pill' | 'glass' = 'pill'): CanvasElement =>
+const carSearch = (id: string, slideId: string, box: Box, look: 'minimal' | 'pill' | 'glass' = 'pill'): CanvasElement =>
   el(id, 'carSearch', slideId, box, 'ابحث بالماركة أو الموديل أو السنة...', { color: C.accent }, { name: 'بحث عن سيارة', shopSearchStyle: look });
 
 function buildNavbar(): NavbarConfig {

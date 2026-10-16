@@ -1,6 +1,8 @@
 // A bill printed from the browser, narrow like a receipt (80 mm). A thermal printer prints it from
 // the print window today; printing straight to the printer comes with the cashier app.
+import QRCode from 'qrcode';
 import { RestaurantSettings } from '../restaurantTypes';
+import { GiftCard, formatCardNumber } from '../giftCardLogic';
 import { Handover, Tab, itemTotal, tabTitle, tabTotals } from '../staffTypes';
 import { formatMoney } from '../../shop/adminUi';
 
@@ -78,4 +80,26 @@ ${extra.counted === null ? '' : row('الموجود فعلًا', money(extra.cou
 <hr><div class="c">${esc(extra.by)} · ${at(new Date().toISOString())}</div>
 <script>window.onload=()=>{window.print()}</script></body></html>`);
   w.document.close();
+};
+
+// The extra slip printed with the bill that sold a gift card: the amount, the unique number, the QR code
+// the cashier scans to spend it, and when it expires. Must be called from a tap (it opens the print
+// window first, then fills it once the QR code is drawn).
+export const printGiftCard = (card: GiftCard, settings: RestaurantSettings) => {
+  const w = window.open('', '_blank', 'width=420,height=700');
+  if (!w) return;
+  const money = (n: number) => esc(formatMoney(n, settings.currency));
+  QRCode.toDataURL(card.number, { margin: 1, width: 240 }).then((qr) => {
+    w.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>بطاقة رصيد</title>
+<style>body{font-family:system-ui,sans-serif;width:72mm;margin:0 auto;padding:4mm;font-size:13px;color:#000;text-align:center}h1{font-size:17px;margin:0 0 2px}
+.a{font-size:26px;font-weight:800;margin:8px 0}.n{font-size:18px;font-weight:800;letter-spacing:1px;direction:ltr;margin:6px 0}.s{font-size:11px;color:#444}hr{border:0;border-top:1px dashed #000}img{width:44mm;height:44mm}</style></head><body>
+<h1>${esc(settings.name || 'المطعم')}</h1><div class="s">بطاقة رصيد</div><hr>
+<div class="a">${money(card.initial)}</div>
+<img src="${qr}" alt="QR">
+<div class="n">${esc(formatCardNumber(card.number))}</div>
+<div class="s">${card.expiresAt ? `صالحة حتى ${esc(new Date(card.expiresAt).toLocaleDateString('ar-SY-u-nu-latn'))}` : 'بدون تاريخ انتهاء'}</div>
+<hr><div class="s">تُصرف في ${esc(settings.name || 'المطعم')} فقط بإعطاء الرقم أو مسح الرمز. احتفظ بها كالنقود.</div>
+<script>window.onload=()=>{window.print()}</script></body></html>`);
+    w.document.close();
+  });
 };

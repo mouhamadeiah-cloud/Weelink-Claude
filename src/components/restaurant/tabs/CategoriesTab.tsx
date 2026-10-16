@@ -7,6 +7,7 @@ import { MenuCategory } from '../restaurantTypes';
 import { newId } from '../../shop/shopTypes';
 import { Card, Field, inputClass, PrimaryButton, GhostButton, EmptyState } from '../../shop/adminUi';
 import { RestaurantTabProps, ImagePicker } from './shared';
+import { GiftCardCard } from './GiftCardCard';
 
 const ICONS = ['🔥', '🍔', '🌯', '🍕', '🥗', '🍝', '🍗', '🥩', '🐟', '🍟', '🥙', '🍰', '🍨', '🥤', '☕', '🧃', '🍳', '🥐'];
 
@@ -41,6 +42,7 @@ export const CategoriesTab: React.FC<RestaurantTabProps> = ({ data, update, onGo
 
   return (
     <div className="space-y-4">
+      <GiftCardCard value={data.settings.giftCard} currency={data.settings.currency} onChange={(giftCard) => update((d) => ({ ...d, settings: { ...d.settings, giftCard } }))} />
       <Card title="قسم جديد">
         <div className="flex flex-wrap items-end gap-2">
           <div className="flex-1 min-w-[180px]">

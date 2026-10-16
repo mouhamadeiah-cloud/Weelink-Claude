@@ -21,11 +21,11 @@ export interface InspectorGroup {
 }
 
 // Elements whose own settings (gallery images, booking hours, table cells...) are more than size and rotation.
-export const TYPES_WITH_SETTINGS: ElementType[] = [
+const TYPES_WITH_SETTINGS: ElementType[] = [
   'gallery', 'table', 'calendar', 'ratings', 'video', 'map', 'cart', 'checkout', 'carListings', 'carSearch', 'menuList', 'menuCart',
 ];
 // Elements whose settings are drawn by the shop's own panel rather than the format section.
-export const SHOP_SETTING_TYPES: ElementType[] = ['shopProducts', 'shopSearch'];
+const SHOP_SETTING_TYPES: ElementType[] = ['shopProducts', 'shopSearch'];
 const TEXT_TYPES: ElementType[] = ['heading', 'paragraph', 'button', 'badge'];
 
 // Each card's title says whose settings it holds (the element's, the slide's or the navbar's), so

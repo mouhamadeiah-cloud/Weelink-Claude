@@ -13,7 +13,7 @@ import { addLog, closeShift, endSession, openShift, openTab, reopenTab, setScree
 import { formatMoney } from '../../shop/adminUi';
 import { NumberPad } from './NumberPad';
 import { TabView, PosMenu, PaidInfo } from './TabView';
-import { printReceipt } from './receipt';
+import { printGiftCard, printReceipt } from './receipt';
 import { CashierHandoverDialog, CloseDayDialog, ExitDialog, MenuDialog, OpenDayDialog, ReportsArchiveDialog, SessionOrdersDialog, SettingsDialog, WaiterHandoverDialog } from './StaffMenu';
 import { BigButton, Modal, failText, useManagerGate, useToast } from './posUi';
 
@@ -226,11 +226,13 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
   };
 
   const onClosedTab = (info: PaidInfo | null) => {
-    setScreenThanks(info ? { ...info, at: new Date().toISOString() } : null);
+    // The gift cards' numbers stay on this screen: the customer's screen never gets them.
+    setScreenThanks(info ? { total: info.total, paid: info.paid, change: info.change, at: new Date().toISOString() } : null);
     setTabId('');
     if (info) {
       setThanks(info);
-      window.setTimeout(() => setThanks(null), info.change > 0 ? 3500 : 1500);
+      // A bill that sold gift cards stays until the cashier has printed them and taps «تم».
+      if (!info.cards?.length) window.setTimeout(() => setThanks(null), info.change > 0 ? 3500 : 1500);
     }
   };
 
@@ -410,6 +412,10 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
           <div className="text-3xl font-black">تم الدفع وأُغلقت الفاتورة</div>
           <div className="text-xl font-bold">{money(thanks.total)}</div>
           {thanks.change > 0 && <div className="mt-2 px-6 py-3 rounded-3xl bg-white text-[#2F9E44] text-3xl font-black">الباقي للزبون {money(thanks.change)}</div>}
+          {thanks.cards?.map((c) => (
+            <button key={c.number} type="button" onClick={(e) => { e.stopPropagation(); printGiftCard(c, settings); }} className="h-14 px-6 rounded-2xl bg-white text-[#1864AB] text-lg font-black inline-flex items-center gap-2 cursor-pointer"><Printer size={20} /> طباعة بطاقة رصيد {money(c.initial)} ····{c.number.slice(-4)}</button>
+          ))}
+          {thanks.cards?.length ? <button type="button" onClick={(e) => { e.stopPropagation(); setThanks(null); }} className="h-12 px-8 rounded-2xl bg-white/20 text-white text-base font-black cursor-pointer">تم</button> : null}
         </div>
       )}
 

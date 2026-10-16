@@ -33,7 +33,7 @@ const isDecoration = (el: FlexEl) => !el.aiSlot && !el.isGroupContainer && ['sha
 const isBackdrop = (el: FlexEl) => el.type === 'shape' && !el.aiSlot && !(el.content || '').trim();
 
 /** The item number of a list slot: points.2.title → 2 (for list 'points'). */
-export const itemOf = (slot: string | undefined, list: string) => {
+const itemOf = (slot: string | undefined, list: string) => {
   const m = slot && new RegExp(`^${list}\\.(\\d+)(\\.|$)`).exec(slot);
   return m ? +m[1] : -1;
 };
@@ -70,7 +70,7 @@ export const listItems = (els: FlexEl[], list: string) => {
 };
 
 /** Where n items go on the grid the example's items show (rows right to left, or columns). */
-export const gridPositions = (boxes: Box[], n: number): { x: number; y: number }[] => {
+const gridPositions = (boxes: Box[], n: number): { x: number; y: number }[] => {
   const b0 = boxes[0];
   if (boxes.length === 1) return Array.from({ length: n }, (_, j) => ({ x: b0.x, y: b0.y + j * (b0.height + 24) }));
   const sameX = boxes.filter((b) => near(b.x, b0.x));
@@ -194,7 +194,7 @@ export const reflowList = (
 const plain = (html: string) => html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
 
 /** The height a text needs in its box: Arabic letters about half the font size wide. */
-export const textHeight = (el: FlexEl) => {
+const textHeight = (el: FlexEl) => {
   const size = Number(el.styles.fontSize) || 16;
   const bold = el.styles.fontWeight === 'bold' || el.type === 'heading';
   const perLine = Math.max(1, Math.floor(el.width / (size * (bold ? 0.56 : 0.5))));

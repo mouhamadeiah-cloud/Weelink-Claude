@@ -11,7 +11,7 @@ import type { CanvasElement } from '../../types';
 const fmt1 = (n: number) => n.toLocaleString('ar-SY', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const fmt = (n: number) => n.toLocaleString('ar-SY');
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-export const ratingDate = (iso: string) => {
+const ratingDate = (iso: string) => {
   const d = new Date(iso);
   return isNaN(d.getTime()) ? '' : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 };
@@ -94,7 +94,7 @@ const Modal: React.FC<{ onClose: () => void; children: React.ReactNode; wide?: b
   );
 
 // All the ratings, as Google shows them.
-export const RatingsWindow: React.FC<{ onClose: () => void; onRate: () => void; accent?: string }> = ({ onClose, onRate, accent = '#f5a623' }) => {
+const RatingsWindow: React.FC<{ onClose: () => void; onRate: () => void; accent?: string }> = ({ onClose, onRate, accent = '#f5a623' }) => {
   const page = useContext(BookingPageContext);
   const summary = useRatingSummary(page?.owner, page?.project);
   const rows = useRatings(page?.owner, page?.project);
@@ -151,7 +151,7 @@ export const RatingsWindow: React.FC<{ onClose: () => void; onRate: () => void; 
 };
 
 // Stars, words, name and email; then the code from the email.
-export const RateForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const RateForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const page = useContext(BookingPageContext);
   const [stars, setStars] = useState(0);
   const [hover, setHover] = useState(0);
@@ -237,7 +237,7 @@ export const RateForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 };
 
 // The window and the form, opened from the stars or from the ratings block.
-export const useRatingsDialogs = (accent?: string) => {
+const useRatingsDialogs = (accent?: string) => {
   const [open, setOpen] = useState<'list' | 'rate' | null>(null);
   const dialogs =
     open === 'list' ? <RatingsWindow accent={accent} onClose={() => setOpen(null)} onRate={() => setOpen('rate')} />

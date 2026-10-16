@@ -110,4 +110,4 @@ export const withoutChip = (f: CarFilters, key: string): CarFilters => {
   return { ...f, [key]: '' };
 };
 
-export const hasCarFilters = (f: CarFilters) => carFilterChips(f).length > 0;
+const hasCarFilters = (f: CarFilters) => carFilterChips(f).length > 0;

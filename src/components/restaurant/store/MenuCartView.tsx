@@ -10,6 +10,7 @@ import type { CanvasElement } from '../../../types';
 import { useRestaurantData, useRestaurantOrder } from './RestaurantDataContext';
 import { clearMenuCart, describeLine, menuCartSubtotal, setMenuLineQty, useMenuCart } from '../menuCartStore';
 import { OrderType, buildOrder } from '../restaurantTypes';
+import { cleanCardNumber, formatCardNumber, isCardNumber } from '../giftCardLogic';
 import { currentTable } from '../tableStore';
 import { formatMoney } from '../../shop/adminUi';
 import { whatsappHref } from '../../cars/carModel';
@@ -34,6 +35,7 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
     : [...(settings?.delivery !== false ? ['delivery' as const] : []), ...(settings?.pickup !== false ? ['pickup' as const] : [])];
   const [type, setType] = useState<OrderType>(types[0] || 'pickup');
   const [f, setF] = useState({ name: '', phone: '', address: '', notes: '' });
+  const [giftText, setGiftText] = useState('');
   const [error, setError] = useState('');
   const [sent, setSent] = useState<{ number: number; live: boolean; whatsapp: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,6 +62,10 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
     if (minOrder && subtotal < minOrder) return setError(`الحد الأدنى للطلب ${formatMoney(minOrder, currency)}.`);
     if (activeType !== 'table' && (!f.name.trim() || f.phone.replace(/\D/g, '').length < 7)) return setError('اكتب اسمك ورقم هاتف صحيح.');
     if (activeType === 'delivery' && !f.address.trim()) return setError('اكتب عنوان التوصيل.');
+    const giftNumber = cleanCardNumber(giftText);
+    if (giftText.trim() && !isCardNumber(giftNumber)) return setError('رقم بطاقة الرصيد يتكون من 16 رقمًا.');
+    // The card's number travels in the order's note: the cashier takes the amount from the card when the restaurant confirms the order.
+    const notes = [f.notes.trim(), giftNumber ? `الدفع ببطاقة رصيد: ${formatCardNumber(giftNumber)}` : ''].filter(Boolean).join('\n');
     setError('');
     const orderLines = lines.map(({ key: _k, image: _i, ...l }) => l);
     const order = buildOrder({
@@ -69,7 +75,7 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
       name: f.name.trim(),
       phone: f.phone.trim(),
       address: activeType === 'delivery' ? f.address.trim() : '',
-      notes: f.notes.trim(),
+      notes,
       lines: orderLines,
       subtotal,
       deliveryFee: fee,
@@ -98,7 +104,7 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
       f.name.trim() ? `الاسم: ${f.name.trim()}` : null,
       f.phone.trim() ? `الهاتف: ${f.phone.trim()}` : null,
       activeType === 'delivery' ? `العنوان: ${f.address.trim()}` : null,
-      f.notes.trim() ? `ملاحظات: ${f.notes.trim()}` : null,
+      notes ? `ملاحظات: ${notes}` : null,
     ].filter((x) => x !== null).join('\n');
     const whatsapp = settings.whatsapp ? whatsappHref(settings.whatsapp, text) : '';
     if (waWindow) {
@@ -108,6 +114,7 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
     clearMenuCart();
     const p = customer?.profile;
     setF({ name: p?.name || '', phone: p?.phone || '', address: p?.address || '', notes: '' });
+    setGiftText('');
     setSent({ number, live: placed !== null, whatsapp });
   };
 
@@ -185,6 +192,7 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
           <input className={input} placeholder={activeType === 'table' ? 'الاسم (اختياري)' : 'الاسم'} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
           {activeType !== 'table' && <input className={input} placeholder="رقم الهاتف" inputMode="tel" dir="rtl" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />}
           {activeType === 'delivery' && <input className={input} placeholder="عنوان التوصيل" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />}
+          {settings?.giftCard?.enabled && <input className={input} placeholder="رقم بطاقة الرصيد للدفع بها (اختياري)" inputMode="numeric" dir="ltr" value={giftText} onChange={(e) => setGiftText(e.target.value)} />}
           <textarea className={`${input} h-20 py-3 resize-none`} placeholder="ملاحظات (اختياري)" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
           <div className="space-y-1.5 text-sm pt-1">
             <div className="flex justify-between"><span className="text-black/55">المجموع الفرعي</span><span className="font-bold">{formatMoney(subtotal, currency)}</span></div>

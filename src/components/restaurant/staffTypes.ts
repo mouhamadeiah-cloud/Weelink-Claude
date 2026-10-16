@@ -66,6 +66,7 @@ export interface TabItem extends OrderLine {
   paidQty: number; // paid by items
   voided: boolean;
   voidNote: string;
+  card?: string; // a gift card sold on the bill: its number. It never goes to the kitchen and gets no discount
   tip?: boolean; // a tip (بخشيش) added to the bill: it never goes to the kitchen and gets no discount
 }
 
@@ -125,6 +126,7 @@ const normalizeItem = (raw: any): TabItem => ({
   voided: !!raw?.voided,
   voidNote: str(raw?.voidNote),
   ...(raw?.tip ? { tip: true } : {}),
+  ...(str(raw?.card) ? { card: str(raw.card) } : {}),
 });
 
 const normalizePayment = (raw: any): TabPayment => ({
@@ -169,11 +171,15 @@ export const itemTotal = (i: TabItem) => (i.voided ? 0 : i.unitPrice * i.qty);
 // The tips on a bill (they are part of what the guest pays, but not of the sale).
 export const tipTotal = (t: Tab) => round(t.items.filter((i) => i.tip).reduce((s, i) => s + itemTotal(i), 0));
 
+// Gift cards sold on a bill: part of what the guest pays, but not of the dishes (no discount on them).
+export const giftTotal = (t: Tab) => round(t.items.filter((i) => i.card).reduce((s, i) => s + itemTotal(i), 0));
+
 export const tabTotals = (t: Tab) => {
   const tips = tipTotal(t);
   const dishes = round(t.items.reduce((s, i) => s + itemTotal(i), 0) - tips);
   const subtotal = round(dishes + tips);
-  const discount = round(Math.min(dishes, t.discountPct ? (dishes * t.discountPct) / 100 : t.discount));
+  const discountBase = round(dishes - giftTotal(t));
+  const discount = round(Math.min(discountBase, t.discountPct ? (discountBase * t.discountPct) / 100 : t.discount));
   const total = round(Math.max(0, subtotal - discount));
   const paid = round(t.payments.reduce((s, p) => s + p.amount, 0));
   return { subtotal, discount, total, paid, tips, due: round(Math.max(0, total - paid)) };
@@ -247,7 +253,7 @@ export const shiftTips = (tabs: Tab[], shiftId: string) =>
   round(tabs.filter((t) => t.payments.some((p) => p.shiftId === shiftId)).reduce((s, t) => s + tipTotal(t), 0));
 
 // The payments of a list of tabs, newest first, each with its tab.
-export const paymentsOf = (tabs: Tab[]) =>
+const paymentsOf = (tabs: Tab[]) =>
   tabs.flatMap((t) => t.payments.map((p) => ({ ...p, tab: t }))).sort((a, b) => b.at.localeCompare(a.at));
 
 // Sums by method: [{method, amount}], cash first.
@@ -340,7 +346,7 @@ export const dayRange = (back: number) => {
 // and gets a random four-digit code. The waiter types it on his tablet, which ends the handover (an
 // electronic signature of both devices). Its id is the waiter's shift id.
 
-export type HandoverStatus = 'requested' | 'received' | 'confirmed' | 'skipped';
+type HandoverStatus = 'requested' | 'received' | 'confirmed' | 'skipped';
 
 export interface Handover {
   id: string;

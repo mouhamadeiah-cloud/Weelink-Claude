@@ -20,7 +20,7 @@ interface MenuViewProps {
   boxHeight?: number;
 }
 
-export const menuLookOf = (elem: CanvasElement): MenuLook => ({
+const menuLookOf = (elem: CanvasElement): MenuLook => ({
   accent: elem.styles.color || '#B5562B',
   cardBg: elem.menuCardBg || '#FFFFFF',
   text: elem.menuCardText || '#2B2118',

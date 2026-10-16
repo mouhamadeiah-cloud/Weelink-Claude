@@ -3,7 +3,7 @@
 // WEELINK_AD_MEDIA (a .mp4/.webm plays muted in a loop, anything else is shown as a picture).
 import React, { useEffect, useState } from 'react';
 
-export const WEELINK_AD_MEDIA = '';
+const WEELINK_AD_MEDIA = '';
 
 const LINES = ['موقعك العربي جاهز بدقائق', 'منيو وطلبات أونلاين وطلب من الطاولة', 'كاشير ونادل وشاشة مطبخ في نظام واحد', 'متجر، مطعم، معرض سيارات… اصنعه بنفسك'];
 

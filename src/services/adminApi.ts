@@ -12,7 +12,7 @@ export interface AdminInfo {
 
 export type SubscriberStatus = 'active' | 'frozen' | 'cancelled';
 
-export interface SubscriberRow {
+interface SubscriberRow {
   uid: string;
   name: string;
   email: string;
@@ -101,7 +101,7 @@ export interface Payment {
 export interface Company { name: string; address: string; phone: string; email: string; taxNo: string; footer: string }
 
 export type TaskStatus = 'new' | 'doing' | 'done';
-export interface AiCall { at: number; kind: string; tokens: number; input: number; output: number; costUsd: number; ok: boolean; reason: string }
+interface AiCall { at: number; kind: string; tokens: number; input: number; output: number; costUsd: number; ok: boolean; reason: string }
 export interface TokensOverview {
   month: string;
   totals: { calls: number; failed: number; tokens: number; input: number; output: number; costUsd: number };
@@ -176,8 +176,8 @@ export interface GallerySlideRow {
 export const adminSlides = (status: SlideStatus) => call<{ rows: GallerySlideRow[]; counts: { pending: number } }>({ action: 'slides-review-list', status });
 // Editing a design in the gallery: the admin edits anything (it changes in place), in the designer's panel (src/App.tsx opens it
 // with the session handed over by openGalleryEditor) or here for the name and category.
-export interface GalleryDoc { id: string; kind: 'slide' | 'page'; name: string; category: string; designerUid: string; designerName: string; status: SlideStatus; official: boolean; slide: any; page: any; elements: any[] }
-export const adminGalleryDoc = (id: string) => call<{ design: GalleryDoc; pendingEdit: boolean }>({ action: 'gallery-doc', id });
+interface GalleryDoc { id: string; kind: 'slide' | 'page'; name: string; category: string; designerUid: string; designerName: string; status: SlideStatus; official: boolean; slide: any; page: any; elements: any[] }
+const adminGalleryDoc = (id: string) => call<{ design: GalleryDoc; pendingEdit: boolean }>({ action: 'gallery-doc', id });
 export const adminGallerySave = (id: string, d: { page: any; elements: any[]; name?: string; category?: string; designerName?: string }) => call<{ ok: true }>({ action: 'gallery-doc-save', id, ...d });
 export const adminGalleryDelete = (id: string) => call<{ ok: true }>({ action: 'gallery-doc-delete', id });
 export const adminEditReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ ok: true }>({ action: 'slide-edit-review', id, decision, reason });
@@ -203,7 +203,7 @@ export const adminSlideReview = (id: string, decision: 'approve' | 'reject', rea
 
 // Hiring a designer: the office takes the customer's money, holds it until the design is confirmed, then pays the
 // designer their part (api/design-orders.ts makes the orders).
-export type DesignOrderStatus = 'awaiting_payment' | 'paid' | 'delivered' | 'confirmed' | 'paid_out' | 'cancelled' | 'disputed' | 'refunded';
+type DesignOrderStatus = 'awaiting_payment' | 'paid' | 'delivered' | 'confirmed' | 'paid_out' | 'cancelled' | 'disputed' | 'refunded';
 export interface AdminDesignOrder {
   id: string; customerUid: string; customerAlias: string; customerEmail: string; designerUid: string; designerName: string; designerEmail: string;
   slideName: string; planId: string; price: number; designerShare: number; platformShare: number; status: DesignOrderStatus; brief: string;

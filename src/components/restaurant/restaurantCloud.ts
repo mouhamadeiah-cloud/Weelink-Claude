@@ -1,4 +1,6 @@
-// The restaurant's live data in Firestore, apart from the owner's private design document:
+// The restaurant's live data in Firestore, apart from the owner's private design document. {uid} below is
+// the restaurant's id: the account's id for its first restaurant, '{uid}__{key}' for a later one
+// (utils/projectKeys.ts restaurantIdOf):
 //   restaurants/{uid}                 the published site: pages, elements, the menu and the public
 //                                     settings. Anyone can read it (the guests' site and QR codes).
 //   restaurants/{uid}/orders/{id}     the guests' orders. A guest can only add a new order; only the
@@ -10,7 +12,7 @@
 //   restaurants/{uid}/deviceLinks/{authUid}   which code each tablet signed in with.
 // See firestore.rules. Nothing private (orders, accounts, customers) is ever in the public doc.
 import { useEffect, useState } from 'react';
-import { collection, deleteDoc, deleteField, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
+import { type DocumentReference, collection, deleteDoc, deleteField, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../../services/firebase';
 import type { CanvasElement, Page } from '../../types';
 import { LedgerEntry, MenuOrder, StaffDevice, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry, setDayStartHour } from './restaurantTypes';
@@ -107,8 +109,9 @@ export const withoutStaff = (admin: RestaurantAdminData) => {
   return rest;
 };
 
-export const dropStaffFromDesign = (uid: string) =>
-  updateDoc(doc(db, 'designs', uid), { 'restaurantAdmin.devices': deleteField(), 'restaurantAdmin.workers': deleteField() });
+// `design` is the restaurant's design document (services/projects.ts projectDoc).
+export const dropStaffFromDesign = (design: DocumentReference) =>
+  updateDoc(design, { 'restaurantAdmin.devices': deleteField(), 'restaurantAdmin.workers': deleteField() });
 
 export const loadStaff = async (uid: string): Promise<{ devices: StaffDevice[]; workers: Worker[] }> => {
   const snap = await getDoc(staffDoc(uid));

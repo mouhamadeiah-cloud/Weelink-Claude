@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import {siteFromLocation, siteNameForHost} from './services/sites';
 import {loadPageFonts} from './services/pageFonts';
+import {ownerOfRestaurant} from './utils/projectKeys';
 
 // The restaurant's own pages open from query links (no server rewrites needed):
 // ?r=<uid> is the guests' site (with &t=<table> from a table's QR code), ?kitchen=<uid> the kitchen
@@ -60,7 +61,7 @@ createRoot(document.getElementById('root')!).render(
     ) : siteUid && orderId ? (
       <Suspense fallback={null}><OrderStatusPage uid={siteUid} orderId={orderId} k={params.get('k') || ''} /></Suspense>
     ) : siteUid ? (
-      <Suspense fallback={null}><SuspendedGate owner={siteUid}><PublicRestaurantSite uid={siteUid} /></SuspendedGate></Suspense>
+      <Suspense fallback={null}><SuspendedGate owner={ownerOfRestaurant(siteUid)}><PublicRestaurantSite uid={siteUid} /></SuspendedGate></Suspense>
     ) : kitchenUid ? (
       <Suspense fallback={null}><KitchenPage uid={kitchenUid} /></Suspense>
     ) : deviceUid ? (

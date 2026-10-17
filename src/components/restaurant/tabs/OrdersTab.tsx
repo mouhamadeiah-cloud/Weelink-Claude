@@ -27,7 +27,7 @@ const waNumber = (phone: string) => {
 
 const isOpen = (o: MenuOrder) => o.status !== 'done' && o.status !== 'cancelled';
 
-export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid, liveOrders }) => {
+export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, restaurantId, liveOrders }) => {
   const [filter, setFilter] = useState<OrderStatus | 'open' | 'all'>('open');
   const currency = data.settings.currency;
   // A local copy whose late cloud save went through anyway shows once, as the live order.
@@ -41,15 +41,15 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid
   const setStatus = (o: MenuOrder, status: OrderStatus) => {
     if (localIds.has(o.id)) {
       update((d) => ({ ...d, orders: d.orders.map((x) => (x.id === o.id ? { ...x, status } : x)) }));
-      syncOrderLedger(ownerUid, o, status).catch(() => {});
+      syncOrderLedger(restaurantId, o, status).catch(() => {});
     } else {
-      setOrderStatus(ownerUid, o, status).catch((e) => console.warn('Could not update the order:', e));
+      setOrderStatus(restaurantId, o, status).catch((e) => console.warn('Could not update the order:', e));
     }
   };
   const remove = (o: MenuOrder) => {
     if (!window.confirm('حذف هذا الطلب نهائيًا؟')) return;
     if (localIds.has(o.id)) update((d) => ({ ...d, orders: d.orders.filter((x) => x.id !== o.id) }));
-    else deleteOrder(ownerUid, o.id).catch(() => {});
+    else deleteOrder(restaurantId, o.id).catch(() => {});
   };
 
   const filters: { id: typeof filter; label: string }[] = [

@@ -22,17 +22,17 @@ const dayLabel = (back: number) => {
 };
 const within = (iso: string, from: string, to: string) => !!iso && iso >= from && iso < to;
 
-export const WorkersTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid }) => {
+export const WorkersTab: React.FC<RestaurantTabProps> = ({ data, update, restaurantId }) => {
   const [draft, setDraft] = useState<{ name: string; phone: string; role: WorkerRole }>({ name: '', phone: '', role: 'waiter' });
   const [back, setBack] = useState(0);
   const week = useMemo(() => dayRange(DAYS - 1).start, []);
   const { start: dayStart, end: dayEnd } = useMemo(() => dayRange(back), [back]);
   const isToday = back === 0;
-  const openTabs = useOpenTabs(ownerUid);
-  const closedTabs = useClosedTabs(ownerUid, week);
-  const shifts = useShifts(ownerUid, 300);
-  const log = useLog(ownerUid, 1000);
-  const sessions = useSessions(ownerUid, week);
+  const openTabs = useOpenTabs(restaurantId);
+  const closedTabs = useClosedTabs(restaurantId, week);
+  const shifts = useShifts(restaurantId, 300);
+  const log = useLog(restaurantId, 1000);
+  const sessions = useSessions(restaurantId, week);
   const money = (n: number) => formatMoney(n, data.settings.currency);
 
   const patch = (id: string, p: Partial<Worker>) => update((d) => ({ ...d, workers: d.workers.map((w) => (w.id === id ? { ...w, ...p } : w)) }));

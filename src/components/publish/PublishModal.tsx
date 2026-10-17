@@ -10,7 +10,7 @@ import {
   CheckCircle2, ChevronDown, Copy, Download, ExternalLink, Globe, ImagePlus, Link2, Loader2, Maximize2, Monitor, RefreshCw, Search, Share2, ShoppingCart, Smartphone, Trash2, X, XCircle,
 } from 'lucide-react';
 import type { CanvasElement, Page } from '../../types';
-import { isFirstOfKind, kindOf, type ProjectKey } from '../../utils/projectKeys';
+import { kindOf, restaurantIdOf, type ProjectKey } from '../../utils/projectKeys';
 import {
   CustomDomainState, DomainContact, NameState, PublishedSite, SEO_LIMITS, SITE_DOMAIN, SiteSeo, checkDomain, checkSiteName, connectDomain,
   contentHash, domainPrice, isValidDomain, letterIcon, makeSiteIcon, normalizeDomain, normalizeKeywords, normalizeSiteName, publishSite,
@@ -498,7 +498,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
   // The logo picked before the first «نشر»; once published it is saved right away.
   const [draftIcon, setDraftIcon] = useState('');
 
-  // What «نشر» publishes. A restaurant's site is already live (restaurants/{uid}); it only gets a name.
+  // What «نشر» publishes. A restaurant's site is already live (restaurants/{restaurantId}); it only gets a name.
   const content = useMemo(
     () => (open ? (kindOf(project) === 'restaurant' ? { pages: [], elements: [], data: null } : { pages, elements, data }) : null),
     [open, project, pages, elements, data]
@@ -615,8 +615,6 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     setSiteIcon(owner, project, next).catch(() => setError('تعذر حفظ الأيقونة. حاول مرة أخرى.'));
   };
   const changed = !!published && kindOf(project) !== 'restaurant' && published.hash !== hash;
-  // A second restaurant has no live site or tablets of its own yet (restaurants/{uid} is the first one's).
-  const laterRestaurant = kindOf(project) === 'restaurant' && !isFirstOfKind(project);
   const renaming = !!published && name !== published.name;
   const shareText = `${suggestedName ? `${suggestedName}: ` : ''}${link}`;
   const share = async () => {
@@ -657,7 +655,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
               {draft ? (
                 <DraftPreviews draft={draft} onOpen={setPreview} />
               ) : (
-                <LivePreviews url={`${window.location.origin}/?r=${encodeURIComponent(owner)}`} />
+                <LivePreviews url={`${window.location.origin}/?r=${encodeURIComponent(restaurantIdOf(owner, project))}`} />
               )}
             </section>
 
@@ -695,14 +693,13 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
               <button
                 type="button"
                 onClick={publish}
-                disabled={busy || !!problem || state === 'taken' || state === 'checking' || laterRestaurant}
+                disabled={busy || !!problem || state === 'taken' || state === 'checking'}
                 className="w-full h-12 rounded-xl bg-brand hover:bg-brand-hover text-white text-base font-black cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-2 transition"
               >
                 {busy ? <Loader2 size={18} className="animate-spin" /> : <Globe size={18} />}
                 {!published ? 'نشر الصفحة' : renaming ? 'نشر بالاسم الجديد' : kindOf(project) === 'restaurant' ? 'حفظ' : changed ? 'تحديث النشر' : seoChanged ? 'حفظ بيانات البحث' : 'تحديث النشر'}
               </button>
               {kindOf(project) === 'restaurant' && <p className="text-xs text-neutral-500">موقع المطعم يتحدّث تلقائياً مع كل تعديل؛ النشر هنا يعطيه اسمه ورابطه.</p>}
-              {laterRestaurant && <p className="text-xs font-bold text-[#a34a00]">نشر مطعم تاني بحسابك، مع أجهزتو وطلباتو، جاي بخطوة قريبة.</p>}
             </section>
 
             {published && (

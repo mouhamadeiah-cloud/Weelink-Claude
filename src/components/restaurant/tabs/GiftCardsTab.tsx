@@ -19,8 +19,8 @@ const FILTERS: { id: Filter; label: string }[] = [
 const day = (iso: string) => (iso ? new Date(iso).toLocaleDateString('ar-SY-u-nu-latn') : '');
 const dayTime = (iso: string) => (iso ? new Date(iso).toLocaleString('ar-SY-u-nu-latn', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
-export const GiftCardsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }) => {
-  const cards = useCards(ownerUid);
+export const GiftCardsTab: React.FC<RestaurantTabProps> = ({ data, restaurantId }) => {
+  const cards = useCards(restaurantId);
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const [openId, setOpenId] = useState('');

@@ -64,9 +64,9 @@ const printTables = async (name: string, uid: string, tables: { name: string; ha
   w.document.close();
 };
 
-export const TablesTab: React.FC<RestaurantTabProps> = ({ data, ownerUid, onGoTo }) => {
+export const TablesTab: React.FC<RestaurantTabProps> = ({ data, restaurantId, onGoTo }) => {
   const tables = allTables(data.halls).filter((t) => t.name.trim());
-  const siteUrl = restaurantSiteUrl(ownerUid);
+  const siteUrl = restaurantSiteUrl(restaurantId);
 
   return (
     <div className="space-y-4">
@@ -86,7 +86,7 @@ export const TablesTab: React.FC<RestaurantTabProps> = ({ data, ownerUid, onGoTo
         </p>
       </Card>
 
-      <Card title="رموز QR للطاولات" actions={tables.length > 0 ? <GhostButton onClick={() => printTables(data.settings.name || 'مطعمنا', ownerUid, tables)}><span className="inline-flex items-center gap-1"><Printer size={14} /> اطبع كل الرموز</span></GhostButton> : undefined}>
+      <Card title="رموز QR للطاولات" actions={tables.length > 0 ? <GhostButton onClick={() => printTables(data.settings.name || 'مطعمنا', restaurantId, tables)}><span className="inline-flex items-center gap-1"><Printer size={14} /> اطبع كل الرموز</span></GhostButton> : undefined}>
         <p className="text-xs text-neutral-500 leading-relaxed">
           كل طاولة لها رمز خاص. الطلب منه يصل باسم الطاولة، بلا عنوان ولا رسوم توصيل.{' '}
           <button type="button" onClick={() => onGoTo('halls')} className="font-bold text-brand cursor-pointer">تعديل الصالات والطاولات</button>
@@ -97,8 +97,8 @@ export const TablesTab: React.FC<RestaurantTabProps> = ({ data, ownerUid, onGoTo
             <div className="text-sm font-black text-neutral-700 inline-flex items-center gap-1.5"><Armchair size={15} /> {h.name}</div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
               {h.tables.filter((t) => t.name.trim()).map((t) => (
-                <a key={t.id} href={restaurantSiteUrl(ownerUid, t.name)} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 p-3 rounded-2xl border border-neutral-200 bg-white hover:border-brand">
-                  <QrImage text={restaurantSiteUrl(ownerUid, t.name)} size={110} label={`رمز طاولة ${t.name}`} />
+                <a key={t.id} href={restaurantSiteUrl(restaurantId, t.name)} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 p-3 rounded-2xl border border-neutral-200 bg-white hover:border-brand">
+                  <QrImage text={restaurantSiteUrl(restaurantId, t.name)} size={110} label={`رمز طاولة ${t.name}`} />
                   <span className="text-sm font-black">طاولة {t.name}</span>
                 </a>
               ))}

@@ -28,3 +28,15 @@ export const newProjectKey = (kind: ProjectType, rand: () => number = Math.rando
 const FIRST_PREFIX: Record<ProjectType, string> = { page: 'weelink_', shop: 'weelink_shop_', cars: 'weelink_cars_', restaurant: 'weelink_restaurant_' };
 
 export const localPrefixOf = (key: string) => (isFirstOfKind(key) ? FIRST_PREFIX[kindOf(key)] : `weelink_${key.replace('-', '_')}_`);
+
+// A restaurant's live data (site, menu, orders, tablets, staff, accounts): restaurants/{id}. The account's
+// first restaurant keeps the account's id; a later one is `{uid}__{key}` ('abc__restaurant-k3x9q2').
+const LATER_RESTAURANT = /^(.+)__(restaurant-[a-z0-9]{4,12})$/;
+
+export const restaurantIdOf = (uid: string, key: string) => (isFirstOfKind(key) ? uid : `${uid}__${key}`);
+
+/** The account that owns a restaurant id (or a page id, which is the account's own). */
+export const ownerOfRestaurant = (id: string) => id.match(LATER_RESTAURANT)?.[1] ?? id;
+
+/** The project key of a restaurant id: 'restaurant' for the account's first. */
+export const restaurantKeyOf = (id: string) => id.match(LATER_RESTAURANT)?.[2] ?? 'restaurant';

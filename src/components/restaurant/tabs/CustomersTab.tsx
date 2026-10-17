@@ -4,6 +4,6 @@ import { PageCustomersList } from '../../customers/PageCustomersList';
 import { restaurantSiteUrl } from '../restaurantCloud';
 import { RestaurantTabProps } from './shared';
 
-export const CustomersTab: React.FC<RestaurantTabProps> = ({ ownerUid }) => (
-  <PageCustomersList ownerUid={ownerUid} isOwner siteUrl={restaurantSiteUrl(ownerUid)} />
+export const CustomersTab: React.FC<RestaurantTabProps> = ({ restaurantId }) => (
+  <PageCustomersList ownerUid={restaurantId} isOwner siteUrl={restaurantSiteUrl(restaurantId)} />
 );

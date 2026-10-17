@@ -94,31 +94,43 @@ service cloud.firestore {
     // Restaurant projects (see src/components/restaurant/restaurantCloud.ts).
     // The published site is public; guests can only add orders; the bills, the orders and the accounts
     // belong to the owner and to the restaurant's devices (a tablet linked with a working device code).
-    match /restaurants/{userId} {
+    // The account a restaurant id (or a page's owner id) belongs to: the id itself, or the account
+    // part of a later restaurant's '{uid}__restaurant-xxxxxx'.
+    function restaurantOwner(id) {
+      return id.matches('^.+__restaurant-[a-z0-9]{4,12}$') ? id.split('__restaurant-')[0] : id;
+    }
+
+    match /restaurants/{restaurantId} {
       allow get: if true;
       allow list: if false;
-      allow create, update: if canManage(userId) && isValidId(userId);
-      allow delete: if isOwner(userId);
+      allow create, update: if canManage(owner()) && isValidId(restaurantId);
+      allow delete: if isOwner(owner());
+
+      // The account that owns the restaurant: its first restaurant has the account's id, a later one
+      // '{uid}__restaurant-xxxxxx' (see src/utils/projectKeys.ts).
+      function owner() {
+        return restaurantOwner(restaurantId);
+      }
 
       function staffCodes() {
-        return get(/databases/$(database)/documents/restaurants/$(userId)/private/staff).data.codes;
+        return get(/databases/$(database)/documents/restaurants/$(restaurantId)/private/staff).data.codes;
       }
 
       // This browser's sign-in was linked with the code of a device that still works.
       function isDevice() {
         return isSignedIn()
-          && get(/databases/$(database)/documents/restaurants/$(userId)/deviceLinks/$(request.auth.uid)).data.code in staffCodes();
+          && get(/databases/$(database)/documents/restaurants/$(restaurantId)/deviceLinks/$(request.auth.uid)).data.code in staffCodes();
       }
 
       // The conditions are the same as ever, but ordered by how few lookups they need: the restaurant's
       // own sign-in none, a linked device two, the claimed account and the members more. Each lookup is
       // a read inside the rules, and the tablets' every write pays for them.
       function isStaff() {
-        return (isSignedIn() && request.auth.uid == userId) || isDevice() || canManage(userId);
+        return (isSignedIn() && request.auth.uid == owner()) || isDevice() || canManage(owner());
       }
 
       function acceptsOrders() {
-        let r = get(/databases/$(database)/documents/restaurants/$(userId));
+        let r = get(/databases/$(database)/documents/restaurants/$(restaurantId));
         return r.data.settings.acceptOrders == true;
       }
 
@@ -144,8 +156,8 @@ service cloud.firestore {
       // The devices (with their codes) and the workers (with their PINs), written by the owner's
       // editor; the devices read them to sign the workers in.
       match /private/{docId} {
-        allow get: if docId == 'staff' && (isOwner(userId) || memberCan(userId, 'staff') || isDevice());
-        allow create, update, delete: if docId == 'staff' && (isOwner(userId) || memberCan(userId, 'staff'));
+        allow get: if docId == 'staff' && (isOwner(owner()) || memberCan(owner(), 'staff') || isDevice());
+        allow create, update, delete: if docId == 'staff' && (isOwner(owner()) || memberCan(owner(), 'staff'));
       }
 
       // A tablet links its sign-in with its code; only the code of a working device is accepted.
@@ -155,7 +167,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['code', 'at'])
           && request.resource.data.code is string
           && request.resource.data.code in staffCodes();
-        allow delete: if isOwner(userId) || memberCan(userId, 'staff') || (isSignedIn() && request.auth.uid == authUid);
+        allow delete: if isOwner(owner()) || memberCan(owner(), 'staff') || (isSignedIn() && request.auth.uid == authUid);
       }
 
       match /orders/{orderId} {
@@ -165,7 +177,7 @@ service cloud.firestore {
           || isStaff());
         allow get, list: if (isSignedIn() && resource.data.customerUid == request.auth.uid) || isStaff();
         allow update: if isStaff();
-        allow delete: if isOwner(userId);
+        allow delete: if isOwner(owner());
       }
 
       // The day's order count (1, 2, 3...). A guest's order takes the next number in its transaction:
@@ -192,13 +204,13 @@ service cloud.firestore {
 
       // The main cashier's sessions and their reports (kept two years): the devices write them, the accounts' readers read them.
       match /cashDays/{dayId} {
-        allow read: if isStaff() || memberCan(userId, 'accounts');
+        allow read: if isStaff() || memberCan(owner(), 'accounts');
         allow write: if isStaff() && isValidId(dayId);
       }
 
       // The accounts: only the owner (and members allowed to) read them; the devices book their payments.
       match /ledger/{entryId} {
-        allow read: if isOwner(userId) || memberCan(userId, 'accounts');
+        allow read: if isOwner(owner()) || memberCan(owner(), 'accounts');
         allow write: if isStaff() && isValidId(entryId);
       }
     }
@@ -290,7 +302,8 @@ service cloud.firestore {
           || canManage(request.resource.data.accountId));
     }
 
-    // The customers of a page (see src/services/pageCustomers.ts). A customer joins with a confirmed
+    // The customers of a page (see src/services/pageCustomers.ts), by its owner's id; a later
+    // restaurant keeps its own customers under its own id. A customer joins with a confirmed
     // email (the email code, or Google) and writes only their own entry; the page's owner and the
     // members allowed to see orders read the list, and the owner may remove someone from it.
     function isValidCustomer(data) {
@@ -309,11 +322,11 @@ service cloud.firestore {
     }
 
     match /pageCustomers/{ownerId}/customers/{customerUid} {
-      allow get: if (isSignedIn() && request.auth.uid == customerUid) || isOwner(ownerId) || memberCan(ownerId, 'orders');
-      allow list: if isOwner(ownerId) || memberCan(ownerId, 'orders');
+      allow get: if (isSignedIn() && request.auth.uid == customerUid) || isOwner(restaurantOwner(ownerId)) || memberCan(restaurantOwner(ownerId), 'orders');
+      allow list: if isOwner(restaurantOwner(ownerId)) || memberCan(restaurantOwner(ownerId), 'orders');
       allow create: if isValidId(ownerId) && isConfirmedUser(customerUid) && isValidCustomer(incoming());
       allow update: if isConfirmedUser(customerUid) && isValidCustomer(incoming()) && incoming().joinedAt == existing().joinedAt;
-      allow delete: if (isSignedIn() && request.auth.uid == customerUid) || isOwner(ownerId);
+      allow delete: if (isSignedIn() && request.auth.uid == customerUid) || isOwner(restaurantOwner(ownerId));
     }
 
     // The pages a customer joined, for their own weelink.de.

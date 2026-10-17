@@ -12,7 +12,10 @@ export interface RestaurantTabProps {
   data: RestaurantAdminData;
   update: (fn: (d: RestaurantAdminData) => RestaurantAdminData) => void;
   onGoTo: (tab: RestaurantTabId) => void;
+  // The account (its members).
   ownerUid: string;
+  // The restaurant's live data, restaurants/{restaurantId}: orders, tablets, accounts, customers.
+  restaurantId: string;
   liveOrders: LiveState<MenuOrder>;
 }
 

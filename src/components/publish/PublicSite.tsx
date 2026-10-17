@@ -10,7 +10,7 @@ import { PublicRestaurantSite } from '../restaurant/PublicRestaurantSite';
 import { SiteView } from './SiteView';
 import { countContact, countVisit, isContactLink } from '../../services/siteStats';
 import { BookingPageContext } from '../../services/bookings';
-import { kindOf } from '../../utils/projectKeys';
+import { kindOf, restaurantIdOf } from '../../utils/projectKeys';
 
 const PHONE_MAX = 768;
 
@@ -89,7 +89,7 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
   if (site === 'loading') {
     return <div className="min-h-[100dvh] flex items-center justify-center bg-white"><Loader2 size={36} className="animate-spin text-[#0071e3]" /></div>;
   }
-  if (ready && kindOf(ready.project) === 'restaurant') return <SuspendedGate owner={ready.owner}><PublicRestaurantSite uid={ready.owner} /></SuspendedGate>;
+  if (ready && kindOf(ready.project) === 'restaurant') return <SuspendedGate owner={ready.owner}><PublicRestaurantSite uid={restaurantIdOf(ready.owner, ready.project)} /></SuspendedGate>;
   if (!ready || !ready.pages?.length) {
     return (
       <div dir="rtl" className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 bg-[#f5f5f7] text-center p-6 font-sans">

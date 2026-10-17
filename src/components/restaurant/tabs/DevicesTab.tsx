@@ -27,7 +27,7 @@ export const CopyLink: React.FC<{ url: string }> = ({ url }) => {
   );
 };
 
-export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUid }) => {
+export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, restaurantId }) => {
   const [stationName, setStationName] = useState('');
   const [draft, setDraft] = useState<{ name: string; role: DeviceRole; stationId: string; displayFor: string }>({ name: '', role: 'kitchen', stationId: '', displayFor: '' });
   const stations = data.stations;
@@ -139,7 +139,7 @@ export const DevicesTab: React.FC<RestaurantTabProps> = ({ data, update, ownerUi
 
       <Card title={`الأجهزة (${data.devices.length})`}>
         <Field label="افتح هذا الرابط على كل جهاز مرة واحدة، ثم أدخل كوده" hint="يتذكر الجهاز كوده، ويعرض شاشته فقط. إذا ضاع جهاز أوقفه أو غيّر كوده من هنا.">
-          <CopyLink url={deviceUrl(ownerUid)} />
+          <CopyLink url={deviceUrl(restaurantId)} />
         </Field>
         {data.devices.length === 0 ? (
           <EmptyState text="لا توجد أجهزة بعد. أضف شاشة المطبخ أو تابلت الكاشير من الأعلى." />

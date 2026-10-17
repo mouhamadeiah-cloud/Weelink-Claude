@@ -16,7 +16,7 @@ const PERIODS: { id: Period; label: string; days: number }[] = [
   { id: 'all', label: 'كل ما هو محفوظ', days: REPORT_KEEP_DAYS },
 ];
 
-export const SalesReportsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }) => {
+export const SalesReportsTab: React.FC<RestaurantTabProps> = ({ data, restaurantId }) => {
   const [period, setPeriod] = useState<Period>('week');
   const [openId, setOpenId] = useState('');
   const since = useMemo(() => {
@@ -25,7 +25,7 @@ export const SalesReportsTab: React.FC<RestaurantTabProps> = ({ data, ownerUid }
     d.setDate(d.getDate() - (PERIODS.find((p) => p.id === period)?.days || 0));
     return d.toISOString();
   }, [period]);
-  const days = useClosedCashDays(ownerUid, since);
+  const days = useClosedCashDays(restaurantId, since);
   const money = (n: number) => formatMoney(n, data.settings.currency);
   const sorted = [...days.items].sort((a, b) => b.closedAt.localeCompare(a.closedAt));
   const sum = useMemo(() => sumReports(days.items), [days.items]);

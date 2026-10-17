@@ -1106,7 +1106,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const isFluidDesktop = (isPublicSite || isPreviewActive) && previewMode === 'desktop';
   let scaleFactor = 1;
   if (isFluidDesktop) {
-    scaleFactor = workspaceWidth / baseWidth;
+    // Never enlarged: on a wide screen the 1280 page keeps its real size (like the Weelink site) and
+    // the sides are filled by the bleed below.
+    scaleFactor = Math.min(1, workspaceWidth / baseWidth);
   } else if (isPublicSite) {
     scaleFactor = workspaceWidth / baseWidth;
   } else if (previewMode === 'mobile') {
@@ -1120,7 +1122,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   } else {
     // Desktop mode
     if (isPreviewActive) {
-      scaleFactor = workspaceWidth / 1280;
+      scaleFactor = Math.min(1, workspaceWidth / 1280);
     } else {
       scaleFactor = Math.min(1, (workspaceWidth - 48) / 1280);
     }

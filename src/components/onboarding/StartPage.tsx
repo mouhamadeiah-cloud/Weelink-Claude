@@ -17,7 +17,7 @@ import { guestKindOf, readGuestAnswers, setGuestKind } from '../../services/gues
 import { CAR_PHOTOS, carPhoto } from '../../data/carShowroomTemplate';
 import type { ProjectType } from '../shop/shopTypes';
 
-// One of the account's projects on «مشاريعي»: its key (src/utils/projectKeys.ts), and its address when published.
+// One of the account's projects on «مشاريعي» (the account page; the start page no longer lists them, Eyad 17 Oct): its key (src/utils/projectKeys.ts), and its address when published.
 export type MyProject = { key: string; kind: ProjectType; name: string; published: string | null; url: string | null };
 
 const photo = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`;
@@ -88,13 +88,9 @@ interface StartPageProps {
   loadingType?: ProjectType | null;
   // The kinds this account already has a project of (the free package is once per account).
   owned?: ProjectType[];
-  // «مشاريعي»: the account's projects, published or not (Eyad, 17 Oct). Null while they load.
-  projects?: MyProject[] | null;
-  onOpenProject?: (key: string) => void;
-  onUnpublish?: (key: string) => Promise<boolean>;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onOpenMyPage, onLaw, onAccount, onMyAccount, onLogout, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [], projects = null, onOpenProject, onUnpublish }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onOpenMyPage, onLaw, onAccount, onMyAccount, onLogout, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [] }) => {
   const signedIn = !!user && !user.isAnonymous;
   const attention = useOrderAttention(signedIn && user ? user.uid : '');
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
@@ -194,8 +190,6 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               )}
             </div>
           </section>
-
-          {signedIn && <MyProjects projects={projects} loadingType={loadingType} onOpen={onOpenProject} onUnpublish={onUnpublish} />}
 
           {/* The four kinds, as photo cards */}
           {signedIn && <h2 className="text-heading font-bold">إضافة مشروع</h2>}
@@ -314,55 +308,5 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
 
       {orders && user && !user.isAnonymous && <DesignOrdersPanel user={user} initialOrderId={orders.id} onClose={() => setOrders(null)} />}
     </div>
-  );
-};
-
-const KIND_NAME: Record<ProjectType, string> = { page: 'صفحة', shop: 'متجر', cars: 'معرض سيارات', restaurant: 'مطعم' };
-
-// «مشاريعي»: every project of the account, published or a draft. A published one keeps running while
-// it is edited; «نشر» in the editor puts the changes live, «إيقاف النشر» takes it down.
-const MyProjects: React.FC<{ projects: MyProject[] | null; loadingType?: ProjectType | null; onOpen?: (key: string) => void; onUnpublish?: (key: string) => Promise<boolean> }> = ({ projects, loadingType, onOpen, onUnpublish }) => {
-  const [busy, setBusy] = useState<string | null>(null);
-  const stop = async (p: MyProject) => {
-    if (!onUnpublish || !window.confirm(`إيقاف نشر «${p.name || KIND_NAME[p.kind]}»؟ الرابط بيوقف لحد ما تنشرو من جديد، ومشروعك بيضل محفوظ.`)) return;
-    setBusy(p.key);
-    const ok = await onUnpublish(p.key);
-    setBusy(null);
-    if (!ok) window.alert('ما قدرنا نوقف النشر. جرّب مرة ثانية.');
-  };
-  return (
-    <section className="space-y-3" aria-labelledby="my-projects">
-      <h2 id="my-projects" className="text-heading font-bold">مشاريعي</h2>
-      {projects === null ? (
-        <p className="flex items-center gap-2 text-sm text-muted"><Loader2 size={15} className="animate-spin" /> عم نجيب مشاريعك…</p>
-      ) : projects.length === 0 ? (
-        <p className="text-sm text-muted">ما عندك مشاريع لسا. اختار نوع مشروعك تحت وبلّش.</p>
-      ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {projects.map((p) => (
-            <li key={p.key} className="rounded-card border border-line bg-surface p-4 flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-muted">{KIND_NAME[p.kind]}</p>
-                  <p className="text-sm font-bold truncate">{p.name || 'بدون اسم'}</p>
-                </div>
-                <span className={`shrink-0 text-xs font-bold rounded-full px-2.5 py-1 ${p.published ? 'bg-brand/10 text-brand' : 'bg-bg text-muted'}`}>{p.published ? 'منشور' : 'مسودة'}</span>
-              </div>
-              {p.url && <a href={p.url} target="_blank" rel="noreferrer" className="text-xs font-bold text-brand truncate hover:underline" dir="ltr">{p.url.replace(/^https?:\/\//, '')}</a>}
-              <div className="mt-auto flex flex-wrap gap-2">
-                <button type="button" disabled={!!loadingType || !onOpen} onClick={() => onOpen?.(p.key)} className="h-9 px-3.5 rounded-ctl bg-brand hover:bg-brand-hover text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-60">
-                  {p.published ? 'تعديل' : 'كمّل المشروع'} <ArrowLeft size={13} />
-                </button>
-                {p.published && onUnpublish && (
-                  <button type="button" disabled={busy === p.key} onClick={() => stop(p)} className="h-9 px-3.5 rounded-ctl border border-line text-xs font-bold text-muted hover:text-ink inline-flex items-center gap-1.5 disabled:opacity-60">
-                    {busy === p.key && <Loader2 size={13} className="animate-spin" />} إيقاف النشر
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 };

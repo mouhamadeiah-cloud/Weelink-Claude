@@ -43,7 +43,7 @@ import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
 import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
 import { laterProjectFields, listProjects, projectDoc } from './services/projects';
-import { isFirstOfKind, kindOf, localPrefixOf, newProjectKey, restaurantIdOf } from './utils/projectKeys';
+import { isFirstOfKind, isProjectKey, kindOf, localPrefixOf, newProjectKey, restaurantIdOf } from './utils/projectKeys';
 import { ITEM_WORD, UNLIMITED, overLimit, type PlanLimits } from './utils/planLimits';
 import { projectLimits, readGate } from './services/billing';
 import { deleteProjectData } from './services/myAccount';
@@ -164,6 +164,17 @@ const PROJECT_STORAGE: Record<ProjectType, { pagesField: string; elementsField: 
 
 // Named in the top bar until the site has its own name (the navbar's brand name).
 const PROJECT_KIND_LABEL: Record<ProjectType, string> = { page: 'صفحتي', shop: 'المتجر', cars: 'معرض السيارات', restaurant: 'المطعم' };
+
+const RESUME_KEY = 'weelink_resume';
+// Where this tab was before a refresh (written by the screen effect in App).
+const readResume = (): { screen: string; key: string } | null => {
+  try {
+    const r = JSON.parse(sessionStorage.getItem(RESUME_KEY) || 'null');
+    return r && typeof r.screen === 'string' && ['editor', 'account', 'home', 'law'].includes(r.screen) ? { screen: r.screen, key: String(r.key || '') } : null;
+  } catch {
+    return null;
+  }
+};
 
 export default function App() {
   // Pages state
@@ -4131,8 +4142,36 @@ export default function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+  // A refresh comes back to the screen it was on (the editor with its project, the account, the home page)
+  // instead of the start page: the screen is kept for the tab and restored once the sign-in is known.
+  const resumeRef = useRef<{ screen: string; key: string } | null>(readResume());
+  useEffect(() => {
+    const resume = resumeRef.current;
+    if (!resume || isFirebaseLoading || handledAuthUid.current === undefined) return;
+    resumeRef.current = null;
+    if (resume.screen === 'editor') {
+      if (!currentUser || currentUser.isAnonymous || !isProjectKey(resume.key)) return;
+      setIsAuthActive(false);
+      handleChooseProject(resume.key).then(() => {
+        setIsStartActive(false);
+        setIsHomeActive(false);
+      }).catch(() => {});
+    } else {
+      goToScreenRef.current(resume.screen);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFirebaseLoading, currentUser]);
   useEffect(() => {
     if (isFirebaseLoading) return;
+    if (!resumeRef.current) {
+      try {
+        if (screen === 'editor' && !designerModeRef.current) sessionStorage.setItem(RESUME_KEY, JSON.stringify({ screen, key: projectKey }));
+        else if (screen === 'account' || screen === 'home' || screen === 'law') sessionStorage.setItem(RESUME_KEY, JSON.stringify({ screen, key: '' }));
+        else sessionStorage.removeItem(RESUME_KEY);
+      } catch {
+        // storage unavailable: a refresh just starts from the start page
+      }
+    }
     const current = window.history.state?.screen;
     if (poppedRef.current || !current) {
       poppedRef.current = false;
@@ -4140,7 +4179,7 @@ export default function App() {
       return;
     }
     if (current !== screen) window.history.pushState({ screen }, '');
-  }, [screen, isFirebaseLoading]);
+  }, [screen, isFirebaseLoading, projectKey]);
 
   if (isFirebaseLoading) {
     return (
@@ -4289,21 +4328,6 @@ export default function App() {
         onLogout={handleLogout}
         onBuild={openAfterQuestions}
         owned={(Object.keys(ownedRef.current) as ProjectType[]).filter((k) => ownedRef.current[k])}
-        projects={myProjects}
-        onOpenProject={async (key) => {
-          setIsAuthActive(false);
-          await handleChooseProject(key);
-          setIsStartActive(false);
-        }}
-        onUnpublish={(key) =>
-          unpublishSite(activeUserUid, key).then(
-            () => {
-              setMyProjectsTick((n) => n + 1);
-              return true;
-            },
-            () => false
-          )
-        }
         onDesigner={joinDesigners}
         onAddDesign={addGalleryDesign}
         onEditDesign={isDesigner ? editMyDesign : undefined}

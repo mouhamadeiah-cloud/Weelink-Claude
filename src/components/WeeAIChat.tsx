@@ -539,9 +539,9 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       {/* Dynamic Typewriter Active Question Header */}
       <div className="flex items-start justify-between gap-2.5 p-3 bg-[#fbfbfd] border-b border-neutral-150 shrink-0">
         <div className="flex items-start gap-2.5">
-          {/* Slowly Pulsing Glow Icon Avatar */}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand to-cyan-500 shadow-[0_0_12px_rgba(0,113,227,0.35)] flex items-center justify-center text-white text-xs shrink-0 animate-pulse">
-            🤖
+          {/* The same three dots as the editor's side column */}
+          <div className="w-8 h-8 rounded-full bg-brand/5 flex items-center justify-center shrink-0">
+            <WeeDots size={22} />
           </div>
           <div className="space-y-0.5 text-right">
             <div className="text-xs font-black text-neutral-400 select-none tracking-wider">مساعدك الشخصي (wee ai)</div>

@@ -7,7 +7,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import {
-  CheckCircle2, ChevronDown, Copy, Download, ExternalLink, Globe, ImagePlus, Link2, Loader2, Maximize2, Monitor, RefreshCw, Search, Share2, ShoppingCart, Smartphone, Trash2, X, XCircle,
+  ArrowRight, CheckCircle2, ChevronDown, Copy, Download, ExternalLink, Globe, ImagePlus, Link2, Loader2, Maximize2, Monitor, RefreshCw, Search, Share2, ShoppingCart, Smartphone, Trash2, X, XCircle,
 } from 'lucide-react';
 import type { CanvasElement, Page } from '../../types';
 import { kindOf, restaurantIdOf, type ProjectKey } from '../../utils/projectKeys';
@@ -654,8 +654,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     : null;
 
   return (
-    <div className="fixed inset-0 z-[4000000] bg-black/40 backdrop-blur-[2px] flex items-end sm:items-center justify-center" onClick={onClose}>
-      <div dir="rtl" className="w-full sm:max-w-xl max-h-[94dvh] overflow-y-auto bg-bg rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 font-sans" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[4000000] bg-bg overflow-y-auto">
+      <div dir="rtl" className="w-full max-w-4xl mx-auto min-h-full px-4 sm:px-8 py-5 sm:py-8 space-y-5 font-sans">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <span className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center"><Globe size={20} /></span>
@@ -664,7 +664,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
               <div className="text-xs text-neutral-500">{published ? 'صفحتك منشورة ويستطيع أي أحد فتحها' : 'اختر اسماً لصفحتك واحصل على رابطها'}</div>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="w-9 h-9 rounded-full bg-black/5 flex items-center justify-center cursor-pointer" aria-label="إغلاق"><X size={18} /></button>
+          <button type="button" onClick={onClose} className="h-10 px-4 rounded-full bg-black/5 flex items-center gap-2 text-sm font-bold text-ink cursor-pointer" aria-label="رجوع"><ArrowRight size={16} />رجوع</button>
         </div>
 
         {site === 'loading' ? (

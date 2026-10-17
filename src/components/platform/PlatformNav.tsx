@@ -1,11 +1,13 @@
 // The one top bar of Weelink's own screens (the start page «اعمل مشروعك» is the main one, «خدماتنا» is the
 // services page): fixed at the top, small text, no buttons. The logo leads to the main page.
-// The screen you are on carries a light blue frame. «حسابي» is a small menu that closes on a click outside it.
-import React, { useEffect, useRef, useState } from 'react';
+// The screen you are on carries a light blue frame. Signed in, a person icon with the name opens the account
+// page, and the bell next to it counts what waits there (new bookings, ratings, design orders).
+import React from 'react';
 import type { User } from 'firebase/auth';
-import { LogOut } from 'lucide-react';
+import { Bell, UserRound } from 'lucide-react';
+import { useNotices } from '../../services/myAccount';
 
-type NavScreen = 'home' | 'start' | 'law';
+type NavScreen = 'home' | 'start' | 'law' | 'account';
 
 interface Props {
   current: NavScreen;
@@ -15,6 +17,8 @@ interface Props {
   onOpenMyPage: () => void;
   onLaw: () => void;
   onAccount: () => void;
+  // The account page; 'notices' opens it at the bell's list.
+  onMyAccount: (section?: 'notices') => void;
   onLogout: () => void;
   // Extra items of the screen (the design orders on the start page).
   extra?: React.ReactNode;
@@ -25,22 +29,10 @@ const itemCls = (on: boolean) =>
     on ? 'border-brand/35 bg-brand/5 text-brand' : 'border-transparent text-muted hover:text-ink'
   }`;
 
-export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, onOpenMyPage, onLaw, onAccount, onLogout, extra }) => {
+export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, onOpenMyPage, onLaw, onAccount, onMyAccount, extra }) => {
   const signedIn = !!user && !user.isAnonymous;
-  const [menu, setMenu] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
   const firstName = user ? (user.displayName || user.email?.split('@')[0] || '').split(' ')[0] : '';
-
-  useEffect(() => {
-    if (!menu) return;
-    const away = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setMenu(false); };
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false);
-    document.addEventListener('mousedown', away);
-    document.addEventListener('keydown', key);
-    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', key); };
-  }, [menu]);
-
-  const pick = (fn: () => void) => () => { setMenu(false); fn(); };
+  const notices = useNotices(user?.uid || '', user?.uid || '', signedIn);
 
   return (
     <header dir="rtl" className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
@@ -56,18 +48,19 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
           {extra}
           <button type="button" onClick={onLaw} aria-current={current === 'law' ? 'page' : undefined} className={itemCls(current === 'law')}>قانون الصفحة</button>
         </div>
-        <div ref={box} className="relative shrink-0">
+        <div className="flex shrink-0 items-center gap-0.5">
           {signedIn ? (
             <>
-              <button type="button" onClick={() => setMenu((o) => !o)} aria-expanded={menu} className={itemCls(menu)}>حسابي{firstName ? ` · ${firstName}` : ''}</button>
-              {menu && (
-                <div role="menu" className="absolute left-0 z-40 mt-1.5 w-48 overflow-hidden rounded-card border border-line bg-surface py-1 text-xs shadow-lg">
-                  <button type="button" role="menuitem" onClick={pick(onOpenMyPage)} className="w-full px-4 py-2 text-right font-medium hover:bg-bg">مشروعي</button>
-                  <button type="button" role="menuitem" onClick={pick(onStart)} className="w-full px-4 py-2 text-right hover:bg-bg">إضافة مشروع لحسابي</button>
-                  <div className="my-1 border-t border-line" />
-                  <button type="button" role="menuitem" onClick={pick(onLogout)} className="flex w-full items-center gap-2 px-4 py-2 text-right text-danger hover:bg-bg"><LogOut size={13} /> تسجيل الخروج</button>
-                </div>
-              )}
+              <button type="button" onClick={() => onMyAccount('notices')} className="relative rounded-md p-1.5 text-muted hover:text-ink" aria-label={notices.length ? `${notices.length} إشعارات` : 'الإشعارات'}>
+                <Bell size={17} />
+                {notices.length > 0 && (
+                  <span className="absolute -top-0.5 -left-0.5 min-w-[16px] h-4 px-1 rounded-full bg-danger text-white text-[10px] font-bold inline-flex items-center justify-center tabular-nums">{notices.length > 9 ? '9+' : notices.length}</span>
+                )}
+              </button>
+              <button type="button" onClick={() => onMyAccount()} aria-current={current === 'account' ? 'page' : undefined} className={`${itemCls(current === 'account')} inline-flex items-center gap-1.5`}>
+                <UserRound size={15} aria-hidden="true" />
+                <span className="max-w-[9rem] truncate">{firstName || 'حسابي'}</span>
+              </button>
             </>
           ) : (
             <button type="button" onClick={onAccount} className={itemCls(false)}>سجّل دخولك</button>

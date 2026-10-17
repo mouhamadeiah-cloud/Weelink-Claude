@@ -122,6 +122,8 @@ export interface SubscriberDetail {
   calls: AiCall[];
   tasks: { id: string; title: string; status: TaskStatus; assignee: string; updatedAt: number }[];
   events: { id: string; at: number; admin: string; type: 'status' | 'note' | string; text: string; status: string }[];
+  test: boolean;
+  projects: { project: string; planName: string; period: string; paidUntil: number }[];
 }
 export const adminSubscriber = (uid: string) => call<SubscriberDetail>({ action: 'subscriber', uid });
 export const adminSetStatus = (uid: string, status: SubscriberStatus, reason: string) => call<{ status: SubscriberStatus }>({ action: 'set-status', uid, status, reason });
@@ -272,3 +274,25 @@ export const saveTextFile = (filename: string, text: string, type: string, bom =
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
+
+// ---------- paying before publishing (server/billing.ts) ----------
+
+export type OrderStatus = 'unpaid' | 'attached' | 'paid' | 'rejected' | 'cancelled' | 'deleted';
+export interface BillingOrder {
+  id: string; uid: string; email: string; name: string; project: string; siteName: string; plan: string; planName: string; period: Period;
+  devices: number; items: { label: string; amount: number }[]; total: number; status: OrderStatus; way: string; transferNo: string; hasImage: boolean;
+  renewal: boolean; createdAt: number; updatedAt: number; deleteAt: number; rejectReason: string; decidedBy: string; decidedAt: number; paymentId: string;
+}
+export const ORDER_STATUS: Record<OrderStatus, string> = { unpaid: 'غير مدفوع', attached: 'بانتظار الفحص', paid: 'مدفوع', rejected: 'مرفوض', cancelled: 'مُستبدل', deleted: 'محذوف' };
+export const PAY_WAYS: Record<string, string> = { syriatel: 'سيريتل كاش', mtn: 'MTN كاش', sham: 'شام كاش', transfer: 'حوالة مالية', office: 'دفع في المكتب' };
+export const adminOrders = (status: string) => call<{ rows: BillingOrder[]; counts: Record<string, number> }>({ action: 'orders', status });
+export const adminOrder = (id: string) => call<{ order: BillingOrder; image: string; paidUntil: number }>({ action: 'order', id });
+export const adminOrderApprove = (id: string) => call<{ order: BillingOrder; paidUntil: number }>({ action: 'order-approve', id });
+export const adminOrderReject = (id: string, reason: string) => call<{ order: BillingOrder }>({ action: 'order-reject', id, reason });
+export const adminOrderExtend = (id: string, date: string) => call<{ deleteAt: number }>({ action: 'order-extend', id, date });
+export const adminBillingSettings = () => call<{ enforce: boolean; since: number; by: string }>({ action: 'billing-settings' });
+export const adminBillingEnforce = (on: boolean) => call<{ enforce: boolean; marked: number }>({ action: 'billing-enforce', on });
+export const adminTestAccount = (uid: string, on: boolean) => call<{ test: boolean }>({ action: 'test-account', uid, on });
+export const adminDeleteSubscriber = (uid: string, reason: string) => call<{ card: DeletedCustomer }>({ action: 'subscriber-delete', uid, reason });
+export interface DeletedCustomer { uid: string; name: string; email: string; phone: string; createdAt: number; endsAt: number; deletedAt: number; by: string; reason: string }
+export const adminDeletedList = () => call<{ rows: DeletedCustomer[] }>({ action: 'deleted-list' });

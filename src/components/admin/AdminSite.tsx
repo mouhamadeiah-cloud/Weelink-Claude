@@ -18,6 +18,8 @@ import { AnnounceView } from './AnnounceView';
 import { PageLawView } from './PageLawView';
 import { SlidesReviewView } from './SlidesReviewView';
 import { DesignOrdersView } from './DesignOrdersView';
+import { OrdersView } from './OrdersView';
+import { DeletedView } from './DeletedView';
 import {
   AdminError, AdminInfo, SubscriberQuery, SubscribersResult,
   adminChangePassword, adminLogin, adminMe, adminSubscribers, getAdminToken, setAdminToken,
@@ -70,12 +72,12 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   );
 };
 
-type View = 'subscribers' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'dashboard' | 'reports' | 'coupons' | 'announce' | 'health' | 'page-law' | 'slides' | 'design-orders' | 'password';
+type View = 'subscribers' | 'deleted' | 'orders' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'dashboard' | 'reports' | 'coupons' | 'announce' | 'health' | 'page-law' | 'slides' | 'design-orders' | 'password';
 interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View; needs?: string }[] }
 // Every group starts folded; the admin opens what he needs. Items without a view are the next phases.
 const MENU: MenuGroup[] = [
-  { id: 'subs', title: 'المشتركون', icon: Users, items: [{ id: 'list', label: 'قائمة المشتركين', view: 'subscribers' }] },
-  { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'payments', label: 'كل الدفعات والفواتير', view: 'payments', needs: 'payments' }, { id: 'billing', label: 'إعدادات الفوترة', view: 'billing', needs: 'get-company' }] },
+  { id: 'subs', title: 'المشتركون', icon: Users, items: [{ id: 'list', label: 'قائمة المشتركين', view: 'subscribers' }, { id: 'deleted', label: 'الزبائن المحذوفين', view: 'deleted', needs: 'deleted-list' }] },
+  { id: 'pay', title: 'الاشتراك والدفع', icon: CreditCard, items: [{ id: 'orders', label: 'طلبات الدفع', view: 'orders', needs: 'orders' }, { id: 'payments', label: 'كل الدفعات والفواتير', view: 'payments', needs: 'payments' }, { id: 'billing', label: 'إعدادات الفوترة', view: 'billing', needs: 'get-company' }] },
   { id: 'tokens', title: 'التوكنز والتكلفة', icon: Coins, items: [{ id: 'usage', label: 'الاستهلاك والأسعار', view: 'tokens', needs: 'tokens-overview' }] },
   { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات', view: 'team', needs: 'admins-list' }, { id: 'my-tasks', label: 'مهامي', view: 'my-tasks' }, { id: 'all-tasks', label: 'كل المهام', view: 'all-tasks', needs: 'task-create' }, { id: 'chat', label: 'لوحة التواصل', view: 'chat' }] },
   { id: 'designers', title: 'معرض المصممين', icon: Palette, items: [{ id: 'slides', label: 'مراجعة الشرائح', view: 'slides', needs: 'slides-review-list' }, { id: 'orders', label: 'طلبات التصميم', view: 'design-orders', needs: 'design-orders' }, { id: 'law', label: 'قانون الصفحة', view: 'page-law', needs: 'page-law-get' }] },
@@ -306,6 +308,8 @@ export const AdminSite: React.FC = () => {
   return (
     <Shell admin={admin} onLogout={logout} menu={<SideMenu view={view} onView={setView} can={admin.can} />}>
       {view === 'subscribers' ? <Subscribers onSessionEnd={logout} can={admin.can} />
+        : view === 'deleted' ? <DeletedView onSessionEnd={logout} />
+        : view === 'orders' ? <OrdersView onSessionEnd={logout} can={admin.can} />
         : view === 'payments' ? <PaymentsView onSessionEnd={logout} />
         : view === 'billing' ? <BillingSettings onSessionEnd={logout} />
         : view === 'tokens' ? <TokensView onSessionEnd={logout} />

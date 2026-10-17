@@ -4,6 +4,12 @@
 //
 //   POST /api/admin  { action: 'login', username, password }   → { token, admin }
 //   POST /api/admin  { action: 'me' }                           → { admin }
+//   POST /api/admin  { action: 'my-account' } with a subscriber's Firebase ID token → { status, subscription, tokens, payments }
+//   POST /api/admin  { action: 'order-create', project, plan, period, devices?, siteName? } and
+//                    { action: 'order-attach', id, way, transferNo?, image? }  with a subscriber's Firebase ID token:
+//        the invoice before a paid project is published, and how it was paid (server/billing.ts)
+//   POST /api/admin  { action: 'orders' | 'order' | 'order-approve' | 'order-reject' | 'order-extend' | 'billing-settings' }  (finance)
+//                    { action: 'billing-enforce' | 'test-account' | 'subscriber-delete' }  (owner), { action: 'deleted-list' }
 //   POST /api/admin  { action: 'change-password', current, next } → { token, admin }
 //   POST /api/admin  { action: 'subscribers', q?, state?, published?, verified?, status? } → { rows, matched, summary }
 //   POST /api/admin  { action: 'subscriber', uid }               → { profile, status, sites, events }
@@ -67,6 +73,7 @@ import { mailOrder } from '../server/orderMail.js';
 import { recountDesigner } from '../server/designerStats.js';
 import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
 import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
+import { approveOrder, attachProof, createOrder, deleteCustomer, enforceBilling, extendOrder, getOrder, listDeleted, listOrders, myBilling, readSettings, rejectOrder, runBillingDaily, setTestAccount } from '../server/billing.js';
 import designTimers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
@@ -231,12 +238,12 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 // The team (Eyad, 14 Oct): the main admin («owner») can do everything; the others have one specialty
 // and only its actions. Checked here on every call; the site only hides what is not allowed.
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
-const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply'];
+const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply', 'orders', 'order', 'order-approve', 'order-reject', 'order-extend', 'billing-settings'];
 // The designers' gallery and the rating reports are the content reviewers' work (the owner too).
 const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'slide-edit-review', 'reports', 'report-decide'];
-const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup'];
+const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup', 'billing-enforce', 'test-account', 'subscriber-delete'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
-const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
+const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'deleted-list', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
 const TASK_TYPES: Record<string, string> = { payment: 'طلب دفع', domain: 'طلب دومين', complaint: 'شكوى', other: 'أخرى' };
 const TASK_STATUSES = ['new', 'doing', 'done'];
 const KNOWN_ACTIONS = [...OPEN_TO_ALL, ...FINANCE_ONLY, ...CONTENT_ONLY, ...OWNER_ONLY];
@@ -305,7 +312,7 @@ const payFromDoc = (id: string, d: Record<string, any>) => ({
   plan: String(d.plan || ''), planName: String(d.planName || ''), period: (d.period === 'yearly' ? 'yearly' : 'monthly') as Period,
   amount: Number(d.amount) || 0, method: String(d.method || ''), receiptNo: String(d.receiptNo || ''), note: String(d.note || ''),
   paidAt: Number(d.paidAt) || 0, coversFrom: Number(d.coversFrom) || 0, coversTo: Number(d.coversTo) || 0,
-  by: String(d.by || ''), sentAt: Number(d.sentAt) || 0, key: String(d.key || ''),
+  by: String(d.by || ''), sentAt: Number(d.sentAt) || 0, key: String(d.key || ''), project: String(d.project || ''),
 });
 
 const getCompany = async (db: Fb['db']): Promise<Company> => ({ ...EMPTY_COMPANY, ...((await db.collection('platform_settings').doc('company').get()).data() || {}) });
@@ -345,8 +352,9 @@ const runDaily = async (fb: Fb) => {
     } else if (sent.result === 'failed') out.failed++;
     else out.skipped++;
   }
-  await db.collection('platform_audit').add({ at: FieldValue.serverTimestamp(), admin: 'system', action: `daily:${JSON.stringify(out)}`, ok: true, ip: 'cron' });
-  return out;
+  const billing = await runBillingDaily(db, auth, now).catch((e) => ({ error: String((e as Error)?.message || e) }));
+  await db.collection('platform_audit').add({ at: FieldValue.serverTimestamp(), admin: 'system', action: `daily:${JSON.stringify({ ...out, billing })}`, ok: true, ip: 'cron' });
+  return { ...out, billing };
 };
 
 // ---------- accounts and dashboard (phase 6) ----------
@@ -461,6 +469,48 @@ export default {
     const ip = (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
     const audit = (admin: string, what: string, ok = true) =>
       db.collection('platform_audit').add({ at: FieldValue.serverTimestamp(), admin, action: what, ok, ip }).catch(() => undefined);
+
+    // ----- a subscriber's own account page (signed in with Firebase, not an admin) -----
+    // The subscription, the AI balance and the payments with their invoice links, read on the server
+    // because the browser never reads platform_subscribers or platform_payments.
+    if (action === 'my-account' || action === 'order-create' || action === 'order-attach') {
+      const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      const user = token ? await auth.verifyIdToken(token).catch(() => null) : null;
+      if (!user) return json({ error: 'unauthorized' }, 401);
+      // Paying for a project before it is published (server/billing.ts).
+      if (action !== 'my-account') {
+        const who = { uid: user.uid, email: String(user.email || ''), name: String(user.name || '') };
+        const r = action === 'order-create' ? await createOrder(db, who, body) : await attachProof(db, who, body);
+        return 'error' in r ? json({ error: r.error }, r.status) : json(r);
+      }
+      const [subSnap, paySnap, billing] = await Promise.all([
+        db.collection('platform_subscribers').doc(user.uid).get(),
+        db.collection('platform_payments').where('uid', '==', user.uid).limit(200).get(),
+        myBilling(db, user.uid),
+      ]);
+      const st = subSnap.data() as Record<string, any> | undefined;
+      const sub = st?.subscription;
+      const origin = new URL(request.url).origin;
+      const payments = paySnap.docs
+        .map((d) => payFromDoc(d.id, d.data()))
+        .sort((a, b) => b.paidAt - a.paidAt)
+        .map((p) => ({
+          id: p.id, invoiceNo: p.invoiceNo, planName: p.planName, period: p.period, amount: p.amount, method: p.method,
+          paidAt: p.paidAt, coversFrom: p.coversFrom, coversTo: p.coversTo, project: p.project,
+          invoiceUrl: p.key ? `${origin}/api/admin?invoice=${p.id}&k=${p.key}` : '',
+        }));
+      const info = (await db.collection('platformSettings').doc('paymentInfo').get()).data() as { text?: string } | undefined;
+      return json({
+        status: String(st?.status || 'active'),
+        subscription: sub
+          ? { plan: String(sub.plan || ''), planName: String(sub.planName || ''), period: sub.period === 'yearly' ? 'yearly' : 'monthly', endsAt: Number(sub.endsAt) || 0, freezeAt: Number(sub.freezeAt) || 0, trial: !!sub.trial }
+          : null,
+        tokens: { balance: typeof st?.tokens?.balance === 'number' ? st.tokens.balance : FREE_TOKENS, used: Number(st?.tokens?.used) || 0 },
+        payments,
+        ...billing,
+        paymentInfo: String(info?.text || ''),
+      });
+    }
 
     // ----- sign in -----
     if (action === 'login') {
@@ -605,7 +655,10 @@ export default {
         sitesByUid.set(uid, [...(sitesByUid.get(uid) || []), { name: s.name, project: s.project }]);
       });
 
-      const statusSnap = await db.collection('platform_subscribers').select('status', 'subscription').get();
+      const statusSnap = await db.collection('platform_subscribers').select('status', 'subscription', 'deletedAt').get();
+      // A customer the team deleted is listed in «الزبائن المحذوفين» only, until they publish a page again.
+      const deleted = new Set<string>();
+      statusSnap.forEach((d) => d.data().deletedAt && deleted.add(d.id));
       const statusOf = new Map<string, string>();
       const subOf = new Map<string, { planName: string; endsAt: number; freezeAt: number }>();
       statusSnap.forEach((d) => {
@@ -650,6 +703,7 @@ export default {
       });
 
       const matched = all.filter((r) => {
+        if (deleted.has(r.uid) && !r.sites.length) return false;
         if (state === 'active' && !r.active) return false;
         if (state === 'sleeping' && r.active) return false;
         if (published === 'yes' && !r.sites.length) return false;
@@ -693,7 +747,13 @@ export default {
         db.collection('platform_ai_calls').where('uid', '==', uid).limit(500).get(),
       ]);
       const st = statusSnap.data() as { status?: string; reason?: string; at?: number; by?: string; subscription?: Record<string, any>; tokens?: { balance?: number; used?: number } } | undefined;
+      const [testSnap, accessSnap] = await Promise.all([
+        db.collection('testAccounts').doc(uid).get(),
+        db.collection('projectAccess').where('owner', '==', uid).limit(100).get(),
+      ]);
       return json({
+        test: testSnap.exists,
+        projects: accessSnap.docs.map((d) => ({ project: String(d.data().project || ''), planName: String(d.data().planName || ''), period: String(d.data().period || ''), paidUntil: Number(d.data().paidUntil) || 0 })),
         profile: {
           uid, name: user.displayName || '', email: user.email || '', phone: user.phoneNumber || '', verified: user.emailVerified,
           createdAt: Date.parse(user.metadata.creationTime || '') || 0,
@@ -823,6 +883,44 @@ export default {
       });
       return json({ rows: rows.slice(0, 300), matched: rows.length, total: rows.reduce((n, r) => n + r.amount, 0) });
     }
+
+    // ----- paying before publishing (server/billing.ts) -----
+    if (action === 'orders') return json(await listOrders(db, ['unpaid', 'attached', 'paid', 'rejected', 'deleted'].includes(String(body.status)) ? String(body.status) : 'all'));
+    if (action === 'order') {
+      const r = await getOrder(db, String(body.id || '').slice(0, 64));
+      return r ? json(r) : json({ error: 'not-found' }, 404);
+    }
+    if (action === 'order-approve' || action === 'order-reject' || action === 'order-extend') {
+      const id = String(body.id || '').slice(0, 64);
+      const origin = new URL(request.url).origin;
+      const r = action === 'order-approve'
+        ? await approveOrder(db, id, session.u, (pid, key) => `${origin}/api/admin?invoice=${pid}&k=${key}`)
+        : action === 'order-reject' ? await rejectOrder(db, id, session.u, body.reason) : await extendOrder(db, id, String(body.date || ''));
+      if ('error' in r) return json({ error: r.error }, r.status);
+      await audit(session.u, `${action}:${id}`);
+      return json(r);
+    }
+    if (action === 'billing-settings') return json(await readSettings(db));
+    if (action === 'billing-enforce') {
+      const on = body.on === true;
+      const uids = on ? (await listAllUsers(auth)).map((u) => u.uid) : [];
+      const r = await enforceBilling(db, on, session.u, uids);
+      await audit(session.u, `billing-enforce:${on}:${r.marked}`);
+      return json(r);
+    }
+    if (action === 'test-account') {
+      if (!uid || !(await userOrNull(uid))) return json({ error: 'not-found' }, 404);
+      const r = await setTestAccount(db, uid, body.on === true, session.u);
+      await audit(session.u, `test-account:${uid}:${r.test}`);
+      return json(r);
+    }
+    if (action === 'subscriber-delete') {
+      const r = await deleteCustomer(db, auth, uid, session.u, body.reason);
+      if ('error' in r) return json({ error: r.error }, r.status);
+      await audit(session.u, `subscriber-delete:${uid}`);
+      return json(r);
+    }
+    if (action === 'deleted-list') return json({ rows: await listDeleted(db) });
 
     if (action === 'invoice-send') {
       const snap = await db.collection('platform_payments').doc(String(body.paymentId || '').slice(0, 128)).get();

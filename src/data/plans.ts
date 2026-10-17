@@ -1,6 +1,6 @@
 // The packages each kind of page comes in (Eyad's plan and prices, 12 Oct), shown on the start page
 // right after the kind is chosen; the questions start once a package is picked. Prices live here only.
-// Nothing is charged or enforced yet; the choice is remembered for the subscriptions phase.
+// A paid package is invoiced before its project is published (src/utils/invoice.ts, server/billing.ts).
 import type { ProjectType } from '../components/shop/shopTypes';
 
 export type Plan = {
@@ -24,7 +24,7 @@ export const yearlyPrice = (monthly: number) => Math.round((monthly * 12 * (1 - 
 export const formatPounds = (n: number) => `${n.toLocaleString('ar-SY')} ل.س`;
 
 // One more tablet or screen for the restaurant (cashier, kitchen, bar, waiter), each month.
-const EXTRA_DEVICE = 75000;
+export const EXTRA_DEVICE = 75000;
 
 const FREE_SLIDES = 'واجهة بصورة، من نحن، الأسعار، معرض صور، التواصل، الشروط والخصوصية';
 

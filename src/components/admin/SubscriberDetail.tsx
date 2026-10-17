@@ -5,7 +5,7 @@ import { Loader2, X } from 'lucide-react';
 import { PLANS, formatPounds, yearlyPrice } from '../../data/plans';
 import {
   AdminError, PAY_METHODS, PayMethod, Period, SubscriberDetail as Detail, SubscriberStatus,
-  adminAddNote, adminAddPayment, adminCouponApply, adminInvoiceSend, adminPostponeFreeze, adminSetStatus, adminSubscriber, adminTokensAdjust, invoiceUrl,
+  adminAddNote, adminAddPayment, adminCouponApply, adminDeleteSubscriber, adminTestAccount, adminInvoiceSend, adminPostponeFreeze, adminSetStatus, adminSubscriber, adminTokensAdjust, invoiceUrl,
 } from '../../services/adminApi';
 import { SEND_ERRORS } from './PaymentsView';
 
@@ -51,6 +51,7 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
   const [postpone, setPostpone] = useState<{ date: string; reason: string } | null>(null);
   const [info, setInfo] = useState('');
   const [tok, setTok] = useState<{ delta: string; reason: string } | null>(null);
+  const [del, setDel] = useState<{ reason: string; word: string } | null>(null);
 
   const fail = useCallback((e: unknown, fallback: string) => {
     if ((e as AdminError)?.code === 'session') return onSessionEnd();
@@ -183,6 +184,34 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
   };
 
   const p = data?.profile;
+  const toggleTest = async () => {
+    if (!data) return;
+    setBusy(true);
+    setError('');
+    try {
+      await adminTestAccount(uid, !data.test);
+      await load();
+    } catch (e) {
+      fail(e, 'تعذّر الحفظ.');
+    }
+    setBusy(false);
+  };
+
+  const deleteCustomer = async () => {
+    if (!del) return;
+    setBusy(true);
+    setError('');
+    try {
+      await adminDeleteSubscriber(uid, del.reason);
+      setDel(null);
+      onChanged();
+      onClose();
+    } catch (e) {
+      fail(e, 'تعذّر الحذف.');
+    }
+    setBusy(false);
+  };
+
   const st = data?.status.status || 'active';
   const action = pending ? ACTIONS[st].find((a) => a.to === pending) : null;
 
@@ -220,7 +249,17 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
                   <dt className="text-muted">ينتهي</dt><dd>{day(data.subscription.endsAt)}</dd>
                   <dt className="text-muted">التجميد التلقائي</dt><dd>{data.subscription.freezeAt ? day(data.subscription.freezeAt) : 'بدون'}</dd>
                 </dl>
-              ) : <p className="mb-2 text-faint">لا اشتراك مدفوع (صفحة مجانية).</p>}
+              ) : <p className="mb-2 text-faint">لا اشتراك مدفوع للحساب كله.</p>}
+              {data.projects.length > 0 && (
+                <ul className="mb-2 flex flex-col gap-1">
+                  {data.projects.map((x) => (
+                    <li key={x.project} className={`text-small ${x.paidUntil > Date.now() ? '' : 'text-danger'}`}>
+                      <span dir="ltr">{x.project}</span> · {x.planName} · صالح لحد {day(x.paidUntil)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {data.test && <p className="mb-2 text-warn">حساب تجريبي: بينشر بدون دفع.</p>}
               {info && <p className="mb-2 text-success">{info}</p>}
 
               {pay ? (
@@ -335,6 +374,26 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
                     <button disabled={busy || (pending !== 'active' && reason.trim().length < 3)} onClick={confirm}
                       className="inline-flex items-center gap-1 rounded-ctl bg-brand px-3 py-1.5 text-white hover:bg-brand-hover disabled:opacity-50">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} تأكيد: {action?.label}</button>
                     <button onClick={() => setPending(null)} className="rounded-ctl px-3 py-1.5 hover:bg-surface">رجوع</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div hidden={!can.includes('subscriber-delete')}>
+              <h3 className="mb-2 font-medium">حساب تجريبي وحذف الزبون</h3>
+              {!del ? (
+                <div className="flex flex-wrap gap-2">
+                  <button disabled={busy} onClick={toggleTest} className="rounded-ctl border border-line px-3 py-1.5 hover:bg-bg disabled:opacity-50">{data.test ? 'إلغاء الحساب التجريبي' : 'اجعله حساباً تجريبياً'}</button>
+                  <button onClick={() => { setDel({ reason: '', word: '' }); setError(''); }} className="rounded-ctl border border-danger px-3 py-1.5 text-danger hover:bg-bg">حذف الزبون وصفحاته</button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 rounded-ctl border border-danger/40 bg-bg p-3">
+                  <p>بتنحذف كل مشاريعه وصفحاته وبياناته من Firebase وما بترجع. حساب الدخول بيضل لأنه ممكن يكون زبون لصفحات تانية، ودفعاته بتضل للحسابات، وبتنحفظ بطاقته بـ«الزبائن المحذوفين».</p>
+                  <input value={del.reason} onChange={(e) => setDel({ ...del, reason: e.target.value })} placeholder="السبب (مطلوب)" className={inputCls} />
+                  <input value={del.word} onChange={(e) => setDel({ ...del, word: e.target.value })} placeholder="للتأكيد اكتب: احذف" className={inputCls} />
+                  <div className="flex gap-2">
+                    <button disabled={busy || del.reason.trim().length < 3 || del.word.trim() !== 'احذف'} onClick={deleteCustomer} className="inline-flex items-center gap-1 rounded-ctl bg-danger px-3 py-1.5 text-white disabled:opacity-50">{busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} حذف نهائي</button>
+                    <button onClick={() => setDel(null)} className="rounded-ctl px-3 py-1.5 hover:bg-surface">رجوع</button>
                   </div>
                 </div>
               )}

@@ -50,6 +50,8 @@ export const PAY_WAYS: Record<string, string> = {
   transfer: 'حوالة مالية',
   office: 'دفع في المكتب',
 };
+// Paid on the Stripe page (server/stripe.ts): the webhook approves it, the customer never sends a receipt.
+const WAY_NAMES: Record<string, string> = { ...PAY_WAYS, online: 'دفع إلكتروني' };
 
 export const accessId = (uid: string, project: string) => `${uid}__${project}`;
 
@@ -293,8 +295,8 @@ export const approveOrder = async (db: Db, id: string, by: string, invoiceUrl: (
   const extras = o.items.slice(1).map((i) => i.label).join('، ');
   const pay = {
     uid: o.uid, email: o.email, name: o.name, plan: o.plan, planName: o.planName, period: o.period, amount: o.total,
-    method: o.way === 'office' ? 'office' : 'transfer', receiptNo: o.transferNo,
-    note: [`مشروع ${o.siteName || o.project}`, extras, PAY_WAYS[o.way] || ''].filter(Boolean).join(' · '),
+    method: o.way === 'office' ? 'office' : o.way === 'online' ? 'online' : 'transfer', receiptNo: o.transferNo,
+    note: [`مشروع ${o.siteName || o.project}`, extras, WAY_NAMES[o.way] || ''].filter(Boolean).join(' · '),
     paidAt: now, coversFrom: from, coversTo: paidUntil, by, key, invoiceNo, project: o.project, orderId: id,
   };
   const months = monthsOf(o.period);

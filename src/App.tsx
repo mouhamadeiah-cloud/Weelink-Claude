@@ -1373,6 +1373,18 @@ export default function App() {
     }
   };
 
+  // Back from Stripe's payment page (src/components/billing/Checkout.tsx): say how it went, once.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const back = url.searchParams.get('stripe');
+    if (!back) return;
+    url.searchParams.delete('stripe');
+    window.history.replaceState(window.history.state, '', url.toString());
+    window.alert(back === 'ok'
+      ? 'وصلت دفعتك. أول ما يأكدها Stripe بيوصلك إيميل بالفاتورة، وبعدها بتقدر تنشر مشروعك من زر «نشر».'
+      : 'ما تم الدفع. فيك تدفع بأي وقت من زر «نشر» أو من صفحة «حسابي».');
+  }, []);
+
   // The admin's editor tab (opened by «تعديل في لوحة المصمم» in the admin site) starts here, once the sign-in check is done.
   const adminEditStarted = useRef(false);
   useEffect(() => {

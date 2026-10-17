@@ -8,6 +8,8 @@
 //   POST /api/admin  { action: 'order-create', project, plan, period, devices?, siteName? } and
 //                    { action: 'order-attach', id, way, transferNo?, image? }  with a subscriber's Firebase ID token:
 //        the invoice before a paid project is published, and how it was paid (server/billing.ts)
+//   POST /api/admin  { action: 'order-card', id, returnUrl } → { url } of the Stripe page that pays it (server/stripe.ts)
+//   POST /api/admin?stripe=webhook  Stripe's events (signed); a paid page approves its order
 //   POST /api/admin  { action: 'orders' | 'order' | 'order-approve' | 'order-reject' | 'order-extend' | 'billing-settings' }  (finance)
 //                    { action: 'billing-enforce' | 'test-account' | 'subscriber-delete' }  (owner), { action: 'deleted-list' }
 //   POST /api/admin  { action: 'change-password', current, next } → { token, admin }
@@ -73,6 +75,7 @@ import { mailOrder } from '../server/orderMail.js';
 import { recountDesigner } from '../server/designerStats.js';
 import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
 import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
+import { createCheckout, handleWebhook, stripeConfig } from '../server/stripe.js';
 import { approveOrder, attachProof, createOrder, deleteCustomer, enforceBilling, extendOrder, getOrder, listDeleted, listOrders, myBilling, readSettings, rejectOrder, runBillingDaily, setTestAccount } from '../server/billing.js';
 import designTimers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
@@ -123,7 +126,7 @@ const getPrices = async (db: Fb['db']) => {
   const p = (await db.collection('platform_settings').doc('ai_prices').get()).data() as { in?: number; out?: number } | undefined;
   return { in: typeof p?.in === 'number' ? p.in : DEFAULT_PRICE.in, out: typeof p?.out === 'number' ? p.out : DEFAULT_PRICE.out };
 };
-const METHODS: Record<string, string> = { office: 'مكتب', cash: 'نقداً', transfer: 'حوالة', grant: 'منحة' };
+const METHODS: Record<string, string> = { office: 'مكتب', cash: 'نقداً', transfer: 'حوالة', grant: 'منحة', online: 'دفع إلكتروني' };
 
 // The end of a period that starts at `from` (a month or a year later, same day of the month).
 const addPeriod = (from: number, period: Period) => {
@@ -459,6 +462,13 @@ export default {
     if (!fb) return json({ error: 'not-configured' }, 503);
     const { db, auth } = fb;
 
+    // Stripe's webhook (server/stripe.ts): its body is Stripe's event, read raw to check the signature.
+    if (new URL(request.url).searchParams.get('stripe') === 'webhook') {
+      const origin = new URL(request.url).origin;
+      const r = await handleWebhook(db, await request.text(), request.headers.get('stripe-signature') || '', (pid, key) => `${origin}/api/admin?invoice=${pid}&k=${key}`);
+      return json(r.body, r.status);
+    }
+
     let body: Record<string, unknown>;
     try {
       body = await request.json();
@@ -473,14 +483,16 @@ export default {
     // ----- a subscriber's own account page (signed in with Firebase, not an admin) -----
     // The subscription, the AI balance and the payments with their invoice links, read on the server
     // because the browser never reads platform_subscribers or platform_payments.
-    if (action === 'my-account' || action === 'order-create' || action === 'order-attach') {
+    if (action === 'my-account' || action === 'order-create' || action === 'order-attach' || action === 'order-card') {
       const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
       const user = token ? await auth.verifyIdToken(token).catch(() => null) : null;
       if (!user) return json({ error: 'unauthorized' }, 401);
       // Paying for a project before it is published (server/billing.ts).
       if (action !== 'my-account') {
         const who = { uid: user.uid, email: String(user.email || ''), name: String(user.name || '') };
-        const r = action === 'order-create' ? await createOrder(db, who, body) : await attachProof(db, who, body);
+        const r = action === 'order-create' ? await createOrder(db, who, body)
+          : action === 'order-card' ? await createCheckout(db, who, body, new URL(request.url).origin)
+          : await attachProof(db, who, body);
         return 'error' in r ? json({ error: r.error }, r.status) : json(r);
       }
       const [subSnap, paySnap, billing] = await Promise.all([
@@ -509,6 +521,7 @@ export default {
         payments,
         ...billing,
         paymentInfo: String(info?.text || ''),
+        online: !!stripeConfig(),
       });
     }
 

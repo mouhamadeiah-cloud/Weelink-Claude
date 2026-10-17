@@ -1,15 +1,16 @@
 // The invoice before a paid project is published (server/billing.ts has the whole flow): the package
 // and the bigger ones the customer could take instead, monthly or yearly, a restaurant's extra devices,
 // then how they paid (a transfer's number or a photo of its receipt). Sent, it waits «قيد الفحص» until
-// the Weelink team confirms it; only then can the project be published.
+// the Weelink team confirms it; only then can the project be published. Paid online (Stripe, when it is
+// set up) there is nothing to send: the customer goes to Stripe's page and the payment approves itself.
 import React, { useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { CheckCircle2, Clock, ImagePlus, Loader2, Minus, Plus, Receipt, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, CreditCard, ImagePlus, Loader2, Minus, Plus, Receipt, Trash2, XCircle } from 'lucide-react';
 import { kindOf } from '../../utils/projectKeys';
 import { formatPounds, EXTRA_DEVICE } from '../../data/plans';
 import { MAX_DEVICES } from '../../utils/invoice';
 import {
-  PAY_WAYS, attachProof, billingErrorText, chosenPlanOf, createOrder, invoiceFor, paidPlansOf, payWayName, shrinkReceipt,
+  PAY_WAYS, attachProof, billingErrorText, payOnline, chosenPlanOf, createOrder, invoiceFor, paidPlansOf, payWayName, shrinkReceipt,
   type BillingOrder, type Period,
 } from '../../services/billing';
 import { fetchMyAccount } from '../../services/myAccount';
@@ -46,6 +47,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
   const [image, setImage] = useState('');
   const [order, setOrder] = useState<BillingOrder | null | undefined>(undefined);
   const [payInfo, setPayInfo] = useState('');
+  const [online, setOnline] = useState(false);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<'' | 'send' | 'later' | 'image'>('');
   const [error, setError] = useState('');
@@ -59,6 +61,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
         const open = a.orders.find((o) => o.project === project) || null;
         setOrder(open);
         setPayInfo(a.paymentInfo);
+        setOnline(!!a.online);
         if (open) {
           setPlan(open.plan);
           setPeriod(open.period);
@@ -97,6 +100,23 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
     if (order && order.plan === plan && order.period === period && order.devices === devices) return order;
     const r = await createOrder(user, { project, plan, period, devices, siteName });
     return r.order;
+  };
+
+  // Online: the invoice is saved, then the browser goes to Stripe and comes back here.
+  const payNow = async () => {
+    if (!invoice) return;
+    setBusy('send');
+    setError('');
+    try {
+      const next = await ensureOrder();
+      setOrder(next);
+      const r = await payOnline(user, { id: next.id, returnUrl: window.location.href });
+      window.location.assign(r.url);
+      return;
+    } catch (e) {
+      setError(billingErrorText((e as Error).message));
+    }
+    setBusy('');
   };
 
   const send = async (later: boolean) => {
@@ -203,7 +223,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
       <div>
         <span className="mb-2 block text-xs font-bold text-muted">طريقة الدفع</span>
         <div className="flex flex-wrap gap-2">
-          {PAY_WAYS.map((w) => (
+          {PAY_WAYS.filter((w) => !w.online || online).map((w) => (
             <button
               key={w.id}
               type="button"
@@ -218,6 +238,9 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
         {payInfo && <p className="mt-3 whitespace-pre-line rounded-card bg-bg p-3 text-xs leading-relaxed text-ink">{payInfo}</p>}
       </div>
 
+      {way === 'online' ? (
+        <p className="text-xs text-muted leading-relaxed">بتنفتح صفحة دفع آمنة من Stripe بنفس المبلغ بالعملة الأجنبية. بعد الدفع بترجع لهون وبيتأكد الدفع لحاله.</p>
+      ) : (
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1 block text-xs font-bold text-muted">رقم الحوالة أو العملية</span>
@@ -240,11 +263,12 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
           )}
         </div>
       </div>
+      )}
 
       {error && <p className="text-xs font-bold text-danger">{error}</p>}
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button type="button" disabled={!!busy || !invoice} onClick={() => send(false)} className="h-12 w-full sm:flex-1 rounded-ctl bg-brand text-base font-black text-white hover:bg-brand-hover disabled:opacity-50 inline-flex items-center justify-center gap-2">
-          {busy === 'send' ? <Loader2 size={18} className="animate-spin" /> : <Receipt size={18} />} أرسل إشعار الدفع
+        <button type="button" disabled={!!busy || !invoice} onClick={() => (way === 'online' ? payNow() : send(false))} className="h-12 w-full sm:flex-1 rounded-ctl bg-brand text-base font-black text-white hover:bg-brand-hover disabled:opacity-50 inline-flex items-center justify-center gap-2">
+          {busy === 'send' ? <Loader2 size={18} className="animate-spin" /> : way === 'online' ? <CreditCard size={18} /> : <Receipt size={18} />} {way === 'online' ? 'ادفع هلق' : 'أرسل إشعار الدفع'}
         </button>
         {(!order || order.status === 'unpaid') && (
           <button type="button" disabled={!!busy || !invoice} onClick={() => send(true)} className="h-12 rounded-ctl border border-line bg-surface px-4 text-sm font-bold text-muted hover:text-ink disabled:opacity-50 inline-flex items-center justify-center gap-2">

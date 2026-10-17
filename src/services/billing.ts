@@ -28,8 +28,10 @@ export interface BillingOrder extends Invoice {
 
 export interface ProjectPeriod { plan: string; planName: string; period: Period; paidUntil: number }
 
-// How the customer pays. The balance card comes later.
-export const PAY_WAYS: { id: string; name: string; soon?: boolean }[] = [
+// How the customer pays. The balance card comes later; 'online' (a bank card or PayPal through Stripe,
+// server/stripe.ts) shows only once Stripe's keys are set on the server.
+export const PAY_WAYS: { id: string; name: string; soon?: boolean; online?: boolean }[] = [
+  { id: 'online', name: 'كرت بنكي أو PayPal', online: true },
   { id: 'card', name: 'بطاقة رصيد Weelink', soon: true },
   { id: 'syriatel', name: 'سيريتل كاش' },
   { id: 'mtn', name: 'MTN كاش' },
@@ -97,9 +99,15 @@ export const createOrder = (user: User, body: { project: string; plan: string; p
 export const attachProof = (user: User, body: { id: string; way: string; transferNo: string; image: string }) =>
   call<{ order: BillingOrder }>(user, { action: 'order-attach', ...body });
 
+/** The Stripe page that pays an invoice; the customer comes back to `returnUrl` with ?stripe=ok or cancel. */
+export const payOnline = (user: User, body: { id: string; returnUrl: string }) =>
+  call<{ url: string }>(user, { action: 'order-card', ...body });
+
 export const billingErrorText = (code: string) =>
   code === 'no-proof' ? 'اكتب رقم الحوالة أو ارفع صورة الإشعار.'
   : code === 'card-soon' ? 'الدفع ببطاقة الرصيد جاي قريباً. اختار طريقة تانية هلق.'
+  : code === 'online-off' ? 'الدفع الإلكتروني مو شغّال هلق. اختار طريقة تانية.'
+  : code === 'stripe-refused' ? 'ما قدرنا نفتح صفحة الدفع. جرّب كمان شوي أو اختار طريقة تانية.'
   : code === 'bad-image' ? 'ما قدرنا نقرأ الصورة. جرّب صورة JPG أو PNG.'
   : code === 'not-found' ? 'ما لقينا المشروع. احفظ مشروعك أول وجرّب مرة تانية.'
   : code === 'bad-state' ? 'هالفاتورة ما عاد فيها تعديل. حدّث الصفحة.'

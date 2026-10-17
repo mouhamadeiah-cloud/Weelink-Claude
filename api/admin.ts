@@ -1,4 +1,4 @@
-// Vercel serverless function: the sign-in and the data of the platform admin site
+// Server function: the sign-in and the data of the platform admin site
 // (admin.testweelink.de, Eyad's team). Everything here runs on the server with the Firebase Admin
 // SDK; the browser never reads the subscribers or the admin accounts (the rules deny them).
 //
@@ -23,7 +23,7 @@
 //   POST /api/admin  { action: 'invoice-send', paymentId }       → { sent: true } | { error }
 //   POST /api/admin  { action: 'get-company' | 'set-company', ...fields }
 //   GET  /api/admin?invoice=<id>&k=<key>  → the invoice page (the key is in the invoice's email)
-//   GET  /api/admin  with  Authorization: Bearer <CRON_SECRET>  (Vercel's daily cron)
+//   GET  /api/admin  with  Authorization: Bearer <CRON_SECRET>  (the daily cron)
 //        → reminds subscribers 14, 7 and 1 day before their subscription ends, and freezes the ones
 //          whose subscription ended
 //   POST /api/admin  { action: 'admins-list' | 'admin-add' | 'admin-update' | 'admin-reset-password', ... }  (owner only)
@@ -66,7 +66,7 @@
 // Failed sign-ins are counted per username and address (5 wrong → 15 minutes locked) and every
 // sign-in and password change is written to platform_audit.
 //
-// Needs FIREBASE_SERVICE_ACCOUNT in Vercel (the same one /api/email-code uses).
+// Needs FIREBASE_SERVICE_ACCOUNT in Cloudflare (the same one /api/email-code uses).
 
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore } from '../server/firebase.js';
@@ -292,7 +292,7 @@ const applyStatus = async (fb: Fb, uid: string, next: string, reason: string, by
   await batch.commit();
 };
 
-// 'sent', 'skipped' (no sender set up in Vercel) or 'failed' (Resend refused, with its reason).
+// 'sent', 'skipped' (no sender set up in Cloudflare) or 'failed' (Resend refused, with its reason).
 const sendMail = async (to: string, subject: string, html: string): Promise<{ result: 'sent' | 'skipped' | 'failed'; detail?: string }> => {
   const from = process.env.EMAIL_FROM;
   const key = process.env.RESEND_API_KEY;
@@ -320,7 +320,7 @@ const payFromDoc = (id: string, d: Record<string, any>) => ({
 
 const getCompany = async (db: Fb['db']): Promise<Company> => ({ ...EMPTY_COMPANY, ...((await db.collection('platform_settings').doc('company').get()).data() || {}) });
 
-// Vercel's daily cron: reminders 14, 7 and 1 day before freezeAt, and the freeze itself.
+// The daily cron: reminders 14, 7 and 1 day before freezeAt, and the freeze itself.
 const REMINDERS: { key: 'd14' | 'd7' | 'd1'; days: number }[] = [{ key: 'd1', days: 1 }, { key: 'd7', days: 7 }, { key: 'd14', days: 14 }];
 const runDaily = async (fb: Fb) => {
   const { db, auth } = fb;

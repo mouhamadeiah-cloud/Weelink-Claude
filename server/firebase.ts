@@ -1,6 +1,6 @@
 // A small stand-in for the parts of firebase-admin the API uses, built on Google's REST APIs and fetch.
 // firebase-admin's Firestore client needs gRPC and code generation, which Cloudflare Workers forbid; this
-// runs on Workers, on Vercel and in Node alike. The exports keep firebase-admin's names and shapes
+// runs on Workers and in Node alike. The exports keep firebase-admin's names and shapes
 // (initializeApp/cert/getApps, getAuth, getFirestore, FieldValue, Timestamp), so the handlers only
 // changed their import lines.
 //

@@ -1,12 +1,12 @@
-// Vercel serverless function: searches Unsplash photos for the editor's image gallery.
+// Server function: searches Unsplash photos for the editor's image gallery.
 //
 //   GET /api/photos?q=<search>&category=<arabic category>&page=1&perPage=24
 //     → { items, total, totalPages, page }
 //   GET /api/photos?track=<photo id>
 //     → tells Unsplash the photo was used (required by its API guidelines)
 //
-// The Unsplash access key lives only in the Vercel environment variable UNSPLASH_ACCESS_KEY,
-// never in the frontend code. Answers are cached by Vercel's CDN for an hour, so the same
+// The Unsplash access key lives only in the Cloudflare environment variable UNSPLASH_ACCESS_KEY,
+// never in the frontend code. Answers are cached by the CDN for an hour, so the same
 // search from many users costs one Unsplash request.
 
 const MAX_PER_PAGE = 30;

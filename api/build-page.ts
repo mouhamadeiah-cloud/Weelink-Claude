@@ -1,4 +1,4 @@
-// Vercel serverless function: «ابن صفحتي». Gemini designs a page from the owner's Wee AI answers,
+// Server function: «ابن صفحتي». Gemini designs a page from the owner's Wee AI answers,
 // following Eyad's weelink-designer constitution (src/data/ai/weelinkDesigner.json) and the ready
 // slides of the catalogue (src/data/ai/buildCatalog.json, written by `npm run ai-catalog`).
 //
@@ -12,7 +12,7 @@
 // so Gemini never writes coordinates. Every answer is checked here before it reaches the page
 // (unknown slides, slots or icons, over-long texts, emoji and AI wording, invented prices or
 // figures, outside links, unknown palettes, fonts or animations).
-// The Gemini key lives only in the Vercel environment variable GEMINI_API_KEY.
+// The Gemini key lives only in the Cloudflare environment variable GEMINI_API_KEY.
 //
 // Usage limits come from the project's package (src/utils/planLimits.ts): once for a free page, once a
 // day on 30/60, 5 a day on Pro. They count only once paying is switched on and never for a test account
@@ -27,7 +27,7 @@ import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
 import { limitsOf } from '../src/utils/planLimits.js';
 
 // A fixed model, not «latest», so a newer and dearer Flash never comes in on its own (Eyad, 12 Oct).
-// Both can be changed in Vercel without code: GEMINI_MODEL, and GEMINI_THINKING (minimal, low,
+// Both can be changed in Cloudflare without code: GEMINI_MODEL, and GEMINI_THINKING (minimal, low,
 // medium, high), how long the model thinks before answering; thinking is paid as output.
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 const THINKING = (process.env.GEMINI_THINKING || 'low').toUpperCase() as ThinkingLevel;
@@ -514,7 +514,7 @@ const RESPONSE_SCHEMA = {
   required: ['look', 'navbar', 'sections'],
 };
 
-// The function's time on Vercel (vercel.json maxDuration 60s): Gemini gets most of it, and a second
+// The function's time budget (60 s): Gemini gets most of it, and a second
 // try only when the first failed fast enough to leave room for one.
 const BUDGET_MS = 52_000;
 

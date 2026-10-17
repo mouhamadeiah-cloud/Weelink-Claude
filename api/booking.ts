@@ -1,4 +1,4 @@
-// Vercel serverless function: appointments booked from the «حجز مواعيد» calendar on a page.
+// Server function: appointments booked from the «حجز مواعيد» calendar on a page.
 //
 //   POST /api/booking  { action: 'create', owner, project, date, startMin, slot, ... }
 //        → a visitor books a free time; the booking is saved and both sides get an email
@@ -6,7 +6,7 @@
 //   POST /api/booking  { action: 'status', id, status }  with  Authorization: Bearer <ID token>
 //        → the page's owner (or a member) confirms, finishes or cancels a booking; the customer
 //          gets an email when it is confirmed or cancelled                    → { ok: true }
-//   GET  /api/booking  with  Authorization: Bearer <CRON_SECRET>   (Vercel's daily cron)
+//   GET  /api/booking  with  Authorization: Bearer <CRON_SECRET>   (the daily cron)
 //        → reminds both sides of tomorrow's bookings, and deletes bookings older than 3 months
 //
 // bookings/{owner}/items/{id} holds the booking (only the owner and members read it, firestore.rules).

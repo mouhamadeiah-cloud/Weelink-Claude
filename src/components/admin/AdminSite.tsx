@@ -29,7 +29,7 @@ const LOGIN_ERRORS: Record<string, string> = {
   wrong: 'اسم المستخدم أو كلمة السر غير صحيحة.',
   frozen: 'هذا الحساب مجمّد. تواصل مع المدير.',
   network: 'تعذّر الاتصال. جرّب مرة ثانية.',
-  'not-configured': 'الخادم غير مُعدّ بعد (FIREBASE_SERVICE_ACCOUNT غير موجود في Vercel).',
+  'not-configured': 'الخادم غير مُعدّ بعد (FIREBASE_SERVICE_ACCOUNT غير موجود في Cloudflare).',
 };
 const loginError = (e: unknown) => {
   if (e instanceof AdminError && e.code === 'locked') return `محاولات كثيرة خاطئة. جرّب بعد ${e.extra.minutes} دقيقة.`;

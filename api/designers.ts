@@ -1,7 +1,6 @@
-// One Vercel function for the designers' programme. A Hobby plan allows 12 serverless functions in all, so
-// the gallery, the design orders and the access codes (server/*.ts) share this entry; vercel.json rewrites
-// /api/gallery, /api/design-orders and /api/design-access to it, so the browser's URLs did not change.
-// The area comes from the rewrite's `?area=`, or from the path that was asked for.
+// One function for the designers' programme: the gallery, the design orders and the access codes
+// (server/*.ts) share this entry; worker/index.ts routes /api/gallery, /api/design-orders and
+// /api/design-access to it. The area comes from `?area=`, or from the path that was asked for.
 import gallery from '../server/gallery.js';
 import orders from '../server/design-orders.js';
 import access from '../server/design-access.js';

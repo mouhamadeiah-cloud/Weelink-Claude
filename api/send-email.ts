@@ -1,5 +1,5 @@
-// Vercel serverless function: sends an email through Resend.
-// The Resend API key lives only in the Vercel environment variable RESEND_API_KEY — never in
+// Server function: sends an email through Resend.
+// The Resend API key lives only in the Cloudflare environment variable RESEND_API_KEY — never in
 // the frontend code, where every visitor could read it.
 //
 //   GET  /api/send-email  → a small test page with a "send test email" button
@@ -47,7 +47,7 @@ export default {
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      return json({ error: 'RESEND_API_KEY is not set in the Vercel environment variables' }, 500);
+      return json({ error: 'RESEND_API_KEY is not set in the Cloudflare environment variables' }, 500);
     }
 
     const resend = new Resend(apiKey);

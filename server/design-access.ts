@@ -1,4 +1,4 @@
-// Vercel serverless function: a hired designer enters the customer's page (Eyad, 14 Oct, last phase).
+// Server function: a hired designer enters the customer's page (Eyad, 14 Oct, last phase).
 // The customer gives the designer a code that works for three days; with it the designer opens the
 // customer's page in the editor, edits it and saves. Nothing else of the customer is reachable:
 //   - the designer never reads or writes designs/{customerUid} directly (the rules do not let them); this

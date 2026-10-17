@@ -44,7 +44,7 @@ export const HealthView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEn
       {!data ? <Loader2 className="h-5 w-5 animate-spin text-muted" /> : (
         <>
           <div className="rounded-card border border-line bg-surface p-3">
-            <h2 className="mb-2 font-medium">الإعدادات في Vercel</h2>
+            <h2 className="mb-2 font-medium">الإعدادات في Cloudflare</h2>
             <ul className="flex flex-col gap-2 text-small">
               {CONFIG.map(([k, label, hint]) => (
                 <li key={k} className="flex items-start gap-2"><Dot ok={data.config[k]} /><div><div>{label}: <b>{data.config[k] ? 'موجود' : 'ناقص'}</b></div>{!data.config[k] && <div className="text-tiny text-faint">{hint}</div>}</div></li>
@@ -68,7 +68,7 @@ export const HealthView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEn
                 <thead className="text-muted"><tr>{['الوقت', 'فُحص', 'جُمّد', 'ذُكّر', 'تخطّى', 'فشل'].map((h) => <th key={h} className="py-1 font-medium">{h}</th>)}</tr></thead>
                 <tbody>{data.daily.map((d, i) => <tr key={i} className="border-t border-line"><td className="py-1.5">{when(d.at)}</td><td>{d.checked}</td><td>{d.frozen}</td><td>{d.reminded}</td><td>{d.skipped}</td><td className={d.failed ? 'text-danger' : ''}>{d.failed}</td></tr>)}</tbody>
               </table>
-            ) : <p className="text-small text-faint">ما اشتغلت بعد. تحقق من CRON_SECRET في Vercel.</p>}
+            ) : <p className="text-small text-faint">ما اشتغلت بعد. تحقق من CRON_SECRET في Cloudflare.</p>}
           </div>
 
           <div className="rounded-card border border-line bg-surface p-3">

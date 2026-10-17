@@ -92,7 +92,7 @@ const Floating: React.FC<{ anchor: React.RefObject<HTMLElement | null>; align: '
   }, [anchor, onClose]);
   if (!pos) return null;
   return createPortal(
-    <div data-floating-menu dir="rtl" style={{ position: 'fixed', top: pos.top, left: pos.left, right: pos.right }} className={`z-[3000] bg-white/95 backdrop-blur-xl rounded-2xl border border-black/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-2 text-right ${className}`}>
+    <div data-floating-menu dir="rtl" style={{ position: 'fixed', top: pos.top, left: pos.left, right: pos.right }} className={`z-[1000001] bg-white/95 backdrop-blur-xl rounded-2xl border border-black/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-2 text-right ${className}`}>
       {children}
     </div>,
     document.body

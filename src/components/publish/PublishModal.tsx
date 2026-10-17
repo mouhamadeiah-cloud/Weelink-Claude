@@ -37,6 +37,8 @@ interface PublishModalProps {
   // The project's items (dishes, products, cars) and active devices, for the package the invoice offers.
   used?: { items: number; devices: number };
   onPublishedChange: (name: string | null) => void;
+  // The settings panel shows only the name, icon, search texts and the publish button, with no window around them.
+  embedded?: boolean;
 }
 
 const input = 'w-full h-11 px-3.5 rounded-xl border border-neutral-200 bg-white text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 transition';
@@ -494,7 +496,8 @@ const SeoFields: React.FC<{ seo: SiteSeo; keywords: string; onSeo: (s: SiteSeo) 
 const sameSeo = (a?: SiteSeo, b?: SiteSeo) =>
   (a?.title || '') === (b?.title || '') && (a?.description || '') === (b?.description || '') && (a?.keywords || []).join(',') === (b?.keywords || []).join(',');
 
-export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange, used }) => {
+export const PublishModal: React.FC<PublishModalProps> = ({ open: openProp, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange, used, embedded }) => {
+  const open = openProp || !!embedded;
   const [site, setSite] = useState<PublishedSite | null | 'loading'>('loading');
   const [name, setName] = useState('');
   const [state, setState] = useState<NameState | 'checking' | ''>('');
@@ -518,8 +521,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
   const hash = useMemo(() => (content ? contentHash(content) : ''), [content]);
   // What the previews show: the editor's content as visitors will see it.
   const draft = useMemo<Draft | null>(
-    () => (open && kindOf(project) !== 'restaurant' ? { project, pages, elements: elements.map(withLocalGraphics), data } : null),
-    [open, project, pages, elements, data]
+    () => (open && !embedded && kindOf(project) !== 'restaurant' ? { project, pages, elements: elements.map(withLocalGraphics), data } : null),
+    [open, embedded, project, pages, elements, data]
   );
 
   useEffect(() => {
@@ -653,34 +656,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     : state === 'taken' ? <span className="text-[#c2410c] inline-flex items-center gap-1"><XCircle size={13} /> الاسم محجوز، اختر اسماً آخر</span>
     : null;
 
-  return (
-    <div className="fixed inset-0 z-[4000000] bg-bg overflow-y-auto">
-      <div dir="rtl" className="w-full max-w-4xl mx-auto min-h-full px-4 sm:px-8 py-5 sm:py-8 space-y-5 font-sans">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center"><Globe size={20} /></span>
-            <div>
-              <div className="text-lg font-black text-ink">نشر صفحتك</div>
-              <div className="text-xs text-neutral-500">{published ? 'صفحتك منشورة ويستطيع أي أحد فتحها' : 'اختر اسماً لصفحتك واحصل على رابطها'}</div>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="h-10 px-4 rounded-full bg-black/5 flex items-center gap-2 text-sm font-bold text-ink cursor-pointer" aria-label="رجوع"><ArrowRight size={16} />رجوع</button>
-        </div>
-
-        {site === 'loading' ? (
-          <div className="py-12 flex justify-center"><Loader2 size={28} className="animate-spin text-brand" /></div>
-        ) : (
-          <>
-            <section className="bg-white rounded-2xl p-4 border border-neutral-200 space-y-3">
-              <div className="text-sm font-black text-ink">{published && !changed ? 'هكذا يرى الناس صفحتك' : 'هكذا ستظهر صفحتك'}</div>
-              {draft ? (
-                <DraftPreviews draft={draft} onOpen={setPreview} />
-              ) : (
-                <LivePreviews url={`${window.location.origin}/?r=${encodeURIComponent(restaurantIdOf(owner, project))}`} />
-              )}
-            </section>
-
-            <section className="bg-white rounded-2xl p-4 space-y-3 border border-neutral-200">
+  const fieldsSection = (
+            <section className={embedded ? 'space-y-3' : 'bg-white rounded-2xl p-4 space-y-3 border border-neutral-200'}>
               <div>
                 <span className={label}>اسم صفحتك</span>
                 <div className="flex items-stretch rounded-xl border border-neutral-200 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15 overflow-hidden" dir="ltr">
@@ -690,7 +667,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                     placeholder="alnour"
                     value={name}
                     onChange={(e) => setName(normalizeSiteName(e.target.value))}
-                    autoFocus={!published}
+                    autoFocus={!published && !embedded}
                     aria-label="اسم صفحتك"
                   />
                   <span className="px-3 flex items-center text-sm font-bold text-neutral-500 bg-neutral-50 border-l border-neutral-200">.{SITE_DOMAIN}</span>
@@ -735,6 +712,51 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
               )}
               {kindOf(project) === 'restaurant' && <p className="text-xs text-neutral-500">موقع المطعم يتحدّث تلقائياً مع كل تعديل؛ النشر هنا يعطيه اسمه ورابطه.</p>}
             </section>
+  );
+
+  if (embedded) {
+    if (site === 'loading') return <div className="py-6 flex justify-center"><Loader2 size={20} className="animate-spin text-brand" /></div>;
+    return (
+      <div dir="rtl" className="space-y-3 font-sans">
+        {fieldsSection}
+        {published && (
+          <div className="flex items-center gap-1.5">
+            <a href={link} target="_blank" rel="noreferrer" dir="ltr" className="flex-1 min-w-0 truncate text-xs font-black text-brand">{link.replace('https://', '')}</a>
+            <CopyButton text={link} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[4000000] bg-bg overflow-y-auto">
+      <div dir="rtl" className="w-full max-w-4xl mx-auto min-h-full px-4 sm:px-8 py-5 sm:py-8 space-y-5 font-sans">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center"><Globe size={20} /></span>
+            <div>
+              <div className="text-lg font-black text-ink">نشر صفحتك</div>
+              <div className="text-xs text-neutral-500">{published ? 'صفحتك منشورة ويستطيع أي أحد فتحها' : 'اختر اسماً لصفحتك واحصل على رابطها'}</div>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="h-10 px-4 rounded-full bg-black/5 flex items-center gap-2 text-sm font-bold text-ink cursor-pointer" aria-label="رجوع"><ArrowRight size={16} />رجوع</button>
+        </div>
+
+        {site === 'loading' ? (
+          <div className="py-12 flex justify-center"><Loader2 size={28} className="animate-spin text-brand" /></div>
+        ) : (
+          <>
+            <section className="bg-white rounded-2xl p-4 border border-neutral-200 space-y-3">
+              <div className="text-sm font-black text-ink">{published && !changed ? 'هكذا يرى الناس صفحتك' : 'هكذا ستظهر صفحتك'}</div>
+              {draft ? (
+                <DraftPreviews draft={draft} onOpen={setPreview} />
+              ) : (
+                <LivePreviews url={`${window.location.origin}/?r=${encodeURIComponent(restaurantIdOf(owner, project))}`} />
+              )}
+            </section>
+
+            {fieldsSection}
 
             {published && (
               <section className="bg-white rounded-2xl p-4 border border-neutral-200 space-y-3">

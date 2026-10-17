@@ -376,9 +376,22 @@ service cloud.firestore {
       allow delete: if canManage(existing().owner);
     }
 
+    // Paying before publishing (server/billing.ts): once the team turns it on (platformSettings/billing),
+    // a restaurant, shop or showroom (or a page once it was Pro) is published only while its paid period
+    // runs, or by a test account.
+    function billingOk(owner, project) {
+      let settings = /databases/$(database)/documents/platformSettings/billing;
+      let access = /databases/$(database)/documents/projectAccess/$(owner + '__' + project);
+      return !exists(settings) || get(settings).data.get('enforce', false) != true
+        || (project.matches('^page(-[a-z0-9]{4,12})?$') && !exists(access))
+        || exists(/databases/$(database)/documents/testAccounts/$(owner))
+        || (exists(access) && get(access).data.get('paidUntil', 0) > request.time.toMillis());
+    }
+
     match /publishedSites/{siteId} {
       allow get: if true;
-      allow create, update: if incoming().keys().hasOnly(['name', 'project', 'owner', 'pages', 'elements', 'data', 'publishedAt', 'hash', 'customDomain', 'icon', 'seo'])
+      allow create, update: if billingOk(incoming().owner, incoming().project)
+        && incoming().keys().hasOnly(['name', 'project', 'owner', 'pages', 'elements', 'data', 'publishedAt', 'hash', 'customDomain', 'icon', 'seo'])
         && (!('seo' in incoming()) || (incoming().seo is map && incoming().seo.keys().hasOnly(['title', 'description', 'keywords']) && isSeo(incoming().seo)))
         && (!('icon' in incoming()) || (incoming().icon is string && incoming().icon.size() <= 200000))
         && isProjectKind(incoming().project)
@@ -531,7 +544,16 @@ service cloud.firestore {
 
     // Platform settings the browser may read: the page's law (written by the admin site only).
     match /platformSettings/{docId} {
-      allow get: if docId == 'pageLaw';
+      allow get: if docId in ['pageLaw', 'billing'];
+    }
+
+    // A project's paid period and the test accounts (server/billing.ts writes them): the published page
+    // and «نشر» check them, so anyone may read one by its id.
+    match /projectAccess/{accessId} {
+      allow get: if true;
+    }
+    match /testAccounts/{uid} {
+      allow get: if true;
     }
 
     // A frozen or cancelled subscriber (the admin site, api/admin.ts writes it): anyone may check

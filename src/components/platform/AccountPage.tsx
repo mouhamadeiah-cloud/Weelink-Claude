@@ -7,6 +7,8 @@ import { ArrowLeft, Bell, CalendarDays, CreditCard, FolderKanban, KeyRound, Load
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { PlatformNav } from './PlatformNav';
+import { Checkout } from '../billing/Checkout';
+import { payWayName } from '../../services/billing';
 import type { MyProject } from '../onboarding/StartPage';
 import type { ProjectType } from '../shop/shopTypes';
 import { formatPounds } from '../../data/plans';
@@ -68,6 +70,8 @@ export const AccountPage: React.FC<AccountPageProps> = (props) => {
   const owner = !!user && user.uid === accountId;
   const [account, setAccount] = useState<MyAccountData | null | undefined>(undefined);
 
+  const [tick, setTick] = useState(0);
+  const reload = () => setTick((t) => t + 1);
   useEffect(() => {
     if (!user) return;
     let alive = true;
@@ -75,7 +79,7 @@ export const AccountPage: React.FC<AccountPageProps> = (props) => {
     return () => {
       alive = false;
     };
-  }, [user]);
+  }, [user, tick]);
 
   useEffect(() => {
     if (section) setTimeout(() => document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -117,10 +121,10 @@ export const AccountPage: React.FC<AccountPageProps> = (props) => {
 
         <ProfileSection key={user.uid} user={user} />
         <SecuritySection user={user} />
-        <ProjectsSection projects={projects} account={account} owner={owner} loadingType={loadingType} onOpen={onOpenProject} onPause={onPauseProject} onDelete={onDeleteProject} onAdd={nav.onStart} />
+        <ProjectsSection projects={projects} account={account} owner={owner} loadingType={loadingType} onOpen={onOpenProject} onPause={onPauseProject} onDelete={onDeleteProject} onAdd={nav.onStart} user={user} onOrder={reload} />
         {isDesigner && <DesignsSection uid={user.uid} onOpenDesigner={onOpenDesigner} />}
         <NoticesSection accountId={accountId} uid={user.uid} email={user.email || ''} />
-        <BillingSection account={account} />
+        <BillingSection account={account} projects={projects} />
         <DangerSection user={user} owner={owner} projects={projects} onPause={onPauseProject} onDeleted={onAccountDeleted} onLogout={nav.onLogout} />
       </main>
     </div>
@@ -232,16 +236,23 @@ const ProjectsSection: React.FC<{
   onPause: (key: string) => Promise<boolean>;
   onDelete: (key: string) => Promise<boolean>;
   onAdd: () => void;
-}> = ({ projects, account, owner, loadingType, onOpen, onPause, onDelete, onAdd }) => {
+  user: NonNullable<NavProps['user']>;
+  onOrder: () => void;
+}> = ({ projects, account, owner, loadingType, onOpen, onPause, onDelete, onAdd, user, onOrder }) => {
   const [busy, setBusy] = useState<string | null>(null);
-  const sub = account?.subscription;
-  const subKind = sub?.plan.split('-')[0];
+  const [paying, setPaying] = useState<MyProject | null>(null);
   const validity = (p: MyProject) => {
-    if (sub && sub.endsAt && subKind === p.kind) {
-      const left = daysLeft(sub.endsAt);
-      return left > 0 ? { text: `${sub.planName || 'الاشتراك'} صالح لحد ${dateText(sub.endsAt)} (باقي ${left.toLocaleString('ar-SY')} يوم)`, warn: left <= 14 } : { text: `انتهى الاشتراك بـ ${dateText(sub.endsAt)}`, warn: true };
+    const paid = account?.projects[p.key];
+    if (paid?.paidUntil) {
+      const left = daysLeft(paid.paidUntil);
+      return left > 0
+        ? { text: `${paid.planName || 'الاشتراك'} صالح لحد ${dateText(paid.paidUntil)} (باقي ${left.toLocaleString('ar-SY')} يوم)`, warn: left <= 14, renew: true }
+        : { text: `انتهت الصلاحية بـ ${dateText(paid.paidUntil)}`, warn: true, renew: true };
     }
-    return p.kind === 'page' ? { text: 'الباقة المجانية', warn: false } : { text: 'بدون اشتراك مدفوع بعد', warn: false };
+    const open = account?.orders.find((o) => o.project === p.key);
+    if (open) return { text: open.status === 'attached' ? 'إشعار الدفع قيد الفحص' : open.status === 'rejected' ? 'انرفض إشعار الدفع، ارفع واحد جديد' : `بانتظار الدفع${open.deleteAt ? `، بينحذف ${dateText(open.deleteAt)} إذا ما اندفع` : ''}`, warn: open.status !== 'attached', renew: true };
+    if (account?.test) return { text: 'حساب تجريبي: بدون دفع', warn: false, renew: false };
+    return p.kind === 'page' ? { text: 'الباقة المجانية', warn: false, renew: false } : { text: 'بدون اشتراك مدفوع بعد', warn: false, renew: true };
   };
   const pause = async (p: MyProject) => {
     if (!window.confirm(`إيقاف «${p.name || KIND_NAME[p.kind]}» مؤقتاً؟ الرابط بيوقف لحد ما تنشرو من جديد، ومشروعك بيضل محفوظ.`)) return;
@@ -283,6 +294,9 @@ const ProjectsSection: React.FC<{
                   <button type="button" disabled={!!loadingType} onClick={() => onOpen(p.key)} className="h-9 px-3.5 rounded-ctl bg-brand hover:bg-brand-hover text-white text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-60">
                     {p.published ? 'تعديل' : 'كمّل المشروع'} <ArrowLeft size={13} />
                   </button>
+                  {owner && v.renew && account && (
+                    <button type="button" onClick={() => setPaying(p)} className={ghostBtn}><CreditCard size={13} /> {account.projects[p.key]?.paidUntil ? 'جدّد' : 'ادفع'}</button>
+                  )}
                   {p.published && (
                     <button type="button" disabled={busy === p.key} onClick={() => pause(p)} className={ghostBtn}>{busy === p.key && <Loader2 size={13} className="animate-spin" />} إيقاف مؤقت</button>
                   )}
@@ -294,6 +308,17 @@ const ProjectsSection: React.FC<{
             );
           })}
         </ul>
+      )}
+      {paying && user && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={() => setPaying(null)}>
+          <div dir="rtl" className="w-full sm:max-w-xl max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-bg p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-base font-black">فاتورة «{paying.name || KIND_NAME[paying.kind]}»</h3>
+              <button type="button" onClick={() => setPaying(null)} className="h-8 w-8 rounded-full bg-black/5 text-sm" aria-label="إغلاق">✕</button>
+            </div>
+            <Checkout user={user} owner={user.uid} project={paying.key} paidUntil={account?.projects[paying.key]?.paidUntil} onOrder={onOrder} />
+          </div>
+        </div>
       )}
     </Section>
   );
@@ -371,9 +396,12 @@ const NoticesSection: React.FC<{ accountId: string; uid: string; email: string }
 
 // ---------- الاشتراك والدفعات ----------
 
-const BillingSection: React.FC<{ account: MyAccountData | null | undefined }> = ({ account }) => {
+const BillingSection: React.FC<{ account: MyAccountData | null | undefined; projects: MyProject[] | null }> = ({ account, projects }) => {
   const sub = account?.subscription;
   const total = useMemo(() => (account?.payments || []).reduce((t, p) => t + p.amount, 0), [account]);
+  const running = Object.values(account?.projects || {}).filter((p) => p.paidUntil > Date.now());
+  // The paid periods, else the old account-wide subscription.
+  const nearest = running.length ? Math.min(...running.map((p) => p.paidUntil)) : sub?.endsAt || 0;
   return (
     <Section id="billing" title="الاشتراك والدفعات" icon={<CreditCard size={18} />}>
       {account === undefined ? (
@@ -384,14 +412,14 @@ const BillingSection: React.FC<{ account: MyAccountData | null | undefined }> = 
         <div className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-card border border-line p-4">
-              <p className="text-xs font-bold text-muted">الاشتراك</p>
-              <p className="mt-1 text-sm font-bold">{sub ? `${sub.planName || sub.plan}${sub.trial ? ' (تجربة)' : ''}` : 'الباقة المجانية'}</p>
-              {sub && <p className="text-xs text-muted">{sub.period === 'yearly' ? 'سنوي' : 'شهري'}</p>}
+              <p className="text-xs font-bold text-muted">المشاريع المدفوعة</p>
+              <p className="mt-1 text-sm font-bold">{account.test ? 'حساب تجريبي' : running.length ? `${running.length.toLocaleString('ar-SY')} مشروع` : sub ? `${sub.planName || sub.plan}${sub.trial ? ' (تجربة)' : ''}` : 'الباقة المجانية'}</p>
+              <p className="text-xs text-muted">{account.test ? 'بتنشر بدون دفع' : 'كل مشروع إلو صلاحيتو لحالو'}</p>
             </div>
             <div className="rounded-card border border-line p-4">
-              <p className="text-xs font-bold text-muted">صالح لحد</p>
-              <p className="mt-1 text-sm font-bold">{sub?.endsAt ? dateText(sub.endsAt) : '—'}</p>
-              {sub?.endsAt ? <p className={`text-xs ${daysLeft(sub.endsAt) <= 14 ? 'font-bold text-danger' : 'text-muted'}`}>{daysLeft(sub.endsAt) > 0 ? `باقي ${daysLeft(sub.endsAt).toLocaleString('ar-SY')} يوم` : 'انتهى'}</p> : null}
+              <p className="text-xs font-bold text-muted">أقرب انتهاء</p>
+              <p className="mt-1 text-sm font-bold">{nearest ? dateText(nearest) : '—'}</p>
+              {nearest ? <p className={`text-xs ${daysLeft(nearest) <= 14 ? 'font-bold text-danger' : 'text-muted'}`}>{daysLeft(nearest) > 0 ? `باقي ${daysLeft(nearest).toLocaleString('ar-SY')} يوم` : 'انتهى'}</p> : null}
             </div>
             <div className="rounded-card border border-line p-4">
               <p className="text-xs font-bold text-muted">رصيد Wee AI</p>
@@ -434,8 +462,28 @@ const BillingSection: React.FC<{ account: MyAccountData | null | undefined }> = 
           </div>
 
           <div>
-            <h3 className="mb-1 text-sm font-bold">قيد الفحص</h3>
-            <p className="text-sm text-muted">لما تدفع بالمكتب أو بتحويل، الدفعة بتظهر هون أول ما يأكدها فريق Weelink، ومعها فاتورتها.</p>
+            <h3 className="mb-2 text-sm font-bold">فواتير مفتوحة وقيد الفحص</h3>
+            {account.orders.length === 0 ? (
+              <p className="text-sm text-muted">ما في فواتير مفتوحة. لما ترسل إشعار دفع، بيضل هون «قيد الفحص» لحد ما يأكده فريق Weelink، وبعدها بيصير بالدفعات المؤكدة مع فاتورته.</p>
+            ) : (
+              <ul className="space-y-2">
+                {account.orders.map((o) => {
+                  const p = projects?.find((x) => x.key === o.project);
+                  const tone = o.status === 'attached' ? 'bg-[#fff4e6] text-[#7a3d00]' : o.status === 'rejected' ? 'bg-danger/10 text-danger' : 'bg-bg text-muted';
+                  return (
+                    <li key={o.id} className="rounded-card border border-line p-3 text-sm flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="font-bold">{p?.name || o.siteName || o.project}</span>
+                      <span className="text-muted">{o.planName} · {o.period === 'yearly' ? 'سنوي' : 'شهري'} · <span className="tabular-nums">{formatPounds(o.total)}</span></span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${tone}`}>{o.status === 'attached' ? 'قيد الفحص' : o.status === 'rejected' ? 'مرفوض' : 'غير مدفوع'}</span>
+                      {o.status === 'attached' && <span className="text-xs text-muted">{payWayName(o.way)}{o.transferNo ? ` · ${o.transferNo}` : ''}</span>}
+                      {o.status === 'rejected' && o.rejectReason && <span className="w-full text-xs text-danger">السبب: {o.rejectReason}</span>}
+                      {o.deleteAt > 0 && o.status !== 'attached' && <span className="w-full text-xs text-danger">إذا ما اندفعت لحد {dateText(o.deleteAt)} بينحذف المشروع.</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <p className="mt-2 text-xs text-muted">لترسل إشعار أو تدفع: «مشاريعي» ← «ادفع».</p>
           </div>
         </div>
       )}

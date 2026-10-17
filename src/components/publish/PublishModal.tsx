@@ -21,6 +21,9 @@ import { categorySourceOf, withCategoryKeywords } from '../../utils/businessCate
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { SiteView } from './SiteView';
+import { auth } from '../../services/firebase';
+import { Checkout } from '../billing/Checkout';
+import { needsPayment, readGate, type Gate } from '../../services/billing';
 
 interface PublishModalProps {
   open: boolean;
@@ -497,6 +500,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
   const [preview, setPreview] = useState<Device | null>(null);
   // The logo picked before the first «نشر»; once published it is saved right away.
   const [draftIcon, setDraftIcon] = useState('');
+  // Paying before publishing (server/billing.ts): null while it is checked.
+  const [gate, setGate] = useState<Gate | null>(null);
 
   // What «نشر» publishes. A restaurant's site is already live (restaurants/{restaurantId}); it only gets a name.
   const content = useMemo(
@@ -509,6 +514,12 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
     () => (open && kindOf(project) !== 'restaurant' ? { project, pages, elements: elements.map(withLocalGraphics), data } : null),
     [open, project, pages, elements, data]
   );
+
+  useEffect(() => {
+    if (!open) return;
+    setGate(null);
+    readGate(owner, project).then(setGate).catch(() => setGate({ enforce: false, test: false, paidUntil: 0 }));
+  }, [open, owner, project]);
 
   useEffect(() => {
     if (!open) return;
@@ -568,6 +579,9 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
 
   if (!open) return null;
 
+  const me = auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser : null;
+  // A paid project is published only while its paid period runs (or it is a test account).
+  const mustPay = !!gate && needsPayment(owner, project) && gate.enforce && !gate.test && !(gate.paidUntil > Date.now());
   const nextSeo: SiteSeo = { ...seo, keywords: normalizeKeywords(keywords) };
   const seoChanged = !!published && !sameSeo({ ...nextSeo, title: nextSeo.title.trim(), description: nextSeo.description.trim() }, published.seo);
 
@@ -690,6 +704,18 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
               )}
               {renaming && <div className="text-xs font-bold text-[#a34a00] bg-[#fff4e6] rounded-xl px-3 py-2">تغيير الاسم يغيّر الرابط، والرابط القديم يتوقف عن العمل.</div>}
               {error && <p className="text-xs font-bold text-[#c2410c]">{error}</p>}
+              {!gate ? (
+                <div className="py-3 flex justify-center"><Loader2 size={20} className="animate-spin text-brand" /></div>
+              ) : mustPay ? (
+                <div className="rounded-2xl border border-brand/30 bg-brand/[0.03] p-4 space-y-3">
+                  <div className="text-sm font-black text-ink">{gate && gate.paidUntil ? 'انتهت صلاحية مشروعك، جدّدها لتنشر' : 'الفاتورة قبل النشر'}</div>
+                  {me && me.uid === owner ? (
+                    <Checkout user={me} owner={owner} project={project} siteName={!problem && state !== 'taken' ? name : ''} paidUntil={gate?.paidUntil} />
+                  ) : (
+                    <p className="text-sm text-neutral-600">صاحب الحساب هو يلي بيدفع فاتورة المشروع من حسابه، وبعدها بتقدر تنشره.</p>
+                  )}
+                </div>
+              ) : (
               <button
                 type="button"
                 onClick={publish}
@@ -699,6 +725,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                 {busy ? <Loader2 size={18} className="animate-spin" /> : <Globe size={18} />}
                 {!published ? 'نشر الصفحة' : renaming ? 'نشر بالاسم الجديد' : kindOf(project) === 'restaurant' ? 'حفظ' : changed ? 'تحديث النشر' : seoChanged ? 'حفظ بيانات البحث' : 'تحديث النشر'}
               </button>
+              )}
               {kindOf(project) === 'restaurant' && <p className="text-xs text-neutral-500">موقع المطعم يتحدّث تلقائياً مع كل تعديل؛ النشر هنا يعطيه اسمه ورابطه.</p>}
             </section>
 

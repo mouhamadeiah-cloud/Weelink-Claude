@@ -2,7 +2,8 @@
 //   name     the Firebase user's displayName
 //   phone    designs/{uid}.profile.phone (and the Wee AI answers' contact phone when they exist, so new
 //            projects' questions start from it)
-//   subscription, AI balance, payments   /api/admin { action: 'my-account' }, read on the server
+//   subscription, AI balance, payments, each project's paid period and open invoices
+//            /api/admin { action: 'my-account' }, read on the server
 import { useEffect, useState } from 'react';
 import {
   EmailAuthProvider, GoogleAuthProvider, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup,
@@ -12,6 +13,7 @@ import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, onSnap
 import { auth, db } from './firebase';
 import { subscribeMyOrders } from './designOrders';
 import { isFirstOfKind, kindOf, restaurantIdOf } from '../utils/projectKeys';
+import type { BillingOrder, ProjectPeriod } from './billing';
 
 export const usesPassword = (user: User) => user.providerData.some((p) => p.providerId === 'password');
 
@@ -71,6 +73,7 @@ export interface MyPayment {
   coversFrom: number;
   coversTo: number;
   invoiceUrl: string;
+  project?: string;
 }
 
 export interface MyAccountData {
@@ -78,6 +81,12 @@ export interface MyAccountData {
   subscription: { plan: string; planName: string; period: 'monthly' | 'yearly'; endsAt: number; freezeAt: number; trial: boolean } | null;
   tokens: { balance: number; used: number };
   payments: MyPayment[];
+  // Paying before publishing (server/billing.ts): each project's paid period and the open invoices.
+  projects: Record<string, ProjectPeriod>;
+  orders: BillingOrder[];
+  test: boolean;
+  enforce: boolean;
+  paymentInfo: string;
 }
 
 export const fetchMyAccount = async (user: User): Promise<MyAccountData> => {
@@ -87,7 +96,8 @@ export const fetchMyAccount = async (user: User): Promise<MyAccountData> => {
     body: JSON.stringify({ action: 'my-account' }),
   });
   if (!res.ok) throw new Error(`http_${res.status}`);
-  return res.json();
+  const data = await res.json();
+  return { projects: {}, orders: [], test: false, enforce: false, paymentInfo: '', ...data };
 };
 
 // ---------- The bell ----------

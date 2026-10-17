@@ -34,6 +34,8 @@ interface PublishModalProps {
   elements: CanvasElement[];
   data: any; // the project's public data (see publicData.ts)
   suggestedName: string;
+  // The project's items (dishes, products, cars) and active devices, for the package the invoice offers.
+  used?: { items: number; devices: number };
   onPublishedChange: (name: string | null) => void;
 }
 
@@ -46,7 +48,7 @@ const domainErrorText = (e: string) =>
     : e === 'bad_domain' ? 'اكتب الدومين بشكل صحيح، مثل alnour.com.'
     : e === 'domain_taken' ? 'هذا الدومين مربوط بصفحة أخرى على Weelink.'
     : e === 'not_published' ? 'انشر صفحتك أولاً ثم اربط الدومين.'
-    : e === 'vercel_refused' ? 'رُفض الدومين. تأكد أنه صحيح وأنه ليس مستعملاً في موقع آخر.'
+    : e === 'cloudflare_refused' ? 'رُفض الدومين. تأكد أنه صحيح وأنه ليس مستعملاً في موقع آخر.'
     : e === 'forbidden' ? 'فقط صاحب الصفحة يستطيع ربط دومين.'
     : 'تعذر الاتصال. حاول مرة أخرى.';
 
@@ -162,6 +164,11 @@ const ConnectDomain: React.FC<{ owner: string; project: ProjectKey; site: Publis
                   </div>
                 ))}
               </div>
+              {current.name.split('.').length === 2 && (
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  إذا لم تقبل شركة الدومين سجل CNAME على @، اختر بدلاً منه ALIAS أو ANAME بنفس القيمة، أو حوّل الدومين إلى www من إعدادات الشركة.
+                </p>
+              )}
               {current.message && <p className="text-xs text-neutral-500">{current.message}</p>}
             </>
           )}
@@ -253,7 +260,7 @@ const BuyDomain: React.FC<{ owner: string; project: ProjectKey; suggested: strin
         </div>
         {quote && (
           <p className={`text-xs font-bold mt-1.5 ${quote.available ? 'text-[#1d6b34]' : 'text-[#c2410c]'}`}>
-            {quote.available ? `متاح${quote.price !== null ? ` · ${quote.price}$ للسنة` : ''}` : 'غير متاح، جرّب اسماً آخر.'}
+            {quote.available ? `متاح${quote.price !== null ? ` · ${quote.price}$ للسنة` : '. أرسل الطلب وسنؤكد لك السعر.'}` : 'غير متاح، جرّب اسماً آخر.'}
           </p>
         )}
         {note && <p className="text-xs text-neutral-500 mt-1.5">{note}</p>}
@@ -487,7 +494,7 @@ const SeoFields: React.FC<{ seo: SiteSeo; keywords: string; onSeo: (s: SiteSeo) 
 const sameSeo = (a?: SiteSeo, b?: SiteSeo) =>
   (a?.title || '') === (b?.title || '') && (a?.description || '') === (b?.description || '') && (a?.keywords || []).join(',') === (b?.keywords || []).join(',');
 
-export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange }) => {
+export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange, used }) => {
   const [site, setSite] = useState<PublishedSite | null | 'loading'>('loading');
   const [name, setName] = useState('');
   const [state, setState] = useState<NameState | 'checking' | ''>('');
@@ -710,7 +717,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                 <div className="rounded-2xl border border-brand/30 bg-brand/[0.03] p-4 space-y-3">
                   <div className="text-sm font-black text-ink">{gate && gate.paidUntil ? 'انتهت صلاحية مشروعك، جدّدها لتنشر' : 'الفاتورة قبل النشر'}</div>
                   {me && me.uid === owner ? (
-                    <Checkout user={me} owner={owner} project={project} siteName={!problem && state !== 'taken' ? name : ''} paidUntil={gate?.paidUntil} />
+                    <Checkout user={me} owner={owner} project={project} siteName={!problem && state !== 'taken' ? name : ''} paidUntil={gate?.paidUntil} used={used} />
                   ) : (
                     <p className="text-sm text-neutral-600">صاحب الحساب هو يلي بيدفع فاتورة المشروع من حسابه، وبعدها بتقدر تنشره.</p>
                   )}

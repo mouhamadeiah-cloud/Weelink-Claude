@@ -109,14 +109,14 @@ const failureMessage = (status: number, data: { reason?: string; detail?: string
   return `${lead} جرّب مرة ثانية بعد شوي. (السبب للدعم: ${reason}${detail})`;
 };
 
-export const requestPagePlan = async (kind: BuildKind, profile: Record<string, string>, assets: ReturnType<typeof pageAssets>): Promise<PlanResult> => {
+export const requestPagePlan = async (kind: BuildKind, profile: Record<string, string>, assets: ReturnType<typeof pageAssets>, project?: string): Promise<PlanResult> => {
   const user = auth.currentUser;
   if (!user) return { ok: false, message: 'سجّل الدخول أولاً حتى يبني Wee AI صفحتك.' };
   try {
     const res = await fetch('/api/build-page', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
-      body: JSON.stringify({ kind, profile, assets }),
+      body: JSON.stringify({ kind, profile, assets, project }),
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && Array.isArray(data.plan?.sections)) {
@@ -126,6 +126,9 @@ export const requestPagePlan = async (kind: BuildKind, profile: Record<string, s
     }
     if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
     if (data.error === 'no_tokens') return { ok: false, message: 'انتهى رصيد Wee AI في حسابك. تواصل مع الإدارة لشحن رصيد جديد.' };
+    if (data.error === 'build_limit') {
+      return { ok: false, message: data.perDay ? `خلصت مرات «ابن صفحتي» لليوم (${data.limit} حسب باقتك). جرّب بكرا، أو رقّي لـ Pro.` : '«ابن صفحتي» بالصفحة المجانية مرة وحدة. رقّي لـ Pro لتبني أكتر.' };
+    }
     if (data.error === 'no_profile') return { ok: false, message: 'اكتب وصف عملك أو اختر تصنيفه بالأسئلة أولاً.' };
     if (res.status === 401) return { ok: false, message: 'انتهت جلسة الدخول. سجّل الدخول من جديد وجرّب مرة ثانية.' };
     return { ok: false, message: failureMessage(res.status, data) };

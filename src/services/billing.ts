@@ -5,6 +5,7 @@ import { db } from './firebase';
 import { kindOf } from '../utils/projectKeys';
 import { PLANS, readPlan } from '../data/plans';
 import { invoiceFor, type Invoice, type InvoiceItem, type Period } from '../utils/invoice';
+import { UNLIMITED, limitsOf, type PlanLimits } from '../utils/planLimits';
 
 export { invoiceFor };
 export type { Invoice, InvoiceItem, Period };
@@ -51,7 +52,7 @@ export const chosenPlanOf = (owner: string, project: string) => {
 /** A page is free unless Pro was picked; the other kinds are paid. */
 export const needsPayment = (owner: string, project: string) => kindOf(project) !== 'page' || readPlan(owner, 'page') === 'page-pro';
 
-export interface Gate { enforce: boolean; test: boolean; paidUntil: number }
+export interface Gate { enforce: boolean; test: boolean; paidUntil: number; plan?: string; devices?: number }
 
 /** What «نشر» and the published page check: whether paying is on, a test account, and the paid period. */
 export const readGate = async (owner: string, project: string): Promise<Gate> => {
@@ -60,11 +61,24 @@ export const readGate = async (owner: string, project: string): Promise<Gate> =>
     getDoc(doc(db, 'testAccounts', owner)).catch(() => null),
     getDoc(doc(db, 'projectAccess', `${owner}__${project}`)).catch(() => null),
   ]);
-  return { enforce: settings?.data()?.enforce === true, test: !!test?.exists(), paidUntil: Number(access?.data()?.paidUntil) || 0 };
+  const a = access?.data();
+  return { enforce: settings?.data()?.enforce === true, test: !!test?.exists(), paidUntil: Number(a?.paidUntil) || 0, plan: String(a?.plan || ''), devices: Number(a?.devices) || 0 };
 };
 
 /** The page is shown: paying is off, a test account, its paid period runs, or a page that was never Pro. */
 export const gateOpen = (g: Gate, project: string) => !g.enforce || g.test || g.paidUntil > Date.now() || (kindOf(project) === 'page' && !g.paidUntil);
+
+/**
+ * What the open project may hold: nothing is limited while paying is off or for a test account.
+ * A running paid period uses the package paid for (with its extra devices); before paying, the package
+ * picked on the start page (a page is free unless Pro was picked).
+ */
+export const projectLimits = (g: Gate | null, owner: string, project: string): PlanLimits => {
+  if (!g || !g.enforce || g.test) return UNLIMITED;
+  if (g.paidUntil > Date.now() && g.plan) return limitsOf(g.plan, g.devices);
+  if (kindOf(project) === 'page') return limitsOf(readPlan(owner, 'page') === 'page-pro' ? 'page-pro' : 'page-free');
+  return limitsOf(chosenPlanOf(owner, project));
+};
 
 const call = async <T,>(user: User, body: Record<string, unknown>): Promise<T> => {
   const res = await fetch('/api/admin', {

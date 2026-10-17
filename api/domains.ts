@@ -1,21 +1,25 @@
-// Vercel serverless function: a customer's own domain for their published page, and domain prices.
+// A customer's own domain for their published page, and whether a domain is free to buy.
 //
 //   POST /api/domains  with  Authorization: Bearer <Firebase ID token>
-//     { action: 'connect', owner, project, domain }  adds the domain to Weelink's Vercel project and
-//                                                    returns the DNS records the customer must set
-//     { action: 'check', owner, project }            whether the domain points to Vercel yet
+//     { action: 'connect', owner, project, domain }  adds the domain to Weelink's Cloudflare zone as a
+//                                                    custom hostname (Cloudflare for SaaS) and returns
+//                                                    the DNS records the customer must set
+//     { action: 'check', owner, project }            whether the domain points to Weelink yet
 //     { action: 'remove', owner, project }           takes the domain off the page
-//     { action: 'price', domain }                    whether it can be bought, and its price
+//     { action: 'price', domain }                    whether it can be bought (RDAP); no price, the
+//                                                    office confirms it
 //
 // The caller must be the page's owner or one of its management members. The domain is mapped to the
 // page in siteDomains/{domain} (read by the visitors' browser) and kept in the published site's
-// customDomain. Buying a domain is not automatic yet: the page saves a request (domainOrders).
+// customDomain. A domain with no subdomain also gets www.<domain>, which the browser maps to the same page.
+// Buying a domain is not automatic: the page saves a request (domainOrders) and the office buys it.
 //
 // Needs, besides FIREBASE_SERVICE_ACCOUNT:
-//   VERCEL_TOKEN        a Vercel access token (Account settings → Tokens), scoped to the team
-//   VERCEL_PROJECT_ID   the project that serves the published pages (prj_...)
-//   VERCEL_TEAM_ID      the team (team_...), when the project belongs to one
-// While any is missing, every action answers 503 { error: 'not_configured' }.
+//   CF_API_TOKEN      a Cloudflare API token with Zone → SSL and Certificates → Edit on the zone
+//   CF_ZONE_ID        the zone of testweelink.de (Overview page, right column)
+//   CF_CNAME_TARGET   the address customers point their CNAME to (default customers.testweelink.de),
+//                     the zone's Custom Hostnames fallback origin
+// While a Cloudflare one is missing, connect/check/remove answer 503 { error: 'not_configured' }.
 
 import { cert, getApps, initializeApp, getAuth, getFirestore } from '../server/firebase.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
@@ -44,34 +48,71 @@ const firebaseAdmin = () => {
 const validDomain = (d: unknown): d is string =>
   typeof d === 'string' && /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(d);
 
-const vercel = async (path: string, init: RequestInit = {}) => {
-  const team = process.env.VERCEL_TEAM_ID;
-  const url = `https://api.vercel.com${path}${team ? `${path.includes('?') ? '&' : '?'}teamId=${encodeURIComponent(team)}` : ''}`;
-  const res = await fetch(url, {
+const target = () => process.env.CF_CNAME_TARGET || 'customers.testweelink.de';
+const configured = () => !!(process.env.CF_API_TOKEN && process.env.CF_ZONE_ID);
+
+const cloudflare = async (path: string, init: RequestInit = {}) => {
+  const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${process.env.CF_ZONE_ID}/custom_hostnames${path}`, {
     ...init,
-    headers: { Authorization: `Bearer ${process.env.VERCEL_TOKEN}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
+    headers: { Authorization: `Bearer ${process.env.CF_API_TOKEN}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
   });
   const data: any = await res.json().catch(() => ({}));
-  return { ok: res.ok, status: res.status, data };
+  return { ok: res.ok && data?.success !== false, status: res.status, data };
 };
 
+type Hostname = { id: string; hostname: string; status?: string; ssl?: { status?: string }; ownership_verification?: { type?: string; name?: string; value?: string } };
+
+const findHostname = async (hostname: string): Promise<Hostname | null> => {
+  const r = await cloudflare(`?hostname=${encodeURIComponent(hostname)}`);
+  return (r.data?.result || []).find((h: Hostname) => h.hostname === hostname) || null;
+};
+
+// Adds the hostname, or finds it when it was added before.
+const addHostname = async (hostname: string): Promise<Hostname | { error: string }> => {
+  const added = await cloudflare('', { method: 'POST', body: JSON.stringify({ hostname, ssl: { method: 'http', type: 'dv' } }) });
+  if (added.ok) return added.data.result as Hostname;
+  const found = await findHostname(hostname);
+  if (found) return found;
+  console.error('Cloudflare refused the domain:', added.status, JSON.stringify(added.data?.errors || []));
+  return { error: String(added.data?.errors?.[0]?.message || '') };
+};
+
+const removeHostname = async (hostname: string) => {
+  const found = await findHostname(hostname);
+  if (found) await cloudflare(`/${found.id}`, { method: 'DELETE' });
+};
+
+const isActive = (h: Hostname | null) => !!h && h.status === 'active' && h.ssl?.status === 'active';
+
 // The DNS records the customer sets at the company they bought the domain from.
-const recordsFor = (domain: string, verification: any[]) => {
+const recordsFor = (domain: string, hosts: Hostname[]) => {
   const apex = domain.split('.').length === 2;
   const records = apex
-    ? [{ type: 'A', name: '@', value: '76.76.21.21' }, { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com' }]
-    : [{ type: 'CNAME', name: domain.split('.')[0], value: 'cname.vercel-dns.com' }];
-  // A domain already used on another Vercel account needs a TXT record to prove it is the customer's.
-  (verification || []).forEach((v) => records.push({ type: String(v.type), name: String(v.domain), value: String(v.value) }));
+    ? [{ type: 'CNAME', name: '@', value: target() }, { type: 'CNAME', name: 'www', value: target() }]
+    : [{ type: 'CNAME', name: domain.split('.')[0], value: target() }];
+  // Proves the domain is the customer's before the CNAME reaches Cloudflare.
+  hosts.forEach((h) => {
+    const v = h.ownership_verification;
+    if (v?.name && v.value) records.push({ type: String(v.type || 'txt').toUpperCase(), name: v.name, value: v.value });
+  });
   return records;
+};
+
+const hostsOf = (domain: string) => (domain.split('.').length === 2 ? [domain, `www.${domain}`] : [domain]);
+
+// Whether nobody has registered the domain yet: RDAP answers 404 for a free one.
+const isFree = async (domain: string): Promise<boolean | null> => {
+  const res = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`, { headers: { Accept: 'application/rdap+json' } }).catch(() => null);
+  if (!res) return null;
+  if (res.status === 404) return true;
+  return res.ok ? false : null;
 };
 
 export default {
   async fetch(request: Request): Promise<Response> {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
     const admin = firebaseAdmin();
-    const project = process.env.VERCEL_PROJECT_ID;
-    if (!admin || !process.env.VERCEL_TOKEN || !project) return json({ error: 'not_configured' }, 503);
+    if (!admin) return json({ error: 'not_configured' }, 503);
 
     const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     const user = token ? await admin.auth.verifyIdToken(token).catch(() => null) : null;
@@ -81,18 +122,9 @@ export default {
     if (body.action === 'price') {
       const domain = typeof body.domain === 'string' ? body.domain.toLowerCase() : '';
       if (!validDomain(domain)) return json({ error: 'bad_domain' }, 400);
-      const [avail, price] = await Promise.all([
-        vercel(`/v1/registrar/domains/${encodeURIComponent(domain)}/availability`),
-        vercel(`/v1/registrar/domains/${encodeURIComponent(domain)}/price`),
-      ]);
-      if (!avail.ok) return json({ error: 'check_failed' }, 502);
-      const p = price.data || {};
-      return json({
-        available: avail.data?.available === true,
-        price: typeof p.purchasePrice === 'number' ? p.purchasePrice : typeof p.price === 'number' ? p.price : null,
-        years: typeof p.years === 'number' ? p.years : typeof p.period === 'number' ? p.period : 1,
-        currency: 'USD',
-      });
+      const available = await isFree(domain);
+      if (available === null) return json({ error: 'check_failed' }, 502);
+      return json({ available, price: null, years: 1, currency: 'USD' });
     }
 
     // The page's owner or a management member.
@@ -108,6 +140,7 @@ export default {
     const siteRef = admin.db.doc(`publishedSites/${owner}__${kind}`);
     const site = (await siteRef.get()).data();
     if (!site?.name) return json({ error: 'not_published' }, 409);
+    if (!configured()) return json({ error: 'not_configured' }, 503);
     const current = site.customDomain?.name as string | undefined;
 
     if (body.action === 'connect') {
@@ -115,17 +148,13 @@ export default {
       if (!validDomain(domain)) return json({ error: 'bad_domain' }, 400);
       const used = (await admin.db.doc(`siteDomains/${domain}`).get()).data();
       if (used && used.name !== site.name) return json({ error: 'domain_taken' }, 409);
-      const added = await vercel(`/v10/projects/${encodeURIComponent(project)}/domains`, { method: 'POST', body: JSON.stringify({ name: domain }) });
-      // Already on the project (added before) is fine.
-      if (!added.ok && added.data?.error?.code !== 'domain_already_in_use_by_project' && added.status !== 409) {
-        console.error('Vercel refused the domain:', added.status, added.data?.error?.message);
-        return json({ error: 'vercel_refused', detail: String(added.data?.error?.message || '') }, 502);
+      const hosts: Hostname[] = [];
+      for (const h of hostsOf(domain)) {
+        const added = await addHostname(h);
+        if ('error' in added) return json({ error: 'cloudflare_refused', detail: added.error }, 502);
+        hosts.push(added);
       }
-      if (domain.split('.').length === 2) {
-        // www.<domain> sends visitors to the domain itself.
-        await vercel(`/v10/projects/${encodeURIComponent(project)}/domains`, { method: 'POST', body: JSON.stringify({ name: `www.${domain}`, redirect: domain, redirectStatusCode: 308 }) });
-      }
-      const state = { name: domain, status: 'pending', records: recordsFor(domain, added.data?.verification), at: new Date().toISOString() };
+      const state = { name: domain, status: 'pending', records: recordsFor(domain, hosts), at: new Date().toISOString() };
       await admin.db.doc(`siteDomains/${domain}`).set({ name: site.name, owner, project: kind });
       if (current && current !== domain) await admin.db.doc(`siteDomains/${current}`).delete().catch(() => {});
       await siteRef.update({ customDomain: state });
@@ -134,12 +163,10 @@ export default {
 
     if (body.action === 'check') {
       if (!current) return json({ error: 'no_domain' }, 409);
-      const [config, info] = await Promise.all([
-        vercel(`/v6/domains/${encodeURIComponent(current)}/config`),
-        vercel(`/v9/projects/${encodeURIComponent(project)}/domains/${encodeURIComponent(current)}`),
-      ]);
-      if (info.data?.verified === false) await vercel(`/v9/projects/${encodeURIComponent(project)}/domains/${encodeURIComponent(current)}/verify`, { method: 'POST' });
-      const active = config.ok && config.data?.misconfigured === false && info.data?.verified !== false;
+      const found = await findHostname(current);
+      // Asks Cloudflare to look at the records again instead of waiting for its next round.
+      if (found && !isActive(found)) await cloudflare(`/${found.id}`, { method: 'PATCH', body: JSON.stringify({ ssl: { method: 'http', type: 'dv' } }) });
+      const active = isActive(found);
       const state = {
         ...site.customDomain,
         status: active ? 'active' : 'pending',
@@ -152,8 +179,7 @@ export default {
 
     if (body.action === 'remove') {
       if (current) {
-        await vercel(`/v9/projects/${encodeURIComponent(project)}/domains/${encodeURIComponent(current)}`, { method: 'DELETE' });
-        if (current.split('.').length === 2) await vercel(`/v9/projects/${encodeURIComponent(project)}/domains/www.${encodeURIComponent(current)}`, { method: 'DELETE' });
+        for (const h of hostsOf(current)) await removeHostname(h);
         await admin.db.doc(`siteDomains/${current}`).delete().catch(() => {});
       }
       await siteRef.update({ customDomain: null });

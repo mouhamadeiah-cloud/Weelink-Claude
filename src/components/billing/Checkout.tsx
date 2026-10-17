@@ -13,6 +13,7 @@ import {
   type BillingOrder, type Period,
 } from '../../services/billing';
 import { fetchMyAccount } from '../../services/myAccount';
+import { ITEM_WORD, limitsOf, smallestFitting } from '../../utils/planLimits';
 
 interface CheckoutProps {
   user: User;
@@ -22,14 +23,22 @@ interface CheckoutProps {
   // Set when the project already has a paid period (a renewal).
   paidUntil?: number;
   onOrder?: (order: BillingOrder) => void;
+  // What the project holds now: a package too small for its items can't be picked, and a restaurant
+  // pays for the active devices its package doesn't include (src/utils/planLimits.ts).
+  used?: { items: number; devices: number };
 }
 
 const dateText = (t: number) => (t ? new Date(t).toLocaleDateString('ar-SY', { year: 'numeric', month: 'long', day: 'numeric' }) : '—');
 const inputCls = 'h-11 w-full rounded-ctl border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-brand';
 
-export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteName, paidUntil, onOrder }) => {
+export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteName, paidUntil, onOrder, used }) => {
   const plans = useMemo(() => paidPlansOf(project), [project]);
-  const [plan, setPlan] = useState(() => chosenPlanOf(owner, project));
+  const items = used?.items || 0;
+  const fits = (id: string) => limitsOf(id).items >= items;
+  const [plan, setPlan] = useState(() => {
+    const picked = chosenPlanOf(owner, project);
+    return fits(picked) ? picked : smallestFitting(plans.map((p) => p.id), items) || picked;
+  });
   const [period, setPeriod] = useState<Period>('monthly');
   const [devices, setDevices] = useState(0);
   const [way, setWay] = useState('syriatel');
@@ -64,7 +73,10 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
     };
   }, [user, project]);
 
-  const invoice = invoiceFor(project, plan, period, devices);
+  // The active devices the package doesn't include are paid as extras.
+  const needDevices = Math.max(0, (used?.devices || 0) - limitsOf(plan).devices);
+  useEffect(() => { if (devices < needDevices) setDevices(needDevices); }, [devices, needDevices]);
+  const invoice = invoiceFor(project, plan, period, Math.max(devices, needDevices));
   const restaurant = kindOf(project) === 'restaurant';
   const current = plans.find((p) => p.id === plan);
 
@@ -153,8 +165,9 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
           {plans.map((p) => {
             const on = p.id === plan;
             const bigger = current && p.monthly > current.monthly;
+            const small = !fits(p.id);
             return (
-              <button key={p.id} type="button" onClick={() => setPlan(p.id)} className={`rounded-card border p-3 text-right transition ${on ? 'border-brand bg-brand/5 ring-2 ring-brand/15' : 'border-line bg-surface hover:border-brand/40'}`}>
+              <button key={p.id} type="button" disabled={small} onClick={() => setPlan(p.id)} className={`rounded-card border p-3 text-right transition disabled:cursor-not-allowed disabled:opacity-50 ${on ? 'border-brand bg-brand/5 ring-2 ring-brand/15' : 'border-line bg-surface hover:border-brand/40'}`}>
                 <span className="flex items-center justify-between gap-2">
                   <span className="text-sm font-black">{p.name}</span>
                   {on ? <CheckCircle2 size={16} className="text-brand" /> : bigger ? <span className="text-[11px] font-bold text-brand">ترقية</span> : null}
@@ -163,6 +176,7 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
                 <ul className="mt-2 space-y-0.5 text-[11px] text-muted leading-snug">
                   {p.features.slice(0, 4).map((f) => <li key={f}>• {f}</li>)}
                 </ul>
+                {small && <span className="mt-1.5 block text-[11px] font-bold text-danger">عندك {items} {ITEM_WORD[kindOf(project)]}، وهي بتسمح بـ {limitsOf(p.id).items}</span>}
               </button>
             );
           })}
@@ -174,9 +188,10 @@ export const Checkout: React.FC<CheckoutProps> = ({ user, owner, project, siteNa
           <div>
             <p className="text-sm font-bold">أجهزة إضافية</p>
             <p className="text-xs text-muted">كاشير، مطبخ، بار أو جرسون: {formatPounds(EXTRA_DEVICE)} بالشهر للجهاز</p>
+            {needDevices > 0 && <p className="text-xs font-bold text-muted">عندك {used?.devices} أجهزة شغّالة، والباقة فيها {limitsOf(plan).devices}</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" aria-label="أقل" disabled={devices <= 0} onClick={() => setDevices(devices - 1)} className="h-8 w-8 rounded-full border border-line flex items-center justify-center disabled:opacity-40"><Minus size={14} /></button>
+            <button type="button" aria-label="أقل" disabled={devices <= needDevices} onClick={() => setDevices(devices - 1)} className="h-8 w-8 rounded-full border border-line flex items-center justify-center disabled:opacity-40"><Minus size={14} /></button>
             <span className="w-6 text-center text-sm font-black tabular-nums">{devices}</span>
             <button type="button" aria-label="أكتر" disabled={devices >= MAX_DEVICES} onClick={() => setDevices(devices + 1)} className="h-8 w-8 rounded-full border border-line flex items-center justify-center disabled:opacity-40"><Plus size={14} /></button>
           </div>

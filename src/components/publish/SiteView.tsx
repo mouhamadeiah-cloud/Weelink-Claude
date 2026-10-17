@@ -8,7 +8,7 @@ import { ShopDataContext, ShopUpdateContext } from '../shop/store/ShopDataContex
 import { CarDataContext } from '../cars/store/CarDataContext';
 import { carsFromPublic, shopFromPublic } from './publicData';
 import type { CanvasElement, Page } from '../../types';
-import type { ProjectType } from '../shop/shopTypes';
+import { kindOf, type ProjectKey } from '../../utils/projectKeys';
 
 const noop = () => {};
 // The store's checkout records the order in the admin data; a published copy has none to write to,
@@ -16,7 +16,7 @@ const noop = () => {};
 const keepNothing = () => {};
 
 export const SiteView: React.FC<{
-  project: ProjectType;
+  project: ProjectKey;
   pages: Page[];
   elements: CanvasElement[];
   data: any;
@@ -26,8 +26,8 @@ export const SiteView: React.FC<{
   onContactClick?: (url: string) => void;
 }> = ({ project, pages, elements, data, phone, pageId, onSelectPage, onContactClick }) => {
   const view = useMemo(() => (phone ? withPhoneLayouts(pages, elements) : { pages, elements }), [pages, elements, phone]);
-  const shop = useMemo(() => (project === 'shop' ? shopFromPublic(data) : null), [project, data]);
-  const cars = useMemo(() => (project === 'cars' ? carsFromPublic(data) : null), [project, data]);
+  const shop = useMemo(() => (kindOf(project) === 'shop' ? shopFromPublic(data) : null), [project, data]);
+  const cars = useMemo(() => (kindOf(project) === 'cars' ? carsFromPublic(data) : null), [project, data]);
   const page = view.pages.find((p) => p.id === pageId) || view.pages[0];
   if (!page) return null;
 

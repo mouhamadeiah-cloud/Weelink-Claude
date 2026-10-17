@@ -6,11 +6,11 @@
 import { createContext, useEffect, useState } from 'react';
 import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import type { ProjectType } from '../components/shop/shopTypes';
+import type { ProjectKey } from '../utils/projectKeys';
 
 export interface Rating {
   id: string;
-  project: ProjectType;
+  project: ProjectKey;
   stars: number;
   text: string;
   name: string;
@@ -37,10 +37,10 @@ const toSummary = (d: any): RatingSummary => {
   };
 };
 
-const watchSummary = (owner: string, project: ProjectType, onData: (s: RatingSummary) => void) =>
+const watchSummary = (owner: string, project: ProjectKey, onData: (s: RatingSummary) => void) =>
   onSnapshot(doc(db, 'ratingSummary', `${owner}_${project}`), (snap) => onData(toSummary(snap.data())), () => onData(EMPTY_SUMMARY));
 
-const watchRatings = (owner: string, project: ProjectType, onData: (rows: Rating[]) => void, onError: () => void) =>
+const watchRatings = (owner: string, project: ProjectKey, onData: (rows: Rating[]) => void, onError: () => void) =>
   onSnapshot(
     query(collection(db, 'ratings', owner, 'items'), where('project', '==', project)),
     (snap) => {
@@ -51,7 +51,7 @@ const watchRatings = (owner: string, project: ProjectType, onData: (rows: Rating
     onError
   );
 
-export const useRatingSummary = (owner?: string, project?: ProjectType) => {
+export const useRatingSummary = (owner?: string, project?: ProjectKey) => {
   const [summary, setSummary] = useState<RatingSummary>(EMPTY_SUMMARY);
   useEffect(() => {
     if (!owner || !project) return setSummary(EMPTY_SUMMARY);
@@ -60,7 +60,7 @@ export const useRatingSummary = (owner?: string, project?: ProjectType) => {
   return summary;
 };
 
-export const useRatings = (owner?: string, project?: ProjectType, on = true) => {
+export const useRatings = (owner?: string, project?: ProjectKey, on = true) => {
   const [rows, setRows] = useState<Rating[] | null | 'error'>(null);
   useEffect(() => {
     if (!owner || !project || !on) return;
@@ -86,7 +86,7 @@ const post = async (body: object, withToken = false) => {
   }
 };
 
-export const startRating = (r: { owner: string; project: ProjectType; pageName: string; stars: number; text: string; name: string; email: string }) =>
+export const startRating = (r: { owner: string; project: ProjectKey; pageName: string; stars: number; text: string; name: string; email: string }) =>
   post({ action: 'start', ...r }) as Promise<{ id?: string; error?: string; waitSeconds?: number }>;
 export const verifyRating = (id: string, code: string) => post({ action: 'verify', id, code }) as Promise<{ ok?: boolean; error?: string; attemptsLeft?: number }>;
 export const replyToRating = (owner: string, id: string, text: string) => post({ action: 'reply', owner, id, text }, true);

@@ -5,7 +5,7 @@ import React, { useContext, useState } from 'react';
 import { Flag, Loader2, MessageSquareReply, Plus, Star } from 'lucide-react';
 import { Rating, RatingsSlideContext, replyToRating, reportRating, useRatingSummary, useRatings } from '../../services/ratings';
 import { RatingItem, Stars } from '../ratings/RatingsUI';
-import type { ProjectType } from '../shop/shopTypes';
+import type { ProjectKey } from '../../utils/projectKeys';
 
 const fmt1 = (n: number) => n.toLocaleString('ar-SY', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -65,7 +65,7 @@ const RatingActions: React.FC<{ owner: string; r: Rating; reply: typeof replyToR
 
 interface RatingsSectionProps {
   owner: string;
-  project: ProjectType;
+  project: ProjectKey;
   pageName: string;
   // Where the ratings come from and go to (Firebase and /api/rating).
   reply?: typeof replyToRating;

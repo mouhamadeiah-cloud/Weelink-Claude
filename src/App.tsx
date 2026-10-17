@@ -33,15 +33,17 @@ import { DESIGN_KIND_LABEL, PAGE_MAX_SLIDES, type DesignKind } from './data/slid
 import { ExportSlideModal } from './components/designer/ExportSlideModal';
 import { HomePage } from './components/home/HomePage';
 import { LawPage } from './components/platform/LawPage';
-import { StartPage } from './components/onboarding/StartPage';
+import { StartPage, type MyProject } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
 import { readCatalogAnswer, sampleRestaurantAdmin, sampleShopAdmin } from './services/sampleItems';
 import { PublishModal } from './components/publish/PublishModal';
 import { publicDataFor } from './components/publish/publicData';
-import { readMySite } from './services/sites';
+import { readMySite, siteUrl, unpublishSite } from './services/sites';
 import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
 import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
+import { laterProjectFields, listProjects, projectDoc } from './services/projects';
+import { isFirstOfKind, kindOf, localPrefixOf, newProjectKey } from './utils/projectKeys';
 import { CarAdminPanel } from './components/cars/CarAdminPanel';
 import { CarDataContext, CarRequestContext } from './components/cars/store/CarDataContext';
 import { submitRequest, RequestInput } from './components/cars/carMoney';
@@ -272,6 +274,9 @@ export default function App() {
   // Open project: the free page or the Online Shop (Weelink / Shops). The user
   // picks one on the project chooser after logging in.
   const [project, setProject] = useState<ProjectType>('page');
+  // The open project's key (src/utils/projectKeys.ts): its kind for the account's first project of
+  // that kind, else the kind and its own id. `project` above stays the kind, which the editor follows.
+  const [projectKey, setProjectKey] = useState<string>('page');
   const [isProjectChosen, setIsProjectChosen] = useState<boolean>(false);
   const [projectLoading, setProjectLoading] = useState<ProjectType | null>(null);
   const [hasShop, setHasShop] = useState<boolean>(false);
@@ -335,8 +340,8 @@ export default function App() {
   // view of their page saves real bookings; the editor shows the calendar as a preview.
   const bookingBrand = pages[0]?.navbar?.brandName || '';
   const bookingPage = useMemo<BookingPage | null>(
-    () => (ownerUid ? { owner: ownerUid, project, pageName: bookingBrand, live: isOwnerView } : null),
-    [ownerUid, project, bookingBrand, isOwnerView]
+    () => (ownerUid ? { owner: ownerUid, project: projectKey, pageName: bookingBrand, live: isOwnerView } : null),
+    [ownerUid, projectKey, bookingBrand, isOwnerView]
   );
   // Whether the signed-in account is a designer (designers/{uid}), and the name the gallery shows.
   useEffect(() => {
@@ -357,13 +362,40 @@ export default function App() {
     setPublishedName(null);
     if (!isProjectChosen || !currentUser || currentUser.isAnonymous) return;
     let alive = true;
-    readMySite(ownerUid, project)
+    readMySite(ownerUid, projectKey)
       .then((s) => alive && setPublishedName(s?.name || null))
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [ownerUid, project, isProjectChosen, currentUser]);
+  }, [ownerUid, projectKey, isProjectChosen, currentUser]);
+  // «مشاريعي» on the start page: the account's projects and whether each is published.
+  const [myProjects, setMyProjects] = useState<MyProject[] | null>(null);
+  const [myProjectsTick, setMyProjectsTick] = useState(0);
+  const startShowing = isStartActive || (!isProjectChosen && !isAuthActive);
+  useEffect(() => {
+    if (!startShowing || !currentUser || currentUser.isAnonymous) return;
+    let alive = true;
+    const uid = activeUserUid;
+    listProjects(uid)
+      .then((list) =>
+        Promise.all(
+          list.map(async (p): Promise<MyProject> => {
+            const site = await readMySite(uid, p.key).catch(() => null);
+            const url = site ? (p.kind === 'restaurant' ? restaurantSiteUrl(uid) : siteUrl(site.name)) : null;
+            return { key: p.key, kind: p.kind, name: p.name || site?.name || '', published: site?.name || null, url };
+          })
+        )
+      )
+      .then((rows) => alive && setMyProjects(rows))
+      .catch((e) => {
+        console.warn('Could not list the projects:', e);
+        if (alive) setMyProjects([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [startShowing, currentUser, activeUserUid, myProjectsTick]);
   // The owner sees everything; a management member what the owner allowed (services/members.ts).
   const [access, setAccess] = useState<Access>(OWNER_ACCESS);
   useEffect(() => {
@@ -455,6 +487,7 @@ export default function App() {
       }
       
       setProject('page');
+      setProjectKey('page');
       setPages(loadedPages);
       setElements(loadedElements);
       setHistory([loadedElements]);
@@ -510,6 +543,7 @@ export default function App() {
           const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
           pageHasContent = cloudElements.length > 0;
           setProject('page');
+          setProjectKey('page');
           setPages(cloudPages);
           setElements(cloudElements);
           setHistory([cloudElements]);
@@ -550,15 +584,16 @@ export default function App() {
   };
 
   // Loads the Online Shop project. A first visit starts from the online shop template.
-  const loadShopWorkspace = async (userId: string) => {
+  const loadShopWorkspace = async (userId: string, key: string = 'shop') => {
     const seq = ++loadSeqRef.current;
     projectReadyRef.current = false;
-    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE.shop;
+    const { pagesField, elementsField } = PROJECT_STORAGE.shop;
+    const localPrefix = localPrefixOf(key);
     let shopPages: Page[] = [];
     let shopElements: CanvasElement[] = [];
     let admin: ShopAdminData | null = null;
     try {
-      const designSnap = await getDoc(doc(db, 'designs', userId));
+      const designSnap = await getDoc(projectDoc(userId, key));
       if (designSnap.exists()) {
         const data: any = designSnap.data();
         if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
@@ -602,6 +637,7 @@ export default function App() {
       if (seq !== loadSeqRef.current) return;
     }
     setProject('shop');
+    setProjectKey(key);
     setPages(shopPages);
     setElements(shopElements);
     setHistory([shopElements]);
@@ -617,15 +653,16 @@ export default function App() {
 
   // Loads the car showroom project. A first visit starts from the showroom template, with four
   // example cars in the admin window so its pages are not empty.
-  const loadCarsWorkspace = async (userId: string) => {
+  const loadCarsWorkspace = async (userId: string, key: string = 'cars') => {
     const seq = ++loadSeqRef.current;
     projectReadyRef.current = false;
-    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE.cars;
+    const { pagesField, elementsField } = PROJECT_STORAGE.cars;
+    const localPrefix = localPrefixOf(key);
     let carPages: Page[] = [];
     let carElements: CanvasElement[] = [];
     let admin: CarAdminData | null = null;
     try {
-      const designSnap = await getDoc(doc(db, 'designs', userId));
+      const designSnap = await getDoc(projectDoc(userId, key));
       if (designSnap.exists()) {
         const data: any = designSnap.data();
         if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
@@ -662,6 +699,7 @@ export default function App() {
       ({ pages: carPages, elements: carElements } = withTemplateGroups(carPages, carElements));
     }
     setProject('cars');
+    setProjectKey(key);
     setPages(carPages);
     setElements(carElements);
     setHistory([carElements]);
@@ -677,15 +715,16 @@ export default function App() {
 
   // Loads the restaurant project. A first visit starts from the restaurant template, with an example
   // menu in the admin window so its pages are not empty.
-  const loadRestaurantWorkspace = async (userId: string) => {
+  const loadRestaurantWorkspace = async (userId: string, key: string = 'restaurant') => {
     const seq = ++loadSeqRef.current;
     projectReadyRef.current = false;
-    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE.restaurant;
+    const { pagesField, elementsField } = PROJECT_STORAGE.restaurant;
+    const localPrefix = localPrefixOf(key);
     let restPages: Page[] = [];
     let restElements: CanvasElement[] = [];
     let admin: RestaurantAdminData | null = null;
     try {
-      const designSnap = await getDoc(doc(db, 'designs', userId));
+      const designSnap = await getDoc(projectDoc(userId, key));
       if (designSnap.exists()) {
         const data: any = designSnap.data();
         if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
@@ -698,7 +737,8 @@ export default function App() {
       console.warn("Could not load the restaurant from Firebase, falling back to local cache:", e);
     }
     // The devices and the workers come from the private doc once it exists (see restaurantCloud.ts).
-    const staff = await readStaff(userId);
+    // Only the account's first restaurant has tablets for now (restaurants/{uid}/private/staff).
+    const staff = isFirstOfKind(key) ? await readStaff(userId) : 'offline';
     if (seq !== loadSeqRef.current) return;
     staffSyncRef.current = typeof staff === 'object' ? 'private' : staff === 'missing' ? 'legacy' : 'off';
     if (typeof staff === 'object') admin = { ...(admin || createEmptyRestaurantAdmin()), devices: staff.devices, workers: staff.workers };
@@ -730,6 +770,7 @@ export default function App() {
       }
     }
     setProject('restaurant');
+    setProjectKey(key);
     setPages(restPages);
     setElements(restElements);
     setHistory([restElements]);
@@ -740,6 +781,56 @@ export default function App() {
     setSelectedElementId(null);
     setIsChatActive(false);
     setHasRestaurant(true);
+    projectReadyRef.current = true;
+  };
+
+  // Loads a page project after the account's first one (designs/{uid}/projects/{key}). A new one
+  // starts on one empty slide.
+  const loadPageProject = async (userId: string, key: string) => {
+    const seq = ++loadSeqRef.current;
+    projectReadyRef.current = false;
+    const { pagesField, elementsField } = PROJECT_STORAGE.page;
+    const localPrefix = localPrefixOf(key);
+    let loadedPages: Page[] = [];
+    let loadedElements: CanvasElement[] = [];
+    try {
+      const snap = await getDoc(projectDoc(userId, key));
+      if (snap.exists()) {
+        const data: any = snap.data();
+        if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
+          loadedPages = normalizeLegacyNavbarDefaults(data[pagesField]);
+          loadedElements = deserializeElements(data[elementsField] || []);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load the page from Firebase, falling back to local cache:", e);
+    }
+    if (seq !== loadSeqRef.current) return;
+    try {
+      if (loadedPages.length === 0) {
+        const storedPages = localStorage.getItem(`${localPrefix}pages_${userId}`);
+        const storedElements = localStorage.getItem(`${localPrefix}elements_${userId}`);
+        if (storedPages) loadedPages = normalizeLegacyNavbarDefaults(JSON.parse(storedPages));
+        if (storedElements) loadedElements = deserializeElements(JSON.parse(storedElements));
+      }
+    } catch (e) {
+      console.warn("Could not read the local page cache:", e);
+    }
+    freshProjectRef.current = loadedPages.length === 0;
+    if (loadedPages.length === 0) {
+      loadedPages = [initialPage];
+      loadedElements = [];
+    }
+    setProject('page');
+    setProjectKey(key);
+    setPages(loadedPages);
+    setElements(loadedElements);
+    setHistory([loadedElements]);
+    setHistoryIndex(0);
+    setActivePageId(loadedPages[0].id);
+    setActiveSlideId(loadedPages[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    setIsChatActive(false);
     projectReadyRef.current = true;
   };
 
@@ -814,7 +905,7 @@ export default function App() {
       if (!projectReadyRef.current || designerModeRef.current || (pageLockRef.current && project === 'page')) return;
       try {
         const targetUserId = activeUserUid;
-        const { localPrefix } = PROJECT_STORAGE[project];
+        const localPrefix = localPrefixOf(projectKey);
         localStorage.setItem(`${localPrefix}pages_${targetUserId}`, JSON.stringify(pages));
         localStorage.setItem(`${localPrefix}elements_${targetUserId}`, JSON.stringify(elements));
         // NOTE: deliberately no longer writing the old non-namespaced 'weelink_pages'/
@@ -825,7 +916,7 @@ export default function App() {
     }, 1200); // 1.2s debounce to avoid spamming writes
 
     return () => clearTimeout(delayDebounceFn);
-  }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid, project]);
+  }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid, project, projectKey]);
 
   // 3. Debounced live auto-save to Firebase whenever pages or elements change
   useEffect(() => {
@@ -840,9 +931,10 @@ export default function App() {
       try {
         setIsSavingCloud(true);
         const { pagesField, elementsField } = PROJECT_STORAGE[project];
-        await setDoc(doc(db, 'designs', targetUserId), {
+        await setDoc(projectDoc(targetUserId, projectKey), {
           [pagesField]: sanitizeData(pages),
           [elementsField]: serializeElements(elements),
+          ...laterProjectFields(projectKey),
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
@@ -853,7 +945,7 @@ export default function App() {
     }, 1200); // 1.2s debounce to avoid spamming writes
 
     return () => clearTimeout(delayDebounceFn);
-  }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid, project]);
+  }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid, project, projectKey]);
 
   // 3b. Full-size photos inside the page (from older Wee AI builds) move to Firebase Storage: kept
   // inline they overflowed the browser storage and made the design too big for Firestore to save.
@@ -881,13 +973,14 @@ export default function App() {
     const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
       try {
-        localStorage.setItem(`${PROJECT_STORAGE.shop.localPrefix}admin_${targetUserId}`, JSON.stringify(shopAdmin));
+        localStorage.setItem(`${localPrefixOf(projectKey)}admin_${targetUserId}`, JSON.stringify(shopAdmin));
       } catch (e) {
         console.warn("Could not save shop admin data locally:", e);
       }
       try {
-        await setDoc(doc(db, 'designs', targetUserId), {
+        await setDoc(projectDoc(targetUserId, projectKey), {
           shopAdmin: sanitizeData(shopAdmin),
+          ...laterProjectFields(projectKey),
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
@@ -895,7 +988,7 @@ export default function App() {
       }
     }, 800);
     return () => clearTimeout(delayDebounceFn);
-  }, [shopAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
+  }, [shopAdmin, currentUser, isFirebaseLoading, activeUserUid, project, projectKey]);
 
   // 5. Debounced save of the car showroom's admin data (cars, settings).
   useEffect(() => {
@@ -905,13 +998,14 @@ export default function App() {
     const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
       try {
-        localStorage.setItem(`${PROJECT_STORAGE.cars.localPrefix}admin_${targetUserId}`, JSON.stringify(carAdmin));
+        localStorage.setItem(`${localPrefixOf(projectKey)}admin_${targetUserId}`, JSON.stringify(carAdmin));
       } catch (e) {
         console.warn("Could not save car showroom data locally:", e);
       }
       try {
-        await setDoc(doc(db, 'designs', targetUserId), {
+        await setDoc(projectDoc(targetUserId, projectKey), {
           carAdmin: sanitizeData(carAdmin),
+          ...laterProjectFields(projectKey),
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
@@ -919,7 +1013,7 @@ export default function App() {
       }
     }, 800);
     return () => clearTimeout(delayDebounceFn);
-  }, [carAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
+  }, [carAdmin, currentUser, isFirebaseLoading, activeUserUid, project, projectKey]);
 
   // 6. Debounced save of the restaurant's admin data (menu, orders, settings).
   useEffect(() => {
@@ -929,13 +1023,14 @@ export default function App() {
     const targetUserId = activeUserUid;
     const delayDebounceFn = setTimeout(async () => {
       try {
-        localStorage.setItem(`${PROJECT_STORAGE.restaurant.localPrefix}admin_${targetUserId}`, JSON.stringify(restaurantAdmin));
+        localStorage.setItem(`${localPrefixOf(projectKey)}admin_${targetUserId}`, JSON.stringify(restaurantAdmin));
       } catch (e) {
         console.warn("Could not save restaurant data locally:", e);
       }
       try {
-        await setDoc(doc(db, 'designs', targetUserId), {
+        await setDoc(projectDoc(targetUserId, projectKey), {
           restaurantAdmin: sanitizeData(withoutStaff(restaurantAdmin)),
+          ...laterProjectFields(projectKey),
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
@@ -943,13 +1038,14 @@ export default function App() {
       }
     }, 800);
     return () => clearTimeout(delayDebounceFn);
-  }, [restaurantAdmin, currentUser, isFirebaseLoading, activeUserUid, project]);
+  }, [restaurantAdmin, currentUser, isFirebaseLoading, activeUserUid, project, projectKey]);
 
   // 7. The restaurant's public site (restaurants/{uid}): pages, elements, menu and settings, published
   // a moment after each change so the guests' link and the tables' QR codes always show the latest.
   // The devices and the workers go to the private doc the restaurant's tablets read.
   useEffect(() => {
-    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant' || !projectReadyRef.current) return;
+    // Only the account's first restaurant has a live site and tablets (restaurants/{uid}) for now.
+    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant' || !projectReadyRef.current || !isFirstOfKind(projectKey)) return;
     const t = setTimeout(() => {
       publishRestaurant(ownerUid, pages, elements, restaurantAdmin).catch((e) => console.warn('Could not publish the restaurant site:', e));
       // Not when they could not be read (no permission, offline): the empty list would wipe them.
@@ -963,7 +1059,7 @@ export default function App() {
       }
     }, 1500);
     return () => clearTimeout(t);
-  }, [pages, elements, restaurantAdmin, isFirebaseLoading, project, ownerUid]);
+  }, [pages, elements, restaurantAdmin, isFirebaseLoading, project, projectKey, ownerUid]);
 
   // Saves the open project right away (the debounced saves above would be
   // cancelled when another project's data replaces it).
@@ -973,7 +1069,8 @@ export default function App() {
     if (pageLockRef.current && project === 'page') return Promise.resolve(false);
     if (!projectReadyRef.current) return Promise.resolve(false);
     const targetUserId = activeUserUid;
-    const { pagesField, elementsField, localPrefix } = PROJECT_STORAGE[project];
+    const { pagesField, elementsField } = PROJECT_STORAGE[project];
+    const localPrefix = localPrefixOf(projectKey);
     try {
       localStorage.setItem(`${localPrefix}pages_${targetUserId}`, JSON.stringify(pages));
       localStorage.setItem(`${localPrefix}elements_${targetUserId}`, JSON.stringify(elements));
@@ -985,9 +1082,10 @@ export default function App() {
     }
     // A project switch does not wait for it: Firestore queues the write locally, and waiting for
     // the server would freeze the switch while offline. The top bar's cloud waits, to say «انحفظ».
-    return setDoc(doc(db, 'designs', targetUserId), {
+    return setDoc(projectDoc(targetUserId, projectKey), {
       [pagesField]: sanitizeData(pages),
       [elementsField]: serializeElements(elements),
+      ...laterProjectFields(projectKey),
       ...(project === 'shop' ? { shopAdmin: sanitizeData(shopAdmin) } : {}),
       ...(project === 'cars' ? { carAdmin: sanitizeData(carAdmin) } : {}),
       ...(project === 'restaurant' ? { restaurantAdmin: sanitizeData(withoutStaff(restaurantAdmin)) } : {}),
@@ -1249,6 +1347,7 @@ export default function App() {
         designerModeRef.current = true;
         const r = await adminEditOpen(handoff.token, handoff.id);
         setProject('page');
+        setProjectKey('page');
         loadGalleryDesign(r.design, 'admin', false, handoff.token);
         setIsHomeActive(false);
         setIsStartActive(false);
@@ -1300,6 +1399,7 @@ export default function App() {
       }
       designerModeRef.current = true;
       setProject('page');
+      setProjectKey('page');
       setDraftList(list);
       await openDraft(user.uid, list.find((d) => d.slot === last)?.slot || list[0].slot);
       setDesignerMode(true);
@@ -1382,8 +1482,10 @@ export default function App() {
     setDraftBusy(false);
   };
 
-  const handleChooseProject = async (type: ProjectType, targetUserId: string = activeUserUid) => {
+  // `type` is a project key (src/utils/projectKeys.ts); a kind opens the account's first project of it.
+  const handleChooseProject = async (type: string, targetUserId: string = activeUserUid) => {
     if (projectLoading) return;
+    const kind = kindOf(type);
     // Leaving «وضع المصمم» (the editor holds a draft, not the page): the draft is saved, and the
     // project asked for is then loaded from the cloud like any other switch.
     const fromDesignerMode = designerModeRef.current;
@@ -1391,21 +1493,22 @@ export default function App() {
       if (draftBusy) return;
       await exitDesignerMode();
     }
-    setProjectLoading(type);
+    setProjectLoading(kind);
     try {
-      if (fromDesignerMode || type !== project || targetUserId !== activeUserUid) {
+      if (fromDesignerMode || type !== projectKey || targetUserId !== activeUserUid) {
         flushProjectSave();
-        if (type === 'shop') await loadShopWorkspace(targetUserId);
-        else if (type === 'cars') await loadCarsWorkspace(targetUserId);
-        else if (type === 'restaurant') await loadRestaurantWorkspace(targetUserId);
-        else await loadUserWorkspace(targetUserId);
+        if (kind === 'shop') await loadShopWorkspace(targetUserId, type);
+        else if (kind === 'cars') await loadCarsWorkspace(targetUserId, type);
+        else if (kind === 'restaurant') await loadRestaurantWorkspace(targetUserId, type);
+        else if (isFirstOfKind(type)) await loadUserWorkspace(targetUserId);
+        else await loadPageProject(targetUserId, type);
       }
       try {
         localStorage.setItem(`weelink_last_project_${targetUserId}`, type);
       } catch {
         // storage unavailable: «صفحتي» just asks again next time
       }
-      ownedRef.current = { ...ownedRef.current, [type]: true };
+      if (isFirstOfKind(type)) ownedRef.current = { ...ownedRef.current, [kind]: true };
       setIsProjectChosen(true);
     } finally {
       setProjectLoading(null);
@@ -1545,6 +1648,7 @@ export default function App() {
       loadSeqRef.current++;
       projectReadyRef.current = true;
       setProject('page');
+      setProjectKey('page');
       setHasShop(false);
       setPages(finalPages);
       setElements(finalElements);
@@ -1630,10 +1734,11 @@ export default function App() {
   };
 
   // The questions finished on the start page: open the kind on an empty page (nothing is built yet).
+  // A kind the account has a project of already gets a new project with its own key (Eyad, 17 Oct).
   const openAfterQuestions = async (kind: ProjectType) => {
     afterQuestionsRef.current = kind;
     setIsAuthActive(false);
-    await handleChooseProject(kind);
+    await handleChooseProject(ownedRef.current[kind] ? newProjectKey(kind) : kind);
     setIsStartActive(false);
   };
 
@@ -1865,6 +1970,7 @@ export default function App() {
     setActivePageId('page-home');
     setActiveSlideId('slide-1');
     setProject('page');
+    setProjectKey('page');
     setHasShop(false);
     setShopAdmin(createEmptyShopAdmin());
     setHasCars(false);
@@ -4024,11 +4130,21 @@ export default function App() {
         onLogout={handleLogout}
         onBuild={openAfterQuestions}
         owned={(Object.keys(ownedRef.current) as ProjectType[]).filter((k) => ownedRef.current[k])}
-        onOpen={async (kind) => {
+        projects={myProjects}
+        onOpenProject={async (key) => {
           setIsAuthActive(false);
-          await handleChooseProject(kind);
+          await handleChooseProject(key);
           setIsStartActive(false);
         }}
+        onUnpublish={(key) =>
+          unpublishSite(activeUserUid, key).then(
+            () => {
+              setMyProjectsTick((n) => n + 1);
+              return true;
+            },
+            () => false
+          )
+        }
         onDesigner={joinDesigners}
         onAddDesign={addGalleryDesign}
         onEditDesign={isDesigner ? editMyDesign : undefined}
@@ -4495,7 +4611,7 @@ export default function App() {
           open={isPageAdminOpen}
           onClose={() => setIsPageAdminOpen(false)}
           owner={ownerUid}
-          project={project}
+          project={projectKey}
           pageName={currentPage.navbar.brandName || ''}
           published={!!publishedName}
           onEditPage={isPreviewActive ? editPageFromAdmin : undefined}
@@ -4543,7 +4659,7 @@ export default function App() {
         open={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}
         owner={ownerUid}
-        project={project}
+        project={projectKey}
         pages={pages}
         elements={elements}
         data={isPublishOpen ? publicDataFor(project, shopAdmin, carAdmin) : null}

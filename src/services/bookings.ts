@@ -6,14 +6,14 @@
 import { createContext } from 'react';
 import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import type { ProjectType } from '../components/shop/shopTypes';
+import type { ProjectKey } from '../utils/projectKeys';
 
 export type BookingStatus = 'new' | 'confirmed' | 'done' | 'cancelled';
 
 export interface Booking {
   id: string;
   owner: string;
-  project: ProjectType;
+  project: ProjectKey;
   pageName: string;
   date: string; // yyyy-mm-dd, the business's own day
   startMin: number; // minutes from midnight
@@ -32,7 +32,7 @@ export interface Booking {
 // the published page and the owner's own view of it save real bookings.
 export interface BookingPage {
   owner: string;
-  project: ProjectType;
+  project: ProjectKey;
   pageName: string;
   live: boolean;
 }
@@ -41,7 +41,7 @@ export const BookingPageContext = createContext<BookingPage | null>(null);
 export const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 // The times already booked on a day.
-export const readTaken = async (owner: string, project: ProjectType, date: string): Promise<number[]> => {
+export const readTaken = async (owner: string, project: ProjectKey, date: string): Promise<number[]> => {
   const snap = await getDoc(doc(db, 'bookingDays', `${owner}_${project}_${date}`));
   const taken = snap.data()?.taken;
   return Array.isArray(taken) ? taken.filter((n) => typeof n === 'number') : [];
@@ -72,7 +72,7 @@ export const setBookingStatus = async (owner: string, id: string, status: Exclud
 };
 
 // The page's bookings, live, soonest first.
-export const watchBookings = (owner: string, project: ProjectType, onData: (rows: Booking[]) => void, onError: () => void) =>
+export const watchBookings = (owner: string, project: ProjectKey, onData: (rows: Booking[]) => void, onError: () => void) =>
   onSnapshot(
     query(collection(db, 'bookings', owner, 'items'), where('project', '==', project)),
     (snap) => {

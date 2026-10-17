@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { CalendarCheck2, CalendarDays, CalendarX2, Check, Loader2, Mail, MessageCircle, Phone } from 'lucide-react';
 import { Booking, BookingStatus, dayKey, setBookingStatus, watchBookings } from '../../services/bookings';
-import type { ProjectType } from '../shop/shopTypes';
+import type { ProjectKey } from '../../utils/projectKeys';
 
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -23,7 +23,7 @@ type View = 'new' | 'upcoming' | 'past';
 
 interface BookingsSectionProps {
   owner: string;
-  project: ProjectType;
+  project: ProjectKey;
   // Where the bookings come from and go to (Firebase and /api/booking).
   watch?: typeof watchBookings;
   changeStatus?: typeof setBookingStatus;

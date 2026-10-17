@@ -15,6 +15,7 @@ import { categorySourceOf, useCategories } from '../../utils/businessCategories'
 import { JoinedPage, listJoinedPages, pageUrl } from '../../services/pageCustomers';
 import { FOOD_PHOTOS, foodPhoto } from '../restaurant/restaurantTypes';
 import type { ProjectType } from '../shop/shopTypes';
+import { kindOf } from '../../utils/projectKeys';
 
 const photo = (id: string, w = 900) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`;
 
@@ -154,8 +155,8 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
 
   const openEntry = (e: DirectoryEntry) => {
     const url = entryUrl(e);
-    recordVisit(uid, { kind: e.project, name: e.name, title: e.title, url });
-    const intent = intentOf(e.project);
+    recordVisit(uid, { kind: kindOf(e.project), name: e.name, title: e.title, url });
+    const intent = intentOf(kindOf(e.project));
     if (intent && !active) bumpIntent(uid, intent);
     window.location.href = url;
   };
@@ -345,7 +346,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
                   <button key={e.name} type="button" onClick={() => openEntry(e)} className="text-right rounded-card border border-line bg-surface hover:border-brand p-4 transition flex items-start gap-3">
                     <span className="w-11 h-11 rounded-ctl bg-brand/10 text-brand flex items-center justify-center font-bold shrink-0">{e.title.trim()[0] || 'W'}</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-bold text-muted">{KIND_LABEL[e.project] || 'مشروع'}</span>
+                      <span className="block text-xs font-bold text-muted">{KIND_LABEL[kindOf(e.project)] || 'مشروع'}</span>
                       <span className="block text-sm font-bold truncate">{e.title}</span>
                       {e.description && <span className="block text-xs text-muted line-clamp-2 mt-0.5">{e.description}</span>}
                     </span>

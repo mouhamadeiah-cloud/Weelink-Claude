@@ -20,7 +20,8 @@
 import { cert, getApps, initializeApp, getAuth, getFirestore } from '../server/firebase.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
-const PROJECTS = ['page', 'shop', 'cars', 'restaurant'];
+// A project key: the kind, or the kind and the project's own id (src/utils/projectKeys.ts).
+const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/.test(p);
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -96,7 +97,7 @@ export default {
 
     // The page's owner or a management member.
     const owner = typeof body.owner === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(body.owner) ? body.owner : '';
-    const kind = typeof body.project === 'string' && PROJECTS.includes(body.project) ? body.project : '';
+    const kind = isProjectKey(body.project) ? body.project : '';
     if (!owner || !kind) return json({ error: 'bad_request' }, 400);
     const allowed =
       owner === user.uid ||

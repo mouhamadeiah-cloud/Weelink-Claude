@@ -11,7 +11,9 @@ interface StandardAuthProps {
   // asDesigner: the account was just made through «انضم لمصممينا»; the app opens the designer's page.
   onAuthSuccess: (userUid: string, isNewUser: boolean, asDesigner?: boolean) => void;
   // Opens on the designers' sign-up (from the start page's «انضم لمصممينا» card).
-  initialMode?: 'login' | 'designer';
+  initialMode?: 'login' | 'signup' | 'designer';
+  // The platform's top bar, shown above the form.
+  nav?: React.ReactNode;
 }
 
 const signInErrorText = (e: unknown, register = false) => {
@@ -26,7 +28,8 @@ const signInErrorText = (e: unknown, register = false) => {
 export const StandardAuth: React.FC<StandardAuthProps> = ({
   onLoginWithGoogle,
   onAuthSuccess,
-  initialMode = 'login'
+  initialMode = 'login',
+  nav
 }) => {
   // 'login' represents Image 1 (هل لديك حساب), 'signup' represents Image 2 (إنشاء حساب)
   // 'code': a new account confirms its email with the 6-digit code sent to it.
@@ -263,7 +266,9 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
   );
 
   return (
-    <div className="min-h-screen bg-bg text-ink flex flex-col justify-center items-center px-4 py-16 select-none" dir="rtl">
+    <>
+    {nav}
+    <div className="min-h-screen bg-bg text-ink flex flex-col justify-center items-center px-4 pt-24 pb-16 select-none" dir="rtl">
       <div className="w-full max-w-[420px] space-y-5">
         <div className="flex items-center justify-center gap-2">
           <span className="w-8 h-8 rounded-ctl bg-brand text-white flex items-center justify-center font-bold">W</span>
@@ -437,6 +442,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
         )}
       </div>
     </div>
+    </>
   );
 };
 

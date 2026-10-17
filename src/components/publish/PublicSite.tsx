@@ -11,6 +11,7 @@ import { SiteView } from './SiteView';
 import { countContact, countVisit, isContactLink } from '../../services/siteStats';
 import { BookingPageContext } from '../../services/bookings';
 import { kindOf, restaurantIdOf } from '../../utils/projectKeys';
+import { AD_SIDE_MIN, BannerAds, SideAds } from './AdSlots';
 
 const PHONE_MAX = 768;
 
@@ -54,6 +55,7 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
   const [site, setSite] = useState<PublishedSite | null | 'loading' | 'error'>('loading');
   const [pageId, setPageId] = useState('');
   const [phone, setPhone] = useState(() => window.innerWidth < PHONE_MAX);
+  const [wide, setWide] = useState(() => window.innerWidth >= AD_SIDE_MIN);
 
   useEffect(() => {
     loadPublishedSite(where)
@@ -73,7 +75,10 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
   }, []);
 
   useEffect(() => {
-    const onResize = () => setPhone(window.innerWidth < PHONE_MAX);
+    const onResize = () => {
+      setPhone(window.innerWidth < PHONE_MAX);
+      setWide(window.innerWidth >= AD_SIDE_MIN);
+    };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -109,7 +114,12 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
     <SuspendedGate owner={ready.owner} project={ready.project}>
     <BookingPageContext.Provider value={bookingPage}>
     <div className="h-[100dvh]">
-      <SiteView project={ready.project} pages={ready.pages} elements={elements} data={ready.data} phone={phone} pageId={pageId} onSelectPage={selectPage} onContactClick={(url) => isContactLink(url) && countContact(ready.owner, ready.project)} />
+      {(() => {
+        const view = <SiteView project={ready.project} pages={ready.pages} elements={elements} data={ready.data} phone={phone} pageId={pageId} onSelectPage={selectPage} onContactClick={(url) => isContactLink(url) && countContact(ready.owner, ready.project)} />;
+        // Only the free page (the account's «page» project) carries ads; the paid kinds do not.
+        if (kindOf(ready.project) !== 'page') return view;
+        return wide ? <SideAds>{view}</SideAds> : <BannerAds>{view}</BannerAds>;
+      })()}
     </div>
     </BookingPageContext.Provider>
     </SuspendedGate>

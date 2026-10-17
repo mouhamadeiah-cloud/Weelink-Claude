@@ -124,17 +124,6 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
     setPending(null);
   };
 
-  // "دخول مباشر": back into the account this browser is still signed in to (Firebase keeps the
-  // sign-in), without typing the password again.
-  const handleDirectLogin = async () => {
-    const user = auth.currentUser;
-    if (user && !user.isAnonymous) {
-      await finishSignIn(await resolveAccountId(user), false);
-      return;
-    }
-    setError('لا يوجد حساب مسجّل الدخول على هذا المتصفح. سجّل الدخول بالبريد وكلمة المرور.');
-  };
-
   // Handle Log In (الصورة الأولى)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,14 +295,6 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
                   className="w-full h-11 rounded-ctl border border-line bg-surface hover:bg-bg text-sm font-bold text-ink transition cursor-pointer flex items-center justify-center gap-2"
                 >
                   <GoogleMark /> سجّل بحساب Google
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDirectLogin}
-                  title="دخول سريع للحساب المسجّل الدخول على هذا المتصفح"
-                  className="w-full h-11 rounded-ctl text-sm font-bold text-brand hover:bg-brand/5 transition cursor-pointer"
-                >
-                  دخول مباشر
                 </button>
               </div>
             </div>

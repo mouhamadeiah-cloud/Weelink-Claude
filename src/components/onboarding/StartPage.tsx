@@ -23,7 +23,7 @@ export type MyProject = { key: string; kind: ProjectType; name: string; publishe
 const photo = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`;
 
 const HERO = photo('1522071820081-009f0129c71c', 1600);
-const STEPS = ['اختار نوع مشروعك', 'اختار باقتك', 'جاوب على أسئلة Wee AI', 'اعمل حسابك ومشروعك جاهز'];
+const STEPS = ['اختار نوع مشروعك', 'اختار باقتك', 'اعمل حسابك', 'جاوب على أسئلة Wee AI'];
 const QUESTION_COUNT = 12;
 
 // Photos of running the business, unlike the home page's search and order cards (Eyad, 12 Oct).
@@ -124,6 +124,11 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const startQuestions = () => {
+    // The account comes before the questions: a visitor is sent to the sign-up page and comes back here.
+    if (!signedIn && kind) {
+      onSignUp(kind);
+      return;
+    }
     setStage('questions');
     window.history.pushState({ screen: 'start', kind, stage: 'questions' }, '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -176,7 +181,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               </span>
               <h1 className="text-title sm:text-display font-bold">شو بدك تعمل؟</h1>
               <p className="text-sm sm:text-base opacity-90 max-w-xl leading-relaxed">
-                {signedIn ? 'اختر نوع مشروعك وباقتك وجاوب على كم سؤال، وبعدين بتصممها بإيدك أو بيبنيها إلك Wee AI. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع مشروعك وباقتك وجاوب على كم سؤال. الحساب بتعمله بالآخر، وإجاباتك بتنحفظ فيه.'}
+                {signedIn ? 'اختر نوع مشروعك وباقتك وجاوب على كم سؤال، وبعدين بتصممها بإيدك أو بيبنيها إلك Wee AI. إجاباتك القديمة معبّاية، بس عدّل اللي بدك.' : 'اختر نوع مشروعك وباقتك وجاوب على كم سؤال. بعد الباقة بتعمل حسابك (أو بتدخل مباشرة) وبعدها الأسئلة.'}
               </p>
               {!signedIn && (
                 <ol className="flex flex-wrap gap-2">

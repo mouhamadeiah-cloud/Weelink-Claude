@@ -35,6 +35,8 @@ import { HomePage } from './components/home/HomePage';
 import { LawPage } from './components/platform/LawPage';
 import { StartPage, type MyProject } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
+import { PlatformNav } from './components/platform/PlatformNav';
+import { readPlan, savePlan } from './data/plans';
 import { readCatalogAnswer, sampleRestaurantAdmin, sampleShopAdmin } from './services/sampleItems';
 import { PublishModal } from './components/publish/PublishModal';
 import { publicDataFor } from './components/publish/publicData';
@@ -240,7 +242,7 @@ export default function App() {
   // The kind the start page opens on (from «عدّل إجاباتي» in the editor), else the kinds.
   const [startKind, setStartKind] = useState<ProjectType | null>(null);
   // Which form the sign-in screen opens on: the designers' sign-up comes from the start page's fifth card.
-  const [authMode, setAuthMode] = useState<'login' | 'designer'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'designer'>('login');
   // The designers' programme: a designer account (designers/{uid}), and «وضع المصمم»: the editor
   // holds one of the designer's drafts (a single slide) instead of their page; the page's own autosave
   // is off meanwhile (designerModeRef) and the draft saves to designerDrafts/{uid}/items/{slot}.
@@ -283,6 +285,8 @@ export default function App() {
   const [hasBuildBackup, setHasBuildBackup] = useState(false);
   // The kind a guest answered Wee AI for: after signing up, the answers move to the account and it opens.
   const pendingBuildRef = useRef<ProjectType | null>(null);
+  // The kind a visitor chose on the start page: the account comes first, then its questions (Eyad, 17 Oct).
+  const questionsAfterAuthRef = useRef<{ kind: ProjectType } | null>(null);
   // What the signed-in account owns, from the last workspace load (decides where «صفحتي» goes).
   const ownedRef = useRef({ page: false, shop: false, cars: false, restaurant: false });
   const [isChatActive, setIsChatActive] = useState<boolean>(true);
@@ -1778,6 +1782,17 @@ export default function App() {
     }
     setIsSavingCloud(false);
     if (isNewUser) isInitialLoadComplete.current = true;
+    const toQuestions = questionsAfterAuthRef.current;
+    questionsAfterAuthRef.current = null;
+    if (toQuestions) {
+      // The package picked as a visitor moves to the account; the questions open for the same kind.
+      const guestPlan = readPlan('guest', toQuestions.kind);
+      if (guestPlan && !readPlan(userUid, toQuestions.kind)) savePlan(userUid, toQuestions.kind, guestPlan);
+      setIsLawActive(false);
+      setIsHomeActive(false);
+      setStartKind(toQuestions.kind);
+      setIsStartActive(true);
+    }
     setIsAuthActive(false); // Hide login screen, go straight to builder/chat!
     // A phone sees its page first; the panel waits behind the bar at the bottom.
     setIsRightDrawerOpen(window.innerWidth >= 1024);
@@ -4333,7 +4348,9 @@ export default function App() {
         onEditDesign={isDesigner ? editMyDesign : undefined}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
-          pendingBuildRef.current = kind;
+          pendingBuildRef.current = null;
+          questionsAfterAuthRef.current = { kind };
+          setAuthMode('signup');
           setIsStartActive(false);
           setIsAuthActive(true);
         }}
@@ -4349,15 +4366,20 @@ export default function App() {
           initialMode={authMode}
           onLoginWithGoogle={handleLogin}
           onAuthSuccess={handleAuthSuccess}
+          nav={(
+            <PlatformNav
+              current="start"
+              user={currentUser}
+              onHome={() => { questionsAfterAuthRef.current = null; setIsStartActive(false); setIsHomeActive(true); setIsAuthActive(false); }}
+              onStart={() => { questionsAfterAuthRef.current = null; setIsLawActive(false); setStartKind(null); setIsStartActive(true); setIsAuthActive(false); }}
+              onOpenMyPage={() => openMyPage(activeUserUid)}
+              onLaw={() => { questionsAfterAuthRef.current = null; setIsAuthActive(false); setIsLawActive(true); }}
+              onAccount={() => {}}
+              onMyAccount={openMyAccount}
+              onLogout={handleLogout}
+            />
+          )}
         />
-        <button
-          type="button"
-          onClick={() => { setIsLawActive(false); setStartKind(null); setIsStartActive(true); }}
-          className="fixed top-3 right-3 z-[60] bg-surface border border-line rounded-full px-3.5 py-1.5 text-xs font-bold text-muted hover:text-ink"
-          dir="rtl"
-        >
-          → الرئيسية
-        </button>
       </>
     );
   }

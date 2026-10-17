@@ -162,7 +162,7 @@ const SeedBox: React.FC<{ onSessionEnd: () => void; onDone: () => void }> = ({ o
   const [result, setResult] = useState<SeedResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const refresh = useCallback(() => adminSeedStatus().then(setStatus).catch((e) => { if ((e as AdminError)?.code === 'session') return onSessionEnd(); setError(`تعذّر تحميل حالة النماذج (${(e as AdminError)?.message || 'خطأ'}). إن بقي الخطأ فالنسخة المنشورة قديمة أو الدالة لا تعمل في Vercel.`); }), [onSessionEnd]);
+  const refresh = useCallback(() => adminSeedStatus().then(setStatus).catch((e) => { if ((e as AdminError)?.code === 'session') return onSessionEnd(); setError(`تعذّر تحميل حالة النماذج (${(e as AdminError)?.message || 'خطأ'}). إن بقي الخطأ فالنسخة المنشورة قديمة أو الدالة لا تعمل في Cloudflare.`); }), [onSessionEnd]);
   useEffect(() => { refresh(); }, [refresh]);
   if (!status) return error ? <p role="alert" className="rounded-card border border-line bg-surface p-4 text-small text-danger">{error}</p> : null;
   if (status.total === 0) return <p className="rounded-card border border-line bg-surface p-4 text-small text-danger">النسخة المنشورة لا تحوي ملف صفحات Weelink AI (pages.json فارغ).</p>;
@@ -179,7 +179,7 @@ const SeedBox: React.FC<{ onSessionEnd: () => void; onDone: () => void }> = ({ o
     } catch (e) {
       const code = (e as AdminError)?.code;
       if (code === 'session') return onSessionEnd();
-      setError(code === 'no-unsplash-key' ? 'مفتاح Unsplash غير مضبوط في Vercel (UNSPLASH_ACCESS_KEY).' : 'تعذّر التنفيذ. جرّب مرة ثانية.');
+      setError(code === 'no-unsplash-key' ? 'مفتاح Unsplash غير مضبوط في Cloudflare (UNSPLASH_ACCESS_KEY).' : 'تعذّر التنفيذ. جرّب مرة ثانية.');
     }
     setBusy(false);
   };

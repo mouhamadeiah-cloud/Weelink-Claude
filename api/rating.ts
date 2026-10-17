@@ -1,4 +1,4 @@
-// Vercel serverless function: the ratings on a page (Eyad, 13 Oct).
+// Server function: the ratings on a page (Eyad, 13 Oct).
 //
 //   POST /api/rating  { action: 'start', owner, project, pageName, stars, text, name, email }
 //        → emails the rater a 6-digit code; the rating waits unpublished      → { id } | { error }

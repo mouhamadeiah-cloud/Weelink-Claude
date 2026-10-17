@@ -1,4 +1,4 @@
-// Vercel serverless function: a restaurant customer's order confirmation and its status page.
+// Server function: a restaurant customer's order confirmation and its status page.
 //
 //   POST /api/order-status  { r: <restaurant uid>, o: <order id> }  with  Authorization: Bearer <ID token>
 //        → emails the order's confirmation to the signed-in customer who placed it, once, with a link

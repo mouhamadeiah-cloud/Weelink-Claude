@@ -8,7 +8,7 @@ import { AdminError, AnnouncePreview, adminAnnounce, adminAnnouncePreview } from
 const inputCls = 'w-full rounded-ctl border border-line bg-surface px-3 py-2 text-small text-ink outline-none focus:border-brand';
 const ERRORS: Record<string, string> = {
   short: 'اكتب عنواناً (3 أحرف) ونصاً (10 أحرف على الأقل).',
-  'email-not-configured': 'الإيميل غير مُعدّ في Vercel (EMAIL_FROM و RESEND_API_KEY).',
+  'email-not-configured': 'الإيميل غير مُعدّ في Cloudflare (EMAIL_FROM و RESEND_API_KEY).',
   refused: 'رفض مزوّد الإيميل الإرسال. غالباً دومين الإرسال غير مؤكَّد في Resend.',
   nobody: 'لا أحد في هذه الفئة.',
   'too-many': 'العدد أكبر من الحد المسموح بدفعة واحدة. ضيّق الفئة.',

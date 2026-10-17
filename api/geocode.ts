@@ -1,11 +1,11 @@
-// Vercel serverless function: turns a point on the map into an address, for the address step of
+// Server function: turns a point on the map into an address, for the address step of
 // Wee AI (the owner drops a pin, the governorate, city or village and street fill in).
 //
 //   GET /api/geocode?lat=33.51&lng=36.29
 //     → { governorate, places: [names from the most local up], neighbourhood, road, houseNumber }
 //
 // Uses OpenStreetMap's free Nominatim service, in Arabic. Its usage policy asks for an identifying
-// User-Agent and at most one request a second, so answers are cached by Vercel's CDN for a day and
+// User-Agent and at most one request a second, so answers are cached by the CDN for a day and
 // points are rounded to about 10 m, which makes repeated pins on the same spot one request.
 
 const json = (body: unknown, status = 200, cache = false) =>

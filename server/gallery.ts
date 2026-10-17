@@ -1,4 +1,4 @@
-// Vercel serverless function: votes on, and uses of, the designers' gallery slides (Eyad, 14 Oct).
+// Server function: votes on, and uses of, the designers' gallery slides (Eyad, 14 Oct).
 //
 //   POST /api/gallery  { action: 'vote', slideId, value: 1 | -1 | 0 }  with  Authorization: Bearer <ID token>
 //        → one vote per account and slide: 1 = like, -1 = dislike, 0 = take the vote back; changing

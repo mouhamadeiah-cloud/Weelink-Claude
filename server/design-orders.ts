@@ -1,4 +1,4 @@
-// Vercel serverless function: hiring a designer (Eyad, 14 Oct). A customer asks a gallery designer to
+// Server function: hiring a designer (Eyad, 14 Oct). A customer asks a gallery designer to
 // design their page; the price depends on the package of the customer's page and the platform keeps
 // its share (data/designerPricing.json). The customer pays the Weelink office, which holds the money
 // until the customer confirms the design (the admin site's «طلبات التصميم»), and the customer and the
@@ -155,7 +155,7 @@ export default {
   async fetch(request: Request): Promise<Response> {
     const admin = firebaseAdmin();
     if (request.method === 'GET') {
-      // Vercel's daily cron: the orders that were left waiting (see designOrderTimers.json).
+      // The daily cron: the orders that were left waiting (see designOrderTimers.json).
       const secret = process.env.CRON_SECRET;
       if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'unauthorized' }, 401);
       if (!admin) return json({ error: 'not_configured' }, 503);

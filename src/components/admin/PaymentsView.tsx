@@ -9,7 +9,7 @@ const day = (ms: number) => (ms ? new Date(ms).toLocaleDateString('ar-SY', { yea
 const inputCls = 'rounded-ctl border border-line bg-surface px-3 py-2 text-small text-ink outline-none focus:border-brand';
 
 export const SEND_ERRORS: Record<string, string> = {
-  'email-not-configured': 'الإيميل غير مُعدّ في Vercel (EMAIL_FROM و RESEND_API_KEY).',
+  'email-not-configured': 'الإيميل غير مُعدّ في Cloudflare (EMAIL_FROM و RESEND_API_KEY).',
   'no-email': 'لا يوجد إيميل لهذا المشترك.',
   refused: 'رفض مزوّد الإيميل الإرسال. غالباً دومين الإرسال غير مؤكَّد في Resend.',
 };

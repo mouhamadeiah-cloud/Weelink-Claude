@@ -1,4 +1,4 @@
-// Vercel serverless function: confirms a new owner's email with a 6-digit code.
+// Server function: confirms a new owner's email with a 6-digit code.
 //
 //   POST /api/email-code  { action: 'send' }                 → { sent: true } | { skipped: true }
 //   POST /api/email-code  { action: 'verify', code: '123456' } → { verified: true }
@@ -10,7 +10,7 @@
 // Resend, its hash is kept in emailCodes/{uid} (the rules let no browser read or write that), and
 // a right code marks the Firebase user's email as verified.
 //
-// Needs two Vercel environment variables besides RESEND_API_KEY:
+// Needs two Cloudflare environment variables besides RESEND_API_KEY:
 //   FIREBASE_SERVICE_ACCOUNT  the service-account JSON from Firebase (Project settings → Service accounts)
 //   EMAIL_FROM                the sender, e.g. "Weelink <code@testweelink.de>" once the domain is
 //                             verified in Resend ("onboarding@resend.dev" reaches only the Resend
@@ -83,7 +83,6 @@ export default {
         EMAIL_FROM: sender ? sender : 'missing',
         senderDomainInResend,
         RESEND_API_KEY: process.env.RESEND_API_KEY ? 'ok' : 'missing',
-        environment: process.env.VERCEL_ENV || 'unknown',
       });
     }
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);

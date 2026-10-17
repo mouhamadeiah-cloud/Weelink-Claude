@@ -1,5 +1,5 @@
 // The emails of a design order (hiring a designer): who is told what. Shared by api/design-orders.ts,
-// api/design-access.ts and api/admin.ts (the file starts with «_», so Vercel does not make it a route).
+// api/design-access.ts and api/admin.ts (it lives in server/, so it is not an API route).
 // A mail never carries a phone number, email or link of the other side, only that something happened and
 // where to look («طلبات التصميم»). A failed or skipped mail never fails the action (EMAIL_FROM and
 // RESEND_API_KEY missing = nothing is sent). DESIGN_ALERT_EMAIL is the office's own address for complaints

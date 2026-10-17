@@ -43,7 +43,7 @@ page types share one editor and one account.
 - Page types: free page, shop, restaurant, car showroom; paid tiers (free, Pro, kind packages).
 - Editor with slides and ready-made slide designs; Wee AI («ابن صفحتي») builds pages with Gemini.
 - Bookings with email confirmations and reminders; ratings verified by email code.
-- Stack: Vite + React + Tailwind, Firebase, Vercel functions, Resend email.
+- Stack: Vite + React + Tailwind, Firebase, Cloudflare Workers (api/*.ts), Resend email.
 - Customer pages can use any of the editor's fonts; Weelink's own interface should not depend on them.
 
 ## Brand Commitments

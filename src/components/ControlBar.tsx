@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Monitor, 
   Tablet, 
@@ -10,13 +11,11 @@ import {
   ChevronDown, 
   Plus,
   LogOut,
-  Loader2,
+  Check,
   Globe,
-  CloudUpload,
-  CloudCheck,
-  CloudOff,
   Palette,
-  Upload
+  Upload,
+  UserRound
 } from 'lucide-react';
 import { DevicePreviewMode, Page } from '../types';
 
@@ -56,7 +55,49 @@ interface ControlBarProps {
   isDesignerMode?: boolean;
   onToggleDesignerMode?: () => void;
   onExportSlide?: () => void;
+  // The account menu (the person icon with the name): the account's projects to switch between.
+  currentProjectKey?: string;
+  onLoadProjects?: () => Promise<{ key: string; label: string; sub: string }[]>;
+  onSwitchProject?: (key: string) => void;
+  onOpenAccount?: () => void;
 }
+
+// A menu that floats above the bar: the bar scrolls sideways on a narrow screen, which would clip
+// a menu placed inside it, so it is drawn at the page level next to its button.
+const Floating: React.FC<{ anchor: React.RefObject<HTMLElement | null>; align: 'start' | 'end'; onClose: () => void; children: React.ReactNode; className?: string }> = ({ anchor, align, onClose, children, className = '' }) => {
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const r = anchor.current?.getBoundingClientRect();
+      if (!r) return;
+      setPos(align === 'end' ? { top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) } : { top: r.bottom + 8, left: Math.max(8, r.left) });
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [anchor, align]);
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (anchor.current?.contains(t) || (t as Element).closest?.('[data-floating-menu]')) return;
+      onClose();
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [anchor, onClose]);
+  if (!pos) return null;
+  return createPortal(
+    <div data-floating-menu dir="rtl" style={{ position: 'fixed', top: pos.top, left: pos.left, right: pos.right }} className={`z-[3000] bg-white/95 backdrop-blur-xl rounded-2xl border border-black/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-2 text-right ${className}`}>
+      {children}
+    </div>,
+    document.body
+  );
+};
 
 export const ControlBar: React.FC<ControlBarProps> = ({
   currentPage,
@@ -88,21 +129,29 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   isDesignerMode,
   onToggleDesignerMode,
   onExportSlide,
+  currentProjectKey,
+  onLoadProjects,
+  onSwitchProject,
+  onOpenAccount,
 }) => {
   const [isPagesDropdownOpen, setIsPagesDropdownOpen] = useState(false);
   const [newPageName, setNewPageName] = useState('');
   const [isAddingPage, setIsAddingPage] = useState(false);
 
-  // The cloud button's answer after a save: «انحفظ» or «ما انحفظ» for a few seconds.
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
-  const saveNow = async () => {
-    if (!onManualSave) return;
-    setSaveState('saving');
-    // Offline, Firebase keeps the write and sends it later; the button stops waiting after 10s.
-    const ok = await Promise.race([onManualSave(), new Promise<boolean>((r) => setTimeout(() => r(false), 10000))]);
-    setSaveState(ok ? 'saved' : 'failed');
-    setTimeout(() => setSaveState('idle'), 3000);
+  // The account menu: opened with the person icon, it lists the account's projects to switch between.
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [accountProjects, setAccountProjects] = useState<{ key: string; label: string; sub: string }[] | null>(null);
+  const accountRef = useRef<HTMLButtonElement>(null);
+  const pagesRef = useRef<HTMLDivElement>(null);
+  const toggleAccountMenu = () => {
+    const next = !isAccountMenuOpen;
+    setIsAccountMenuOpen(next);
+    if (next && onLoadProjects) {
+      setAccountProjects(null);
+      onLoadProjects().then(setAccountProjects).catch(() => setAccountProjects([]));
+    }
   };
+  const firstName = user ? (user.displayName || user.email?.split('@')[0] || '').split(' ')[0] : '';
 
   const handleCreatePage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,7 +198,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
         {projectName !== undefined && !isPreviewActive && !isDesignerMode && <span className="text-neutral-300 text-lg -mx-1 select-none">/</span>}
 
         {/* 1. Current Page Name in a Dropdown Box + Settings Gear */}
-        <div className="flex items-center gap-1.5 bg-neutral-100/90 hover:bg-neutral-200/70 rounded-xl p-1 border border-black/[0.05] transition-colors relative">
+        <div ref={pagesRef} className="flex items-center gap-1.5 bg-neutral-100/90 hover:bg-neutral-200/70 rounded-xl p-1 border border-black/[0.05] transition-colors">
           <button
             onClick={() => setIsPagesDropdownOpen(!isPagesDropdownOpen)}
             className="flex items-center gap-2 px-2.5 py-1 text-xs sm:text-sm font-medium text-ink hover:text-black transition-colors rounded-lg focus:outline-none"
@@ -176,10 +225,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
 
           {/* Pages Dropdown Menu */}
           {isPagesDropdownOpen && (
-            <div 
-              className="absolute top-full right-0 mt-2 w-56 bg-white/95 backdrop-blur-xl rounded-2xl border border-black/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.12)] p-2 z-50 text-right animate-in fade-in zoom-in-95 duration-150"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <Floating anchor={pagesRef} align="end" onClose={() => setIsPagesDropdownOpen(false)} className="w-56">
               <div className="text-xs font-semibold text-neutral-400 px-2.5 py-1">
                 صفحات الموقع
               </div>
@@ -241,7 +287,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
                   </button>
                 )}
               </div>
-            </div>
+            </Floating>
           )}
         </div>
 
@@ -367,52 +413,64 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             {isPublished ? 'منشورة' : 'نشر'}
           </button>
         )}
-        {/* The cloud: saves the page to the cloud now (it also saves itself after every change) */}
-        {user && (
-          <div className="flex items-center gap-1 bg-neutral-100/80 p-0.5 rounded-xl border border-black/[0.05]">
-            {onManualSave && (
-              <button
-                type="button"
-                onClick={saveNow}
-                disabled={isSaving || saveState === 'saving'}
-                className={`h-8 px-2 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer hover:bg-white active:scale-95 ${saveState === 'failed' ? 'text-red-600' : saveState === 'saved' ? 'text-emerald-600' : 'text-neutral-700 hover:text-brand'}`}
-                title="احفظ صفحتك على السحابة هلق (بتنحفظ لحالها كمان بعد كل تعديل)"
-                aria-label="حفظ على السحابة"
-              >
-                {isSaving || saveState === 'saving' ? (
-                  <Loader2 size={16} className="animate-spin text-brand" />
-                ) : saveState === 'saved' ? (
-                  <CloudCheck size={16} strokeWidth={2.1} />
-                ) : saveState === 'failed' ? (
-                  <CloudOff size={16} strokeWidth={2.1} />
-                ) : (
-                  <CloudUpload size={16} strokeWidth={2.1} />
-                )}
-                {saveState === 'saved' && <span>انحفظ</span>}
-                {saveState === 'failed' && <span>ما انحفظ</span>}
-              </button>
+        {/* The account: the name with the person icon, a menu to switch between the account's projects */}
+        {user && !user.isAnonymous && (
+          <>
+            <button
+              ref={accountRef}
+              type="button"
+              onClick={toggleAccountMenu}
+              aria-expanded={isAccountMenuOpen}
+              className="h-9 px-2.5 rounded-xl border border-black/[0.05] bg-neutral-100/80 hover:bg-white text-xs sm:text-sm font-bold text-ink inline-flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              title="حسابك ومشاريعك"
+            >
+              <UserRound size={16} aria-hidden="true" />
+              <span className="max-w-[7rem] truncate">{firstName || 'حسابي'}</span>
+            </button>
+            {isAccountMenuOpen && (
+              <Floating anchor={accountRef} align="start" onClose={() => setIsAccountMenuOpen(false)} className="w-64">
+                <div className="text-xs font-semibold text-neutral-400 px-2.5 py-1">مشاريعك</div>
+                <div className="space-y-0.5 max-h-60 overflow-y-auto">
+                  {accountProjects === null ? (
+                    <div className="px-3 py-2 text-xs text-neutral-400">جاري التحميل...</div>
+                  ) : accountProjects.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-neutral-400">ما في مشاريع بعد</div>
+                  ) : (
+                    accountProjects.map((p) => (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => {
+                          setIsAccountMenuOpen(false);
+                          if (p.key !== currentProjectKey) onSwitchProject?.(p.key);
+                        }}
+                        className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs rounded-xl font-medium transition-all cursor-pointer ${p.key === currentProjectKey ? 'bg-brand/10 text-brand' : 'text-neutral-700 hover:bg-neutral-100'}`}
+                      >
+                        <span className="truncate">{p.label}</span>
+                        <span className="flex items-center gap-1 text-xs opacity-70 shrink-0">{p.sub}{p.key === currentProjectKey && <Check size={12} />}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+                <div className="mt-2 pt-2 border-t border-black/[0.06] space-y-0.5">
+                  {onOpenAccount && (
+                    <button type="button" onClick={() => { setIsAccountMenuOpen(false); onOpenAccount(); }} className="w-full text-right px-3 py-1.5 text-xs rounded-xl font-medium text-neutral-700 hover:bg-neutral-100 cursor-pointer">صفحة حسابي</button>
+                  )}
+                  <button type="button" onClick={() => { setIsAccountMenuOpen(false); onLogout(); }} className="w-full text-right px-3 py-1.5 text-xs rounded-xl font-medium text-red-600 hover:bg-red-50 cursor-pointer">تسجيل الخروج</button>
+                </div>
+              </Floating>
             )}
-            {user.isAnonymous ? (
-              <button
-                type="button"
-                onClick={onLogin}
-                className="h-8 px-2 text-xs font-bold bg-brand text-white hover:bg-brand-hover rounded-lg flex items-center gap-1 transition-all cursor-pointer active:scale-95"
-                title="ربط المشروع بحساب Google لحفظ دائم"
-              >
-                حفظ بـ Google
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onLogout}
-                className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all cursor-pointer"
-                title="تسجيل الخروج"
-                aria-label="تسجيل الخروج"
-              >
-                <LogOut size={14} />
-              </button>
-            )}
-          </div>
+          </>
+        )}
+        {user?.isAnonymous && (
+          <button
+            type="button"
+            onClick={onLogin}
+            className="h-8 px-2 text-xs font-bold bg-brand text-white hover:bg-brand-hover rounded-lg flex items-center gap-1 transition-all cursor-pointer active:scale-95"
+            title="ربط المشروع بحساب Google لحفظ دائم"
+          >
+            حفظ بـ Google
+          </button>
         )}
 
         <button

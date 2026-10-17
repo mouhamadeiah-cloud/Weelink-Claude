@@ -4543,6 +4543,14 @@ export default function App() {
           onOpenProjectSettings={() => handleSelectTool('project-settings')}
           projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'restaurant' ? 'Restaurant' : undefined}
           onOpenProjects={handleOpenProjects}
+          currentProjectKey={projectKey}
+          onLoadProjects={async () => {
+            const list = await listProjects(activeUserUid);
+            const same = (k: string) => list.filter((p) => p.kind === kindOf(k)).length > 1;
+            return list.map((p, i) => ({ key: p.key, label: p.name || PROJECT_KIND_LABEL[p.kind], sub: same(p.key) ? `${PROJECT_KIND_LABEL[p.kind]} ${list.filter((q, j) => j <= i && q.kind === p.kind).length}` : PROJECT_KIND_LABEL[p.kind] }));
+          }}
+          onSwitchProject={(key) => { setIsPreviewActive(false); handleChooseProject(key); }}
+          onOpenAccount={() => openMyAccount()}
           onPublish={currentUser && !currentUser.isAnonymous ? () => setIsPublishOpen(true) : undefined}
           isPublished={!!publishedName}
           isDesigner={isDesigner}

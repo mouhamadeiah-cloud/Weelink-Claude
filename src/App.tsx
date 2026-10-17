@@ -43,7 +43,7 @@ import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
 import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
 import { laterProjectFields, listProjects, projectDoc } from './services/projects';
-import { isFirstOfKind, kindOf, localPrefixOf, newProjectKey } from './utils/projectKeys';
+import { isFirstOfKind, kindOf, localPrefixOf, newProjectKey, restaurantIdOf } from './utils/projectKeys';
 import { CarAdminPanel } from './components/cars/CarAdminPanel';
 import { CarDataContext, CarRequestContext } from './components/cars/store/CarDataContext';
 import { submitRequest, RequestInput } from './components/cars/carMoney';
@@ -293,6 +293,8 @@ export default function App() {
   const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
   const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
   const ownerUid = activeUserUid;
+  // The open restaurant's live data: restaurants/{uid} for the account's first, restaurants/{uid}__{key} after.
+  const restaurantId = restaurantIdOf(ownerUid, projectKey);
   // The signed-in owner (or a member) looking at the page as visitors see it: its navbar gets «الإدارة».
   const isOwnerView = isPreviewActive && !!currentUser && !currentUser.isAnonymous;
   // The «التقييمات» slide (Eyad, 13 Oct): every free page has one and can't remove it; a paid page
@@ -382,7 +384,7 @@ export default function App() {
         Promise.all(
           list.map(async (p): Promise<MyProject> => {
             const site = await readMySite(uid, p.key).catch(() => null);
-            const url = site ? (p.kind === 'restaurant' ? restaurantSiteUrl(uid) : siteUrl(site.name)) : null;
+            const url = site ? (p.kind === 'restaurant' ? restaurantSiteUrl(restaurantIdOf(uid, p.key)) : siteUrl(site.name)) : null;
             return { key: p.key, kind: p.kind, name: p.name || site?.name || '', published: site?.name || null, url };
           })
         )
@@ -409,13 +411,13 @@ export default function App() {
   // reached it is kept in the admin data instead.
   const submitRestaurantOrder = useCallback(async (o: MenuOrder) => {
     try {
-      return await placeOrder(ownerUid, o);
+      return await placeOrder(restaurantId, o);
     } catch (e) {
       console.warn('Could not send the order to the live orders:', e);
       setRestaurantAdmin((prev) => submitOrder(prev, o));
       return null;
     }
-  }, [ownerUid]);
+  }, [restaurantId]);
   // Bumped by every workspace load so a slower, older load can't overwrite a newer one.
   const loadSeqRef = useRef(0);
   // True once the open project's data has actually been loaded, so switching
@@ -737,8 +739,7 @@ export default function App() {
       console.warn("Could not load the restaurant from Firebase, falling back to local cache:", e);
     }
     // The devices and the workers come from the private doc once it exists (see restaurantCloud.ts).
-    // Only the account's first restaurant has tablets for now (restaurants/{uid}/private/staff).
-    const staff = isFirstOfKind(key) ? await readStaff(userId) : 'offline';
+    const staff = await readStaff(restaurantIdOf(userId, key));
     if (seq !== loadSeqRef.current) return;
     staffSyncRef.current = typeof staff === 'object' ? 'private' : staff === 'missing' ? 'legacy' : 'off';
     if (typeof staff === 'object') admin = { ...(admin || createEmptyRestaurantAdmin()), devices: staff.devices, workers: staff.workers };
@@ -1040,26 +1041,25 @@ export default function App() {
     return () => clearTimeout(delayDebounceFn);
   }, [restaurantAdmin, currentUser, isFirebaseLoading, activeUserUid, project, projectKey]);
 
-  // 7. The restaurant's public site (restaurants/{uid}): pages, elements, menu and settings, published
+  // 7. The restaurant's public site (restaurants/{restaurantId}): pages, elements, menu and settings, published
   // a moment after each change so the guests' link and the tables' QR codes always show the latest.
   // The devices and the workers go to the private doc the restaurant's tablets read.
   useEffect(() => {
-    // Only the account's first restaurant has a live site and tablets (restaurants/{uid}) for now.
-    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant' || !projectReadyRef.current || !isFirstOfKind(projectKey)) return;
+    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant' || !projectReadyRef.current) return;
     const t = setTimeout(() => {
-      publishRestaurant(ownerUid, pages, elements, restaurantAdmin).catch((e) => console.warn('Could not publish the restaurant site:', e));
+      publishRestaurant(restaurantId, pages, elements, restaurantAdmin).catch((e) => console.warn('Could not publish the restaurant site:', e));
       // Not when they could not be read (no permission, offline): the empty list would wipe them.
       if (staffSyncRef.current !== 'off') {
-        saveStaff(ownerUid, restaurantAdmin)
+        saveStaff(restaurantId, restaurantAdmin)
           .then(() => {
-            if (staffSyncRef.current === 'legacy') dropStaffFromDesign(ownerUid).catch(() => {});
+            if (staffSyncRef.current === 'legacy') dropStaffFromDesign(projectDoc(ownerUid, projectKey)).catch(() => {});
             staffSyncRef.current = 'private';
           })
           .catch((e) => console.warn('Could not save the devices for the restaurant tablets:', e));
       }
     }, 1500);
     return () => clearTimeout(t);
-  }, [pages, elements, restaurantAdmin, isFirebaseLoading, project, projectKey, ownerUid]);
+  }, [pages, elements, restaurantAdmin, isFirebaseLoading, project, projectKey, ownerUid, restaurantId]);
 
   // Saves the open project right away (the debounced saves above would be
   // cancelled when another project's data replaces it).
@@ -4590,7 +4590,7 @@ export default function App() {
             name={currentPage.navbar.brandName || ''}
             onRename={(brandName) => setPages(pages.map(p => ({ ...p, navbar: { ...p.navbar, brandName } })))}
             kindLabel={PROJECT_KIND_LABEL[project]}
-            siteUrl={project === 'restaurant' ? restaurantSiteUrl(ownerUid) : undefined}
+            siteUrl={project === 'restaurant' ? restaurantSiteUrl(restaurantId) : undefined}
           />
         }
       />
@@ -4604,7 +4604,7 @@ export default function App() {
         <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} openRequest={adminOpenRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
       )}
       {project === 'restaurant' && (
-        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} access={access} openRequest={adminOpenRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
+        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} restaurantId={restaurantId} access={access} openRequest={adminOpenRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
       )}
       {project === 'page' && (
         <PageAdminPanel

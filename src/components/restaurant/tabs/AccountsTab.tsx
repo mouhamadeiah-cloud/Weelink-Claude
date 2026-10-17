@@ -33,8 +33,8 @@ const SOURCE_LABEL: Record<LedgerEntry['source'], string> = { manual: 'يدوي'
 const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 
 export const AccountsTab: React.FC<RestaurantTabProps> = (props) => {
-  const { data, ownerUid } = props;
-  const ledger = useLedger(ownerUid);
+  const { data, restaurantId } = props;
+  const ledger = useLedger(restaurantId);
   const currency = data.settings.currency;
   const [period, setPeriod] = useState<Period>('month');
   const [range, setRange] = useState({ from: daysAgo(30), to: todayKey() });
@@ -72,13 +72,13 @@ export const AccountsTab: React.FC<RestaurantTabProps> = (props) => {
     const amount = parseAmount(form.amount);
     if (!amount) return setError('اكتب المبلغ.');
     setError('');
-    addLedgerEntry(ownerUid, { kind, date: form.date || todayKey(), createdAt: new Date().toISOString(), amount, category: form.category, method: form.method, note: form.note.trim(), source: 'manual', orderId: '' })
+    addLedgerEntry(restaurantId, { kind, date: form.date || todayKey(), createdAt: new Date().toISOString(), amount, category: form.category, method: form.method, note: form.note.trim(), source: 'manual', orderId: '' })
       .catch(() => setError('تعذر الحفظ. تحقق من تفعيل قاعدة البيانات اللحظية.'));
     setForm((f) => ({ ...f, amount: '', note: '' }));
   };
   const remove = (e: LedgerEntry) => {
     if (!window.confirm(e.source === 'order' ? 'هذا القيد جاء من طلب مُسلَّم. حذفه؟' : 'حذف هذا القيد؟')) return;
-    deleteLedgerEntry(ownerUid, e.id).catch(() => {});
+    deleteLedgerEntry(restaurantId, e.id).catch(() => {});
   };
   const exportCsv = () => {
     const head = ['التاريخ', 'النوع', 'التصنيف', 'المبلغ', 'طريقة الدفع', 'المصدر', 'ملاحظة'];

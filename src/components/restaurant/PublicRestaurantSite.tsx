@@ -4,6 +4,7 @@
 // Orders go straight to the restaurant's live orders. «حسابي» lets a visitor join as the
 // restaurant's customer (see components/customers); a joined customer's orders carry their uid.
 import React, { useEffect, useMemo, useState } from 'react';
+import { ownerOfRestaurant, restaurantKeyOf } from '../../utils/projectKeys';
 import { Loader2, UtensilsCrossed } from 'lucide-react';
 import { CanvasWorkspace } from '../CanvasWorkspace';
 import { withPhoneLayouts } from '../../utils/mobileLayout';
@@ -33,7 +34,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
         setSite(s ? { ...s, elements: s.elements.map(withLocalGraphics) } : null);
         if (s?.pages[0]) setPageId(s.pages[0].id);
         if (s?.admin.settings.name) document.title = s.admin.settings.name;
-        if (s) countVisit(uid, 'restaurant');
+        if (s) countVisit(ownerOfRestaurant(uid), restaurantKeyOf(uid));
       })
       .catch(() => setSite('error'));
   }, [uid]);
@@ -86,7 +87,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
 
   return (
     <RestaurantDataContext.Provider value={site.admin}>
-      <BookingPageContext.Provider value={{ owner: uid, project: 'restaurant', pageName: site.admin.settings.name || '', live: true }}>
+      <BookingPageContext.Provider value={{ owner: ownerOfRestaurant(uid), project: restaurantKeyOf(uid), pageName: site.admin.settings.name || '', live: true }}>
       <RestaurantOrderContext.Provider value={submit}>
         <div className="h-[100dvh] flex flex-col bg-white">
           <CustomerAccount ownerUid={uid} pageName={site.admin.settings.name} kind="restaurant" accent="#B5562B" currency={site.admin.settings.currency} />
@@ -109,7 +110,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
             onUpdateElementContent={noop}
             onDeleteElement={noop}
             onDuplicateElement={noop}
-            onContactClick={(url) => isContactLink(url) && countContact(uid, 'restaurant')}
+            onContactClick={(url) => isContactLink(url) && countContact(ownerOfRestaurant(uid), restaurantKeyOf(uid))}
           />
         </div>
       </RestaurantOrderContext.Provider>

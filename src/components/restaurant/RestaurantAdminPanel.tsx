@@ -48,6 +48,8 @@ interface RestaurantAdminPanelProps {
   data: RestaurantAdminData;
   onChange: (fn: (d: RestaurantAdminData) => RestaurantAdminData) => void;
   ownerUid: string;
+  // restaurants/{restaurantId}: the account's id for its first restaurant (utils/projectKeys.ts).
+  restaurantId: string;
   access?: Access;
   // Asks the admin to open (counted); the editor's column has an "admin" button for this.
   openRequest?: number;
@@ -57,7 +59,7 @@ interface RestaurantAdminPanelProps {
   onEditPage?: () => void;
 }
 
-export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid, access = OWNER_ACCESS, openRequest = 0, hideGear = false, onEditPage }) => {
+export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid, restaurantId, access = OWNER_ACCESS, openRequest = 0, hideGear = false, onEditPage }) => {
   // Before anything below reads «today»: the owner's business day.
   setDayStartHour(data.settings.dayStartHour);
   const [open, setOpen] = useState(false);
@@ -67,7 +69,7 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
   const tabs = TABS.filter((t) => (t.perm === 'owner' ? access.owner : access.owner || access.perms[t.perm]));
   const [chosen, setTab] = useState<TabId>('dishes');
   const tab = tabs.some((t) => t.id === chosen) ? chosen : tabs[0]?.id;
-  const liveOrders = useLiveOrders(access.owner || access.perms.orders ? ownerUid : null);
+  const liveOrders = useLiveOrders(access.owner || access.perms.orders ? restaurantId : null);
   const liveIds = new Set(liveOrders.items.map((o) => o.id));
   const newOrders = [...liveOrders.items, ...data.orders.filter((o) => !liveIds.has(o.id))].filter((o) => o.status === 'new' && o.source !== 'staff').length;
 
@@ -143,7 +145,7 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
                 {active ? (
                   <>
                     <h2 className="text-lg font-black text-ink mb-4">{active.label}</h2>
-                    <active.Component key={active.id} data={data} update={onChange} onGoTo={setTab} ownerUid={ownerUid} liveOrders={liveOrders} />
+                    <active.Component key={active.id} data={data} update={onChange} onGoTo={setTab} ownerUid={ownerUid} restaurantId={restaurantId} liveOrders={liveOrders} />
                   </>
                 ) : (
                   <div className="py-16 text-center text-sm text-neutral-500 font-bold">لم يسمح لك صاحب الحساب بأي قسم بعد.</div>

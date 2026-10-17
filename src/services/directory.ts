@@ -8,7 +8,7 @@ import { searchSites, siteFallbackUrl } from './sites';
 import { categoryKeyword } from '../utils/businessCategories';
 import { loadPublishedRestaurant, restaurantSiteUrl } from '../components/restaurant/restaurantCloud';
 import type { ProjectType } from '../components/shop/shopTypes';
-import { kindOf, type ProjectKey } from '../utils/projectKeys';
+import { kindOf, restaurantIdOf, type ProjectKey } from '../utils/projectKeys';
 import type { Intent } from './homeActivity';
 
 export interface DirectoryEntry {
@@ -41,7 +41,7 @@ const toEntry = (name: string, d: any): DirectoryEntry => ({
   description: typeof d?.description === 'string' ? d.description : '',
 });
 
-export const entryUrl = (e: DirectoryEntry) => (kindOf(e.project) === 'restaurant' ? restaurantSiteUrl(e.owner) : siteFallbackUrl(e.name));
+export const entryUrl = (e: DirectoryEntry) => (kindOf(e.project) === 'restaurant' ? restaurantSiteUrl(restaurantIdOf(e.owner, e.project)) : siteFallbackUrl(e.name));
 
 // The first project of a kind is named by its kind; later ones carry `kind` (see sites.ts).
 export const listByKind = async (kind: ProjectType, n = 24): Promise<DirectoryEntry[]> => {
@@ -73,7 +73,7 @@ const searchDirectory = async (text: string): Promise<DirectoryEntry[]> => {
 
 // Dishes on offer (a struck-through old price or the «عرض» badge) at the first few restaurants.
 export const restaurantOffers = async (restaurants: DirectoryEntry[], max = 8): Promise<DishOffer[]> => {
-  const menus = await Promise.all(restaurants.slice(0, 6).map((r) => loadPublishedRestaurant(r.owner).then((m) => ({ r, m })).catch(() => null)));
+  const menus = await Promise.all(restaurants.slice(0, 6).map((r) => loadPublishedRestaurant(restaurantIdOf(r.owner, r.project)).then((m) => ({ r, m })).catch(() => null)));
   const offers: DishOffer[] = [];
   for (const item of menus) {
     if (!item?.m) continue;
@@ -83,7 +83,7 @@ export const restaurantOffers = async (restaurants: DirectoryEntry[], max = 8): 
       if (!(d.oldPrice > d.price || d.badge === 'offer')) continue;
       offers.push({
         restaurant: settings.name || item.r.title,
-        restaurantUrl: restaurantSiteUrl(item.r.owner),
+        restaurantUrl: restaurantSiteUrl(restaurantIdOf(item.r.owner, item.r.project)),
         dish: d.name,
         price: d.price,
         oldPrice: d.oldPrice,

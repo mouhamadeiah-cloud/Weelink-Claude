@@ -87,6 +87,8 @@ export interface MyAccountData {
   test: boolean;
   enforce: boolean;
   paymentInfo: string;
+  // Stripe is set up on the server (server/stripe.ts), so «كرت بنكي أو PayPal» can be picked.
+  online?: boolean;
 }
 
 export const fetchMyAccount = async (user: User): Promise<MyAccountData> => {

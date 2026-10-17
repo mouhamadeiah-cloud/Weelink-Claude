@@ -89,8 +89,8 @@ export const adminChangePassword = (current: string, next: string) => call<{ tok
 export const adminSubscribers = (query: SubscriberQuery) => call<SubscribersResult>({ action: 'subscribers', ...query });
 
 export type Period = 'monthly' | 'yearly';
-export type PayMethod = 'office' | 'cash' | 'transfer' | 'grant';
-export const PAY_METHODS: Record<PayMethod, string> = { office: 'مكتب', cash: 'نقداً', transfer: 'حوالة', grant: 'منحة' };
+export type PayMethod = 'office' | 'cash' | 'transfer' | 'grant' | 'online';
+export const PAY_METHODS: Record<PayMethod, string> = { office: 'مكتب', cash: 'نقداً', transfer: 'حوالة', grant: 'منحة', online: 'دفع إلكتروني' };
 
 export interface Payment {
   id: string; uid: string; invoiceNo: string; name: string; email: string; plan: string; planName: string; period: Period;
@@ -284,7 +284,7 @@ export interface BillingOrder {
   renewal: boolean; createdAt: number; updatedAt: number; deleteAt: number; rejectReason: string; decidedBy: string; decidedAt: number; paymentId: string;
 }
 export const ORDER_STATUS: Record<OrderStatus, string> = { unpaid: 'غير مدفوع', attached: 'بانتظار الفحص', paid: 'مدفوع', rejected: 'مرفوض', cancelled: 'مُستبدل', deleted: 'محذوف' };
-export const PAY_WAYS: Record<string, string> = { syriatel: 'سيريتل كاش', mtn: 'MTN كاش', sham: 'شام كاش', transfer: 'حوالة مالية', office: 'دفع في المكتب' };
+export const PAY_WAYS: Record<string, string> = { syriatel: 'سيريتل كاش', mtn: 'MTN كاش', sham: 'شام كاش', transfer: 'حوالة مالية', office: 'دفع في المكتب', online: 'دفع إلكتروني' };
 export const adminOrders = (status: string) => call<{ rows: BillingOrder[]; counts: Record<string, number> }>({ action: 'orders', status });
 export const adminOrder = (id: string) => call<{ order: BillingOrder; image: string; paidUntil: number }>({ action: 'order', id });
 export const adminOrderApprove = (id: string) => call<{ order: BillingOrder; paidUntil: number }>({ action: 'order-approve', id });

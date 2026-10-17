@@ -28,6 +28,7 @@ import {
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
+import { storagePath } from '../utils/storagePaths';
 import { elementDisplayName } from '../utils/elementLabels';
 import { PhotoBrowserPanel, notLiveMessage } from './PhotoBrowserPanel';
 
@@ -46,7 +47,7 @@ const dataURLtoBlob = (dataurl: string): Blob => {
 const uploadDataUrlToStorage = async (dataurl: string, baseName: string): Promise<string> => {
   const blob = dataURLtoBlob(dataurl);
   const timestamp = Date.now();
-  const fileRef = ref(storage, `images/${timestamp}_${baseName}`);
+  const fileRef = ref(storage, storagePath('images', `${timestamp}_${baseName}`));
   const snapshot = await uploadBytes(fileRef, blob);
   return await getDownloadURL(snapshot.ref);
 };

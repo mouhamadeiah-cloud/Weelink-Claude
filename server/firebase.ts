@@ -523,6 +523,26 @@ export const getFirestore = (app: App = apps[0], databaseId = '(default)') => {
   return db;
 };
 
+// ---------- Storage ----------
+// Only what the server needs: deleting every file under a folder (a deleted customer's photos), through the
+// Cloud Storage JSON API. Same shape as firebase-admin's getStorage().bucket(name).deleteFiles({ prefix }).
+export const getStorage = (app: App = apps[0]) => ({
+  bucket: (name: string) => ({
+    async deleteFiles({ prefix }: { prefix: string }) {
+      const base = `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(name)}/o`;
+      const headers = { Authorization: `Bearer ${await accessToken(app)}` };
+      let page = '';
+      do {
+        const res = await fetch(`${base}?prefix=${encodeURIComponent(prefix)}&fields=items(name),nextPageToken${page ? `&pageToken=${encodeURIComponent(page)}` : ''}`, { headers });
+        if (!res.ok) throw new Error(`storage list ${res.status}`);
+        const data = (await res.json()) as { items?: { name: string }[]; nextPageToken?: string };
+        for (const item of data.items || []) await fetch(`${base}/${encodeURIComponent(item.name)}`, { method: 'DELETE', headers });
+        page = data.nextPageToken || '';
+      } while (page);
+    },
+  }),
+});
+
 // ---------- Auth ----------
 
 export type UserRecord = {

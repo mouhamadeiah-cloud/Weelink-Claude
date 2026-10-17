@@ -23,7 +23,8 @@
 // Everything takes the db (and auth) from server/firebase.ts, so the tests can pass the in-memory one.
 import { randomBytes } from 'node:crypto';
 import { Resend } from 'resend';
-import { FieldValue } from './firebase.js';
+import { FieldValue, getStorage } from './firebase.js';
+import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import { invoiceFor, needsPayment, type InvoiceItem, type Period } from '../src/utils/invoice.js';
 import { isFirstOfKind, isProjectKey, kindOf, restaurantIdOf } from '../src/utils/projectKeys.js';
 
@@ -450,6 +451,10 @@ export const deleteCustomer = async (db: Db, auth: Auth, uid: string, by: string
   for (const ref of [db.collection('designs').doc(uid), db.collection('platform_directory').doc(uid), db.collection('restaurants').doc(uid)]) {
     await ref.delete().catch(() => undefined);
   }
+  // Their photos (src/utils/storagePaths.ts keeps each account's under users/{uid}/). Older photos, from
+  // before that, sit in shared folders and stay.
+  await getStorage().bucket(firebaseConfig.storageBucket).deleteFiles({ prefix: `users/${uid}/` })
+    .catch((err: Error) => console.error('photo delete failed:', err?.message));
 
   const card = {
     uid, name: user.displayName || String(dir.personalInfo?.fullName || ''), email: user.email || '',

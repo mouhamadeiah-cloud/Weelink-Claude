@@ -1,5 +1,6 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
+import { storagePath } from './storagePaths';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
   const arr = dataurl.split(',');
@@ -21,7 +22,7 @@ export const uploadGalleryImageToStorage = async (file: File): Promise<string> =
         const rawDataUrl = e.target?.result as string;
         const blob = dataURLtoBlob(rawDataUrl);
         const timestamp = Date.now();
-        const fileRef = ref(storage, `gallery/${timestamp}_${file.name.replace(/\s+/g, '_')}`);
+        const fileRef = ref(storage, storagePath('gallery', `${timestamp}_${file.name.replace(/\s+/g, '_')}`));
         const snapshot = await uploadBytes(fileRef, blob);
         const downloadUrl = await getDownloadURL(snapshot.ref);
         resolve(downloadUrl);

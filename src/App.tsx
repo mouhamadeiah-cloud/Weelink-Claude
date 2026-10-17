@@ -44,6 +44,8 @@ import { ShopDataContext, ShopUpdateContext } from './components/shop/store/Shop
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
 import { laterProjectFields, listProjects, projectDoc } from './services/projects';
 import { isFirstOfKind, kindOf, localPrefixOf, newProjectKey, restaurantIdOf } from './utils/projectKeys';
+import { ITEM_WORD, UNLIMITED, overLimit, type PlanLimits } from './utils/planLimits';
+import { projectLimits, readGate } from './services/billing';
 import { deleteProjectData } from './services/myAccount';
 import { AccountPage } from './components/platform/AccountPage';
 import { CarAdminPanel } from './components/cars/CarAdminPanel';
@@ -285,21 +287,55 @@ export default function App() {
   const [isProjectChosen, setIsProjectChosen] = useState<boolean>(false);
   const [projectLoading, setProjectLoading] = useState<ProjectType | null>(null);
   const [hasShop, setHasShop] = useState<boolean>(false);
+  // The open project's package limits (src/utils/planLimits.ts); unlimited until paying is switched on.
+  const [limits, setLimits] = useState<PlanLimits>(UNLIMITED);
+  const limitsRef = useRef(limits);
+  limitsRef.current = limits;
+  // A change that would pass the package's limit is dropped, with one notice (the updater may run twice).
+  const limitNoticeRef = useRef(0);
+  const refuseOverLimit = (what: string) => {
+    if (Date.now() - limitNoticeRef.current < 1500) return;
+    limitNoticeRef.current = Date.now();
+    setTimeout(() => window.alert(`باقتك بتسمح بـ ${what}. رقّي الباقة من «نشر» أو من «حسابي» لتضيف أكتر.`), 0);
+  };
   const [shopAdmin, setShopAdmin] = useState<ShopAdminData>(createEmptyShopAdmin);
-  const updateShopAdmin = useCallback((fn: (d: ShopAdminData) => ShopAdminData) => setShopAdmin((prev) => fn(prev)), []);
+  const updateShopAdmin = useCallback((fn: (d: ShopAdminData) => ShopAdminData) => setShopAdmin((prev) => {
+    const next = fn(prev);
+    const max = limitsRef.current.items;
+    if (overLimit(prev.products.length, next.products.length, max)) { refuseOverLimit(`${max} ${ITEM_WORD.shop}`); return prev; }
+    return next;
+  }), []);
   const [hasCars, setHasCars] = useState<boolean>(false);
   const [carAdmin, setCarAdmin] = useState<CarAdminData>(createEmptyCarAdmin);
   // «نشر»: the publish window, and the published page's name (null = not published).
   const [isPublishOpen, setIsPublishOpen] = useState(false);
   const [publishedName, setPublishedName] = useState<string | null>(null);
-  const updateCarAdmin = useCallback((fn: (d: CarAdminData) => CarAdminData) => setCarAdmin((prev) => fn(prev)), []);
+  const updateCarAdmin = useCallback((fn: (d: CarAdminData) => CarAdminData) => setCarAdmin((prev) => {
+    const next = fn(prev);
+    const max = limitsRef.current.items;
+    if (overLimit(prev.cars.length, next.cars.length, max)) { refuseOverLimit(`${max} ${ITEM_WORD.cars}`); return prev; }
+    return next;
+  }), []);
   const submitCarRequest = useCallback((r: RequestInput) => setCarAdmin((prev) => submitRequest(prev, r)), []);
   const [hasRestaurant, setHasRestaurant] = useState<boolean>(false);
   const [restaurantAdmin, setRestaurantAdmin] = useState<RestaurantAdminData>(createEmptyRestaurantAdmin);
-  const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => fn(prev)), []);
+  const updateRestaurantAdmin = useCallback((fn: (d: RestaurantAdminData) => RestaurantAdminData) => setRestaurantAdmin((prev) => {
+    const next = fn(prev);
+    const { items, devices } = limitsRef.current;
+    if (overLimit(prev.dishes.length, next.dishes.length, items)) { refuseOverLimit(`${items} ${ITEM_WORD.restaurant}`); return prev; }
+    const active = (d: RestaurantAdminData) => d.devices.filter((v) => v.active).length;
+    if (overLimit(active(prev), active(next), devices)) { refuseOverLimit(devices ? `${devices} ${devices === 1 ? 'جهاز' : 'أجهزة'}` : 'طلب أونلاين بس، بدون أجهزة'); return prev; }
+    return next;
+  }), []);
   const ownerUid = activeUserUid;
   // The open restaurant's live data: restaurants/{uid} for the account's first, restaurants/{uid}__{key} after.
   const restaurantId = restaurantIdOf(ownerUid, projectKey);
+  // Read again when «نشر» closes, since a payment may have changed the package.
+  useEffect(() => {
+    let live = true;
+    readGate(ownerUid, projectKey).then((g) => { if (live) setLimits(projectLimits(g, ownerUid, projectKey)); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [ownerUid, projectKey, isPublishOpen]);
   // The signed-in owner (or a member) looking at the page as visitors see it: its navbar gets «الإدارة».
   const isOwnerView = isPreviewActive && !!currentUser && !currentUser.isAnonymous;
   // The «التقييمات» slide (Eyad, 13 Oct): every free page has one and can't remove it; a paid page
@@ -1970,7 +2006,7 @@ export default function App() {
     }
     // The owner's photos go into the page as links, never as full-size inline images.
     const answers = await hostAnswerImages(given);
-    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers));
+    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers), projectKey);
     if (!result.ok) return { ok: false, message: result.message };
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
     const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId });
@@ -4672,6 +4708,7 @@ export default function App() {
         onCompleteChat={handleCompleteChat}
         onStepChange={handleStepChange}
         onBuildPage={handleBuildPage}
+        galleryLimit={limits.gallery}
         onRestorePage={handleRestoreBuiltPage}
         onEditAnswers={openQuestions}
         restoreAvailable={hasBuildBackup}
@@ -4776,6 +4813,10 @@ export default function App() {
         data={isPublishOpen ? publicDataFor(project, shopAdmin, carAdmin) : null}
         suggestedName={currentPage.navbar.brandName || ''}
         onPublishedChange={setPublishedName}
+        used={{
+          items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
+          devices: project === 'restaurant' ? restaurantAdmin.devices.filter((d) => d.active).length : 0,
+        }}
       />
     </div>
     </RatingsSlideContext.Provider>

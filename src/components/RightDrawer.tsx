@@ -178,6 +178,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onCompleteChat,
   onStepChange,
   onBuildPage,
+  galleryLimit = Number.POSITIVE_INFINITY,
   onRestorePage,
   onEditAnswers,
   restoreAvailable,
@@ -1737,7 +1738,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           updateGalleryConfig({ items: newItems });
                         };
 
+                        // A new photo past the package's limit is refused; replacing one is always fine.
+                        const galleryFull = (idx: number) => {
+                          if (idx !== -1 || items.length < galleryLimit) return false;
+                          window.alert(`باقتك بتسمح بـ ${galleryLimit} صور بالمعرض. رقّي الباقة لتضيف أكتر.`);
+                          return true;
+                        };
                         const handleTriggerDeviceUpload = (idx: number) => {
+                          if (galleryFull(idx)) return;
                           setGalleryTargetReplaceIndex(idx);
                           galleryFileInputRef.current?.click();
                         };
@@ -1795,6 +1803,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         };
 
                         const handleOpenUnsplashPicker = (idx: number) => {
+                          if (galleryFull(idx)) return;
                           setUnsplashPickerIndex(idx);
                           handleLoadUnsplashForGallery(unsplashSearchQuery);
                         };

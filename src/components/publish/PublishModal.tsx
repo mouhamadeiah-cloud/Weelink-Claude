@@ -34,6 +34,8 @@ interface PublishModalProps {
   elements: CanvasElement[];
   data: any; // the project's public data (see publicData.ts)
   suggestedName: string;
+  // The project's items (dishes, products, cars) and active devices, for the package the invoice offers.
+  used?: { items: number; devices: number };
   onPublishedChange: (name: string | null) => void;
 }
 
@@ -492,7 +494,7 @@ const SeoFields: React.FC<{ seo: SiteSeo; keywords: string; onSeo: (s: SiteSeo) 
 const sameSeo = (a?: SiteSeo, b?: SiteSeo) =>
   (a?.title || '') === (b?.title || '') && (a?.description || '') === (b?.description || '') && (a?.keywords || []).join(',') === (b?.keywords || []).join(',');
 
-export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange }) => {
+export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange, used }) => {
   const [site, setSite] = useState<PublishedSite | null | 'loading'>('loading');
   const [name, setName] = useState('');
   const [state, setState] = useState<NameState | 'checking' | ''>('');
@@ -715,7 +717,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open, onClose, owner
                 <div className="rounded-2xl border border-brand/30 bg-brand/[0.03] p-4 space-y-3">
                   <div className="text-sm font-black text-ink">{gate && gate.paidUntil ? 'انتهت صلاحية مشروعك، جدّدها لتنشر' : 'الفاتورة قبل النشر'}</div>
                   {me && me.uid === owner ? (
-                    <Checkout user={me} owner={owner} project={project} siteName={!problem && state !== 'taken' ? name : ''} paidUntil={gate?.paidUntil} />
+                    <Checkout user={me} owner={owner} project={project} siteName={!problem && state !== 'taken' ? name : ''} paidUntil={gate?.paidUntil} used={used} />
                   ) : (
                     <p className="text-sm text-neutral-600">صاحب الحساب هو يلي بيدفع فاتورة المشروع من حسابه، وبعدها بتقدر تنشره.</p>
                   )}

@@ -14,8 +14,9 @@
 // figures, outside links, unknown palettes, fonts or animations).
 // The Gemini key lives only in the Vercel environment variable GEMINI_API_KEY.
 //
-// Usage limits (once per free page, 5 a day on paid pages) come with the subscriptions phase: every
-// account today is a test account with unlimited use.
+// Usage limits come from the project's package (src/utils/planLimits.ts): once for a free page, once a
+// day on 30/60, 5 a day on Pro. They count only once paying is switched on and never for a test account
+// (buildAllowance below); the count is kept in platform_builds/{uid}__{project}.
 
 import { GoogleGenAI, type ThinkingLevel } from '@google/genai';
 import { cert, getApps, initializeApp, getFirestore } from '../server/firebase.js';
@@ -23,6 +24,7 @@ import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' 
 import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
 import designer from '../src/data/ai/weelinkDesigner.json' with { type: 'json' };
 import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
+import { limitsOf } from '../src/utils/planLimits.js';
 
 // A fixed model, not «latest», so a newer and dearer Flash never comes in on its own (Eyad, 12 Oct).
 // Both can be changed in Vercel without code: GEMINI_MODEL, and GEMINI_THINKING (minimal, low,
@@ -184,6 +186,48 @@ const meterClose = async (m: Meter | null, kind: string, model: string, u: { inp
     await m.db.collection('platform_ai_calls').add({ uid: m.uid, kind, model, input: u.input, cached: u.cached, output: u.output, tokens, costUsd, ok, reason: reason.slice(0, 60), ms, at: Date.now() });
   } catch (err) {
     console.error('meter failed:', (err as Error)?.message);
+  }
+};
+
+// ---------- «ابن صفحتي» per package ----------
+const BUILD_KIND_PROJECT: Record<string, string> = { free: 'page', restaurant: 'restaurant', shop: 'shop', cars: 'cars' };
+const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/.test(p);
+const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+type Allowance = { ref: any; day: string; limit: number; perDay: boolean; over: boolean } | null;
+
+// null = no limit (no database, paying off, a test account); else whether it is used up, and what to count after a build.
+export const buildAllowance = async (db: ReturnType<typeof getFirestore> | null, uid: string, project: string, now = Date.now()): Promise<Allowance> => {
+  if (!db) return null;
+  try {
+    const [settings, test, access] = await Promise.all([
+      db.collection('platformSettings').doc('billing').get(),
+      db.collection('testAccounts').doc(uid).get(),
+      db.collection('projectAccess').doc(`${uid}__${project}`).get(),
+    ]);
+    if (settings.data()?.enforce !== true || test.exists) return null;
+    const a = access.data() as { plan?: string; paidUntil?: number } | undefined;
+    const kind = project.split('-')[0];
+    // Before paying: a page is free, another kind gets its smallest package.
+    const plan = a?.plan && Number(a.paidUntil) > now ? a.plan : kind === 'page' ? 'page-free' : `${kind}-30`;
+    const { builds, perDay } = limitsOf(plan);
+    const ref = db.collection('platform_builds').doc(`${uid}__${project}`);
+    const used = (await ref.get()).data() as { day?: string; today?: number; total?: number } | undefined;
+    const day = dayOf(now);
+    const count = perDay ? (used?.day === day ? Number(used?.today) || 0 : 0) : Number(used?.total) || 0;
+    return { ref, day, limit: builds, perDay, over: count >= builds };
+  } catch {
+    return null;
+  }
+};
+
+const countBuild = async (a: Allowance) => {
+  if (!a) return;
+  try {
+    const cur = ((await a.ref.get()).data() || {}) as { day?: string; today?: number; total?: number };
+    await a.ref.set({ day: a.day, today: (cur.day === a.day ? Number(cur.today) || 0 : 0) + 1, total: (Number(cur.total) || 0) + 1, at: Date.now() });
+  } catch (err) {
+    console.error('build count failed:', (err as Error)?.message);
   }
 };
 
@@ -557,6 +601,9 @@ export default {
     const assets = cleanAssets(body?.assets);
     if (!profile['الوصف'] && !profile['التصنيف'] && !profile['الاختصاص']) return json({ error: 'no_profile' }, 400);
 
+    const project = isProjectKey(body?.project) ? body.project : BUILD_KIND_PROJECT[kind] || 'page';
+    const allowance = await buildAllowance(meterDb(), uid, project);
+    if (allowance?.over) return json({ error: 'build_limit', limit: allowance.limit, perDay: allowance.perDay }, 429);
     const meter = await meterOpen(uid);
     if (meter === 'empty') return json({ error: 'no_tokens' }, 402);
 
@@ -578,6 +625,7 @@ export default {
       console.log(`build-page: ${kind} planned in ${Date.now() - started} ms, tokens ${JSON.stringify(tokens)}`);
       const plan = checkPlan(raw, kind, profile, assets);
       await meterClose(meter, 'build-page', MODEL, tokens, true, '', Date.now() - started);
+      await countBuild(allowance);
       return json({ plan, usage: tokens });
     } catch (err) {
       const failure = err instanceof BuildFailure ? err : new BuildFailure('check', String((err as Error)?.message || '').slice(0, 200));

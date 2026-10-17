@@ -120,6 +120,8 @@ export interface RightDrawerProps {
   onStepChange?: (stepNum: number) => void;
   // «ابن صفحتي»: Wee AI building the page from the answers, and bringing the old page back.
   onBuildPage?: (answers: any) => Promise<{ ok: boolean; message: string }>;
+  // Photos one gallery element may hold under the project's package (src/utils/planLimits.ts).
+  galleryLimit?: number;
   onRestorePage?: () => { ok: boolean; message: string };
   // The questions are on the start page: this opens them again.
   onEditAnswers?: () => void;

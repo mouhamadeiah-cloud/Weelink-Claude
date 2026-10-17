@@ -9,7 +9,7 @@
 //                                         A restaurant's site stays live in restaurants/{uid}; its
 //                                         doc here only gives it a name.
 //   siteDomains/{host}                    a customer's own domain → the site's name (written by
-//                                         api/domains.ts once the domain is added to Vercel).
+//                                         api/domains.ts once the domain is added to Cloudflare).
 //   domainOrders/{id}                     a request to buy a domain through Weelink.
 // See firestore.rules.
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, runTransaction, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
@@ -40,7 +40,7 @@ export const siteNameProblem = (name: string) => {
 };
 
 export const siteUrl = (name: string) => `https://${name}.${SITE_DOMAIN}`;
-// Works before the free addresses (*.testweelink.de) are set up in Vercel.
+// Works before the free addresses (*.testweelink.de) are set up.
 export const siteFallbackUrl = (name: string) => `${window.location.origin}/?s=${encodeURIComponent(name)}`;
 
 const siteId = (owner: string, project: ProjectKey) => `${owner}__${project}`;
@@ -240,7 +240,7 @@ export const siteFromLocation = (): { name: string } | { host: string } | null =
     const sub = host.slice(0, -(SITE_DOMAIN.length + 1));
     return sub && sub !== 'www' && !sub.includes('.') ? { name: sub } : null;
   }
-  const ours = host === SITE_DOMAIN || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.vercel.app') || host === 'weelink.de' || host.endsWith('.weelink.de');
+  const ours = host === SITE_DOMAIN || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.vercel.app') || host.endsWith('.workers.dev') || host === 'weelink.de' || host.endsWith('.weelink.de');
   return ours ? null : { host: host.replace(/^www\./, '') };
 };
 
@@ -288,7 +288,7 @@ export const normalizeDomain = (raw: string) =>
 
 export const isValidDomain = (d: string) => /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(d);
 
-// The customer's own domain: added to Weelink's Vercel project; returns the DNS records to set.
+// The customer's own domain: added to Weelink's Cloudflare zone; returns the DNS records to set.
 export const connectDomain = (owner: string, project: ProjectKey, domain: string) =>
   callDomains<{ domain: CustomDomainState }>({ action: 'connect', owner, project, domain });
 
@@ -296,7 +296,7 @@ export const checkDomain = (owner: string, project: ProjectKey) => callDomains<{
 
 export const removeDomain = (owner: string, project: ProjectKey) => callDomains<{ removed: true }>({ action: 'remove', owner, project });
 
-// Whether a domain can be bought, and for how much (through Weelink's Vercel account).
+// Whether a domain is still free to buy; the price is confirmed by the office (price is null).
 export const domainPrice = (domain: string) =>
   callDomains<{ available: boolean; price: number | null; years: number; currency: string }>({ action: 'price', domain });
 

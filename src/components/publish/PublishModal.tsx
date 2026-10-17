@@ -46,7 +46,7 @@ const domainErrorText = (e: string) =>
     : e === 'bad_domain' ? 'اكتب الدومين بشكل صحيح، مثل alnour.com.'
     : e === 'domain_taken' ? 'هذا الدومين مربوط بصفحة أخرى على Weelink.'
     : e === 'not_published' ? 'انشر صفحتك أولاً ثم اربط الدومين.'
-    : e === 'vercel_refused' ? 'رُفض الدومين. تأكد أنه صحيح وأنه ليس مستعملاً في موقع آخر.'
+    : e === 'cloudflare_refused' ? 'رُفض الدومين. تأكد أنه صحيح وأنه ليس مستعملاً في موقع آخر.'
     : e === 'forbidden' ? 'فقط صاحب الصفحة يستطيع ربط دومين.'
     : 'تعذر الاتصال. حاول مرة أخرى.';
 
@@ -162,6 +162,11 @@ const ConnectDomain: React.FC<{ owner: string; project: ProjectKey; site: Publis
                   </div>
                 ))}
               </div>
+              {current.name.split('.').length === 2 && (
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  إذا لم تقبل شركة الدومين سجل CNAME على @، اختر بدلاً منه ALIAS أو ANAME بنفس القيمة، أو حوّل الدومين إلى www من إعدادات الشركة.
+                </p>
+              )}
               {current.message && <p className="text-xs text-neutral-500">{current.message}</p>}
             </>
           )}
@@ -253,7 +258,7 @@ const BuyDomain: React.FC<{ owner: string; project: ProjectKey; suggested: strin
         </div>
         {quote && (
           <p className={`text-xs font-bold mt-1.5 ${quote.available ? 'text-[#1d6b34]' : 'text-[#c2410c]'}`}>
-            {quote.available ? `متاح${quote.price !== null ? ` · ${quote.price}$ للسنة` : ''}` : 'غير متاح، جرّب اسماً آخر.'}
+            {quote.available ? `متاح${quote.price !== null ? ` · ${quote.price}$ للسنة` : '. أرسل الطلب وسنؤكد لك السعر.'}` : 'غير متاح، جرّب اسماً آخر.'}
           </p>
         )}
         {note && <p className="text-xs text-neutral-500 mt-1.5">{note}</p>}

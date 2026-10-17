@@ -29,7 +29,7 @@ const query = (path: string, filters: [string, any, string?][]): any => ({
   orderBy() { return this; },
   async get() { const docs = [...store.entries()].filter(([k, v]) => k.startsWith(path + '/') && k.split('/').length === path.split('/').length + 1 && filters.every(([f, val, op]) => cmp(v[f], op || '==', val))).map(([k, v]) => ({ id: k.split('/').pop(), ref: docRef(k), data: () => clone(v) })); return { size: docs.length, docs }; },
 });
-export const getFirestore = () => ({ collection: (n: string) => colRef(n), batch() { const ops: (() => Promise<void>)[] = []; return { set: (r: any, d: any, o?: any) => { ops.push(() => r.set(d, o)); }, delete: (r: any) => { ops.push(() => r.delete()); }, update: (r: any, p: any) => { ops.push(() => r.update(p)); }, async commit() { for (const op of ops) await op(); } }; }, async runTransaction(fn: any) { const tx = { get: (r: any) => r.get(), update: (r: any, p: any) => r.update(p), set: (r: any, d: any, o: any) => r.set(d, o) }; return fn(tx); } });
+export const getFirestore = () => ({ collection: (n: string) => colRef(n), doc: (p: string) => docRef(p), batch() { const ops: (() => Promise<void>)[] = []; return { set: (r: any, d: any, o?: any) => { ops.push(() => r.set(d, o)); }, delete: (r: any) => { ops.push(() => r.delete()); }, update: (r: any, p: any) => { ops.push(() => r.update(p)); }, async commit() { for (const op of ops) await op(); } }; }, async runTransaction(fn: any) { const tx = { get: (r: any) => r.get(), update: (r: any, p: any) => r.update(p), set: (r: any, d: any, o: any) => r.set(d, o) }; return fn(tx); } });
 export const getApps = () => [{}];
 export const initializeApp = () => ({});
 export const cert = (x: any) => x;

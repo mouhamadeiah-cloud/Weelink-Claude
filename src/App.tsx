@@ -2446,6 +2446,11 @@ export default function App() {
   };
 
   const currentPage = pages.find(p => p.id === activePageId) || pages[0];
+  // What publishing from the project settings sends: computed only while those settings are open.
+  const settingsPublishData = useMemo(
+    () => (drawerSection === 'project-settings' ? publicDataFor(project, shopAdmin, carAdmin) : null),
+    [drawerSection, project, shopAdmin, carAdmin]
+  );
 
   // The look cards show the owner's own site: its name, the first heading, text and button of its
   // first page, and its first dish, product, car or price.
@@ -4797,6 +4802,25 @@ export default function App() {
             onRename={(brandName) => setPages(pages.map(p => ({ ...p, navbar: { ...p.navbar, brandName } })))}
             kindLabel={PROJECT_KIND_LABEL[project]}
             siteUrl={project === 'restaurant' ? restaurantSiteUrl(restaurantId) : undefined}
+            publish={drawerSection === 'project-settings' && ownerUid ? (
+              <PublishModal
+                key={`${projectKey}-${publishedName || ''}-${isPublishOpen}`}
+                embedded
+                open={false}
+                onClose={() => {}}
+                owner={ownerUid}
+                project={projectKey}
+                pages={pages}
+                elements={elements}
+                data={settingsPublishData}
+                suggestedName={currentPage.navbar.brandName || ''}
+                onPublishedChange={setPublishedName}
+                used={{
+                  items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
+                  devices: project === 'restaurant' ? restaurantAdmin.devices.filter((d) => d.active).length : 0,
+                }}
+              />
+            ) : undefined}
           />
         }
       />

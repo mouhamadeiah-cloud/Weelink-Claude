@@ -8,9 +8,11 @@ interface ProjectSettingsSectionProps {
   onRename: (name: string) => void;
   kindLabel: string;
   siteUrl?: string;
+  // The publish fields (page name and its default link, icon, search texts) with a publish button.
+  publish?: React.ReactNode;
 }
 
-export const ProjectSettingsSection = ({ name, onRename, kindLabel, siteUrl }: ProjectSettingsSectionProps) => {
+export const ProjectSettingsSection = ({ name, onRename, kindLabel, siteUrl, publish }: ProjectSettingsSectionProps) => {
   const [copied, setCopied] = useState(false);
   const copy = () => {
     if (!siteUrl) return;
@@ -37,7 +39,14 @@ export const ProjectSettingsSection = ({ name, onRename, kindLabel, siteUrl }: P
         <p className="text-xs text-neutral-500">يظهر في النافبار على كل صفحات الموقع. نوع المشروع: {kindLabel}.</p>
       </div>
 
-      <div className="space-y-1.5 pt-3 border-t border-neutral-200">
+      {publish && (
+        <div className="space-y-2 pt-3 border-t border-neutral-200">
+          <label className="text-xs font-bold text-neutral-800 block">النشر ورابط الموقع:</label>
+          {publish}
+        </div>
+      )}
+
+      <div className="space-y-1.5 pt-3 border-t border-neutral-200" hidden={!!publish}>
         <label className="text-xs font-bold text-neutral-800 block">رابط الموقع:</label>
         {siteUrl ? (
           <div className="flex items-center gap-1.5">

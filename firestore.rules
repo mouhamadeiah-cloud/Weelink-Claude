@@ -129,6 +129,13 @@ service cloud.firestore {
         return (isSignedIn() && request.auth.uid == owner()) || isDevice() || canManage(owner());
       }
 
+      // A guest's order comes with its sign-in's mark in guestRate, written in the same transaction; the mark
+      // can only move forward 20 seconds after the last one, so one browser can't flood the kitchen.
+      function guestRateTaken() {
+        return isSignedIn()
+          && getAfter(/databases/$(database)/documents/restaurants/$(restaurantId)/guestRate/$(request.auth.uid)).data.at == request.time;
+      }
+
       function acceptsOrders() {
         let r = get(/databases/$(database)/documents/restaurants/$(restaurantId));
         return r.data.settings.acceptOrders == true;
@@ -173,11 +180,19 @@ service cloud.firestore {
       match /orders/{orderId} {
         // Guests add new orders only; the staff (cashier, waiters) add theirs from their devices.
         allow create: if isValidId(orderId) && (
-          (isValidNewOrder(request.resource.data, orderId) && acceptsOrders())
+          (isValidNewOrder(request.resource.data, orderId) && acceptsOrders() && guestRateTaken())
           || isStaff());
         allow get, list: if (isSignedIn() && resource.data.customerUid == request.auth.uid) || isStaff();
         allow update: if isStaff();
         allow delete: if isOwner(owner());
+      }
+
+      match /guestRate/{guestUid} {
+        allow create: if isSignedIn() && request.auth.uid == guestUid
+          && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time;
+        allow update: if isSignedIn() && request.auth.uid == guestUid
+          && request.resource.data.keys().hasOnly(['at']) && request.resource.data.at == request.time
+          && request.time > resource.data.at + duration.value(20, 's');
       }
 
       // The day's order count (1, 2, 3...). A guest's order takes the next number in its transaction:

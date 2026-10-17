@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { store, getFirestore } from './fakeAdmin.ts';
+import { store, getFirestore, storageDeletes } from './fakeAdmin.ts';
 import { sent } from './mailRecorder.ts';
 import {
   DAY, accessId, approveOrder, attachProof, createOrder, deleteCustomer, enforceBilling, extendOrder, invoiceFor, myBilling, needsPayment, rejectOrder, runBillingDaily,
@@ -140,6 +140,7 @@ test('deleting a customer keeps their sign-in, payments and a card', async () =>
   }
   assert.ok(store.has('platform_payments/p4'), 'payments stay');
   assert.equal(store.get('platform_deleted/u4').email, 'u4@x.de');
+  assert.deepEqual(storageDeletes, ['weelink-cd35d.firebasestorage.app/users/u4/'], 'their photos');
 });
 
 test('turning payment on marks the accounts that exist as test accounts', async () => {

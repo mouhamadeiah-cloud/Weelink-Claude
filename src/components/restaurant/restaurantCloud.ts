@@ -12,7 +12,8 @@
 //   restaurants/{uid}/deviceLinks/{authUid}   which code each tablet signed in with.
 // See firestore.rules. Nothing private (orders, accounts, customers) is ever in the public doc.
 import { useEffect, useState } from 'react';
-import { type DocumentReference, collection, deleteDoc, deleteField, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
+import { type DocumentReference, collection, deleteDoc, deleteField, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
 import { auth, db } from '../../services/firebase';
 import type { CanvasElement, Page } from '../../types';
 import { LedgerEntry, MenuOrder, StaffDevice, OrderStatus, RestaurantAdminData, normalizeLedgerEntry, normalizeOrderRecord, normalizeRestaurantAdmin, orderLedgerEntry, setDayStartHour } from './restaurantTypes';
@@ -134,18 +135,23 @@ export const setOrderDoneLines = (uid: string, orderId: string, doneLines: numbe
 // ---------- Orders ----------
 
 // Gives up after a while on a bad connection, so the guest is offered WhatsApp instead of waiting.
-// Writes a guest's order with the day's next number and returns that number.
-export const placeOrder = (uid: string, order: MenuOrder, timeoutMs = 15000) =>
-  Promise.race([
+// Writes a guest's order with the day's next number and returns that number. The guest needs a sign-in
+// (an anonymous one when they have none): the order moves its mark in guestRate, which the rules let
+// move once every 20 seconds (firestore.rules).
+export const placeOrder = async (uid: string, order: MenuOrder, timeoutMs = 15000) => {
+  const guest = auth.currentUser || (await signInAnonymously(auth)).user;
+  return Promise.race([
     runTransaction(db, async (tx) => {
       const next = await readNextNumber(tx, uid);
       next?.take();
       const number = next?.n ?? order.number;
       tx.set(doc(ordersCol(uid), order.id), clean({ ...order, number }));
+      tx.set(doc(db, 'restaurants', uid, 'guestRate', guest.uid), { at: serverTimestamp() });
       return number;
     }),
     new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('timeout')), timeoutMs)),
   ]);
+};
 
 // A delivered order adds its sale to the accounts; taking it back from «تم التسليم» removes it.
 // The staff's orders and the ones added to a table's bill are paid at the cashier, which books them.

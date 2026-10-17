@@ -1,5 +1,6 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
+import { storagePath } from './storagePaths';
 import { compressImageToTargetSize } from './imageCompressor';
 
 // The owner's photos from the Wee AI questions (logo, gallery, hero background). A phone photo read
@@ -40,7 +41,7 @@ export async function hostImage(url: string, kind: 'logo' | 'photo'): Promise<st
   if (!isInline(url)) return url;
   const small = await shrinkDataUrl(url, kind);
   try {
-    const fileRef = ref(storage, `images/${Date.now()}_wee_${kind}_${Math.random().toString(36).slice(2, 8)}`);
+    const fileRef = ref(storage, storagePath('images', `${Date.now()}_wee_${kind}_${Math.random().toString(36).slice(2, 8)}`));
     const snapshot = await uploadBytes(fileRef, await toBlob(small));
     return await getDownloadURL(snapshot.ref);
   } catch (e) {

@@ -44,6 +44,8 @@ import { ShopDataContext, ShopUpdateContext } from './components/shop/store/Shop
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
 import { laterProjectFields, listProjects, projectDoc } from './services/projects';
 import { isFirstOfKind, kindOf, localPrefixOf, newProjectKey, restaurantIdOf } from './utils/projectKeys';
+import { deleteProjectData } from './services/myAccount';
+import { AccountPage } from './components/platform/AccountPage';
 import { CarAdminPanel } from './components/cars/CarAdminPanel';
 import { CarDataContext, CarRequestContext } from './components/cars/store/CarDataContext';
 import { submitRequest, RequestInput } from './components/cars/carMoney';
@@ -219,6 +221,9 @@ export default function App() {
   const [isStartActive, setIsStartActive] = useState<boolean>(true);
   // «قانون الصفحة»: a screen of its own under Weelink's top bar.
   const [isLawActive, setIsLawActive] = useState<boolean>(false);
+  // «حسابي»: the account page, opened from the person icon (or at the bell's list).
+  const [isAccountActive, setIsAccountActive] = useState<boolean>(false);
+  const [accountSection, setAccountSection] = useState<'notices' | null>(null);
   // The kind the start page opens on (from «عدّل إجاباتي» in the editor), else the kinds.
   const [startKind, setStartKind] = useState<ProjectType | null>(null);
   // Which form the sign-in screen opens on: the designers' sign-up comes from the start page's fifth card.
@@ -374,7 +379,7 @@ export default function App() {
   // «مشاريعي» on the start page: the account's projects and whether each is published.
   const [myProjects, setMyProjects] = useState<MyProject[] | null>(null);
   const [myProjectsTick, setMyProjectsTick] = useState(0);
-  const startShowing = isStartActive || (!isProjectChosen && !isAuthActive);
+  const startShowing = isAccountActive || isStartActive || (!isProjectChosen && !isAuthActive);
   useEffect(() => {
     if (!startShowing || !currentUser || currentUser.isAnonymous) return;
     let alive = true;
@@ -1533,6 +1538,7 @@ export default function App() {
     setIsHomeActive(false);
     setIsStartActive(false);
     setIsLawActive(false);
+    setIsAccountActive(false);
     setIsAuthActive(false);
     setIsProjectChosen(false);
     // The owner sees their page as visitors do, with «الإدارة» in its navbar (Eyad, 13 Oct); the
@@ -1841,33 +1847,83 @@ export default function App() {
     }, 900);
   };
 
+  // Clears the signed-out account from memory. Without this, the previous account's pages/elements
+  // stay in React state, and if a DIFFERENT person then signs up as a new user on this same browser
+  // without a page refresh, handleAuthSuccess's "preserve current design for the new user" logic
+  // would hand them the previous user's page.
+  const resetAfterSignOut = () => {
+    resetAccountMemory();
+    designerModeRef.current = false;
+    draftReadyRef.current = false;
+    setDesignerMode(false);
+    setIsDesigner(false);
+    setIsExportOpen(false);
+    setIsOrdersOpen(false);
+    setActiveUserUid('mouhamadeiah');
+    setIsProjectChosen(false);
+    setIsAuthActive(true);
+    setIsLawActive(false);
+    setIsAccountActive(false);
+    setIsHomeActive(false);
+    setStartKind(null);
+    setIsStartActive(true);
+  };
+
   const handleLogout = async () => {
     if (confirm('هل أنت متأكد من رغبتك في تسجيل الخروج من الحساب السحابي؟')) {
       try {
         if (designerModeRef.current) await saveActiveDraft();
         await logoutUser();
-        // Critical: clear the in-memory design when logging out. Without this,
-        // the previous account's pages/elements stay in React state, and if a
-        // DIFFERENT person then signs up as a new user on this same browser
-        // without a page refresh, handleAuthSuccess's "preserve current design
-        // for the new user" logic would hand them the previous user's page.
-        resetAccountMemory();
-        designerModeRef.current = false;
-        draftReadyRef.current = false;
-        setDesignerMode(false);
-        setIsDesigner(false);
-        setIsExportOpen(false);
-        setIsOrdersOpen(false);
-        setActiveUserUid('mouhamadeiah');
-        setIsProjectChosen(false);
-        setIsAuthActive(true);
-        setIsLawActive(false);
-        setIsHomeActive(false);
-        setStartKind(null);
-        setIsStartActive(true);
+        resetAfterSignOut();
       } catch (e) {
         alert('تعذر تسجيل الخروج.');
       }
+    }
+  };
+
+  const openMyAccount = (section?: 'notices') => {
+    if (screenRef.current === 'editor') flushProjectSave();
+    setIsHomeActive(false);
+    setIsStartActive(false);
+    setIsLawActive(false);
+    setAccountSection(section || null);
+    setIsAccountActive(true);
+    window.scrollTo({ top: 0 });
+  };
+
+  // «إيقاف مؤقت» on the account page: the project stays, its link stops until it is published again.
+  const pauseProject = (key: string) =>
+    unpublishSite(activeUserUid, key).then(
+      () => {
+        setMyProjectsTick((n) => n + 1);
+        return true;
+      },
+      () => false
+    );
+
+  // «حذف» on the account page: the link stops, then the project's design and local copies go.
+  const deleteProject = async (key: string) => {
+    try {
+      const row = myProjects?.find((p) => p.key === key);
+      if (row?.published) await unpublishSite(activeUserUid, key);
+      if (key === projectKey) {
+        // The open project must not be saved back by the editor's saves.
+        projectReadyRef.current = false;
+        setIsProjectChosen(false);
+      }
+      await deleteProjectData(activeUserUid, key);
+      const prefix = localPrefixOf(key);
+      try {
+        for (const part of ['pages', 'elements', 'admin']) localStorage.removeItem(`${prefix}${part}_${activeUserUid}`);
+      } catch {
+        // nothing kept locally
+      }
+      if (isFirstOfKind(key)) ownedRef.current = { ...ownedRef.current, [kindOf(key)]: false };
+      setMyProjectsTick((n) => n + 1);
+      return true;
+    } catch (e) {
+      console.warn('Could not delete the project:', e);
+      return false;
     }
   };
 
@@ -3994,7 +4050,7 @@ export default function App() {
   // The browser's back button walks back through Weelink's screens (home, the start page and its
   // questions, sign-in, the editor) instead of leaving the site: each screen is an
   // entry in the browser's history.
-  const screen = isLawActive ? 'law' : isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'start' : 'editor';
+  const screen = isAccountActive ? 'account' : isLawActive ? 'law' : isHomeActive ? 'home' : isStartActive ? 'start' : isAuthActive ? 'auth' : !isProjectChosen ? 'start' : 'editor';
   const screenRef = useRef(screen);
   screenRef.current = screen;
   // Customers' page fonts load once the editor opens (Weelink's own screens don't use them).
@@ -4006,9 +4062,10 @@ export default function App() {
   goToScreenRef.current = (target, kind) => {
     const signedIn = !!currentUser && !currentUser.isAnonymous;
     const asked = target === 'chooser' ? 'start' : target; // the old projects page's entries
-    const to = !signedIn && asked === 'editor' ? 'start' : signedIn && asked === 'auth' ? 'start' : asked;
+    const to = !signedIn && (asked === 'editor' || asked === 'account') ? 'start' : signedIn && asked === 'auth' ? 'start' : asked;
     if (screenRef.current === 'editor' && to !== 'editor') flushProjectSave();
     setIsLawActive(to === 'law');
+    setIsAccountActive(to === 'account' && signedIn);
     setIsHomeActive(to === 'home');
     setIsStartActive(to === 'start');
     if (to === 'start') setStartKind(kind || null);
@@ -4045,6 +4102,57 @@ export default function App() {
     );
   }
 
+  if (isAccountActive && currentUser && !currentUser.isAnonymous) {
+    return (
+      <AccountPage
+        user={currentUser}
+        accountId={activeUserUid}
+        isDesigner={isDesigner}
+        projects={myProjects}
+        loadingType={projectLoading}
+        section={accountSection}
+        onHome={() => {
+          setIsAccountActive(false);
+          setIsHomeActive(true);
+        }}
+        onStart={() => {
+          setIsAccountActive(false);
+          setStartKind(null);
+          setIsStartActive(true);
+        }}
+        onOpenMyPage={() => openMyPage(activeUserUid)}
+        onLaw={() => {
+          setIsAccountActive(false);
+          setIsLawActive(true);
+        }}
+        onAccount={() => {}}
+        onMyAccount={(section) => {
+          setAccountSection(section || null);
+          if (section) document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' });
+          else window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onLogout={handleLogout}
+        onOpenProject={async (key) => {
+          await handleChooseProject(key);
+          setIsAccountActive(false);
+          setIsStartActive(false);
+          setIsProjectChosen(true);
+        }}
+        onPauseProject={pauseProject}
+        onDeleteProject={deleteProject}
+        onOpenDesigner={async () => {
+          setIsAccountActive(false);
+          setIsStartActive(false);
+          setIsHomeActive(false);
+          setIsAuthActive(false);
+          setIsProjectChosen(true);
+          await enterDesignerMode();
+        }}
+        onAccountDeleted={resetAfterSignOut}
+      />
+    );
+  }
+
   if (isLawActive) {
     return (
       <LawPage
@@ -4068,6 +4176,7 @@ export default function App() {
           setIsLawActive(false);
           setIsAuthActive(true);
         }}
+        onMyAccount={openMyAccount}
         onLogout={handleLogout}
       />
     );
@@ -4095,6 +4204,7 @@ export default function App() {
           setIsHomeActive(false);
           setIsLawActive(true);
         }}
+        onMyAccount={openMyAccount}
         onLogout={handleLogout}
       />
     );
@@ -4127,6 +4237,7 @@ export default function App() {
           setIsStartActive(false);
           setIsAuthActive(true);
         }}
+        onMyAccount={openMyAccount}
         onLogout={handleLogout}
         onBuild={openAfterQuestions}
         owned={(Object.keys(ownedRef.current) as ProjectType[]).filter((k) => ownedRef.current[k])}

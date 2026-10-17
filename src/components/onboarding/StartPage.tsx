@@ -73,6 +73,7 @@ interface StartPageProps {
   onOpenMyPage?: () => void;
   onLaw?: () => void;
   onAccount?: () => void;
+  onMyAccount?: (section?: 'notices') => void;
   onLogout?: () => void;
   // A signed-in owner finished the questions: open this kind and build it from the answers.
   onBuild: (kind: ProjectType, answers: any) => void;
@@ -93,7 +94,7 @@ interface StartPageProps {
   onUnpublish?: (key: string) => Promise<boolean>;
 }
 
-export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onOpenMyPage, onLaw, onAccount, onLogout, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [], projects = null, onOpenProject, onUnpublish }) => {
+export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKind, onHome, onOpenMyPage, onLaw, onAccount, onMyAccount, onLogout, onBuild, onSignUp, onDesigner, onAddDesign, onEditDesign, loadingType, owned = [], projects = null, onOpenProject, onUnpublish }) => {
   const signedIn = !!user && !user.isAnonymous;
   const attention = useOrderAttention(signedIn && user ? user.uid : '');
   const [kind, setKind] = useState<ProjectType | null>(initialKind || null);
@@ -151,6 +152,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
         onOpenMyPage={onOpenMyPage || onHome}
         onLaw={onLaw || onHome}
         onAccount={onAccount || onHome}
+        onMyAccount={onMyAccount || onHome}
         onLogout={onLogout || onHome}
         extra={signedIn && !kind ? (
           <button type="button" onClick={() => setOrders({ id: '' })} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-ink">

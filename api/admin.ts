@@ -4,6 +4,7 @@
 //
 //   POST /api/admin  { action: 'login', username, password }   → { token, admin }
 //   POST /api/admin  { action: 'me' }                           → { admin }
+//   POST /api/admin  { action: 'my-account' } with a subscriber's Firebase ID token → { status, subscription, tokens, payments }
 //   POST /api/admin  { action: 'change-password', current, next } → { token, admin }
 //   POST /api/admin  { action: 'subscribers', q?, state?, published?, verified?, status? } → { rows, matched, summary }
 //   POST /api/admin  { action: 'subscriber', uid }               → { profile, status, sites, events }
@@ -461,6 +462,38 @@ export default {
     const ip = (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
     const audit = (admin: string, what: string, ok = true) =>
       db.collection('platform_audit').add({ at: FieldValue.serverTimestamp(), admin, action: what, ok, ip }).catch(() => undefined);
+
+    // ----- a subscriber's own account page (signed in with Firebase, not an admin) -----
+    // The subscription, the AI balance and the payments with their invoice links, read on the server
+    // because the browser never reads platform_subscribers or platform_payments.
+    if (action === 'my-account') {
+      const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      const user = token ? await auth.verifyIdToken(token).catch(() => null) : null;
+      if (!user) return json({ error: 'unauthorized' }, 401);
+      const [subSnap, paySnap] = await Promise.all([
+        db.collection('platform_subscribers').doc(user.uid).get(),
+        db.collection('platform_payments').where('uid', '==', user.uid).limit(200).get(),
+      ]);
+      const st = subSnap.data() as Record<string, any> | undefined;
+      const sub = st?.subscription;
+      const origin = new URL(request.url).origin;
+      const payments = paySnap.docs
+        .map((d) => payFromDoc(d.id, d.data()))
+        .sort((a, b) => b.paidAt - a.paidAt)
+        .map((p) => ({
+          id: p.id, invoiceNo: p.invoiceNo, planName: p.planName, period: p.period, amount: p.amount, method: p.method,
+          paidAt: p.paidAt, coversFrom: p.coversFrom, coversTo: p.coversTo,
+          invoiceUrl: p.key ? `${origin}/api/admin?invoice=${p.id}&k=${p.key}` : '',
+        }));
+      return json({
+        status: String(st?.status || 'active'),
+        subscription: sub
+          ? { plan: String(sub.plan || ''), planName: String(sub.planName || ''), period: sub.period === 'yearly' ? 'yearly' : 'monthly', endsAt: Number(sub.endsAt) || 0, freezeAt: Number(sub.freezeAt) || 0, trial: !!sub.trial }
+          : null,
+        tokens: { balance: typeof st?.tokens?.balance === 'number' ? st.tokens.balance : FREE_TOKENS, used: Number(st?.tokens?.used) || 0 },
+        payments,
+      });
+    }
 
     // ----- sign in -----
     if (action === 'login') {

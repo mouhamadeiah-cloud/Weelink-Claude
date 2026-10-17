@@ -77,6 +77,7 @@ interface HomePageProps {
   onLaw: () => void; // «قانون الصفحة»
   onBuild: () => void; // «اعمل مشروعك»
   onLogout: () => void;
+  onMyAccount: (section?: 'notices') => void; // the account page
 }
 
 const Chip: React.FC<{ on: boolean; onClick: () => void; small?: boolean; children: React.ReactNode }> = ({ on, onClick, small, children }) => (
@@ -91,7 +92,7 @@ const Chip: React.FC<{ on: boolean; onClick: () => void; small?: boolean; childr
   </button>
 );
 
-export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPage, onLaw, onBuild, onLogout }) => {
+export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPage, onLaw, onBuild, onLogout, onMyAccount }) => {
   const uid = user?.uid || null;
   const [place, setPlace] = useState(readHomePlace);
   // A search: one of the four fields (narrowed to a category and its sub-category when picked).
@@ -179,6 +180,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, onAccount, onOpenMyPag
         onOpenMyPage={onOpenMyPage}
         onLaw={onLaw}
         onAccount={onAccount}
+        onMyAccount={onMyAccount}
         onLogout={onLogout}
       />
 

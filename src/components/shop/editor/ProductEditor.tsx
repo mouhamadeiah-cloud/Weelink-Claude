@@ -20,9 +20,11 @@ import { RelatedProductsPicker } from './RelatedProductsPicker';
 import { ProductCard, ProductSlide } from '../store/ProductCard';
 import { CardStyleSettings } from './CardStyleSettings';
 import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
+import { itemNoLabel } from '../../../utils/itemNumbers';
 
 const newProductDraft = (currency: string): ShopProduct => ({
   id: '',
+  publicNo: 0,
   name: '',
   description: '',
   shortDescription: '',
@@ -167,10 +169,11 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           catalogIds.add(subId);
         }
       }
-      const saved = { ...product, catalogIds: Array.from(catalogIds) };
+      const before = d.products.find((x) => x.id === product.id);
+      // Numbered by Weelink while this form was open: keep it.
+      const saved = { ...product, publicNo: before?.publicNo || product.publicNo, catalogIds: Array.from(catalogIds) };
 
       // New stock is recorded as a purchase, per combination, for the accounts page.
-      const before = d.products.find((x) => x.id === saved.id);
       const added: { qty: number; variant?: string }[] = [];
       if (!saved.inWarehouse) {
         // Sold from the store only: no stock, nothing to record.
@@ -364,6 +367,11 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
             <Field label="رقم المنتج" hint="يُعطى تلقائياً بالتسلسل بدءاً من 0، ويمكنك تغييره. يُستعمل لربط المنتجات المرتبطة.">
               <input className={`${inputFitClass} w-48`} value={p.sku} onChange={(e) => set({ sku: e.target.value })} dir="ltr" />
             </Field>
+            {itemNoLabel('product', p.publicNo) && (
+              <Field label="رقم Weelink" hint="رقم المنتج على Weelink كله: لا يتكرر ولا يتغير، وبه تجد الإدارة منتجك للإعلان.">
+                <div dir="ltr" className="text-sm font-black text-ink">{itemNoLabel('product', p.publicNo)}</div>
+              </Field>
+            )}
           </Card>
         )}
 

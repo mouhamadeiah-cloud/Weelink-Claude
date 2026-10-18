@@ -15,6 +15,7 @@ import { carTitle } from '../carModel';
 import { useVehicleLists, isOther } from '../vehicleLists';
 import { carCost, syncPurchaseTx } from '../carMoney';
 import { Segmented } from './moneyUi';
+import { itemNoLabel } from '../../../utils/itemNumbers';
 
 export interface CarTabProps {
   data: CarAdminData;
@@ -153,6 +154,8 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
         brand: car.brand.trim(),
         model: car.model.trim(),
         id: car.id || newId('car'),
+        // Numbered by Weelink while this form was open: keep it.
+        publicNo: current?.publicNo || car.publicNo,
         stockNumber: car.stockNumber.trim() || nextStockNumber(d.cars),
         published,
         createdAt: car.createdAt || now,
@@ -177,7 +180,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
       <div className="space-y-4 min-w-0">
         {existing && (
           <div className="flex items-center justify-between gap-2 rounded-xl bg-blue-50 border border-blue-100 px-3 py-2 text-xs font-bold text-brand">
-            <span>تعديل: {carTitle(existing)} {existing.year || ''} · {existing.stockNumber}</span>
+            <span>تعديل: {carTitle(existing)} {existing.year || ''} · {existing.stockNumber}{itemNoLabel('car', existing.publicNo) && <> · <span dir="ltr" title="رقم Weelink للسيارة">{itemNoLabel('car', existing.publicNo)}</span></>}</span>
             <button type="button" onClick={() => onEdit(null)} className="flex items-center gap-1 cursor-pointer"><X size={13} /> سيارة جديدة</button>
           </div>
         )}

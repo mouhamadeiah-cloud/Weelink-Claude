@@ -79,6 +79,7 @@ export const DEFAULT_CARD_STYLE: CardStyle = { border: false, borderColor: '#B45
 
 export interface ShopProduct {
   id: string;
+  publicNo: number; // Weelink's public number of the product (S-10001, see services/itemNumbers.ts); 0 = not given yet
   name: string;
   description: string; // rich text (HTML)
   shortDescription: string;
@@ -345,6 +346,7 @@ export const createEmptyShopAdmin = (): ShopAdminData => ({
 // Fills in product fields added after the first version of the panel.
 export const normalizeProduct = (p: any, currency: string): ShopProduct => ({
   id: p.id,
+  publicNo: Math.max(0, Math.floor(Number(p.publicNo) || 0)),
   name: p.name || '',
   description: p.description || '',
   shortDescription: p.shortDescription || '',

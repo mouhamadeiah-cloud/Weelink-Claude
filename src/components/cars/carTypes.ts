@@ -15,6 +15,7 @@ export type VehicleKind = 'car' | 'commercial';
 
 export interface Car {
   id: string;
+  publicNo: number; // Weelink's public number of the car (C-10001, see services/itemNumbers.ts); 0 = not given yet
   stockNumber: string; // the showroom's own number for the car, e.g. "A-0007"
   vehicleKind: VehicleKind;
   vehicleCategory: string; // «شاحنات ومعدات» only: the category's Arabic name, e.g. «شاحنات أكثر من 7.5 طن»
@@ -311,6 +312,7 @@ const DEFAULT_CAR_SETTINGS: CarSettings = {
 
 export const emptyCar = (currency: string): Car => ({
   id: '',
+  publicNo: 0,
   stockNumber: '',
   vehicleKind: 'car',
   vehicleCategory: '',
@@ -374,6 +376,7 @@ const normalizeCar = (raw: any, currency: string): Car => {
     ...base,
     ...raw,
     id: str(raw?.id) || newId('car'),
+    publicNo: Math.max(0, Math.floor(num(raw?.publicNo))),
     year: num(raw?.year, base.year),
     engineCc: num(raw?.engineCc),
     horsepower: num(raw?.horsepower),

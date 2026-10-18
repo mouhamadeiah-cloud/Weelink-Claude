@@ -9,6 +9,7 @@ import { CarMoneyDialog } from './CarMoneyDialog';
 import { Card, EmptyState, inputClass, PrimaryButton, formatMoney } from '../../shop/adminUi';
 import { matchesSearch } from '../../shop/store/shopSearchStore';
 import { CarTabProps } from './CarEditor';
+import { itemNoLabel } from '../../../utils/itemNumbers';
 
 const Stat: React.FC<{ label: string; value: string; color?: string }> = ({ label, value, color }) => (
   <div className="bg-white border border-neutral-200 rounded-2xl p-3">
@@ -48,7 +49,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
   };
 
   const shown = useMemo(
-    () => data.cars.filter((c) => (filter === 'all' || c.status === filter) && matchesSearch([c.brand, c.model, c.trim, String(c.year), c.stockNumber, c.vin, c.color], query)),
+    () => data.cars.filter((c) => (filter === 'all' || c.status === filter) && matchesSearch([c.brand, c.model, c.trim, String(c.year), c.stockNumber, itemNoLabel('car', c.publicNo), c.vin, c.color], query)),
     [data.cars, filter, query]
   );
   const inStock = data.cars.filter((c) => c.status !== 'sold');
@@ -105,7 +106,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
                     <div className="min-w-0">
                       <div className="text-sm font-black text-ink truncate">{carTitle(c)} · {carSubtitle(c)}</div>
                       <div className="text-xs text-neutral-500 truncate">
-                        {[c.stockNumber, c.condition === 'new' ? 'جديدة' : formatKm(c.mileage), c.color].filter(Boolean).join(' · ')}
+                        {[itemNoLabel('car', c.publicNo), c.stockNumber, c.condition === 'new' ? 'جديدة' : formatKm(c.mileage), c.color].filter(Boolean).join(' · ')}
                       </div>
                       <div className="text-xs font-bold mt-0.5">
                         {c.sale ? <>بيعت بـ {formatMoney(c.sale.price, c.currency)}</> : c.price > 0 ? formatMoney(c.price, c.currency) : <span className="text-neutral-400">بدون سعر</span>}

@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<title>إدارة المطعم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Lalezar&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#eef2f8}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;font-family:'IBM Plex Sans Arabic',sans-serif;color:#0b1220}
+.bg{position:absolute;inset:0;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
+#b1{width:620px;height:620px;background:#cfe3ff;left:-120px;top:-160px}
+#b2{width:520px;height:520px;background:#e6dcff;right:-100px;bottom:-140px}
+#b3{width:380px;height:380px;background:#d9f3ea;right:420px;top:-120px}
+.grid{position:absolute;inset:0;background-image:radial-gradient(#c9d3e3 1.2px,transparent 1.2px);background-size:34px 34px;opacity:.5}
+
+/* intro */
+#intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#t1{font-family:'Lalezar','IBM Plex Sans Arabic',sans-serif;font-size:150px;font-weight:400;line-height:1.05;color:#0b1220}
+#t2{font-size:38px;font-weight:500;color:#4a5568;margin-top:18px;direction:rtl}
+#t2 b{color:#1d5bd8;font-weight:600}
+#shapes{position:relative;width:330px;height:150px;margin-bottom:34px}
+.sh{position:absolute;bottom:0;width:92px;height:92px;border-radius:24px;display:grid;place-items:center;color:#fff}
+.sh svg{width:46px;height:46px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#s1{background:#B5562B;left:0}#s2{background:#1d5bd8;left:119px}#s3{background:#12b886;left:238px}
+
+/* the admin window */
+#win{position:absolute;left:160px;top:110px;width:1600px;height:880px;background:#f6f7fa;border-radius:26px;
+  box-shadow:0 40px 90px -20px rgba(20,40,80,.35),0 0 0 1px rgba(10,20,40,.06);overflow:hidden;direction:rtl;transform-origin:50% 50%}
+#top{height:68px;background:#fff;border-bottom:1px solid #e7e9ef;display:flex;align-items:center;gap:14px;padding:0 24px}
+#top .ic{width:42px;height:42px;border-radius:13px;background:#B5562B;display:grid;place-items:center}
+#top .ic svg{width:21px;height:21px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#top .tt{flex:1}
+#top .tt b{display:block;font-size:19px;font-weight:700}
+#top .tt span{display:block;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;color:#9aa3b2;direction:ltr;text-align:right}
+#top .x{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#6b7280}
+#top .x svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+#body{display:flex;height:812px}
+#nav{width:270px;background:#fff;border-left:1px solid #e7e9ef;padding:12px 10px;display:flex;flex-direction:column;gap:4px}
+.nv{height:46px;border-radius:14px;display:flex;align-items:center;gap:11px;padding:0 14px;font-size:16px;font-weight:600;color:#4b5563;white-space:nowrap}
+.nv svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.nv.on{background:#1d5bd8;color:#fff}
+.nv .bd{margin-right:auto;min-width:24px;height:22px;border-radius:11px;background:#ff3b30;color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;padding:0 6px}
+.nv .ct{margin-right:auto;min-width:24px;height:22px;border-radius:11px;background:#f1f3f7;color:#6b7280;font-size:13px;font-weight:700;display:grid;place-items:center;padding:0 6px}
+.nv.on .ct{background:#fff;color:#1d5bd8}
+#content{flex:1;position:relative;overflow:hidden}
+.view{position:absolute;inset:0;padding:30px 34px;visibility:hidden;opacity:0}
+.vh{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.vh h2{font-size:28px;font-weight:700}
+.vh p{font-size:16px;color:#6b7280;margin-top:4px}
+.btn{height:46px;padding:0 22px;border-radius:14px;background:#0b1220;color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.btn svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round}
+.card{background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(16,24,40,.05),0 0 0 1px #eceef3}
+
+/* dishes */
+#dgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.dc{height:236px;padding:12px;position:relative}
+.dc .im{height:132px;border-radius:14px}
+.dc b{display:block;font-size:18px;font-weight:700;margin-top:12px}
+.dc span{display:block;font-size:15px;font-weight:700;color:#B5562B;margin-top:4px}
+.dc .cat{position:absolute;top:22px;right:22px;background:rgba(255,255,255,.92);border-radius:10px;padding:3px 10px;font-size:13px;font-weight:700;color:#374151}
+#dNew{box-shadow:0 0 0 3px #1d5bd8,0 20px 40px -16px rgba(29,91,216,.45)}
+/* categories */
+.crow{display:flex;align-items:center;gap:16px;height:76px;padding:0 22px;margin-bottom:12px;font-size:19px;font-weight:700}
+.crow .hd{color:#c0c6d2;font-size:22px;letter-spacing:-3px}
+.crow .th{width:52px;height:52px;border-radius:14px}
+.crow .n{margin-right:auto;font-size:15px;color:#6b7280;font-weight:600}
+/* orders */
+.ord{display:flex;align-items:center;gap:20px;height:110px;padding:0 26px;margin-bottom:14px}
+.ord .no{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:#9aa3b2;width:70px}
+.ord .who{flex:1}
+.ord .who b{display:block;font-size:19px}
+.ord .who span{display:block;font-size:15px;color:#6b7280;margin-top:4px}
+.ord .sum{font-size:19px;font-weight:700;width:150px}
+.chip{height:34px;border-radius:17px;padding:0 16px;display:flex;align-items:center;font-size:15px;font-weight:700;white-space:nowrap}
+.cNew{background:#fee2e2;color:#dc2626}.cPrep{background:#fef3c7;color:#b45309}.cWay{background:#dbeafe;color:#1d4ed8}.cDone{background:#dcfce7;color:#15803d}
+.okb{height:44px;border-radius:13px;background:#12b886;color:#fff;font-size:16px;font-weight:700;padding:0 22px;display:flex;align-items:center}
+/* customers */
+.tbl{overflow:hidden}
+.tr{display:flex;align-items:center;height:64px;padding:0 26px;border-bottom:1px solid #f0f2f6;font-size:17px}
+.tr.h{height:52px;background:#f8f9fb;font-size:14px;font-weight:700;color:#6b7280}
+.tr>*:nth-child(1){flex:1.4}.tr>*:nth-child(2){flex:1.2;direction:ltr;text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:15px}.tr>*:nth-child(3){flex:.8}.tr>*:nth-child(4){flex:1}
+.tr.h>*:nth-child(2){font-family:'IBM Plex Sans Arabic';font-size:14px;direction:rtl}
+/* halls */
+.tabs{display:flex;gap:10px;margin-bottom:22px}
+.tabs i{font-style:normal;height:42px;border-radius:21px;padding:0 20px;display:flex;align-items:center;font-size:16px;font-weight:700;background:#fff;box-shadow:0 0 0 1px #e5e7eb;color:#4b5563}
+.tabs i.on{background:#0b1220;color:#fff;box-shadow:none}
+#floor{height:540px;position:relative;background:#fff;border-radius:22px;box-shadow:0 0 0 1px #eceef3;background-image:radial-gradient(#e3e7ee 1.2px,transparent 1.2px);background-size:26px 26px}
+.tb{position:absolute;width:130px;height:110px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;background:#ecfdf5;box-shadow:0 0 0 2px #a7f3d0;color:#047857}
+.tb b{font-size:28px;font-family:'Plus Jakarta Sans',sans-serif}
+.tb span{font-size:14px}
+.tb.busy{background:#fff7ed;box-shadow:0 0 0 2px #fdba74;color:#c2410c}
+.tb.rnd{border-radius:55px;width:110px}
+/* devices */
+#dvg{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.dv{padding:26px;height:250px;position:relative}
+.dv .ic{width:58px;height:58px;border-radius:17px;display:grid;place-items:center}
+.dv .ic svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dv b{display:block;font-size:20px;margin-top:16px}
+.dv .cd{display:flex;align-items:center;gap:10px;margin-top:18px}
+.dv .cd span{font-family:'Plus Jakarta Sans',sans-serif;font-size:30px;font-weight:800;letter-spacing:6px;direction:ltr;background:#f3f5f9;border-radius:12px;padding:4px 14px}
+.dv .st{position:absolute;top:28px;left:26px;font-size:14px;font-weight:700;color:#15803d;background:#dcfce7;border-radius:12px;padding:4px 12px}
+/* workers */
+.wk{display:flex;align-items:center;gap:18px;height:92px;padding:0 26px;margin-bottom:14px}
+.av{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:22px;font-weight:700}
+.wk .who{flex:1}.wk .who b{display:block;font-size:19px}.wk .who span{font-size:15px;color:#6b7280}
+.pin{font-size:22px;letter-spacing:6px;color:#9aa3b2;width:130px}
+.box{width:220px;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.box svg{width:20px;height:20px;stroke:#12b886;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* qr */
+#link{height:64px;display:flex;align-items:center;gap:14px;padding:0 22px;margin-bottom:22px;font-size:17px}
+#link span{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:20px;color:#1d5bd8;direction:ltr;flex:1;text-align:right}
+#link i{font-style:normal;height:40px;border-radius:12px;background:#eff6ff;color:#1d5bd8;font-weight:700;padding:0 18px;display:flex;align-items:center}
+#qg{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+.qc{padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px;font-size:16px;font-weight:700}
+.qc svg{width:170px;height:170px}
+/* accounts */
+#acTop{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:22px}
+.kp{padding:24px 26px}
+.kp span{font-size:16px;color:#6b7280;font-weight:600}
+.kp b{display:block;font-size:34px;font-weight:700;margin-top:8px}
+.kp.main{background:#0b1220;color:#fff;box-shadow:none}.kp.main span{color:#9aa3b2}
+.bar{display:flex;align-items:center;gap:18px;height:66px;padding:0 26px;font-size:17px;font-weight:700}
+.bar .nm{width:120px}
+.bar .tk{flex:1;height:16px;border-radius:8px;background:#f1f3f7;overflow:hidden}
+.bar .tk i{display:block;height:100%;border-radius:8px;width:0}
+.bar .v{width:170px;text-align:left}
+/* settings */
+.st-row{display:flex;align-items:center;gap:18px;min-height:88px;padding:0 26px;margin-bottom:14px}
+.st-row .t{flex:1}.st-row .t b{display:block;font-size:19px}.st-row .t span{font-size:15px;color:#6b7280}
+.tog{width:64px;height:36px;border-radius:18px;background:#d1d5db;position:relative}
+.tog i{position:absolute;top:4px;right:4px;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.sel{height:44px;border-radius:12px;background:#f3f5f9;padding:0 18px;display:flex;align-items:center;font-size:16px;font-weight:700}
+/* members */
+.mm{display:flex;align-items:center;gap:18px;min-height:100px;padding:0 26px;margin-bottom:14px}
+.mm .who{width:300px}.mm .who b{display:block;font-size:19px}.mm .who span{font-size:15px;color:#6b7280;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700}
+.perms{flex:1;display:flex;flex-wrap:wrap;gap:8px}
+.perms i{font-style:normal;height:34px;border-radius:17px;padding:0 14px;display:flex;align-items:center;font-size:14px;font-weight:700;background:#f1f3f7;color:#9aa3b2}
+.perms i.y{background:#e8f1ff;color:#1d5bd8}
+
+/* cursor */
+#cur{position:absolute;left:0;top:0;width:34px;height:40px;z-index:50;pointer-events:none}
+#ring{position:absolute;width:60px;height:60px;border-radius:50%;border:3px solid #1d5bd8;z-index:49;opacity:0}
+
+/* overlays */
+#cap{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);direction:rtl;display:flex;align-items:center;gap:16px;background:#0b1220;color:#fff;
+  font-size:30px;font-weight:600;padding:16px 34px 16px 22px;border-radius:24px;box-shadow:0 20px 40px -12px rgba(11,18,32,.5);white-space:nowrap;opacity:0;z-index:60}
+#cap .n{width:44px;height:44px;border-radius:14px;background:#1d5bd8;display:grid;place-items:center;font-size:24px;font-weight:700}
+#chap{position:absolute;right:60px;top:34px;direction:rtl;display:flex;align-items:center;gap:12px;opacity:0}
+#chap .dots{display:flex;gap:6px}
+#chap .dots i{width:30px;height:6px;border-radius:4px;background:#cdd5e2;display:block}
+#chap .dots i.on{background:#1d5bd8}
+#chap span{font-size:22px;font-weight:700;color:#0b1220}
+#outro{position:absolute;inset:0;direction:rtl;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0}
+#o1{font-size:52px;font-weight:700}
+#o2{font-size:28px;color:#4a5568;margin-top:14px}
+#o3{margin-top:44px;display:flex;align-items:center;gap:14px;direction:ltr}
+#o3 span{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:34px;background:linear-gradient(90deg,#7c3aed,#2563eb);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ot{width:200px;height:160px;background:#fff;border-radius:26px;box-shadow:0 24px 50px -18px rgba(20,40,80,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:22px;font-weight:700}
+.ot i{width:68px;height:68px;border-radius:20px;display:grid;place-items:center}
+.ot svg{width:34px;height:34px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="iFork" viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 002 2v8M5 3v5a2 2 0 002 2M9 3v5a2 2 0 01-2 2M17 21V3c-2.5 1-4 3.5-4 7v3h4"/></symbol>
+  <symbol id="iInbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M3 13h5l1.5 2.5h5L16 13h5"/></symbol>
+  <symbol id="iContact" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5.5 17c.8-1.8 2-2.6 3.5-2.6s2.7.8 3.5 2.6M15 9h3M15 13h3"/></symbol>
+  <symbol id="iCal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="iStar" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z"/></symbol>
+  <symbol id="iList" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></symbol>
+  <symbol id="iLayers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="iChair" viewBox="0 0 24 24"><path d="M7 11V5a2 2 0 012-2h6a2 2 0 012 2v6"/><path d="M5 11h14v4H5zM6 15v6M18 15v6"/></symbol>
+  <symbol id="iMonitor" viewBox="0 0 24 24"><rect x="2" y="4" width="14" height="10" rx="2"/><path d="M6 18h6M9 14v4"/><rect x="17" y="8" width="5" height="11" rx="1.5"/></symbol>
+  <symbol id="iUsers" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.3-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 010 6.8M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></symbol>
+  <symbol id="iQr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M18 18h3v3h-3z"/></symbol>
+  <symbol id="iWallet" viewBox="0 0 24 24"><path d="M4 7a2 2 0 012-2h12v4"/><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 13.5h2"/></symbol>
+  <symbol id="iReport" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 17v-3M12 17v-5M15 17v-2"/></symbol>
+  <symbol id="iSliders" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+  <symbol id="iUserCog" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.3-5.5 6.5-5.5 1.3 0 2.5.3 3.5.9"/><circle cx="18" cy="17" r="2.5"/><path d="M18 13v1.5M18 19.5V21M14.5 17H16M20 17h1.5"/></symbol>
+  <symbol id="iPlus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="iX" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="iCash" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="iKitchen" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 8h4M7 11h6"/></symbol>
+  <symbol id="iPhone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></symbol>
+</svg>
+<div id="stage">
+<div class="bg"><div class="grid"></div><div class="blob" id="b1"></div><div class="blob" id="b2"></div><div class="blob" id="b3"></div></div>
+<div id="intro"><div id="shapes"><div class="sh" id="s1"><svg><use href="#iFork"/></svg></div><div class="sh" id="s2"><svg><use href="#iInbox"/></svg></div><div class="sh" id="s3"><svg><use href="#iWallet"/></svg></div></div><div id="t1">إدارة المطعم</div><div id="t2">المنيو والطلبات والعمال والحسابات، <b>بنافذة وحدة</b></div></div>
+
+<div id="win">
+ <div id="top"><div class="ic"><svg><use href="#iFork"/></svg></div><div class="tt"><b>إدارة المطعم · مطبخ سفرة</b><span>Weelink / Restaurant</span></div><div class="x"><svg><use href="#iX"/></svg></div></div>
+ <div id="body">
+  <div id="nav">
+   <div class="nv" id="nOrd"><svg><use href="#iInbox"/></svg>الطلبات<span class="bd" id="ordBd">2</span></div>
+   <div class="nv" id="nCus"><svg><use href="#iContact"/></svg>زبائن الموقع</div>
+   <div class="nv" id="nBk"><svg><use href="#iCal"/></svg>المواعيد</div>
+   <div class="nv" id="nRt"><svg><use href="#iStar"/></svg>التقييمات</div>
+   <div class="nv" id="nDish"><svg><use href="#iFork"/></svg>الأطباق<span class="ct" id="dishCt">7</span></div>
+   <div class="nv" id="nCat"><svg><use href="#iList"/></svg>أقسام المنيو<span class="ct">4</span></div>
+   <div class="nv" id="nSub"><svg><use href="#iLayers"/></svg>مجموعات المكونات<span class="ct">3</span></div>
+   <div class="nv" id="nHall"><svg><use href="#iChair"/></svg>الصالات والطاولات</div>
+   <div class="nv" id="nDev"><svg><use href="#iMonitor"/></svg>الأجهزة والأكواد</div>
+   <div class="nv" id="nWork"><svg><use href="#iUsers"/></svg>العمال والصناديق</div>
+   <div class="nv" id="nQr"><svg><use href="#iQr"/></svg>رابط الموقع ورموز QR</div>
+   <div class="nv" id="nAcc"><svg><use href="#iWallet"/></svg>الحسابات</div>
+   <div class="nv" id="nRep"><svg><use href="#iReport"/></svg>تقارير الكاشير</div>
+   <div class="nv" id="nSet"><svg><use href="#iSliders"/></svg>الإعدادات</div>
+   <div class="nv" id="nMem"><svg><use href="#iUserCog"/></svg>أعضاء الإدارة</div>
+  </div>
+  <div id="content">
+   <!-- dishes -->
+   <div class="view" id="vDish"><div class="vh"><div><h2>الأطباق</h2><p>كل طبق بصورته وسعره وقسمه</p></div><div class="btn" id="addBtn"><svg><use href="#iPlus"/></svg>طبق جديد</div></div>
+    <div id="dgrid">
+     <div class="card dc"><div class="im" style="background:linear-gradient(135deg,#e7c79a,#b07a3c)"></div><i class="cat" style="font-style:normal">مشاوي</i><b>شيش طاووق</b><span>٤٥٬٠٠٠ ل.س</span></div>
+     <div class="card dc"><div class="im" style="background:linear-gradient(135deg,#d9b38c,#8a5a2b)"></div><i class="cat" style="font-style:normal">مشاوي</i><b>كباب حلبي</b><span>٥٠٬٠٠٠ ل.س</span></div>
+     <div class="card dc"><div class="im" style="background:linear-gradient(135deg,#c8e6a0,#5f8f3a)"></div><i class="cat" style="font-style:normal">مقبلات</i><b>تبولة</b><span>١٨٬٠٠٠ ل.س</span></div>
+     <div class="card dc"><div class="im" style="background:linear-gradient(135deg,#f3e2b8,#c9a25a)"></div><i class="cat" style="font-style:normal">مقبلات</i><b>حمص بطحينة</b><span>١٥٬٠٠٠ ل.س</span></div>
+     <div class="card dc"><div class="im" style="background:linear-gradient(135deg,#f0c9a0,#c4703a)"></div><i class="cat" style="font-style:normal">مقبلات</i><b>فتوش</b><span>١٧٬٠٠٠ ل.س</span></div>
+     <div class="card dc"><div class="im" style="background:linear-gradient(135deg,#f7dca8,#d39a3a)"></div><i class="cat" style="font-style:normal">حلويات</i><b>كنافة</b><span>٢٥٬٠٠٠ ل.س</span></div>
+     <div class="card dc"><div class="im" style="background:linear-gradient(135deg,#bfe0f0,#4a8fb5)"></div><i class="cat" style="font-style:normal">مشروبات</i><b>ليموناضة بالنعنع</b><span>١٠٬٠٠٠ ل.س</span></div>
+     <div class="card dc" id="dNew"><div class="im" style="background:linear-gradient(135deg,#f2c98a,#a85d22)"></div><i class="cat" style="font-style:normal">مشاوي</i><b>شاورما دجاج</b><span>٢٥٬٠٠٠ ل.س</span></div>
+    </div>
+   </div>
+   <!-- categories -->
+   <div class="view" id="vCat"><div class="vh"><div><h2>أقسام المنيو</h2><p>اسحب القسم لترتّب المنيو متل ما بدك</p></div><div class="btn"><svg><use href="#iPlus"/></svg>قسم جديد</div></div>
+    <div class="card crow" id="cr1"><span class="hd">⋮⋮</span><i class="th" style="background:linear-gradient(135deg,#e7c79a,#b07a3c)"></i>مشاوي<span class="n">٣ أطباق</span></div>
+    <div class="card crow" id="cr2"><span class="hd">⋮⋮</span><i class="th" style="background:linear-gradient(135deg,#c8e6a0,#5f8f3a)"></i>مقبلات<span class="n">٣ أطباق</span></div>
+    <div class="card crow" id="cr3"><span class="hd">⋮⋮</span><i class="th" style="background:linear-gradient(135deg,#f7dca8,#d39a3a)"></i>حلويات<span class="n">طبق واحد</span></div>
+    <div class="card crow" id="cr4"><span class="hd">⋮⋮</span><i class="th" style="background:linear-gradient(135deg,#bfe0f0,#4a8fb5)"></i>مشروبات<span class="n">طبق واحد</span></div>
+   </div>
+   <!-- orders -->
+   <div class="view" id="vOrd"><div class="vh"><div><h2>الطلبات</h2><p>طلبات الموقع والطاولات، لحظة بلحظة</p></div></div>
+    <div class="card ord" id="ord1"><span class="no">#118</span><div class="who"><b>سامر الحلبي</b><span>توصيل · شيش طاووق ×٢، تبولة</span></div><span class="sum">١٠٨٬٠٠٠ ل.س</span><span class="chip cNew" id="o1chip">جديد</span><span class="okb" id="okBtn">قبول</span></div>
+    <div class="card ord"><span class="no">#117</span><div class="who"><b>طاولة ٤</b><span>بالصالة · كباب حلبي، فتوش، كنافة</span></div><span class="sum">٩٢٬٠٠٠ ل.س</span><span class="chip cNew">جديد</span><span class="okb" style="opacity:.0">قبول</span></div>
+    <div class="card ord"><span class="no">#116</span><div class="who"><b>ريم العلي</b><span>توصيل · حمص بطحينة، ليموناضة</span></div><span class="sum">٢٥٬٠٠٠ ل.س</span><span class="chip cWay">على الطريق</span></div>
+    <div class="card ord"><span class="no">#115</span><div class="who"><b>طاولة ٢</b><span>بالصالة · شيش طاووق</span></div><span class="sum">٤٥٬٠٠٠ ل.س</span><span class="chip cDone">مدفوع</span></div>
+   </div>
+   <!-- customers -->
+   <div class="view" id="vCus"><div class="vh"><div><h2>زبائن الموقع</h2><p>كل مين طلب من موقعك، مع عدد طلباته</p></div></div>
+    <div class="card tbl">
+     <div class="tr h"><span>الاسم</span><span>الموبايل</span><span>الطلبات</span><span>آخر طلب</span></div>
+     <div class="tr"><span>سامر الحلبي</span><span>+963 944 120 551</span><span>١٢</span><span>اليوم</span></div>
+     <div class="tr"><span>ريم العلي</span><span>+963 933 870 214</span><span>٧</span><span>اليوم</span></div>
+     <div class="tr"><span>أبو خالد</span><span>+963 955 301 776</span><span>٥</span><span>مبارح</span></div>
+     <div class="tr"><span>لين شحادة</span><span>+963 988 642 090</span><span>٣</span><span>من ٣ أيام</span></div>
+     <div class="tr" style="border:0"><span>مازن درويش</span><span>+963 947 218 365</span><span>٢</span><span>الأسبوع الماضي</span></div>
+    </div>
+   </div>
+   <!-- halls -->
+   <div class="view" id="vHall"><div class="vh"><div><h2>الصالات والطاولات</h2><p>ارسم صالاتك، والطاولة المشغولة بتبيّن بلونها</p></div><div class="btn"><svg><use href="#iPlus"/></svg>طاولة</div></div>
+    <div class="tabs"><i class="on">الصالة الرئيسية</i><i>التراس</i><i>الطابق الثاني</i></div>
+    <div id="floor">
+     <div class="tb" style="right:60px;top:50px"><b>1</b><span>فاضية</span></div>
+     <div class="tb busy" id="tb2" style="right:250px;top:50px"><b>2</b><span>مشغولة</span></div>
+     <div class="tb" style="right:440px;top:50px"><b>3</b><span>فاضية</span></div>
+     <div class="tb busy" id="tb4" style="right:630px;top:50px"><b>4</b><span>مشغولة</span></div>
+     <div class="tb rnd" style="right:70px;top:250px"><b>5</b><span>فاضية</span></div>
+     <div class="tb rnd" style="right:260px;top:250px"><b>6</b><span>فاضية</span></div>
+     <div class="tb busy rnd" id="tb7" style="right:450px;top:250px"><b>7</b><span>مشغولة</span></div>
+     <div class="tb" style="right:800px;top:180px;width:200px;height:130px"><b>8</b><span>فاضية · ٨ كراسي</span></div>
+     <div class="tb" style="right:60px;top:410px;width:540px;height:80px;background:#f3f5f9;box-shadow:0 0 0 2px #e5e7eb;color:#6b7280"><span style="font-size:17px">البار</span></div>
+    </div>
+   </div>
+   <!-- devices -->
+   <div class="view" id="vDev"><div class="vh"><div><h2>الأجهزة والأكواد</h2><p>كل جهاز بتضيفه مرة وحدة بكوده</p></div><div class="btn" id="devBtn"><svg><use href="#iPlus"/></svg>جهاز جديد</div></div>
+    <div id="dvg">
+     <div class="card dv"><span class="st">يعمل</span><div class="ic" style="background:#12b886"><svg><use href="#iCash"/></svg></div><b>الكاشير</b><div class="cd"><span>4821</span></div></div>
+     <div class="card dv"><span class="st">يعمل</span><div class="ic" style="background:#B5562B"><svg><use href="#iKitchen"/></svg></div><b>شاشة المطبخ</b><div class="cd"><span>7390</span></div></div>
+     <div class="card dv"><span class="st">يعمل</span><div class="ic" style="background:#1d5bd8"><svg><use href="#iPhone"/></svg></div><b>تطبيق الطلبات</b><div class="cd"><span>2615</span></div></div>
+    </div>
+   </div>
+   <!-- workers -->
+   <div class="view" id="vWork"><div class="vh"><div><h2>العمال والصناديق</h2><p>كل عامل بيدخل برمزه، وإله صندوقه</p></div><div class="btn"><svg><use href="#iPlus"/></svg>عامل جديد</div></div>
+    <div class="card wk"><div class="av" style="background:#1d5bd8">أ</div><div class="who"><b>أحمد</b><span>كاشير</span></div><span class="pin">••••</span><span class="box"><svg><use href="#iCash"/></svg><span id="wb1">٣٤٠٬٠٠٠ ل.س</span></span></div>
+    <div class="card wk"><div class="av" style="background:#7c5cff">م</div><div class="who"><b>محمد</b><span>كرسون</span></div><span class="pin">••••</span><span class="box"><svg><use href="#iCash"/></svg>١٨٥٬٠٠٠ ل.س</span></div>
+    <div class="card wk"><div class="av" style="background:#12b886">ن</div><div class="who"><b>نور</b><span>كرسونة</span></div><span class="pin">••••</span><span class="box"><svg><use href="#iCash"/></svg>٢١٠٬٠٠٠ ل.س</span></div>
+    <div class="card wk"><div class="av" style="background:#d97706">ي</div><div class="who"><b>يوسف</b><span>مطبخ</span></div><span class="pin">••••</span><span class="box" style="color:#9aa3b2">بلا صندوق</span></div>
+   </div>
+   <!-- qr -->
+   <div class="view" id="vQr"><div class="vh"><div><h2>رابط الموقع ورموز QR</h2><p>الزبون بيمسح الرمز وبيطلب من طاولته</p></div></div>
+    <div class="card" id="link">رابط موقعك:<span>sufra.testweelink.de</span><i>نسخ</i></div>
+    <div id="qg">
+     <div class="card qc"><svg class="qr" data-s="11"></svg>طاولة ١</div>
+     <div class="card qc"><svg class="qr" data-s="23"></svg>طاولة ٢</div>
+     <div class="card qc"><svg class="qr" data-s="37"></svg>طاولة ٣</div>
+     <div class="card qc"><svg class="qr" data-s="41"></svg>طاولة ٤</div>
+     <div class="card qc"><svg class="qr" data-s="59"></svg>طاولة ٥</div>
+    </div>
+   </div>
+   <!-- accounts -->
+   <div class="view" id="vAcc"><div class="vh"><div><h2>الحسابات</h2><p>مصاري اليوم: كل عامل لحاله، والمجموع</p></div><div class="btn" style="background:#fff;color:#0b1220;box-shadow:0 0 0 1px #e5e7eb">اليوم</div></div>
+    <div id="acTop">
+     <div class="card kp main"><span>مجموع اليوم</span><b id="accTot">٧٣٥٬٠٠٠ ل.س</b></div>
+     <div class="card kp"><span>عدد الطلبات</span><b>٣٨</b></div>
+     <div class="card kp"><span>لسا ما انقبض</span><b style="color:#d97706">٩٢٬٠٠٠ ل.س</b></div>
+    </div>
+    <div class="card" style="padding:10px 0">
+     <div class="bar"><span class="nm">أحمد</span><span class="tk"><i data-w="1" style="background:#1d5bd8"></i></span><span class="v">٣٤٠٬٠٠٠ ل.س</span></div>
+     <div class="bar"><span class="nm">نور</span><span class="tk"><i data-w=".62" style="background:#12b886"></i></span><span class="v">٢١٠٬٠٠٠ ل.س</span></div>
+     <div class="bar"><span class="nm">محمد</span><span class="tk"><i data-w=".54" style="background:#7c5cff"></i></span><span class="v">١٨٥٬٠٠٠ ل.س</span></div>
+    </div>
+   </div>
+   <!-- settings -->
+   <div class="view" id="vSet"><div class="vh"><div><h2>الإعدادات</h2><p>طريقة شغل مطعمك</p></div></div>
+    <div class="card st-row"><div class="t"><b>بداية يوم الشغل</b><span>الحسابات والتقارير بتبلّش من هالساعة</span></div><span class="sel">الساعة ٦ الصبح</span></div>
+    <div class="card st-row"><div class="t"><b>الدفع عند أي عامل</b><span>إذا مسكّرة، بس العامل اللي فتح الطاولة بيقبض</span></div><span class="tog" id="tog1"><i></i></span></div>
+    <div class="card st-row"><div class="t"><b>استقبال طلبات التوصيل</b><span>زبائن الموقع بيطلبوا لبيوتهم</span></div><span class="tog" style="background:#12b886"><i style="right:32px"></i></span></div>
+    <div class="card st-row"><div class="t"><b>قفل الشاشة تلقائياً</b><span>بعد وقت بلا شغل، كل عامل بيرجع يدخل رمزه</span></div><span class="sel">بعد ٥ دقائق</span></div>
+   </div>
+   <!-- members -->
+   <div class="view" id="vMem"><div class="vh"><div><h2>أعضاء الإدارة</h2><p>كل عضو بيشوف بس الأقسام اللي بتسمحله فيها</p></div><div class="btn"><svg><use href="#iPlus"/></svg>عضو جديد</div></div>
+    <div class="card mm"><div class="who"><b>إياد (أنت)</b><span>owner</span></div><div class="perms"><i class="y">كل شي</i></div></div>
+    <div class="card mm"><div class="who"><b>رامي</b><span>rami@mail.com</span></div><div class="perms"><i class="y">الطلبات</i><i class="y">المنيو</i><i class="y">الطاولات</i><i>العمال</i><i>الحسابات</i><i>الإعدادات</i></div></div>
+    <div class="card mm" id="mm3"><div class="who"><b>هبة</b><span>heba@mail.com</span></div><div class="perms"><i>الطلبات</i><i>المنيو</i><i>الطاولات</i><i class="y">العمال</i><i class="y">الحسابات</i><i>الإعدادات</i></div></div>
+   </div>
+  </div>
+ </div>
+ <div id="ring"></div>
+ <svg id="cur" viewBox="0 0 34 40"><path d="M4 3l24 14-10.5 2.5L23 31l-4.6 2.2-5.6-11.6L5 29z" fill="#0b1220" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>
+</div>
+
+<div id="chap"><div class="dots"></div><span id="chapt"></span></div>
+<div id="cap"><div class="n" id="capn">1</div><div id="capt"></div></div>
+<div id="outro"><div style="display:flex;gap:30px;margin-bottom:60px">
+ <div class="ot" id="ot1"><i style="background:#B5562B"><svg><use href="#iFork"/></svg></i>المنيو</div>
+ <div class="ot" id="ot2"><i style="background:#1d5bd8"><svg><use href="#iInbox"/></svg></i>الطلبات</div>
+ <div class="ot" id="ot3"><i style="background:#12b886"><svg><use href="#iWallet"/></svg></i>الحسابات</div>
+</div><div id="o1">مطعمك كلّه بإيدك</div><div id="o2">من المنيو للطلبات للعمال والحسابات، بنافذة وحدة</div><div id="o3"><svg viewBox="0 0 48 48" width="64" height="64" style="overflow:visible"><defs><radialGradient id="wgO" cx=".5" cy=".5" r=".75" fx=".35" fy=".3"><stop offset="0" stop-color="#d8ccff"/><stop offset=".5" stop-color="#7c3aed"/><stop offset="1" stop-color="#2563eb"/></radialGradient></defs><circle class="wd" cx="24" cy="15" r="6.5" fill="url(#wgO)"/><circle class="wd" cx="16" cy="29" r="6.5" fill="url(#wgO)"/><circle class="wd" cx="32" cy="29" r="6.5" fill="url(#wgO)"/></svg><span>Wee AI</span></div></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const easeOut=x=>1-Math.pow(1-clamp(x),3);
+const back=x=>{x=clamp(x);const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const lerp=(a,b,k)=>a+(b-a)*k;
+const seg=(t,t0,t1,f=ease)=>f((t-t0)/(t1-t0));
+
+// A made-up QR picture per table: a fixed pattern from its seed, with the three corner squares.
+document.querySelectorAll('.qr').forEach(svg=>{let s=+svg.dataset.s;const rnd=()=>(s=(s*9301+49297)%233280)/233280;const N=21;let h='';
+  const fin=(x,y)=>`<rect x="${x}" y="${y}" width="7" height="7" fill="#0b1220"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#0b1220"/>`;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const inF=(x<8&&y<8)||(x>12&&y<8)||(x<8&&y>12);if(!inF&&rnd()<.48)h+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#0b1220"/>`}
+  svg.setAttribute('viewBox','-1 -1 23 23');svg.innerHTML=h+fin(0,0)+fin(14,0)+fin(0,14)});
+
+const RESET=['.view','#dNew'];
+const IDS={addBtn:'#addBtn',nCat:'#nCat',nOrd:'#nOrd',okBtn:'#okBtn',nCus:'#nCus',nHall:'#nHall',tb4:'#tb4',nDev:'#nDev',nWork:'#nWork',nQr:'#nQr',nAcc:'#nAcc',nSet:'#nSet',tog1:'#tog1',nMem:'#nMem',mm3:'#mm3',cr3:'#cr3'};
+const T={add:9.8,cat:13.4,ord:16.8,ok:20.4,cus:23.2,hall:26.2,dev:29.4,work:32.4,qr:35.6,acc:39,set:42.4,tog:44.2,mem:45.8};
+// The clicks, in order: when and on what.
+const CL=[[T.add,'addBtn'],[T.cat,'nCat'],[T.ord,'nOrd'],[T.ok,'okBtn'],[T.cus,'nCus'],[T.hall,'nHall'],[T.dev,'nDev'],[T.work,'nWork'],[T.qr,'nQr'],[T.acc,'nAcc'],[T.set,'nSet'],[T.tog,'tog1'],[T.mem,'nMem']];
+const CLICKS=CL.map(c=>c[0]);const DRAGS=[];
+const WOUT=48.8,OUT=49.8;
+const CAPS=[
+ [7,9.6,1,'من «إدارة» بتفتح كل شي بيخص مطعمك'],
+ [9.8,13.2,2,'زيد أطباقك بصورها وأسعارها'],
+ [13.4,16.4,3,'ورتّبها بأقسام المنيو'],
+ [16.6,20.2,4,'طلبات الموقع والطاولات بتوصل هون لحظة بلحظة'],
+ [20.4,22.9,5,'اقبل الطلب، وبيروح عالمطبخ'],
+ [23.1,25.9,6,'وكل زبون طلب منك محفوظ عندك'],
+ [26.1,29.1,7,'ارسم صالاتك، والمشغول بيبيّن بلونه'],
+ [29.3,32.1,8,'كل جهاز بتضيفه مرة وحدة بكود'],
+ [32.3,35.3,9,'وكل عامل إله رمزه السري وصندوقه'],
+ [35.5,38.7,10,'رابط موقعك، ورمز QR لكل طاولة'],
+ [38.9,42.1,11,'الحسابات: مصاري كل عامل، والمجموع'],
+ [42.3,45.5,12,'إعدادات الشغل كلها بمكان واحد'],
+ [45.7,48.6,13,'وزيد أعضاء للإدارة، كل واحد بصلاحياته'],
+];
+const CHAPS=[[7,16.6,1,'المنيو'],[16.6,26,2,'الطلبات والزبائن'],[26,35.4,3,'الصالات والأجهزة والعمال'],[35.4,42.2,4,'رموز QR والحسابات'],[42.2,48.6,5,'الإعدادات والأعضاء']];
+const START={x:1300,y:760};
+function WAY(t){const w=[[0,START],[7.6,START]];let lastT=7.6;
+  CL.forEach(([ct,key])=>{const from=Math.max(lastT,ct-1.1);if(from>lastT)w.push([from,w[w.length-1][1]]);w.push([ct-.1,()=>pt(P[key],key[0]==='n'?-30:0)]);lastT=ct+.3;w.push([lastT,()=>pt(P[key],key[0]==='n'?-30:0)])});
+  w.push([WOUT-.4,{x:1300,y:780}]);return w}
+
+// Which tab is open, by time.
+const TABS=[[0,'nDish','#vDish'],[T.cat,'nCat','#vCat'],[T.ord,'nOrd','#vOrd'],[T.cus,'nCus','#vCus'],[T.hall,'nHall','#vHall'],[T.dev,'nDev','#vDev'],[T.work,'nWork','#vWork'],[T.qr,'nQr','#vQr'],[T.acc,'nAcc','#vAcc'],[T.set,'nSet','#vSet'],[T.mem,'nMem','#vMem']];
+function scene(t){
+  const cur=TABS.filter(x=>t>=x[0]).pop();
+  TABS.forEach(([a,nav,v],i)=>{$('#'+nav).classList.toggle('on',cur[1]===nav);const b=TABS[i+1]?TABS[i+1][0]:undefined;view(v,t,a===0?-1:a+.05,b)});
+  // a new dish
+  const nk=back(seg(t,T.add+.3,T.add+.9,x=>x));const nd=$('#dNew');nd.style.opacity=clamp((t-T.add-.3)*4);nd.style.transform=`scale(${.6+nk*.4})`;
+  nd.style.boxShadow=`0 0 0 ${3*(1-seg(t,T.add+2.2,T.add+3))}px #1d5bd8,0 20px 40px -16px rgba(29,91,216,${.45*(1-seg(t,T.add+2.2,T.add+3))})`;
+  $('#dishCt').textContent=t>=T.add+.3?'8':'7';
+  // categories: «حلويات» moves above «مقبلات»
+  const cm=seg(t,T.cat+1.2,T.cat+1.9);const step=88;
+  $('#cr3').style.transform=`translateY(${-step*cm}px)`;$('#cr2').style.transform=`translateY(${step*cm}px)`;
+  $('#cr3').style.boxShadow=cm>0&&cm<1?'0 20px 40px -14px rgba(20,40,80,.35),0 0 0 2px #1d5bd8':'';$('#cr3').style.zIndex=2;$('#cr3').style.position='relative';
+  // the order gets accepted
+  const ok=t>=T.ok+.15;$('#o1chip').textContent=ok?'عم يتحضّر':'جديد';$('#o1chip').className='chip '+(ok?'cPrep':'cNew');
+  $('#okBtn').style.opacity=1-seg(t,T.ok+.15,T.ok+.5);$('#ordBd').textContent=ok?'1':'2';
+  // busy tables breathe
+  ['#tb2','#tb4','#tb7'].forEach((s,i)=>{$(s).style.transform=`scale(${1+Math.max(0,Math.sin(t*3+i))*.03})`});
+  // accounts: bars grow in
+  document.querySelectorAll('.bar .tk i').forEach((b,i)=>{b.style.width=(+b.dataset.w*100*seg(t,T.acc+.3+i*.15,T.acc+1.3+i*.15))+'%'});
+  // settings toggle
+  const tg=seg(t,T.tog+.05,T.tog+.35);$('#tog1').style.background=tg>.5?'#12b886':'#d1d5db';$('#tog1 i').style.right=(4+28*tg)+'px';
+  // members: the new one slides in
+  const mk=seg(t,T.mem+.6,T.mem+1.2);$('#mm3').style.opacity=mk;$('#mm3').style.transform=`translateY(${(1-mk)*30}px)`;
+}
+function outroScene(t){['#ot1','#ot2','#ot3'].forEach((id,i)=>{const k=back(seg(t,OUT+.3+i*.25,OUT+.9+i*.25,x=>x));$(id).style.transform=`translateY(${(1-k)*80+Math.sin(t*1.6+i)*5*clamp(t-OUT-2)}px) scale(${.7+k*.3})`;$(id).style.opacity=clamp((t-OUT-.3-i*.25)*4)})}
+
+// Positions inside the window, measured with nothing moved and every view shown.
+const W=$('#win'),P={};
+function measure(){
+  const els=[W,...document.querySelectorAll(RESET.join(','))];
+  const saved=els.map(e=>[e,e.style.transform,e.style.opacity]);
+  els.forEach(e=>{e.style.transform='none';e.style.opacity=1});
+  const wr=W.getBoundingClientRect();const k=wr.width/1600;
+  for(const key in IDS){const el=$(IDS[key]);if(!el)continue;const r=el.getBoundingClientRect();const x=(r.left-wr.left)/k,y=(r.top-wr.top)/k,w=r.width/k,h=r.height/k;P[key]={x,y,w,h,cx:x+w/2,cy:y+h/2}}
+  saved.forEach(([e,tr,op])=>{e.style.transform=tr;e.style.opacity=op});
+}
+const pt=(p,dx=0,dy=0)=>({x:p.cx+dx,y:p.cy+dy});
+function curPos(t){
+  const W_=WAY(t);const v=w=>typeof w==='function'?w():w;
+  if(t<=W_[0][0])return v(W_[0][1]);
+  for(let i=1;i<W_.length;i++){const[a,pa]=W_[i-1],[b,pb]=W_[i];if(t<=b){const k=ease((t-a)/(b-a));const A=v(pa),B=v(pb);return{x:lerp(A.x,B.x,k),y:lerp(A.y,B.y,k)}}}
+  return v(W_[W_.length-1][1]);
+}
+// one content view sliding in from the left between a and b
+function view(sel,t,a,b){const k=Math.min(seg(t,a,a+.4),b===undefined?1:1-seg(t,b,b+.25));const el=$(sel);el.style.opacity=k;el.style.transform=`translateX(${(1-seg(t,a,a+.4))*-30}px)`;el.style.visibility=k>0?'visible':'hidden'}
+const dots=$('#chap .dots');CHAPS.forEach(()=>dots.appendChild(document.createElement('i')));
+let measured=false;
+function render(t){
+  if(!measured){measure();measured=true}
+  $('#b1').style.transform=`translate(${Math.sin(t*.3)*40}px,${Math.cos(t*.25)*30}px)`;
+  $('#b2').style.transform=`translate(${Math.cos(t*.22)*50}px,${Math.sin(t*.3)*30}px)`;
+  $('#b3').style.transform=`translate(${Math.sin(t*.18)*60}px,${Math.cos(t*.3)*20}px)`;
+  // intro
+  $('#intro').style.opacity=1-seg(t,5.2,6.2);
+  $('#intro').style.transform=`translateY(${-seg(t,5.2,6.2)*80}px)`;
+  [['#s1',.3],['#s2',.55],['#s3',.8]].forEach(([id,d],i)=>{
+    const k=back(seg(t,d,d+.7,x=>x));const fl=Math.sin(t*2+i)*4*clamp(t-1.6);
+    $(id).style.transform=`translateY(${(1-k)*-260+fl}px) rotate(${(1-k)*(i-1)*40}deg)`;$(id).style.opacity=clamp((t-d)*4);
+  });
+  $('#t1').style.opacity=seg(t,1.2,1.9);$('#t1').style.transform=`translateY(${(1-seg(t,1.2,1.9))*30}px)`;
+  $('#t2').style.opacity=seg(t,2,2.7);$('#t2').style.transform=`translateY(${(1-seg(t,2,2.7))*20}px)`;
+  // window
+  const wi=seg(t,5.6,6.9), wo=seg(t,WOUT,WOUT+1);
+  W.style.opacity=wi*(1-wo);
+  W.style.transform=`translateY(${(1-wi)*160+wo*-40}px) scale(${(0.92+wi*.08)*(1-wo*.06)})`;
+  scene(t);
+  // cursor
+  const c=curPos(t);const cur=$('#cur');
+  const clickK=CLICKS.reduce((m,ct)=>Math.max(m,t>=ct&&t<ct+.25?Math.sin((t-ct)/.25*Math.PI):0),0);
+  cur.style.transform=`translate(${c.x-4}px,${c.y-3}px) scale(${1-clickK*.15})`;
+  cur.style.opacity=t<6.6||t>WOUT-.3?0:1;
+  const lastClick=CLICKS.filter(ct=>t>=ct&&t<ct+.6).pop();const ring=$('#ring');
+  if(lastClick!==undefined){const k=(t-lastClick)/.6;ring.style.opacity=(1-k)*.9;ring.style.transform=`translate(${c.x-30}px,${c.y-30}px) scale(${.3+k*.9})`}
+  else ring.style.opacity=0;
+  // captions
+  const cap=CAPS.find(([a,b])=>t>=a&&t<b);const capEl=$('#cap');
+  if(cap){const[a,b,n,txt]=cap;const k=Math.min(seg(t,a,a+.4,easeOut),1-seg(t,b-.3,b));capEl.style.opacity=k;capEl.style.transform=`translateX(-50%) translateY(${(1-k)*24}px)`;$('#capn').textContent=n;$('#capt').textContent=txt}
+  else capEl.style.opacity=0;
+  const ch=CHAPS.find(([a,b])=>t>=a&&t<b);
+  if(ch){const[a,b,n,txt]=ch;const k=Math.min(seg(t,a,a+.4),1-seg(t,b-.3,b));$('#chap').style.opacity=k;$('#chapt').textContent=txt;[...dots.children].forEach((d,i)=>d.classList.toggle('on',i<n))}
+  else $('#chap').style.opacity=0;
+  // outro
+  $('#outro').style.opacity=seg(t,OUT,OUT+1);
+  outroScene(t);
+  $('#o1').style.opacity=seg(t,OUT+1.4,OUT+2.2);$('#o1').style.transform=`translateY(${(1-seg(t,OUT+1.4,OUT+2.2))*20}px)`;
+  $('#o2').style.opacity=seg(t,OUT+2,OUT+2.8);
+  $('#o3').style.opacity=seg(t,OUT+2.8,OUT+3.6);
+  const spin=(1-seg(t,OUT+2.8,OUT+4.4))*Math.PI*2, gap=lerp(20,11,seg(t,OUT+2.8,OUT+3.8,back));
+  [...document.querySelectorAll('.wd')].forEach((c,i)=>{const a=[-90,150,30][i]*Math.PI/180+spin;const pl=1+Math.max(0,Math.sin((t-OUT-4.4)*3-i*.9))*.12*(t>OUT+4.4?1:0);
+    c.setAttribute('cx',24+gap*Math.cos(a));c.setAttribute('cy',24.3+gap*Math.sin(a));c.setAttribute('r',6.5*pl)});
+}
+const DURATION=56;
+window.DURATION=DURATION;window.render=render;
+// Fit the 1920×1080 stage into whatever size the window is.
+const stage=$('#stage');
+function fit(){measured=false;const k=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform=`translate(${(innerWidth-1920*k)/2}px,${(innerHeight-1080*k)/2}px) scale(${k})`}
+addEventListener('resize',fit);fit();
+// Playback, driven by the editor's player through postMessage.
+// ?t=12 starts at that second (the editor reopens it where it was); ?paused shows that frame still.
+let time=Math.max(0,Math.min(DURATION,Number(new URLSearchParams(location.search).get('t'))||0)),playing=false,last=0;
+const post=()=>parent!==window&&parent.postMessage({source:'weelink-intro',type:'time',time,duration:DURATION,playing},'*');
+function tick(now){if(playing){time=Math.min(DURATION,time+(now-last)/1000);if(time>=DURATION)playing=false;render(time);post()}last=now;requestAnimationFrame(tick)}
+addEventListener('message',(e)=>{const m=e.data;if(!m||m.source!=='weelink-intro-player')return;
+  if(m.type==='play'){if(time>=DURATION)time=0;playing=true;last=performance.now()}
+  else if(m.type==='pause')playing=false;
+  else if(m.type==='seek'){time=Math.max(0,Math.min(DURATION,m.time));render(time)}
+  post()});
+// A click on the picture pauses or plays it, like a video.
+addEventListener('click',()=>{if(playing)playing=false;else{if(time>=DURATION)time=0;playing=true;last=performance.now()}post()});
+document.fonts.ready.then(()=>{measured=false;render(time);playing=!/[?&]paused/.test(location.search);last=performance.now();requestAnimationFrame(tick);post()});
+</script>
+</body>
+</html>

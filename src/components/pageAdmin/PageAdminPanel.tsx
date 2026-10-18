@@ -12,6 +12,7 @@ import { RatingsSection } from './RatingsSection';
 import { watchBookings } from '../../services/bookings';
 import { ServicesSection } from './ServicesSection';
 import type { PageAdminData } from './pageServices';
+import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
 interface PageAdminPanelProps {
   open: boolean;
@@ -77,6 +78,7 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
               <PencilLine size={14} /> تعديل الصفحة
             </button>
           )}
+          <AdminIntroButton kind="page" />
           <button type="button" onClick={onClose} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق">
             <X size={18} />
           </button>

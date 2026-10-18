@@ -94,6 +94,8 @@ import { LottieGallery, LottieSettings } from './rightDrawer/LottiePicker';
 import { textEffectById } from '../utils/textEffects';
 import { elementDisplayName } from '../utils/elementLabels';
 import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
+import { IntroVideo, introVideoFor, introVideoSeen, markIntroVideoSeen } from './introVideos/introVideos';
+import { IntroVideoPlayer } from './introVideos/IntroVideoPlayer';
 import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
 import { GalleryPicker, type AddPageOptions } from './rightDrawer/GalleryPicker';
@@ -1076,6 +1078,19 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     openByKind[inspectorKind] ?? (groups[0]?.id === 'content' && groups[1] ? [groups[0].id, groups[1].id] : groups.slice(0, 1).map((g) => g.id));
   const setOpenGroups = (next: InspectorGroupId[]) => setOpenByKind((prev) => ({ ...prev, [inspectorKind]: next }));
   const [flashGroup, setFlashGroup] = useState<InspectorGroupId | null>(null);
+  // The explainer animation playing over the editor, if any.
+  const [introVideo, setIntroVideo] = useState<IntroVideo | null>(null);
+  const openIntroVideo = (g: InspectorGroupId) => {
+    const v = introVideoFor(g);
+    if (!v) return;
+    markIntroVideoSeen(v.id);
+    setIntroVideo(v);
+  };
+  // The first time a group with a video is opened, the video opens by itself (once its card is in place).
+  const autoIntroVideo = (g: InspectorGroupId) => {
+    const v = introVideoFor(g);
+    if (v && !introVideoSeen(v.id)) window.setTimeout(() => openIntroVideo(g), 500);
+  };
   const toolScrollRef = useRef<HTMLDivElement>(null);
   const spyPausedUntil = useRef(0);
   const [glowSide, setGlowSide] = useState<'out' | 'in'>('out');
@@ -1099,6 +1114,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     if (!openGroups.includes(g)) setOpenGroups([...openGroups, g]);
     onInspectorGroupChange?.(g);
     setFlashGroup(g);
+    autoIntroVideo(g);
     // The column keeps the picked group lit while the panel scrolls to it.
     spyPausedUntil.current = Date.now() + 900;
     // A shortcut picked under the group: that part of the card (the font's two halves open their own).
@@ -1352,11 +1368,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               title={g.title}
               summary={inspectorSummary(g.id)}
               help={inspectorHelp(g.id, inspectorTarget)}
+              video={introVideoFor(g.id) ? { dock: g.id, playing: introVideo?.id === g.id, onOpen: () => openIntroVideo(g.id) } : undefined}
               open={open}
               flash={flashGroup === g.id}
               onToggle={() => {
                 setOpenGroups(open ? openGroups.filter((x) => x !== g.id) : [...openGroups, g.id]);
                 if (!open) onInspectorGroupChange?.(g.id);
+                if (!open) autoIntroVideo(g.id);
               }}
             >
               {g.id === 'content' && renderContentExtras()}
@@ -5963,6 +5981,14 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         {activeTab === 'tool' && (
           <div ref={toolScrollRef} onScroll={handleInspectorScroll} className="relative flex-1 overflow-y-auto p-3.5 space-y-4 bg-white text-right">
             {activeSection === 'inspector' ? renderInspector() : renderSection(activeSection)}
+            {introVideo && (
+              <IntroVideoPlayer
+                key={introVideo.id}
+                video={introVideo}
+                dockSelector={`[data-intro-dock="${introVideo.id}"]`}
+                onClosed={() => setIntroVideo(null)}
+              />
+            )}
 
           </div>
         )}

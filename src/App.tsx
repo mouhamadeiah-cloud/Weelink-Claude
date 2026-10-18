@@ -42,6 +42,7 @@ import { PublishModal } from './components/publish/PublishModal';
 import { publicDataFor } from './components/publish/publicData';
 import { readMySite, siteUrl, unpublishSite } from './services/sites';
 import { useItemNumbers } from './services/itemNumbers';
+import { PageAdminData, createEmptyPageAdmin, normalizePageAdmin } from './components/pageAdmin/pageServices';
 import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
 import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
@@ -344,10 +345,16 @@ export default function App() {
     return next;
   }), []);
   const ownerUid = activeUserUid;
+  // The free page's own admin data (its services). `pageAdminReadyRef` is true once the project's saved
+  // copy has been read, so a failed read never saves an empty list over the real one.
+  const [pageAdmin, setPageAdmin] = useState<PageAdminData>(createEmptyPageAdmin);
+  const pageAdminReadyRef = useRef(false);
+  const updatePageAdmin = useCallback((fn: (d: PageAdminData) => PageAdminData) => setPageAdmin((prev) => fn(prev)), []);
   // Every car, dish and product gets Weelink's public number once the admin is open (see services/itemNumbers.ts).
   const numberingOn = !!currentUser && !isFirebaseLoading;
   useItemNumbers('car', carAdmin.cars, numberingOn && project === 'cars', (fn) => setCarAdmin((d) => ({ ...d, cars: fn(d.cars) })));
   useItemNumbers('dish', restaurantAdmin.dishes, numberingOn && project === 'restaurant', (fn) => setRestaurantAdmin((d) => ({ ...d, dishes: fn(d.dishes) })));
+  useItemNumbers('service', pageAdmin.services, numberingOn && project === 'page' && pageAdminReadyRef.current, (fn) => setPageAdmin((d) => ({ ...d, services: fn(d.services) })));
   useItemNumbers('product', shopAdmin.products, numberingOn && project === 'shop', (fn) => setShopAdmin((d) => ({ ...d, products: fn(d.products) })));
   // The open restaurant's live data: restaurants/{uid} for the account's first, restaurants/{uid}__{key} after.
   const restaurantId = restaurantIdOf(ownerUid, projectKey);
@@ -582,6 +589,7 @@ export default function App() {
   const loadUserWorkspace = async (userId: string) => {
     const seq = ++loadSeqRef.current;
     projectReadyRef.current = false;
+    pageAdminReadyRef.current = false;
     let loadedDesignFromCloud = false;
     let shopExists = false;
     let carsExist = false;
@@ -614,7 +622,11 @@ export default function App() {
           setHistoryIndex(0);
           loadedDesignFromCloud = true;
         }
+        setPageAdmin(normalizePageAdmin(data.pageAdmin));
+      } else {
+        setPageAdmin(createEmptyPageAdmin());
       }
+      pageAdminReadyRef.current = true;
     } catch (e) {
       console.warn("Could not load design from Firebase, falling back to local cache:", e);
     }
@@ -856,6 +868,8 @@ export default function App() {
     const localPrefix = localPrefixOf(key);
     let loadedPages: Page[] = [];
     let loadedElements: CanvasElement[] = [];
+    let loadedPageAdmin: PageAdminData | null = null;
+    pageAdminReadyRef.current = false;
     try {
       const snap = await getDoc(projectDoc(userId, key));
       if (snap.exists()) {
@@ -864,6 +878,9 @@ export default function App() {
           loadedPages = normalizeLegacyNavbarDefaults(data[pagesField]);
           loadedElements = deserializeElements(data[elementsField] || []);
         }
+        loadedPageAdmin = normalizePageAdmin(data.pageAdmin);
+      } else {
+        loadedPageAdmin = createEmptyPageAdmin();
       }
     } catch (e) {
       console.warn("Could not load the page from Firebase, falling back to local cache:", e);
@@ -886,6 +903,8 @@ export default function App() {
     }
     setProject('page');
     setProjectKey(key);
+    setPageAdmin(loadedPageAdmin || createEmptyPageAdmin());
+    pageAdminReadyRef.current = !!loadedPageAdmin;
     setPages(loadedPages);
     setElements(loadedElements);
     setHistory([loadedElements]);
@@ -1009,6 +1028,19 @@ export default function App() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [pages, elements, currentUser, isFirebaseLoading, activeUserUid, project, projectKey]);
+
+  // 3a. Debounced save of the free page's own admin data (its services), only once the saved copy was read.
+  useEffect(() => {
+    if (!isInitialLoadComplete.current || !projectReadyRef.current || !pageAdminReadyRef.current || isFirebaseLoading || project !== 'page') return;
+    const targetUserId = activeUserUid;
+    const key = projectKey;
+    const t = setTimeout(() => {
+      if (!pageAdminReadyRef.current || designerModeRef.current || pageLockRef.current) return;
+      setDoc(projectDoc(targetUserId, key), { pageAdmin: sanitizeData(pageAdmin), updatedAt: serverTimestamp() }, { merge: true })
+        .catch((e) => console.warn('Cloud save of the page services failed:', e));
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [pageAdmin, isFirebaseLoading, activeUserUid, project, projectKey]);
 
   // 3b. Full-size photos inside the page (from older Wee AI builds) move to Firebase Storage: kept
   // inline they overflowed the browser storage and made the design too big for Firestore to save.
@@ -2455,8 +2487,8 @@ export default function App() {
   const currentPage = pages.find(p => p.id === activePageId) || pages[0];
   // What publishing from the project settings sends: computed only while those settings are open.
   const settingsPublishData = useMemo(
-    () => (drawerSection === 'project-settings' ? publicDataFor(project, shopAdmin, carAdmin) : null),
-    [drawerSection, project, shopAdmin, carAdmin]
+    () => (drawerSection === 'project-settings' ? publicDataFor(project, shopAdmin, carAdmin, pageAdmin) : null),
+    [drawerSection, project, shopAdmin, carAdmin, pageAdmin]
   );
 
   // The look cards show the owner's own site: its name, the first heading, text and button of its
@@ -4859,6 +4891,8 @@ export default function App() {
           project={projectKey}
           pageName={currentPage.navbar.brandName || ''}
           published={!!publishedName}
+          pageAdmin={pageAdmin}
+          onPageAdmin={updatePageAdmin}
           onEditPage={isPreviewActive ? editPageFromAdmin : undefined}
           onPublish={() => setIsPublishOpen(true)}
         />
@@ -4907,7 +4941,7 @@ export default function App() {
         project={projectKey}
         pages={pages}
         elements={elements}
-        data={isPublishOpen ? publicDataFor(project, shopAdmin, carAdmin) : null}
+        data={isPublishOpen ? publicDataFor(project, shopAdmin, carAdmin, pageAdmin) : null}
         suggestedName={currentPage.navbar.brandName || ''}
         onPublishedChange={setPublishedName}
         used={{

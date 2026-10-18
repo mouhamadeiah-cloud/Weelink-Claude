@@ -406,7 +406,8 @@ service cloud.firestore {
     match /publishedSites/{siteId} {
       allow get: if true;
       allow create, update: if billingOk(incoming().owner, incoming().project)
-        && incoming().keys().hasOnly(['name', 'project', 'owner', 'pages', 'elements', 'data', 'publishedAt', 'hash', 'customDomain', 'icon', 'seo'])
+        && incoming().keys().hasOnly(['name', 'project', 'owner', 'pages', 'elements', 'data', 'publishedAt', 'hash', 'customDomain', 'icon', 'seo', 'place'])
+        && (!('place' in incoming()) || incoming().place == null || (incoming().place is map && incoming().place.size() <= 12))
         && (!('seo' in incoming()) || (incoming().seo is map && incoming().seo.keys().hasOnly(['title', 'description', 'keywords']) && isSeo(incoming().seo)))
         && (!('icon' in incoming()) || (incoming().icon is string && incoming().icon.size() <= 200000))
         && isProjectKind(incoming().project)

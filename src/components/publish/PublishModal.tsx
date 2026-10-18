@@ -4,6 +4,7 @@
 // bought themselves, and buying a domain through Weelink (a request handled by the office for now).
 // Before publishing, the customer sees the page in a computer and a phone (and full size, phones
 // arranged automatically), and writes its title, description and keywords for search.
+import { placeFromAddress } from '../../services/place';
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import {
@@ -607,7 +608,9 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open: openProp, onCl
         setBusy(false);
         return;
       }
-      await publishSite(owner, project, name, content, nextSeo);
+      // The public part of the address from Wee AI goes with the page; unreadable = the old one stays.
+      const place = await getDoc(doc(db, 'platform_directory', owner)).then((d) => placeFromAddress(d.data()?.addressInfo)).catch(() => undefined);
+      await publishSite(owner, project, name, content, nextSeo, place);
       if (!published && draftIcon) await setSiteIcon(owner, project, draftIcon).catch(() => {});
       const s = await readMySite(owner, project);
       setSite(s);

@@ -6,9 +6,8 @@
 import { useEffect, useState } from 'react';
 import { normalizeArabic } from '../components/ui/ComboInput';
 
-export const SYRIAN_GOVERNORATES = [
-  'دمشق', 'ريف دمشق', 'حلب', 'حمص', 'حماة', 'اللاذقية', 'طرطوس', 'إدلب', 'درعا', 'السويداء', 'القنيطرة', 'دير الزور', 'الرقة', 'الحسكة',
-];
+export { SYRIAN_GOVERNORATES } from './governorates';
+import { SYRIAN_GOVERNORATES } from './governorates';
 
 // A governorate: its cities (each with its neighbourhoods, when the list has real ones) and its
 // countryside: districts (المنطقة) → sub-districts (الناحية) → villages. Every list is sorted

@@ -15,6 +15,7 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, runTransaction, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import type { CanvasElement, Page } from '../types';
+import type { PublicPlace } from './place';
 import { isFirstOfKind, kindOf, type ProjectKey } from '../utils/projectKeys';
 
 // The domain under which every published page gets its free address. Changing it changes every
@@ -97,6 +98,7 @@ export interface PublishedSite {
   customDomain?: CustomDomainState | null;
   icon?: string; // the browser tab's icon (a small PNG data URL), '' = the name's first letter
   seo?: SiteSeo;
+  place?: PublicPlace | null; // where the page is (services/place.ts), for Weelink's search pages
 }
 
 export const readMySite = async (owner: string, project: ProjectKey): Promise<PublishedSite | null> => {
@@ -121,7 +123,8 @@ export const publishSite = async (
   project: ProjectKey,
   name: string,
   content: { pages: Page[]; elements: CanvasElement[]; data: any },
-  seo: SiteSeo
+  seo: SiteSeo,
+  place?: PublicPlace | null
 ) => {
   const search = cleanSeo(seo);
   const ref = doc(db, 'publishedSites', siteId(owner, project));
@@ -147,6 +150,8 @@ export const publishSite = async (
       customDomain: current.exists() ? current.data().customDomain ?? null : null,
       icon: current.exists() ? current.data().icon || '' : '',
       seo: search,
+      // Without an address given now, the one published before stays.
+      place: place === undefined ? (current.exists() ? current.data().place ?? null : null) : place,
     });
   });
 };

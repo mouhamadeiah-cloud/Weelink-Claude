@@ -10,6 +10,8 @@ import type { ProjectKey } from '../../utils/projectKeys';
 import { BookingsSection } from './BookingsSection';
 import { RatingsSection } from './RatingsSection';
 import { watchBookings } from '../../services/bookings';
+import { ServicesSection } from './ServicesSection';
+import type { PageAdminData } from './pageServices';
 
 interface PageAdminPanelProps {
   open: boolean;
@@ -18,6 +20,9 @@ interface PageAdminPanelProps {
   project: ProjectKey;
   pageName: string;
   published: boolean;
+  // The page's services as items («خدماتي»); left out where the panel has no store for them.
+  pageAdmin?: PageAdminData;
+  onPageAdmin?: (fn: (d: PageAdminData) => PageAdminData) => void;
   // «تعديل الصفحة»: when the admin was opened from the page's navbar; the editor's own door leaves it out.
   onEditPage?: () => void;
   onPublish?: () => void;
@@ -36,7 +41,7 @@ const SERVICES = [
   { icon: Globe2, title: 'دومين خاص', line: 'صفحتك على اسمك أنت بدل رابط Weelink، من نافذة «نشر».', soon: false },
 ];
 
-export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, owner, project, pageName, published, onEditPage, onPublish, loadStats = readStats, watchBookings: watch }) => {
+export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, owner, project, pageName, published, pageAdmin, onPageAdmin, onEditPage, onPublish, loadStats = readStats, watchBookings: watch }) => {
   const [stats, setStats] = useState<DayStats[] | null | 'error'>(null);
 
   useEffect(() => {
@@ -84,6 +89,8 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
               {onPublish && <button type="button" onClick={() => { onClose(); onPublish(); }} className="h-9 px-4 rounded-xl bg-ink text-white cursor-pointer">نشر الصفحة</button>}
             </div>
           )}
+
+          {pageAdmin && onPageAdmin && <ServicesSection data={pageAdmin} onChange={onPageAdmin} />}
 
           <BookingsSection owner={owner} project={project} watch={watch} />
 

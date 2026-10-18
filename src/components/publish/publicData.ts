@@ -4,6 +4,7 @@
 import { CarAdminData, normalizeCarAdmin } from '../cars/carTypes';
 import { ShopAdminData, normalizeShopAdmin } from '../shop/shopTypes';
 import type { ProjectType } from '../shop/shopTypes';
+import { PageAdminData, publicServices } from '../pageAdmin/pageServices';
 
 const publicShopData = (shop: ShopAdminData) => ({
   catalogs: shop.catalogs,
@@ -36,8 +37,11 @@ const publicCarData = (cars: CarAdminData) => ({
   },
 });
 
-export const publicDataFor = (project: ProjectType, shop: ShopAdminData, cars: CarAdminData) =>
-  project === 'shop' ? publicShopData(shop) : project === 'cars' ? publicCarData(cars) : null;
+// A free page publishes its services (the shown ones) when it has any.
+const publicPageData = (page: PageAdminData) => (publicServices(page).length ? { services: publicServices(page) } : null);
+
+export const publicDataFor = (project: ProjectType, shop: ShopAdminData, cars: CarAdminData, page?: PageAdminData) =>
+  project === 'shop' ? publicShopData(shop) : project === 'cars' ? publicCarData(cars) : project === 'page' && page ? publicPageData(page) : null;
 
 // Back to the shape the store elements read (empty customers, orders and accounts).
 export const shopFromPublic = (data: any): ShopAdminData => normalizeShopAdmin(data || {});

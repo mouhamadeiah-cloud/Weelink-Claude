@@ -11,6 +11,8 @@ export interface WeeAnswers {
     specialInstructions?: string;
     colorPalette?: string;
     customColor?: string;
+    lookId?: string;
+    customPalette?: string[];
     dividerStyle?: string;
     wantsGallery?: boolean;
     galleryImages?: string[];

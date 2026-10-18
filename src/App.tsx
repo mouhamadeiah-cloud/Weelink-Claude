@@ -1746,8 +1746,9 @@ export default function App() {
           catalogInfo: { category: '', subCategory: '', specialty: '', customCategory: '', customSpecialty: '' },
           aiAnswers: {
             description: '',
-            colorPalette: 'الأزرق الكلاسيكي الكوني',
+            colorPalette: '',
             customColor: '#0071e3',
+            lookId: '',
             dividerStyle: 'straight',
             wantsGallery: true,
             galleryImages: [],

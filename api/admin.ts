@@ -41,6 +41,7 @@
 //   POST /api/admin  { action: 'design-order-refund', id, reason }                   gives the customer their money back (or cancels an unpaid order)
 //        (hiring a designer, api/design-orders.ts: the money is held by the office until the customer confirms)
 //   POST /api/admin  { action: 'tokens-overview', month? }       → { totals, kinds, top, emails, prices }
+//   POST /api/admin  { action: 'cleanup', apply?, last? } → { report }  (owner): orphaned photos and records of accounts whose sign-in is gone (server/cleanup.ts)
 //   POST /api/admin  { action: 'dashboard' }  → numbers and 12-month chart; { action: 'export', kind: 'subscribers'|'payments' } → CSV; { action: 'backup' } → one JSON file (owner)
 //   POST /api/admin  { action: 'reports' | 'report-decide' }  rating reports;  'health' (owner);  'coupons' | 'coupon-save' | 'coupon-toggle' | 'coupon-apply';  'announce-preview' | 'announce' (owner)
 //   POST /api/admin  { action: 'tokens-adjust', uid, delta, reason } → { balance }
@@ -76,6 +77,7 @@ import { recountDesigner } from '../server/designerStats.js';
 import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
 import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
 import { createCheckout, handleWebhook, stripeConfig } from '../server/stripe.js';
+import { runCleanup } from '../server/cleanup.js';
 import { approveOrder, attachProof, createOrder, deleteCustomer, enforceBilling, extendOrder, getOrder, listDeleted, listOrders, myBilling, readSettings, rejectOrder, runBillingDaily, setTestAccount } from '../server/billing.js';
 import designTimers from '../src/data/designOrderTimers.json' with { type: 'json' };
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
@@ -244,7 +246,7 @@ const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركي�
 const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply', 'orders', 'order', 'order-approve', 'order-reject', 'order-extend', 'billing-settings'];
 // The designers' gallery and the rating reports are the content reviewers' work (the owner too).
 const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'slide-edit-review', 'reports', 'report-decide'];
-const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup', 'billing-enforce', 'test-account', 'subscriber-delete'];
+const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup', 'billing-enforce', 'test-account', 'subscriber-delete', 'cleanup'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'deleted-list', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
 const TASK_TYPES: Record<string, string> = { payment: 'طلب دفع', domain: 'طلب دومين', complaint: 'شكوى', other: 'أخرى' };
@@ -452,7 +454,10 @@ export default {
       }
       if (secret && request.headers.get('authorization') === `Bearer ${secret}`) {
         if (!fbGet) return json({ error: 'not-configured' }, 503);
-        return json(await runDaily(fbGet));
+        const daily = await runDaily(fbGet);
+        // The daily scan of orphans only counts them; wiping them is the owner's button.
+        const cleanup = await runCleanup(fbGet.db, fbGet.auth, false).catch((err: Error) => ({ error: err?.message || 'failed' }));
+        return json({ ...daily, cleanup });
       }
       return json({ serviceAccount: !!serviceAccount(), cron: !!secret, email: !!process.env.EMAIL_FROM && !!process.env.RESEND_API_KEY });
     }
@@ -932,6 +937,13 @@ export default {
       if ('error' in r) return json({ error: r.error }, r.status);
       await audit(session.u, `subscriber-delete:${uid}`);
       return json(r);
+    }
+    // ----- cleaning orphans (server/cleanup.ts): owner only; apply:true wipes them, otherwise it only counts -----
+    if (action === 'cleanup') {
+      if (body.last) return json({ report: (await db.collection('platform_cleanup').doc('last').get()).data() || null });
+      const report = await runCleanup(db, auth, body.apply === true);
+      await audit(session.u, body.apply === true ? 'cleanup:apply' : 'cleanup:scan');
+      return json({ report });
     }
     if (action === 'deleted-list') return json({ rows: await listDeleted(db) });
 

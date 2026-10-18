@@ -13,6 +13,7 @@ import { ChatView } from './ChatView';
 import { DashboardView } from './DashboardView';
 import { ReportsView } from './ReportsView';
 import { HealthView } from './HealthView';
+import { CleanupView } from './CleanupView';
 import { CouponsView } from './CouponsView';
 import { AnnounceView } from './AnnounceView';
 import { PageLawView } from './PageLawView';
@@ -72,7 +73,7 @@ const Shell: React.FC<{ children: React.ReactNode; admin?: AdminInfo | null; onL
   );
 };
 
-type View = 'subscribers' | 'deleted' | 'orders' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'dashboard' | 'reports' | 'coupons' | 'announce' | 'health' | 'page-law' | 'slides' | 'design-orders' | 'password';
+type View = 'subscribers' | 'deleted' | 'orders' | 'payments' | 'billing' | 'tokens' | 'team' | 'my-tasks' | 'all-tasks' | 'chat' | 'dashboard' | 'reports' | 'coupons' | 'announce' | 'health' | 'cleanup' | 'page-law' | 'slides' | 'design-orders' | 'password';
 interface MenuGroup { id: string; title: string; icon: React.ElementType; items: { id: string; label: string; view?: View; needs?: string }[] }
 // Every group starts folded; the admin opens what he needs. Items without a view are the next phases.
 const MENU: MenuGroup[] = [
@@ -82,7 +83,7 @@ const MENU: MenuGroup[] = [
   { id: 'team', title: 'فريق الإدارة', icon: UserCog, items: [{ id: 'admins', label: 'الأدمنز والصلاحيات', view: 'team', needs: 'admins-list' }, { id: 'my-tasks', label: 'مهامي', view: 'my-tasks' }, { id: 'all-tasks', label: 'كل المهام', view: 'all-tasks', needs: 'task-create' }, { id: 'chat', label: 'لوحة التواصل', view: 'chat' }] },
   { id: 'designers', title: 'معرض المصممين', icon: Palette, items: [{ id: 'slides', label: 'مراجعة الشرائح', view: 'slides', needs: 'slides-review-list' }, { id: 'orders', label: 'طلبات التصميم', view: 'design-orders', needs: 'design-orders' }, { id: 'law', label: 'قانون الصفحة', view: 'page-law', needs: 'page-law-get' }] },
   { id: 'books', title: 'الحسابات والداشبورد', icon: BarChart3, items: [{ id: 'dash', label: 'الداشبورد والتصدير', view: 'dashboard', needs: 'dashboard' }, { id: 'coupons', label: 'الكوبونات والتجربة', view: 'coupons', needs: 'coupons' }, { id: 'announce', label: 'إعلان بالإيميل', view: 'announce', needs: 'announce' }] },
-  { id: 'watch', title: 'المراجعة والمتابعة', icon: Activity, items: [{ id: 'reports', label: 'بلاغات التقييمات', view: 'reports', needs: 'reports' }, { id: 'health', label: 'صحة النظام', view: 'health', needs: 'health' }] },
+  { id: 'watch', title: 'المراجعة والمتابعة', icon: Activity, items: [{ id: 'reports', label: 'بلاغات التقييمات', view: 'reports', needs: 'reports' }, { id: 'health', label: 'صحة النظام', view: 'health', needs: 'health' }, { id: 'cleanup', label: 'تنظيف البيانات', view: 'cleanup', needs: 'cleanup' }] },
   { id: 'me', title: 'حسابي', icon: KeyRound, items: [{ id: 'pw', label: 'تغيير كلمة السر', view: 'password' }] },
 ];
 
@@ -321,6 +322,7 @@ export const AdminSite: React.FC = () => {
         : view === 'coupons' ? <CouponsView onSessionEnd={logout} />
         : view === 'announce' ? <AnnounceView onSessionEnd={logout} />
         : view === 'health' ? <HealthView onSessionEnd={logout} />
+        : view === 'cleanup' ? <CleanupView onSessionEnd={logout} />
         : view === 'page-law' ? <PageLawView onSessionEnd={logout} />
         : view === 'slides' ? <SlidesReviewView onSessionEnd={logout} />
         : view === 'design-orders' ? <DesignOrdersView onSessionEnd={logout} />

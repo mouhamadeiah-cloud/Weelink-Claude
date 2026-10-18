@@ -32,7 +32,8 @@ const query = (path: string, filters: [string, any, string?][]): any => ({
 });
 export const getFirestore = () => ({ collection: (n: string) => colRef(n), doc: (p: string) => docRef(p), batch() { const ops: (() => Promise<void>)[] = []; return { set: (r: any, d: any, o?: any) => { ops.push(() => r.set(d, o)); }, delete: (r: any) => { ops.push(() => r.delete()); }, update: (r: any, p: any) => { ops.push(() => r.update(p)); }, async commit() { for (const op of ops) await op(); } }; }, async runTransaction(fn: any) { const tx = { get: (r: any) => r.get(), update: (r: any, p: any) => r.update(p), set: (r: any, d: any, o: any) => r.set(d, o) }; return fn(tx); } });
 export const storageDeletes: string[] = [];
-export const getStorage = () => ({ bucket: (name: string) => ({ deleteFiles: async ({ prefix }: { prefix: string }) => { storageDeletes.push(`${name}/${prefix}`); } }) });
+export const storageFiles: { name: string; size: number }[] = [];
+export const getStorage = () => ({ bucket: (name: string) => ({ listFiles: async () => ({ files: storageFiles, truncated: false }), deleteFiles: async ({ prefix }: { prefix: string }) => { storageDeletes.push(`${name}/${prefix}`); } }) });
 export const getApps = () => [{}];
 export const initializeApp = () => ({});
 export const cert = (x: any) => x;

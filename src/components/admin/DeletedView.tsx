@@ -14,7 +14,7 @@ export const DeletedView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionE
     adminDeletedList().then((r) => setRows(r.rows)).catch((e) => ((e as AdminError)?.code === 'session' ? onSessionEnd() : setError('تعذّر التحميل.')));
   }, [onSessionEnd]);
   const term = q.trim().toLowerCase();
-  const shown = (rows || []).filter((r) => !term || [r.name, r.email, r.phone].some((v) => v.toLowerCase().includes(term)));
+  const shown = (rows || []).filter((r) => !term || [r.name, r.email, r.phone, r.address || ''].some((v) => v.toLowerCase().includes(term)));
   return (
     <section className="flex flex-col gap-4">
       <h1 className="text-title font-semibold">الزبائن المحذوفين</h1>
@@ -24,7 +24,7 @@ export const DeletedView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionE
         <div className="overflow-x-auto rounded-card border border-line bg-surface">
           <table className="w-full min-w-[820px] text-right text-small">
             <thead className="border-b border-line text-muted">
-              <tr>{['الاسم', 'الهاتف', 'الإيميل', 'تاريخ التسجيل', 'تاريخ الانتهاء', 'انحذف', 'السبب'].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr>
+              <tr>{['الاسم', 'الهاتف', 'الإيميل', 'العنوان', 'تاريخ التسجيل', 'تاريخ الانتهاء', 'انحذف', 'السبب'].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr>
             </thead>
             <tbody>
               {shown.map((r) => (
@@ -32,13 +32,14 @@ export const DeletedView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionE
                   <td className="px-3 py-2">{r.name || '—'}</td>
                   <td className="px-3 py-2" dir="ltr">{r.phone || '—'}</td>
                   <td className="px-3 py-2" dir="ltr">{r.email || '—'}</td>
+                  <td className="px-3 py-2">{r.address || '—'}</td>
                   <td className="px-3 py-2">{day(r.createdAt)}</td>
                   <td className="px-3 py-2">{day(r.endsAt)}</td>
                   <td className="px-3 py-2">{day(r.deletedAt)} · {r.by}</td>
                   <td className="px-3 py-2">{r.reason}</td>
                 </tr>
               ))}
-              {!shown.length && <tr><td colSpan={7} className="px-3 py-8 text-center text-muted">لا أحد.</td></tr>}
+              {!shown.length && <tr><td colSpan={8} className="px-3 py-8 text-center text-muted">لا أحد.</td></tr>}
             </tbody>
           </table>
         </div>

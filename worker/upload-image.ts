@@ -1,4 +1,5 @@
-// Server function: a photo into the R2 store (server/images.ts).
+// Worker function: a photo into the R2 store (server/images.ts). Lives in worker/, not api/: Vercel counts
+// every file in api/ as a function (12 at most on its plan) and has no R2.
 //
 //   POST /api/upload-image?folder=images|backgrounds|gallery&name=<file name>
 //        body: the image bytes (Content-Type image/*)   Authorization: Bearer <ID token>

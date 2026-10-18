@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import handler from '../api/upload-image.ts';
+import handler from '../worker/upload-image.ts';
 import { tokens } from './fakeAdmin.ts';
 import { deleteUserImages, setImagesBucket, type ImagesBucket } from '../server/images.ts';
 

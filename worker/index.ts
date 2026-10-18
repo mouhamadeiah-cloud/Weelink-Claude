@@ -16,7 +16,7 @@ import orderStatus from '../api/order-status.js';
 import photos from '../api/photos.js';
 import rating from '../api/rating.js';
 import sendEmail from '../api/send-email.js';
-import uploadImage from '../api/upload-image.js';
+import uploadImage from './upload-image.js';
 import { imagesBucket, setImagesBucket, type ImagesBucket } from '../server/images.js';
 
 type Handler = { fetch(request: Request): Promise<Response> };

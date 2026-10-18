@@ -296,3 +296,7 @@ export const adminTestAccount = (uid: string, on: boolean) => call<{ test: boole
 export const adminDeleteSubscriber = (uid: string, reason: string) => call<{ card: DeletedCustomer }>({ action: 'subscriber-delete', uid, reason });
 export interface DeletedCustomer { uid: string; name: string; email: string; phone: string; address: string; createdAt: number; endsAt: number; deletedAt: number; by: string; reason: string }
 export const adminDeletedList = () => call<{ rows: DeletedCustomer[] }>({ action: 'deleted-list' });
+
+export interface CleanupReport { at: number; applied: boolean; orphanAccounts: number; orphanFiles: number; orphanBytes: number; orphanR2Files: number; orphanDocs: number; legacyFiles: number; legacyBytes: number; wiped: number; partial: boolean }
+export const adminCleanupLast = () => call<{ report: CleanupReport | null }>({ action: 'cleanup', last: true });
+export const adminCleanup = (apply: boolean) => call<{ report: CleanupReport }>({ action: 'cleanup', apply });

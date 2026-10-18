@@ -528,6 +528,21 @@ export const getFirestore = (app: App = apps[0], databaseId = '(default)') => {
 // Cloud Storage JSON API. Same shape as firebase-admin's getStorage().bucket(name).deleteFiles({ prefix }).
 export const getStorage = (app: App = apps[0]) => ({
   bucket: (name: string) => ({
+    // Up to `max` files (name and size) under a folder; `truncated` when there were more.
+    async listFiles({ prefix, max = 5000 }: { prefix: string; max?: number }) {
+      const base = `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(name)}/o`;
+      const headers = { Authorization: `Bearer ${await accessToken(app)}` };
+      const files: { name: string; size: number }[] = [];
+      let page = '';
+      do {
+        const res = await fetch(`${base}?${prefix ? `prefix=${encodeURIComponent(prefix)}&` : ''}fields=items(name,size),nextPageToken${page ? `&pageToken=${encodeURIComponent(page)}` : ''}`, { headers });
+        if (!res.ok) throw new Error(`storage list ${res.status}`);
+        const data = (await res.json()) as { items?: { name: string; size?: string }[]; nextPageToken?: string };
+        for (const item of data.items || []) files.push({ name: item.name, size: Number(item.size) || 0 });
+        page = data.nextPageToken || '';
+      } while (page && files.length < max);
+      return { files: files.slice(0, max), truncated: !!page };
+    },
     async deleteFiles({ prefix }: { prefix: string }) {
       const base = `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(name)}/o`;
       const headers = { Authorization: `Bearer ${await accessToken(app)}` };

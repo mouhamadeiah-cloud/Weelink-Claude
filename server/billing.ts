@@ -422,31 +422,18 @@ export const projectKeysOf = async (db: Db, uid: string) => {
 };
 
 /**
- * The team deletes a customer (Eyad, 17 Oct): all their pages and everything about them go, but the Firebase
- * sign-in stays, since they may still be a customer of other pages. Their payments stay for the books, and a
- * card (name, phone, email, sign-up and end dates) is kept in platform_deleted for «الزبائن المحذوفين».
+ * Everything an account owns, gone: its projects, published pages, live restaurant data, paid periods, bookings,
+ * ratings, customers, stats, team and photos (Firebase Storage and R2). The sign-in, the payments and the billing
+ * records are not touched. Shared by the customer deletion and the cleanup of orphaned accounts (server/cleanup.ts).
  */
-export const deleteCustomer = async (db: Db, auth: Auth, uid: string, by: string, reasonIn: unknown) => {
-  const reason = String(reasonIn || '').trim().slice(0, 300);
-  if (reason.length < 3) return { error: 'reason', status: 400 };
-  const user = await auth.getUser(uid).catch(() => null);
-  if (!user) return { error: 'not-found', status: 404 };
-  const design = (await db.collection('designs').doc(uid).get()).data() || {};
-  const dir = (await db.collection('platform_directory').doc(uid).get()).data() || {};
-  const accessSnap = await db.collection('projectAccess').where('owner', '==', uid).limit(100).get();
-  const endsAt = Math.max(0, ...accessSnap.docs.map((d: any) => Number(d.data().paidUntil) || 0));
-  const keys = await projectKeysOf(db, uid);
+export const wipeAccount = async (db: Db, uid: string, keysIn?: string[]) => {
+  const keys = keysIn || (await projectKeysOf(db, uid));
   for (const key of keys) await deleteProject(db, uid, key);
+  const accessSnap = await db.collection('projectAccess').where('owner', '==', uid).limit(100).get();
   for (const d of accessSnap.docs) await d.ref.delete().catch(() => undefined);
   // Pages published under a key the design no longer lists.
   const sites = await db.collection('publishedSites').where('owner', '==', uid).limit(100).get();
   for (const s of sites.docs) await unpublish(db, uid, String(s.data().project || ''));
-
-  const now = Date.now();
-  const orders = await db.collection('platform_orders').where('uid', '==', uid).limit(300).get();
-  const batch = db.batch();
-  for (const o of orders.docs) if (OPEN.includes(o.data().status)) batch.set(o.ref, { status: 'deleted', updatedAt: now }, { merge: true });
-  await batch.commit();
   for (const col of [
     db.collection('designs').doc(uid).collection('projects'),
     db.collection('bookings').doc(uid).collection('items'),
@@ -464,6 +451,30 @@ export const deleteCustomer = async (db: Db, auth: Auth, uid: string, by: string
   await getStorage().bucket(firebaseConfig.storageBucket).deleteFiles({ prefix: `users/${uid}/` })
     .catch((err: Error) => console.error('photo delete failed:', err?.message));
   await deleteUserImages(uid).catch((err: Error) => console.error('R2 photo delete failed:', err?.message));
+};
+
+/**
+ * The team deletes a customer (Eyad, 17 Oct): all their pages and everything about them go, but the Firebase
+ * sign-in stays, since they may still be a customer of other pages. Their payments stay for the books, and a
+ * card (name, phone, email, sign-up and end dates) is kept in platform_deleted for «الزبائن المحذوفين».
+ */
+export const deleteCustomer = async (db: Db, auth: Auth, uid: string, by: string, reasonIn: unknown) => {
+  const reason = String(reasonIn || '').trim().slice(0, 300);
+  if (reason.length < 3) return { error: 'reason', status: 400 };
+  const user = await auth.getUser(uid).catch(() => null);
+  if (!user) return { error: 'not-found', status: 404 };
+  const design = (await db.collection('designs').doc(uid).get()).data() || {};
+  const dir = (await db.collection('platform_directory').doc(uid).get()).data() || {};
+  const accessSnap = await db.collection('projectAccess').where('owner', '==', uid).limit(100).get();
+  const endsAt = Math.max(0, ...accessSnap.docs.map((d: any) => Number(d.data().paidUntil) || 0));
+  const keys = await projectKeysOf(db, uid);
+  await wipeAccount(db, uid, keys);
+
+  const now = Date.now();
+  const orders = await db.collection('platform_orders').where('uid', '==', uid).limit(300).get();
+  const batch = db.batch();
+  for (const o of orders.docs) if (OPEN.includes(o.data().status)) batch.set(o.ref, { status: 'deleted', updatedAt: now }, { merge: true });
+  await batch.commit();
 
   const card = {
     uid, name: user.displayName || String(dir.personalInfo?.fullName || ''), email: user.email || '',

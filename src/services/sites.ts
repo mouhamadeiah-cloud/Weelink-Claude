@@ -16,6 +16,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, runTransacti
 import { auth, db } from './firebase';
 import type { CanvasElement, Page } from '../types';
 import type { PublicPlace } from './place';
+import { mirrorMedia } from './mirror';
 import { isFirstOfKind, kindOf, type ProjectKey } from '../utils/projectKeys';
 
 // The domain under which every published page gets its free address. Changing it changes every
@@ -142,9 +143,9 @@ export const publishSite = async (
       name,
       project,
       owner,
-      pages: clean(content.pages),
-      elements: clean(content.elements),
-      data: content.data === undefined ? null : clean(content.data),
+      pages: clean(mirrorMedia(content.pages)),
+      elements: clean(mirrorMedia(content.elements)),
+      data: content.data === undefined ? null : clean(mirrorMedia(content.data)),
       publishedAt: now,
       hash: contentHash(content),
       customDomain: current.exists() ? current.data().customDomain ?? null : null,

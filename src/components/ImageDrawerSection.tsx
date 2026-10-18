@@ -26,7 +26,7 @@ import {
   trackUnsplashDownload 
 } from '../services/unsplashService';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
-import { hostImageBlob } from '../utils/hostImage';
+import { hostImageBlob, hostRemoteImage } from '../utils/hostImage';
 import { elementDisplayName } from '../utils/elementLabels';
 import { PhotoBrowserPanel, notLiveMessage } from './PhotoBrowserPanel';
 
@@ -316,6 +316,8 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
     try {
       // Compress the Unsplash photo to maximum 150 KB (153,600 bytes)
       const compressed = await compressImageToTargetSize(photo.fullUrl, 150 * 1024);
+      // Our own copy on Cloudflare, so the page does not depend on Unsplash.
+      compressed.url = await hostRemoteImage('images', `${photo.unsplashId || 'unsplash'}.webp`, compressed.url);
 
       // Add compressed image to canvas
       handleImageApply(

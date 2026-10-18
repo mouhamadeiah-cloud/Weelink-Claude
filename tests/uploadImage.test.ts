@@ -16,6 +16,9 @@ const bucket: ImagesBucket = {
   async get() {
     return null;
   },
+  async head() {
+    return null;
+  },
   async list({ prefix }) {
     return { objects: [...files.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })), truncated: false };
   },

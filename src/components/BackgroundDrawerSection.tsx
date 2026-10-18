@@ -20,7 +20,7 @@ import {
   UnsplashPreset 
 } from '../data/backgroundPresets';
 import { BACKGROUND_VIDEOS, BackgroundVideoPreset } from '../data/backgroundVideos';
-import { hostImageBlob } from '../utils/hostImage';
+import { hostImageBlob, hostRemoteImage } from '../utils/hostImage';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
   const arr = dataurl.split(',');
@@ -685,7 +685,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
                 return (
                   <button
                     key={photo.id}
-                    onClick={() => onApplyImage(photo.fullUrl, 'cover')}
+                    onClick={async () => onApplyImage(await hostRemoteImage('backgrounds', 'unsplash.jpg', photo.fullUrl), 'cover')}
                     className={`group relative rounded-xl overflow-hidden border aspect-video transition-all cursor-pointer text-right shadow-2xs ${
                       isSelected
                         ? 'border-brand ring-2 ring-brand ring-offset-1'
@@ -739,9 +739,9 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
               initialQuery={searchQuery}
               initialCategory="all"
               pickingId={null}
-              onPick={(photo) => {
-                onApplyImage(photo.fullUrl, 'cover');
+              onPick={async (photo) => {
                 setIsPhotoBrowserOpen(false);
+                onApplyImage(await hostRemoteImage('backgrounds', 'unsplash.jpg', photo.fullUrl), 'cover');
               }}
               onClose={() => setIsPhotoBrowserOpen(false)}
             />

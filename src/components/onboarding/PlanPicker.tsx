@@ -5,6 +5,10 @@ import React, { useState } from 'react';
 import { ArrowLeft, Check, Plus } from 'lucide-react';
 import type { ProjectType } from '../shop/shopTypes';
 import { ADD_ONS, PLANS, YEARLY_DISCOUNT, formatPounds, readPlan, savePlan, yearlyPrice } from '../../data/plans';
+
+// Prices are hidden for now (Eyad, 2026-10-18): the packages show what they hold, not what they cost.
+// Set to true to bring back the prices, the monthly/yearly switch and the add-ons' prices.
+const SHOW_PRICES = false;
 import { PlanArt } from './PlanArt';
 
 
@@ -36,7 +40,7 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPi
           <h1 id="plans-title" className="text-title font-bold">اختر باقتك</h1>
           <p className="text-sm text-muted">بعد ما تختار، منبلّش بالأسئلة. فيك تغيّر الباقة بأي وقت، والدفع لسا ما بلّش.</p>
         </div>
-        <div className="inline-flex rounded-full bg-surface border border-line p-1 text-xs font-bold" role="group" aria-label="طريقة الدفع">
+        {SHOW_PRICES && <div className="inline-flex rounded-full bg-surface border border-line p-1 text-xs font-bold" role="group" aria-label="طريقة الدفع">
           {[false, true].map((y) => (
             <button
               key={String(y)}
@@ -48,7 +52,7 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPi
               {y ? `سنوي (أرخص ${Math.round(YEARLY_DISCOUNT * 100)}٪)` : 'شهري'}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
 
       <div className={`grid gap-3 sm:gap-4 ${plans.length === 2 ? 'sm:grid-cols-2 max-w-3xl' : 'sm:grid-cols-3'}`}>
@@ -69,10 +73,10 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPi
                 <h2 className="text-heading font-bold">{p.monthly === 0 ? 'الباقة المجانية' : `باقة ${p.name}`}</h2>
                 <p className="text-sm text-muted">{p.tagline}</p>
               </div>
-              <div className="my-4">
+              <div className={SHOW_PRICES || p.monthly === 0 ? 'my-4' : 'my-2'}>
                 {p.monthly === 0 ? (
                   <span className="text-title font-bold">مجاناً</span>
-                ) : yearly ? (
+                ) : !SHOW_PRICES ? null : yearly ? (
                   <>
                     <span className="text-title font-bold">{formatPounds(yearlyPrice(p.monthly))}</span>
                     <span className="text-xs text-muted font-bold"> / بالسنة</span>
@@ -116,7 +120,7 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPi
             <li key={a.name} className="flex items-center gap-2.5 rounded-ctl bg-bg px-3 py-2.5 text-sm">
               <Plus size={15} className="shrink-0 text-brand" />
               <span className="flex-1 font-bold">{a.name}</span>
-              <span className="text-muted">{a.price}</span>
+              {SHOW_PRICES && <span className="text-muted">{a.price}</span>}
             </li>
           ))}
         </ul>

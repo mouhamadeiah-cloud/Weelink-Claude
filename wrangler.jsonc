@@ -14,6 +14,8 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*", "/img/*"]
   },
+  // Photos (worker/upload-image.ts, GET /img/*). The bucket is created in the dashboard: R2 → Create bucket.
+  "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "weelink-images" }],
   "triggers": { "crons": ["0 6 * * *", "0 7 * * *", "0 8 * * *"] },
   "observability": { "enabled": true }
 }

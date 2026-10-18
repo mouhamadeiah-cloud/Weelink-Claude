@@ -18,6 +18,7 @@ import rating from '../api/rating.js';
 import sendEmail from '../api/send-email.js';
 import uploadImage from './upload-image.js';
 import indexSite from './index-site.js';
+import { serveMedia } from './media.js';
 import { setSearchDb, type SearchDb } from '../server/searchIndex.js';
 import { imagesBucket, setImagesBucket, type ImagesBucket } from '../server/images.js';
 
@@ -71,6 +72,7 @@ export default {
     setImagesBucket(env.IMAGES);
     setSearchDb(env.SEARCH);
     if (pathname.startsWith('/img/')) return servePhoto(request, pathname);
+    if (pathname === '/media') return serveMedia(request, env.ASSETS);
     if (pathname.startsWith('/api/')) return route(request);
     return env.ASSETS.fetch(request);
   },

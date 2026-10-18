@@ -5,7 +5,8 @@
 
 export interface ImagesBucket {
   put(key: string, value: ArrayBuffer | ReadableStream, options?: { httpMetadata?: { contentType?: string; cacheControl?: string } }): Promise<unknown>;
-  get(key: string): Promise<{ body: ReadableStream; httpEtag: string; httpMetadata?: { contentType?: string } } | null>;
+  get(key: string, options?: { range?: { offset: number; length?: number } }): Promise<{ body: ReadableStream; size: number; httpEtag: string; httpMetadata?: { contentType?: string } } | null>;
+  head(key: string): Promise<{ size: number; httpEtag: string; httpMetadata?: { contentType?: string } } | null>;
   list(options: { prefix: string; cursor?: string; limit?: number }): Promise<{ objects: { key: string }[]; truncated: boolean; cursor?: string }>;
   delete(keys: string | string[]): Promise<void>;
 }

@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<title>الإضافة: بطاقات جاهزة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Lalezar&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#eef2f8}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;font-family:'IBM Plex Sans Arabic',sans-serif;color:#0b1220}
+.bg{position:absolute;inset:0;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
+#b1{width:620px;height:620px;background:#cfe3ff;left:-120px;top:-160px}
+#b2{width:520px;height:520px;background:#e6dcff;right:-100px;bottom:-140px}
+#b3{width:380px;height:380px;background:#d9f3ea;right:420px;top:-120px}
+.grid{position:absolute;inset:0;background-image:radial-gradient(#c9d3e3 1.2px,transparent 1.2px);background-size:34px 34px;opacity:.5}
+
+/* intro */
+#intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#t1{font-family:'Lalezar','IBM Plex Sans Arabic',sans-serif;font-size:150px;font-weight:400;line-height:1.05;color:#0b1220}
+#t2{font-size:38px;font-weight:500;color:#4a5568;margin-top:18px}
+#t2 b{color:#1d5bd8;font-weight:600}
+
+/* window */
+#win{position:absolute;left:160px;top:110px;width:1600px;height:880px;background:#f6f7fa;border-radius:22px;
+  box-shadow:0 40px 90px -20px rgba(20,40,80,.35),0 0 0 1px rgba(10,20,40,.06);overflow:hidden;direction:rtl;transform-origin:50% 50%}
+#top{height:58px;background:#fff;border-bottom:1px solid #e7e9ef;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+.logo{direction:ltr;font-family:'Plus Jakarta Sans','IBM Plex Sans Arabic',sans-serif;font-weight:800;font-size:22px;display:flex;align-items:center;gap:8px}
+.logo i{width:30px;height:30px;border-radius:9px;background:#1d5bd8;color:#fff;font-style:normal;font-size:16px;display:grid;place-items:center}
+.crumb{font-size:16px;font-weight:600;color:#1f2937}
+#body{display:flex;height:822px}
+#panel{width:420px;background:#fff;border-left:1px solid #e7e9ef;position:relative;overflow:hidden}
+#col{width:92px;background:#fff;border-left:1px solid #eef0f4;display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:6px}
+.ci{width:74px;padding:10px 0 8px;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#4b5563}
+.ci svg{width:24px;height:24px;stroke:#4b5563;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ci.on{background:#e8f1ff;color:#1d5bd8}
+.ci.on svg{stroke:#1d5bd8}
+#canvas{flex:1;position:relative;overflow:hidden}
+
+/* cursor */
+#cur{position:absolute;left:0;top:0;width:34px;height:40px;z-index:50;pointer-events:none}
+#ring{position:absolute;width:60px;height:60px;border-radius:50%;border:3px solid #1d5bd8;z-index:49;opacity:0}
+
+/* overlays */
+#cap{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);direction:rtl;display:flex;align-items:center;gap:16px;background:#0b1220;color:#fff;
+  font-size:30px;font-weight:600;padding:16px 34px 16px 22px;border-radius:24px;box-shadow:0 20px 40px -12px rgba(11,18,32,.5);white-space:nowrap;opacity:0}
+#cap .n{width:44px;height:44px;border-radius:14px;background:#1d5bd8;display:grid;place-items:center;font-size:24px;font-weight:700}
+#chap{position:absolute;right:60px;top:34px;direction:rtl;display:flex;align-items:center;gap:12px;opacity:0}
+#chap .dots{display:flex;gap:6px}
+#chap .dots i{width:30px;height:6px;border-radius:4px;background:#cdd5e2;display:block}
+#chap .dots i.on{background:#1d5bd8}
+#chap span{font-size:22px;font-weight:700;color:#0b1220}
+
+#pempty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#9aa3b2;font-size:17px}
+#pempty .ico{width:64px;height:64px;border-radius:18px;background:#f1f4f9;display:grid;place-items:center}
+#padd{position:absolute;inset:0;padding:18px 20px;opacity:0;background:#fff}
+.phead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.phead h2{font-size:20px;font-weight:700}
+.tabs{display:flex;background:#f1f3f7;border-radius:14px;padding:4px;gap:4px}
+.tabs div{flex:1;text-align:center;font-size:14px;font-weight:700;color:#6b7280;padding:9px 0;border-radius:10px}
+.tabs div.on{color:#1d5bd8;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.gt{font-size:14px;font-weight:700;color:#9aa3b2;padding:0 4px;margin:16px 0 6px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{height:70px;background:#fff;border:1px solid #e3e6ec;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:600;color:#1f2937}
+.tile i{width:34px;height:34px;border-radius:10px;background:#f1f3f7;display:grid;place-items:center}
+.tile svg{width:20px;height:20px;stroke:#374151;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tile.hot{border-color:#1d5bd8;color:#1d5bd8}
+.tile.hot i{background:#e8f1ff}
+.tile.hot svg{stroke:#1d5bd8}
+.gt{margin:8px 0 5px}
+#vSub{position:absolute;inset:0;background:#fff;overflow:hidden;opacity:0;visibility:hidden}
+#sin{position:absolute;left:0;right:0;top:0;padding:18px 20px 40px}
+.vh{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid #eef0f4;margin-bottom:14px}
+.vh h3{font-size:18px;font-weight:700;display:flex;align-items:center;gap:6px}
+.vh h3 svg{width:18px;height:18px;stroke:#1d5bd8;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#1d5bd8;background:#e8f1ff;padding:7px 14px;border-radius:10px}
+.pills{display:flex;align-items:center;border:2px solid #d1d5db;border-radius:40px;padding:4px;gap:4px;margin-bottom:14px;background:#fff}
+.pills .ar{width:28px;height:28px;flex-shrink:0;border-radius:50%;background:#f1f3f7;display:grid;place-items:center;font-size:18px;font-weight:700;color:#374151;line-height:1}
+.pills .trk{flex:1;overflow:hidden}
+.pills .tr{display:flex;gap:4px;width:max-content}
+.pills .tr span{flex-shrink:0;padding:6px 13px;border-radius:20px;font-size:13px;font-weight:600;color:#374151;white-space:nowrap}
+.pills .tr span.on{background:#1d5bd8;color:#fff;font-weight:700}
+.tg{display:grid;grid-template-columns:1fr 1fr;gap:10px;position:relative}
+.tc{border:2px solid #e3e6ec;border-radius:16px;padding:10px;background:#fff;display:flex;flex-direction:column;min-width:0}
+.tc .pv{height:88px;border-radius:12px;margin-bottom:8px;overflow:hidden;position:relative}
+.tc h5{font-size:13px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc p{font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc .ft{margin-top:8px;padding-top:6px;border-top:1px solid #f1f3f7;display:flex;justify-content:space-between;align-items:center}
+.tc .ft span{font-size:11px;font-weight:700;color:#1d5bd8;background:#e8f1ff;border-radius:6px;padding:2px 8px}
+.tc .ft i{font-style:normal;font-size:11px;color:#9aa3b2}
+.tc.hot{border-color:#1d5bd8;box-shadow:0 4px 12px rgba(29,91,216,.12)}
+.tc.hot h5{color:#1d5bd8}
+.tc.hot .ft span{background:#1d5bd8;color:#fff}
+.slide{position:absolute;left:50%;top:80px;margin-left:-480px;width:960px;height:660px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.st{position:absolute;right:80px;top:64px;font-size:46px;font-weight:700}
+.ss{position:absolute;right:80px;top:132px;font-size:20px}
+.el{position:absolute;opacity:0}
+.caret{display:inline-block;width:2px;height:1em;background:#1d5bd8;vertical-align:middle;margin:0 2px;opacity:0}
+.selbox{position:absolute;inset:-7px;border:2px solid #1d5bd8;border-radius:6px;opacity:0;pointer-events:none}
+.selbox i{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #1d5bd8;border-radius:3px}
+.selbox i:nth-child(1){top:-7px;right:-7px}.selbox i:nth-child(2){top:-7px;left:-7px}.selbox i:nth-child(3){bottom:-7px;right:-7px}.selbox i:nth-child(4){bottom:-7px;left:-7px}
+.tedit{outline:2px dashed #1d5bd8;outline-offset:3px;border-radius:3px}
+#cmp{display:flex;align-items:center;gap:90px;margin-bottom:56px}
+.oc{position:relative}
+.oc .tag{position:absolute;top:-52px;left:50%;transform:translateX(-50%);font-size:24px;font-weight:700;color:#6b7280}
+.mini{width:480px;height:330px;border-radius:6px;overflow:hidden;position:relative;box-shadow:0 20px 40px -16px rgba(20,40,80,.3)}
+.mini .slide{left:0;top:0;margin:0;transform:scale(.5);transform-origin:0 0}
+#arrow svg{width:90px;height:40px}
+#outro{position:absolute;inset:0;direction:rtl;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0}
+#o1{font-size:52px;font-weight:700}
+#o2{font-size:28px;color:#4a5568;margin-top:14px}
+#o3{margin-top:44px;display:flex;align-items:center;gap:14px;direction:ltr}
+#o3 span{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:34px;background:linear-gradient(90deg,#7c3aed,#2563eb);-webkit-background-clip:text;background-clip:text;color:transparent}
+#shapes{position:relative;width:330px;height:150px;margin-bottom:34px}
+.sh{position:absolute;bottom:0;width:92px;height:92px;border-radius:24px;display:grid;place-items:center}
+.sh svg{width:46px;height:46px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#s1{background:#1d5bd8;left:0}
+#s2{background:#7c5cff;left:119px}
+#s3{background:#12b886;left:238px}
+.gw{position:relative}
+#gTeam,#gStat{position:absolute;top:0;left:0;right:0;opacity:0}
+.gc{width:400px;height:176px;background:#fff;border-radius:22px;border:1px solid rgba(0,0,0,.08);box-shadow:0 14px 30px -10px rgba(0,0,0,.18)}
+.gc .gi{position:absolute;left:18px;top:18px;width:136px;height:140px;border-radius:16px;background:#eef1f4;display:grid;place-items:center}
+.gc .gn{position:absolute;right:20px;top:24px;font-size:22px;font-weight:700;color:#1d1d1f;white-space:nowrap}
+.gc .gr{position:absolute;right:20px;top:62px;font-size:15px;font-weight:600;color:#0071e3;white-space:nowrap}
+.gc .gb{position:absolute;right:20px;top:94px;width:210px;font-size:13.5px;color:#64748b;line-height:1.6;text-align:right}
+.gs{width:240px;height:240px;border-radius:50%;background:#eff6ff;border:1px solid rgba(0,0,0,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.gs > .selbox{border-radius:50%}
+.gsn{font-family:'Plus Jakarta Sans',sans-serif;font-size:42px;font-weight:800;color:#0071e3;direction:ltr;white-space:nowrap}
+.gsl{font-size:15px;color:#475569;white-space:nowrap}
+.pills .tr span.hov{background:#f1f3f7}
+.pills .ar.hot{background:#e8f1ff;color:#1d5bd8}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="iText" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
+  <symbol id="iImg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="iBtn" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="5"/></symbol>
+  <symbol id="iStar" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z"/></symbol>
+  <symbol id="iShapes" viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="3.5"/><rect x="13" y="12" width="7" height="7" rx="1.5"/><path d="M12 3l4 6H8z"/></symbol>
+  <symbol id="iLine" viewBox="0 0 24 24"><path d="M4 12h16"/></symbol>
+  <symbol id="iVid" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></symbol>
+  <symbol id="iAnim" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4l-2 5M14 4l-2 5M20 4l-2 5"/></symbol>
+  <symbol id="iGal" viewBox="0 0 24 24"><rect x="7" y="3" width="14" height="14" rx="2"/><path d="M3 7v12a2 2 0 002 2h12"/></symbol>
+  <symbol id="iPin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+  <symbol id="iCal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="iTag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></symbol>
+  <symbol id="iSheet" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></symbol>
+  <symbol id="iCards" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+  <symbol id="iCode" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></symbol>
+  <symbol id="iPlus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="iSlide" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h7M7 14h4"/></symbol>
+  <symbol id="iPage" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
+  <symbol id="iUsers" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 016 5"/></symbol>
+  <symbol id="iFrame" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/></symbol>
+  <symbol id="iChart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+</svg>
+<div id="stage">
+<div class="bg"><div class="grid"></div><div class="blob" id="b1"></div><div class="blob" id="b2"></div><div class="blob" id="b3"></div></div>
+
+<div id="intro">
+  <div id="shapes"><div class="sh" id="s1"><svg><use href="#iCards"/></svg></div><div class="sh" id="s2"><svg><use href="#iUsers"/></svg></div><div class="sh" id="s3"><svg><use href="#iChart"/></svg></div></div>
+  <div id="t1">بطاقات جاهزة</div>
+  <div id="t2"><b>فريق</b> و<b>خطوات</b> و<b>باقات</b> مصممة، بضغطة</div>
+</div>
+
+<div id="win">
+  <div id="top">
+    <div class="crumb">صفحتي<span style="color:#9aa3b2;margin:0 8px">›</span>الرئيسية</div>
+    <div class="logo">weelink<i>w</i></div>
+  </div>
+  <div id="body">
+    <div id="panel">
+      <div id="pempty"><div class="ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#9aa3b2" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>اضغط «إضافة» لتضيف لصفحتك</div>
+      <div id="padd">
+        <div class="phead"><h2>إضافة</h2></div>
+        <div class="tabs"><div class="on">إضافة عنصر</div><div>إضافة شريحة</div><div>إضافة صفحة</div></div>
+<div class="gt">أساسي</div><div class="tiles"><div class="tile"><i><svg><use href="#iText"/></svg></i>نص</div><div class="tile"><i><svg><use href="#iImg"/></svg></i>صورة</div><div class="tile"><i><svg><use href="#iBtn"/></svg></i>زر</div><div class="tile"><i><svg><use href="#iStar"/></svg></i>أيقونة</div><div class="tile"><i><svg><use href="#iShapes"/></svg></i>أشكال</div><div class="tile"><i><svg><use href="#iLine"/></svg></i>خط فاصل</div></div>
+<div class="gt">وسائط</div><div class="tiles"><div class="tile"><i><svg><use href="#iVid"/></svg></i>فيديو</div><div class="tile"><i><svg><use href="#iAnim"/></svg></i>رسوم متحركة</div><div class="tile"><i><svg><use href="#iGal"/></svg></i>معرض صور</div><div class="tile"><i><svg><use href="#iPin"/></svg></i>خريطة</div></div>
+<div class="gt">أعمال</div><div class="tiles"><div class="tile"><i><svg><use href="#iCal"/></svg></i>حجز مواعيد</div><div class="tile"><i><svg><use href="#iStar"/></svg></i>التقييمات</div><div class="tile"><i><svg><use href="#iTag"/></svg></i>أسعار</div><div class="tile"><i><svg><use href="#iSheet"/></svg></i>جدول</div></div>
+<div class="gt">جاهز</div><div class="tiles"><div class="tile" id="tile"><i><svg><use href="#iCards"/></svg></i>بطاقات جاهزة</div><div class="tile"><i><svg><use href="#iCode"/></svg></i>كود مخصص</div></div>
+      </div>
+      <div id="vSub" class="mv"><div id="sin">
+        <div class="vh"><div class="back">› رجوع للعناصر</div><h3><svg><use href="#iCards"/></svg>إضافة بطاقات جاهزة</h3></div>
+        <div class="pills"><span class="ar" id="arL">‹</span><div class="trk"><div class="tr mv" id="ptr"><span id="pAll">الكل</span><span id="pTeam">فريق وأشخاص</span><span>خطوات</span><span>ميزات</span><span id="pStat">إحصائيات</span><span>صناديق بسيطة</span><span>باقات</span><span>تواصل</span></div></div><span class="ar">›</span></div>
+        <div class="gw">
+          <div class="tg mv" id="gAll"><div class="tc"><div class="pv"><div style="display:flex;gap:6px;height:100%;padding:8px;border:1px solid #e5e7eb;border-radius:12px;background:#fff"><div style="width:44px;background:#e5e7eb;border-radius:8px"></div><div style="flex:1;display:flex;flex-direction:column;justify-content:center"><div style="height:7px;width:75%;background:#9ca3af;border-radius:4px;margin:4px 0"></div><div style="height:6px;width:50%;background:#60a5fa;border-radius:4px;margin:4px 0"></div><div style="height:6px;width:100%;background:#e5e7eb;border-radius:4px;margin:4px 0"></div></div></div></div><h5>بطاقة عضو فريق</h5><p>صورة شخصية مع الاسم والمسمى الوظيفي</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div><div class="tc"><div class="pv"><div style="height:100%;padding:8px;border:1px solid #e5e7eb;border-radius:12px;background:#fff"><div style="width:22px;height:22px;border-radius:50%;background:#1d5bd8;color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center">1</div><div style="height:6px;width:60%;background:#9ca3af;border-radius:4px;margin:4px 0"></div><div style="height:5px;width:90%;background:#e5e7eb;border-radius:4px;margin:4px 0"></div><div style="width:38px;height:10px;border-radius:6px;background:#93c5fd"></div></div></div><h5>خطوة ضمن عملية</h5><p>رقم متسلسل مع عنوان ونص وزر</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div><div class="tc"><div class="pv"><div style="height:100%;padding:6px;border:1px solid #e5e7eb;border-radius:12px;background:#fff"><div style="height:42px;background:#e5e7eb;border-radius:8px"></div><div style="height:6px;width:65%;background:#9ca3af;border-radius:4px;margin:4px 0"></div><div style="height:5px;width:90%;background:#e5e7eb;border-radius:4px;margin:4px 0"></div></div></div><h5>بطاقة ميزة بصورة</h5><p>صورة مع عنوان ووصف قصير</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div><div class="tc"><div class="pv"><div style="height:100%;display:grid;place-items:center;background:#fff"><div style="width:60px;height:60px;border-radius:50%;background:#eff6ff;border:1px solid #bfdbfe;display:grid;place-items:center;color:#2563eb;font-weight:700;font-size:12px;direction:ltr">+120</div></div></div><h5>بطاقة إحصائية دائرية</h5><p>رقم كبير داخل دائرة بسيطة</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div><div class="tc"><div class="pv"><div style="height:100%;padding:10px;border:1px solid #d1d5db;border-radius:12px;background:#fff"><div style="height:7px;width:55%;background:#9ca3af;border-radius:4px;margin:4px 0"></div><div style="height:5px;width:85%;background:#e5e7eb;border-radius:4px;margin:4px 0"></div><div style="height:5px;width:70%;background:#e5e7eb;border-radius:4px;margin:4px 0"></div><div style="width:44px;height:11px;border-radius:6px;background:#1d5bd8;margin-top:6px"></div></div></div><h5>صندوق بسيط مع زر</h5><p>عنوان ونص وزر واحد داخل صندوق</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div><div class="tc"><div class="pv"><div style="height:100%;padding:8px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:center"><div style="font-size:10px;font-weight:700;color:#6b7280">الباقة الأساسية</div><div style="font-size:18px;font-weight:800;color:#111827;direction:ltr">$29</div><div style="width:60%;height:11px;border-radius:6px;background:#1d5bd8;margin:6px auto 0"></div></div></div><h5>بطاقة باقة أو تسعير</h5><p>اسم الباقة والسعر وزر اشتراك</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div></div>
+          <div class="tg mv" id="gTeam"><div class="tc" id="tcTeam"><div class="pv"><div style="display:flex;gap:6px;height:100%;padding:8px;border:1px solid #e5e7eb;border-radius:12px;background:#fff"><div style="width:44px;background:#e5e7eb;border-radius:8px"></div><div style="flex:1;display:flex;flex-direction:column;justify-content:center"><div style="height:7px;width:75%;background:#9ca3af;border-radius:4px;margin:4px 0"></div><div style="height:6px;width:50%;background:#60a5fa;border-radius:4px;margin:4px 0"></div><div style="height:6px;width:100%;background:#e5e7eb;border-radius:4px;margin:4px 0"></div></div></div></div><h5>بطاقة عضو فريق</h5><p>صورة شخصية مع الاسم والمسمى الوظيفي</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div><div class="tc"><div class="pv"><div style="height:100%;position:relative;background:#fff"><div style="position:absolute;left:14px;right:14px;bottom:4px;height:48px;border-radius:12px;background:#a78bfa"></div><div style="position:absolute;left:50%;top:6px;margin-left:-20px;width:40px;height:40px;border-radius:50%;background:#e5e7eb;border:3px solid #fff"></div></div></div><h5>بطاقة عضو فريق بشكل جيب ملون</h5><p>صورة دائرية تطفو فوق شكل ملون</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div><div class="tc"><div class="pv"><div style="height:100%;position:relative;background:#fff;border:1px solid #e5e7eb;border-radius:12px"><div style="position:absolute;left:0;right:0;top:24px;height:5px;background:#34d399"></div><div style="position:absolute;left:50%;top:8px;margin-left:-18px;width:36px;height:36px;border-radius:50%;background:#e5e7eb;border:3px solid #fff"></div><div style="position:absolute;left:25%;right:25%;top:56px"><div style="height:6px;width:100%;background:#9ca3af;border-radius:4px;margin:4px 0"></div></div></div></div><h5>بطاقة عضو فريق بشريط ملون</h5><p>صورة دائرية فوق شريط ملون رفيع</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div></div>
+          <div class="tg mv" id="gStat"><div class="tc" id="tcStat"><div class="pv"><div style="height:100%;display:grid;place-items:center;background:#fff"><div style="width:60px;height:60px;border-radius:50%;background:#eff6ff;border:1px solid #bfdbfe;display:grid;place-items:center;color:#2563eb;font-weight:700;font-size:12px;direction:ltr">+120</div></div></div><h5>بطاقة إحصائية دائرية</h5><p>رقم كبير داخل دائرة مع توصيف قصير</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div></div>
+        </div>
+      </div></div>
+    </div>
+    <div id="col">
+      <div class="ci" id="cAdd"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>إضافة</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg>المحتوى</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 1.6-1 1.1-1.9-.6-1 .1-2.1 1.2-2.1H17a4 4 0 004-4c0-5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>الألوان</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="3.5"/><rect x="13" y="12" width="7" height="7" rx="1.5"/><path d="M12 3l4 6H8z"/></svg>الشكل</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>المكان</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M5 12h3l3-7 3 14 3-7h2"/></svg>الحركة</div>
+    </div>
+    <div id="canvas">
+      <div class="slide" id="sl" style="background:linear-gradient(135deg,#f6fbfb 0%,#e3f3f1 100%)">
+        <svg style="position:absolute;left:70px;top:60px" width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#8fd3cc" stroke-width="1.4" stroke-linejoin="round"><path d="M7 3c-2.5 0-4 2-4 5 0 4 2 6 2.5 10 .3 2 1 3 2 3s1.5-1.5 2-4c.4-2 1.2-3 2.5-3s2.1 1 2.5 3c.5 2.5 1 4 2 4s1.7-1 2-3C19 14 21 12 21 8c0-3-1.5-5-4-5-2 0-3 1-5 1S9 3 7 3z"/></svg>
+        <div class="st" style="color:#12403d">تعرّف على فريقنا</div>
+        <div class="ss" style="color:#4f7471">عيادة ابتسامة لطب الأسنان، حلب</div>
+        <div class="el mv gc" id="gc" style="right:80px;top:200px">
+          <div class="gi"><svg width="54" height="54" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0115 0"/></svg></div>
+          <div class="gn" id="gn"><i class="caret"></i><span class="tx">اسم عضو الفريق</span></div>
+          <div class="gr" id="gr"><i class="caret"></i><span class="tx">المسمى الوظيفي</span></div>
+          <div class="gb">سطر قصير يوضح خبرة هذا الشخص ودوره في الفريق.</div>
+          <div class="selbox"><i></i><i></i><i></i><i></i></div></div>
+        <div class="el mv gs" id="gs" style="left:110px;top:190px">
+          <div class="gsn" id="gsn"><span class="tx">+120</span><i class="caret"></i></div>
+          <div class="gsl" id="gsl"><i class="caret"></i><span class="tx">وصف قصير للرقم</span></div>
+          <div class="selbox"><i></i><i></i><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+  <div id="ring"></div>
+  <svg id="cur" viewBox="0 0 34 40"><path d="M4 3l24 14-10.5 2.5L23 31l-4.6 2.2-5.6-11.6L5 29z" fill="#0b1220" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>
+</div>
+
+<div id="chap"><div class="dots" id="dots"></div><span id="chapt"></span></div>
+<div id="cap"><div class="n" id="capn">1</div><div id="capt"></div></div>
+
+<div id="outro">
+  <div id="cmp">
+    <div class="oc"><div class="tag">قبل</div><div class="mini" id="m1"></div></div>
+    <div id="arrow"><svg viewBox="0 0 90 40"><path d="M84 20H10M24 6L8 20l16 14" fill="none" stroke="#1d5bd8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="oc"><div class="tag" style="color:#1d5bd8">بعد</div><div class="mini" id="m2"></div></div>
+  </div>
+  <div id="o1">بطاقة مرتبة بثواني، بدل ما تبنيها قطعة قطعة</div>
+  <div id="o2">وكل نص وصورة جوّاتها بتغيّرهم متل ما بدك</div>
+  <div id="o3"><svg viewBox="0 0 48 48" width="64" height="64" style="overflow:visible"><defs><radialGradient id="wg" cx=".5" cy=".5" r=".75" fx=".35" fy=".3"><stop offset="0" stop-color="#d8ccff"/><stop offset=".5" stop-color="#7c3aed"/><stop offset="1" stop-color="#2563eb"/></radialGradient></defs><circle class="wd" r="6.5" fill="url(#wg)"/><circle class="wd" r="6.5" fill="url(#wg)"/><circle class="wd" r="6.5" fill="url(#wg)"/></svg><span>Wee AI</span></div>
+</div>
+
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const easeOut=x=>1-Math.pow(1-clamp(x),3);
+const back=x=>{x=clamp(x);const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const lerp=(a,b,k)=>a+(b-a)*k;
+const seg=(t,t0,t1,f=ease)=>f((t-t0)/(t1-t0));
+const pulse=(t,a,b)=>Math.min(seg(t,a,a+.35),1-seg(t,b-.35,b));
+
+const T={add:8.7,tile:10.5,pt:14.6,c1:16.4,n:21.2,r:23.6,ar:27,ps:28,c2:29.4,sn:30.8,sl:32.5};
+const DRAG=[18.4,19.8];
+const CLICKS=[T.add,T.tile,T.pt,T.c1,T.n,T.n+.25,T.r,T.r+.25,T.ar,T.ps,T.c2,T.sn,T.sn+.25,T.sl,T.sl+.25];
+const DRAGS=[DRAG];
+const CUR_OUT=35.6,WIN_OUT=36.4,OUTRO=37.4;
+const OFF={x:-170,y:180},SHIFT=150;
+const IDS={cAdd:'#cAdd',tile:'#tile',pAll:'#pAll',pTeam:'#pTeam',pStat:'#pStat',arL:'#arL',tcTeam:'#tcTeam',tcStat:'#tcStat',gc:'#gc',gn:'#gn .tx',gr:'#gr .tx',gsn:'#gsn .tx',gsl:'#gsl .tx'};
+const CAPS=[
+  [7.4,11.4,1,'من «إضافة»، اضغط «بطاقات جاهزة»'],
+  [11.6,15.6,2,'فرز البطاقات حسب نوعها: فريق، خطوات، ميزات…'],
+  [15.8,18.2,3,'اضغط على البطاقة، وبتنزل بصورتها ونصوصها'],
+  [18.3,20.6,3,'اسحبها لمكانها بالشريحة'],
+  [20.8,26.4,3,'اضغط مرتين على أي نص جوّاتها وغيّره'],
+  [26.6,30.4,4,'وفيك تضيف بطاقة إحصائية لأرقامك'],
+  [30.6,35.2,4,'واكتب رقمك ووصفه'],
+];
+const CHAPS=[[11.4,15.8,1,'أنواع البطاقات'],[15.8,26.6,2,'بطاقة الفريق'],[26.6,35.6,3,'بطاقة إحصائية']];
+function prep(){
+  const tx=[...document.querySelectorAll('.el .tx')];const old=tx.map(e=>e.textContent);
+  $('#gn .tx').textContent='د. ليلى حداد';$('#gr .tx').textContent='أخصائية تقويم أسنان';$('#gsl .tx').textContent='ابتسامة رجّعناها';
+  return ()=>tx.forEach((e,i)=>e.textContent=old[i]);
+}
+const shift=t=>kf(t,[[T.ar+.1,0],[T.ar+.5,SHIFT]]);
+const pill=p=>({x:p.cx+shift(TT),y:p.cy});let TT=0;
+const grab=(p,o)=>({x:p.x+p.w*.35+o.x,y:p.y+p.h-28+o.y});
+const tend=p=>({x:p.x+p.w-14,y:p.cy});
+function waypoints(t){TT=t;
+  return [
+    [0,{x:1300,y:760}],[7.6,{x:1300,y:760}],[T.add-.1,pt(P.cAdd)],
+    [9.6,pt(P.cAdd)],[T.tile-.1,pt(P.tile)],
+    [11.4,pt(P.tile)],[12.2,()=>pill(P.pAll)],[13.2,()=>pill(P.pAll,0)],[T.pt-.1,()=>pill(P.pTeam)],
+    [15.4,()=>pill(P.pTeam)],[T.c1-.1,pt(P.tcTeam)],
+    [17.4,pt(P.tcTeam)],[DRAG[0]-.1,()=>grab(P.gc,OFF)],[DRAG[1]+.1,()=>grab(P.gc,dragOff(t,OFF,DRAG[0],DRAG[1]))],
+    [T.n-.1,()=>tend(P.gn)],[22.9,()=>tend(P.gn)],[T.r-.1,()=>tend(P.gr)],[25.8,()=>tend(P.gr)],
+    [T.ar-.1,pt(P.arL)],[27.4,pt(P.arL)],[T.ps-.1,()=>pill(P.pStat)],[28.6,()=>pill(P.pStat)],[T.c2-.1,pt(P.tcStat)],
+    [30.1,pt(P.tcStat)],[T.sn-.1,()=>({x:P.gsn.cx,y:P.gsn.cy})],[32,()=>({x:P.gsn.cx,y:P.gsn.cy})],[T.sl-.1,()=>({x:P.gsl.cx,y:P.gsl.cy})],
+    [34.4,()=>({x:P.gsl.cx,y:P.gsl.cy})],[CUR_OUT,{x:1300,y:780}]
+  ];
+}
+function edit(id,t,dbl,a,b,from,to,end){
+  const el=$(id);el.querySelector('.tx').textContent=typed(t,a,b,from,to);
+  const on=t>=dbl+.25&&t<end;el.classList.toggle('tedit',on);caret(el.querySelector('.caret'),t,on);
+}
+function scene(t){
+  // pills and the cards they show
+  $('#ptr').style.transform=`translateX(${shift(t)}px)`;
+  $('#arL').classList.toggle('hot',t>=T.ar-.4&&t<T.ar+.4);
+  const p=t<T.pt?'pAll':t<T.ps?'pTeam':'pStat';['pAll','pTeam','pStat'].forEach(id=>$('#'+id).classList.toggle('on',id===p));
+  [...$('#ptr').children].forEach((e,i)=>e.classList.toggle('hov',t>=12.2&&t<T.pt-.2&&!e.classList.contains('on')&&i===Math.min(3,Math.floor((t-12.2)/.6)+1)));
+  const kt=seg(t,T.pt+.1,T.pt+.5),ks=seg(t,T.ps+.1,T.ps+.5);
+  $('#gAll').style.opacity=1-kt;$('#gTeam').style.opacity=kt*(1-ks);$('#gStat').style.opacity=ks;
+  $('#tcTeam').classList.toggle('hot',t>=T.c1-.6&&t<T.c1+.4);$('#tcStat').classList.toggle('hot',t>=T.c2-.6&&t<T.c2+.4);
+  // the team card: lands, is dragged home, its texts are retyped
+  pop('#gc',t,T.c1,dragOff(t,OFF,DRAG[0],DRAG[1]),'50% 50%');
+  sel('#gc',t>=T.c1+.4&&t<T.ar);
+  edit('#gn',t,T.n,T.n+.6,T.n+1.6,'اسم عضو الفريق','د. ليلى حداد',T.r);
+  edit('#gr',t,T.r,T.r+.6,T.r+2,'المسمى الوظيفي','أخصائية تقويم أسنان',26.4);
+  // the stat circle
+  pop('#gs',t,T.c2,{x:0,y:0},'50% 50%');
+  sel('#gs',t>=T.c2+.4&&t<CUR_OUT);
+  edit('#gsn',t,T.sn,T.sn+.5,T.sn+1.1,'+120','+1200',T.sl);
+  edit('#gsl',t,T.sl,T.sl+.5,T.sl+1.7,'وصف قصير للرقم','ابتسامة رجّعناها',CUR_OUT);
+}
+
+// Positions inside the window, measured with nothing moved and every view shown.
+const W=$('#win'),P={};
+function measure(){
+  const els=[...document.querySelectorAll('#win, #padd, .mv')];
+  const saved=els.map(e=>[e,e.style.transform,e.style.opacity]);
+  els.forEach(e=>{e.style.transform='none';e.style.opacity=1});
+  const undo=prep();
+  const wr=W.getBoundingClientRect();const k=wr.width/1600;
+  for(const key in IDS){const r=$(IDS[key]).getBoundingClientRect();const x=(r.left-wr.left)/k,y=(r.top-wr.top)/k,w=r.width/k,h=r.height/k;P[key]={x,y,w,h,cx:x+w/2,cy:y+h/2}}
+  if(undo)undo();
+  saved.forEach(([e,tr,op])=>{e.style.transform=tr;e.style.opacity=op});
+}
+function curPos(t){
+  const W_=waypoints(t);
+  const v=w=>typeof w==='function'?w():w;
+  for(let i=1;i<W_.length;i++){const[a,pa]=W_[i-1],[b,pb]=W_[i];if(t<=b){const k=ease((t-a)/(b-a));const A=v(pa),B=v(pb);return{x:lerp(A.x,B.x,k),y:lerp(A.y,B.y,k)}}}
+  return v(W_[W_.length-1][1]);
+}
+const pt=(p,dx=0,dy=0)=>({x:p.cx+dx,y:p.cy+dy});
+// An element added to the slide: pops in at `off` from its place, then follows the drag home.
+function pop(id,t,born,off,origin){
+  const el=$(id);const k=back(seg(t,born+.1,born+.6,x=>x));
+  el.style.opacity=clamp((t-born-.1)*5);
+  el.style.transformOrigin=origin||'50% 50%';
+  el.style.transform=`translate(${off.x}px,${off.y}px) scale(${t<born+.1?.5:.5+k*.5})`;
+}
+const dragOff=(t,from,a,b)=>{const k=seg(t,a,b);return{x:from.x*(1-k),y:from.y*(1-k)}};
+const sel=(id,on)=>{$(id+' > .selbox').style.opacity=on?1:0};
+// Text typed into a field between a and b; before a it keeps `from`.
+const typed=(t,a,b,from,to)=>t<a-.2?from:t<a?'':to.slice(0,Math.round(clamp((t-a)/(b-a))*to.length));
+function caret(el,t,on){el.style.opacity=on&&(Math.floor(t*2.5)%2===0)?1:0}
+
+let measured=false,cloned=false;
+function render(t){
+  if(!measured){measure();measured=true}
+  if(!cloned){cloned=true;
+    // the outro's before/after: the slide with nothing added, and the slide as it ends
+    scene(OUTRO-1.2);const a=$('#sl').cloneNode(true);a.removeAttribute('id');a.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+    a.querySelectorAll('.selbox,.caret').forEach(e=>e.remove());a.querySelectorAll('.tedit').forEach(e=>e.classList.remove('tedit'));$('#m2').appendChild(a);
+    const b=$('#sl').cloneNode(true);b.removeAttribute('id');b.querySelectorAll('.el').forEach(e=>e.remove());b.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));$('#m1').appendChild(b);
+    $('#dots').innerHTML=CHAPS.map(()=>'<i></i>').join('');
+  }
+  $('#b1').style.transform=`translate(${Math.sin(t*.3)*40}px,${Math.cos(t*.25)*30}px)`;
+  $('#b2').style.transform=`translate(${Math.cos(t*.22)*50}px,${Math.sin(t*.3)*30}px)`;
+  $('#b3').style.transform=`translate(${Math.sin(t*.18)*60}px,${Math.cos(t*.3)*20}px)`;
+
+  // intro
+  $('#intro').style.opacity=1-seg(t,5.2,6.2);
+  $('#intro').style.transform=`translateY(${-seg(t,5.2,6.2)*80}px)`;
+  [['#s1',.3],['#s2',.55],['#s3',.8]].forEach(([id,d],i)=>{
+    const k=back(seg(t,d,d+.7,x=>x));const fl=Math.sin(t*2+i)*4*clamp(t-1.6);
+    $(id).style.transform=`translateY(${(1-k)*-260+fl}px) rotate(${(1-k)*(i-1)*40}deg)`;$(id).style.opacity=clamp((t-d)*4);
+  });
+  $('#t1').style.opacity=seg(t,1.2,1.9);$('#t1').style.transform=`translateY(${(1-seg(t,1.2,1.9))*30}px)`;
+  $('#t2').style.opacity=seg(t,2,2.7);$('#t2').style.transform=`translateY(${(1-seg(t,2,2.7))*20}px)`;
+
+  // window
+  const wi=seg(t,5.6,6.9), wo=seg(t,WIN_OUT,WIN_OUT+1);
+  W.style.opacity=wi*(1-wo);
+  W.style.transform=`translateY(${(1-wi)*160+wo*-40}px) scale(${(0.92+wi*.08)*(1-wo*.06)})`;
+
+  // panel: «إضافة», then the category's own view
+  $('#cAdd').classList.toggle('on',t>=T.add+.1);
+  $('#pempty').style.opacity=1-seg(t,T.add+.1,T.add+.4);
+  $('#padd').style.opacity=seg(t,T.add+.1,T.add+.5);
+  $('#tile').classList.toggle('hot',t>=T.tile-.5&&t<T.tile+.4);
+  const vk=seg(t,T.tile+.1,T.tile+.5);
+  $('#vSub').style.opacity=vk;$('#vSub').style.visibility=vk>0?'visible':'hidden';$('#vSub').style.transform=`translateX(${(1-vk)*-30}px)`;
+
+  scene(t);
+
+  // cursor
+  const c=curPos(t);const cur=$('#cur');
+  const dragging=DRAGS.some(([a,b])=>t>=a&&t<=b);
+  const clickK=CLICKS.reduce((m,ct)=>Math.max(m,t>=ct&&t<ct+.2?Math.sin((t-ct)/.2*Math.PI):0),0);
+  cur.style.transform=`translate(${c.x-4}px,${c.y-3}px) scale(${1-clickK*.15-(dragging?.1:0)})`;
+  cur.style.opacity=t<6.6||t>CUR_OUT+.2?0:1;
+  const lastClick=CLICKS.filter(ct=>t>=ct&&t<ct+.6).pop();
+  const ring=$('#ring');
+  if(lastClick!==undefined){const k=(t-lastClick)/.6;ring.style.opacity=(1-k)*.9;ring.style.transform=`translate(${c.x-30}px,${c.y-30}px) scale(${.3+k*.9})`}
+  else if(dragging){ring.style.opacity=.35;ring.style.transform=`translate(${c.x-30}px,${c.y-30}px) scale(.55)`}
+  else ring.style.opacity=0;
+
+  // captions
+  const cap=CAPS.find(([a,b])=>t>=a&&t<b);const capEl=$('#cap');
+  if(cap){const[a,b,n,txt]=cap;const k=Math.min(seg(t,a,a+.4,easeOut),1-seg(t,b-.3,b));capEl.style.opacity=k;capEl.style.transform=`translateX(-50%) translateY(${(1-k)*24}px)`;$('#capn').textContent=n;$('#capt').textContent=txt}
+  else capEl.style.opacity=0;
+  const ch=CHAPS.find(([a,b])=>t>=a&&t<b);
+  if(ch){const[a,b,n,txt]=ch;const k=Math.min(seg(t,a,a+.4),1-seg(t,b-.3,b));$('#chap').style.opacity=k;$('#chapt').textContent=txt;[...$('#dots').children].forEach((d,i)=>d.classList.toggle('on',i<n))}
+  else $('#chap').style.opacity=0;
+
+  // outro
+  const O=OUTRO;
+  $('#outro').style.opacity=seg(t,O,O+1);
+  const ab=seg(t,O+1.2,O+2.4);
+  $('#m2').style.transform=`scale(${.9+ab*.1})`;$('#m2').style.opacity=.3+ab*.7;
+  $('#arrow').style.opacity=seg(t,O+.8,O+1.4);$('#arrow').style.transform=`translateX(${(1-seg(t,O+.8,O+1.4))*20}px)`;
+  $('#o1').style.opacity=seg(t,O+2.2,O+3);$('#o1').style.transform=`translateY(${(1-seg(t,O+2.2,O+3))*20}px)`;
+  $('#o2').style.opacity=seg(t,O+2.8,O+3.6);
+  $('#o3').style.opacity=seg(t,O+3.6,O+4.4);
+  const spin=(1-seg(t,O+3.6,O+5.2))*Math.PI*2, gap=lerp(20,11,seg(t,O+3.6,O+4.6,back));
+  [...document.querySelectorAll('.wd')].forEach((c,i)=>{const a=[-90,150,30][i]*Math.PI/180+spin;const pl=1+Math.max(0,Math.sin((t-O-5.2)*3-i*.9))*.12*(t>O+5.2?1:0);
+    c.setAttribute('cx',24+gap*Math.cos(a));c.setAttribute('cy',24.3+gap*Math.sin(a));c.setAttribute('r',6.5*pl)});
+}
+function kf(t,ks,f=ease){if(t<=ks[0][0])return ks[0][1];for(let i=1;i<ks.length;i++){if(t<=ks[i][0]){const[a,va]=ks[i-1],[b,vb]=ks[i];return lerp(va,vb,f((t-a)/(b-a)))}}return ks[ks.length-1][1]}
+const DURATION=45;
+window.DURATION=DURATION;window.render=render;
+// Fit the 1920×1080 stage into whatever size the window is.
+const stage=$('#stage');
+function fit(){measured=false;const k=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform=`translate(${(innerWidth-1920*k)/2}px,${(innerHeight-1080*k)/2}px) scale(${k})`}
+addEventListener('resize',fit);fit();
+// Playback, driven by the editor's player through postMessage.
+// ?t=12 starts at that second (the editor reopens it where it was); ?paused shows that frame still.
+let time=Math.max(0,Math.min(DURATION,Number(new URLSearchParams(location.search).get('t'))||0)),playing=false,last=0;
+const post=()=>parent!==window&&parent.postMessage({source:'weelink-intro',type:'time',time,duration:DURATION,playing},'*');
+function tick(now){if(playing){time=Math.min(DURATION,time+(now-last)/1000);if(time>=DURATION)playing=false;render(time);post()}last=now;requestAnimationFrame(tick)}
+addEventListener('message',(e)=>{const m=e.data;if(!m||m.source!=='weelink-intro-player')return;
+  if(m.type==='play'){if(time>=DURATION)time=0;playing=true;last=performance.now()}
+  else if(m.type==='pause')playing=false;
+  else if(m.type==='seek'){time=Math.max(0,Math.min(DURATION,m.time));render(time)}
+  post()});
+// A click on the picture pauses or plays it, like a video.
+addEventListener('click',()=>{if(playing)playing=false;else{if(time>=DURATION)time=0;playing=true;last=performance.now()}post()});
+document.fonts.ready.then(()=>{measured=false;render(time);playing=!/[?&]paused/.test(location.search);last=performance.now();requestAnimationFrame(tick);post()});
+</script>
+</body>
+</html>

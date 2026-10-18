@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<title>الإضافة: الأشكال</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Lalezar&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#eef2f8}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;font-family:'IBM Plex Sans Arabic',sans-serif;color:#0b1220}
+.bg{position:absolute;inset:0;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
+#b1{width:620px;height:620px;background:#cfe3ff;left:-120px;top:-160px}
+#b2{width:520px;height:520px;background:#e6dcff;right:-100px;bottom:-140px}
+#b3{width:380px;height:380px;background:#d9f3ea;right:420px;top:-120px}
+.grid{position:absolute;inset:0;background-image:radial-gradient(#c9d3e3 1.2px,transparent 1.2px);background-size:34px 34px;opacity:.5}
+
+/* intro */
+#intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#t1{font-family:'Lalezar','IBM Plex Sans Arabic',sans-serif;font-size:150px;font-weight:400;line-height:1.05;color:#0b1220}
+#t2{font-size:38px;font-weight:500;color:#4a5568;margin-top:18px}
+#t2 b{color:#1d5bd8;font-weight:600}
+
+/* window */
+#win{position:absolute;left:160px;top:110px;width:1600px;height:880px;background:#f6f7fa;border-radius:22px;
+  box-shadow:0 40px 90px -20px rgba(20,40,80,.35),0 0 0 1px rgba(10,20,40,.06);overflow:hidden;direction:rtl;transform-origin:50% 50%}
+#top{height:58px;background:#fff;border-bottom:1px solid #e7e9ef;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+.logo{direction:ltr;font-family:'Plus Jakarta Sans','IBM Plex Sans Arabic',sans-serif;font-weight:800;font-size:22px;display:flex;align-items:center;gap:8px}
+.logo i{width:30px;height:30px;border-radius:9px;background:#1d5bd8;color:#fff;font-style:normal;font-size:16px;display:grid;place-items:center}
+.crumb{font-size:16px;font-weight:600;color:#1f2937}
+#body{display:flex;height:822px}
+#panel{width:420px;background:#fff;border-left:1px solid #e7e9ef;position:relative;overflow:hidden}
+#col{width:92px;background:#fff;border-left:1px solid #eef0f4;display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:6px}
+.ci{width:74px;padding:10px 0 8px;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#4b5563}
+.ci svg{width:24px;height:24px;stroke:#4b5563;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ci.on{background:#e8f1ff;color:#1d5bd8}
+.ci.on svg{stroke:#1d5bd8}
+#canvas{flex:1;position:relative;overflow:hidden}
+
+/* cursor */
+#cur{position:absolute;left:0;top:0;width:34px;height:40px;z-index:50;pointer-events:none}
+#ring{position:absolute;width:60px;height:60px;border-radius:50%;border:3px solid #1d5bd8;z-index:49;opacity:0}
+
+/* overlays */
+#cap{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);direction:rtl;display:flex;align-items:center;gap:16px;background:#0b1220;color:#fff;
+  font-size:30px;font-weight:600;padding:16px 34px 16px 22px;border-radius:24px;box-shadow:0 20px 40px -12px rgba(11,18,32,.5);white-space:nowrap;opacity:0}
+#cap .n{width:44px;height:44px;border-radius:14px;background:#1d5bd8;display:grid;place-items:center;font-size:24px;font-weight:700}
+#chap{position:absolute;right:60px;top:34px;direction:rtl;display:flex;align-items:center;gap:12px;opacity:0}
+#chap .dots{display:flex;gap:6px}
+#chap .dots i{width:30px;height:6px;border-radius:4px;background:#cdd5e2;display:block}
+#chap .dots i.on{background:#1d5bd8}
+#chap span{font-size:22px;font-weight:700;color:#0b1220}
+
+#pempty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#9aa3b2;font-size:17px}
+#pempty .ico{width:64px;height:64px;border-radius:18px;background:#f1f4f9;display:grid;place-items:center}
+#padd{position:absolute;inset:0;padding:18px 20px;opacity:0;background:#fff}
+.phead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.phead h2{font-size:20px;font-weight:700}
+.tabs{display:flex;background:#f1f3f7;border-radius:14px;padding:4px;gap:4px}
+.tabs div{flex:1;text-align:center;font-size:14px;font-weight:700;color:#6b7280;padding:9px 0;border-radius:10px}
+.tabs div.on{color:#1d5bd8;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.gt{font-size:14px;font-weight:700;color:#9aa3b2;padding:0 4px;margin:12px 0 6px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{height:70px;background:#fff;border:1px solid #e3e6ec;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:600;color:#1f2937}
+.tile i{width:34px;height:34px;border-radius:10px;background:#f1f3f7;display:grid;place-items:center}
+.tile svg{width:20px;height:20px;stroke:#374151;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tile.hot{border-color:#1d5bd8;color:#1d5bd8}
+.tile.hot i{background:#e8f1ff}
+.tile.hot svg{stroke:#1d5bd8}
+#vSub{position:absolute;inset:0;background:#fff;overflow:hidden;opacity:0;padding:18px 20px}
+.pane{position:absolute;left:20px;right:20px;opacity:0}
+.vh{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid #eef0f4;margin-bottom:14px}
+.vh h3{font-size:18px;font-weight:700;display:flex;align-items:center;gap:6px}
+.vh h3 svg{width:18px;height:18px;stroke:#1d5bd8;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#1d5bd8;background:#e8f1ff;padding:7px 14px;border-radius:10px}
+.pills{display:flex;align-items:center;gap:4px;border:2px solid #d1d5db;border-radius:40px;padding:4px;margin-bottom:14px;background:#fff}
+.pills .ar{width:28px;height:28px;border-radius:50%;background:#f1f3f7;display:grid;place-items:center;font-size:15px;color:#4b5563;flex-shrink:0}
+.pills .tr{flex:1;display:flex;gap:4px;overflow:hidden}
+.pl{flex-shrink:0;font-size:13px;font-weight:600;color:#374151;padding:6px 12px;border-radius:30px;white-space:nowrap}
+.pl.on{background:#1d5bd8;color:#fff;font-weight:700}
+.cards{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.cg{position:absolute;left:0;right:0;opacity:0}
+.card{border:2px solid #e3e6ec;border-radius:16px;padding:9px;background:#fff}
+.card .pv{height:78px;border-radius:10px;background:#f7f8fa;display:flex;align-items:center;justify-content:center;margin-bottom:7px;overflow:hidden}
+.card h4{font-size:13px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card p{font-size:11.5px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.card .cf{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f1f3f7;margin-top:7px;padding-top:6px}
+.card .cf span{font-size:11.5px;font-weight:700;color:#1d5bd8;background:#e8f1ff;padding:2px 8px;border-radius:6px}
+.card .cf em{font-style:normal;color:#9aa3b2;font-size:12px}
+.card.hot{border-color:#1d5bd8;box-shadow:0 4px 14px rgba(29,91,216,.14)}
+.card.hot h4{color:#1d5bd8}
+.card.hot .cf span{background:#1d5bd8;color:#fff}
+.slide{position:absolute;left:50%;top:80px;margin-left:-480px;width:960px;height:660px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.el{position:absolute;opacity:0}
+.selbox{position:absolute;inset:-8px -10px;border:2px solid #1d5bd8;border-radius:6px;opacity:0;pointer-events:none}
+.selbox i{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #1d5bd8;border-radius:3px}
+.edit .selbox{border-style:dashed}
+.caret{display:inline-block;width:3px;height:.9em;background:#fff;vertical-align:middle;margin-right:3px;opacity:0}
+#cmp{display:flex;align-items:center;gap:90px;margin-bottom:56px}
+.oc{position:relative}
+.oc .tag{position:absolute;top:-52px;left:50%;transform:translateX(-50%);font-size:24px;font-weight:700;color:#6b7280}
+.mini{width:480px;height:330px;border-radius:6px;overflow:hidden;position:relative;box-shadow:0 20px 40px -16px rgba(20,40,80,.3)}
+.mini .slide{left:0;top:0;margin:0;transform:scale(.5);transform-origin:0 0}
+.mini .el{opacity:1!important}
+#arrow svg{width:90px;height:40px}
+#outro{position:absolute;inset:0;direction:rtl;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0}
+#o1{font-size:52px;font-weight:700}
+#o2{font-size:28px;color:#4a5568;margin-top:14px}
+#o3{margin-top:44px;display:flex;align-items:center;gap:14px;direction:ltr}
+#o3 span{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:34px;background:linear-gradient(90deg,#7c3aed,#2563eb);-webkit-background-clip:text;background-clip:text;color:transparent}
+#shapes{position:relative;width:330px;height:150px;margin-bottom:34px}
+.sh{position:absolute;bottom:0;width:92px;height:92px;border-radius:24px;display:grid;place-items:center;color:#fff;font-weight:700}
+.sh svg{width:46px;height:46px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#s1{background:#1d5bd8;left:0}
+#s2{background:#7c5cff;left:119px}
+#s3{background:#12b886;left:238px}
+
+#sl{background:linear-gradient(135deg,#fff7f5 0%,#fdebe7 100%)}
+.stitle{position:absolute;top:150px;right:80px;font-size:52px;font-weight:700;color:#5b1f2a;z-index:2}
+.ssub{position:absolute;top:232px;right:80px;font-size:22px;color:#8b5560;z-index:2}
+.photo{position:absolute;left:110px;top:130px;width:340px;height:400px;background:linear-gradient(165deg,#f3c4b5,#b86a5e);display:grid;place-items:center;z-index:1}
+#eBl{left:40px;top:70px;width:480px;height:520px;z-index:0}
+#eBr{right:50px;top:176px;width:500px;height:80px;z-index:1}
+#eM{left:110px;top:130px;width:340px;height:400px;z-index:3}
+#eM svg{display:block}
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="iText" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
+  <symbol id="iImg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="iBtn" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="5"/></symbol>
+  <symbol id="iStar" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z"/></symbol>
+  <symbol id="iShapes" viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="3.5"/><rect x="13" y="12" width="7" height="7" rx="1.5"/><path d="M12 3l4 6H8z"/></symbol>
+  <symbol id="iLine" viewBox="0 0 24 24"><path d="M4 12h16"/></symbol>
+  <symbol id="iVid" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></symbol>
+  <symbol id="iAnim" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4l-2 5M14 4l-2 5M20 4l-2 5"/></symbol>
+  <symbol id="iGal" viewBox="0 0 24 24"><rect x="7" y="3" width="14" height="14" rx="2"/><path d="M3 7v12a2 2 0 002 2h12"/></symbol>
+  <symbol id="iPin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+  <symbol id="iCal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="iTag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></symbol>
+  <symbol id="iSheet" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></symbol>
+  <symbol id="iCards" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+  <symbol id="iCode" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></symbol>
+  <symbol id="iPlus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="iSlide" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h7M7 14h4"/></symbol>
+  <symbol id="iPage" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
+</svg>
+<div id="stage">
+<div class="bg"><div class="grid"></div><div class="blob" id="b1"></div><div class="blob" id="b2"></div><div class="blob" id="b3"></div></div>
+<div id="intro">
+  <div id="shapes"><div class="sh" id="s1"><svg viewBox="0 0 24 24"><use href="#iShapes"/></svg></div><div class="sh" id="s2"><svg viewBox="0 0 24 24"><path d="M6 21V11a6 6 0 0112 0v10z"/></svg></div><div class="sh" id="s3"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z"/></svg></div></div>
+  <div id="t1">الأشكال</div>
+  <div id="t2"><b>خلفيات</b> و<b>زخارف</b> و<b>صور بأشكال</b>، بضغطة</div>
+</div>
+<div id="win">
+  <div id="top">
+    <div class="crumb">صفحتي<span style="color:#9aa3b2;margin:0 8px">›</span>الرئيسية</div>
+    <div class="logo">weelink<i>w</i></div>
+  </div>
+  <div id="body">
+    <div id="panel">
+      <div id="pempty"><div class="ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#9aa3b2" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>اضغط «إضافة» لتضيف لصفحتك</div>
+      <div id="padd">
+        <div class="phead"><h2>إضافة</h2></div>
+        <div class="tabs"><div class="on">إضافة عنصر</div><div>إضافة شريحة</div><div>إضافة صفحة</div></div>
+        <div class="gt">أساسي</div><div class="tiles">
+<div class="tile"><i><svg><use href="#iText"/></svg></i>نص</div>
+<div class="tile"><i><svg><use href="#iImg"/></svg></i>صورة</div>
+<div class="tile"><i><svg><use href="#iBtn"/></svg></i>زر</div>
+<div class="tile"><i><svg><use href="#iStar"/></svg></i>أيقونة</div>
+<div class="tile" data-m="tile"><i><svg><use href="#iShapes"/></svg></i>أشكال</div>
+<div class="tile"><i><svg><use href="#iLine"/></svg></i>خط فاصل</div>
+</div>
+<div class="gt">وسائط</div><div class="tiles">
+<div class="tile"><i><svg><use href="#iVid"/></svg></i>فيديو</div>
+<div class="tile"><i><svg><use href="#iAnim"/></svg></i>رسوم متحركة</div>
+<div class="tile"><i><svg><use href="#iGal"/></svg></i>معرض صور</div>
+<div class="tile"><i><svg><use href="#iPin"/></svg></i>خريطة</div>
+</div>
+<div class="gt">أعمال</div><div class="tiles">
+<div class="tile"><i><svg><use href="#iCal"/></svg></i>حجز مواعيد</div>
+<div class="tile"><i><svg><use href="#iStar"/></svg></i>التقييمات</div>
+<div class="tile"><i><svg><use href="#iTag"/></svg></i>أسعار</div>
+<div class="tile"><i><svg><use href="#iSheet"/></svg></i>جدول</div>
+</div>
+<div class="gt">جاهز</div><div class="tiles">
+<div class="tile"><i><svg><use href="#iCards"/></svg></i>بطاقات جاهزة</div>
+<div class="tile"><i><svg><use href="#iCode"/></svg></i>كود مخصص</div>
+</div>
+      </div>
+      <div id="vSub"><div class="vh"><div class="back">› رجوع للعناصر</div><h3><svg><use href="#iShapes"/></svg>إضافة أشكال</h3></div>
+<div class="pills"><span class="ar">›</span><div class="tr"><span class="pl" id="p1">أشكال وهياكل</span><span class="pl" id="p2" data-m="pMask">صورة بشكل</span><span class="pl">الكل</span></div><span class="ar">‹</span></div>
+<div style="position:relative"><div class="cg" id="g1"><div class="cards"><div class="card"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><rect x="30" y="10" width="40" height="40" rx="7" fill="#fff" stroke="#e5e7eb"/><rect x="31" y="49" width="38" height="4" rx="2" fill="#000" opacity=".06"/></svg></div><h4>بطاقة مربعة ناصعة 🔲</h4><p>مربعة متساوية الأضلاع بظل ناعم</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><defs><linearGradient id="pg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs><circle cx="50" cy="33" r="24" fill="url(#pg1)"/></svg></div><h4>بطاقة دائرية متدرجة 🟣</h4><p>حاوية دائرية فخمة بتدرج لوني</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card" data-m="cBlob"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><path d="M28 18c10-12 34-10 44 2s8 30-6 38-38 6-44-8 0-24 6-32z" fill="#f9a8a0"/></svg></div><h4>بقعة عضوية منسابة 🎨</h4><p>شكل منساب كخلفية مبهجة تحت الصور</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card" data-m="cBrush"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><path d="M12 40c10-8 30-12 50-11s24 2 28 0c2 4-2 8-8 9-14 2-34 0-50 4-8 2-16 4-20-2z" fill="#f472b6" opacity=".85"/></svg></div><h4>ضربة فرشاة عرضية 🖌️</h4><p>مسحة عريضة لكتابة العناوين عليها</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><g transform="translate(50 34)"><rect x="-17" y="-17" width="34" height="34" fill="#d97706"/><rect x="-17" y="-17" width="34" height="34" fill="#f59e0b" transform="rotate(45)"/></g></svg></div><h4>نجمة ثمانية إسلامية 🌟</h4><p>نجمة هندسية ثمانية الرؤوس للزخارف</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><path d="M32 62V30c0-10 10-18 18-24 8 6 18 14 18 24v32z" fill="#0d9488"/></svg></div><h4>قوس شامي مدبب 🏛️</h4><p>قوس مستوحى من القناطر الشامية</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div></div></div><div class="cg" id="g2"><div class="cards"><div class="card" data-m="cArch"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><path d="M22 6h56v58H22z M34 60V30a16 16 0 0132 0v30z" fill="#cbd5e1" fill-rule="evenodd"/></svg></div><h4>صورة بشكل: قوس معماري ملكي 🏛️</h4><p>إطار مفرغ لقص الصور على شكل قوس</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><path d="M22 6h56v58H22z M50 15a20 20 0 100 40 20 20 0 100-40z" fill="#cbd5e1" fill-rule="evenodd"/></svg></div><h4>صورة بشكل: تفريغ دائري ناعم ⚪</h4><p>إطار مفرغ لقص الصور على شكل دائرة</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><path d="M22 6h56v58H22z M38 18c8-8 24-6 28 4s2 22-8 28-24 4-26-8 0-18 6-24z" fill="#cbd5e1" fill-rule="evenodd"/></svg></div><h4>صورة بشكل: بقعة عضوية سائلة 💦</h4><p>إطار مفرغ لقص الصور على شكل بقعة</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><path d="M22 6h56v58H22z M50 12l6 17 17 6-17 6-6 17-6-17-17-6 17-6z" fill="#cbd5e1" fill-rule="evenodd"/></svg></div><h4>صورة بشكل: نجمة متوهجة رباعية ✨</h4><p>إطار مفرغ لقص الصور على شكل نجمة</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><path d="M22 6h56v58H22z M50 14a10 10 0 00-6 18l-5 26h22l-5-26a10 10 0 00-6-18z" fill="#cbd5e1" fill-rule="evenodd"/></svg></div><h4>صورة بشكل: ثقب الباب الفخم 🔑</h4><p>إطار مفرغ لقص الصور على شكل ثقب باب</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div><div class="card"><div class="pv"><svg width="96" height="66" viewBox="0 0 100 70"><path d="M22 6h56v58H22z M32 14h36v32H32z" fill="#cbd5e1" fill-rule="evenodd"/></svg></div><h4>صورة بشكل: إطار بولارويد كلاسيكي 📸</h4><p>إطار مفرغ على شكل صورة بولارويد</p><div class="cf"><span>إضافة +</span><em>✦</em></div></div></div></div></div></div>
+    </div>
+    <div id="col">
+      <div class="ci" id="cAdd" data-m="cAdd"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>إضافة</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg>المحتوى</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 1.6-1 1.1-1.9-.6-1 .1-2.1 1.2-2.1H17a4 4 0 004-4c0-5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>الألوان</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="3.5"/><rect x="13" y="12" width="7" height="7" rx="1.5"/><path d="M12 3l4 6H8z"/></svg>الشكل</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>المكان</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M5 12h3l3-7 3 14 3-7h2"/></svg>الحركة</div>
+    </div>
+    <div id="canvas"><div class="slide" id="sl">
+  <div class="el" id="eBl" data-m="eBl"><svg width="480" height="520" viewBox="0 0 100 108"><path d="M22 12c18-14 54-12 68 8s12 52-6 70-56 20-74 2S-2 52 6 34 10 20 22 12z" fill="#f9c9c0"/></svg><div class="selbox"><i style="top:-7px;right:-7px"></i><i style="top:-7px;left:-7px"></i><i style="bottom:-7px;right:-7px"></i><i style="bottom:-7px;left:-7px"></i></div></div>
+  <div class="photo"><svg width="200" height="200" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M50 80c-16-8-24-22-22-40 10 2 18 8 22 18 4-10 12-16 22-18 2 18-6 32-22 40z"/><path d="M50 80c-6-14-6-30 0-46 6 16 6 32 0 46z"/><path d="M20 84h60" opacity=".7"/></svg></div>
+  <div class="el" id="eBr" data-m="eBr"><svg width="500" height="80" viewBox="0 0 100 16" preserveAspectRatio="none"><path d="M2 11c6-5 20-7 40-7s34 1 54 0c3 3 0 7-6 8-16 2-40 0-62 2-12 1-22 3-26-3z" fill="#f7a8b8" opacity=".8"/></svg><div class="selbox"><i style="top:-7px;right:-7px"></i><i style="top:-7px;left:-7px"></i><i style="bottom:-7px;right:-7px"></i><i style="bottom:-7px;left:-7px"></i></div></div>
+  <div class="stitle">صالون ريم للتجميل</div>
+  <div class="ssub">شعر، مكياج، وعناية بالبشرة، ببيروت</div>
+  <div class="el" id="eM" data-m="eM"><svg width="340" height="400" viewBox="0 0 340 400"><path id="mk" d="M0 0H340V400H0Z M44 370V172a126 126 0 01252 0V370Z" fill="#ffffff" fill-rule="evenodd"/></svg><div class="selbox"><i style="top:-7px;right:-7px"></i><i style="top:-7px;left:-7px"></i><i style="bottom:-7px;right:-7px"></i><i style="bottom:-7px;left:-7px"></i></div></div>
+</div></div>
+  </div>
+  <div id="ring"></div>
+  <svg id="cur" viewBox="0 0 34 40"><path d="M4 3l24 14-10.5 2.5L23 31l-4.6 2.2-5.6-11.6L5 29z" fill="#0b1220" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>
+</div>
+<div id="chap"><div class="dots"><i id="d1"></i><i id="d2"></i><i id="d3"></i></div><span id="chapt"></span></div>
+<div id="cap"><div class="n" id="capn">1</div><div id="capt"></div></div>
+<div id="outro">
+  <div id="cmp">
+    <div class="oc"><div class="tag">قبل</div><div class="mini" id="m1"></div></div>
+    <div id="arrow"><svg viewBox="0 0 90 40"><path d="M84 20H10M24 6L8 20l16 14" fill="none" stroke="#1d5bd8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="oc"><div class="tag" style="color:#1d5bd8">بعد</div><div class="mini" id="m2"></div></div>
+  </div>
+  <div id="o1">الشكل الصح، بيعطي صفحتك روح</div>
+  <div id="o2">لوّن الأشكال وغيّر شفافيتها من اللوحة</div>
+  <div id="o3"><svg viewBox="0 0 48 48" width="64" height="64" style="overflow:visible"><defs><radialGradient id="wg" cx=".5" cy=".5" r=".75" fx=".35" fy=".3"><stop offset="0" stop-color="#d8ccff"/><stop offset=".5" stop-color="#7c3aed"/><stop offset="1" stop-color="#2563eb"/></radialGradient></defs><circle class="wd" r="6.5" fill="url(#wg)"/><circle class="wd" r="6.5" fill="url(#wg)"/><circle class="wd" r="6.5" fill="url(#wg)"/></svg><span>Wee AI</span></div>
+</div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const easeOut=x=>1-Math.pow(1-clamp(x),3);
+const back=x=>{x=clamp(x);const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const lerp=(a,b,k)=>a+(b-a)*k;
+const seg=(t,t0,t1,f=ease)=>f((t-t0)/(t1-t0));
+const pulse=(t,a,b)=>Math.min(seg(t,a,a+.35),1-seg(t,b-.35,b));
+
+const OUT=32.2;
+const T={add:8.7,cat:10.5,blob:14,dB:[15.2,16.6],brush:18,pMask:22.4,arch:24.4,dM:[25.6,27],col:[28.4,29.8]};
+const CLICKS=[T.add,T.cat,T.blob,T.brush,T.pMask,T.arch];
+const DRAGS=[T.dB,T.dM];
+const OB={x:260,y:40},OM={x:300,y:60};
+const CAPS=[
+  [7.4,10.4,1,'من «إضافة»، اضغط «أشكال»'],
+  [10.8,13.8,2,'أشكال جاهزة: بطاقات، بقع، أقواس ونجوم'],
+  [14,17.6,3,'حط شكل خلفية ورا صورك ونصوصك'],
+  [17.8,21.8,3,'وضربة فرشاة تحت العنوان، بتلفت النظر'],
+  [22.1,24.2,4,'وهون «صورة بشكل»: إطارات بتقص صورتك'],
+  [24.4,27.6,4,'اختار الشكل، وحطه فوق الصورة'],
+  [27.8,31.8,5,'لوّن الإطار بلون اللي وراه، وصارت صورتك قوس'],
+];
+const CHAPS=[[10.4,21.9,1,'أشكال وهياكل'],[21.9,32,2,'صورة بشكل']];
+function curPos(t){
+  const oB=dragOff(t,T.dB[0],T.dB[1],OB),oM=dragOff(t,T.dM[0],T.dM[1],OM);
+  const at=(p,o,dx=0,dy=0)=>()=>({x:p.cx+o.x+dx,y:p.cy+o.y+dy});
+  return path(t,[
+    [0,{x:1300,y:760}],[7.6,{x:1300,y:760}],[T.add-.1,pt(P.cAdd)],
+    [9.6,pt(P.cAdd)],[T.cat-.1,pt(P.tile)],
+    [11.4,pt(P.tile)],[12.6,pt(P.cBrush)],[13.2,pt(P.cBrush)],[T.blob-.1,pt(P.cBlob)],
+    [14.5,pt(P.cBlob)],[15.1,at(P.eBl,oB,-140,-150)],[T.dB[1]+.1,at(P.eBl,oB,-140,-150)],
+    [17,at(P.eBl,{x:0,y:0},-140,-150)],[T.brush-.1,pt(P.cBrush)],
+    [19.4,pt(P.cBrush)],[20.4,at(P.eBr,{x:0,y:0},60,0)],[21.6,at(P.eBr,{x:0,y:0},60,0)],[T.pMask-.1,pt(P.pMask)],
+    [23.4,pt(P.pMask)],[T.arch-.1,pt(P.cArch)],
+    [24.9,pt(P.cArch)],[25.5,at(P.eM,oM,0,-140)],[T.dM[1]+.1,at(P.eM,oM,0,-140)],
+    [30.4,at(P.eM,{x:0,y:0},0,-140)],[32,{x:1300,y:780}]
+  ]);
+}
+const lerpCol=(a,b,k)=>{const h=s=>[1,3,5].map(i=>parseInt(s.slice(i,i+2),16));const A=h(a),B=h(b);return`rgb(${A.map((v,i)=>Math.round(lerp(v,B[i],k))).join(',')})`};
+function scene(t){
+  ['#g1','#g2'].forEach((id,i)=>{const a=[T.cat+.1,T.pMask+.1][i],b=[T.pMask,999][i];const k=Math.min(seg(t,a,a+.3),1-seg(t,b,b+.2));$(id).style.opacity=k;$(id).style.visibility=k>0?'visible':'hidden'});
+  $('#p1').classList.toggle('on',t<T.pMask+.1);$('#p2').classList.toggle('on',t>=T.pMask+.1);
+  hot('[data-m=cBlob]',t>=T.blob-.5&&t<T.blob+.4);hot('[data-m=cBrush]',(t>=12.4&&t<13.2)||(t>=T.brush-.5&&t<T.brush+.4));
+  hot('[data-m=cArch]',t>=T.arch-.5&&t<T.arch+.4);
+  pop('#eBl',t,T.blob,dragOff(t,T.dB[0],T.dB[1],OB));selOn('#eBl',t>=T.blob+.4&&t<T.brush);
+  // the brush stroke sweeps in under the title
+  const bk=seg(t,T.brush+.1,T.brush+.8);
+  $('#eBr').style.opacity=t<T.brush+.1?0:1;$('#eBr').style.clipPath=`inset(0 0 0 ${(1-bk)*100}%)`;selOn('#eBr',t>=T.brush+.6&&t<T.pMask);
+  pop('#eM',t,T.arch,dragOff(t,T.dM[0],T.dM[1],OM));selOn('#eM',t>=T.arch+.4&&t<OUT-.4);
+  $('#mk').setAttribute('fill',lerpCol('#ffffff','#f9c9c0',seg(t,T.col[0],T.col[1])));
+}
+function finalSlide(s){s.querySelector('#mk').setAttribute('fill','#f9c9c0');s.querySelector('#eBr').style.clipPath='none'}
+
+// Positions inside the window, measured with nothing moved and every view shown.
+const W=$('#win'),P={};
+function measure(){
+  const els=[...document.querySelectorAll('#win, #padd, #vSub, .pane, .cg, #win .el')];
+  const saved=els.map(e=>[e,e.style.transform,e.style.opacity,e.style.visibility]);
+  els.forEach(e=>{e.style.transform='none';e.style.opacity=1;e.style.visibility='visible'});
+  if(window.beforeMeasure)beforeMeasure();
+  const wr=W.getBoundingClientRect();const k=wr.width/1600;
+  document.querySelectorAll('#win [data-m]').forEach(e=>{const r=e.getBoundingClientRect();const x=(r.left-wr.left)/k,y=(r.top-wr.top)/k,w=r.width/k,h=r.height/k;P[e.dataset.m]={x,y,w,h,cx:x+w/2,cy:y+h/2}});
+  if(window.afterMeasure)afterMeasure();
+  saved.forEach(([e,tr,op,vi])=>{e.style.transform=tr;e.style.opacity=op;e.style.visibility=vi});
+}
+// A panel layer slides in from the left as it shows, and out when b is given.
+function view(sel,t,a,b){const k=Math.min(seg(t,a,a+.4),b===undefined?1:1-seg(t,b,b+.3));const el=$(sel);el.style.opacity=k;el.style.transform=`translateX(${(1-seg(t,a,a+.4))*-30}px)`;el.style.visibility=k>0?'visible':'hidden'}
+// A slide element pops in where it is added and follows any drag offset.
+function pop(sel,t,born,off={x:0,y:0},origin='50% 50%'){const el=$(sel);const k=back(seg(t,born+.1,born+.6,x=>x));
+  el.style.opacity=clamp((t-born-.1)*5);el.style.transformOrigin=origin;
+  el.style.transform=`translate(${off.x}px,${off.y}px) scale(${t<born+.1?.5:.5+k*.5})`}
+const selOn=(sel,on)=>{$(sel+' .selbox').style.opacity=on?1:0};
+const dragOff=(t,a,b,o)=>{const k=seg(t,a,b);return{x:o.x*(1-k),y:o.y*(1-k)}};
+const hot=(sel,on)=>$(sel).classList.toggle('hot',!!on);
+const pt=(p,dx=0,dy=0)=>({x:p.cx+dx,y:p.cy+dy});
+function path(t,W_){const v=w=>typeof w==='function'?w():w;
+  for(let i=1;i<W_.length;i++){const[a,pa]=W_[i-1],[b,pb]=W_[i];if(t<=b){const k=ease((t-a)/(b-a));const A=v(pa),B=v(pb);return{x:lerp(A.x,B.x,k),y:lerp(A.y,B.y,k)}}}
+  return v(W_[W_.length-1][1])}
+function typed(t,a,b,txt){return txt.slice(0,Math.round(clamp((t-a)/(b-a))*txt.length))}
+
+let measured=false;
+function render(t){
+  if(!measured){measure();measured=true}
+  $('#b1').style.transform=`translate(${Math.sin(t*.3)*40}px,${Math.cos(t*.25)*30}px)`;
+  $('#b2').style.transform=`translate(${Math.cos(t*.22)*50}px,${Math.sin(t*.3)*30}px)`;
+  $('#b3').style.transform=`translate(${Math.sin(t*.18)*60}px,${Math.cos(t*.3)*20}px)`;
+  // intro
+  $('#intro').style.opacity=1-seg(t,5.2,6.2);
+  $('#intro').style.transform=`translateY(${-seg(t,5.2,6.2)*80}px)`;
+  [['#s1',.3],['#s2',.55],['#s3',.8]].forEach(([id,d],i)=>{
+    const k=back(seg(t,d,d+.7,x=>x));const fl=Math.sin(t*2+i)*4*clamp(t-1.6);
+    $(id).style.transform=`translateY(${(1-k)*-260+fl}px) rotate(${(1-k)*(i-1)*40}deg)`;$(id).style.opacity=clamp((t-d)*4);
+  });
+  $('#t1').style.opacity=seg(t,1.2,1.9);$('#t1').style.transform=`translateY(${(1-seg(t,1.2,1.9))*30}px)`;
+  $('#t2').style.opacity=seg(t,2,2.7);$('#t2').style.transform=`translateY(${(1-seg(t,2,2.7))*20}px)`;
+  // window
+  const wi=seg(t,5.6,6.9), wo=seg(t,OUT,OUT+1);
+  W.style.opacity=wi*(1-wo);
+  W.style.transform=`translateY(${(1-wi)*160+wo*-40}px) scale(${(0.92+wi*.08)*(1-wo*.06)})`;
+  // the add panel, then the category's own view
+  $('#cAdd').classList.toggle('on',t>=T.add+.1);
+  $('#pempty').style.opacity=1-seg(t,T.add+.1,T.add+.4);
+  $('#padd').style.opacity=seg(t,T.add+.1,T.add+.5);
+  hot('[data-m=tile]',t>=T.cat-.5&&t<T.cat+.4);
+  view('#vSub',t,T.cat+.1);
+  scene(t);
+  // cursor
+  const c=curPos(t);const cur=$('#cur');
+  const dragging=DRAGS.some(([a,b])=>t>=a&&t<=b);
+  const clickK=CLICKS.reduce((m,ct)=>Math.max(m,t>=ct&&t<ct+.2?Math.sin((t-ct)/.2*Math.PI):0),0);
+  cur.style.transform=`translate(${c.x-4}px,${c.y-3}px) scale(${1-clickK*.15-(dragging?.1:0)})`;
+  cur.style.opacity=t<6.6||t>OUT-.2?0:1;
+  const lastClick=CLICKS.filter(ct=>t>=ct&&t<ct+.6).pop();
+  const ring=$('#ring');
+  if(lastClick!==undefined){const k=(t-lastClick)/.6;ring.style.opacity=(1-k)*.9;ring.style.transform=`translate(${c.x-30}px,${c.y-30}px) scale(${.3+k*.9})`}
+  else if(dragging){ring.style.opacity=.35;ring.style.transform=`translate(${c.x-30}px,${c.y-30}px) scale(.55)`}
+  else ring.style.opacity=0;
+  // captions
+  const cap=CAPS.find(([a,b])=>t>=a&&t<b);const capEl=$('#cap');
+  if(cap){const[a,b,n,txt]=cap;const k=Math.min(seg(t,a,a+.4,easeOut),1-seg(t,b-.3,b));capEl.style.opacity=k;capEl.style.transform=`translateX(-50%) translateY(${(1-k)*24}px)`;$('#capn').textContent=n;$('#capt').textContent=txt}
+  else capEl.style.opacity=0;
+  const ch=CHAPS.find(([a,b])=>t>=a&&t<b);
+  if(ch){const[a,b,n,txt]=ch;const k=Math.min(seg(t,a,a+.4),1-seg(t,b-.3,b));$('#chap').style.opacity=k;$('#chapt').textContent=txt;['#d1','#d2','#d3'].forEach((d,i)=>{$(d).classList.toggle('on',i<n);$(d).style.display=i<CHAPS.length?'block':'none'})}
+  else $('#chap').style.opacity=0;
+  // outro
+  const o=OUT+1;
+  $('#outro').style.opacity=seg(t,o,o+1);
+  const ab=seg(t,o+1.2,o+2.4);
+  $('#m2').style.transform=`scale(${.9+ab*.1})`;$('#m2').style.opacity=.3+ab*.7;
+  $('#arrow').style.opacity=seg(t,o+.8,o+1.4);$('#arrow').style.transform=`translateX(${(1-seg(t,o+.8,o+1.4))*20}px)`;
+  $('#o1').style.opacity=seg(t,o+2.2,o+3);$('#o1').style.transform=`translateY(${(1-seg(t,o+2.2,o+3))*20}px)`;
+  $('#o2').style.opacity=seg(t,o+2.8,o+3.6);
+  $('#o3').style.opacity=seg(t,o+3.6,o+4.4);
+  const spin=(1-seg(t,o+3.6,o+5.2))*Math.PI*2, gap=lerp(20,11,seg(t,o+3.6,o+4.6,back));
+  [...document.querySelectorAll('.wd')].forEach((c,i)=>{const a=[-90,150,30][i]*Math.PI/180+spin;const pl=1+Math.max(0,Math.sin((t-o-5.2)*3-i*.9))*.12*(t>o+5.2?1:0);
+    c.setAttribute('cx',24+gap*Math.cos(a));c.setAttribute('cy',24.3+gap*Math.sin(a));c.setAttribute('r',6.5*pl)});
+}
+// the outro's before/after: the slide as it was, and with what was added
+{const s=$('#sl').cloneNode(true);s.removeAttribute('id');s.querySelectorAll('.el').forEach(e=>e.remove());s.querySelectorAll('[data-m]').forEach(e=>e.removeAttribute('data-m'));$('#m1').appendChild(s);
+ const s2=$('#sl').cloneNode(true);s2.removeAttribute('id');s2.querySelectorAll('.selbox,.caret').forEach(e=>e.remove());s2.querySelectorAll('[data-m]').forEach(e=>e.removeAttribute('data-m'));
+ if(window.finalSlide)finalSlide(s2);$('#m2').appendChild(s2);}
+
+function kf(t,ks,f=ease){if(t<=ks[0][0])return ks[0][1];for(let i=1;i<ks.length;i++){if(t<=ks[i][0]){const[a,va]=ks[i-1],[b,vb]=ks[i];return lerp(va,vb,f((t-a)/(b-a)))}}return ks[ks.length-1][1]}
+const DURATION=41.2;
+window.DURATION=DURATION;window.render=render;
+// Fit the 1920×1080 stage into whatever size the window is.
+const stage=$('#stage');
+function fit(){measured=false;const k=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform=`translate(${(innerWidth-1920*k)/2}px,${(innerHeight-1080*k)/2}px) scale(${k})`}
+addEventListener('resize',fit);fit();
+// Playback, driven by the editor's player through postMessage.
+// ?t=12 starts at that second (the editor reopens it where it was); ?paused shows that frame still.
+let time=Math.max(0,Math.min(DURATION,Number(new URLSearchParams(location.search).get('t'))||0)),playing=false,last=0;
+const post=()=>parent!==window&&parent.postMessage({source:'weelink-intro',type:'time',time,duration:DURATION,playing},'*');
+function tick(now){if(playing){time=Math.min(DURATION,time+(now-last)/1000);if(time>=DURATION)playing=false;render(time);post()}last=now;requestAnimationFrame(tick)}
+addEventListener('message',(e)=>{const m=e.data;if(!m||m.source!=='weelink-intro-player')return;
+  if(m.type==='play'){if(time>=DURATION)time=0;playing=true;last=performance.now()}
+  else if(m.type==='pause')playing=false;
+  else if(m.type==='seek'){time=Math.max(0,Math.min(DURATION,m.time));render(time)}
+  post()});
+// A click on the picture pauses or plays it, like a video.
+addEventListener('click',()=>{if(playing)playing=false;else{if(time>=DURATION)time=0;playing=true;last=performance.now()}post()});
+document.fonts.ready.then(()=>{measured=false;render(time);playing=!/[?&]paused/.test(location.search);last=performance.now();requestAnimationFrame(tick);post()});
+</script>
+</body>
+</html>

@@ -4,8 +4,8 @@
 // animation where it was, so it carries on from the same second.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize2, Minimize2, Minus, PanelTopOpen, Pause, Play, RotateCcw } from 'lucide-react';
-import type { IntroVideo } from './introVideos';
+import { ListVideo, Maximize2, Minimize2, Minus, PanelTopOpen, Pause, Play, RotateCcw } from 'lucide-react';
+import type { IntroChapter, IntroVideo } from './introVideos';
 
 export type IntroVideoMode = 'docked' | 'mini' | 'floating' | 'big';
 
@@ -15,6 +15,9 @@ interface IntroVideoPlayerProps {
   onModeChange: (mode: IntroVideoMode) => void;
   // The second it is at, kept by the panel so a redrawn player carries on from there.
   timeRef: React.MutableRefObject<number>;
+  // The chapter playing, for an explainer cut into chapters, and picking another from its list.
+  chapter?: IntroChapter | null;
+  onChapter?: (id: string) => void;
 }
 
 const BAR = 44;
@@ -34,7 +37,10 @@ const Frame: React.FC<{ src: string; start: number; paused?: boolean; title: str
   return <iframe ref={frameRef} src={url} title={title} tabIndex={paused ? -1 : undefined} className={`border-0 bg-[#eef2f8] ${className || ''}`} />;
 };
 
-export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode, onModeChange, timeRef }) => {
+export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode, onModeChange, timeRef, chapter, onChapter }) => {
+  const src = chapter?.src ?? video.src;
+  const title = chapter ? `${video.title}: ${chapter.title}` : video.title;
+  const [listOpen, setListOpen] = useState(false);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [time, setTime] = useState(timeRef.current);
@@ -142,13 +148,13 @@ export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode,
         className="w-full flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-2 text-right cursor-pointer hover:border-brand/40 hover:shadow-[0_6px_18px_rgba(16,24,40,0.07)] transition-[box-shadow,border-color] animate-[fade_0.25s_ease-out]"
       >
         <span className="relative w-[112px] h-[63px] shrink-0 overflow-hidden rounded-lg ring-1 ring-neutral-200 bg-[#eef2f8]">
-          <Frame src={video.src} start={timeRef.current} paused title={video.title} className="absolute left-0 top-0 w-[448px] h-[252px] origin-top-left scale-[0.25] pointer-events-none" />
+          <Frame key={src} src={src} start={timeRef.current} paused title={title} className="absolute left-0 top-0 w-[448px] h-[252px] origin-top-left scale-[0.25] pointer-events-none" />
           <span className="absolute inset-0 flex items-center justify-center">
             <span className="w-8 h-8 rounded-full bg-white/90 text-brand shadow flex items-center justify-center"><Play size={14} fill="currentColor" /></span>
           </span>
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block text-[13px] font-bold text-neutral-900">{video.title}</span>
+          <span className="block text-[13px] font-bold text-neutral-900 truncate">{title}</span>
           <span className="block text-xs text-neutral-500">اضغط لتكمّل المشاهدة</span>
         </span>
       </button>
@@ -163,9 +169,14 @@ export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode,
       title={mode === 'big' ? undefined : 'اسحب لتحركها لأي مكان'}
     >
       {playButton}
-      <span className="text-[12px] font-bold text-neutral-800 truncate max-w-[40%]">{video.title}</span>
+      <span className="text-[12px] font-bold text-neutral-800 truncate max-w-[40%]" title={title}>{chapter ? chapter.title : video.title}</span>
       {scrubber}
       <span className="text-[11px] tabular-nums text-neutral-500 shrink-0" dir="ltr">{fmt(time)}</span>
+      {video.chapters && onChapter && (
+        <button type="button" className={`${iconBtn} ${listOpen ? 'bg-brand/10 text-brand' : ''}`} aria-label="الفصول" title="الفصول" aria-expanded={listOpen} onClick={() => setListOpen((o) => !o)}>
+          <ListVideo size={15} />
+        </button>
+      )}
       <button type="button" className={iconBtn} aria-label={mode === 'big' ? 'تصغير' : 'تكبير'} onClick={() => setMode(mode === 'big' ? prevMode.current : 'big')}>
         {mode === 'big' ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
       </button>
@@ -181,13 +192,31 @@ export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode,
       )}
     </div>
   );
-  const shell = 'rounded-2xl bg-white overflow-hidden flex flex-col';
+  const shell = 'relative rounded-2xl bg-white overflow-hidden flex flex-col';
+  // The list of chapters, laid over the picture.
+  const chapterList = listOpen && video.chapters && onChapter && (
+    <div className="absolute inset-x-0 bottom-0 overflow-y-auto bg-white/95 backdrop-blur-sm p-1.5 animate-[fade_0.15s_ease-out]" style={{ top: BAR }}>
+      {video.chapters.map((c, i) => (
+        <button
+          key={c.id}
+          type="button"
+          onClick={() => { setListOpen(false); onChapter(c.id); }}
+          className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-right text-[13px] cursor-pointer transition-colors ${c.id === chapter?.id ? 'bg-brand/10 text-brand font-bold' : 'text-neutral-700 hover:bg-neutral-100'}`}
+        >
+          <span className="w-5 shrink-0 text-center text-[11px] tabular-nums text-neutral-400">{i + 1}</span>
+          <span className="truncate">{c.title}</span>
+          {c.id === chapter?.id && <Play size={12} className="mr-auto shrink-0" fill="currentColor" />}
+        </button>
+      ))}
+    </div>
+  );
 
   if (mode === 'docked') {
     return (
       <div ref={boxRef} dir="rtl" className={`${shell} border border-neutral-200 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_8px_24px_rgba(16,24,40,0.08)] animate-[fade_0.25s_ease-out]`}>
         {bar}
-        <Frame key="docked" frameRef={frameRef} src={video.src} start={timeRef.current} title={video.title} className="w-full aspect-video" />
+        <Frame key={`docked-${src}`} frameRef={frameRef} src={src} start={timeRef.current} title={title} className="w-full aspect-video" />
+        {chapterList}
       </div>
     );
   }
@@ -205,12 +234,13 @@ export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode,
         ref={boxRef}
         dir="rtl"
         role="dialog"
-        aria-label={video.title}
+        aria-label={title}
         className={`fixed ${shell} shadow-[0_24px_60px_-12px_rgba(16,24,40,0.45),0_0_0_1px_rgba(16,24,40,0.08)] ${drag.current?.moved ? '' : 'transition-[left,top,width,height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
         style={{ ...style, zIndex: Z + 1 }}
       >
         {bar}
-        <Frame key="floating" frameRef={frameRef} src={video.src} start={timeRef.current} title={video.title} className="w-full flex-1" />
+        <Frame key={`floating-${src}`} frameRef={frameRef} src={src} start={timeRef.current} title={title} className="w-full flex-1" />
+        {chapterList}
       </div>
     </>,
     document.body,

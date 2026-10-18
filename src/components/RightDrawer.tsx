@@ -94,7 +94,7 @@ import { LottieGallery, LottieSettings } from './rightDrawer/LottiePicker';
 import { textEffectById } from '../utils/textEffects';
 import { elementDisplayName } from '../utils/elementLabels';
 import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
-import { IntroVideo, introVideoFor } from './introVideos/introVideos';
+import { ADD_VIDEO, IntroVideo, addChapterFor, introVideoFor } from './introVideos/introVideos';
 import { IntroVideoPlayer, IntroVideoMode } from './introVideos/IntroVideoPlayer';
 import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
@@ -1088,8 +1088,28 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     const v = introVideoFor(g);
     if (!v) return;
     setIntroVideo(v);
+    setIntroChapter(null);
     setIntroVideoMode((m) => (m === 'floating' || m === 'big' ? m : 'docked'));
   };
+  // The «إضافة» explainer is cut into chapters: the quick tour when the panel opens, then the chapter of
+  // whatever is picked in it, each from its start.
+  const [introChapter, setIntroChapter] = useState<string | null>(null);
+  const openAddChapter = (id: string) => {
+    if (!addChapterFor(id)) return;
+    if (introVideo?.id !== 'add' || introChapter !== id) introVideoTime.current = 0;
+    setIntroVideo(ADD_VIDEO);
+    setIntroChapter(id);
+    setIntroVideoMode((m) => (m === 'floating' || m === 'big' ? m : 'docked'));
+  };
+  const addPanelOpen = activeSection === 'elements' || activeSection === 'add-text';
+  useEffect(() => {
+    if (addPanelOpen) openAddChapter(activeSection === 'add-text' ? 'text' : 'tour');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addPanelOpen]);
+  useEffect(() => {
+    if (addPanelOpen && activeAddCategory) openAddChapter(activeAddCategory);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAddCategory]);
   const toolScrollRef = useRef<HTMLDivElement>(null);
   const spyPausedUntil = useRef(0);
   const [glowSide, setGlowSide] = useState<'out' | 'in'>('out');
@@ -3646,6 +3666,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               {activeSection === 'animation' && <AnimationSection styles={styles} onUpdateElementStyles={onUpdateElementStyles} />}
 
               {/* TOOL: Add Elements (+) - Step 1: Squares Grid (الصورة رقم ١) | Step 2: Detail with Subcategories Bar (الصورة رقم ٢) */}
+              {addPanelOpen && introVideo?.id === 'add' && (
+                <div data-intro-for="add" className="mb-3">
+                  <IntroVideoPlayer video={introVideo} mode={introVideoMode} onModeChange={setIntroVideoMode} timeRef={introVideoTime} chapter={introChapter ? addChapterFor(introChapter) : null} onChapter={openAddChapter} />
+                </div>
+              )}
               {(activeSection === 'elements' || activeSection === 'add-text') && (() => {
                 const { ADD_CATEGORIES, SUBCATEGORIES_MAP, TEMPLATES_MAP } = buildAddMenuData({
                   onAddElement,

@@ -47,6 +47,8 @@ const newProductDraft = (currency: string): ShopProduct => ({
   options: [],
   variants: [],
   catalogIds: [],
+  artikelSub: 0,
+  artikelItem: 0,
   published: true,
   inWarehouse: true,
   relatedIds: [],
@@ -171,7 +173,11 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
       }
       const before = d.products.find((x) => x.id === product.id);
       // Numbered by Weelink while this form was open: keep it.
-      const saved = { ...product, publicNo: before?.publicNo || product.publicNo, catalogIds: Array.from(catalogIds) };
+      // The artikel.json sub-catalog and product name it was picked from go with it, for Weelink's search.
+      const artikel = pathChosen
+        ? { artikelSub: path.subKey.startsWith('a:') ? Number(path.subKey.slice(2)) || 0 : 0, artikelItem: path.itemId && path.itemId > 0 ? path.itemId : 0 }
+        : { artikelSub: product.artikelSub, artikelItem: product.artikelItem };
+      const saved = { ...product, ...artikel, publicNo: before?.publicNo || product.publicNo, catalogIds: Array.from(catalogIds) };
 
       // New stock is recorded as a purchase, per combination, for the accounts page.
       const added: { qty: number; variant?: string }[] = [];

@@ -102,6 +102,8 @@ export interface ShopProduct {
   options: ProductOption[];
   variants: ProductVariant[];
   catalogIds: string[];
+  artikelSub: number; // the artikel.json sub-catalog it was picked from (101…), 0 = typed by hand; for Weelink's search
+  artikelItem: number; // the artikel.json product name it was picked from, 0 = none
   published: boolean; // true = shown on the store page
   inWarehouse: boolean; // true = stock is counted; false = sold from the store without stock
   relatedIds: string[]; // up to MAX_RELATED products shown at the bottom of the floating card
@@ -369,6 +371,8 @@ export const normalizeProduct = (p: any, currency: string): ShopProduct => ({
   options: Array.isArray(p.options) ? p.options : [],
   variants: Array.isArray(p.variants) ? p.variants : [],
   catalogIds: Array.isArray(p.catalogIds) ? p.catalogIds : [],
+  artikelSub: Math.max(0, Math.floor(Number(p.artikelSub) || 0)),
+  artikelItem: Math.max(0, Math.floor(Number(p.artikelItem) || 0)),
   published: p.published ?? true,
   inWarehouse: p.inWarehouse ?? true,
   relatedIds: Array.isArray(p.relatedIds) ? p.relatedIds : [],

@@ -25,6 +25,8 @@ import { randomBytes } from 'node:crypto';
 import { Resend } from 'resend';
 import { FieldValue, getStorage } from './firebase.js';
 import { deleteUserImages } from './images.js';
+import { removeSite, searchDb } from './searchIndex.js';
+import { placeFromAddress, placeLabel } from '../src/services/place.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import { invoiceFor, needsPayment, type InvoiceItem, type Period } from '../src/utils/invoice.js';
 import { isFirstOfKind, isProjectKey, kindOf, restaurantIdOf } from '../src/utils/projectKeys.js';
@@ -392,6 +394,9 @@ const unpublish = async (db: Db, uid: string, project: string) => {
   const name = snap.exists ? String(snap.data().name || '') : '';
   if (name) await db.collection('siteNames').doc(name).delete().catch(() => undefined);
   await site.delete().catch(() => undefined);
+  // Out of Weelink's search too (worker/index-site.ts keeps it); no database bound = nothing to remove.
+  const index = searchDb();
+  if (index) await removeSite(index, accessId(uid, project)).catch((err: Error) => console.error('search index remove failed:', err?.message));
 };
 
 /** Removes one project: its design, its live restaurant data, its published page and its paid period. */
@@ -463,6 +468,7 @@ export const deleteCustomer = async (db: Db, auth: Auth, uid: string, by: string
   const card = {
     uid, name: user.displayName || String(dir.personalInfo?.fullName || ''), email: user.email || '',
     phone: String(design.profile?.phone || dir.contactInfo?.phone || ''),
+    address: placeLabel(placeFromAddress(dir.addressInfo)),
     createdAt: Date.parse(user.metadata?.creationTime || '') || 0, endsAt, deletedAt: now, by, reason, projects: keys,
   };
   await db.collection('platform_deleted').doc(uid).set(card);
@@ -476,7 +482,7 @@ export const listDeleted = async (db: Db) => {
   const snap = await db.collection('platform_deleted').orderBy('deletedAt', 'desc').limit(500).get();
   return snap.docs.map((d: any) => {
     const c = d.data();
-    return { uid: d.id, name: String(c.name || ''), email: String(c.email || ''), phone: String(c.phone || ''), createdAt: Number(c.createdAt) || 0, endsAt: Number(c.endsAt) || 0, deletedAt: Number(c.deletedAt) || 0, by: String(c.by || ''), reason: String(c.reason || '') };
+    return { uid: d.id, name: String(c.name || ''), email: String(c.email || ''), phone: String(c.phone || ''), address: String(c.address || ''), createdAt: Number(c.createdAt) || 0, endsAt: Number(c.endsAt) || 0, deletedAt: Number(c.deletedAt) || 0, by: String(c.by || ''), reason: String(c.reason || '') };
   });
 };
 

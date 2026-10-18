@@ -129,11 +129,12 @@ test('deleting a customer keeps their sign-in, payments and a card', async () =>
   store.set('bookings/u4/items/b1', { name: 'x' });
   store.set('platform_payments/p4', { uid: 'u4', amount: 5 });
   store.set(`projectAccess/${accessId('u4', 'restaurant')}`, { owner: 'u4', project: 'restaurant', paidUntil: 123456 });
-  store.set('platform_directory/u4', { contactInfo: { phone: '0999' } });
+  store.set('platform_directory/u4', { contactInfo: { phone: '0999' }, addressInfo: { governorate: 'اللاذقية', city: 'اللاذقية', area: 'الرمل', street: 'شارع 8' } });
 
   assert.equal((await deleteCustomer(db, auth, 'u4', 'admin', '') as any).error, 'reason');
   const r: any = await deleteCustomer(db, auth, 'u4', 'admin', 'طلب الزبون');
   assert.equal(r.card.phone, '0999');
+  assert.equal(r.card.address, 'اللاذقية، اللاذقية، الرمل، شارع 8');
   assert.equal(r.card.endsAt, 123456);
   for (const k of ['designs/u4', 'designs/u4/projects/shop-ab12cd', 'restaurants/u4', 'restaurants/u4/orders/o1', 'giftCardNumbers/1234567812345678', 'publishedSites/u4__page', 'siteNames/u4page', 'bookings/u4/items/b1', 'platform_directory/u4', `projectAccess/u4__restaurant`]) {
     assert.equal(store.has(k), false, k);

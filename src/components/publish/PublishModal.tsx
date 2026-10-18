@@ -4,6 +4,7 @@
 // bought themselves, and buying a domain through Weelink (a request handled by the office for now).
 // Before publishing, the customer sees the page in a computer and a phone (and full size, phones
 // arranged automatically), and writes its title, description and keywords for search.
+import { refreshSearchIndex } from '../../services/searchIndex';
 import { placeFromAddress } from '../../services/place';
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
@@ -604,6 +605,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open: openProp, onCl
       if (published && !changed && !renaming && seoChanged && kindOf(project) !== 'restaurant') {
         // Only the search texts changed: no need to publish the page again.
         const saved = await setSiteSeo(owner, project, published.name, nextSeo);
+        void refreshSearchIndex(owner, project);
         setSite({ ...published, seo: saved });
         setBusy(false);
         return;
@@ -611,6 +613,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open: openProp, onCl
       // The public part of the address from Wee AI goes with the page; unreadable = the old one stays.
       const place = await getDoc(doc(db, 'platform_directory', owner)).then((d) => placeFromAddress(d.data()?.addressInfo)).catch(() => undefined);
       await publishSite(owner, project, name, content, nextSeo, place);
+      void refreshSearchIndex(owner, project);
       if (!published && draftIcon) await setSiteIcon(owner, project, draftIcon).catch(() => {});
       const s = await readMySite(owner, project);
       setSite(s);
@@ -627,6 +630,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open: openProp, onCl
     try {
       if (published?.customDomain) await removeDomain(owner, project);
       await unpublishSite(owner, project);
+      void refreshSearchIndex(owner, project);
       setSite(null);
       onPublishedChange(null);
     } catch {

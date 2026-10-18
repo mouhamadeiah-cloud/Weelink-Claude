@@ -3718,9 +3718,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   referrerPolicy="no-referrer"
                                   draggable={false}
                                   onDragStart={(e) => e.preventDefault()}
-                                  className={`w-full h-full pointer-events-none select-none ${
+                                  className={`w-full h-full select-none ${isPublicSite ? '' : 'pointer-events-none'} ${
                                     elem.styles.objectFit === 'contain' ? 'object-contain' : 'object-cover'
-                                  }`} 
+                                  }`}
                                   style={{
                                     filter: [
                                       elem.styles.imageFilter === 'grayscale' ? 'grayscale(100%)' :

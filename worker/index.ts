@@ -16,12 +16,14 @@ import orderStatus from '../api/order-status.js';
 import photos from '../api/photos.js';
 import rating from '../api/rating.js';
 import sendEmail from '../api/send-email.js';
+import uploadImage from '../api/upload-image.js';
+import { imagesBucket, setImagesBucket, type ImagesBucket } from '../server/images.js';
 
 type Handler = { fetch(request: Request): Promise<Response> };
 
 const ROUTES: Record<string, Handler> = {
   admin, booking, 'build-page': buildPage, designers, domains, 'email-code': emailCode,
-  geocode, 'item-numbers': itemNumbers, 'order-status': orderStatus, photos, rating, 'send-email': sendEmail,
+  geocode, 'item-numbers': itemNumbers, 'order-status': orderStatus, photos, rating, 'send-email': sendEmail, 'upload-image': uploadImage,
 };
 // These addresses share the designers handler, which reads the area from the path.
 for (const name of ['gallery', 'design-orders', 'design-access']) ROUTES[name] = designers;
@@ -41,16 +43,36 @@ const route = (request: Request): Promise<Response> => {
   return handler ? handler.fetch(request) : Promise.resolve(notFound());
 };
 
-interface Env { ASSETS: { fetch(request: Request): Promise<Response> }; CRON_SECRET?: string }
+interface Env { ASSETS: { fetch(request: Request): Promise<Response> }; CRON_SECRET?: string; IMAGES?: ImagesBucket }
+
+// GET /img/<key>: a photo from the R2 store (api/upload-image.ts writes them). Keys are never reused, so
+// browsers and Cloudflare may keep them for good.
+const servePhoto = async (request: Request, pathname: string): Promise<Response> => {
+  const bucket = imagesBucket();
+  if (!bucket || (request.method !== 'GET' && request.method !== 'HEAD')) return notFound();
+  const object = await bucket.get(decodeURIComponent(pathname.slice('/img/'.length)));
+  if (!object) return notFound();
+  return new Response(request.method === 'HEAD' ? null : object.body, {
+    headers: {
+      'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      ETag: object.httpEtag,
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
+};
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
+    setImagesBucket(env.IMAGES);
+    if (pathname.startsWith('/img/')) return servePhoto(request, pathname);
     if (pathname.startsWith('/api/')) return route(request);
     return env.ASSETS.fetch(request);
   },
 
   async scheduled(event: { cron: string }, env: Env): Promise<void> {
+    setImagesBucket(env.IMAGES);
     const path = CRONS[event.cron];
     if (!path || !env.CRON_SECRET) return;
     // A GET with the cron secret as a bearer token, as the handlers expect.

@@ -20,9 +20,7 @@ import {
   UnsplashPreset 
 } from '../data/backgroundPresets';
 import { BACKGROUND_VIDEOS, BackgroundVideoPreset } from '../data/backgroundVideos';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../services/firebase';
-import { storagePath } from '../utils/storagePaths';
+import { hostImageBlob } from '../utils/hostImage';
 
 const dataURLtoBlob = (dataurl: string): Blob => {
   const arr = dataurl.split(',');
@@ -38,10 +36,7 @@ const dataURLtoBlob = (dataurl: string): Blob => {
 
 const uploadDataUrlToStorage = async (dataurl: string, baseName: string): Promise<string> => {
   const blob = dataURLtoBlob(dataurl);
-  const timestamp = Date.now();
-  const fileRef = ref(storage, storagePath('backgrounds', `${timestamp}_${baseName}`));
-  const snapshot = await uploadBytes(fileRef, blob);
-  return await getDownloadURL(snapshot.ref);
+  return hostImageBlob('backgrounds', baseName, blob);
 };
 
 interface BackgroundDrawerSectionProps {

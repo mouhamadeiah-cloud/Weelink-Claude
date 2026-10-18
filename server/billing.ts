@@ -24,6 +24,7 @@
 import { randomBytes } from 'node:crypto';
 import { Resend } from 'resend';
 import { FieldValue, getStorage } from './firebase.js';
+import { deleteUserImages } from './images.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import { invoiceFor, needsPayment, type InvoiceItem, type Period } from '../src/utils/invoice.js';
 import { isFirstOfKind, isProjectKey, kindOf, restaurantIdOf } from '../src/utils/projectKeys.js';
@@ -457,6 +458,7 @@ export const deleteCustomer = async (db: Db, auth: Auth, uid: string, by: string
   // before that, sit in shared folders and stay.
   await getStorage().bucket(firebaseConfig.storageBucket).deleteFiles({ prefix: `users/${uid}/` })
     .catch((err: Error) => console.error('photo delete failed:', err?.message));
+  await deleteUserImages(uid).catch((err: Error) => console.error('R2 photo delete failed:', err?.message));
 
   const card = {
     uid, name: user.displayName || String(dir.personalInfo?.fullName || ''), email: user.email || '',

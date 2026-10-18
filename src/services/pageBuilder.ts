@@ -13,6 +13,7 @@ import { WEE_SLIDE_BY_ID } from '../data/weeSlideTemplates';
 import { getSlideTemplatePayload } from '../data/slideTemplates';
 import { STORE_SLIDE_IDS } from '../data/storeSlideAi';
 import { DEFAULT_LOOK, pageLookById } from '../data/pageLooks';
+import { SLIDE_DIVIDER_OPTIONS } from '../components/SlideDividers';
 import { REST_PAGE_IDS } from '../data/restaurantTemplate';
 import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
 import { applyPageLook, lookColours, slideSource } from './applyLook';
@@ -44,7 +45,10 @@ export interface Plan {
 }
 
 // The Wee AI divider answer as the editor's slide edge.
+// Older answers used four short names; now the answer is the editor's own edge shape.
 const DIVIDERS: Record<string, Slide['dividerShape']> = { straight: 'straight', wave: 'wave', sine: 'double-wave', curved: 'curve-down' };
+const dividerOf = (answer: string | undefined): Slide['dividerShape'] =>
+  DIVIDERS[answer || ''] || SLIDE_DIVIDER_OPTIONS.find((o) => o.id === answer)?.id;
 
 // The pages a button may open, by the kind of page the AI named.
 const PAGE_TARGETS: Record<string, string[]> = {
@@ -58,9 +62,12 @@ const HOME_PAGE: Record<BuildKind, string | null> = { free: null, restaurant: RE
 
 // The owner's colour choice (Wee AI step 6): a named choice gives its accent and second colour,
 // «مخصص» the colour picked by hand. Nothing when the owner left the question.
-const ownersChoice = (a: WeeAnswers): { accent: string; second?: string } | null => {
+const ownersChoice = (a: WeeAnswers): { accent: string; second?: string; palette?: [string, string, string, string, string] } | null => {
   const ai = a.aiAnswers || {};
+  if (ai.lookId && pageLookById(ai.lookId)) return null; // a page look: its own colours
   if ((ai.colorPalette || '').startsWith('مخصص')) {
+    const pal = ai.customPalette;
+    if (Array.isArray(pal) && pal.length === 5 && pal.every((c) => /^#[0-9a-f]{6}$/i.test(c))) return { accent: pal[4], palette: pal as [string, string, string, string, string] };
     const custom = /#[0-9a-f]{6}/i.exec(`${ai.colorPalette} ${ai.customColor || ''}`)?.[0];
     return custom ? { accent: custom } : null;
   }
@@ -452,7 +459,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   const wash = (backgroundOpacity ?? 1) < 0.5;
   const dropWash = wash && to.deep === to.bg;
   const bgUrl = dropWash ? null : await imageFor(section.images.background, ctx);
-  const divider = DIVIDERS[ctx.answers.aiAnswers?.dividerStyle || ''];
+  const divider = dividerOf(ctx.answers.aiAnswers?.dividerStyle);
   let slide: Slide = {
     id: slideId,
     name,
@@ -549,9 +556,9 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
   // The page look Wee AI chose gives the fonts. The owner's colours are the page's (Eyad: the chosen
   // colours are the page colours); the look's colours only when the owner chose none, and then the
   // site is also kept in that look («ستايل الصفحة»), so a ready slide added later comes in it.
-  const look = pageLookById(plan.look) || pageLookById(DEFAULT_LOOK[kind])!;
+  const look = pageLookById(answers.aiAnswers?.lookId) || pageLookById(plan.look) || pageLookById(DEFAULT_LOOK[kind])!;
   const choice = ownersChoice(answers);
-  const ownColours = choice ? ownerPalette(choice.accent, choice.second) : null;
+  const ownColours = choice ? choice.palette || ownerPalette(choice.accent, choice.second) : null;
   const colors: [string, string, string, string, string] = ownColours || [look.bg, look.card, look.line, look.ink, look.accent];
   const to = choice ? targetColours(colors, choice.accent) : lookColours(look);
   const fonts = { head: look.head, body: look.body };

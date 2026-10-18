@@ -5,7 +5,11 @@ import { SYRIAN_GOVERNORATES, GOVERNORATE_CENTERS, addressFromPoint, areasOf, fi
 import { categorySourceOf, useCategories } from '../utils/businessCategories';
 import type { ProjectType } from './shop/shopTypes';
 import { ComboInput } from './ui/ComboInput';
-import { WEE_COLOR_CHOICES } from '../data/weeColorChoices';
+import { looksFor, pageLookById, suitsKind } from '../data/pageLooks';
+import { luminance } from '../utils/pageRecolour';
+import { SLIDE_DIVIDER_OPTIONS } from './SlideDividers';
+import { PersonalPalette, DEFAULT_PERSONAL_PALETTE, asPalette5 } from './onboarding/PersonalPalette';
+import { EmailIcon, FacebookIcon, PhoneIcon, TikTokIcon, WhatsAppIcon } from './ui/SocialIcons';
 import { hostAnswerImages, hostImage, shrinkPickedImage } from '../utils/answerImages';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { 
@@ -14,6 +18,7 @@ import {
   Upload, 
   MapPin, 
   ArrowLeft,
+  Check,
   X
 } from 'lucide-react';
 
@@ -247,8 +252,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   const [aiAnswers, setAiAnswers] = useState({
     description: '',
-    colorPalette: 'الأزرق الكلاسيكي الكوني',
+    colorPalette: '',
     customColor: '#0071e3',
+    lookId: '',
+    customPalette: [...DEFAULT_PERSONAL_PALETTE] as string[],
     dividerStyle: 'straight',
     wantsGallery: true,
     galleryImages: [] as string[],
@@ -258,6 +265,18 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     services: [] as { name: string; price: string }[],
     features: [] as string[],
   });
+
+  // The 12 page looks, those that suit this kind of page first; the divider answer of older sessions
+  // used four short names.
+  const buildKind = pageKind === 'page' || !pageKind ? 'free' : pageKind;
+  const lookChoices = looksFor(buildKind);
+  const luminanceIsDark = (hex: string) => luminance(hex) < 0.45;
+  const currentDivider = ({ sine: 'double-wave', curved: 'curve-down' } as Record<string, string>)[aiAnswers.dividerStyle] || aiAnswers.dividerStyle;
+  const colorSummary = aiAnswers.lookId
+    ? `ستايل ${pageLookById(aiAnswers.lookId)?.name || ''}`.trim()
+    : (aiAnswers.colorPalette || '').startsWith('مخصص')
+      ? 'ألوان شخصية'
+      : aiAnswers.colorPalette || 'Wee AI يختار';
 
   const resetToBlankDefaults = () => {
     setPersonalInfo({
@@ -295,8 +314,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     });
     setAiAnswers({
       description: '',
-      colorPalette: 'الأزرق الكلاسيكي الكوني',
+      colorPalette: '',
       customColor: '#0071e3',
+      lookId: '',
+      customPalette: [...DEFAULT_PERSONAL_PALETTE],
       dividerStyle: 'straight',
       wantsGallery: true,
       galleryImages: [],
@@ -545,7 +566,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           </div>
           <div className="space-y-0.5 text-right">
             <div className="text-xs font-black text-neutral-400 select-none tracking-wider">مساعدك الشخصي (wee ai)</div>
-            <h4 className="font-bold text-neutral-800 text-xs leading-relaxed min-h-[2.5em] transition-all">
+            <h4 className="font-bold text-neutral-900 text-base leading-relaxed min-h-[3em] transition-all">
               {onEditAnswers ? (step >= 13 ? 'هي إجاباتك. Wee AI بيبني صفحتك منها.' : 'جاوب على أسئلة Wee AI أولاً، وبعدها بيبني صفحتك.') : typedText}
             </h4>
           </div>
@@ -570,7 +591,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             ['اسم الصفحة', personalInfo.pageName || personalInfo.fullName],
             [pageKind === 'restaurant' ? 'نوع المطعم' : pageKind === 'shop' ? 'المنتجات' : pageKind === 'cars' ? 'نوع المعرض' : 'العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.subCategory, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
             ['الوصف', aiAnswers.description],
-            ['الألوان', (aiAnswers.colorPalette || '').startsWith('مخصص') ? 'لون مخصص' : aiAnswers.colorPalette],
+            ['الألوان', colorSummary],
             ['طابع الصفحة', aiAnswers.motionEffects],
             ['الخدمات', (aiAnswers.services || []).filter((r: { name: string }) => r.name?.trim()).map((r: { name: string }) => r.name).join('، ')],
             ['المزايا', (aiAnswers.features || []).join('، ')],
@@ -855,7 +876,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {step === 3 && (
           <div className="space-y-3.5">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-neutral-400 block">الإيميل الافتراضي</label>
+              <label className="text-xs font-bold text-neutral-600 flex items-center gap-1.5"><EmailIcon size={20} />الإيميل الافتراضي</label>
               <input
                 type="email"
                 readOnly
@@ -865,7 +886,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-neutral-500 block">رقم واتساب (إجباري) *</label>
+              <label className="text-xs font-bold text-neutral-600 flex items-center gap-1.5"><WhatsAppIcon size={20} />رقم واتساب (إجباري) *</label>
               <input
                 type="tel"
                 value={contactInfo.whatsapp}
@@ -876,7 +897,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-neutral-400 block">رقم الهاتف (غير إجباري)</label>
+              <label className="text-xs font-bold text-neutral-600 flex items-center gap-1.5"><PhoneIcon size={20} />رقم الهاتف (غير إجباري)</label>
               <input
                 type="tel"
                 value={contactInfo.phone}
@@ -887,7 +908,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-neutral-400 block">حساب فيسبوك (غير إجباري)</label>
+              <label className="text-xs font-bold text-neutral-600 flex items-center gap-1.5"><FacebookIcon size={20} />حساب فيسبوك (غير إجباري)</label>
               <input
                 type="url"
                 value={contactInfo.facebook}
@@ -898,7 +919,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-neutral-400 block">حساب Tiktok (غير إجباري)</label>
+              <label className="text-xs font-bold text-neutral-600 flex items-center gap-1.5"><TikTokIcon size={20} />حساب Tiktok (غير إجباري)</label>
               <input
                 type="url"
                 value={contactInfo.tiktok}
@@ -1105,38 +1126,63 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           </div>
         )}
 
-        {/* STEP 6: اللون المفضل */}
+        {/* STEP 6: اللون المفضل: the 12 page looks, or the personal five colours */}
         {step === 6 && (
           <div className="space-y-3.5">
+            <button
+              type="button"
+              onClick={() => setAiAnswers(p => ({ ...p, colorPalette: '', lookId: '' }))}
+              className={`w-full p-2.5 rounded-xl border text-right text-sm font-bold transition-all cursor-pointer ${
+                !aiAnswers.lookId && !(aiAnswers.colorPalette || '').startsWith('مخصص') ? 'border-brand bg-brand/5 ring-2 ring-brand/30 text-brand' : 'border-neutral-200 hover:border-neutral-300 text-neutral-800'
+              }`}
+            >
+              خلّي Wee AI يختار الستايل المناسب لي
+            </button>
+
             <div className="grid grid-cols-2 gap-2">
-              {WEE_COLOR_CHOICES.map(pal => (
-                <button
-                  key={pal.name}
-                  type="button"
-                  onClick={() => setAiAnswers(p => ({ ...p, colorPalette: pal.name }))}
-                  className={`p-2 rounded-xl border text-right transition-all cursor-pointer flex flex-col gap-1 ${
-                    aiAnswers.colorPalette === pal.name ? 'border-black bg-neutral-50 shadow-xs' : 'border-neutral-200 hover:border-neutral-300'
-                  }`}
-                >
-                  <span className="text-xs font-bold text-neutral-800">{pal.name}</span>
-                  <div className="flex gap-1">
-                    {pal.colors.map((c, i) => (
-                      <span key={i} className="w-3.5 h-3.5 rounded-full border border-neutral-300" style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
-                </button>
-              ))}
+              {lookChoices.map(look => {
+                const on = aiAnswers.lookId === look.id;
+                return (
+                  <button
+                    key={look.id}
+                    type="button"
+                    onClick={() => setAiAnswers(p => ({ ...p, colorPalette: `ستايل: ${look.name}`, lookId: look.id }))}
+                    aria-pressed={on}
+                    className={`rounded-xl border overflow-hidden text-right transition-all cursor-pointer ${on ? 'border-brand ring-2 ring-brand/30' : 'border-neutral-200 hover:shadow-md'}`}
+                  >
+                    <div dir="rtl" className="p-3 flex flex-col gap-1.5" style={{ backgroundColor: look.bg, color: look.ink, fontFamily: `'${look.body}', sans-serif` }}>
+                      <span className="text-base leading-snug" style={{ fontFamily: `'${look.head}', serif`, fontWeight: look.headWeight }}>أهلاً فيك</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold px-3 py-1" style={{ backgroundColor: look.accent, color: luminanceIsDark(look.accent) ? '#fff' : '#111', borderRadius: look.radius > 100 ? 999 : look.radius }}>اطلب</span>
+                        <span className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: look.card }} />
+                        <span className="w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: look.soft }} />
+                      </span>
+                    </div>
+                    <div className="px-3 py-2 border-t border-neutral-200 bg-white flex items-center justify-between gap-1">
+                      <span className="text-sm font-bold text-neutral-900">{look.name}</span>
+                      {on ? <Check size={14} className="text-brand" /> : suitsKind(look, buildKind) ? <span className="text-[11px] font-bold text-brand">بيناسبك</span> : null}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* تخصيص لون من المتصفح */}
-            <div className="pt-2 border-t border-neutral-100 flex items-center justify-between">
-              <span className="text-xs font-bold text-neutral-600">أو حدد لوناً مخصصاً:</span>
-              <input
-                type="color"
-                value={aiAnswers.customColor}
-                onChange={e => setAiAnswers(p => ({ ...p, customColor: e.target.value, colorPalette: `مخصص: ${e.target.value}` }))}
-                className="w-7 h-7 rounded border border-neutral-300 cursor-pointer"
-              />
+            <div className="pt-2 border-t border-neutral-100 space-y-2">
+              <button
+                type="button"
+                onClick={() => setAiAnswers(p => ({ ...p, lookId: '', colorPalette: `مخصص: ${(asPalette5(p.customPalette) || DEFAULT_PERSONAL_PALETTE)[4]}` }))}
+                className={`w-full p-2.5 rounded-xl border text-right text-sm font-bold transition-all cursor-pointer ${
+                  (aiAnswers.colorPalette || '').startsWith('مخصص') ? 'border-brand bg-brand/5 ring-2 ring-brand/30 text-brand' : 'border-neutral-200 hover:border-neutral-300 text-neutral-800'
+                }`}
+              >
+                ألوان شخصية
+              </button>
+              {(aiAnswers.colorPalette || '').startsWith('مخصص') && (
+                <PersonalPalette
+                  value={asPalette5(aiAnswers.customPalette) || DEFAULT_PERSONAL_PALETTE}
+                  onChange={pal => setAiAnswers(p => ({ ...p, customPalette: pal, customColor: pal[4], colorPalette: `مخصص: ${pal[4]}`, lookId: '' }))}
+                />
+              )}
             </div>
 
             <div className="flex gap-2 pt-1">
@@ -1161,24 +1207,24 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {/* STEP 7: تنسيق الشرائح */}
         {step === 7 && (
           <div className="space-y-3.5">
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { name: 'مستقيمة', val: 'straight' },
-                { name: 'متماوجة', val: 'wave' },
-                { name: 'جيبية', val: 'sine' },
-                { name: 'منحنية', val: 'curved' }
-              ].map(div => (
-                <button
-                  key={div.val}
-                  type="button"
-                  onClick={() => setAiAnswers(p => ({ ...p, dividerStyle: div.val }))}
-                  className={`p-2.5 rounded-xl border text-center text-xs font-bold transition-all cursor-pointer ${
-                    aiAnswers.dividerStyle === div.val ? 'border-black bg-neutral-50 shadow-xs' : 'border-neutral-200 hover:border-neutral-300'
-                  }`}
-                >
-                  {div.name}
-                </button>
-              ))}
+            <div className="grid grid-cols-3 gap-2.5">
+              {SLIDE_DIVIDER_OPTIONS.map(div => {
+                const on = currentDivider === div.id;
+                return (
+                  <button
+                    key={div.id}
+                    type="button"
+                    onClick={() => setAiAnswers(p => ({ ...p, dividerStyle: div.id }))}
+                    className={`flex flex-col items-center gap-1.5 p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                      on ? 'border-brand bg-brand/5 ring-2 ring-brand/40 shadow-xs' : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                    }`}
+                    title={div.name}
+                  >
+                    <div className="w-full h-11 border border-black/10 rounded-md overflow-hidden shadow-2xs">{div.renderPreview(on)}</div>
+                    <span className={`text-xs truncate w-full ${on ? 'font-bold text-brand' : 'text-neutral-600'}`}>{div.name}</span>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex gap-2 pt-1">

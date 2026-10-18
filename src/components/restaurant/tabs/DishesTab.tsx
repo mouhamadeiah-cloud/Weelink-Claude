@@ -8,6 +8,8 @@ import { Dish, DISH_BADGES, emptyDish } from '../restaurantTypes';
 import { newId } from '../../shop/shopTypes';
 import { Card, Field, inputClass, inputFitClass, textareaClass, PrimaryButton, GhostButton, Toggle, EmptyState, formatMoney } from '../../shop/adminUi';
 import { RestaurantTabProps, ImagePicker, MultiChips, parseAmount } from './shared';
+import { ComboInput } from '../../ui/ComboInput';
+import restaurantCategories from '../../../data/restaurantCategories.json';
 import { itemNoLabel } from '../../../utils/itemNumbers';
 
 const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void }> = ({ data, update, onGoTo, dish, onDone }) => {
@@ -52,6 +54,9 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
           <Field label={`السعر (${currency})`}><input className={`${inputFitClass} w-40`} inputMode="decimal" dir="ltr" placeholder="0" value={price} onChange={(e) => setPrice(e.target.value)} /></Field>
           <Field label="السعر قبل العرض (اختياري)"><input className={`${inputFitClass} w-40`} inputMode="decimal" dir="ltr" placeholder="0" value={oldPrice} onChange={(e) => setOldPrice(e.target.value)} /></Field>
         </div>
+        <Field label="نوع الأكل (اختياري، يساعد الناس يلاقوا الطبق بالبحث)">
+          <ComboInput value={d.cuisine} options={CUISINES} onChange={(cuisine) => setD({ ...d, cuisine })} placeholder="مثلاً: سوشي، بيتزا، مشاوي" />
+        </Field>
         <Field label="الصورة"><ImagePicker value={d.image} onChange={(image) => setD({ ...d, image })} /></Field>
         <Field label="شارة على الطبق">
           <div className="flex flex-wrap gap-1.5">
@@ -115,6 +120,9 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
     </div>
   );
 };
+
+// The kinds of food of restaurantCategories.json, as suggestions.
+const CUISINES = Array.from(new Set((restaurantCategories as { subs: string[] }[]).flatMap((c) => c.subs)));
 
 export const DishesTab: React.FC<RestaurantTabProps> = (props) => {
   const { data, update } = props;

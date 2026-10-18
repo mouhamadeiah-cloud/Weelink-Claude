@@ -55,6 +55,7 @@ export interface Dish {
   oldPrice: number; // shown struck through when higher than the price
   categoryId: string;
   image: string;
+  cuisine: string; // the kind of food (from restaurantCategories.json or typed), for Weelink's search; '' = the restaurant's own
   badge: DishBadge;
   featured: boolean;
   available: boolean; // false = shown as «نفد اليوم», cannot be ordered
@@ -273,6 +274,7 @@ export const emptyDish = (categoryId = ''): Dish => ({
   oldPrice: 0,
   categoryId,
   image: '',
+  cuisine: '',
   badge: '',
   featured: false,
   available: true,
@@ -315,6 +317,7 @@ const normalizeDish = (raw: any): Dish => ({
   oldPrice: Math.max(0, num(raw?.oldPrice)),
   categoryId: str(raw?.categoryId),
   image: str(raw?.image),
+  cuisine: str(raw?.cuisine).trim().slice(0, 80),
   badge: DISH_BADGES.some((b) => b.id === raw?.badge) ? raw.badge : '',
   featured: !!raw?.featured,
   available: raw?.available !== false,

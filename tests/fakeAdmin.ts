@@ -18,6 +18,7 @@ const colRef = (path: string): any => ({
   async add(data: any) { const id = 'm' + ++counter; store.set(`${path}/${id}`, clone(data)); return docRef(`${path}/${id}`); },
   where(field: string, op: string, val: any) { return query(path, [[field, val, op]]); },
   orderBy() { return colRef(path); },
+  select() { return colRef(path); },
   limit() { return colRef(path); },
   async get() { return query(path, []).get(); },
 });

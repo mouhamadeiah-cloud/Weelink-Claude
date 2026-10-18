@@ -17,13 +17,15 @@ import photos from '../api/photos.js';
 import rating from '../api/rating.js';
 import sendEmail from '../api/send-email.js';
 import uploadImage from './upload-image.js';
+import indexSite from './index-site.js';
+import { setSearchDb, type SearchDb } from '../server/searchIndex.js';
 import { imagesBucket, setImagesBucket, type ImagesBucket } from '../server/images.js';
 
 type Handler = { fetch(request: Request): Promise<Response> };
 
 const ROUTES: Record<string, Handler> = {
   admin, booking, 'build-page': buildPage, designers, domains, 'email-code': emailCode,
-  geocode, 'item-numbers': itemNumbers, 'order-status': orderStatus, photos, rating, 'send-email': sendEmail, 'upload-image': uploadImage,
+  geocode, 'item-numbers': itemNumbers, 'order-status': orderStatus, photos, rating, 'send-email': sendEmail, 'upload-image': uploadImage, 'index-site': indexSite,
 };
 // These addresses share the designers handler, which reads the area from the path.
 for (const name of ['gallery', 'design-orders', 'design-access']) ROUTES[name] = designers;
@@ -33,6 +35,7 @@ const CRONS: Record<string, string> = {
   '0 6 * * *': '/api/booking',
   '0 7 * * *': '/api/admin',
   '0 8 * * *': '/api/designers?area=orders',
+  '0 3 * * *': '/api/index-site',
 };
 
 const notFound = () => new Response(JSON.stringify({ error: 'not_found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
@@ -43,7 +46,7 @@ const route = (request: Request): Promise<Response> => {
   return handler ? handler.fetch(request) : Promise.resolve(notFound());
 };
 
-interface Env { ASSETS: { fetch(request: Request): Promise<Response> }; CRON_SECRET?: string; IMAGES?: ImagesBucket }
+interface Env { ASSETS: { fetch(request: Request): Promise<Response> }; CRON_SECRET?: string; IMAGES?: ImagesBucket; SEARCH?: SearchDb }
 
 // GET /img/<key>: a photo from the R2 store (api/upload-image.ts writes them). Keys are never reused, so
 // browsers and Cloudflare may keep them for good.
@@ -66,6 +69,7 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
     setImagesBucket(env.IMAGES);
+    setSearchDb(env.SEARCH);
     if (pathname.startsWith('/img/')) return servePhoto(request, pathname);
     if (pathname.startsWith('/api/')) return route(request);
     return env.ASSETS.fetch(request);
@@ -73,6 +77,7 @@ export default {
 
   async scheduled(event: { cron: string }, env: Env): Promise<void> {
     setImagesBucket(env.IMAGES);
+    setSearchDb(env.SEARCH);
     const path = CRONS[event.cron];
     if (!path || !env.CRON_SECRET) return;
     // A GET with the cron secret as a bearer token, as the handlers expect.

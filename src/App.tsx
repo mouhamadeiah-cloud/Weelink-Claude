@@ -41,6 +41,7 @@ import { readCatalogAnswer, sampleRestaurantAdmin, sampleShopAdmin } from './ser
 import { PublishModal } from './components/publish/PublishModal';
 import { publicDataFor } from './components/publish/publicData';
 import { readMySite, siteUrl, unpublishSite } from './services/sites';
+import { useItemNumbers } from './services/itemNumbers';
 import { ShopAdminPanel } from './components/shop/ShopAdminPanel';
 import { ShopDataContext, ShopUpdateContext } from './components/shop/store/ShopDataContext';
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
@@ -343,6 +344,11 @@ export default function App() {
     return next;
   }), []);
   const ownerUid = activeUserUid;
+  // Every car, dish and product gets Weelink's public number once the admin is open (see services/itemNumbers.ts).
+  const numberingOn = !!currentUser && !isFirebaseLoading;
+  useItemNumbers('car', carAdmin.cars, numberingOn && project === 'cars', (fn) => setCarAdmin((d) => ({ ...d, cars: fn(d.cars) })));
+  useItemNumbers('dish', restaurantAdmin.dishes, numberingOn && project === 'restaurant', (fn) => setRestaurantAdmin((d) => ({ ...d, dishes: fn(d.dishes) })));
+  useItemNumbers('product', shopAdmin.products, numberingOn && project === 'shop', (fn) => setShopAdmin((d) => ({ ...d, products: fn(d.products) })));
   // The open restaurant's live data: restaurants/{uid} for the account's first, restaurants/{uid}__{key} after.
   const restaurantId = restaurantIdOf(ownerUid, projectKey);
   // Read again when «نشر» closes, since a payment may have changed the package.

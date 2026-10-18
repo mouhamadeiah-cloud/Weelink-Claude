@@ -8,6 +8,7 @@ import { Dish, DISH_BADGES, emptyDish } from '../restaurantTypes';
 import { newId } from '../../shop/shopTypes';
 import { Card, Field, inputClass, inputFitClass, textareaClass, PrimaryButton, GhostButton, Toggle, EmptyState, formatMoney } from '../../shop/adminUi';
 import { RestaurantTabProps, ImagePicker, MultiChips, parseAmount } from './shared';
+import { itemNoLabel } from '../../../utils/itemNumbers';
 
 const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void }> = ({ data, update, onGoTo, dish, onDone }) => {
   const [d, setD] = useState<Dish>(dish);
@@ -24,7 +25,7 @@ const DishEditor: React.FC<RestaurantTabProps & { dish: Dish; onDone: () => void
     const clean: Dish = { ...d, name: d.name.trim(), description: d.description.trim(), price: parseAmount(price), oldPrice: parseAmount(oldPrice) };
     update((x) =>
       clean.id
-        ? { ...x, dishes: x.dishes.map((y) => (y.id === clean.id ? clean : y)) }
+        ? { ...x, dishes: x.dishes.map((y) => (y.id === clean.id ? { ...clean, publicNo: y.publicNo || clean.publicNo } : y)) }
         : { ...x, dishes: [{ ...clean, id: newId('dish'), createdAt: new Date().toISOString() }, ...x.dishes] }
     );
     onDone();
@@ -124,7 +125,7 @@ export const DishesTab: React.FC<RestaurantTabProps> = (props) => {
 
   const list = useMemo(() => {
     const s = q.trim();
-    return data.dishes.filter((d) => (!cat || d.categoryId === cat) && (!s || d.name.includes(s) || d.description.includes(s)));
+    return data.dishes.filter((d) => (!cat || d.categoryId === cat) && (!s || d.name.includes(s) || d.description.includes(s) || itemNoLabel('dish', d.publicNo).toLowerCase().includes(s.toLowerCase())));
   }, [data.dishes, q, cat]);
 
   if (editing) return <DishEditor {...props} dish={editing} onDone={() => setEditing(null)} />;
@@ -167,7 +168,7 @@ export const DishesTab: React.FC<RestaurantTabProps> = (props) => {
                       <span className="text-sm font-black truncate">{d.name || 'طبق بدون اسم'}</span>
                       {badge && <span className="h-5 px-1.5 rounded-full text-xs font-bold text-white inline-flex items-center" style={{ backgroundColor: badge.color }}>{badge.label}</span>}
                     </div>
-                    <div className="text-xs text-neutral-400 font-bold">{c ? `${c.icon} ${c.name}` : 'بدون قسم'} · {formatMoney(d.price, currency)}</div>
+                    <div className="text-xs text-neutral-400 font-bold">{c ? `${c.icon} ${c.name}` : 'بدون قسم'} · {formatMoney(d.price, currency)}{itemNoLabel('dish', d.publicNo) && <> · <span dir="ltr" title="رقم Weelink للطبق">{itemNoLabel('dish', d.publicNo)}</span></>}</div>
                   </div>
                   <button
                     type="button"

@@ -48,6 +48,7 @@ export const DISH_BADGES: { id: DishBadge; label: string; color: string }[] = [
 
 export interface Dish {
   id: string;
+  publicNo: number; // Weelink's public number of the dish (F-10001, see services/itemNumbers.ts); 0 = not given yet
   name: string;
   description: string;
   price: number;
@@ -265,6 +266,7 @@ export const createEmptyRestaurantAdmin = (): RestaurantAdminData => ({
 
 export const emptyDish = (categoryId = ''): Dish => ({
   id: '',
+  publicNo: 0,
   name: '',
   description: '',
   price: 0,
@@ -306,6 +308,7 @@ const normalizeSubCatalog = (raw: any): SubCatalog => ({
 const normalizeDish = (raw: any): Dish => ({
   ...emptyDish(),
   id: str(raw?.id) || newId('dish'),
+  publicNo: Math.max(0, Math.floor(num(raw?.publicNo))),
   name: str(raw?.name),
   description: str(raw?.description),
   price: Math.max(0, num(raw?.price)),

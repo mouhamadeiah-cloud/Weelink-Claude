@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { Search, Pencil, Trash2, PackagePlus, AlertTriangle, Eye, EyeOff, X } from 'lucide-react';
 import { ShopProduct, PRODUCT_BADGES, newId } from '../shopTypes';
+import { itemNoLabel } from '../../../utils/itemNumbers';
 import { Card, inputClass, inputFitClass, PrimaryButton, GhostButton, EmptyState, formatMoney } from '../adminUi';
 import { AdminTabProps } from './tabProps';
 import { ProductEditor } from '../editor/ProductEditor';
@@ -75,7 +76,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
     : [];
   const filtering = q !== '' || filters.catalog !== '' || filters.status !== '' || filters.stock !== '' || filters.badge !== '';
   const list = data.products
-    .filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+    .filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || itemNoLabel('product', p.publicNo).toLowerCase().includes(q))
     .filter((p) => !catalogIds.length || p.catalogIds.some((id) => catalogIds.includes(id)))
     .filter((p) =>
       filters.status === 'published' ? p.published
@@ -207,6 +208,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-ink truncate">{p.name}</div>
                     <div className="text-xs text-neutral-400 truncate">
+                      {itemNoLabel('product', p.publicNo) && <span dir="ltr" title="رقم Weelink للمنتج">{itemNoLabel('product', p.publicNo)} · </span>}
                       {formatMoney(p.price, p.currency || currency)}
                       {p.catalogIds.length > 0 && ` · ${p.catalogIds.map(catalogName).filter(Boolean).join('، ')}`}
                     </div>

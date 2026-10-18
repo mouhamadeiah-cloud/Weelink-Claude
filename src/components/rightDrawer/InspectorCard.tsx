@@ -2,7 +2,7 @@
 // the current values, that opens smoothly to show its settings. Its contents are drawn the first time
 // it opens and kept afterwards, so closing and reopening animates both ways.
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, HelpCircle } from 'lucide-react';
+import { ChevronDown, HelpCircle, Play } from 'lucide-react';
 
 interface InspectorCardProps {
   id: string;
@@ -16,10 +16,12 @@ interface InspectorCardProps {
   flash?: boolean;
   // A short explanation, shown by the «؟» button.
   help?: string;
+  // An explainer animation for this group: a small «شرح» button it opens out of and folds back into.
+  video?: { dock: string; playing: boolean; onOpen: () => void };
   children: React.ReactNode;
 }
 
-export const InspectorCard: React.FC<InspectorCardProps> = ({ id, icon, title, summary, open, onToggle, index, flash, help, children }) => {
+export const InspectorCard: React.FC<InspectorCardProps> = ({ id, icon, title, summary, open, onToggle, index, flash, help, video, children }) => {
   const [mounted, setMounted] = useState(open);
   const [shown, setShown] = useState(open);
   const [showHelp, setShowHelp] = useState(false);
@@ -43,7 +45,7 @@ export const InspectorCard: React.FC<InspectorCardProps> = ({ id, icon, title, s
       style={{ animationDelay: `${index * 55}ms` }}
     >
       <div className="relative">
-      <button type="button" onClick={onToggle} aria-expanded={open} className={`w-full flex items-center gap-2.5 p-3 text-right cursor-pointer ${help ? 'pl-16' : ''}`}>
+      <button type="button" onClick={onToggle} aria-expanded={open} className={`w-full flex items-center gap-2.5 p-3 text-right cursor-pointer ${video ? 'pl-[118px]' : help ? 'pl-16' : ''}`}>
         <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-300 ${shown ? 'bg-brand/10 text-brand' : 'bg-neutral-100 text-neutral-500'}`}>
           {icon}
         </span>
@@ -65,6 +67,21 @@ export const InspectorCard: React.FC<InspectorCardProps> = ({ id, icon, title, s
           className={`absolute left-9 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${showHelp ? 'bg-brand/10 text-brand' : 'text-neutral-300 hover:text-neutral-600 hover:bg-neutral-100'}`}
         >
           <HelpCircle size={15} />
+        </button>
+      )}
+      {video && (
+        <button
+          type="button"
+          data-intro-dock={video.dock}
+          onClick={video.onOpen}
+          aria-label="فيديو الشرح"
+          title="فيديو الشرح"
+          className={`absolute left-[68px] top-1/2 -translate-y-1/2 h-7 px-2 rounded-full flex items-center gap-1 text-[11px] font-bold transition-[colors,opacity] cursor-pointer ${
+            video.playing ? 'opacity-40 bg-brand/10 text-brand' : 'bg-brand/10 text-brand hover:bg-brand/15'
+          }`}
+        >
+          <Play size={11} fill="currentColor" />
+          شرح
         </button>
       )}
       </div>

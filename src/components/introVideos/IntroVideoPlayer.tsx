@@ -1,60 +1,60 @@
-// A floating window over the editor that plays an explainer animation. It unfolds out of the small
-// «شرح» button in its card, can be enlarged to the middle of the screen, and on closing folds back
-// into that button (or is swiped down to close it).
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+// The explainer animation of a group of settings. It sits at the top of the panel and plays while the
+// user scrolls on to the settings below it; it can shrink to a small screen there, be dragged out to
+// float anywhere, or be enlarged over everything. Moving between the panel and the screen redraws the
+// animation where it was, so it carries on from the same second.
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize2, Minimize2, Pause, Play, RotateCcw, X } from 'lucide-react';
+import { Maximize2, Minimize2, Minus, PanelTopOpen, Pause, Play, RotateCcw } from 'lucide-react';
 import type { IntroVideo } from './introVideos';
+
+export type IntroVideoMode = 'docked' | 'mini' | 'floating' | 'big';
 
 interface IntroVideoPlayerProps {
   video: IntroVideo;
-  // Where the window folds out of and back into.
-  dockSelector: string;
-  onClosed: () => void;
+  mode: IntroVideoMode;
+  onModeChange: (mode: IntroVideoMode) => void;
+  // The second it is at, kept by the panel so a redrawn player carries on from there.
+  timeRef: React.MutableRefObject<number>;
 }
 
-const BAR = 48;
-const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-
-const useViewport = () => {
-  const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
-  useEffect(() => {
-    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  return size;
-};
+const BAR = 44;
+const FLOAT_WIDTH = 420;
+// Above the editor's bars, panels and menus.
+const Z = 2147483000;
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, dockSelector, onClosed }) => {
-  const vp = useViewport();
-  const winRef = useRef<HTMLDivElement>(null);
+// The animation page, started at the second it was left at. Its address is fixed when it is drawn,
+// so the time ticking on doesn't reload it.
+const Frame: React.FC<{ src: string; start: number; paused?: boolean; title: string; frameRef?: React.Ref<HTMLIFrameElement>; className?: string }> = ({
+  src, start, paused, title, frameRef, className,
+}) => {
+  const [url] = useState(() => `${src}?t=${start.toFixed(2)}${paused ? '&paused' : ''}`);
+  return <iframe ref={frameRef} src={url} title={title} tabIndex={paused ? -1 : undefined} className={`border-0 bg-[#eef2f8] ${className || ''}`} />;
+};
+
+export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode, onModeChange, timeRef }) => {
   const frameRef = useRef<HTMLIFrameElement>(null);
-  const [big, setBig] = useState(false);
-  const [time, setTime] = useState(0);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [time, setTime] = useState(timeRef.current);
   const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [drag, setDrag] = useState(0);
-  const [leaving, setLeaving] = useState(false);
-  const closing = useRef(false);
-  const dragStart = useRef<number | null>(null);
+  const [pos, setPos] = useState({ x: 24, y: 120 });
+  const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const prevMode = useRef<IntroVideoMode>('docked');
+  const drag = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
 
-  // Small: in the corner of the canvas, away from the panel. Big: the middle of the screen.
-  const phone = vp.w < 640;
-  const width = phone || big ? Math.min(vp.w - 32, 1180, ((vp.h - 96) * 16) / 9) : Math.min(480, vp.w - 32);
-  const height = (width * 9) / 16 + BAR;
-  const left = phone || big ? (vp.w - width) / 2 : 24;
-  const top = phone || big ? Math.max(16, (vp.h - height) / 2) : vp.h - height - 24;
-
-  const send = useCallback((type: 'play' | 'pause' | 'seek', t?: number) => {
-    frameRef.current?.contentWindow?.postMessage({ source: 'weelink-intro-player', type, time: t }, '*');
+  useEffect(() => {
+    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.source !== frameRef.current?.contentWindow || e.data?.source !== 'weelink-intro') return;
+      timeRef.current = e.data.time >= e.data.duration ? 0 : e.data.time;
       setTime(e.data.time);
       setDuration(e.data.duration);
       setPlaying(e.data.playing);
@@ -63,125 +63,154 @@ export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, dockS
     return () => window.removeEventListener('message', onMessage);
   }, []);
 
-  // The transform that shrinks the window onto its button, folded flat.
-  const foldedTransform = () => {
-    const dock = document.querySelector<HTMLElement>(dockSelector);
-    const r = dock?.getBoundingClientRect();
-    const tx = r && r.width ? r.left + r.width / 2 - (left + width / 2) : -width / 3;
-    const ty = r && r.width ? r.top + r.height / 2 - (top + height / 2) : vp.h - top;
-    const s = r && r.width ? Math.max(0.04, r.width / width) : 0.2;
-    return `translate(${tx}px, ${ty}px) scale(${s}) rotateX(75deg)`;
-  };
-
-  useLayoutEffect(() => {
-    winRef.current?.animate(
-      [{ transform: foldedTransform(), opacity: 0.2 }, { transform: 'none', opacity: 1 }],
-      { duration: 480, easing: EASE },
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const send = useCallback((type: 'play' | 'pause' | 'seek', t?: number) => {
+    frameRef.current?.contentWindow?.postMessage({ source: 'weelink-intro-player', type, time: t }, '*');
   }, []);
 
-  const close = useCallback(() => {
-    if (closing.current) return;
-    closing.current = true;
-    setLeaving(true);
-    send('pause');
-    const el = winRef.current;
-    if (!el) return onClosed();
-    const anim = el.animate(
-      [{ transform: `translateY(${drag}px)`, opacity: 1 }, { transform: foldedTransform(), opacity: 0 }],
-      { duration: 420, easing: 'cubic-bezier(0.55, 0, 0.75, 0.2)', fill: 'forwards' },
-    );
-    anim.onfinish = onClosed;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drag, onClosed, send, left, top, width, height]);
+  const setMode = useCallback((next: IntroVideoMode) => {
+    if (next === 'big' && mode !== 'big') prevMode.current = mode;
+    onModeChange(next);
+  }, [mode, onModeChange]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      if (big) setBig(false);
-      else close();
-    };
+    if (mode !== 'big') return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMode(prevMode.current);
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [big, close]);
+  }, [mode, setMode]);
 
-  // Swiping the top bar down closes it.
-  const onPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return;
-    dragStart.current = e.clientY;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (dragStart.current === null) return;
-    setDrag(Math.max(0, e.clientY - dragStart.current));
-  };
-  const onPointerUp = () => {
-    if (dragStart.current === null) return;
-    dragStart.current = null;
-    if (drag > 90) close();
-    else setDrag(0);
+  // Dragging the top bar: out of the panel it becomes a floating window that follows the pointer.
+  const floatW = Math.min(FLOAT_WIDTH, vp.w - 24);
+  const floatH = (floatW * 9) / 16 + BAR;
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+      if (!d.moved && Math.hypot(dx, dy) < 6) return;
+      d.moved = true;
+      setPos({ x: clamp(d.ox + dx, 8 - floatW + 80, vp.w - 80), y: clamp(d.oy + dy, 8, vp.h - BAR - 8) });
+      if (mode === 'docked') onModeChange('floating');
+    };
+    const onUp = () => { drag.current = null; };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [mode, onModeChange, floatW, vp]);
+
+  const startDrag = (e: React.PointerEvent) => {
+    if (mode === 'big' || (e.target as HTMLElement).closest('button, input')) return;
+    e.preventDefault();
+    const r = boxRef.current?.getBoundingClientRect();
+    // Grabbed in the panel: the floating window keeps the pointer at the same spot of its bar.
+    const ox = mode === 'docked' && r ? e.clientX - Math.min(e.clientX - r.left, floatW - 40) : pos.x;
+    const oy = mode === 'docked' && r ? r.top : pos.y;
+    drag.current = { sx: e.clientX, sy: e.clientY, ox, oy, moved: false };
   };
 
   const ended = duration > 0 && time >= duration - 0.05;
-  const iconBtn = 'w-8 h-8 rounded-lg flex items-center justify-center text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer';
+  const iconBtn = 'w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors cursor-pointer';
+  const playButton = (
+    <button type="button" className={iconBtn} aria-label={ended ? 'من الأول' : playing ? 'إيقاف مؤقت' : 'تشغيل'} onClick={() => (ended ? (send('seek', 0), send('play')) : send(playing ? 'pause' : 'play'))}>
+      {ended ? <RotateCcw size={15} /> : playing ? <Pause size={15} /> : <Play size={15} />}
+    </button>
+  );
+  const scrubber = (
+    <input
+      type="range"
+      min={0}
+      max={duration || 1}
+      step={0.05}
+      value={time}
+      onChange={(e) => send('seek', Number(e.target.value))}
+      aria-label="مكان التشغيل"
+      className="flex-1 min-w-0 mx-1 accent-[var(--color-brand)] cursor-pointer"
+    />
+  );
 
+  // A small screen at the top of the panel, showing where the animation stopped.
+  if (mode === 'mini') {
+    return (
+      <button
+        type="button"
+        onClick={() => { setMode('docked'); }}
+        className="w-full flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-2 text-right cursor-pointer hover:border-brand/40 hover:shadow-[0_6px_18px_rgba(16,24,40,0.07)] transition-[box-shadow,border-color] animate-[fade_0.25s_ease-out]"
+      >
+        <span className="relative w-[112px] h-[63px] shrink-0 overflow-hidden rounded-lg ring-1 ring-neutral-200 bg-[#eef2f8]">
+          <Frame src={video.src} start={timeRef.current} paused title={video.title} className="absolute left-0 top-0 w-[448px] h-[252px] origin-top-left scale-[0.25] pointer-events-none" />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="w-8 h-8 rounded-full bg-white/90 text-brand shadow flex items-center justify-center"><Play size={14} fill="currentColor" /></span>
+          </span>
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[13px] font-bold text-neutral-900">{video.title}</span>
+          <span className="block text-xs text-neutral-500">اضغط لتكمّل المشاهدة</span>
+        </span>
+      </button>
+    );
+  }
+
+  const bar = (
+    <div
+      className={`flex items-center gap-0.5 px-1.5 border-b border-neutral-100 select-none touch-none ${mode === 'big' ? '' : 'cursor-grab active:cursor-grabbing'}`}
+      style={{ height: BAR }}
+      onPointerDown={startDrag}
+      title={mode === 'big' ? undefined : 'اسحب لتحركها لأي مكان'}
+    >
+      {playButton}
+      <span className="text-[12px] font-bold text-neutral-800 truncate max-w-[40%]">{video.title}</span>
+      {scrubber}
+      <span className="text-[11px] tabular-nums text-neutral-500 shrink-0" dir="ltr">{fmt(time)}</span>
+      <button type="button" className={iconBtn} aria-label={mode === 'big' ? 'تصغير' : 'تكبير'} onClick={() => setMode(mode === 'big' ? prevMode.current : 'big')}>
+        {mode === 'big' ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+      </button>
+      {mode === 'floating' && (
+        <button type="button" className={iconBtn} aria-label="رجّعها للوحة" title="رجّعها للوحة" onClick={() => setMode('docked')}>
+          <PanelTopOpen size={15} />
+        </button>
+      )}
+      {mode !== 'big' && (
+        <button type="button" className={iconBtn} aria-label="تصغير لشاشة صغيرة" title="تصغير" onClick={() => { send('pause'); setMode('mini'); }}>
+          <Minus size={16} />
+        </button>
+      )}
+    </div>
+  );
+  const shell = 'rounded-2xl bg-white overflow-hidden flex flex-col';
+
+  if (mode === 'docked') {
+    return (
+      <div ref={boxRef} dir="rtl" className={`${shell} border border-neutral-200 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_8px_24px_rgba(16,24,40,0.08)] animate-[fade_0.25s_ease-out]`}>
+        {bar}
+        <Frame key="docked" frameRef={frameRef} src={video.src} start={timeRef.current} title={video.title} className="w-full aspect-video" />
+      </div>
+    );
+  }
+
+  // Floating or enlarged: drawn on the page itself, above the editor.
+  const bigW = Math.min(vp.w - 32, 1180, ((vp.h - 32 - BAR) * 16) / 9);
+  const style: React.CSSProperties =
+    mode === 'big'
+      ? { left: (vp.w - bigW) / 2, top: Math.max(16, (vp.h - bigW * 9 / 16 - BAR) / 2), width: bigW, height: (bigW * 9) / 16 + BAR }
+      : { left: pos.x, top: pos.y, width: floatW, height: floatH };
   return createPortal(
     <>
-      {(big || phone) && (
-        <div className={`fixed inset-0 z-[180] bg-neutral-950/40 backdrop-blur-[2px] animate-[fade_0.25s_ease-out] transition-opacity duration-300 ${leaving ? 'opacity-0' : ''}`} onClick={() => (phone ? close() : setBig(false))} />
-      )}
+      {mode === 'big' && <div className="fixed inset-0 bg-neutral-950/45 backdrop-blur-[2px] animate-[fade_0.25s_ease-out]" style={{ zIndex: Z }} onClick={() => setMode(prevMode.current)} />}
       <div
-        className="fixed z-[181]"
-        style={{ left, top, width, height, perspective: 1200, transition: `left .4s ${EASE}, top .4s ${EASE}, width .4s ${EASE}, height .4s ${EASE}` }}
+        ref={boxRef}
+        dir="rtl"
+        role="dialog"
+        aria-label={video.title}
+        className={`fixed ${shell} shadow-[0_24px_60px_-12px_rgba(16,24,40,0.45),0_0_0_1px_rgba(16,24,40,0.08)] ${drag.current?.moved ? '' : 'transition-[left,top,width,height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
+        style={{ ...style, zIndex: Z + 1 }}
       >
-        <div
-          ref={winRef}
-          role="dialog"
-          aria-label={video.title}
-          dir="rtl"
-          className="w-full h-full rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(16,24,40,0.45),0_0_0_1px_rgba(16,24,40,0.06)] overflow-hidden flex flex-col"
-          style={{ transform: drag ? `translateY(${drag}px)` : undefined, opacity: drag ? Math.max(0.4, 1 - drag / 300) : undefined, transformOrigin: '50% 0' }}
-        >
-          <div
-            className="flex items-center gap-1 px-2 border-b border-neutral-100 select-none touch-none cursor-grab active:cursor-grabbing"
-            style={{ height: BAR }}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-          >
-            <button type="button" className={iconBtn} aria-label={playing ? 'إيقاف مؤقت' : 'تشغيل'} onClick={() => (ended ? (send('seek', 0), send('play')) : send(playing ? 'pause' : 'play'))}>
-              {ended ? <RotateCcw size={16} /> : playing ? <Pause size={16} /> : <Play size={16} />}
-            </button>
-            <span className="text-[13px] font-bold text-neutral-800 truncate">{video.title}</span>
-            <input
-              type="range"
-              min={0}
-              max={duration || 1}
-              step={0.05}
-              value={time}
-              onChange={(e) => send('seek', Number(e.target.value))}
-              aria-label="مكان التشغيل"
-              className="flex-1 min-w-0 mx-2 accent-[var(--color-brand)] cursor-pointer"
-            />
-            <span className="text-[11px] tabular-nums text-neutral-500 shrink-0" dir="ltr">{fmt(time)} / {fmt(duration)}</span>
-            {!phone && (
-              <button type="button" className={iconBtn} aria-label={big ? 'تصغير' : 'تكبير'} onClick={() => setBig((b) => !b)}>
-                {big ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-              </button>
-            )}
-            <button type="button" className={iconBtn} aria-label="إغلاق" onClick={close}>
-              <X size={17} />
-            </button>
-          </div>
-          <iframe
-            ref={frameRef}
-            src={video.src}
-            title={video.title}
-            className="flex-1 w-full border-0 bg-[#eef2f8]"
-          />
-        </div>
+        {bar}
+        <Frame key="floating" frameRef={frameRef} src={video.src} start={timeRef.current} title={video.title} className="w-full flex-1" />
       </div>
     </>,
     document.body,

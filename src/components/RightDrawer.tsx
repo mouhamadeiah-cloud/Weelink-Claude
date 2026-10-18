@@ -94,8 +94,8 @@ import { LottieGallery, LottieSettings } from './rightDrawer/LottiePicker';
 import { textEffectById } from '../utils/textEffects';
 import { elementDisplayName } from '../utils/elementLabels';
 import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
-import { IntroVideo, introVideoFor, introVideoSeen, markIntroVideoSeen } from './introVideos/introVideos';
-import { IntroVideoPlayer } from './introVideos/IntroVideoPlayer';
+import { IntroVideo, introVideoFor } from './introVideos/introVideos';
+import { IntroVideoPlayer, IntroVideoMode } from './introVideos/IntroVideoPlayer';
 import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
 import { GalleryPicker, type AddPageOptions } from './rightDrawer/GalleryPicker';
@@ -1078,18 +1078,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     openByKind[inspectorKind] ?? (groups[0]?.id === 'content' && groups[1] ? [groups[0].id, groups[1].id] : groups.slice(0, 1).map((g) => g.id));
   const setOpenGroups = (next: InspectorGroupId[]) => setOpenByKind((prev) => ({ ...prev, [inspectorKind]: next }));
   const [flashGroup, setFlashGroup] = useState<InspectorGroupId | null>(null);
-  // The explainer animation playing over the editor, if any.
+  // The explainer animation of the group last opened, at the top of the panel (or floating).
   const [introVideo, setIntroVideo] = useState<IntroVideo | null>(null);
+  const [introVideoMode, setIntroVideoMode] = useState<IntroVideoMode>('docked');
+  // Where it was, so a new selection (which redraws the cards) carries on from the same second.
+  const introVideoTime = useRef(0);
+  // Every time a group with a video is opened, its video is there, playing.
   const openIntroVideo = (g: InspectorGroupId) => {
     const v = introVideoFor(g);
     if (!v) return;
-    markIntroVideoSeen(v.id);
     setIntroVideo(v);
-  };
-  // The first time a group with a video is opened, the video opens by itself (once its card is in place).
-  const autoIntroVideo = (g: InspectorGroupId) => {
-    const v = introVideoFor(g);
-    if (v && !introVideoSeen(v.id)) window.setTimeout(() => openIntroVideo(g), 500);
+    setIntroVideoMode((m) => (m === 'floating' || m === 'big' ? m : 'docked'));
   };
   const toolScrollRef = useRef<HTMLDivElement>(null);
   const spyPausedUntil = useRef(0);
@@ -1114,7 +1113,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     if (!openGroups.includes(g)) setOpenGroups([...openGroups, g]);
     onInspectorGroupChange?.(g);
     setFlashGroup(g);
-    autoIntroVideo(g);
     // The column keeps the picked group lit while the panel scrolls to it.
     spyPausedUntil.current = Date.now() + 900;
     // A shortcut picked under the group: that part of the card (the font's two halves open their own).
@@ -1122,10 +1120,13 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     if (shortcut === 'font-family') setTextSubSection('family');
     if (shortcut === 'font-size') setTextSubSection('size');
     const part = shortcut && shortcut !== 'font-family' && shortcut !== 'font-size' ? shortcut : null;
+    // The whole group picked: its explainer opens just above its card, and comes into view with it.
+    if (!part) openIntroVideo(g);
     const scrollToCard = () => {
       const box = toolScrollRef.current;
       const card = box?.querySelector<HTMLElement>(`[data-inspector-group="${g}"]`);
-      const target = (part && card?.querySelector<HTMLElement>(`[data-inspector-section="${part}"]`)) || card;
+      const video = !part && box?.querySelector<HTMLElement>(`[data-intro-for="${g}"]`);
+      const target = (part && card?.querySelector<HTMLElement>(`[data-inspector-section="${part}"]`)) || video || card;
       if (!box || !target) return;
       const top = target.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
       box.scrollTo({ top: Math.max(0, top - 10), behavior: 'smooth' });
@@ -1360,6 +1361,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           const open = openGroups.includes(g.id);
           const many = g.sections.length > 1;
           return (
+            <React.Fragment key={g.id}>
+            {introVideo?.id === g.id && (
+              <div data-intro-for={g.id}>
+                <IntroVideoPlayer video={introVideo} mode={introVideoMode} onModeChange={setIntroVideoMode} timeRef={introVideoTime} />
+              </div>
+            )}
             <InspectorCard
               key={g.id}
               id={g.id}
@@ -1368,13 +1375,16 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               title={g.title}
               summary={inspectorSummary(g.id)}
               help={inspectorHelp(g.id, inspectorTarget)}
-              video={introVideoFor(g.id) ? { dock: g.id, playing: introVideo?.id === g.id, onOpen: () => openIntroVideo(g.id) } : undefined}
+              video={introVideoFor(g.id) ? { playing: introVideo?.id === g.id && introVideoMode !== 'mini', onOpen: () => {
+                openIntroVideo(g.id);
+                window.setTimeout(() => toolScrollRef.current?.querySelector(`[data-intro-for="${g.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+              } } : undefined}
               open={open}
               flash={flashGroup === g.id}
               onToggle={() => {
                 setOpenGroups(open ? openGroups.filter((x) => x !== g.id) : [...openGroups, g.id]);
                 if (!open) onInspectorGroupChange?.(g.id);
-                if (!open) autoIntroVideo(g.id);
+                if (!open) openIntroVideo(g.id);
               }}
             >
               {g.id === 'content' && renderContentExtras()}
@@ -1410,6 +1420,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 )
               )}
             </InspectorCard>
+            </React.Fragment>
           );
         })}
       </div>
@@ -5981,14 +5992,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         {activeTab === 'tool' && (
           <div ref={toolScrollRef} onScroll={handleInspectorScroll} className="relative flex-1 overflow-y-auto p-3.5 space-y-4 bg-white text-right">
             {activeSection === 'inspector' ? renderInspector() : renderSection(activeSection)}
-            {introVideo && (
-              <IntroVideoPlayer
-                key={introVideo.id}
-                video={introVideo}
-                dockSelector={`[data-intro-dock="${introVideo.id}"]`}
-                onClosed={() => setIntroVideo(null)}
-              />
-            )}
 
           </div>
         )}

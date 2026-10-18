@@ -16,8 +16,8 @@ interface InspectorCardProps {
   flash?: boolean;
   // A short explanation, shown by the «؟» button.
   help?: string;
-  // An explainer animation for this group: a small «شرح» button it opens out of and folds back into.
-  video?: { dock: string; playing: boolean; onOpen: () => void };
+  // An explainer animation for this group: a small «شرح» button that brings it up at the top of the panel.
+  video?: { playing: boolean; onOpen: () => void };
   children: React.ReactNode;
 }
 
@@ -72,7 +72,6 @@ export const InspectorCard: React.FC<InspectorCardProps> = ({ id, icon, title, s
       {video && (
         <button
           type="button"
-          data-intro-dock={video.dock}
           onClick={video.onOpen}
           aria-label="فيديو الشرح"
           title="فيديو الشرح"

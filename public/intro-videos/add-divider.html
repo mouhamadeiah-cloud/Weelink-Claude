@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<title>الإضافة: الخط الفاصل</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Lalezar&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#eef2f8}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;font-family:'IBM Plex Sans Arabic',sans-serif;color:#0b1220}
+.bg{position:absolute;inset:0;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
+#b1{width:620px;height:620px;background:#cfe3ff;left:-120px;top:-160px}
+#b2{width:520px;height:520px;background:#e6dcff;right:-100px;bottom:-140px}
+#b3{width:380px;height:380px;background:#d9f3ea;right:420px;top:-120px}
+.grid{position:absolute;inset:0;background-image:radial-gradient(#c9d3e3 1.2px,transparent 1.2px);background-size:34px 34px;opacity:.5}
+
+/* intro */
+#intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#t1{font-family:'Lalezar','IBM Plex Sans Arabic',sans-serif;font-size:150px;font-weight:400;line-height:1.05;color:#0b1220}
+#t2{font-size:38px;font-weight:500;color:#4a5568;margin-top:18px}
+#t2 b{color:#1d5bd8;font-weight:600}
+
+/* window */
+#win{position:absolute;left:160px;top:110px;width:1600px;height:880px;background:#f6f7fa;border-radius:22px;
+  box-shadow:0 40px 90px -20px rgba(20,40,80,.35),0 0 0 1px rgba(10,20,40,.06);overflow:hidden;direction:rtl;transform-origin:50% 50%}
+#top{height:58px;background:#fff;border-bottom:1px solid #e7e9ef;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+.logo{direction:ltr;font-family:'Plus Jakarta Sans','IBM Plex Sans Arabic',sans-serif;font-weight:800;font-size:22px;display:flex;align-items:center;gap:8px}
+.logo i{width:30px;height:30px;border-radius:9px;background:#1d5bd8;color:#fff;font-style:normal;font-size:16px;display:grid;place-items:center}
+.crumb{font-size:16px;font-weight:600;color:#1f2937}
+#body{display:flex;height:822px}
+#panel{width:420px;background:#fff;border-left:1px solid #e7e9ef;position:relative;overflow:hidden}
+#col{width:92px;background:#fff;border-left:1px solid #eef0f4;display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:6px}
+.ci{width:74px;padding:10px 0 8px;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#4b5563}
+.ci svg{width:24px;height:24px;stroke:#4b5563;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ci.on{background:#e8f1ff;color:#1d5bd8}
+.ci.on svg{stroke:#1d5bd8}
+#canvas{flex:1;position:relative;overflow:hidden}
+
+/* cursor */
+#cur{position:absolute;left:0;top:0;width:34px;height:40px;z-index:50;pointer-events:none}
+#ring{position:absolute;width:60px;height:60px;border-radius:50%;border:3px solid #1d5bd8;z-index:49;opacity:0}
+
+/* overlays */
+#cap{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);direction:rtl;display:flex;align-items:center;gap:16px;background:#0b1220;color:#fff;
+  font-size:30px;font-weight:600;padding:16px 34px 16px 22px;border-radius:24px;box-shadow:0 20px 40px -12px rgba(11,18,32,.5);white-space:nowrap;opacity:0}
+#cap .n{width:44px;height:44px;border-radius:14px;background:#1d5bd8;display:grid;place-items:center;font-size:24px;font-weight:700}
+#chap{position:absolute;right:60px;top:34px;direction:rtl;display:flex;align-items:center;gap:12px;opacity:0}
+#chap .dots{display:flex;gap:6px}
+#chap .dots i{width:30px;height:6px;border-radius:4px;background:#cdd5e2;display:block}
+#chap .dots i.on{background:#1d5bd8}
+#chap span{font-size:22px;font-weight:700;color:#0b1220}
+
+#pempty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#9aa3b2;font-size:17px}
+#pempty .ico{width:64px;height:64px;border-radius:18px;background:#f1f4f9;display:grid;place-items:center}
+#padd{position:absolute;inset:0;padding:18px 20px;opacity:0;background:#fff}
+.phead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.phead h2{font-size:20px;font-weight:700}
+.tabs{display:flex;background:#f1f3f7;border-radius:14px;padding:4px;gap:4px}
+.tabs div{flex:1;text-align:center;font-size:14px;font-weight:700;color:#6b7280;padding:9px 0;border-radius:10px}
+.tabs div.on{color:#1d5bd8;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.gt{font-size:14px;font-weight:700;color:#9aa3b2;padding:0 4px;margin:16px 0 6px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{height:70px;background:#fff;border:1px solid #e3e6ec;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:600;color:#1f2937}
+.tile i{width:34px;height:34px;border-radius:10px;background:#f1f3f7;display:grid;place-items:center}
+.tile svg{width:20px;height:20px;stroke:#374151;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tile.hot{border-color:#1d5bd8;color:#1d5bd8}
+.tile.hot i{background:#e8f1ff}
+.tile.hot svg{stroke:#1d5bd8}
+#vCat{position:absolute;inset:0;background:#fff;overflow:hidden;opacity:0}
+#cin{position:absolute;left:0;right:0;top:0;padding:18px 20px 40px}
+.vh{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid #eef0f4;margin-bottom:14px}
+.vh h3{font-size:18px;font-weight:700;display:flex;align-items:center;gap:6px}
+.vh h3 svg{width:18px;height:18px;stroke:#1d5bd8;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#1d5bd8;background:#e8f1ff;padding:7px 14px;border-radius:10px}
+.pills{display:flex;align-items:center;gap:6px;border:2px solid #d6dae2;border-radius:40px;padding:4px;margin-bottom:14px;overflow:hidden}
+.pills .arr{width:28px;height:28px;border-radius:50%;background:#f1f3f7;display:grid;place-items:center;flex-shrink:0;font-size:15px;color:#374151;order:9}
+.pills .pl{display:flex;gap:4px;flex:1;overflow:hidden}
+.pills .p{flex-shrink:0;font-size:13px;font-weight:600;color:#4b5563;padding:6px 13px;border-radius:30px;white-space:nowrap}
+.pills .p.on{background:#1d5bd8;color:#fff;font-weight:700}
+.tsets{position:relative}
+.tset{position:absolute;left:0;right:0;top:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;opacity:0}
+.tc{min-width:0;background:#fff;border:2px solid #e3e6ec;border-radius:16px;padding:9px}
+.tc .pv{height:72px;background:#f7f8fa;border:1px solid #e3e6ec;border-radius:12px;display:grid;place-items:center;overflow:hidden;position:relative}
+.tc h4{font-size:12.5px;font-weight:700;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc p{font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc .ft{margin-top:7px;padding-top:6px;border-top:1px solid #eef0f4;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#9aa3b2}
+.tc .ft b{font-size:11px;color:#1d5bd8;background:#e8f1ff;border-radius:6px;padding:2px 8px}
+.tc.hot{border-color:#1d5bd8;box-shadow:0 6px 16px rgba(29,91,216,.14)}
+.tc.hot h4{color:#1d5bd8}
+.tc.hot .ft b{background:#1d5bd8;color:#fff}
+.slide{position:absolute;left:50%;top:80px;margin-left:-480px;width:960px;height:660px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.el{position:absolute;opacity:0;z-index:5}
+.selbox{position:absolute;inset:-8px -10px;border:2px solid #1d5bd8;border-radius:6px;opacity:0;pointer-events:none}
+.selbox i{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #1d5bd8;border-radius:3px}
+#cmp{display:flex;align-items:center;gap:90px;margin-bottom:56px}
+.oc{position:relative}
+.oc .tag{position:absolute;top:-52px;left:50%;transform:translateX(-50%);font-size:24px;font-weight:700;color:#6b7280}
+.mini{width:480px;height:330px;border-radius:6px;overflow:hidden;position:relative;box-shadow:0 20px 40px -16px rgba(20,40,80,.3)}
+.mini .slide{left:0;top:0;margin:0;transform:scale(.5);transform-origin:0 0}
+.mini .el{opacity:1!important;transform:none!important}
+#arrow svg{width:90px;height:40px}
+#outro{position:absolute;inset:0;direction:rtl;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0}
+#o1{font-size:52px;font-weight:700}
+#o2{font-size:28px;color:#4a5568;margin-top:14px}
+#o3{margin-top:44px;display:flex;align-items:center;gap:14px;direction:ltr}
+#o3 span{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:34px;background:linear-gradient(90deg,#7c3aed,#2563eb);-webkit-background-clip:text;background-clip:text;color:transparent}
+#shapes{position:relative;width:330px;height:150px;margin-bottom:34px}
+.sh{position:absolute;bottom:0;width:92px;height:92px;border-radius:24px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:44px}
+.sh svg{width:46px;height:46px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#s1{background:#1d5bd8;left:0}
+#s2{background:#7c5cff;left:119px}
+#s3{background:#12b886;left:238px}
+.lw-title{position:absolute;top:96px;right:90px;font-size:50px;font-weight:700;color:#14213d}
+.lw-mark{top:176px;right:96px;color:#c9a227;font-size:24px;letter-spacing:1px;white-space:nowrap}
+.lw-sub{position:absolute;top:222px;right:90px;font-size:22px;color:#5b6475}
+.lw-line{top:304px;right:90px;width:420px;height:5px;border-radius:3px;background:linear-gradient(90deg,#1e3a8a,#c9a227)}
+.lw-line .selbox{inset:-10px -10px}
+.lw-h{position:absolute;top:350px;right:90px;font-size:30px;font-weight:700;color:#14213d}
+.lw-cards{position:absolute;top:418px;right:90px;left:90px;display:flex;gap:20px}
+.lw-cards div{flex:1;background:#fff;border-radius:14px;padding:26px 22px;box-shadow:0 8px 24px -14px rgba(20,33,61,.4);border-top:4px solid #c9a227}
+.lw-cards b{display:block;font-size:22px;color:#14213d}
+.lw-cards span{display:block;font-size:16px;color:#7a8394;margin-top:6px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="iText" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
+  <symbol id="iImg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="iBtn" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="5"/></symbol>
+  <symbol id="iStar" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z"/></symbol>
+  <symbol id="iShapes" viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="3.5"/><rect x="13" y="12" width="7" height="7" rx="1.5"/><path d="M12 3l4 6H8z"/></symbol>
+  <symbol id="iLine" viewBox="0 0 24 24"><path d="M4 12h16"/></symbol>
+  <symbol id="iVid" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></symbol>
+  <symbol id="iAnim" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4l-2 5M14 4l-2 5M20 4l-2 5"/></symbol>
+  <symbol id="iGal" viewBox="0 0 24 24"><rect x="7" y="3" width="14" height="14" rx="2"/><path d="M3 7v12a2 2 0 002 2h12"/></symbol>
+  <symbol id="iPin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+  <symbol id="iCal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="iTag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></symbol>
+  <symbol id="iSheet" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></symbol>
+  <symbol id="iCards" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+  <symbol id="iCode" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></symbol>
+  <symbol id="iPlus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="iSlide" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h7M7 14h4"/></symbol>
+  <symbol id="iPage" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
+  <symbol id="iPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
+  <symbol id="iWave" viewBox="0 0 24 24"><path d="M2 12c2.5-4 5-4 7.5 0s5 4 7.5 0 3.5-3 5-1"/></symbol>
+  <symbol id="iSpark" viewBox="0 0 24 24"><path d="M12 3l1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8z"/></symbol>
+  <symbol id="iPhone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+
+</svg>
+<div id="stage">
+<div class="bg"><div class="grid"></div><div class="blob" id="b1"></div><div class="blob" id="b2"></div><div class="blob" id="b3"></div></div>
+
+<div id="intro">
+  <div id="shapes"><div class="sh" id="s1"><svg><use href="#iLine"/></svg></div><div class="sh" id="s2"><svg><use href="#iSpark"/></svg></div><div class="sh" id="s3"><svg><use href="#iWave"/></svg></div></div>
+  <div id="t1">الخط الفاصل</div>
+  <div id="t2"><b>خطوط</b> و<b>علامات</b> بترتّب أقسام صفحتك</div>
+</div>
+
+<div id="win">
+  <div id="top">
+    <div class="crumb">صفحتي<span style="color:#9aa3b2;margin:0 8px">›</span>الرئيسية</div>
+    <div class="logo">weelink<i>w</i></div>
+  </div>
+  <div id="body">
+    <div id="panel">
+      <div id="pempty"><div class="ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#9aa3b2" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>اضغط «إضافة» لتضيف لصفحتك</div>
+      <div id="padd">
+        <div class="phead"><h2>إضافة</h2></div>
+        <div class="tabs"><div class="on">إضافة عنصر</div><div>إضافة شريحة</div><div>إضافة صفحة</div></div>
+        <div class="gt">أساسي</div>
+        <div class="tiles"><div class="tile"><i><svg><use href="#iText"/></svg></i>نص</div><div class="tile"><i><svg><use href="#iImg"/></svg></i>صورة</div><div class="tile"><i><svg><use href="#iBtn"/></svg></i>زر</div><div class="tile"><i><svg><use href="#iStar"/></svg></i>أيقونة</div><div class="tile"><i><svg><use href="#iShapes"/></svg></i>أشكال</div><div class="tile" id="tCat"><i><svg><use href="#iLine"/></svg></i>خط فاصل</div></div>
+        <div class="gt">وسائط</div>
+        <div class="tiles"><div class="tile"><i><svg><use href="#iVid"/></svg></i>فيديو</div><div class="tile"><i><svg><use href="#iAnim"/></svg></i>رسوم متحركة</div><div class="tile"><i><svg><use href="#iGal"/></svg></i>معرض صور</div><div class="tile"><i><svg><use href="#iPin"/></svg></i>خريطة</div></div>
+      </div>
+      <div id="vCat"><div id="cin">
+        <div class="vh"><div class="back">› رجوع للعناصر</div><h3><svg><use href="#iLine"/></svg>إضافة خط فاصل</h3></div>
+        <div class="pills"><div class="pl"><div class="p">الكل</div><div class="p">خطوط</div><div class="p">علامات</div></div><div class="arr">‹</div></div>
+        
+        <div class="tsets" style="height:640px"><div class="tset" id="sAll"><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 10H115" stroke="#6b7280" stroke-width="4" stroke-dasharray="1 9" stroke-linecap="round"/></svg></div><h4>خط منقط هندسي ⚪</h4><p>خط تزييني منقط ناعم</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 10H115" stroke="#6b7280" stroke-width="3" stroke-dasharray="12 7"/></svg></div><h4>خط متقطع متوازن ➖</h4><p>للفصل والتقسيم</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 10H115" stroke="#22d3ee" stroke-width="3" style="filter:drop-shadow(0 0 4px #22d3ee)"/></svg></div><h4>خط نيون مضيء ✨</h4><p>خط متوهج للتصميم العصري</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 16Q60 -4 115 16" stroke="#6b7280" stroke-width="3" fill="none"/></svg></div><h4>خط مقوس للأعلى ⌒</h4><p>قوس ناعم لتأطير المحتوى</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 10q7-8 14 0t14 0 14 0 14 0 14 0 14 0 14 0 14 0" stroke="#6b7280" stroke-width="3" fill="none"/></svg></div><h4>خط متموج انسيابي 〰️</h4><p>تموج ناعم للفصل</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 7H115M5 13H115" stroke="#6b7280" stroke-width="2.5"/></svg></div><h4>خط مزدوج متوازي ═</h4><p>لإبراز العناوين والأقسام</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div></div><div class="tset" id="sLines"><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 10H115" stroke="#6b7280" stroke-width="4" stroke-dasharray="1 9" stroke-linecap="round"/></svg></div><h4>خط منقط هندسي ⚪</h4><p>خط تزييني منقط ناعم</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 10H115" stroke="#6b7280" stroke-width="3" stroke-dasharray="12 7"/></svg></div><h4>خط متقطع متوازن ➖</h4><p>للفصل والتقسيم</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 10H115" stroke="#22d3ee" stroke-width="3" style="filter:drop-shadow(0 0 4px #22d3ee)"/></svg></div><h4>خط نيون مضيء ✨</h4><p>خط متوهج للتصميم العصري</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 16Q60 -4 115 16" stroke="#6b7280" stroke-width="3" fill="none"/></svg></div><h4>خط مقوس للأعلى ⌒</h4><p>قوس ناعم لتأطير المحتوى</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 10q7-8 14 0t14 0 14 0 14 0 14 0 14 0 14 0 14 0" stroke="#6b7280" stroke-width="3" fill="none"/></svg></div><h4>خط متموج انسيابي 〰️</h4><p>تموج ناعم للفصل</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><path d="M5 7H115M5 13H115" stroke="#6b7280" stroke-width="2.5"/></svg></div><h4>خط مزدوج متوازي ═</h4><p>لإبراز العناوين والأقسام</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc" id="cGrad"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><defs><linearGradient id="pg" x1="0" x2="1"><stop offset="0" stop-color="#c9a227"/><stop offset="1" stop-color="#1e3a8a"/></linearGradient></defs><rect x="5" y="8" width="110" height="4" rx="2" fill="url(#pg)"/></svg></div><h4>خط متدرج لوني فخم 🌈</h4><p>تدرج لوني انسيابي ومشرق</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><svg width="120" height="20" viewBox="0 0 120 20"><rect x="5" y="11" width="110" height="4" rx="2" fill="#d1d5db"/><rect x="5" y="7" width="110" height="4" rx="2" fill="#4b5563"/></svg></div><h4>خط ثلاثي الأبعاد بظل 🧱</h4><p>ببروز واقعي وظل خلفي</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div></div><div class="tset" id="sMarks"><div class="tc"><div class="pv"><span style="color:#c9a227;font-size:20px;letter-spacing:6px">✦★✦</span></div><h4>فاصل النجوم الثلاثة ✨★✨</h4><p>فاصل أنيق بين فقرات الشرح</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc" id="cDia"><div class="pv"><span style="color:#c9a227;font-size:18px">✦──────✦</span></div><h4>فاصل المعين المذهب ✦──✦</h4><p>فاصل فاخر بين الأقسام</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><span style="color:#6b7280;font-size:22px">〰〰〰</span></div><h4>فاصل متموج 〰️〰️〰️</h4><p>فاصل ناعم ومرح</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div><div class="tc"><div class="pv"><span style="color:#6b7280;font-size:12px;letter-spacing:8px">⚫⚫⚫</span></div><h4>فاصل النقاط الثلاث ⚫⚫⚫</h4><p>فاصل بسيط محايد للفقرات</p><div class="ft"><b>إضافة +</b><span>✦</span></div></div></div></div>
+      </div></div>
+    </div>
+    <div id="col">
+      <div class="ci" id="cAdd"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>إضافة</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg>المحتوى</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 1.6-1 1.1-1.9-.6-1 .1-2.1 1.2-2.1H17a4 4 0 004-4c0-5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>الألوان</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="3.5"/><rect x="13" y="12" width="7" height="7" rx="1.5"/><path d="M12 3l4 6H8z"/></svg>الشكل</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>المكان</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M5 12h3l3-7 3 14 3-7h2"/></svg>الحركة</div>
+    </div>
+    <div id="canvas">
+      <div class="slide" id="sl" style="background:linear-gradient(160deg,#fbfaf6,#f1ede4)"><div class="lw-title">مكتب العدالة للمحاماة</div>
+<div class="el lw-mark" id="eM">✦──────✦<div class="selbox"><i style="top:-7px;right:-7px"></i><i style="top:-7px;left:-7px"></i><i style="bottom:-7px;right:-7px"></i><i style="bottom:-7px;left:-7px"></i></div></div>
+<div class="lw-sub">استشارات قانونية للشركات والأفراد، بكل سرية</div>
+<div class="el lw-line" id="eL"><div class="selbox"><i style="top:-7px;right:-7px"></i><i style="top:-7px;left:-7px" id="hL"></i><i style="bottom:-7px;right:-7px"></i><i style="bottom:-7px;left:-7px"></i></div></div>
+<div class="lw-h">خدماتنا</div>
+<div class="lw-cards"><div><b>عقود تجارية</b><span>صياغة ومراجعة</span></div><div><b>قضايا عمل</b><span>حقوق الموظف والشركة</span></div><div><b>تأسيس شركات</b><span>من الفكرة للسجل</span></div></div>
+</div>
+    </div>
+  </div>
+  <div id="ring"></div>
+  <svg id="cur" viewBox="0 0 34 40"><path d="M4 3l24 14-10.5 2.5L23 31l-4.6 2.2-5.6-11.6L5 29z" fill="#0b1220" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>
+</div>
+
+<div id="chap"><div class="dots"><i id="d1"></i><i id="d2"></i><i id="d3"></i></div><span id="chapt"></span></div>
+<div id="cap"><div class="n" id="capn">1</div><div id="capt"></div></div>
+
+<div id="outro">
+  <div id="cmp">
+    <div class="oc"><div class="tag">قبل</div><div class="mini" id="m1"></div></div>
+    <div id="arrow"><svg viewBox="0 0 90 40"><path d="M84 20H10M24 6L8 20l16 14" fill="none" stroke="#1d5bd8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="oc"><div class="tag" style="color:#1d5bd8">بعد</div><div class="mini" id="m2"></div></div>
+  </div>
+  <div id="o1">خط صغير، بيرتّب كل الشريحة</div>
+  <div id="o2">وبعدها غيّر لونه وسماكته من اللوحة</div>
+  <div id="o3"><svg viewBox="0 0 48 48" width="64" height="64" style="overflow:visible"><defs><radialGradient id="wg" cx=".5" cy=".5" r=".75" fx=".35" fy=".3"><stop offset="0" stop-color="#d8ccff"/><stop offset=".5" stop-color="#7c3aed"/><stop offset="1" stop-color="#2563eb"/></radialGradient></defs><circle class="wd" r="6.5" fill="url(#wg)"/><circle class="wd" r="6.5" fill="url(#wg)"/><circle class="wd" r="6.5" fill="url(#wg)"/></svg><span>Wee AI</span></div>
+</div>
+
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const easeOut=x=>1-Math.pow(1-clamp(x),3);
+const back=x=>{x=clamp(x);const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const lerp=(a,b,k)=>a+(b-a)*k;
+const seg=(t,t0,t1,f=ease)=>f((t-t0)/(t1-t0));
+const pulse=(t,a,b)=>Math.min(seg(t,a,a+.35),1-seg(t,b-.35,b));
+const M={pLines:'.pills .p:nth-child(2)',pMarks:'.pills .p:nth-child(3)',cGrad:'#cGrad',cDia:'#cDia',eL:'#eL',eM:'#eM'};
+const T={add:8.7,cat:10.5,pLines:12.6,grad:15.4,ld:[16.6,18.2],rs:[19.4,21],pMarks:23.4,dia:27,md:[28.2,29.6]};
+const CLICKS=[T.add,T.cat,T.pLines,T.grad,T.pMarks,T.dia];
+const DRAGS=[T.ld,T.rs,T.md];
+const OUT=34.4;
+const LOFF={x:-160,y:170},MOFF={x:-280,y:190};
+const CAPS=[
+  [7.4,11.2,1,'من «إضافة»، اضغط «خط فاصل»'],
+  [11.4,15,2,'الخطوط: منقّط، متموج، نيون ومتدرّج'],
+  [15.2,18.6,2,'اختار خط، واسحبه بين القسمين'],
+  [18.8,22.4,3,'ومدّه من طرفه لعرض الشريحة'],
+  [22.8,26.6,4,'العلامات: فواصل مزخرفة بين الفقرات'],
+  [26.8,32.6,5,'حطّ علامة تحت العنوان لتفصله عن الوصف'],
+];
+const CHAPS=[[11.2,22.6,1,'الخطوط'],[22.6,33,2,'العلامات']];
+const lineW=t=>kf(t,[[T.rs[0],420],[T.rs[1],780]]);
+const lOff=t=>dragOff(t,T.ld[0],T.ld[1],LOFF), mOff=t=>dragOff(t,T.md[0],T.md[1],MOFF);
+function WAY(){const t=TT;return[
+  [0,{x:1300,y:760}],[7.6,{x:1300,y:760}],[T.add-.1,pt('cAdd')],
+  [9.6,pt('cAdd')],[T.cat-.1,pt('tCat')],
+  [11.6,pt('tCat')],[T.pLines-.1,pt('pLines')],
+  [14.4,pt('pLines')],[T.grad-.1,pt('cGrad')],
+  [16,pt('cGrad')],[16.5,()=>{const o=lOff(t);return{x:P.eL.x+P.eL.w-40+o.x,y:P.eL.cy+o.y}}],[T.ld[1]+.1,()=>{const o=lOff(t);return{x:P.eL.x+P.eL.w-40+o.x,y:P.eL.cy+o.y}}],
+  [T.rs[0]-.1,()=>({x:P.eL.x+P.eL.w-420,y:P.eL.cy})],[T.rs[1]+.1,()=>({x:P.eL.x+P.eL.w-lineW(t),y:P.eL.cy})],
+  [22.4,()=>({x:P.eL.x+P.eL.w-780,y:P.eL.cy})],[T.pMarks-.1,pt('pMarks')],
+  [25.8,pt('pMarks')],[T.dia-.1,pt('cDia')],
+  [27.6,pt('cDia')],[28.1,()=>{const o=mOff(t);return{x:P.eM.cx+o.x,y:P.eM.cy+o.y}}],[T.md[1]+.1,()=>{const o=mOff(t);return{x:P.eM.cx+o.x,y:P.eM.cy+o.y}}],
+  [31.6,()=>({x:P.eM.cx-40,y:P.eM.cy+40})],[OUT-1.6,{x:1300,y:780}]
+]}
+function scene(t){
+  pills([[0,0],[T.pLines,1],[T.pMarks,2]]);
+  tset('#sAll',t,0,T.pLines);tset('#sLines',t,T.pLines,T.pMarks);tset('#sMarks',t,T.pMarks);
+  $('#cGrad').classList.toggle('hot',t>=T.grad-.6&&t<T.grad+.5);
+  $('#cDia').classList.toggle('hot',t>=T.dia-.6&&t<T.dia+.5);
+  pop('#eL',t,T.grad,lOff(t),'100% 50%');$('#eL').style.width=lineW(t)+'px';
+  selOn('#eL',t>=T.grad+.4&&t<T.pMarks);
+  pop('#eM',t,T.dia,mOff(t));selOn('#eM',t>=T.dia+.4&&t<OUT-1.4);
+}
+function afterMini(s){s.querySelector('.lw-line').style.width='780px'}
+
+// Positions inside the window, measured with nothing moved and every view shown.
+const W=$('#win'),P={};
+function measure(){
+  const els=[...document.querySelectorAll('#win, #vCat, #cin, #padd, .el, .tset, .msr')];
+  const saved=els.map(e=>[e,e.style.transform,e.style.opacity]);
+  els.forEach(e=>{e.style.transform='none';e.style.opacity=1});
+  const wr=W.getBoundingClientRect();const k=wr.width/1600;
+  const ids=Object.assign({cAdd:'#cAdd',tCat:'#tCat'},M);
+  for(const key in ids){const r=$(ids[key]).getBoundingClientRect();const x=(r.left-wr.left)/k,y=(r.top-wr.top)/k,w=r.width/k,h=r.height/k;P[key]={x,y,w,h,cx:x+w/2,cy:y+h/2}}
+  saved.forEach(([e,tr,op])=>{e.style.transform=tr;e.style.opacity=op});
+}
+const scrollOf=t=>typeof panelScroll==='function'?panelScroll(t):0;
+const pt=(key,dx=0,dy=0)=>()=>({x:P[key].cx+dx,y:P[key].cy+dy});
+const ps=(key,dx=0,dy=0)=>()=>({x:P[key].cx+dx,y:P[key].cy+dy-scrollOf(TT)});
+let TT=0;
+function curPos(t){
+  const W_=WAY();const v=w=>typeof w==='function'?w():w;
+  for(let i=1;i<W_.length;i++){const[a,pa]=W_[i-1],[b,pb]=W_[i];if(t<=b){const k=ease((t-a)/(b-a));const A=v(pa),B=v(pb);return{x:lerp(A.x,B.x,k),y:lerp(A.y,B.y,k)}}}
+  return v(W_[W_.length-1][1]);
+}
+// An element pops in where it is added and can be dragged by an offset.
+function pop(sel,t,born,off={x:0,y:0},origin='50% 50%'){
+  const el=$(sel);const k=back(seg(t,born+.1,born+.6,x=>x));
+  el.style.opacity=clamp((t-born-.1)*5);
+  el.style.transformOrigin=origin;
+  el.style.transform=`translate(${off.x}px,${off.y}px) scale(${t<born+.1?.5:.5+k*.5})`;
+}
+const selOn=(sel,on)=>{const s=$(sel+' .selbox');if(s)s.style.opacity=on?1:0};
+const dragOff=(t,a,b,o)=>{const k=seg(t,a,b);return{x:o.x*(1-k),y:o.y*(1-k)}};
+// A set of cards that cross-fades in when its pill is picked.
+function tset(sel,t,a,b){const k=Math.min(a<=0?1:seg(t,a,a+.35),b===undefined?1:1-seg(t,b,b+.25));const e=$(sel);e.style.opacity=k;e.style.transform=`translateY(${(1-k)*10}px)`;e.style.visibility=k>0?'visible':'hidden'}
+function pills(states){const ps=[...document.querySelectorAll('.pills .p')];let on=0;for(const[tt,i]of states)if(TT>=tt)on=i;ps.forEach((p,i)=>p.classList.toggle('on',i===on))}
+
+let measured=false;
+function render(t){
+  TT=t;
+  if(!measured){measure();measured=true}
+  $('#b1').style.transform=`translate(${Math.sin(t*.3)*40}px,${Math.cos(t*.25)*30}px)`;
+  $('#b2').style.transform=`translate(${Math.cos(t*.22)*50}px,${Math.sin(t*.3)*30}px)`;
+  $('#b3').style.transform=`translate(${Math.sin(t*.18)*60}px,${Math.cos(t*.3)*20}px)`;
+
+  // intro
+  $('#intro').style.opacity=1-seg(t,5.2,6.2);
+  $('#intro').style.transform=`translateY(${-seg(t,5.2,6.2)*80}px)`;
+  [['#s1',.3],['#s2',.55],['#s3',.8]].forEach(([id,d],i)=>{
+    const k=back(seg(t,d,d+.7,x=>x));const fl=Math.sin(t*2+i)*4*clamp(t-1.6);
+    $(id).style.transform=`translateY(${(1-k)*-260+fl}px) rotate(${(1-k)*(i-1)*40}deg)`;$(id).style.opacity=clamp((t-d)*4);
+  });
+  $('#t1').style.opacity=seg(t,1.2,1.9);$('#t1').style.transform=`translateY(${(1-seg(t,1.2,1.9))*30}px)`;
+  $('#t2').style.opacity=seg(t,2,2.7);$('#t2').style.transform=`translateY(${(1-seg(t,2,2.7))*20}px)`;
+
+  // window
+  const wi=seg(t,5.6,6.9), wo=seg(t,OUT-1,OUT);
+  W.style.opacity=wi*(1-wo);
+  W.style.transform=`translateY(${(1-wi)*160+wo*-40}px) scale(${(0.92+wi*.08)*(1-wo*.06)})`;
+
+  // panel: «إضافة», then the category's own view
+  $('#cAdd').classList.toggle('on',t>=T.add+.1);
+  $('#pempty').style.opacity=1-seg(t,T.add+.1,T.add+.4);
+  $('#padd').style.opacity=seg(t,T.add+.1,T.add+.5);
+  $('#tCat').classList.toggle('hot',t>=T.cat-.5&&t<T.cat+.4);
+  const vk=seg(t,T.cat+.1,T.cat+.5);
+  $('#vCat').style.opacity=vk;$('#vCat').style.transform=`translateX(${(1-vk)*-30}px)`;
+  $('#cin').style.transform=`translateY(${-scrollOf(t)}px)`;
+
+  scene(t);
+
+  // cursor
+  const c=curPos(t);const cur=$('#cur');
+  const dragging=DRAGS.some(([a,b])=>t>=a&&t<=b);
+  const clickK=CLICKS.reduce((m,ct)=>Math.max(m,t>=ct&&t<ct+.2?Math.sin((t-ct)/.2*Math.PI):0),0);
+  cur.style.transform=`translate(${c.x-4}px,${c.y-3}px) scale(${1-clickK*.15-(dragging?.1:0)})`;
+  cur.style.opacity=t<6.6||t>OUT-1.4?0:1;
+  const lastClick=CLICKS.filter(ct=>t>=ct&&t<ct+.6).pop();
+  const ring=$('#ring');
+  if(lastClick!==undefined){const k=(t-lastClick)/.6;ring.style.opacity=(1-k)*.9;ring.style.transform=`translate(${c.x-30}px,${c.y-30}px) scale(${.3+k*.9})`}
+  else if(dragging){ring.style.opacity=.35;ring.style.transform=`translate(${c.x-30}px,${c.y-30}px) scale(.55)`}
+  else ring.style.opacity=0;
+
+  // captions
+  const cap=CAPS.find(([a,b])=>t>=a&&t<b);const capEl=$('#cap');
+  if(cap){const[a,b,n,txt]=cap;const k=Math.min(seg(t,a,a+.4,easeOut),1-seg(t,b-.3,b));capEl.style.opacity=k;capEl.style.transform=`translateX(-50%) translateY(${(1-k)*24}px)`;$('#capn').textContent=n;$('#capt').textContent=txt}
+  else capEl.style.opacity=0;
+  const ch=CHAPS.find(([a,b])=>t>=a&&t<b);
+  $('#d3').style.display=CHAPS.length>2?'':'none';
+  if(ch){const[a,b,n,txt]=ch;const k=Math.min(seg(t,a,a+.4),1-seg(t,b-.3,b));$('#chap').style.opacity=k;$('#chapt').textContent=txt;['#d1','#d2','#d3'].forEach((d,i)=>$(d).classList.toggle('on',i<n))}
+  else $('#chap').style.opacity=0;
+
+  // outro
+  const O=OUT;
+  $('#outro').style.opacity=seg(t,O,O+1);
+  const ab=seg(t,O+1.2,O+2.4);
+  $('#m2').style.transform=`scale(${.9+ab*.1})`;$('#m2').style.opacity=.3+ab*.7;
+  $('#arrow').style.opacity=seg(t,O+.8,O+1.4);$('#arrow').style.transform=`translateX(${(1-seg(t,O+.8,O+1.4))*20}px)`;
+  $('#o1').style.opacity=seg(t,O+2.2,O+3);$('#o1').style.transform=`translateY(${(1-seg(t,O+2.2,O+3))*20}px)`;
+  $('#o2').style.opacity=seg(t,O+2.8,O+3.6);
+  $('#o3').style.opacity=seg(t,O+3.6,O+4.4);
+  const spin=(1-seg(t,O+3.6,O+5.2))*Math.PI*2, gap=lerp(20,11,seg(t,O+3.6,O+4.6,back));
+  [...document.querySelectorAll('.wd')].forEach((c,i)=>{const a=[-90,150,30][i]*Math.PI/180+spin;const pl=1+Math.max(0,Math.sin((t-O-5.2)*3-i*.9))*.12*(t>O+5.2?1:0);
+    c.setAttribute('cx',24+gap*Math.cos(a));c.setAttribute('cy',24.3+gap*Math.sin(a));c.setAttribute('r',6.5*pl)});
+}
+// the outro's before/after: the slide without and with what was added
+{const s=$('#sl').cloneNode(true);s.removeAttribute('id');s.querySelectorAll('.el').forEach(e=>e.remove());$('#m1').appendChild(s);
+ const s2=$('#sl').cloneNode(true);s2.removeAttribute('id');s2.querySelectorAll('.selbox').forEach(e=>e.remove());s2.querySelectorAll('[id]').forEach(e=>e.id='m_'+e.id);$('#m2').appendChild(s2);
+ if(typeof afterMini==='function')afterMini(s2);}
+
+function kf(t,ks,f=ease){if(t<=ks[0][0])return ks[0][1];for(let i=1;i<ks.length;i++){if(t<=ks[i][0]){const[a,va]=ks[i-1],[b,vb]=ks[i];return lerp(va,vb,f((t-a)/(b-a)))}}return ks[ks.length-1][1]}
+const DURATION=42;
+window.DURATION=DURATION;window.render=render;
+// Fit the 1920×1080 stage into whatever size the window is.
+const stage=$('#stage');
+function fit(){measured=false;const k=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform=`translate(${(innerWidth-1920*k)/2}px,${(innerHeight-1080*k)/2}px) scale(${k})`}
+addEventListener('resize',fit);fit();
+// Playback, driven by the editor's player through postMessage.
+// ?t=12 starts at that second (the editor reopens it where it was); ?paused shows that frame still.
+let time=Math.max(0,Math.min(DURATION,Number(new URLSearchParams(location.search).get('t'))||0)),playing=false,last=0;
+const post=()=>parent!==window&&parent.postMessage({source:'weelink-intro',type:'time',time,duration:DURATION,playing},'*');
+function tick(now){if(playing){time=Math.min(DURATION,time+(now-last)/1000);if(time>=DURATION)playing=false;render(time);post()}last=now;requestAnimationFrame(tick)}
+addEventListener('message',(e)=>{const m=e.data;if(!m||m.source!=='weelink-intro-player')return;
+  if(m.type==='play'){if(time>=DURATION)time=0;playing=true;last=performance.now()}
+  else if(m.type==='pause')playing=false;
+  else if(m.type==='seek'){time=Math.max(0,Math.min(DURATION,m.time));render(time)}
+  post()});
+// A click on the picture pauses or plays it, like a video.
+addEventListener('click',()=>{if(playing)playing=false;else{if(time>=DURATION)time=0;playing=true;last=performance.now()}post()});
+document.fonts.ready.then(()=>{measured=false;render(time);playing=!/[?&]paused/.test(location.search);last=performance.now();requestAnimationFrame(tick);post()});
+</script>
+</body>
+</html>

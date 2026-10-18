@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<title>الإضافة: الجدول</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Lalezar&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#eef2f8}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;font-family:'IBM Plex Sans Arabic',sans-serif;color:#0b1220}
+.bg{position:absolute;inset:0;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
+#b1{width:620px;height:620px;background:#cfe3ff;left:-120px;top:-160px}
+#b2{width:520px;height:520px;background:#e6dcff;right:-100px;bottom:-140px}
+#b3{width:380px;height:380px;background:#d9f3ea;right:420px;top:-120px}
+.grid{position:absolute;inset:0;background-image:radial-gradient(#c9d3e3 1.2px,transparent 1.2px);background-size:34px 34px;opacity:.5}
+
+/* intro */
+#intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#t1{font-family:'Lalezar','IBM Plex Sans Arabic',sans-serif;font-size:150px;font-weight:400;line-height:1.05;color:#0b1220}
+#t2{font-size:38px;font-weight:500;color:#4a5568;margin-top:18px}
+#t2 b{color:#1d5bd8;font-weight:600}
+
+/* window */
+#win{position:absolute;left:160px;top:110px;width:1600px;height:880px;background:#f6f7fa;border-radius:22px;
+  box-shadow:0 40px 90px -20px rgba(20,40,80,.35),0 0 0 1px rgba(10,20,40,.06);overflow:hidden;direction:rtl;transform-origin:50% 50%}
+#top{height:58px;background:#fff;border-bottom:1px solid #e7e9ef;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+.logo{direction:ltr;font-family:'Plus Jakarta Sans','IBM Plex Sans Arabic',sans-serif;font-weight:800;font-size:22px;display:flex;align-items:center;gap:8px}
+.logo i{width:30px;height:30px;border-radius:9px;background:#1d5bd8;color:#fff;font-style:normal;font-size:16px;display:grid;place-items:center}
+.crumb{font-size:16px;font-weight:600;color:#1f2937}
+#body{display:flex;height:822px}
+#panel{width:420px;background:#fff;border-left:1px solid #e7e9ef;position:relative;overflow:hidden}
+#col{width:92px;background:#fff;border-left:1px solid #eef0f4;display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:6px}
+.ci{width:74px;padding:10px 0 8px;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#4b5563}
+.ci svg{width:24px;height:24px;stroke:#4b5563;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ci.on{background:#e8f1ff;color:#1d5bd8}
+.ci.on svg{stroke:#1d5bd8}
+#canvas{flex:1;position:relative;overflow:hidden}
+
+/* cursor */
+#cur{position:absolute;left:0;top:0;width:34px;height:40px;z-index:50;pointer-events:none}
+#ring{position:absolute;width:60px;height:60px;border-radius:50%;border:3px solid #1d5bd8;z-index:49;opacity:0}
+
+/* overlays */
+#cap{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);direction:rtl;display:flex;align-items:center;gap:16px;background:#0b1220;color:#fff;
+  font-size:30px;font-weight:600;padding:16px 34px 16px 22px;border-radius:24px;box-shadow:0 20px 40px -12px rgba(11,18,32,.5);white-space:nowrap;opacity:0}
+#cap .n{width:44px;height:44px;border-radius:14px;background:#1d5bd8;display:grid;place-items:center;font-size:24px;font-weight:700}
+#chap{position:absolute;right:60px;top:34px;direction:rtl;display:flex;align-items:center;gap:12px;opacity:0}
+#chap .dots{display:flex;gap:6px}
+#chap .dots i{width:30px;height:6px;border-radius:4px;background:#cdd5e2;display:block}
+#chap .dots i.on{background:#1d5bd8}
+#chap span{font-size:22px;font-weight:700;color:#0b1220}
+
+#pempty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#9aa3b2;font-size:17px}
+#pempty .ico{width:64px;height:64px;border-radius:18px;background:#f1f4f9;display:grid;place-items:center}
+#padd{position:absolute;inset:0;padding:18px 20px;opacity:0;background:#fff}
+.phead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.phead h2{font-size:20px;font-weight:700}
+.tabs{display:flex;background:#f1f3f7;border-radius:14px;padding:4px;gap:4px}
+.tabs div{flex:1;text-align:center;font-size:14px;font-weight:700;color:#6b7280;padding:9px 0;border-radius:10px}
+.tabs div.on{color:#1d5bd8;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.gt{font-size:14px;font-weight:700;color:#9aa3b2;padding:0 4px;margin:16px 0 6px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{height:70px;background:#fff;border:1px solid #e3e6ec;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:600;color:#1f2937}
+.tile i{width:34px;height:34px;border-radius:10px;background:#f1f3f7;display:grid;place-items:center}
+.tile svg{width:20px;height:20px;stroke:#374151;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tile.hot{border-color:#1d5bd8;color:#1d5bd8}
+.tile.hot i{background:#e8f1ff}
+.tile.hot svg{stroke:#1d5bd8}
+.gt{margin:8px 0 5px}
+#vSub{position:absolute;inset:0;background:#fff;overflow:hidden;opacity:0;visibility:hidden}
+#sin{position:absolute;left:0;right:0;top:0;padding:18px 20px 40px}
+.vh{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid #eef0f4;margin-bottom:14px}
+.vh h3{font-size:18px;font-weight:700;display:flex;align-items:center;gap:6px}
+.vh h3 svg{width:18px;height:18px;stroke:#1d5bd8;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:#1d5bd8;background:#e8f1ff;padding:7px 14px;border-radius:10px}
+.pills{display:flex;align-items:center;border:2px solid #d1d5db;border-radius:40px;padding:4px;gap:4px;margin-bottom:14px;background:#fff}
+.pills .ar{width:28px;height:28px;flex-shrink:0;border-radius:50%;background:#f1f3f7;display:grid;place-items:center;font-size:18px;font-weight:700;color:#374151;line-height:1}
+.pills .trk{flex:1;overflow:hidden}
+.pills .tr{display:flex;gap:4px;width:max-content}
+.pills .tr span{flex-shrink:0;padding:6px 13px;border-radius:20px;font-size:13px;font-weight:600;color:#374151;white-space:nowrap}
+.pills .tr span.on{background:#1d5bd8;color:#fff;font-weight:700}
+.tg{display:grid;grid-template-columns:1fr 1fr;gap:10px;position:relative}
+.tc{border:2px solid #e3e6ec;border-radius:16px;padding:10px;background:#fff;display:flex;flex-direction:column;min-width:0}
+.tc .pv{height:88px;border-radius:12px;margin-bottom:8px;overflow:hidden;position:relative}
+.tc h5{font-size:13px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc p{font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc .ft{margin-top:8px;padding-top:6px;border-top:1px solid #f1f3f7;display:flex;justify-content:space-between;align-items:center}
+.tc .ft span{font-size:11px;font-weight:700;color:#1d5bd8;background:#e8f1ff;border-radius:6px;padding:2px 8px}
+.tc .ft i{font-style:normal;font-size:11px;color:#9aa3b2}
+.tc.hot{border-color:#1d5bd8;box-shadow:0 4px 12px rgba(29,91,216,.12)}
+.tc.hot h5{color:#1d5bd8}
+.tc.hot .ft span{background:#1d5bd8;color:#fff}
+.slide{position:absolute;left:50%;top:80px;margin-left:-480px;width:960px;height:660px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.st{position:absolute;right:80px;top:64px;font-size:46px;font-weight:700}
+.ss{position:absolute;right:80px;top:132px;font-size:20px}
+.el{position:absolute;opacity:0}
+.caret{display:inline-block;width:2px;height:1em;background:#1d5bd8;vertical-align:middle;margin:0 2px;opacity:0}
+.selbox{position:absolute;inset:-7px;border:2px solid #1d5bd8;border-radius:6px;opacity:0;pointer-events:none}
+.selbox i{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #1d5bd8;border-radius:3px}
+.selbox i:nth-child(1){top:-7px;right:-7px}.selbox i:nth-child(2){top:-7px;left:-7px}.selbox i:nth-child(3){bottom:-7px;right:-7px}.selbox i:nth-child(4){bottom:-7px;left:-7px}
+.tedit{outline:2px dashed #1d5bd8;outline-offset:3px;border-radius:3px}
+#cmp{display:flex;align-items:center;gap:90px;margin-bottom:56px}
+.oc{position:relative}
+.oc .tag{position:absolute;top:-52px;left:50%;transform:translateX(-50%);font-size:24px;font-weight:700;color:#6b7280}
+.mini{width:480px;height:330px;border-radius:6px;overflow:hidden;position:relative;box-shadow:0 20px 40px -16px rgba(20,40,80,.3)}
+.mini .slide{left:0;top:0;margin:0;transform:scale(.5);transform-origin:0 0}
+#arrow svg{width:90px;height:40px}
+#outro{position:absolute;inset:0;direction:rtl;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0}
+#o1{font-size:52px;font-weight:700}
+#o2{font-size:28px;color:#4a5568;margin-top:14px}
+#o3{margin-top:44px;display:flex;align-items:center;gap:14px;direction:ltr}
+#o3 span{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:34px;background:linear-gradient(90deg,#7c3aed,#2563eb);-webkit-background-clip:text;background-clip:text;color:transparent}
+#shapes{position:relative;width:330px;height:150px;margin-bottom:34px}
+.sh{position:absolute;bottom:0;width:92px;height:92px;border-radius:24px;display:grid;place-items:center}
+.sh svg{width:46px;height:46px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#s1{background:#1d5bd8;left:0}
+#s2{background:#7c5cff;left:119px}
+#s3{background:#12b886;left:238px}
+.bx{background:#f0fbf6;border:1px solid #bfe8d4;border-radius:16px;padding:14px;margin-bottom:14px}
+.bt{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#1f2937;margin-bottom:10px}
+.bt svg{width:16px;height:16px;stroke:#059669;fill:none;stroke-width:2.2}
+.bl{font-size:12px;color:#6b7280;margin:0 0 5px}
+.swg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+.sw{height:26px;border-radius:7px;border:1px solid rgba(0,0,0,.05);position:relative;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:700}
+.sp2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.spin{display:flex;gap:4px;align-items:center}
+.spin b{width:28px;height:28px;border-radius:6px;background:#fff;border:1px solid #d1d5db;display:grid;place-items:center;font-weight:700;color:#4b5563}
+.spin span{flex:1;text-align:center;font-family:'Plus Jakarta Sans',monospace;font-weight:700;font-size:14px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:3px 0}
+.spin b.hot{background:#e8f1ff;border-color:#1d5bd8;color:#1d5bd8}
+.ck{display:flex;align-items:center;gap:8px;font-size:12px;color:#374151;margin-top:7px}
+.ck i{width:15px;height:15px;border-radius:4px;border:1.5px solid #9ca3af;display:grid;place-items:center;font-style:normal;font-size:10px;color:#fff}
+.ck i.on{background:#059669;border-color:#059669}
+.ins{margin-top:12px;background:#059669;color:#fff;font-size:13px;font-weight:700;text-align:center;padding:10px 0;border-radius:12px;box-shadow:0 4px 10px rgba(5,150,105,.25)}
+.ins.hot{background:#047857}
+#tcCost{position:absolute;top:0;right:0;width:calc(50% - 5px);opacity:0}
+.mt{display:flex;justify-content:space-between;font-size:10px;color:#4b5563;padding:3px 4px}
+.mt.h{background:#f3f4f6;border-radius:4px;font-weight:700;color:#111827}
+.tbl{background:#fff;border-radius:16px;box-shadow:0 12px 28px -8px rgba(0,0,0,.18);font-size:17px}
+.tbl .tr_{display:flex}
+.tbl .td{width:130px;height:46px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #e3edf3;border-left:1px solid #e3edf3;color:#334155;white-space:nowrap}
+.tbl .td:last-child{border-left:0}
+.tbl .tr_:last-child .td{border-bottom:0}
+.tbl .hd .td{background:#14b8a6;color:#fff;font-weight:700;border-color:rgba(255,255,255,.25)}
+.tbl .tr_:first-child .td:first-child{border-top-right-radius:16px}.tbl .tr_:first-child .td:last-child{border-top-left-radius:16px}
+.t2{font-size:15px}.t2 .td{width:118px;height:44px}
+.t2 .hd .td{background:#0071e3}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="iText" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></symbol>
+  <symbol id="iImg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+  <symbol id="iBtn" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="5"/></symbol>
+  <symbol id="iStar" viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z"/></symbol>
+  <symbol id="iShapes" viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="3.5"/><rect x="13" y="12" width="7" height="7" rx="1.5"/><path d="M12 3l4 6H8z"/></symbol>
+  <symbol id="iLine" viewBox="0 0 24 24"><path d="M4 12h16"/></symbol>
+  <symbol id="iVid" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></symbol>
+  <symbol id="iAnim" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4l-2 5M14 4l-2 5M20 4l-2 5"/></symbol>
+  <symbol id="iGal" viewBox="0 0 24 24"><rect x="7" y="3" width="14" height="14" rx="2"/><path d="M3 7v12a2 2 0 002 2h12"/></symbol>
+  <symbol id="iPin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+  <symbol id="iCal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="iTag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></symbol>
+  <symbol id="iSheet" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16M15 4v16"/></symbol>
+  <symbol id="iCards" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+  <symbol id="iCode" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></symbol>
+  <symbol id="iPlus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="iSlide" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h7M7 14h4"/></symbol>
+  <symbol id="iPage" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
+  <symbol id="iUsers" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 016 5"/></symbol>
+  <symbol id="iFrame" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/></symbol>
+  <symbol id="iChart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+</svg>
+<div id="stage">
+<div class="bg"><div class="grid"></div><div class="blob" id="b1"></div><div class="blob" id="b2"></div><div class="blob" id="b3"></div></div>
+
+<div id="intro">
+  <div id="shapes"><div class="sh" id="s1"><svg><use href="#iSheet"/></svg></div><div class="sh" id="s2"><svg><use href="#iTag"/></svg></div><div class="sh" id="s3"><svg><use href="#iCal"/></svg></div></div>
+  <div id="t1">الجدول</div>
+  <div id="t2">رتّب <b>أسعارك</b> و<b>مواعيدك</b> ومعلوماتك بجدول</div>
+</div>
+
+<div id="win">
+  <div id="top">
+    <div class="crumb">صفحتي<span style="color:#9aa3b2;margin:0 8px">›</span>الرئيسية</div>
+    <div class="logo">weelink<i>w</i></div>
+  </div>
+  <div id="body">
+    <div id="panel">
+      <div id="pempty"><div class="ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#9aa3b2" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>اضغط «إضافة» لتضيف لصفحتك</div>
+      <div id="padd">
+        <div class="phead"><h2>إضافة</h2></div>
+        <div class="tabs"><div class="on">إضافة عنصر</div><div>إضافة شريحة</div><div>إضافة صفحة</div></div>
+<div class="gt">أساسي</div><div class="tiles"><div class="tile"><i><svg><use href="#iText"/></svg></i>نص</div><div class="tile"><i><svg><use href="#iImg"/></svg></i>صورة</div><div class="tile"><i><svg><use href="#iBtn"/></svg></i>زر</div><div class="tile"><i><svg><use href="#iStar"/></svg></i>أيقونة</div><div class="tile"><i><svg><use href="#iShapes"/></svg></i>أشكال</div><div class="tile"><i><svg><use href="#iLine"/></svg></i>خط فاصل</div></div>
+<div class="gt">وسائط</div><div class="tiles"><div class="tile"><i><svg><use href="#iVid"/></svg></i>فيديو</div><div class="tile"><i><svg><use href="#iAnim"/></svg></i>رسوم متحركة</div><div class="tile"><i><svg><use href="#iGal"/></svg></i>معرض صور</div><div class="tile"><i><svg><use href="#iPin"/></svg></i>خريطة</div></div>
+<div class="gt">أعمال</div><div class="tiles"><div class="tile"><i><svg><use href="#iCal"/></svg></i>حجز مواعيد</div><div class="tile"><i><svg><use href="#iStar"/></svg></i>التقييمات</div><div class="tile"><i><svg><use href="#iTag"/></svg></i>أسعار</div><div class="tile" id="tile"><i><svg><use href="#iSheet"/></svg></i>جدول</div></div>
+<div class="gt">جاهز</div><div class="tiles"><div class="tile"><i><svg><use href="#iCards"/></svg></i>بطاقات جاهزة</div><div class="tile"><i><svg><use href="#iCode"/></svg></i>كود مخصص</div></div>
+      </div>
+      <div id="vSub" class="mv"><div id="sin">
+        <div class="vh"><div class="back">› رجوع للعناصر</div><h3><svg><use href="#iSheet"/></svg>إضافة جدول</h3></div>
+        <div class="pills"><span class="ar">‹</span><div class="trk"><div class="tr"><span class="on" id="pData">جدول بيانات</span><span id="pCost">جدول تكاليف</span><span>الكل</span></div></div><span class="ar">›</span></div>
+        <div class="bx">
+          <div class="bt"><svg><use href="#iSheet"/></svg>تخصيص جدول البيانات الجديد:</div>
+          <div class="bl">اختر لون الجدول (10 ألوان متناسقة):</div>
+          <div class="swg"><div class="sw" id="sw0" style="background:#0071e3"></div><div class="sw" id="sw1" style="background:#10b981"></div><div class="sw" id="sw2" style="background:#ef4444"></div><div class="sw" id="sw3" style="background:#f59e0b"></div><div class="sw" id="sw4" style="background:#6366f1"></div><div class="sw" id="sw5" style="background:#ec4899"></div><div class="sw" id="sw6" style="background:#475569"></div><div class="sw" id="sw7" style="background:#14b8a6"></div><div class="sw" id="sw8" style="background:#f97316"></div><div class="sw" id="sw9" style="background:#1f2937"></div></div>
+          <div class="sp2"><div><div class="bl">عدد الأسطر (الصفوف):</div><div class="spin"><b>-</b><span id="vRows">3</span><b id="rowsPlus">+</b></div></div><div><div class="bl">عدد الأعمدة:</div><div class="spin"><b>-</b><span>3</span><b>+</b></div></div></div>
+          <div class="sp2"><div><div class="bl">عرض العمود (بكسل):</div><div class="spin"><b>-</b><span>120</span><b>+</b></div></div><div><div class="bl">ارتفاع السطر (بكسل):</div><div class="spin"><b>-</b><span>40</span><b>+</b></div></div></div>
+          <div class="ck"><i class="on">✓</i>إضافة سطر العناوين (أول سطر كعنوان مميز)</div>
+          <div class="ck"><i></i>إضافة عمود التعداد يميناً (1، 2، 3...)</div>
+          <div class="ins" id="ins">✨ إدراج الجدول المخصص الآن في الشريحة</div>
+        </div>
+        <div class="tg">
+          <div class="tc" id="tcData"><div class="pv" style="background:#fff;border:1px solid #e5e7eb;padding:8px"><div class="mt h"><span>الخدمة</span><span>الحالة</span><span>السعر</span></div><div class="mt"><span>تصميم موقع</span><span style="color:#059669">مكتمل</span><span>$500</span></div><div class="mt"><span>استضافة</span><span style="color:#059669">نشط</span><span>$120</span></div></div><h5>جدول بيانات متطور</h5><p>أعمدة وصفوف مع حالات الخدمة</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div>
+          <div class="tc mv" id="tcCost"><div class="pv" style="background:#f9fafb;border:1px solid #e5e7eb;padding:10px"><div style="font-size:12px;font-weight:700;margin-bottom:8px">قائمة الأسعار الرسمية</div><div class="mt" style="border-bottom:1px solid #e5e7eb;padding-bottom:4px"><span>الاستضافة السحابية</span><span>$120</span></div></div><h5>جدول تكاليف وتسعير</h5><p>عرض تفصيلي لأسعار الخدمات</p><div class="ft"><span>إضافة +</span><i>✦</i></div></div>
+        </div>
+      </div></div>
+    </div>
+    <div id="col">
+      <div class="ci" id="cAdd"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>إضافة</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/></svg>المحتوى</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.2 0 1.6-1 1.1-1.9-.6-1 .1-2.1 1.2-2.1H17a4 4 0 004-4c0-5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>الألوان</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="3.5"/><rect x="13" y="12" width="7" height="7" rx="1.5"/><path d="M12 3l4 6H8z"/></svg>الشكل</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>المكان</div>
+      <div class="ci"><svg viewBox="0 0 24 24"><path d="M5 12h3l3-7 3 14 3-7h2"/></svg>الحركة</div>
+    </div>
+    <div id="canvas">
+      <div class="slide" id="sl" style="background:linear-gradient(135deg,#f7fbff 0%,#e6effa 100%)">
+        <svg style="position:absolute;left:70px;top:58px" width="150" height="80" viewBox="0 0 150 80"><path d="M10 50c40-6 80-22 120-40" stroke="#b9cce6" stroke-width="3" stroke-dasharray="6 8" fill="none"/><path d="M118 6l22 2-12 18-4-9z" fill="#3b82c4"/></svg>
+        <div class="st" style="color:#0f2a4a">رحلاتنا لهالصيف</div>
+        <div class="ss" style="color:#4a6380">أسعار شاملة الطيران والفندق، من دمشق</div>
+        <div class="el mv tbl" id="tb1" style="right:80px;top:200px"><div class="tr_ hd"><div class="td c00"><span class="tx">عنوان 1</span><i class=caret></i></div><div class="td c01"><span class="tx">عنوان 2</span><i class=caret></i></div><div class="td c02"><span class="tx">عنوان 3</span><i class=caret></i></div></div><div class="tr_ "><div class="td c10"><span class="tx">خلية 2-1</span></div><div class="td c11"><span class="tx">خلية 2-2</span></div><div class="td c12"><span class="tx">خلية 2-3</span></div></div><div class="tr_ "><div class="td c20"><span class="tx">خلية 3-1</span></div><div class="td c21"><span class="tx">خلية 3-2</span></div><div class="td c22"><span class="tx">خلية 3-3</span></div></div><div class="tr_ "><div class="td c30"><span class="tx">خلية 4-1</span></div><div class="td c31"><span class="tx">خلية 4-2</span></div><div class="td c32"><span class="tx">خلية 4-3</span></div></div><div class="tr_ "><div class="td c40"><span class="tx">خلية 5-1</span></div><div class="td c41"><span class="tx">خلية 5-2</span></div><div class="td c42"><span class="tx">خلية 5-3</span></div></div><div class="selbox"><i></i><i></i><i></i><i></i></div></div>
+        <div class="el mv tbl t2" id="tb2" style="left:70px;top:200px">
+          <div class="tr_ hd"><div class="td"><span class="tx">الخدمة</span></div><div class="td"><span class="tx">الحالة</span></div><div class="td"><span class="tx">التكلفة</span></div></div>
+          <div class="tr_"><div class="td"><span class="tx">تصميم موقع</span></div><div class="td"><span class="tx">مكتمل</span></div><div class="td"><span class="tx">500 $</span></div></div>
+          <div class="tr_"><div class="td"><span class="tx">استضافة سريعة</span></div><div class="td"><span class="tx">نشط</span></div><div class="td"><span class="tx">120 $</span></div></div>
+          <div class="selbox"><i></i><i></i><i></i><i></i></div></div>
+      </div>
+    </div>
+  </div>
+  <div id="ring"></div>
+  <svg id="cur" viewBox="0 0 34 40"><path d="M4 3l24 14-10.5 2.5L23 31l-4.6 2.2-5.6-11.6L5 29z" fill="#0b1220" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>
+</div>
+
+<div id="chap"><div class="dots" id="dots"></div><span id="chapt"></span></div>
+<div id="cap"><div class="n" id="capn">1</div><div id="capt"></div></div>
+
+<div id="outro">
+  <div id="cmp">
+    <div class="oc"><div class="tag">قبل</div><div class="mini" id="m1"></div></div>
+    <div id="arrow"><svg viewBox="0 0 90 40"><path d="M84 20H10M24 6L8 20l16 14" fill="none" stroke="#1d5bd8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="oc"><div class="tag" style="color:#1d5bd8">بعد</div><div class="mini" id="m2"></div></div>
+  </div>
+  <div id="o1">أسعارك ورحلاتك، مرتبة وواضحة</div>
+  <div id="o2">وبتقدر تغيّر لون الجدول وأعمدته من لوحة التحكم</div>
+  <div id="o3"><svg viewBox="0 0 48 48" width="64" height="64" style="overflow:visible"><defs><radialGradient id="wg" cx=".5" cy=".5" r=".75" fx=".35" fy=".3"><stop offset="0" stop-color="#d8ccff"/><stop offset=".5" stop-color="#7c3aed"/><stop offset="1" stop-color="#2563eb"/></radialGradient></defs><circle class="wd" r="6.5" fill="url(#wg)"/><circle class="wd" r="6.5" fill="url(#wg)"/><circle class="wd" r="6.5" fill="url(#wg)"/></svg><span>Wee AI</span></div>
+</div>
+
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+const easeOut=x=>1-Math.pow(1-clamp(x),3);
+const back=x=>{x=clamp(x);const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)};
+const lerp=(a,b,k)=>a+(b-a)*k;
+const seg=(t,t0,t1,f=ease)=>f((t-t0)/(t1-t0));
+const pulse=(t,a,b)=>Math.min(seg(t,a,a+.35),1-seg(t,b-.35,b));
+
+const T={add:8.7,tile:10.5,sw:12.5,r1:14.2,r2:14.9,ins:17.4,h1:22.3,h2:23.9,h3:25.2,pc:31.4,tc:33};
+const DRAG=[18.8,20.2];
+const CLICKS=[T.add,T.tile,T.sw,T.r1,T.r2,T.ins,T.h1,T.h2,T.h3,T.pc,T.tc];
+const DRAGS=[DRAG];
+const CUR_OUT=36.8,WIN_OUT=37.6,OUTRO=38.6;
+const OFF={x:-200,y:150};
+const IDS={cAdd:'#cAdd',tile:'#tile',sw7:'#sw7',plus:'#rowsPlus',ins:'#ins',pCost:'#pCost',tcData:'#tcData',tb1:'#tb1',c00:'#tb1 .c00',c01:'#tb1 .c01',c02:'#tb1 .c02',tb2:'#tb2'};
+const CAPS=[
+  [7.4,11.2,1,'من «إضافة»، اضغط «جدول»'],
+  [11.4,13.6,2,'اختار لون الجدول'],
+  [13.8,16.4,2,'حدد عدد الأسطر والأعمدة'],
+  [16.6,21.4,2,'اضغط زر الإدراج، واسحب الجدول لمكانه'],
+  [21.8,26.4,3,'اضغط على أي خلية واكتب'],
+  [26.6,30.2,3,'وعبّي باقي الأسطر بنفس الطريقة'],
+  [30.6,36.6,4,'أو اختار جدول جاهز وعدّل خلاياه'],
+];
+const CHAPS=[[11.2,21.6,1,'جدول على ذوقك'],[21.6,30.4,2,'عبّي الخلايا'],[30.4,37,3,'جداول جاهزة']];
+const HEAD=['الرحلة','المدة','السعر'];
+const ROWS=[['إسطنبول','5 أيام','450 $'],['دبي','4 أيام','380 $'],['شرم الشيخ','6 أيام','300 $'],['طرابزون','7 أيام','520 $']];
+const EXTRA=[['الخدمة','الحالة','التكلفة'],['تأشيرة تركيا','متاحة','60 $'],['تأمين سفر','متاح','25 $']];
+const prep=()=>{};
+const grab=(p,o)=>({x:p.x+p.w-70+o.x,y:p.y+70+o.y});
+function waypoints(t){
+  return [
+    [0,{x:1300,y:760}],[7.6,{x:1300,y:760}],[T.add-.1,pt(P.cAdd)],
+    [9.6,pt(P.cAdd)],[T.tile-.1,pt(P.tile)],
+    [11.6,pt(P.tile)],[T.sw-.1,pt(P.sw7)],
+    [13.4,pt(P.sw7)],[T.r1-.1,pt(P.plus)],[T.r2+.4,pt(P.plus)],[T.ins-.1,pt(P.ins)],
+    [18.1,pt(P.ins)],[DRAG[0]-.1,()=>grab(P.tb1,OFF)],[DRAG[1]+.1,()=>grab(P.tb1,dragOff(t,OFF,DRAG[0],DRAG[1]))],
+    [21.4,()=>grab(P.tb1,{x:0,y:0})],[T.h1-.1,pt(P.c00)],[23.4,pt(P.c00)],[T.h2-.1,pt(P.c01)],[24.7,pt(P.c01)],[T.h3-.1,pt(P.c02)],
+    [29.8,pt(P.c02,0,30)],[T.pc-.1,pt(P.pCost)],
+    [32.2,pt(P.pCost)],[T.tc-.1,pt(P.tcData)],[35.4,pt(P.tcData)],[CUR_OUT,{x:1300,y:780}]
+  ];
+}
+function scene(t){
+  // panel
+  [...document.querySelectorAll('.sw')].forEach((e,i)=>e.textContent=(t<T.sw?i===0:i===7)?'✓':'');
+  $('#sw7').style.boxShadow=t>=T.sw-.5&&t<T.sw+.6?'0 0 0 2px #fff,0 0 0 4px #1d5bd8':'none';
+  $('#vRows').textContent=t<T.r1?3:t<T.r2?4:5;
+  $('#rowsPlus').classList.toggle('hot',t>=T.r1-.4&&t<T.r2+.4);
+  $('#ins').classList.toggle('hot',t>=T.ins-.5&&t<T.ins+.4);
+  const pc=t>=T.pc;$('#pData').classList.toggle('on',!pc);$('#pCost').classList.toggle('on',pc);
+  const ck=seg(t,T.pc+.1,T.pc+.5);$('#tcData').style.opacity=1-ck;$('#tcCost').style.opacity=ck;
+  $('#tcCost').classList.toggle('hot',t>=T.tc-.6&&t<T.tc+.4);$('#tcData').classList.toggle('hot',false);
+  // the new table: pops in where it is added, is dragged home, then filled in
+  pop('#tb1',t,T.ins,dragOff(t,OFF,DRAG[0],DRAG[1]),'50% 50%');
+  sel('#tb1',t>=T.ins+.4&&t<T.pc);
+  [...$('#tb1').children].filter(e=>e.classList.contains('tr_')).forEach((row,r)=>{
+    [...row.children].forEach((cell,k)=>{
+      const tx=cell.querySelector('.tx');
+      if(r===0){const a=[T.h1,T.h2,T.h3][k]+.3;tx.textContent=typed(t,a,a+.7,`عنوان ${k+1}`,HEAD[k]);
+        const on=t>=[T.h1,T.h2,T.h3][k]&&t<(k<2?[T.h2,T.h3][k]:27);cell.classList.toggle('tedit',on);caret(cell.querySelector('.caret'),t,on)}
+      else{const a=26.6+(r-1)*.45;const k2=seg(t,a,a+.4);tx.textContent=t<a+.2?`خلية ${r+1}-${k+1}`:ROWS[r-1][k];tx.style.opacity=t<a?1:Math.abs(k2-.5)*2}
+    });
+  });
+  // a ready table: lands with its own example cells, which are then typed over
+  pop('#tb2',t,T.tc,{x:0,y:0},'0 50%');
+  sel('#tb2',t>=T.tc+.4&&t<CUR_OUT);
+  [...$('#tb2').children].filter(e=>e.classList.contains('tr_')).forEach((row,r)=>{
+    [...row.children].forEach((cell,k)=>{const tx=cell.querySelector('.tx');if(r===0)return;const a=34.4+(r-1)*.5;const k2=seg(t,a,a+.4);
+      if(tx.dataset.o===undefined)tx.dataset.o=tx.textContent;tx.textContent=t<a+.2?tx.dataset.o:EXTRA[r][k];tx.style.opacity=t<a?1:Math.abs(k2-.5)*2});
+  });
+}
+
+// Positions inside the window, measured with nothing moved and every view shown.
+const W=$('#win'),P={};
+function measure(){
+  const els=[...document.querySelectorAll('#win, #padd, .mv')];
+  const saved=els.map(e=>[e,e.style.transform,e.style.opacity]);
+  els.forEach(e=>{e.style.transform='none';e.style.opacity=1});
+  const undo=prep();
+  const wr=W.getBoundingClientRect();const k=wr.width/1600;
+  for(const key in IDS){const r=$(IDS[key]).getBoundingClientRect();const x=(r.left-wr.left)/k,y=(r.top-wr.top)/k,w=r.width/k,h=r.height/k;P[key]={x,y,w,h,cx:x+w/2,cy:y+h/2}}
+  if(undo)undo();
+  saved.forEach(([e,tr,op])=>{e.style.transform=tr;e.style.opacity=op});
+}
+function curPos(t){
+  const W_=waypoints(t);
+  const v=w=>typeof w==='function'?w():w;
+  for(let i=1;i<W_.length;i++){const[a,pa]=W_[i-1],[b,pb]=W_[i];if(t<=b){const k=ease((t-a)/(b-a));const A=v(pa),B=v(pb);return{x:lerp(A.x,B.x,k),y:lerp(A.y,B.y,k)}}}
+  return v(W_[W_.length-1][1]);
+}
+const pt=(p,dx=0,dy=0)=>({x:p.cx+dx,y:p.cy+dy});
+// An element added to the slide: pops in at `off` from its place, then follows the drag home.
+function pop(id,t,born,off,origin){
+  const el=$(id);const k=back(seg(t,born+.1,born+.6,x=>x));
+  el.style.opacity=clamp((t-born-.1)*5);
+  el.style.transformOrigin=origin||'50% 50%';
+  el.style.transform=`translate(${off.x}px,${off.y}px) scale(${t<born+.1?.5:.5+k*.5})`;
+}
+const dragOff=(t,from,a,b)=>{const k=seg(t,a,b);return{x:from.x*(1-k),y:from.y*(1-k)}};
+const sel=(id,on)=>{$(id+' > .selbox').style.opacity=on?1:0};
+// Text typed into a field between a and b; before a it keeps `from`.
+const typed=(t,a,b,from,to)=>t<a-.2?from:t<a?'':to.slice(0,Math.round(clamp((t-a)/(b-a))*to.length));
+function caret(el,t,on){el.style.opacity=on&&(Math.floor(t*2.5)%2===0)?1:0}
+
+let measured=false,cloned=false;
+function render(t){
+  if(!measured){measure();measured=true}
+  if(!cloned){cloned=true;
+    // the outro's before/after: the slide with nothing added, and the slide as it ends
+    scene(OUTRO-1.2);const a=$('#sl').cloneNode(true);a.removeAttribute('id');a.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+    a.querySelectorAll('.selbox,.caret').forEach(e=>e.remove());a.querySelectorAll('.tedit').forEach(e=>e.classList.remove('tedit'));$('#m2').appendChild(a);
+    const b=$('#sl').cloneNode(true);b.removeAttribute('id');b.querySelectorAll('.el').forEach(e=>e.remove());b.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));$('#m1').appendChild(b);
+    $('#dots').innerHTML=CHAPS.map(()=>'<i></i>').join('');
+  }
+  $('#b1').style.transform=`translate(${Math.sin(t*.3)*40}px,${Math.cos(t*.25)*30}px)`;
+  $('#b2').style.transform=`translate(${Math.cos(t*.22)*50}px,${Math.sin(t*.3)*30}px)`;
+  $('#b3').style.transform=`translate(${Math.sin(t*.18)*60}px,${Math.cos(t*.3)*20}px)`;
+
+  // intro
+  $('#intro').style.opacity=1-seg(t,5.2,6.2);
+  $('#intro').style.transform=`translateY(${-seg(t,5.2,6.2)*80}px)`;
+  [['#s1',.3],['#s2',.55],['#s3',.8]].forEach(([id,d],i)=>{
+    const k=back(seg(t,d,d+.7,x=>x));const fl=Math.sin(t*2+i)*4*clamp(t-1.6);
+    $(id).style.transform=`translateY(${(1-k)*-260+fl}px) rotate(${(1-k)*(i-1)*40}deg)`;$(id).style.opacity=clamp((t-d)*4);
+  });
+  $('#t1').style.opacity=seg(t,1.2,1.9);$('#t1').style.transform=`translateY(${(1-seg(t,1.2,1.9))*30}px)`;
+  $('#t2').style.opacity=seg(t,2,2.7);$('#t2').style.transform=`translateY(${(1-seg(t,2,2.7))*20}px)`;
+
+  // window
+  const wi=seg(t,5.6,6.9), wo=seg(t,WIN_OUT,WIN_OUT+1);
+  W.style.opacity=wi*(1-wo);
+  W.style.transform=`translateY(${(1-wi)*160+wo*-40}px) scale(${(0.92+wi*.08)*(1-wo*.06)})`;
+
+  // panel: «إضافة», then the category's own view
+  $('#cAdd').classList.toggle('on',t>=T.add+.1);
+  $('#pempty').style.opacity=1-seg(t,T.add+.1,T.add+.4);
+  $('#padd').style.opacity=seg(t,T.add+.1,T.add+.5);
+  $('#tile').classList.toggle('hot',t>=T.tile-.5&&t<T.tile+.4);
+  const vk=seg(t,T.tile+.1,T.tile+.5);
+  $('#vSub').style.opacity=vk;$('#vSub').style.visibility=vk>0?'visible':'hidden';$('#vSub').style.transform=`translateX(${(1-vk)*-30}px)`;
+
+  scene(t);
+
+  // cursor
+  const c=curPos(t);const cur=$('#cur');
+  const dragging=DRAGS.some(([a,b])=>t>=a&&t<=b);
+  const clickK=CLICKS.reduce((m,ct)=>Math.max(m,t>=ct&&t<ct+.2?Math.sin((t-ct)/.2*Math.PI):0),0);
+  cur.style.transform=`translate(${c.x-4}px,${c.y-3}px) scale(${1-clickK*.15-(dragging?.1:0)})`;
+  cur.style.opacity=t<6.6||t>CUR_OUT+.2?0:1;
+  const lastClick=CLICKS.filter(ct=>t>=ct&&t<ct+.6).pop();
+  const ring=$('#ring');
+  if(lastClick!==undefined){const k=(t-lastClick)/.6;ring.style.opacity=(1-k)*.9;ring.style.transform=`translate(${c.x-30}px,${c.y-30}px) scale(${.3+k*.9})`}
+  else if(dragging){ring.style.opacity=.35;ring.style.transform=`translate(${c.x-30}px,${c.y-30}px) scale(.55)`}
+  else ring.style.opacity=0;
+
+  // captions
+  const cap=CAPS.find(([a,b])=>t>=a&&t<b);const capEl=$('#cap');
+  if(cap){const[a,b,n,txt]=cap;const k=Math.min(seg(t,a,a+.4,easeOut),1-seg(t,b-.3,b));capEl.style.opacity=k;capEl.style.transform=`translateX(-50%) translateY(${(1-k)*24}px)`;$('#capn').textContent=n;$('#capt').textContent=txt}
+  else capEl.style.opacity=0;
+  const ch=CHAPS.find(([a,b])=>t>=a&&t<b);
+  if(ch){const[a,b,n,txt]=ch;const k=Math.min(seg(t,a,a+.4),1-seg(t,b-.3,b));$('#chap').style.opacity=k;$('#chapt').textContent=txt;[...$('#dots').children].forEach((d,i)=>d.classList.toggle('on',i<n))}
+  else $('#chap').style.opacity=0;
+
+  // outro
+  const O=OUTRO;
+  $('#outro').style.opacity=seg(t,O,O+1);
+  const ab=seg(t,O+1.2,O+2.4);
+  $('#m2').style.transform=`scale(${.9+ab*.1})`;$('#m2').style.opacity=.3+ab*.7;
+  $('#arrow').style.opacity=seg(t,O+.8,O+1.4);$('#arrow').style.transform=`translateX(${(1-seg(t,O+.8,O+1.4))*20}px)`;
+  $('#o1').style.opacity=seg(t,O+2.2,O+3);$('#o1').style.transform=`translateY(${(1-seg(t,O+2.2,O+3))*20}px)`;
+  $('#o2').style.opacity=seg(t,O+2.8,O+3.6);
+  $('#o3').style.opacity=seg(t,O+3.6,O+4.4);
+  const spin=(1-seg(t,O+3.6,O+5.2))*Math.PI*2, gap=lerp(20,11,seg(t,O+3.6,O+4.6,back));
+  [...document.querySelectorAll('.wd')].forEach((c,i)=>{const a=[-90,150,30][i]*Math.PI/180+spin;const pl=1+Math.max(0,Math.sin((t-O-5.2)*3-i*.9))*.12*(t>O+5.2?1:0);
+    c.setAttribute('cx',24+gap*Math.cos(a));c.setAttribute('cy',24.3+gap*Math.sin(a));c.setAttribute('r',6.5*pl)});
+}
+function kf(t,ks,f=ease){if(t<=ks[0][0])return ks[0][1];for(let i=1;i<ks.length;i++){if(t<=ks[i][0]){const[a,va]=ks[i-1],[b,vb]=ks[i];return lerp(va,vb,f((t-a)/(b-a)))}}return ks[ks.length-1][1]}
+const DURATION=46.2;
+window.DURATION=DURATION;window.render=render;
+// Fit the 1920×1080 stage into whatever size the window is.
+const stage=$('#stage');
+function fit(){measured=false;const k=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform=`translate(${(innerWidth-1920*k)/2}px,${(innerHeight-1080*k)/2}px) scale(${k})`}
+addEventListener('resize',fit);fit();
+// Playback, driven by the editor's player through postMessage.
+// ?t=12 starts at that second (the editor reopens it where it was); ?paused shows that frame still.
+let time=Math.max(0,Math.min(DURATION,Number(new URLSearchParams(location.search).get('t'))||0)),playing=false,last=0;
+const post=()=>parent!==window&&parent.postMessage({source:'weelink-intro',type:'time',time,duration:DURATION,playing},'*');
+function tick(now){if(playing){time=Math.min(DURATION,time+(now-last)/1000);if(time>=DURATION)playing=false;render(time);post()}last=now;requestAnimationFrame(tick)}
+addEventListener('message',(e)=>{const m=e.data;if(!m||m.source!=='weelink-intro-player')return;
+  if(m.type==='play'){if(time>=DURATION)time=0;playing=true;last=performance.now()}
+  else if(m.type==='pause')playing=false;
+  else if(m.type==='seek'){time=Math.max(0,Math.min(DURATION,m.time));render(time)}
+  post()});
+// A click on the picture pauses or plays it, like a video.
+addEventListener('click',()=>{if(playing)playing=false;else{if(time>=DURATION)time=0;playing=true;last=performance.now()}post()});
+document.fonts.ready.then(()=>{measured=false;render(time);playing=!/[?&]paused/.test(location.search);last=performance.now();requestAnimationFrame(tick);post()});
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 // The short explainer animations shown over the editor, one per group of settings. Each is a page in
 // public/intro-videos that plays itself and talks to IntroVideoPlayer through postMessage.
-import type { InspectorGroupId } from '../rightDrawer/inspectorGroups';
+import type { InspectorGroupId, InspectorTarget } from '../rightDrawer/inspectorGroups';
 
 // One part of a long explainer, picked from the player's list of chapters.
 export interface IntroChapter {
@@ -10,18 +10,64 @@ export interface IntroChapter {
 }
 
 export interface IntroVideo {
-  id: InspectorGroupId | 'add';
+  id: InspectorGroupId | 'add' | 'structure' | 'weeai';
   title: string;
   src: string;
   // A long explainer is cut into short chapters; src is then the first one's.
   chapters?: IntroChapter[];
 }
 
+const chaptersOf = (group: string, list: [string, string][]): IntroChapter[] =>
+  list.map(([id, title]) => ({ id, title, src: `/intro-videos/${group}-${id}.html` }));
+
+// Groups whose card differs by what is selected (a slide, the navbar, an image…) have a chapter for each.
 const VIDEOS: Partial<Record<InspectorGroupId, IntroVideo>> = {
+  content: {
+    id: 'content',
+    title: 'شرح «المحتوى»',
+    src: '/intro-videos/content-element.html',
+    chapters: chaptersOf('content', [['element', 'إعدادات العنصر'], ['image', 'الصورة'], ['lottie', 'الرسوم المتحركة'], ['navbar', 'النافبار'], ['slide', 'تداخل الشريحة']]),
+  },
+  font: { id: 'font', title: 'شرح «الخط»', src: '/intro-videos/font.html' },
+  effects: { id: 'effects', title: 'شرح «تأثيرات»', src: '/intro-videos/effects.html' },
+  colors: {
+    id: 'colors',
+    title: 'شرح «الألوان»',
+    src: '/intro-videos/colors-element.html',
+    chapters: chaptersOf('colors', [['element', 'ألوان العنصر'], ['image', 'فلاتر الصورة'], ['slide', 'خلفية الشريحة']]),
+  },
   shape: { id: 'shape', title: 'شرح «الشكل»', src: '/intro-videos/shape.html' },
+  layout: {
+    id: 'layout',
+    title: 'شرح «المكان»',
+    src: '/intro-videos/layout-element.html',
+    chapters: chaptersOf('layout', [['element', 'مكان العنصر'], ['slide', 'طبقات الشريحة']]),
+  },
+  motion: {
+    id: 'motion',
+    title: 'شرح «الحركة»',
+    src: '/intro-videos/motion-link.html',
+    chapters: chaptersOf('motion', [['link', 'الرابط'], ['animation', 'حركة الظهور']]),
+  },
 };
 
 export const introVideoFor = (group: InspectorGroupId): IntroVideo | null => VIDEOS[group] ?? null;
+
+// The chapter of a group's explainer that fits what is selected.
+export const introChapterFor = (group: InspectorGroupId, target: InspectorTarget): string | null => {
+  const ids = VIDEOS[group]?.chapters?.map((c) => c.id);
+  if (!ids) return null;
+  const type = target.kind === 'element' ? target.type : null;
+  const pick = target.kind === 'navbar' ? 'navbar' : target.kind === 'slide' ? 'slide' : type === 'image' || type === 'lottie' ? type : 'element';
+  return ids.includes(pick) ? pick : ids[0];
+};
+
+export const chapterOf = (video: IntroVideo, id: string | null): IntroChapter | null =>
+  (id && video.chapters?.find((c) => c.id === id)) || null;
+
+// The column's «الهيكل» and «Wee AI» panels.
+export const STRUCTURE_VIDEO: IntroVideo = { id: 'structure', title: 'شرح «الهيكل»', src: '/intro-videos/structure.html' };
+export const WEEAI_VIDEO: IntroVideo = { id: 'weeai', title: 'شرح «Wee AI»', src: '/intro-videos/weeai.html' };
 
 // The «إضافة» panel: a quick tour, then one chapter per thing that can be added (ids as in its grid).
 const ADD_CHAPTERS: [string, string][] = [

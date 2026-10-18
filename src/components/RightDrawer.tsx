@@ -94,7 +94,7 @@ import { LottieGallery, LottieSettings } from './rightDrawer/LottiePicker';
 import { textEffectById } from '../utils/textEffects';
 import { elementDisplayName } from '../utils/elementLabels';
 import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
-import { ADD_VIDEO, IntroVideo, addChapterFor, introVideoFor } from './introVideos/introVideos';
+import { ADD_VIDEO, IntroVideo, STRUCTURE_VIDEO, WEEAI_VIDEO, addChapterFor, chapterOf, introChapterFor, introVideoFor } from './introVideos/introVideos';
 import { IntroVideoPlayer, IntroVideoMode } from './introVideos/IntroVideoPlayer';
 import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
@@ -1087,8 +1087,10 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const openIntroVideo = (g: InspectorGroupId) => {
     const v = introVideoFor(g);
     if (!v) return;
+    const ch = introChapterFor(g, inspectorTarget);
+    if (introVideo?.id !== g || introChapter !== ch) introVideoTime.current = 0;
     setIntroVideo(v);
-    setIntroChapter(null);
+    setIntroChapter(ch);
     setIntroVideoMode((m) => (m === 'floating' || m === 'big' ? m : 'docked'));
   };
   // The «إضافة» explainer is cut into chapters: the quick tour when the panel opens, then the chapter of
@@ -1101,6 +1103,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     setIntroChapter(id);
     setIntroVideoMode((m) => (m === 'floating' || m === 'big' ? m : 'docked'));
   };
+  const pickIntroChapter = (id: string) => {
+    introVideoTime.current = 0;
+    setIntroChapter(id);
+  };
+  // A panel of the column with one explainer of its own («الهيكل», «Wee AI»), from its start each time it opens.
+  const openPanelVideo = (v: IntroVideo) => {
+    if (introVideo?.id !== v.id) introVideoTime.current = 0;
+    setIntroVideo(v);
+    setIntroChapter(null);
+    setIntroVideoMode((m) => (m === 'floating' || m === 'big' ? m : 'docked'));
+  };
   const addPanelOpen = activeSection === 'elements' || activeSection === 'add-text';
   useEffect(() => {
     if (addPanelOpen) openAddChapter(activeSection === 'add-text' ? 'text' : 'tour');
@@ -1110,6 +1123,20 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     if (addPanelOpen && activeAddCategory) openAddChapter(activeAddCategory);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeAddCategory]);
+  useEffect(() => {
+    if (activeTab === 'structure') openPanelVideo(STRUCTURE_VIDEO);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+  useEffect(() => {
+    if (!isWeeAiChatCollapsed) openPanelVideo(WEEAI_VIDEO);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWeeAiChatCollapsed]);
+  const panelVideo = (id: IntroVideo['id']) =>
+    introVideo?.id === id && (
+      <div data-intro-for={id}>
+        <IntroVideoPlayer video={introVideo} mode={introVideoMode} onModeChange={setIntroVideoMode} timeRef={introVideoTime} chapter={chapterOf(introVideo, introChapter)} onChapter={pickIntroChapter} />
+      </div>
+    );
   const toolScrollRef = useRef<HTMLDivElement>(null);
   const spyPausedUntil = useRef(0);
   const [glowSide, setGlowSide] = useState<'out' | 'in'>('out');
@@ -1384,7 +1411,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             <React.Fragment key={g.id}>
             {introVideo?.id === g.id && (
               <div data-intro-for={g.id}>
-                <IntroVideoPlayer video={introVideo} mode={introVideoMode} onModeChange={setIntroVideoMode} timeRef={introVideoTime} />
+                <IntroVideoPlayer video={introVideo} mode={introVideoMode} onModeChange={setIntroVideoMode} timeRef={introVideoTime} chapter={chapterOf(introVideo, introChapter)} onChapter={pickIntroChapter} />
               </div>
             )}
             <InspectorCard
@@ -3668,7 +3695,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               {/* TOOL: Add Elements (+) - Step 1: Squares Grid (الصورة رقم ١) | Step 2: Detail with Subcategories Bar (الصورة رقم ٢) */}
               {addPanelOpen && introVideo?.id === 'add' && (
                 <div data-intro-for="add" className="mb-3">
-                  <IntroVideoPlayer video={introVideo} mode={introVideoMode} onModeChange={setIntroVideoMode} timeRef={introVideoTime} chapter={introChapter ? addChapterFor(introChapter) : null} onChapter={openAddChapter} />
+                  <IntroVideoPlayer video={introVideo} mode={introVideoMode} onModeChange={setIntroVideoMode} timeRef={introVideoTime} chapter={chapterOf(introVideo, introChapter)} onChapter={openAddChapter} />
                 </div>
               )}
               {(activeSection === 'elements' || activeSection === 'add-text') && (() => {
@@ -5744,6 +5771,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         {/* TAB 1: الهيكل (Structure) */}
         {activeTab === 'structure' && (
           <div className="flex-1 overflow-y-auto p-3 space-y-2.5 bg-white text-right">
+            {panelVideo('structure')}
             {pages.map((p) => {
               const isPageExpanded = !!expandedPages[p.id];
               const isCurrentPage = p.id === currentPage.id;
@@ -6034,6 +6062,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           onRestorePage={onRestorePage}
           onEditAnswers={onEditAnswers}
           restoreAvailable={restoreAvailable}
+          introSlot={panelVideo('weeai')}
           pageKind={isShopProject ? 'shop' : isRestaurantProject ? 'restaurant' : isCarProject ? 'cars' : 'page'}
         />
 

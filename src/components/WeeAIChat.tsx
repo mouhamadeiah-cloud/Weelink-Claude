@@ -44,6 +44,8 @@ interface WeeAIChatProps {
   fromStart?: boolean;
   // The page was built in this visit and can still be brought back as it was.
   restoreAvailable?: boolean;
+  // The explainer of Wee AI, under the header.
+  introSlot?: React.ReactNode;
 }
 
 // Answers given before signing up are kept on this device under this id, then moved to the new
@@ -177,7 +179,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   embedded,
   onEditAnswers,
   fromStart,
-  restoreAvailable
+  restoreAvailable,
+  introSlot
 }) => {
   // Answers finished once stay finished while the owner walks through them again.
   const finishedRef = useRef(false);
@@ -582,6 +585,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           <ChevronDown size={15} strokeWidth={2.4} />
         </button>
       </div>
+
+      {introSlot && <div className="p-3 pb-0 shrink-0">{introSlot}</div>}
 
       {/* In the editor: the answers in short, and the way back to the questions */}
       {onEditAnswers ? (

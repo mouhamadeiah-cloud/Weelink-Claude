@@ -1,11 +1,12 @@
 import {StrictMode, lazy, Suspense, useEffect, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import App from './App.tsx';
 import './index.css';
 import {siteFromLocation, siteNameForHost} from './services/sites';
 import {loadPageFonts} from './services/pageFonts';
 import {ownerOfRestaurant, restaurantKeyOf} from './utils/projectKeys';
 
+// The editor is the heavy part of the app: published pages, restaurant screens and the admin site never load it.
+const App = lazy(() => import('./App.tsx'));
 // The restaurant's own pages open from query links (no server rewrites needed):
 // ?r=<uid> is the guests' site (with &t=<table> from a table's QR code), ?kitchen=<uid> the kitchen
 // screen, ?device=<uid> a restaurant tablet that opens its own screen by its code, and
@@ -47,7 +48,7 @@ const HostGate = ({host}: {host: string}) => {
     }).catch(() => setName(null));
   }, []);
   if (name === undefined) return null;
-  return name ? <Suspense fallback={null}><PublicSite where={{name}} /></Suspense> : <App />;
+  return name ? <Suspense fallback={null}><PublicSite where={{name}} /></Suspense> : <Suspense fallback={null}><App /></Suspense>;
 };
 
 createRoot(document.getElementById('root')!).render(
@@ -67,7 +68,7 @@ createRoot(document.getElementById('root')!).render(
     ) : deviceUid ? (
       <Suspense fallback={null}><DevicePage uid={deviceUid} /></Suspense>
     ) : (
-      <App />
+      <Suspense fallback={null}><App /></Suspense>
     )}
   </StrictMode>,
 );

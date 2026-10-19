@@ -17,7 +17,7 @@ import { restaurantIdOf, kindOf } from '../src/utils/projectKeys.js';
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
-const firebaseAdmin = () => {
+export const firebaseAdmin = () => {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) return null;
   let account: { private_key?: string };

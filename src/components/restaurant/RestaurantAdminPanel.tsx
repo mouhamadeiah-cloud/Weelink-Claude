@@ -2,7 +2,7 @@
 // shop and the showroom. The menu (main catalogs, sub-catalogs, dishes), the website's orders and
 // the settings are managed here; the restaurant's pages are edited in the editor like any page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, PencilLine, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users, UserCog, FileBarChart, Contact, CalendarDays, Star } from 'lucide-react';
+import { Settings, X, PencilLine, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users, UserCog, FileBarChart, Contact, CalendarDays, Star, MessageSquare } from 'lucide-react';
 import { RestaurantAdminData, setDayStartHour } from './restaurantTypes';
 import { RestaurantTabProps, RestaurantTabId } from './tabs/shared';
 import { TablesTab } from './tabs/TablesTab';
@@ -21,6 +21,7 @@ import { MembersTab } from './tabs/MembersTab';
 import { CustomersTab } from './tabs/CustomersTab';
 import { Access, OWNER_ACCESS, PermId } from '../../services/members';
 import { BookingsTab } from '../pageAdmin/BookingsTab';
+import { InquiriesTab } from '../pageAdmin/InquiriesTab';
 import { RatingsTab } from '../pageAdmin/RatingsTab';
 import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
@@ -31,6 +32,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'orders', label: 'الطلبات', icon: Inbox, Component: OrdersTab, perm: 'orders' },
   { id: 'customers', label: 'زبائن الموقع', icon: Contact, Component: CustomersTab, perm: 'orders' },
   { id: 'bookings', label: 'المواعيد', icon: CalendarDays, Component: BookingsTab, perm: 'orders' },
+  { id: 'inquiries', label: 'الرسائل', icon: MessageSquare, Component: InquiriesTab, perm: 'orders' },
   { id: 'ratings', label: 'التقييمات', icon: Star, Component: RatingsTab, perm: 'orders' },
   { id: 'dishes', label: 'الأطباق', icon: UtensilsCrossed, Component: DishesTab, perm: 'menu' },
   { id: 'categories', label: 'أقسام المنيو', icon: LayoutList, Component: CategoriesTab, perm: 'menu' },

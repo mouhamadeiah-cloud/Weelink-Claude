@@ -64,10 +64,11 @@ export const AnimationSection = ({
         <span className="text-xs font-bold text-neutral-800 block">
           تنشيط التأثير وحالة التشغيل:
         </span>
-        <div className="grid grid-cols-3 gap-1.5 p-1 bg-neutral-100 rounded-xl border border-neutral-200">
+        <div className="grid grid-cols-2 gap-1.5 p-1 bg-neutral-100 rounded-xl border border-neutral-200">
           {[
             { id: 'hover', label: 'مرور الماوس 🖱️' },
             { id: 'once', label: 'فتح الصفحة 🔄' },
+            { id: 'scroll', label: 'عند التمرير 📜' },
             { id: 'loop', label: 'مستمر دائم 🔁' }
           ].map((trig) => {
             const isSelected = currentTrigger === trig.id;

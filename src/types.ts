@@ -73,7 +73,7 @@ export interface ElementStyles {
   fontFamily?: string;
   listStyle?: 'none' | 'bullet' | 'numeric';
   animation?: string;
-  animationTrigger?: 'hover' | 'once' | 'loop';
+  animationTrigger?: 'hover' | 'once' | 'loop' | 'scroll'; // 'scroll': plays once when the visitor scrolls to it (published page and preview)
   animationDuration?: number;
   rotation?: number;
   objectFit?: 'cover' | 'contain' | 'fill' | 'none';

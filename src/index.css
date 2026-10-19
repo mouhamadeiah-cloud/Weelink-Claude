@@ -82,6 +82,12 @@
   background-image: radial-gradient(circle, rgba(0, 0, 0, 0.05) 1.2px, transparent 1.2px);
 }
 
+/* An element set to «عند التمرير» holds its first frame until the visitor scrolls it into view (CanvasWorkspace). */
+[data-scroll-anim]:not([data-seen]) { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  [data-scroll-anim] { animation: none !important; }
+}
+
 /* --- Interactive Animation Keyframes --- */
 @keyframes fade {
   from { opacity: 0; }

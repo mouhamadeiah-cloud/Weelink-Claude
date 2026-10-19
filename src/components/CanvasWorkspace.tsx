@@ -1098,6 +1098,22 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   // The phone frame is 380 wide with a 10px border round the 360-wide phone page; the published
   // phone view has no frame, so its page is the 360 the phone layout is drawn on.
+  // An element set to «عند التمرير» waits (its animation paused on the first frame, see index.css) until
+  // the visitor scrolls it into view, then plays once. Only on the published page and in the preview.
+  useEffect(() => {
+    if (!(isPublicSite || isPreviewActive) || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        (e.target as HTMLElement).setAttribute('data-seen', '1');
+        io.unobserve(e.target);
+      }),
+      { threshold: 0.12 }
+    );
+    document.querySelectorAll('[data-scroll-anim]:not([data-seen])').forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [elements, slides, isPublicSite, isPreviewActive, previewMode]);
+
   const baseWidth = previewMode === 'mobile' ? (isPublicSite ? MOBILE_CANVAS_WIDTH : 380) : (previewMode === 'tablet' ? 768 : 1280);
   const pageWidth = previewMode === 'mobile' ? MOBILE_CANVAS_WIDTH : baseWidth;
 
@@ -3181,6 +3197,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   ? 'ring-2 ring-[#0071e3] shadow-[0_4px_24px_rgba(0,113,227,0.15)]' 
                                   : 'hover:ring-1 hover:ring-[#0071e3]/40'
                       } ${isAnimHover ? 'hover-animate' : ''}`}
+                      data-scroll-anim={animTrigger === 'scroll' && anim !== 'none' && (isPreviewActive || isPublicSite) ? '1' : undefined}
                       style={{
                         left: `${spansPage ? elem.x - bleed : elem.x}px`,
                         top: `${elem.y}px`,

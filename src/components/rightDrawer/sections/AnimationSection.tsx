@@ -88,6 +88,11 @@ export const AnimationSection = ({
             );
           })}
         </div>
+        {currentTrigger === 'scroll' && (
+          <p className="text-xs text-neutral-500 leading-relaxed">
+            «عند التمرير» بتشتغل بالمعاينة (زر العين) وعلى الصفحة المنشورة: العنصر بيستنى لحد ما الزائر ينزل له. بالمحرر نفسه الحركة بتشتغل مرة وحدة عند الفتح.
+          </p>
+        )}
       </div>
 
       {/* 2. Speed Slider */}

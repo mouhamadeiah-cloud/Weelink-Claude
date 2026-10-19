@@ -38,4 +38,5 @@ export const getApps = () => [{}];
 export const initializeApp = () => ({});
 export const cert = (x: any) => x;
 export const tokens: Record<string, any> = {};
-export const getAuth = () => ({ verifyIdToken: async (t: string) => { if (!tokens[t]) throw new Error('bad'); return tokens[t]; } });
+export const users: Record<string, { email?: string }> = {};
+export const getAuth = () => ({ getUser: async (uid: string) => { if (!users[uid]) throw Object.assign(new Error('no user'), { code: 'auth/user-not-found' }); return users[uid]; }, verifyIdToken: async (t: string) => { if (!tokens[t]) throw new Error('bad'); return tokens[t]; } });

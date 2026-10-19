@@ -1,7 +1,7 @@
 // Category list, sub-category tabs and ready-made element templates for the "+" add menu.
 // Moved verbatim from RightDrawer.tsx; built per render exactly as before.
 import React from 'react';
-import { Type, Square, Image as ImageIcon, Sparkles, Globe, Shapes, Video, Clapperboard, MapPin, Tag, Calendar, Grid3X3, Code, Images, FolderOpen, Stethoscope, Minus, Star } from 'lucide-react';
+import { Type, Square, Image as ImageIcon, Sparkles, Globe, Shapes, Video, Clapperboard, MapPin, Tag, Calendar, Grid3X3, Code, Images, FolderOpen, Stethoscope, Minus, Star, MessageSquare } from 'lucide-react';
 import { ElementType } from '../../types';
 import { MASK_SHAPES } from '../../utils/maskShapes';
 import { LOTTIE_ANIMATIONS, LOTTIE_GROUPS } from '../../utils/lottieAnimations';
@@ -71,6 +71,7 @@ export const buildAddMenuData = ({
     { id: 'map', name: 'خريطة', group: 'media', icon: <MapPin size={18} /> },
     { id: 'calendar', name: 'حجز مواعيد', group: 'business', icon: <Calendar size={18} /> },
     { id: 'ratings', name: 'التقييمات', group: 'business', icon: <Star size={18} /> },
+    { id: 'contactForm', name: 'نموذج تواصل', group: 'business', icon: <MessageSquare size={18} /> },
     { id: 'pricing', name: 'أسعار', group: 'business', icon: <Tag size={18} /> },
     { id: 'sheet', name: 'جدول', group: 'business', icon: <Grid3X3 size={18} /> },
     { id: 'group-templates', name: 'بطاقات جاهزة', group: 'ready', icon: <FolderOpen size={18} /> },
@@ -3581,6 +3582,24 @@ export const buildAddMenuData = ({
           </div>
         ),
         action: () => onAddElement('ratings', 'التقييمات', {}, { name: 'التقييمات', width: 460, height: 460 }),
+      },
+    ],
+    // A message form: the visitor's message reaches the page's admin and the owner's email.
+    contactForm: [
+      {
+        id: 'contact-form',
+        title: 'نموذج تواصل',
+        sub: 'الاسم والهاتف والرسالة، وبتوصلك بالإدارة وعالإيميل',
+        subCategories: ['all'],
+        type: 'contactForm',
+        preview: (
+          <div className="w-full h-22 bg-white rounded-xl p-2 flex flex-col gap-1 border border-neutral-200 text-right">
+            <div className="text-[10px] font-black">راسلنا</div>
+            <div className="h-2.5 rounded bg-neutral-100" /><div className="h-2.5 rounded bg-neutral-100" /><div className="h-4 rounded bg-neutral-100" />
+            <span className="text-[8px] bg-[#0071e3] text-white py-0.5 rounded text-center font-bold">إرسال</span>
+          </div>
+        ),
+        action: () => onAddElement('contactForm', 'راسلنا', { backgroundColor: '#ffffff', borderRadius: 24, glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom' }, { name: 'نموذج تواصل', contactTitle: 'راسلنا', width: 460, height: 420 }),
       },
     ],
     sheet: [

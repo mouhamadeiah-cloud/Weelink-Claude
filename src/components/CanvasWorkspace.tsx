@@ -32,6 +32,7 @@ import { Icon } from '@iconify/react';
 import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
 import { BookingPageContext, createBooking, dayKey, readTaken } from '../services/bookings';
 import { NavbarStars, RatingsWidget } from './ratings/RatingsUI';
+import { ContactFormWidget } from './contact/ContactFormWidget';
 import { 
   Trash2, 
   Copy, 
@@ -4654,6 +4655,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {elem.type === 'ratings' && (
                           <RatingsWidget elem={elem} />
+                        )}
+
+                        {elem.type === 'contactForm' && (
+                          <ContactFormWidget elem={elem} />
                         )}
 
                         {elem.type === 'cart' && (

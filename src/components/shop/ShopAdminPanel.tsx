@@ -1,6 +1,6 @@
 // Online Shop admin: a large floating gear (bottom-left) that opens a floating admin window.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, PencilLine, FolderTree, PackagePlus, Warehouse, Users, ClipboardList, BarChart3, SlidersHorizontal, CalendarDays, Star } from 'lucide-react';
+import { Settings, X, PencilLine, FolderTree, PackagePlus, Warehouse, Users, ClipboardList, BarChart3, SlidersHorizontal, CalendarDays, Star, MessageSquare } from 'lucide-react';
 import { ShopAdminData } from './shopTypes';
 import { CatalogsTab } from './tabs/CatalogsTab';
 import { AddProductTab } from './tabs/AddProductTab';
@@ -11,10 +11,11 @@ import { AccountsTab } from './tabs/AccountsTab';
 import { SettingsTab } from './tabs/SettingsTab';
 import { AdminTabProps } from './tabs/tabProps';
 import { BookingsTab } from '../pageAdmin/BookingsTab';
+import { InquiriesTab } from '../pageAdmin/InquiriesTab';
 import { RatingsTab } from '../pageAdmin/RatingsTab';
 import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
-type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' | 'bookings' | 'ratings' | 'accounts' | 'settings';
+type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' | 'bookings' | 'inquiries' | 'ratings' | 'accounts' | 'settings';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<AdminTabProps> }[] = [
   { id: 'add-product', label: 'إضافة منتج', icon: PackagePlus, Component: AddProductTab },
@@ -23,6 +24,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'customers', label: 'الزبائن', icon: Users, Component: CustomersTab },
   { id: 'orders', label: 'الطلبات', icon: ClipboardList, Component: OrdersTab },
   { id: 'bookings', label: 'المواعيد', icon: CalendarDays, Component: BookingsTab },
+  { id: 'inquiries', label: 'الرسائل', icon: MessageSquare, Component: InquiriesTab },
   { id: 'ratings', label: 'التقييمات', icon: Star, Component: RatingsTab },
   { id: 'accounts', label: 'الحسابات', icon: BarChart3, Component: AccountsTab },
   { id: 'settings', label: 'الإعدادات', icon: SlidersHorizontal, Component: SettingsTab },

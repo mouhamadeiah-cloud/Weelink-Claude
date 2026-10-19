@@ -57,7 +57,9 @@ test('a page with a logo gets og:image and the small card; without one nothing i
 test('the owner\'s share line replaces the description in og:description only', () => {
   const base = { title: 'a', description: 'for Google', keywords: [], url: 'https://a.testweelink.de/' };
   const out = injectHead(html, { ...base, shareText: 'السلام عليكم "صفحتي" الجديدة' });
-  assert.match(out, /property="og:description" content="السلام عليكم &quot;صفحتي&quot; الجديدة"/);
+  assert.match(out, /property="og:description" content="السلام عليكم &quot;صفحتي&quot; الجديدة · صُمّمت على Weelink"/);
   assert.match(out, /name="description" content="for Google"/);
-  assert.match(injectHead(html, base), /property="og:description" content="for Google"/);
+  assert.match(injectHead(html, base), /property="og:description" content="for Google · صُمّمت على Weelink"/);
+  assert.match(injectHead(html, { ...base, description: '' }), /property="og:description" content="صُمّمت على Weelink"/);
+  assert.match(out, /property="og:site_name" content="Weelink"/);
 });

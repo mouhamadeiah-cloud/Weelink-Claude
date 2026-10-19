@@ -42,3 +42,14 @@ test('Weelink\'s own address is left to the static assets, except robots.txt', a
   assert.equal(robots?.status, 200);
   assert.equal(await serveSiteHead(new Request('https://a.testweelink.de/', { method: 'POST' }), assets), null);
 });
+
+test('a page with a logo gets og:image and the small card; without one nothing is added', () => {
+  const base = { title: 'a', description: 'b', keywords: [], url: 'https://a.testweelink.de/' };
+  const withLogo = injectHead(html, { ...base, image: true });
+  assert.match(withLogo, /property="og:image" content="https:\/\/a\.testweelink\.de\/og-image\.png"/);
+  assert.match(withLogo, /name="twitter:card" content="summary"/);
+  assert.doesNotMatch(withLogo, /summary_large_image/);
+  const without = injectHead(html, base);
+  assert.doesNotMatch(without, /og:image/);
+  assert.match(without, /summary_large_image/);
+});

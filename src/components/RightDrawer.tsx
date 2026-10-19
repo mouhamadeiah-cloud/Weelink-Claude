@@ -1120,7 +1120,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addPanelOpen]);
   useEffect(() => {
-    if (addPanelOpen && activeAddCategory) openAddChapter(activeAddCategory);
+    // Back at the grid of everything that can be added: the overview again.
+    if (addPanelOpen) openAddChapter(activeAddCategory ?? 'tour');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeAddCategory]);
   useEffect(() => {

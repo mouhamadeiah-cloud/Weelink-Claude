@@ -192,7 +192,8 @@ export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode,
       )}
     </div>
   );
-  const shell = 'relative rounded-2xl bg-white overflow-hidden flex flex-col';
+  // `fixed` itself holds the chapter list, so only the docked box needs `relative` (both would let `relative` win).
+  const shell = 'rounded-2xl bg-white overflow-hidden flex flex-col';
   // The list of chapters, laid over the picture.
   const chapterList = listOpen && video.chapters && onChapter && (
     <div className="absolute inset-x-0 bottom-0 overflow-y-auto bg-white/95 backdrop-blur-sm p-1.5 animate-[fade_0.15s_ease-out]" style={{ top: BAR }}>
@@ -213,7 +214,7 @@ export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode,
 
   if (mode === 'docked') {
     return (
-      <div ref={boxRef} dir="rtl" className={`${shell} border border-neutral-200 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_8px_24px_rgba(16,24,40,0.08)] animate-[fade_0.25s_ease-out]`}>
+      <div ref={boxRef} dir="rtl" className={`relative ${shell} border border-neutral-200 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_8px_24px_rgba(16,24,40,0.08)] animate-[fade_0.25s_ease-out]`}>
         {bar}
         <Frame key={`docked-${src}`} frameRef={frameRef} src={src} start={timeRef.current} title={title} className="w-full aspect-video" />
         {chapterList}

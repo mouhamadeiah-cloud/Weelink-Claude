@@ -5,6 +5,8 @@ import { ElementType } from '../../../types';
 import { RightDrawerProps } from '../types';
 
 interface LayersSectionProps {
+  // The selected element's own place only (up or down one layer, over all, under all), not the slide's list.
+  own?: boolean;
   elements: RightDrawerProps['elements'];
   activeSlideId: RightDrawerProps['activeSlideId'];
   selectedElement: RightDrawerProps['selectedElement'];
@@ -20,6 +22,7 @@ interface LayersSectionProps {
 }
 
 export const LayersSection = ({
+  own,
   elements,
   activeSlideId,
   selectedElement,
@@ -43,7 +46,7 @@ export const LayersSection = ({
       {/* أزرار التحكم بالترتيب الفوري للطبقات */}
       <div className="space-y-2">
         <span className="text-xs font-bold text-neutral-800 block">
-          خيارات ترتيب الطبقة للعنصر المحدد:
+          {own ? 'مكان العنصر بين العناصر اللي فوق بعض:' : 'خيارات ترتيب الطبقة للعنصر المحدد:'}
         </span>
                     
         {selectedElement ? (
@@ -103,95 +106,100 @@ export const LayersSection = ({
         )}
       </div>
 
+      {!own && (
+        <>
       {/* قائمة بجميع الطبقات في هذه الشريحة */}
-      <div className="space-y-2.5 pt-2 border-t border-neutral-100">
-        <div className="flex justify-between items-center text-xs">
-          <span className="font-bold text-neutral-800">طبقات الشريحة الحالية:</span>
-          <span className="text-xs text-neutral-400 font-mono">({layersList.length} عناصر)</span>
-        </div>
-
-        <div className="space-y-1.5 max-h-80 overflow-y-auto pr-0.5">
-          {layersList.map((el, i) => {
-            const isSelected = selectedElement?.id === el.id;
-            const isLocked = !!el.isLocked;
-
-            return (
-              <div
-                key={el.id}
-                className={`p-2 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-pointer ${
-                  isSelected
-                    ? 'border-brand bg-brand/5 shadow-xs ring-1 ring-brand/30'
-                    : 'border-neutral-200 bg-white hover:bg-neutral-50 hover:border-neutral-300'
-                }`}
-                onClick={() => onSelectElement(el.id)}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  {/* رقم الترتيب / الطبقة بصريًا */}
-                  <span className="text-xs font-mono font-bold text-neutral-400 bg-neutral-100 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
-                    {layersList.length - i}
-                  </span>
-                  {/* أيقونة العنصر */}
-                  <span className="shrink-0">
-                    {getElementIcon(el.type)}
-                  </span>
-                  {/* اسم العنصر */}
-                  <span className={`text-xs truncate ${isSelected ? 'font-bold text-brand' : 'text-neutral-700 font-medium'}`}>
-                    {el.name}
-                  </span>
+        <div className="space-y-2.5 pt-2 border-t border-neutral-100">
+          <div className="flex justify-between items-center text-xs">
+            <span className="font-bold text-neutral-800">طبقات الشريحة الحالية:</span>
+            <span className="text-xs text-neutral-400 font-mono">({layersList.length} عناصر)</span>
+          </div>
+  
+          <div className="space-y-1.5 max-h-80 overflow-y-auto pr-0.5">
+            {layersList.map((el, i) => {
+              const isSelected = selectedElement?.id === el.id;
+              const isLocked = !!el.isLocked;
+  
+              return (
+                <div
+                  key={el.id}
+                  className={`p-2 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                    isSelected
+                      ? 'border-brand bg-brand/5 shadow-xs ring-1 ring-brand/30'
+                      : 'border-neutral-200 bg-white hover:bg-neutral-50 hover:border-neutral-300'
+                  }`}
+                  onClick={() => onSelectElement(el.id)}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {/* رقم الترتيب / الطبقة بصريًا */}
+                    <span className="text-xs font-mono font-bold text-neutral-400 bg-neutral-100 w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                      {layersList.length - i}
+                    </span>
+                    {/* أيقونة العنصر */}
+                    <span className="shrink-0">
+                      {getElementIcon(el.type)}
+                    </span>
+                    {/* اسم العنصر */}
+                    <span className={`text-xs truncate ${isSelected ? 'font-bold text-brand' : 'text-neutral-700 font-medium'}`}>
+                      {el.name}
+                    </span>
+                  </div>
+  
+                  {/* الإجراءات السريعة على الطبقة */}
+                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {/* زر القفل السريع */}
+                    <button
+                      onClick={() => {
+                        onSelectElement(el.id);
+                        onToggleLock();
+                      }}
+                      className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                        isLocked 
+                          ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' 
+                          : 'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100'
+                      }`}
+                      title={isLocked ? "إلغاء قفل العنصر" : "قفل العنصر"}
+                    >
+                      {isLocked ? <Lock size={11} strokeWidth={2.4} /> : <Unlock size={11} />}
+                    </button>
+  
+                    {/* زر التكرار السريع */}
+                    <button
+                      onClick={() => onDuplicateElement(el.id)}
+                      className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-all"
+                      title="تكرار هذه الطبقة"
+                    >
+                      <Copy size={11} />
+                    </button>
+  
+                    {/* زر الحذف السريع */}
+                    <button
+                      onClick={() => onDeleteElement(el.id)}
+                      className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                      title="حذف الطبقة"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
                 </div>
-
-                {/* الإجراءات السريعة على الطبقة */}
-                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  {/* زر القفل السريع */}
-                  <button
-                    onClick={() => {
-                      onSelectElement(el.id);
-                      onToggleLock();
-                    }}
-                    className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
-                      isLocked 
-                        ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' 
-                        : 'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100'
-                    }`}
-                    title={isLocked ? "إلغاء قفل العنصر" : "قفل العنصر"}
-                  >
-                    {isLocked ? <Lock size={11} strokeWidth={2.4} /> : <Unlock size={11} />}
-                  </button>
-
-                  {/* زر التكرار السريع */}
-                  <button
-                    onClick={() => onDuplicateElement(el.id)}
-                    className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-all"
-                    title="تكرار هذه الطبقة"
-                  >
-                    <Copy size={11} />
-                  </button>
-
-                  {/* زر الحذف السريع */}
-                  <button
-                    onClick={() => onDeleteElement(el.id)}
-                    className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-all"
-                    title="حذف الطبقة"
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
+              );
+            })}
+  
+            {layersList.length === 0 && (
+              <div className="text-center py-6 text-xs text-neutral-400 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
+                لا توجد عناصر في هذه الشريحة حالياً. أضف عناصر جديدة من القائمة لتبدأ!
               </div>
-            );
-          })}
-
-          {layersList.length === 0 && (
-            <div className="text-center py-6 text-xs text-neutral-400 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
-              لا توجد عناصر في هذه الشريحة حالياً. أضف عناصر جديدة من القائمة لتبدأ!
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* نص توضيحي مفيد */}
-      <div className="p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-500 leading-tight">
-        💡 <b>معلومة مفيدة:</b> الطبقات مرتبة من الأعلى للأسفل كبرامج التصميم الاحترافية. لتعديل عنصر مغطى بالكامل خلف عناصر أخرى، حدده مباشرة من هذه القائمة وسيتم تنشيطه على الفور في ساحة العمل.
-      </div>
+  
+        {/* نص توضيحي مفيد */}
+        <div className="p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs text-neutral-500 leading-tight">
+          💡 <b>معلومة مفيدة:</b> الطبقات مرتبة من الأعلى للأسفل كبرامج التصميم الاحترافية. لتعديل عنصر مغطى بالكامل خلف عناصر أخرى، حدده مباشرة من هذه القائمة وسيتم تنشيطه على الفور في ساحة العمل.
+        </div>
+  
+          </>
+      )}
 
     </div>
   );

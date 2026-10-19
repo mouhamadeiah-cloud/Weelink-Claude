@@ -28,8 +28,12 @@ const VIDEOS: Partial<Record<InspectorGroupId, IntroVideo>> = {
     src: '/intro-videos/content-element.html',
     chapters: chaptersOf('content', [['element', 'إعدادات العنصر'], ['image', 'الصورة'], ['lottie', 'الرسوم المتحركة'], ['navbar', 'النافبار'], ['slide', 'تداخل الشريحة']]),
   },
-  font: { id: 'font', title: 'شرح «الخط»', src: '/intro-videos/font.html' },
-  effects: { id: 'effects', title: 'شرح «تأثيرات»', src: '/intro-videos/effects.html' },
+  font: {
+    id: 'font',
+    title: 'شرح «الخط»',
+    src: '/intro-videos/font.html',
+    chapters: [{ id: 'font', title: 'الخط', src: '/intro-videos/font.html' }, { id: 'effects', title: 'تأثيرات النص', src: '/intro-videos/effects.html' }],
+  },
   colors: {
     id: 'colors',
     title: 'شرح «الألوان»',
@@ -43,12 +47,8 @@ const VIDEOS: Partial<Record<InspectorGroupId, IntroVideo>> = {
     src: '/intro-videos/layout-element.html',
     chapters: chaptersOf('layout', [['element', 'مكان العنصر'], ['slide', 'طبقات الشريحة']]),
   },
-  motion: {
-    id: 'motion',
-    title: 'شرح «الحركة»',
-    src: '/intro-videos/motion-link.html',
-    chapters: chaptersOf('motion', [['link', 'الرابط'], ['animation', 'حركة الظهور']]),
-  },
+  link: { id: 'link', title: 'شرح «الرابط»', src: '/intro-videos/motion-link.html' },
+  motion: { id: 'motion', title: 'شرح «الحركة»', src: '/intro-videos/motion-animation.html' },
 };
 
 export const introVideoFor = (group: InspectorGroupId): IntroVideo | null => VIDEOS[group] ?? null;

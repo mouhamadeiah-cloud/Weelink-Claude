@@ -65,6 +65,7 @@ import {
   Palette,
   Move,
   Zap,
+  Link as LinkIcon,
   PanelTop,
 } from 'lucide-react';
 import { WeeDots } from './ui/WeeDots';
@@ -1211,10 +1212,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     switch (id) {
       case 'content': return isNavbarSelected ? <PanelTop size={17} /> : <SlidersHorizontal size={17} />;
       case 'font': return <Type size={17} />;
-      case 'effects': return <Sparkles size={17} />;
       case 'colors': return <Palette size={17} />;
       case 'shape': return <Shapes size={17} />;
       case 'layout': return selectedElement ? <Move size={17} /> : <Layers size={17} />;
+      case 'layers': return <Layers size={17} />;
+      case 'link': return <LinkIcon size={17} />;
       case 'motion': return <Zap size={17} />;
     }
   };
@@ -1234,9 +1236,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         if (selectedElement) return elementDisplayName(selectedElement);
         return `مع التالية: ${SLIDE_DIVIDER_OPTIONS.find((o) => o.id === (activeSlide?.dividerShape || 'straight'))?.name || 'مستقيم'}`;
       case 'font':
-        return join(st.fontSize ? `${st.fontSize}px` : '', st.fontWeight === 'bold' && 'عريض', st.fontStyle === 'italic' && 'مائل', st.fontFamily && String(st.fontFamily).split(',')[0].replace(/['"]/g, ''));
-      case 'effects':
-        return textEffectById(st.textEffect)?.name || 'بدون تأثير';
+        return join(st.fontSize ? `${st.fontSize}px` : '', st.fontWeight === 'bold' && 'عريض', st.fontStyle === 'italic' && 'مائل', st.fontFamily && String(st.fontFamily).split(',')[0].replace(/['"]/g, ''), textEffectById(st.textEffect)?.name);
       case 'colors': {
         const fg = isNavbarSelected ? navbar?.textColor : st.color;
         const bg = st.backgroundColor;
@@ -1257,8 +1257,16 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
       case 'layout':
         if (!selectedElement) return `${elements.filter((e) => e.slideId === activeSlideId).length} عنصر بالشريحة`;
         return join(`${Math.round(selectedElement.width)}×${Math.round(selectedElement.height)}`, selectedElement.rotation ? `مدوّر ${Math.round(selectedElement.rotation)}°` : '', selectedElement.isLocked && 'مقفل');
+      case 'layers': {
+        if (!selectedElement) return '';
+        const onSlide = elements.filter((e) => e.slideId === selectedElement.slideId);
+        const at = onSlide.findIndex((e) => e.id === selectedElement.id);
+        return at < 0 ? '' : `الطبقة ${at + 1} من ${onSlide.length}`;
+      }
+      case 'link':
+        return selectedElement?.linkUrl ? 'فيه رابط' : 'بدون رابط';
       case 'motion':
-        return join(selectedElement?.linkUrl ? 'فيه رابط' : 'بدون رابط', st.animation && st.animation !== 'none' ? 'فيه حركة' : 'بدون حركة');
+        return st.animation && st.animation !== 'none' ? 'فيه حركة' : 'بدون حركة';
     }
   };
 
@@ -1403,7 +1411,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         {/* Copy, lock, copy format and delete are in the bar above the element on the canvas. */}
         {groups.map((g, i) => {
           const open = openGroups.includes(g.id);
-          const many = g.sections.length > 1;
+          const many = g.sections.length > 1 || (g.id === 'font' && !!selectedElement);
           return (
             <React.Fragment key={g.id}>
             {introVideo?.id === g.id && (
@@ -1432,9 +1440,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               }}
             >
               {g.id === 'content' && renderContentExtras()}
-              {g.id === 'effects' && selectedElement && (
-                <TextEffectsPicker styles={selectedElement.styles || {}} onChange={onUpdateElementStyles} onShowAll={() => setTextFxGalleryOpen(true)} />
-              )}
               {g.sections.filter((s) => s !== 'lighting').map((s) =>
                 // The outer shadow and the inner glow are one tool with a side to pick.
                 s === 'shadow' && g.sections.includes('lighting') ? (
@@ -1462,6 +1467,12 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     {renderSection(s)}
                   </div>
                 )
+              )}
+              {g.id === 'font' && selectedElement && (
+                <div data-inspector-section="text-effects" className="space-y-3">
+                  <InspectorSubheading>تأثيرات النص</InspectorSubheading>
+                  <TextEffectsPicker styles={selectedElement.styles || {}} onChange={onUpdateElementStyles} onShowAll={() => setTextFxGalleryOpen(true)} />
+                </div>
               )}
             </InspectorCard>
             </React.Fragment>
@@ -5353,7 +5364,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               {activeSection === 'link' && <LinkSection pages={pages} slides={slides} selectedElement={selectedElement} onUpdateElement={onUpdateElement} linkSubSection={linkSubSection} setLinkSubSection={setLinkSubSection} contactMethod={contactMethod} setContactMethod={setContactMethod} contactInputValue={contactInputValue} setContactInputValue={setContactInputValue} urlInputValue={urlInputValue} setUrlInputValue={setUrlInputValue} withShopSettings={!isDocked} />}
 
               {/* TOOL: Layers (إدارة الطبقات) */}
-              {activeSection === 'layers' && <LayersSection elements={elements} activeSlideId={activeSlideId} selectedElement={selectedElement} onSelectElement={onSelectElement} onDeleteElement={onDeleteElement} onDuplicateElement={onDuplicateElement} onToggleLock={onToggleLock} onMoveLayerUp={onMoveLayerUp} onMoveLayerDown={onMoveLayerDown} onMoveLayerToFront={onMoveLayerToFront} onMoveLayerToBack={onMoveLayerToBack} getElementIcon={getElementIcon} />}
+              {activeSection === 'layers' && <LayersSection own={!!selectedElement} elements={elements} activeSlideId={activeSlideId} selectedElement={selectedElement} onSelectElement={onSelectElement} onDeleteElement={onDeleteElement} onDuplicateElement={onDuplicateElement} onToggleLock={onToggleLock} onMoveLayerUp={onMoveLayerUp} onMoveLayerDown={onMoveLayerDown} onMoveLayerToFront={onMoveLayerToFront} onMoveLayerToBack={onMoveLayerToBack} getElementIcon={getElementIcon} />}
 
               {/* TOOL: Add/Edit Image (تبديل/تعديل الصورة) */}
               {activeSection === 'add-image' && (

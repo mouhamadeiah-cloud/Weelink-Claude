@@ -19,6 +19,7 @@ import sendEmail from '../api/send-email.js';
 import uploadImage from './upload-image.js';
 import indexSite from './index-site.js';
 import { serveMedia } from './media.js';
+import { serveSiteHead } from './site-head.js';
 import { setSearchDb, type SearchDb } from '../server/searchIndex.js';
 import { imagesBucket, setImagesBucket, type ImagesBucket } from '../server/images.js';
 
@@ -74,7 +75,8 @@ export default {
     if (pathname.startsWith('/img/')) return servePhoto(request, pathname);
     if (pathname === '/media') return serveMedia(request, env.ASSETS);
     if (pathname.startsWith('/api/')) return route(request);
-    return env.ASSETS.fetch(request);
+    const site = await serveSiteHead(request, env.ASSETS);
+    return site || env.ASSETS.fetch(request);
   },
 
   async scheduled(event: { cron: string }, env: Env): Promise<void> {

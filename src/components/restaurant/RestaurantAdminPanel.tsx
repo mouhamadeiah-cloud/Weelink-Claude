@@ -22,6 +22,7 @@ import { CustomersTab } from './tabs/CustomersTab';
 import { Access, OWNER_ACCESS, PermId } from '../../services/members';
 import { BookingsTab } from '../pageAdmin/BookingsTab';
 import { RatingsTab } from '../pageAdmin/RatingsTab';
+import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
 type TabId = RestaurantTabId;
 
@@ -116,6 +117,7 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
                   <PencilLine size={14} /> تعديل الصفحة
                 </button>
               )}
+              <AdminIntroButton kind="restaurant" />
               <button type="button" onClick={() => setOpen(false)} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق">
                 <X size={18} />
               </button>

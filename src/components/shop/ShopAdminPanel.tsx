@@ -12,6 +12,7 @@ import { SettingsTab } from './tabs/SettingsTab';
 import { AdminTabProps } from './tabs/tabProps';
 import { BookingsTab } from '../pageAdmin/BookingsTab';
 import { RatingsTab } from '../pageAdmin/RatingsTab';
+import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
 type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' | 'bookings' | 'ratings' | 'accounts' | 'settings';
 
@@ -92,6 +93,7 @@ export const ShopAdminPanel: React.FC<ShopAdminPanelProps> = ({ data, onChange, 
                   <PencilLine size={14} /> تعديل الصفحة
                 </button>
               )}
+              <AdminIntroButton kind="shop" />
               <button type="button" onClick={() => setOpen(false)} className="w-9 h-9 rounded-xl hover:bg-neutral-100 text-neutral-500 flex items-center justify-center cursor-pointer" aria-label="إغلاق">
                 <X size={18} />
               </button>

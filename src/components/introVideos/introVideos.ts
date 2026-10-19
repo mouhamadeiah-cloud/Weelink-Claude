@@ -10,7 +10,7 @@ export interface IntroChapter {
 }
 
 export interface IntroVideo {
-  id: InspectorGroupId | 'add' | 'structure' | 'weeai';
+  id: InspectorGroupId | 'add' | 'structure' | 'weeai' | 'admin';
   title: string;
   src: string;
   // A long explainer is cut into short chapters; src is then the first one's.
@@ -99,3 +99,12 @@ export const ADD_VIDEO: IntroVideo = {
 
 export const addChapterFor = (category: string): IntroChapter | null =>
   ADD_VIDEO.chapters?.find((c) => c.id === category) ?? null;
+
+// The admin of each kind of page; it floats over the editor, so its explainer opens from a button in its header.
+export type AdminKind = 'page' | 'restaurant' | 'shop' | 'cars';
+export const ADMIN_VIDEOS: Record<AdminKind, IntroVideo> = {
+  page: { id: 'admin', title: 'شرح «إدارة الصفحة»', src: '/intro-videos/admin-page.html' },
+  restaurant: { id: 'admin', title: 'شرح «إدارة المطعم»', src: '/intro-videos/admin-restaurant.html' },
+  shop: { id: 'admin', title: 'شرح «إدارة المتجر»', src: '/intro-videos/admin-shop.html' },
+  cars: { id: 'admin', title: 'شرح «إدارة معرض السيارات»', src: '/intro-videos/admin-cars.html' },
+};

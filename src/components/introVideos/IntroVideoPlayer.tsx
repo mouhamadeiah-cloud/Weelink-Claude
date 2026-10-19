@@ -33,7 +33,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 const Frame: React.FC<{ src: string; start: number; paused?: boolean; title: string; frameRef?: React.Ref<HTMLIFrameElement>; className?: string }> = ({
   src, start, paused, title, frameRef, className,
 }) => {
-  const [url] = useState(() => `${src}?t=${start.toFixed(2)}${paused ? '&paused' : ''}`);
+  const [url] = useState(() => `${src}?t=${(Number.isFinite(start) ? start : 0).toFixed(2)}${paused ? '&paused' : ''}`);
   return <iframe ref={frameRef} src={url} title={title} tabIndex={paused ? -1 : undefined} className={`border-0 bg-[#eef2f8] ${className || ''}`} />;
 };
 
@@ -222,28 +222,47 @@ export const IntroVideoPlayer: React.FC<IntroVideoPlayerProps> = ({ video, mode,
     );
   }
 
-  // Floating or enlarged: drawn on the page itself, above the editor.
-  const bigW = Math.min(vp.w - 32, 1180, ((vp.h - 32 - BAR) * 16) / 9);
-  const style: React.CSSProperties =
-    mode === 'big'
-      ? { left: (vp.w - bigW) / 2, top: Math.max(16, (vp.h - bigW * 9 / 16 - BAR) / 2), width: bigW, height: (bigW * 9) / 16 + BAR }
-      : { left: pos.x, top: pos.y, width: floatW, height: floatH };
-  return createPortal(
-    <>
-      {mode === 'big' && <div className="fixed inset-0 bg-neutral-950/45 backdrop-blur-[2px] animate-[fade_0.25s_ease-out]" style={{ zIndex: Z }} onClick={() => setMode(prevMode.current)} />}
+  const shadow = 'shadow-[0_24px_60px_-12px_rgba(16,24,40,0.45),0_0_0_1px_rgba(16,24,40,0.08)]';
+  // Enlarged: centred over the page by CSS alone (no pixel maths from the window's size), as wide as fits.
+  if (mode === 'big') {
+    return createPortal(
       <div
-        ref={boxRef}
-        dir="rtl"
-        role="dialog"
-        aria-label={title}
-        className={`fixed ${shell} shadow-[0_24px_60px_-12px_rgba(16,24,40,0.45),0_0_0_1px_rgba(16,24,40,0.08)] ${drag.current?.moved ? '' : 'transition-[left,top,width,height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
-        style={{ ...style, zIndex: Z + 1 }}
+        className="fixed inset-0 flex items-center justify-center p-4 bg-neutral-950/45 backdrop-blur-[2px] animate-[fade_0.25s_ease-out]"
+        style={{ zIndex: Z }}
+        onClick={() => setMode(prevMode.current)}
       >
-        {bar}
-        <Frame key={`floating-${src}`} frameRef={frameRef} src={src} start={timeRef.current} title={title} className="w-full flex-1" />
-        {chapterList}
-      </div>
-    </>,
+        <div
+          ref={boxRef}
+          dir="rtl"
+          role="dialog"
+          aria-label={title}
+          className={`relative ${shell} ${shadow}`}
+          style={{ width: `min(1180px, 100%, calc((100dvh - 32px - ${BAR}px) * 16 / 9))` }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {bar}
+          <Frame key={`big-${src}`} frameRef={frameRef} src={src} start={timeRef.current} title={title} className="w-full aspect-video" />
+          {chapterList}
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
+  // Floating: drawn on the page itself, above the editor, wherever it was dragged.
+  return createPortal(
+    <div
+      ref={boxRef}
+      dir="rtl"
+      role="dialog"
+      aria-label={title}
+      className={`fixed ${shell} ${shadow} ${drag.current?.moved ? '' : 'transition-[left,top,width,height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
+      style={{ left: pos.x, top: pos.y, width: floatW, height: floatH, zIndex: Z + 1 }}
+    >
+      {bar}
+      <Frame key={`floating-${src}`} frameRef={frameRef} src={src} start={timeRef.current} title={title} className="w-full flex-1" />
+      {chapterList}
+    </div>,
     document.body,
   );
 };

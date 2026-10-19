@@ -1115,23 +1115,19 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     setIntroVideoMode((m) => (m === 'floating' || m === 'big' ? m : 'docked'));
   };
   const addPanelOpen = activeSection === 'elements' || activeSection === 'add-text';
-  useEffect(() => {
-    if (addPanelOpen) openAddChapter(activeSection === 'add-text' ? 'text' : 'tour');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addPanelOpen]);
-  useEffect(() => {
-    // Back at the grid of everything that can be added: the overview again.
-    if (addPanelOpen) openAddChapter(activeAddCategory ?? 'tour');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeAddCategory]);
-  useEffect(() => {
-    if (activeTab === 'structure') openPanelVideo(STRUCTURE_VIDEO);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  // The panels of the column take turns in this drawer: the chat covers the others while it is open. Each
+  // explainer starts when its panel is the one on show, and again when the chat steps aside for it.
   useEffect(() => {
     if (!isWeeAiChatCollapsed) openPanelVideo(WEEAI_VIDEO);
+    else if (activeTab === 'structure') openPanelVideo(STRUCTURE_VIDEO);
+    else if (addPanelOpen) openAddChapter(activeSection === 'add-text' ? 'text' : activeAddCategory ?? 'tour');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWeeAiChatCollapsed]);
+  }, [isWeeAiChatCollapsed, addPanelOpen, activeTab]);
+  useEffect(() => {
+    // Back at the grid of everything that can be added: the overview again.
+    if (addPanelOpen && isWeeAiChatCollapsed) openAddChapter(activeAddCategory ?? 'tour');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAddCategory]);
   const panelVideo = (id: IntroVideo['id']) =>
     introVideo?.id === id && (
       <div data-intro-for={id}>

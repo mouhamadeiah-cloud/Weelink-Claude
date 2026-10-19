@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import handler, { PER_VISITOR_HOUR } from '../api/contact.ts';
+import handler, { PER_VISITOR_HOUR } from '../server/contact.ts';
 import { store, users } from './fakeAdmin.ts';
 
 process.env.FIREBASE_SERVICE_ACCOUNT = JSON.stringify({ private_key: 'x' });

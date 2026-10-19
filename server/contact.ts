@@ -1,4 +1,4 @@
-// Server function: messages sent from the «نموذج تواصل» on a page.
+// Server function (routed by worker/index.ts as /api/contact; it lives in server/ so Vercel's 12-function limit still holds): messages sent from the «نموذج تواصل» on a page.
 //
 //   POST /api/contact  { owner, project, pageName, name, phone, email?, message, website? }
 //        → the message is saved for the page's owner and emailed to them      → { ok: true } | { error }
@@ -10,7 +10,7 @@
 // Needs FIREBASE_SERVICE_ACCOUNT; EMAIL_FROM and RESEND_API_KEY for the email (without them the message is
 // still saved and shows in the page's admin).
 
-import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore } from '../server/firebase.js';
+import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore } from './firebase.js';
 import { Resend } from 'resend';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 

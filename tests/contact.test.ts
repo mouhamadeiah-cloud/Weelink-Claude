@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { inquiryMail } from '../api/contact';
+import { inquiryMail } from '../server/contact';
 import { contactErrorText } from '../src/services/contact';
 
 test('the owner\'s email escapes what a visitor typed', () => {

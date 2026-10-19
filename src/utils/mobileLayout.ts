@@ -44,7 +44,7 @@ const PICTURE_TYPES = new Set(['image', 'video', 'lottie', 'gallery', 'mask']);
 const MAX_PICTURE_HEIGHT = 420;
 // A small round or square badge that holds an icon or a letter keeps its size on a phone; it is not a panel.
 const BADGE_MAX = 200;
-const REFLOW_TYPES = new Set(['pricing', 'calendar', 'ratings', 'html', 'input', 'divider', 'menuCart']);
+const REFLOW_TYPES = new Set(['pricing', 'calendar', 'ratings', 'contactForm', 'html', 'input', 'divider', 'menuCart']);
 
 const DEFAULT_FONT_SIZE: Record<string, number> = { heading: 32, paragraph: 16 };
 

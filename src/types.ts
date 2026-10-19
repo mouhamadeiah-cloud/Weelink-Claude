@@ -17,6 +17,7 @@ export type ElementType =
   | 'pricing'
   | 'calendar'
   | 'ratings'
+  | 'contactForm'
   | 'html'
   | 'gallery'
   | 'mask'
@@ -220,6 +221,10 @@ export interface CanvasElement {
   // The «التقييمات» block: its stars' colour and an optional «قيّمنا على جوجل» link.
   ratingsAccentColor?: string;
   ratingsGoogleUrl?: string;
+  // The «نموذج تواصل» block: its heading, button and colour.
+  contactTitle?: string;
+  contactButtonText?: string;
+  contactAccentColor?: string;
   compoundType?: 'hero' | 'badge-heading' | 'quote' | 'stat' | 'checklist' | 'accent-border' | 'price-tag' | 'card-box' | 'alert-box' | 'faq-box' | 'welcome-box';
   subContent?: string;
   badgeText?: string;

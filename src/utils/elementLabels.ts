@@ -19,6 +19,7 @@ const ELEMENT_TYPE_LABEL: Record<ElementType, string> = {
   pricing: 'أسعار',
   calendar: 'حجوزات',
   ratings: 'التقييمات',
+  contactForm: 'نموذج تواصل',
   html: 'كود HTML',
   gallery: 'معرض صور',
   mask: 'صورة بقناع',

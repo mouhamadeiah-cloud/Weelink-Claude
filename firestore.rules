@@ -463,6 +463,13 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    // Messages from a page's «نموذج تواصل» (api/contact.ts creates them): the owner and the members read them,
+    // mark them read and delete them. contactLimits (the per-hour counters) are the function's alone.
+    match /inquiries/{ownerId}/items/{inquiryId} {
+      allow read, delete: if canManage(ownerId);
+      allow update: if canManage(ownerId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
     // A page's ratings (api/rating.ts writes them after the rater confirmed their email): anyone
     // reads them and the page's stars; nobody, the owner included, changes or deletes them here.
     match /ratings/{ownerId}/items/{ratingId} {

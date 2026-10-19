@@ -7,6 +7,7 @@
 import admin from '../api/admin.js';
 import booking from '../api/booking.js';
 import buildPage from '../api/build-page.js';
+import contact from '../api/contact.js';
 import designers from '../api/designers.js';
 import domains from '../api/domains.js';
 import emailCode from '../api/email-code.js';
@@ -26,7 +27,7 @@ import { imagesBucket, setImagesBucket, type ImagesBucket } from '../server/imag
 type Handler = { fetch(request: Request): Promise<Response> };
 
 const ROUTES: Record<string, Handler> = {
-  admin, booking, 'build-page': buildPage, designers, domains, 'email-code': emailCode,
+  admin, booking, 'build-page': buildPage, contact, designers, domains, 'email-code': emailCode,
   geocode, 'item-numbers': itemNumbers, 'order-status': orderStatus, photos, rating, 'send-email': sendEmail, 'upload-image': uploadImage, 'index-site': indexSite,
 };
 // These addresses share the designers handler, which reads the area from the path.

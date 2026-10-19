@@ -87,6 +87,7 @@ export const restyleElement = (e: CanvasElement, scene: RecolourScene, slideHead
   if (e.type === 'shopProducts' || e.type === 'cart' || e.type === 'checkout') next.shopAccent = look.accent;
   if (e.type === 'ratings') next.ratingsAccentColor = look.accent;
   if (e.type === 'calendar') next.calendarAccentColor = look.accent;
+  if (e.type === 'contactForm') next.contactAccentColor = look.accent;
   return next;
 };
 

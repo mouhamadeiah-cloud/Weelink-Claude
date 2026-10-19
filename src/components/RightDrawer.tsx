@@ -2397,6 +2397,25 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         );
                       })()}
 
+                      {/* The contact form: its heading, button and colour */}
+                      {selectedElement.type === 'contactForm' && (
+                        <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-3 text-right">
+                          <p className="text-xs text-neutral-500 leading-relaxed">رسائل الزوار بتوصلك على إيميلك وبتلاقيها بـ «الإدارة».</p>
+                          <label className="block space-y-1">
+                            <span className="text-xs font-bold text-neutral-700">العنوان</span>
+                            <input value={selectedElement.contactTitle ?? 'راسلنا'} onChange={(e) => onUpdateElement({ contactTitle: e.target.value })} className="w-full text-xs px-2.5 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:border-neutral-400" />
+                          </label>
+                          <label className="block space-y-1">
+                            <span className="text-xs font-bold text-neutral-700">نص الزر</span>
+                            <input value={selectedElement.contactButtonText ?? 'إرسال'} onChange={(e) => onUpdateElement({ contactButtonText: e.target.value })} className="w-full text-xs px-2.5 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:border-neutral-400" />
+                          </label>
+                          <label className="block space-y-1">
+                            <span className="text-xs font-bold text-neutral-700">لون الزر</span>
+                            <input type="color" value={selectedElement.contactAccentColor || '#0071e3'} onChange={(e) => onUpdateElement({ contactAccentColor: e.target.value })} className="w-full h-9 rounded-lg border border-neutral-200 cursor-pointer" />
+                          </label>
+                        </div>
+                      )}
+
                       {/* The ratings block: its stars' colour and the «قيّمنا على جوجل» link */}
                       {selectedElement.type === 'ratings' && (
                         <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-3 text-right">

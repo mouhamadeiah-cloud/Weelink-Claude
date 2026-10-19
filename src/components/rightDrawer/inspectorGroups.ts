@@ -22,7 +22,7 @@ export interface InspectorGroup {
 
 // Elements whose own settings (gallery images, booking hours, table cells...) are more than size and rotation.
 const TYPES_WITH_SETTINGS: ElementType[] = [
-  'gallery', 'table', 'calendar', 'ratings', 'video', 'map', 'cart', 'checkout', 'carListings', 'carSearch', 'menuList', 'menuCart',
+  'gallery', 'table', 'calendar', 'ratings', 'contactForm', 'video', 'map', 'cart', 'checkout', 'carListings', 'carSearch', 'menuList', 'menuCart',
 ];
 // Elements whose settings are drawn by the shop's own panel rather than the format section.
 const SHOP_SETTING_TYPES: ElementType[] = ['shopProducts', 'shopSearch'];

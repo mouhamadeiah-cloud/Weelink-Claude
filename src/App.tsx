@@ -3099,7 +3099,7 @@ export default function App() {
     const ADDS: [string, string, string?][] = [
       ['text', 'نص', 'عنوان فقرة كتابة'], ['image', 'صورة', 'صوره'], ['button', 'زر', 'كبسة'], ['icons', 'أيقونة', 'ايقونه رمز'],
       ['shape', 'أشكال', 'شكل مربع دائرة'], ['divider', 'خط فاصل', 'فاصل خط'], ['video', 'فيديو', 'يوتيوب'], ['lottie', 'رسوم متحركة', 'لوتي lottie انيميشن حركة'], ['gallery', 'معرض صور', 'البوم'],
-      ['map', 'خريطة', 'موقع عنوان'], ['calendar', 'حجز مواعيد', 'تقويم موعد'], ['pricing', 'أسعار', 'باقة سعر'], ['sheet', 'جدول', 'جدول'],
+      ['map', 'خريطة', 'موقع عنوان'], ['calendar', 'حجز مواعيد', 'تقويم موعد'], ['contactForm', 'نموذج تواصل', 'رسالة اتصال تواصل راسلنا فورم'], ['pricing', 'أسعار', 'باقة سعر'], ['sheet', 'جدول', 'جدول'],
       ['group-templates', 'بطاقات جاهزة', 'بطاقة مجموعة'], ['html', 'كود مخصص', 'html كود'],
     ];
     ADDS.forEach(([category, name, keywords]) =>
@@ -3469,6 +3469,13 @@ export default function App() {
         width: 1000,
         height: 380,
         content: customContent || 'التقييمات',
+        styles: { backgroundColor: '#ffffff', borderRadius: 24, ...(customStyles || {}) },
+      },
+      contactForm: {
+        name: 'نموذج تواصل',
+        width: 460,
+        height: 420,
+        content: customContent || 'راسلنا',
         styles: { backgroundColor: '#ffffff', borderRadius: 24, ...(customStyles || {}) },
       },
       html: {

@@ -474,6 +474,18 @@ const SeoFields: React.FC<{ seo: SiteSeo; keywords: string; onSeo: (s: SiteSeo) 
         <div className="text-xs text-neutral-400 mt-0.5 text-left" dir="ltr">{seo.description.length}/{SEO_LIMITS.description}</div>
       </div>
       <div>
+        <span className={label}>عبارة مع الرابط عند المشاركة</span>
+        <textarea
+          className={`${input} h-16 py-2.5 resize-none`}
+          maxLength={SEO_LIMITS.shareText}
+          placeholder="السلام عليكم، هذه صفحتي الجديدة. شاركوها مع أصدقائكم وادعموني."
+          value={seo.shareText || ''}
+          onChange={(e) => onSeo({ ...seo, shareText: e.target.value })}
+        />
+        <div className="text-xs text-neutral-400 mt-0.5 text-left" dir="ltr">{(seo.shareText || '').length}/{SEO_LIMITS.shareText}</div>
+        <p className="text-xs text-neutral-500 mt-1">تظهر تحت عنوان الصفحة عندما يُرسل رابطك على واتساب أو فيسبوك. إذا تركتها فارغة يظهر الوصف القصير.</p>
+      </div>
+      <div>
         <span className={label}>كلمات مفتاحية (افصل بينها بفاصلة)</span>
         <input className={input} placeholder="مطعم، مشاوي، حلب، توصيل" value={keywords} onChange={(e) => onKeywords(e.target.value)} />
         {chips.length > 0 && (
@@ -496,7 +508,7 @@ const SeoFields: React.FC<{ seo: SiteSeo; keywords: string; onSeo: (s: SiteSeo) 
 // ---------- The window ----------
 
 const sameSeo = (a?: SiteSeo, b?: SiteSeo) =>
-  (a?.title || '') === (b?.title || '') && (a?.description || '') === (b?.description || '') && (a?.keywords || []).join(',') === (b?.keywords || []).join(',');
+  (a?.title || '') === (b?.title || '') && (a?.description || '') === (b?.description || '') && (a?.keywords || []).join(',') === (b?.keywords || []).join(',') && (a?.shareText || '') === (b?.shareText || '');
 
 export const PublishModal: React.FC<PublishModalProps> = ({ open: openProp, onClose, owner, project, pages, elements, data, suggestedName, onPublishedChange, used, embedded }) => {
   const open = openProp || !!embedded;
@@ -595,7 +607,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open: openProp, onCl
   // A paid project is published only while its paid period runs (or it is a test account).
   const mustPay = !!gate && needsPayment(owner, project) && gate.enforce && !gate.test && !(gate.paidUntil > Date.now());
   const nextSeo: SiteSeo = { ...seo, keywords: normalizeKeywords(keywords) };
-  const seoChanged = !!published && !sameSeo({ ...nextSeo, title: nextSeo.title.trim(), description: nextSeo.description.trim() }, published.seo);
+  const seoChanged = !!published && !sameSeo({ ...nextSeo, title: nextSeo.title.trim(), description: nextSeo.description.trim(), shareText: (nextSeo.shareText || '').trim() }, published.seo);
 
   const publish = async () => {
     if (problem || state === 'taken' || !content) return;

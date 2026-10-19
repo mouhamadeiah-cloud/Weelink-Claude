@@ -69,9 +69,10 @@ export interface SiteSeo {
   title: string;
   description: string;
   keywords: string[];
+  shareText?: string; // the owner's own line shown under the link when it is shared (WhatsApp, Facebook)
 }
 
-export const SEO_LIMITS = { title: 70, description: 300, keyword: 40, keywords: 15 };
+export const SEO_LIMITS = { title: 70, description: 300, keyword: 40, keywords: 15, shareText: 200 };
 
 // The keywords as typed (separated by commas, «،» or new lines): trimmed, lower-case, no repeats.
 export const normalizeKeywords = (raw: string | string[]) => {
@@ -81,11 +82,16 @@ export const normalizeKeywords = (raw: string | string[]) => {
   return Array.from(new Set(list)).slice(0, SEO_LIMITS.keywords);
 };
 
-const cleanSeo = (seo: SiteSeo): SiteSeo => ({
-  title: seo.title.trim().slice(0, SEO_LIMITS.title),
-  description: seo.description.trim().slice(0, SEO_LIMITS.description),
-  keywords: normalizeKeywords(seo.keywords),
-});
+const cleanSeo = (seo: SiteSeo): SiteSeo => {
+  const shareText = (seo.shareText || '').trim().slice(0, SEO_LIMITS.shareText);
+  return {
+    title: seo.title.trim().slice(0, SEO_LIMITS.title),
+    description: seo.description.trim().slice(0, SEO_LIMITS.description),
+    keywords: normalizeKeywords(seo.keywords),
+    // Only sent when written, so pages without one save exactly as before.
+    ...(shareText ? { shareText } : {}),
+  };
+};
 
 export interface PublishedSite {
   name: string;

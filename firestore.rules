@@ -371,7 +371,8 @@ service cloud.firestore {
     function isSeo(m) {
       return (!('title' in m) || (m.title is string && m.title.size() <= 70))
         && (!('description' in m) || (m.description is string && m.description.size() <= 300))
-        && (!('keywords' in m) || (m.keywords is list && m.keywords.size() <= 15));
+        && (!('keywords' in m) || (m.keywords is list && m.keywords.size() <= 15))
+        && (!('shareText' in m) || (m.shareText is string && m.shareText.size() <= 200));
     }
 
     match /siteNames/{name} {
@@ -379,14 +380,14 @@ service cloud.firestore {
       // Weelink's search (keywords array-contains a word).
       allow list: if request.query.limit <= 50;
       allow create: if isSiteName(name)
-        && incoming().keys().hasOnly(['owner', 'project', 'kind', 'at', 'title', 'description', 'keywords'])
+        && incoming().keys().hasOnly(['owner', 'project', 'kind', 'at', 'title', 'description', 'keywords', 'shareText'])
         && isSeo(incoming())
         && isProjectKind(incoming().project)
         && (!('kind' in incoming()) || incoming().kind == incoming().project.split('-')[0])
         && incoming().at is string
         && canManage(incoming().owner);
       allow update: if canManage(existing().owner)
-        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'keywords'])
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'keywords', 'shareText'])
         && isSeo(incoming());
       allow delete: if canManage(existing().owner);
     }
@@ -408,7 +409,7 @@ service cloud.firestore {
       allow create, update: if billingOk(incoming().owner, incoming().project)
         && incoming().keys().hasOnly(['name', 'project', 'owner', 'pages', 'elements', 'data', 'publishedAt', 'hash', 'customDomain', 'icon', 'seo', 'place'])
         && (!('place' in incoming()) || incoming().place == null || (incoming().place is map && incoming().place.size() <= 12))
-        && (!('seo' in incoming()) || (incoming().seo is map && incoming().seo.keys().hasOnly(['title', 'description', 'keywords']) && isSeo(incoming().seo)))
+        && (!('seo' in incoming()) || (incoming().seo is map && incoming().seo.keys().hasOnly(['title', 'description', 'keywords', 'shareText']) && isSeo(incoming().seo)))
         && (!('icon' in incoming()) || (incoming().icon is string && incoming().icon.size() <= 200000))
         && isProjectKind(incoming().project)
         && siteId == incoming().owner + '__' + incoming().project

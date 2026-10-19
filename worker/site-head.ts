@@ -25,7 +25,10 @@ export const siteTargetOf = (url: URL, domain = siteDomain()): SiteTarget | null
 
 export const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-export interface HeadInfo { title: string; description: string; keywords: string[]; url: string; image?: boolean }
+// Said under every shared link, after the owner's own line or the description.
+export const MADE_WITH = 'صُمّمت على Weelink';
+
+export interface HeadInfo { title: string; description: string; keywords: string[]; url: string; image?: boolean; shareText?: string }
 
 // index.html with the page's own tags in place of Weelink's.
 export const injectHead = (html: string, info: HeadInfo) => {
@@ -35,7 +38,9 @@ export const injectHead = (html: string, info: HeadInfo) => {
     `<meta name="description" content="${description}" />`,
     info.keywords.length ? `<meta name="keywords" content="${escapeAttr(info.keywords.join(', '))}" />` : '',
     `<meta property="og:title" content="${title}" />`,
-    `<meta property="og:description" content="${description}" />`,
+    // The owner's own line for shared links, or the short description when there is none.
+    `<meta property="og:description" content="${escapeAttr([info.shareText || info.description, MADE_WITH].filter(Boolean).join(' · '))}" />`,
+    `<meta property="og:site_name" content="Weelink" />`,
     `<meta property="og:type" content="website" />`,
     `<meta property="og:url" content="${escapeAttr(info.url)}" />`,
     // The customer's logo, a small square PNG: shown as the thumbnail beside the link.
@@ -82,6 +87,7 @@ const lookup = async (target: SiteTarget): Promise<Found | null> => {
           icon: typeof site?.icon === 'string' && site.icon.startsWith(PNG_DATA_URL) ? site.icon : '',
           title: String(s.title || name),
           description: String(s.description || ''),
+          shareText: String(s.shareText || ''),
           keywords: Array.isArray(s.keywords) ? s.keywords.map(String) : [],
         };
       }

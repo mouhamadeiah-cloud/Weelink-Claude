@@ -4,7 +4,7 @@
 import { ElementType } from '../../types';
 import type { DrawerSection } from './types';
 
-export type InspectorGroupId = 'content' | 'font' | 'effects' | 'colors' | 'shape' | 'layout' | 'motion';
+export type InspectorGroupId = 'content' | 'font' | 'colors' | 'shape' | 'layout' | 'layers' | 'link' | 'motion';
 
 export type InspectorTarget =
   | { kind: 'navbar' }
@@ -59,9 +59,8 @@ export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
   if (content.length || ['image', 'mask', 'shape', 'lottie', ...SHOP_SETTING_TYPES].includes(type)) {
     groups.push({ id: 'content', title: 'محتوى العنصر', label: 'المحتوى', sections: content });
   }
-  if (TEXT_TYPES.includes(type)) groups.push({ id: 'font', title: 'خط العنصر', label: 'الخط', sections: ['typography'] });
-  // Glow, outline, highlight... of the letters, drawn by the inspector itself.
-  if (TEXT_TYPES.includes(type)) groups.push({ id: 'effects', title: 'تأثيرات النص', label: 'تأثيرات', sections: [] });
+  // The font and, under it, the letters' effects (glow, outline, highlight...), drawn by the inspector itself.
+  if (TEXT_TYPES.includes(type)) groups.push({ id: 'font', title: 'خط العنصر وتأثيراته', label: 'الخط', sections: ['typography'] });
   groups.push({
     id: 'colors',
     title: type === 'image' ? 'ألوان الصورة وفلاترها' : type === 'lottie' ? 'خلفية العنصر' : 'ألوان العنصر',
@@ -70,20 +69,18 @@ export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
     sections: type === 'image' ? ['color'] : type === 'lottie' ? ['background'] : ['color', 'background'],
   });
   groups.push({ id: 'shape', title: 'شكل العنصر', label: 'الشكل', sections: shapeSections });
-  groups.push({
-    id: 'layout',
-    title: 'مكان العنصر وحجمه',
-    label: 'المكان',
-    // An element with its own settings shows its size inside them already.
-    sections: hasSettings ? ['layers'] : ['format', 'layers'],
-  });
-  groups.push({ id: 'motion', title: 'رابط العنصر وحركته', label: 'الحركة', sections: ['link', 'animation'] });
+  // An element with its own settings shows its size inside them already.
+  if (!hasSettings) groups.push({ id: 'layout', title: 'مكان العنصر وحجمه', label: 'المكان', sections: ['format'] });
+  // The element's own place among the others on the slide: up or down one layer, over all or under all.
+  groups.push({ id: 'layers', title: 'طبقات العنصر', label: 'الطبقات', sections: ['layers'] });
+  groups.push({ id: 'link', title: 'رابط العنصر', label: 'الرابط', sections: ['link'] });
+  groups.push({ id: 'motion', title: 'حركة العنصر', label: 'الحركة', sections: ['animation'] });
   return groups;
 };
 
 // The quick ways into a group, shown under it in the column once it is picked: each one brings that
 // part of the group's card into view. A font's are the two halves of its toolbar.
-export type InspectorShortcutId = DrawerSection | 'font-family' | 'font-size';
+export type InspectorShortcutId = DrawerSection | 'font-family' | 'font-size' | 'text-effects';
 export interface InspectorShortcut {
   id: InspectorShortcutId;
   label: string;
@@ -100,7 +97,7 @@ const SHORTCUT_LABEL: Partial<Record<DrawerSection, string>> = {
   animation: 'الحركة',
 };
 export const groupShortcuts = (group: InspectorGroup, target: InspectorTarget): InspectorShortcut[] => {
-  if (group.id === 'font') return [{ id: 'font-family', label: 'نوع الخط' }, { id: 'font-size', label: 'الحجم' }];
+  if (group.id === 'font') return [{ id: 'font-family', label: 'نوع الخط' }, { id: 'font-size', label: 'الحجم' }, { id: 'text-effects', label: 'تأثيرات' }];
   const isImage = target.kind === 'element' && target.type === 'image';
   const items = group.sections
     // The glow is drawn with the shadow, as one tool.
@@ -137,9 +134,7 @@ export const inspectorHelp = (id: InspectorGroupId, target: InspectorTarget): st
       if (target.type === 'image') return 'بدّل الصورة بصورة من جهازك أو من مكتبة الصور، أو قصّها بشكل (دائرة، قلب، نجمة…) بدل المستطيل.';
       return 'إعدادات هالعنصر الخاصة فيه: الصور بمعرض الصور، أوقات الحجز، خلايا الجدول، رابط الفيديو أو الخريطة، أو منتجات المتجر.';
     case 'font':
-      return 'شكل الكتابة: نوع الخط وحجمه، عريض أو مائل أو تحته خط، المحاذاة يمين أو وسط أو يسار، وتحويل النص لقائمة بنقاط أو أرقام.';
-    case 'effects':
-      return 'شكل جاهز للحروف: توهج نيون، ظل، حروف مجوفة، تدرج أو ذهبي، تمييز الكلمة، أو حركة. اختار واحد، وبعدين غيّر لونه وقوته. «عرض المزيد» بيفتح كل التأثيرات.';
+      return 'شكل الكتابة: نوع الخط وحجمه، عريض أو مائل أو تحته خط، المحاذاة يمين أو وسط أو يسار، وتحويل النص لقائمة بنقاط أو أرقام. وتحتها تأثيرات الحروف: توهج نيون، ظل، حروف مجوفة، تدرج أو ذهبي، تمييز الكلمة، أو حركة. «عرض المزيد» بيفتح كل التأثيرات.';
     case 'colors':
       if (kind === 'slide') return 'خلفية الشريحة: لون واحد، تدرج بين لونين أو أكتر، أو صورة. «ألوان صفحتك» هي الألوان الخمسة اللي اخترتها لكل الموقع.';
       if (kind === 'element' && target.type === 'image') return 'غيّر ألوان الصورة: صبغة بلون، أبيض وأسود، تفتيح أو تغميق، بدون ما تتغير الصورة الأصلية.';
@@ -148,8 +143,12 @@ export const inspectorHelp = (id: InspectorGroupId, target: InspectorTarget): st
       return 'الإطار حول العنصر وتدوير زواياه، الشفافية (كم بيبيّن اللي وراه)، والظل: خارجي بيرفع العنصر عن الصفحة، وداخلي بيعطيه توهج من جوا.';
     case 'layout':
       if (kind === 'slide') return 'كل العناصر بهالشريحة بالترتيب: اللي فوق بالقائمة بيطلع فوق الباقي على الصفحة. اسحب لتغيير الترتيب.';
-      return 'مكان العنصر وحجمه بالأرقام، تدويره، وترتيبه فوق أو تحت العناصر التانية. فيك كمان تحرّكه بالأسهم من الكيبورد.';
+      return 'مكان العنصر وحجمه بالأرقام وتدويره. فيك كمان تحرّكه بالأسهم من الكيبورد.';
+    case 'layers':
+      return 'لما عنصرين فوق بعض، الطبقة بتحدد مين بيبين فوق. «لأعلى» و«لأسفل» بيحرّكوه طبقة وحدة، و«أعلى» بيطلّعه فوق الكل، و«أسفل» بيحطه تحت الكل.';
+    case 'link':
+      return 'وين بياخد الزائر لما يضغط على العنصر: صفحة من موقعك، رابط خارجي، واتساب أو اتصال.';
     case 'motion':
-      return 'وين بياخد الزائر لما يضغط: صفحة من موقعك، رابط خارجي، واتساب أو اتصال. والحركة اللي بيظهر فيها العنصر لما يوصله الزائر.';
+      return 'الحركة اللي بيظهر فيها العنصر لما يوصله الزائر، وسرعتها ومدتها.';
   }
 };

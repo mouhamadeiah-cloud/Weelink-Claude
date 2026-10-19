@@ -17,10 +17,11 @@ const groupIcon = (g: InspectorGroup) => {
   switch (g.id) {
     case 'content': return g.sections.includes('navbar-settings') ? <PanelTop size={19} /> : <SlidersHorizontal size={19} />;
     case 'font': return <Type size={19} />;
-    case 'effects': return <Sparkles size={19} />;
     case 'colors': return <Palette size={19} />;
     case 'shape': return <Shapes size={19} />;
-    case 'layout': return g.sections.length === 1 ? <Layers size={19} /> : <Move size={19} />;
+    case 'layout': return g.sections.includes('layers') ? <Layers size={19} /> : <Move size={19} />;
+    case 'layers': return <Layers size={19} />;
+    case 'link': return <Link size={19} />;
     case 'motion': return <Zap size={19} />;
   }
 };
@@ -29,6 +30,7 @@ const shortcutIcon = (id: InspectorShortcutId) => {
   switch (id) {
     case 'font-family': return <CaseSensitive size={16} />;
     case 'font-size': return <ALargeSmall size={16} />;
+    case 'text-effects': return <Sparkles size={16} />;
     case 'color': return <Baseline size={16} />;
     case 'background': return <PaintBucket size={16} />;
     case 'border': return <Square size={16} />;

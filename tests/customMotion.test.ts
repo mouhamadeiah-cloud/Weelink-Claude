@@ -40,3 +40,14 @@ test('the custom keyframe exists and the animation card offers the two states', 
   assert.match(html, /حالة النهاية/);
   assert.match(html, /الشفافية/);
 });
+
+test('set by dragging: the shift is from the resting place to the drop, doubled when set on a phone', async () => {
+  const { shiftBetween } = await import('../src/utils/customMotion');
+  assert.deepEqual(shiftBetween({ x: 100, y: 50 }, { x: 40, y: 80 }), { x: -60, y: 30 });
+  assert.deepEqual(shiftBetween({ x: 100, y: 50 }, { x: 40, y: 80 }, 2), { x: -120, y: 60 });
+});
+
+test('the animation card offers «set by dragging» once it knows the element', () => {
+  const html = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, element: { id: 'a', x: 1, y: 2 }, onPlace: () => {} }));
+  assert.match(html, /حدّد المكان بالسحب/);
+});

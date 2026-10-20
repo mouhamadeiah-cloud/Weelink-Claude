@@ -1,19 +1,32 @@
 // Moved verbatim from RightDrawer.tsx (was an inline IIFE in the drawer body).
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { CanvasElement } from '../../../types';
 import { RightDrawerProps } from '../types';
-import { DEFAULT_MOTION_FROM, DEFAULT_MOTION_TO, MotionState } from '../../../utils/customMotion';
+import { DEFAULT_MOTION_FROM, DEFAULT_MOTION_TO, MotionState, shiftBetween } from '../../../utils/customMotion';
 
 interface AnimationSectionProps {
   styles: CanvasElement['styles'];
   onUpdateElementStyles: RightDrawerProps['onUpdateElementStyles'];
+  // For «set by dragging» of a custom motion: the element as it stands now and the way to move it.
+  element?: { id: string; x: number; y: number };
+  onPlace?: (x: number, y: number) => void;
+  // The phone view: a phone plays a motion's shift at half size, so a shift dragged there is stored doubled.
+  phone?: boolean;
 }
 
 export const AnimationSection = ({
   styles,
   onUpdateElementStyles,
+  element,
+  onPlace,
+  phone = false,
 }: AnimationSectionProps) => {
+  // The state being set by dragging: the element is dragged on the canvas, then dropped here, and goes back to its place.
+  const [dragging, setDragging] = useState<{ key: 'animationFrom' | 'animationTo'; id: string; x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (dragging && dragging.id !== element?.id) setDragging(null);
+  }, [dragging, element?.id]);
   const currentAnimation = styles.animation || 'none';
   const currentTrigger = styles.animationTrigger || 'once';
   const currentDuration = styles.animationDuration || (
@@ -141,6 +154,36 @@ export const AnimationSection = ({
             return (
               <div key={key} className="space-y-1.5 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
                 <span className="text-xs font-bold text-neutral-800 block">{title}</span>
+                {element && onPlace && (
+                  dragging?.key === key ? (
+                    <div className="space-y-1.5 p-2 rounded-lg bg-brand/5 border border-brand/20">
+                      <p className="text-xs text-neutral-600 leading-relaxed">اسحب العنصر على الصفحة إلى المكان المطلوب ثم اضغط «تثبيت»؛ يرجع العنصر إلى مكانه بعدها.</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const shift = shiftBetween(dragging, element, phone ? 2 : 1);
+                            onUpdateElementStyles({ [key]: { ...(styles[key] || {}), ...shift } });
+                            onPlace(dragging.x, dragging.y);
+                            setDragging(null);
+                          }}
+                          className="flex-1 py-1.5 rounded-lg bg-brand text-white text-xs font-bold cursor-pointer"
+                        >تثبيت هنا</button>
+                        <button
+                          type="button"
+                          onClick={() => { onPlace(dragging.x, dragging.y); setDragging(null); }}
+                          className="flex-1 py-1.5 rounded-lg bg-white border border-neutral-200 text-xs font-bold text-neutral-700 cursor-pointer"
+                        >إلغاء</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setDragging({ key, id: element.id, x: element.x, y: element.y })}
+                      className="w-full py-1.5 rounded-lg bg-white border border-neutral-200 text-xs font-bold text-neutral-700 hover:border-brand cursor-pointer"
+                    >✋ حدّد المكان بالسحب</button>
+                  )
+                )}
                 {rows.map((r) => {
                   const shown = Math.round((state[r.field] as number) * (r.scale || 1));
                   return (

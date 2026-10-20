@@ -40,3 +40,10 @@ export const customMotionVars = (
 // The animation a custom motion plays: a loop or a hover goes there and back, a single play goes there once.
 export const customMotionDirection = (trigger: string | undefined, alternate?: boolean) =>
   alternate || trigger === 'loop' || trigger === 'hover' ? 'alternate' : 'normal';
+
+// «Set by dragging»: the owner drags the element to where a state should be; the state is the shift
+// from where the element rests (its saved place) to where it was dropped.
+export const shiftBetween = (rest: { x: number; y: number }, dropped: { x: number; y: number }, factor = 1) => ({
+  x: Math.round((dropped.x - rest.x) * factor),
+  y: Math.round((dropped.y - rest.y) * factor),
+});

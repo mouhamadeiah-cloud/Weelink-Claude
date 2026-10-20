@@ -117,10 +117,15 @@ const P_ = PAINTER;
 // A scene for a cover that moves with the scrolling (the «مع التمرير» trigger): every layer drawn on its own
 // (SVG art in /Library/scenes) leaves at its own pace, so the leaves and the bush seem to grow out of the page.
 const FOREST: Look = { bg: '#12382A', card: '#1C4A36', line: '#2F6B4D', ink: '#F7F1DC', muted: '#CFD8C0', accent: '#E9B949', soft: '#1C4A36', head: 'Amiri', body: 'Tajawal' };
+const WARM: Look = { bg: '#E9D7B8', card: '#F8EEDB', line: '#D9C09A', ink: '#3E2412', muted: '#6B4A2E', accent: '#9A5B22', soft: '#F1E2C6', head: 'Amiri', body: 'Tajawal' };
+const COOL: Look = { bg: '#D9DCD6', card: '#F1F2EE', line: '#B7BCB3', ink: '#262B27', muted: '#4D544E', accent: '#8A6A3B', soft: '#E4E6E0', head: 'Amiri', body: 'Tajawal' };
 const AT_REST = { x: 0, y: 0, opacity: 1, scale: 1, rotate: 0 };
-const scene = (name: string, file: string, box: Box, leave: { x?: number; y?: number; scale?: number; opacity?: number }) =>
+type Motion = { x?: number; y?: number; scale?: number; opacity?: number; rotate?: number };
+// One drawn layer that moves with the scrolling: from where it is drawn («leave», for what is on the screen from the
+// start) or from a first state («enter», for what comes up from below) to the given one.
+const scene = (name: string, file: string, box: Box, to: Motion, part: 'enter' | 'leave' | 'through' = 'leave', from: Motion = {}, extra: Record<string, unknown> = {}) =>
   el('image', name, box, `/Library/scenes/${file}`, {
-    objectFit: 'contain', animation: 'custom', animationTrigger: 'scrub', animationScrub: 'leave', animationFrom: AT_REST, animationTo: { ...AT_REST, ...leave },
+    objectFit: 'contain', animation: 'custom', animationTrigger: 'scrub', animationScrub: part, animationFrom: { ...AT_REST, ...from }, animationTo: { ...AT_REST, ...to }, ...extra,
   }, { imageUrl: `/Library/scenes/${file}` });
 const firefly = (box: Box, delay: number) =>
   shape('شرارة', box, {
@@ -155,6 +160,71 @@ const HERO: (() => WeeSlide)[] = [
       }, 'sub'), 20, 424, 320, 100),
       on(button(FOREST, { x: 650, y: 566, width: 210, height: 56 }, 'سجّل طفلك الآن', { color: '#12382A', animation: 'heartbeat', animationTrigger: 'loop', animationDuration: 3 }), 186, 548, 154, 48),
       on(whatsapp(FOREST, { x: 420, y: 566, width: 210, height: 56 }), 20, 548, 154, 48),
+    ],
+  }),
+
+  // hero.paper: warm paper with a pleated fan and a flowing ribbon; both slide away at their own pace as the page is scrolled.
+  () => ({
+    aiTemplate: 'hero.paper',
+    name: 'مدخل مشهد سينمائي (ورق دافئ)',
+    height: 760,
+    mobileHeight: 700,
+    backgroundColor: WARM.bg,
+    backgroundImage: '/Library/scenes/paper-warm.svg',
+    elements: [
+      on(scene('مروحة مطوية', 'ribbon-fan.svg', { x: -80, y: 0, width: 360, height: 760 }, { x: -190 }), -30, 0, 130, 274),
+      on(scene('شريط ورقي', 'ribbon-swirl.svg', { x: 740, y: 80, width: 600, height: 600 }, { x: 150, y: -80, scale: 1.1, rotate: 6 }), 150, 610, 260, 260),
+      on(eyebrow(WARM, { x: 380, y: 170, width: 520, height: 28 }, 'مخبز الصباح · حلب', {
+        textAlign: 'center', animation: 'slide-up', animationTrigger: 'once',
+      }), 20, 250, 320, 28),
+      on(heading(WARM, { x: 240, y: 214, width: 800, height: 240 }, 'عجين بحب، وخبز بصبر', 86, {
+        textAlign: 'center', color: WARM.ink, textShadowIntensity: 10, textShadowColor: 'rgba(255,255,255,0.7)', textShadowPosition: 'bottom',
+        animation: 'custom', animationTrigger: 'scrub', animationScrub: 'leave', animationFrom: AT_REST, animationTo: { ...AT_REST, y: -150, opacity: 0.1 },
+      }, 'title'), 20, 284, 320, 190),
+      on(text(WARM, { x: 340, y: 462, width: 600, height: 70 }, 'خبز طازج كل فجر، ومعجنات وحلويات شرقية بوصفات العائلة.', 20, {
+        textAlign: 'center', animation: 'custom', animationTrigger: 'scrub', animationScrub: 'leave', animationFrom: AT_REST, animationTo: { ...AT_REST, y: -90, opacity: 0 },
+      }, 'sub'), 20, 484, 320, 80),
+      on(button(WARM, { x: 650, y: 566, width: 210, height: 56 }, 'اطلب خبزك', { animation: 'rubberband', animationTrigger: 'hover' }), 186, 590, 154, 48),
+      on(whatsapp(WARM, { x: 420, y: 566, width: 210, height: 56 }), 20, 590, 154, 48),
+    ],
+  }),
+
+  // hero.disc: words that give way to a disc growing out of a dot as the page is scrolled, stones floating over it.
+  () => ({
+    aiTemplate: 'hero.disc',
+    name: 'مدخل مشهد سينمائي (دائرة تتسع)',
+    height: 1180,
+    mobileHeight: 860,
+    backgroundColor: COOL.bg,
+    backgroundImage: '/Library/scenes/paper-cool.svg',
+    elements: [
+      on(heading(COOL, { x: 200, y: 120, width: 880, height: 130 }, 'نحن لا نبيع خدمات، نحن نصنع نتائج', 54, {
+        textAlign: 'center', animation: 'custom', animationTrigger: 'scrub', animationScrub: 'leave', animationFrom: AT_REST, animationTo: { ...AT_REST, y: -60, opacity: 0.1 },
+      }, 'title'), 20, 40, 320, 120),
+      on(text(COOL, { x: 320, y: 262, width: 640, height: 70 }, 'ثمانية عشر عاماً من العمل مع مئات الشركات لتنمو وتبدأ من جديد.', 20, {
+        textAlign: 'center', animation: 'custom', animationTrigger: 'scrub', animationScrub: 'leave', animationFrom: AT_REST, animationTo: { ...AT_REST, y: -40, opacity: 0 },
+      }, 'sub'), 20, 172, 320, 80),
+      on(scene('قرص', 'disc-grey.svg', { x: 260, y: 400, width: 760, height: 760 }, {}, 'enter', { scale: 0.06 }), 20, 300, 320, 320),
+      on(scene('حجر طيني', 'stone-clay.svg', { x: 330, y: 470, width: 300, height: 300 }, {}, 'enter', { y: 140, x: -60, opacity: 0, scale: 0.7 }, {
+        animationLayers: [{ animation: 'float', animationTrigger: 'loop', animationDuration: 5 }],
+      }), 40, 330, 130, 130),
+      on(scene('حجر رملي', 'stone-sand.svg', { x: 690, y: 420, width: 330, height: 330 }, {}, 'enter', { y: 180, x: 60, opacity: 0, scale: 0.7 }, {
+        animationLayers: [{ animation: 'float', animationTrigger: 'loop', animationDuration: 6 }],
+      }), 190, 310, 140, 140),
+      on(scene('حجر رمادي', 'stone-grey.svg', { x: 520, y: 760, width: 280, height: 280 }, {}, 'enter', { y: 220, opacity: 0, scale: 0.7 }, {
+        animationLayers: [{ animation: 'float', animationTrigger: 'loop', animationDuration: 7 }],
+      }), 110, 470, 120, 120),
+      on(eyebrow(COOL, { x: 400, y: 640, width: 480, height: 28 }, 'الأمر ببساطة', {
+        textAlign: 'center', color: '#FFFFFF', animation: 'custom', animationTrigger: 'scrub', animationScrub: 'enter', animationFrom: { ...AT_REST, opacity: 0, y: 40 }, animationTo: AT_REST,
+      }), 20, 420, 320, 28),
+      on(heading(COOL, { x: 300, y: 670, width: 680, height: 170 }, 'أعمالك', 130, {
+        textAlign: 'center', color: '#FFFFFF', textShadowIntensity: 16, textShadowColor: 'rgba(0,0,0,0.35)', textShadowPosition: 'bottom',
+        animation: 'custom', animationTrigger: 'scrub', animationScrub: 'enter', animationFrom: { ...AT_REST, opacity: 0, y: 60, scale: 0.9 }, animationTo: AT_REST,
+      }), 20, 452, 320, 120),
+      on(text(COOL, { x: 420, y: 1010, width: 440, height: 40 }, 'ارفع مستوى أعمالك', 20, {
+        textAlign: 'center', color: '#FFFFFF', animation: 'custom', animationTrigger: 'scrub', animationScrub: 'enter', animationFrom: { ...AT_REST, opacity: 0, y: 40 }, animationTo: AT_REST,
+      }, 'note'), 20, 580, 320, 36),
+      on(button(COOL, { x: 540, y: 1090, width: 200, height: 54 }, 'ابدأ معنا', { backgroundColor: COOL.ink, color: '#FFFFFF' }), 100, 650, 160, 48),
     ],
   }),
 

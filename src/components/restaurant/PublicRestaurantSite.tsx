@@ -3,7 +3,7 @@
 // no sign-in. Phones get the phone layout (slides without one are arranged for phones on the fly).
 // Orders go straight to the restaurant's live orders. «حسابي» lets a visitor join as the
 // restaurant's customer (see components/customers); a joined customer's orders carry their uid.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ownerOfRestaurant, restaurantKeyOf } from '../../utils/projectKeys';
 import { Loader2, UtensilsCrossed } from 'lucide-react';
 import { CanvasWorkspace } from '../CanvasWorkspace';
@@ -18,6 +18,7 @@ import { getCustomerSession } from '../customers/customerSession';
 import { sendOrderConfirmation } from './orderStatus';
 import { countContact, countVisit, isContactLink } from '../../services/siteStats';
 import { BookingPageContext } from '../../services/bookings';
+import { notifyOwner } from '../../services/contact';
 
 const PHONE_MAX = 768;
 const noop = () => {};
@@ -50,12 +51,21 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
     return phone ? withPhoneLayouts(site.pages, site.elements) : { pages: site.pages, elements: site.elements };
   }, [site, phone]);
 
+  const nameRef = useRef('');
   const submit = useMemo(
     () => async (o: MenuOrder) => {
       try {
         const customer = getCustomerSession();
         const number = await placeOrder(uid, customer ? { ...o, customerUid: customer.uid } : o);
         if (customer) sendOrderConfirmation(uid, o.id);
+        if (number !== null) {
+          const lines = o.lines.map((l) => `• ${l.name} × ${l.qty}`);
+          void notifyOwner({
+            owner: ownerOfRestaurant(uid), project: restaurantKeyOf(uid), pageName: nameRef.current, kind: 'restaurant',
+            name: o.name || 'زبون', phone: o.phone || '000000',
+            message: [`طلب #${number}`, o.type === 'table' ? `طاولة ${o.table}` : o.type === 'delivery' ? `توصيل إلى: ${o.address}` : 'استلام', ...lines, `المجموع: ${o.total}`, o.notes].filter(Boolean).join('\n'),
+          });
+        }
         return number;
       } catch (e) {
         console.warn('Could not send the order:', e);
@@ -66,6 +76,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
   );
 
   const readySite = site && typeof site !== 'string' ? site : null;
+  nameRef.current = readySite?.admin.settings.name || '';
   const { navActions, account } = useAccountNav({ ownerUid: uid, pageName: readySite?.admin.settings.name || '', kind: 'restaurant', accent: '#B5562B', currency: readySite?.admin.settings.currency, project: restaurantKeyOf(uid), owner: ownerOfRestaurant(uid) });
 
   if (site === 'loading') {

@@ -46,6 +46,8 @@ export const InquiriesSection: React.FC<InquiriesSectionProps> = ({ owner, proje
             <li key={r.id} className={`rounded-xl border p-3 space-y-1.5 ${r.read ? 'border-neutral-200 bg-white' : 'border-brand/30 bg-blue-50/40'}`}>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-black text-ink">{r.name}</span>
+                {r.kind === 'order' && <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">طلب</span>}
+                {r.kind === 'car' && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[11px] font-bold">طلب سيارة</span>}
                 <span className="text-xs text-neutral-400 flex-1">{when(r.createdAt)}</span>
                 {!r.read && (
                   <button type="button" onClick={() => run(markInquiryRead(owner, r.id))} className="h-8 px-2.5 rounded-lg bg-white border border-neutral-200 text-xs font-bold flex items-center gap-1 cursor-pointer">

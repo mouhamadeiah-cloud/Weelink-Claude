@@ -68,16 +68,19 @@ const ownerEmail = async (admin: Admin, owner: string) => {
 const row = (label: string, value: string) =>
   value ? `<tr><td style="padding:6px 0;color:#888;width:90px;vertical-align:top">${esc(label)}</td><td style="padding:6px 0;font-weight:700">${esc(value)}</td></tr>` : '';
 
-export const inquiryMail = (m: { pageName: string; name: string; phone: string; email: string; message: string }) => `<!doctype html>
+const KIND_SUBJECT = { inquiry: 'رسالة جديدة من', order: 'طلب جديد من', car: 'طلب سيارة جديد من', restaurant: 'طلب جديد من' };
+const KIND_TITLE = { inquiry: 'رسالة جديدة من صفحتك', order: 'طلب جديد من متجرك', car: 'طلب جديد على سيارة', restaurant: 'طلب جديد من موقع مطعمك' };
+
+export const inquiryMail = (m: { pageName: string; name: string; phone: string; email: string; message: string }, kind: keyof typeof KIND_TITLE = 'inquiry') => `<!doctype html>
 <html lang="ar" dir="rtl"><body style="font-family:system-ui,sans-serif;background:#f5f5f7;margin:0;padding:24px">
   <div style="max-width:480px;margin:auto;background:#fff;border-radius:16px;padding:28px">
-    <h1 style="font-size:20px;margin:0 0 6px">رسالة جديدة من صفحتك</h1>
-    <p style="color:#555;margin:0 0 18px;line-height:1.7">${esc(m.name)} راسلك من «نموذج تواصل» على ${esc(m.pageName || 'صفحتك')}.</p>
+    <h1 style="font-size:20px;margin:0 0 6px">${KIND_TITLE[kind]}</h1>
+    <p style="color:#555;margin:0 0 18px;line-height:1.7">${esc(m.name)} وصلك من ${esc(m.pageName || 'صفحتك')}.</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       ${row('الاسم', m.name)}${row('الهاتف', m.phone)}${row('الإيميل', m.email)}
     </table>
     <div style="background:#f5f5f7;border-radius:12px;padding:14px 16px;margin:14px 0 0;line-height:1.8;white-space:pre-wrap">${esc(m.message)}</div>
-    <p style="color:#999;font-size:12px;margin:18px 0 0">بتلاقي كل الرسائل بـ «إدارة الصفحة» على Weelink.</p>
+    <p style="color:#999;font-size:12px;margin:18px 0 0">بتلاقيه بـ «إدارة الصفحة» على Weelink.</p>
   </div>
 </body></html>`;
 
@@ -85,12 +88,15 @@ const create = async (admin: Admin, request: Request, body: any) => {
   if (text(body.website, 100)) return json({ ok: true });
   const { owner, project } = body;
   if (!validId(owner) || !isProjectKey(project)) return json({ error: 'bad_request' }, 400);
+  // 'order' (a shop order) and 'car' (a car request) are saved with the messages; 'restaurant' is only
+  // emailed, since the restaurant's orders already reach its admin.
+  const kind: 'inquiry' | 'order' | 'car' | 'restaurant' = ['order', 'car', 'restaurant'].includes(body.kind) ? body.kind : 'inquiry';
   const msg = {
     pageName: text(body.pageName, 80),
     name: text(body.name, 80),
     phone: text(body.phone, 30),
     email: text(body.email, 120).toLowerCase(),
-    message: text(body.message, 1500),
+    message: text(body.message, kind === 'inquiry' ? 1500 : 3000),
   };
   if (msg.name.length < 2 || msg.message.length < 3 || msg.phone.replace(/\D/g, '').length < 6) return json({ error: 'missing_fields' }, 400);
   if (msg.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(msg.email)) return json({ error: 'bad_email' }, 400);
@@ -104,7 +110,7 @@ const create = async (admin: Admin, request: Request, body: any) => {
   const toOwner = await ownerEmail(admin, owner);
   if (!toOwner && !(await admin.auth.getUser(owner).then(() => true, () => false))) return json({ error: 'not_found' }, 404);
 
-  await admin.db.collection('inquiries').doc(owner).collection('items').add({ ...msg, project, read: false, createdAt: new Date().toISOString() });
+  if (kind !== 'restaurant') await admin.db.collection('inquiries').doc(owner).collection('items').add({ ...msg, project, kind, read: false, createdAt: new Date().toISOString() });
 
   const from = process.env.EMAIL_FROM;
   const key = process.env.RESEND_API_KEY;
@@ -116,8 +122,8 @@ const create = async (admin: Admin, request: Request, body: any) => {
         from: clean ? `${clean} <${address}>` : from,
         to: toOwner,
         replyTo: msg.email || undefined,
-        subject: `رسالة جديدة من ${msg.name}`,
-        html: inquiryMail(msg),
+        subject: `${KIND_SUBJECT[kind]} ${msg.name}`,
+        html: inquiryMail(msg, kind),
       })
       .then(({ error }) => error && console.error('Resend refused a contact email:', error.message))
       .catch((e) => console.error('A contact email failed:', e?.message));

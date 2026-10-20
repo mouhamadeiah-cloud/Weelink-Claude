@@ -12,10 +12,11 @@ import { SettingsTab } from './tabs/SettingsTab';
 import { AdminTabProps } from './tabs/tabProps';
 import { BookingsTab } from '../pageAdmin/BookingsTab';
 import { InquiriesTab } from '../pageAdmin/InquiriesTab';
+import { PageCustomersTab } from '../pageAdmin/PageCustomersTab';
 import { RatingsTab } from '../pageAdmin/RatingsTab';
 import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
-type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' | 'bookings' | 'inquiries' | 'ratings' | 'accounts' | 'settings';
+type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' | 'bookings' | 'inquiries' | 'signups' | 'ratings' | 'accounts' | 'settings';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<AdminTabProps> }[] = [
   { id: 'add-product', label: 'إضافة منتج', icon: PackagePlus, Component: AddProductTab },
@@ -24,6 +25,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'customers', label: 'الزبائن', icon: Users, Component: CustomersTab },
   { id: 'orders', label: 'الطلبات', icon: ClipboardList, Component: OrdersTab },
   { id: 'bookings', label: 'المواعيد', icon: CalendarDays, Component: BookingsTab },
+  { id: 'signups', label: 'مشتركو الصفحة', icon: Users, Component: PageCustomersTab },
   { id: 'inquiries', label: 'الرسائل', icon: MessageSquare, Component: InquiriesTab },
   { id: 'ratings', label: 'التقييمات', icon: Star, Component: RatingsTab },
   { id: 'accounts', label: 'الحسابات', icon: BarChart3, Component: AccountsTab },

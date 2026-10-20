@@ -114,7 +114,50 @@ const L_ = LAW;
 const K_ = KITCHEN;
 const P_ = PAINTER;
 
+// A scene for a cover that moves with the scrolling (the «مع التمرير» trigger): every layer drawn on its own
+// (SVG art in /Library/scenes) leaves at its own pace, so the leaves and the bush seem to grow out of the page.
+const FOREST: Look = { bg: '#12382A', card: '#1C4A36', line: '#2F6B4D', ink: '#F7F1DC', muted: '#CFD8C0', accent: '#E9B949', soft: '#1C4A36', head: 'Amiri', body: 'Tajawal' };
+const AT_REST = { x: 0, y: 0, opacity: 1, scale: 1, rotate: 0 };
+const scene = (name: string, file: string, box: Box, leave: { x?: number; y?: number; scale?: number; opacity?: number }) =>
+  el('image', name, box, `/Library/scenes/${file}`, {
+    objectFit: 'contain', animation: 'custom', animationTrigger: 'scrub', animationScrub: 'leave', animationFrom: AT_REST, animationTo: { ...AT_REST, ...leave },
+  }, { imageUrl: `/Library/scenes/${file}` });
+const firefly = (box: Box, delay: number) =>
+  shape('شرارة', box, {
+    backgroundColor: '#FFE08A', borderRadius: 9999, glowIntensity: 16, glowColor: 'rgba(255,224,138,0.85)', glowPosition: 'center',
+    animation: 'float', animationTrigger: 'loop', animationDuration: 3 + delay,
+  });
+
 const HERO: (() => WeeSlide)[] = [
+  // hero.forest: a green velvet scene whose leaves, flowers and glowing bush leave at their own pace as the page is scrolled.
+  () => ({
+    aiTemplate: 'hero.forest',
+    name: 'مدخل مشهد سينمائي (غابة)',
+    height: 760,
+    mobileHeight: 700,
+    backgroundColor: FOREST.bg,
+    backgroundImage: '/Library/scenes/forest-velvet.svg',
+    elements: [
+      on(scene('شجيرة مضيئة', 'forest-bush.svg', { x: 690, y: 270, width: 640, height: 549 }, { y: -70, scale: 1.22 }), 130, 470, 250, 214),
+      on(scene('غصن', 'forest-branch.svg', { x: -30, y: -16, width: 520, height: 340 }, { x: -120, y: -70, scale: 0.8 }), -20, 0, 230, 150),
+      on(scene('أزهار', 'forest-flowers.svg', { x: 930, y: -24, width: 350, height: 386 }, { x: 70, y: -110, scale: 0.85 }), 190, 0, 170, 187),
+      ...[[320, 150, 12], [980, 470, 14], [150, 520, 10], [560, 600, 12], [1120, 300, 10], [760, 120, 12], [430, 680, 10]].map(([x, y, d], i) =>
+        offPhone(firefly({ x, y, width: d, height: d }, i * 0.7))),
+      on(eyebrow(FOREST, { x: 380, y: 150, width: 520, height: 28 }, 'حضانة الأمل · دمشق', {
+        textAlign: 'center', color: FOREST.accent, textEffect: 'soft-glow', textEffectColor: FOREST.accent, animation: 'slide-up', animationTrigger: 'once',
+      }), 20, 190, 320, 28),
+      on(heading(FOREST, { x: 220, y: 200, width: 840, height: 250 }, 'كل خطوة تقود إلى مغامرة', 88, {
+        textAlign: 'center', color: FOREST.ink, textShadowIntensity: 14, textShadowColor: 'rgba(0,0,0,0.45)', textShadowPosition: 'bottom',
+        animation: 'custom', animationTrigger: 'scrub', animationScrub: 'leave', animationFrom: AT_REST, animationTo: { ...AT_REST, y: -150, opacity: 0.15 },
+      }, 'title'), 20, 224, 320, 190),
+      on(text(FOREST, { x: 340, y: 462, width: 600, height: 70 }, 'صفوف صغيرة، معلّمات يحببن ما يفعلن، وحديقة يلعب فيها الأطفال كل يوم.', 20, {
+        textAlign: 'center', color: FOREST.muted, animation: 'custom', animationTrigger: 'scrub', animationScrub: 'leave', animationFrom: AT_REST, animationTo: { ...AT_REST, y: -90, opacity: 0 },
+      }, 'sub'), 20, 424, 320, 100),
+      on(button(FOREST, { x: 650, y: 566, width: 210, height: 56 }, 'سجّل طفلك الآن', { color: '#12382A', animation: 'heartbeat', animationTrigger: 'loop', animationDuration: 3 }), 186, 548, 154, 48),
+      on(whatsapp(FOREST, { x: 420, y: 566, width: 210, height: 56 }), 20, 548, 154, 48),
+    ],
+  }),
+
   // hero.cover: the background (here a video) covers the slide, the text sits on a dark veil.
   () => ({
     aiTemplate: 'hero.cover',

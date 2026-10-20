@@ -18,6 +18,7 @@ import {
   readMyCustomerProfile,
   saveCustomerProfile,
 } from '../../services/pageCustomers';
+import { readPhone } from '../../services/myAccount';
 import { forgetLogin, rememberLogin, resumeLogin } from '../../services/sharedLogin';
 import { setCustomerSession } from './customerSession';
 import { ORDER_STATUSES } from '../restaurant/restaurantTypes';
@@ -82,7 +83,6 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
         setCustomerSession({ uid: u.uid, email: u.email || '', profile: mine });
         setStep('account');
       } else {
-        setProfile((p) => ({ ...p, name: p.name || u.displayName || '' }));
         setCustomerSession(null);
         setStep('profile');
       }
@@ -225,15 +225,18 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
     });
   };
 
+  // The customer card is made from the Weelink account (name, phone): the visitor is not asked for
+  // their details again, only whether they want the page's offers.
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     const u = auth.currentUser;
     if (!u) return;
-    if (!profile.name.trim()) return setError('اكتب اسمك.');
-    if (profile.phone.replace(/\D/g, '').length < 7) return setError('اكتب رقم هاتف صحيح.');
     run(async () => {
       try {
-        await saveCustomerProfile(ownerUid, { name: pageName, kind }, u, profile, joined?.joinedAt);
+        const own = joined
+          ? { name: joined.name, phone: joined.phone, address: joined.address }
+          : { name: u.displayName || (u.email || '').split('@')[0], phone: await readPhone(u.uid).catch(() => ''), address: '' };
+        await saveCustomerProfile(ownerUid, { name: pageName, kind }, u, { ...own, marketing: profile.marketing }, joined?.joinedAt);
         setSaved(true);
         window.setTimeout(() => setSaved(false), 2500);
         await arrive(u);
@@ -380,12 +383,9 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
               <form onSubmit={handleSaveProfile} className="space-y-3">
                 {step === 'profile' && (
                   <p className="text-sm text-black/55 leading-relaxed">
-                    أنت داخل باسم <span dir="ltr" className="font-bold text-black">{user?.email}</span>. أكمل بياناتك لتشترك في {pageName || 'هذه الصفحة'}.
+                    أنت داخل باسم <span dir="ltr" className="font-bold text-black">{user?.email}</span>. اشترك في {pageName || 'هذه الصفحة'} ببياناتك المحفوظة في حسابك.
                   </p>
                 )}
-                <input className={input} autoComplete="name" placeholder="الاسم" value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} />
-                <input className={input} autoComplete="tel" inputMode="tel" placeholder="رقم الهاتف" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} />
-                <input className={input} autoComplete="street-address" placeholder="العنوان (للتوصيل)" value={profile.address} onChange={(e) => setProfile({ ...profile, address: e.target.value })} />
                 <label className="flex items-start gap-2.5 text-xs font-bold text-black/65 leading-relaxed cursor-pointer">
                   <input type="checkbox" className="mt-0.5 w-4 h-4 shrink-0" style={{ accentColor: accent }} checked={profile.marketing} onChange={(e) => setProfile({ ...profile, marketing: e.target.checked })} />
                   أوافق على استلام عروض {pageName || 'هذه الصفحة'} على بريدي الإلكتروني (يمكنني إلغاء ذلك في أي وقت).
@@ -393,7 +393,7 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
                 {error && <p className="text-xs text-red-600 font-bold">{error}</p>}
                 <button type="submit" disabled={busy} className={primary} style={{ backgroundColor: accent }}>
                   {busy ? <Loader2 size={16} className="animate-spin" /> : saved ? <CheckCircle2 size={16} /> : null}
-                  {step === 'profile' ? 'اشترك' : saved ? 'تم الحفظ' : 'حفظ بياناتي'}
+                  {step === 'profile' ? 'اشترك' : saved ? 'تم الحفظ' : 'حفظ'}
                 </button>
               </form>
             )}

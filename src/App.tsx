@@ -3072,6 +3072,39 @@ export default function App() {
     setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 }));
     setIsRightDrawerOpen(true);
   };
+  // The «+» beside a slide opens the slides to add and puts what gets added right under that slide
+  // instead of at the page's end: the slides that were there are remembered, and the ones that
+  // appear are moved after it.
+  const insertAfterRef = useRef<{ afterId: string; known: Set<string> } | null>(null);
+  const handleAddSlideBelow = (slideId: string) => {
+    insertAfterRef.current = { afterId: slideId, known: new Set(currentPage.slides.map((s) => s.id)) };
+    openAdd('slide');
+  };
+  const handleSlideSettings = (slideId: string) => {
+    handleSelectSlide(slideId);
+    setSelectedElementId(null);
+    showInspector(null);
+  };
+  useEffect(() => {
+    const pending = insertAfterRef.current;
+    if (!pending) return;
+    const page = pages.find((p) => p.id === activePageId);
+    if (!page) return;
+    const added = page.slides.filter((s) => !pending.known.has(s.id));
+    if (added.length > 0) {
+      insertAfterRef.current = null;
+      if (!page.slides.some((s) => s.id === pending.afterId)) return;
+      const rest = page.slides.filter((s) => pending.known.has(s.id));
+      const at = rest.findIndex((s) => s.id === pending.afterId);
+      const slides = [...rest.slice(0, at + 1), ...added, ...rest.slice(at + 1)];
+      if (slides.some((s, i) => s.id !== page.slides[i].id)) {
+        setPages((all) => all.map((p) => (p.id === page.id ? { ...p, slides } : p)));
+      }
+      return;
+    }
+    // Nothing added and the add panel was left: this wish is over.
+    if (!(isRightDrawerOpen && drawerSection === 'elements')) insertAfterRef.current = null;
+  }, [pages, activePageId, isRightDrawerOpen, drawerSection]);
   const paletteCommands = (): PaletteCommand[] => {
     const cmds: PaletteCommand[] = [];
     const target = currentInspectorTarget();
@@ -4647,6 +4680,9 @@ export default function App() {
           }}
           onCancelLinkCopy={() => setLinkCopySource(null)}
           onUpdateSlideHeight={handleUpdateSlideHeight}
+          onMoveSlide={handleMoveSlide}
+          onSlideSettings={handleSlideSettings}
+          onAddSlideBelow={handleAddSlideBelow}
           activeTableCell={activeTableCell}
           onSelectTableCell={setActiveTableCell}
           navbar={currentPage.navbar}

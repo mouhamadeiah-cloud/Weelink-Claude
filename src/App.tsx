@@ -83,7 +83,7 @@ import { deserializeElements, sanitizeData, serializeElements } from './utils/el
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
-import { rememberLogin } from './services/sharedLogin';
+import { rememberLogin, resumeLogin } from './services/sharedLogin';
 import { hostAnswerImages, hostLargeImages, largeInlineImages, replaceImages } from './utils/answerImages';
 import { isSigningIn, resolveAccountId, takeInviteProblem } from './services/accounts';
 import { Access, OWNER_ACCESS, loadAccess } from './services/members';
@@ -1440,6 +1440,35 @@ export default function App() {
       : 'ما تم الدفع. فيك تدفع بأي وقت من زر «نشر» أو من صفحة «حسابي».');
   }, []);
 
+  // «الإدارة» in the navbar of a published page: this address opens on that project, in its admin.
+  // The login another Weelink page remembered (services/sharedLogin.ts) signs the owner in first.
+  const openAdminRef = useRef<() => void>(() => {});
+  const manageStarted = useRef(false);
+  useEffect(() => {
+    const key = new URLSearchParams(window.location.search).get('manage');
+    if (!key || isFirebaseLoading || handledAuthUid.current === undefined || manageStarted.current) return;
+    if (!currentUser || currentUser.isAnonymous) {
+      resumeLogin();
+      return;
+    }
+    manageStarted.current = true;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('manage');
+    window.history.replaceState(window.history.state, '', url.toString());
+    if (!isProjectKey(key)) return;
+    resumeRef.current = null;
+    setIsAuthActive(false);
+    setIsStartActive(false);
+    setIsHomeActive(false);
+    handleChooseProject(key, activeUserUid)
+      .then(() => {
+        openOwnerView();
+        window.setTimeout(() => openAdminRef.current(), 400);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFirebaseLoading, currentUser]);
+
   // The admin's editor tab (opened by «تعديل في لوحة المصمم» in the admin site) starts here, once the sign-in check is done.
   const adminEditStarted = useRef(false);
   useEffect(() => {
@@ -1660,6 +1689,8 @@ export default function App() {
     if (project === 'page') setIsPageAdminOpen(true);
     else setAdminOpenRequest((n) => n + 1);
   };
+
+  openAdminRef.current = openAdmin;
 
   // «تعديل الصفحة» in the admin: from the owner's view of the page back to the editor.
   const editPageFromAdmin = () => {

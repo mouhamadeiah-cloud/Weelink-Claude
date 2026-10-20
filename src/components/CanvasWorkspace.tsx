@@ -44,7 +44,10 @@ import {
   ChevronLeft,
   X,
   Menu,
-  Download
+  Download,
+  ChevronUp,
+  ChevronDown,
+  Settings
 } from 'lucide-react';
 
 interface CanvasWorkspaceProps {
@@ -79,6 +82,10 @@ interface CanvasWorkspaceProps {
   onUpdateNavbar?: (updates: Partial<NavbarConfig>) => void;
   isPreviewActive?: boolean;
   onUpdateSlideHeight?: (slideId: string, height: number) => void;
+  // The quick buttons beside each slide: one place up or down, its settings, and adding a slide under it.
+  onMoveSlide?: (slideId: string, direction: 'up' | 'down') => void;
+  onSlideSettings?: (slideId: string) => void;
+  onAddSlideBelow?: (slideId: string) => void;
   activeTableCell?: { elementId: string; row: number; col: number } | null;
   onSelectTableCell?: (cell: { elementId: string; row: number; col: number } | null) => void;
   isNavbarSelected?: boolean;
@@ -830,6 +837,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   navbar: navbarProp,
   onUpdateNavbar,
   isPreviewActive = false,
+  onMoveSlide,
+  onSlideSettings,
+  onAddSlideBelow,
   onUpdateSlideHeight,
   activeTableCell,
   onSelectTableCell,
@@ -2830,9 +2840,17 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             const slideElements = elements.filter(el => el.slideId === slide.id);
             const isSlideActive = slide.id === activeSlideId;
 
+            // Small grey buttons in the gap beside the slide (outside it, which clips what it holds).
+            const quick: { label: string; icon: React.ReactNode; run: () => void; off?: boolean }[] = isPreviewActive ? [] : [
+              onMoveSlide && { label: 'رفع الشريحة درجة', icon: <ChevronUp size={14} />, run: () => onMoveSlide(slide.id, 'up'), off: slideIndex === 0 },
+              onMoveSlide && { label: 'تنزيل الشريحة درجة', icon: <ChevronDown size={14} />, run: () => onMoveSlide(slide.id, 'down'), off: slideIndex === slides.length - 1 },
+              onSlideSettings && { label: 'إعدادات الشريحة', icon: <Settings size={13} />, run: () => onSlideSettings(slide.id) },
+              onAddSlideBelow && { label: 'إضافة شريحة تحت هذه الشريحة', icon: <Plus size={14} />, run: () => onAddSlideBelow(slide.id) },
+            ].filter(Boolean) as { label: string; icon: React.ReactNode; run: () => void; off?: boolean }[];
+
             return (
+              <div key={slide.id} className="relative">
               <div
-                key={slide.id}
                 id={`slide-container-${slide.id}`}
                 onClick={(e) => {
                   if (isPreviewActive) return;
@@ -4980,6 +4998,28 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     )}
                   </div>
                 )}
+              </div>
+              {quick.length > 0 && (
+                <div
+                  className="absolute top-1 left-full ml-1 flex flex-col"
+                  style={{ transform: `scale(${1 / (scaleFactor || 1)})`, transformOrigin: 'top left' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {quick.map((b) => (
+                    <button
+                      key={b.label}
+                      type="button"
+                      title={b.label}
+                      aria-label={b.label}
+                      disabled={b.off}
+                      onClick={b.run}
+                      className="w-6 h-6 flex items-center justify-center text-neutral-400 hover:text-neutral-700 disabled:opacity-30 disabled:hover:text-neutral-400 transition-colors cursor-pointer disabled:cursor-default"
+                    >
+                      {b.icon}
+                    </button>
+                  ))}
+                </div>
+              )}
               </div>
             );
           })}

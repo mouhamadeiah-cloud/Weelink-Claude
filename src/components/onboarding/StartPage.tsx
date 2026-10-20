@@ -230,8 +230,8 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               </button>
             ))}
 
-            {/* The fifth card: designers join here (their own sign-up, a free page with a gallery of their slides) */}
-            <button
+            {/* The fifth card: a visitor joins the designers here (their own sign-up); a signed-in account never becomes one from here */}
+            {!signedIn && <button
               type="button"
               disabled={!!loadingType}
               onClick={onDesigner}
@@ -253,7 +253,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
                   <ArrowLeft size={14} className="transition group-hover:-translate-x-1.5" />
                 </span>
               </span>
-            </button>
+            </button>}
           </section>
 
           {/* The designers' approved slides, under the cards */}

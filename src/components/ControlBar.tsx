@@ -385,10 +385,10 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             onClick={onToggleDesignerMode}
             aria-pressed={!!isDesignerMode}
             className={`h-9 px-3 rounded-xl border text-xs sm:text-sm font-black active:scale-95 flex items-center gap-1.5 transition-all cursor-pointer ${isDesignerMode ? 'bg-ink text-white border-ink' : 'bg-neutral-100/80 border-black/[0.05] text-neutral-700 hover:bg-white hover:text-brand'}`}
-            title={isDesignerMode ? 'العودة لصفحتك' : 'وضع المصمم: صمّم شرائح وصدّرها لمعرض Weelink'}
+            title={isDesignerMode ? 'الخروج من استوديو المصمم والدخول كمستخدم' : 'الدخول كمصمم: استوديو التصاميم والمعرض وطلبات التصميم'}
           >
             <Palette size={15} strokeWidth={2.3} />
-            {isDesignerMode ? 'صفحتي' : 'وضع المصمم'}
+            {isDesignerMode ? 'الدخول كمستخدم' : 'الدخول كمصمم'}
           </button>
         )}
         {isDesignerMode && onExportSlide && !isPreviewActive && (

@@ -79,6 +79,8 @@ export interface ElementStyles {
   animationFrom?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number };
   animationTo?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number };
   animationAlternate?: boolean;
+  // Up to three more animations on top of the first (utils/elementAnimation), each with the same fields as above
+  animationLayers?: { animation?: string; animationTrigger?: 'hover' | 'once' | 'loop' | 'scroll'; animationDuration?: number; animationFrom?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number }; animationTo?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number }; animationAlternate?: boolean }[];
   rotation?: number;
   objectFit?: 'cover' | 'contain' | 'fill' | 'none';
   imageFilter?: string;

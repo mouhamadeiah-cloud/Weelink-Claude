@@ -12,6 +12,9 @@ export interface MotionState {
 
 export const CUSTOM_MOTION = 'custom';
 export const CUSTOM_MOTION_KEYFRAMES = 'custom-move';
+// The first animation of an element reads --mv-*; its extra animations (utils/elementAnimation) read
+// --mv1-* … --mv3-* through their own keyframes, so two custom motions never share variables.
+export const customMotionKeyframes = (layer: number) => (layer === 0 ? CUSTOM_MOTION_KEYFRAMES : `${CUSTOM_MOTION_KEYFRAMES}-${layer}`);
 
 export const DEFAULT_MOTION_FROM: Required<MotionState> = { x: -80, y: 0, opacity: 0, scale: 1, rotate: 0 };
 export const DEFAULT_MOTION_TO: Required<MotionState> = { x: 0, y: 0, opacity: 1, scale: 1, rotate: 0 };
@@ -24,15 +27,17 @@ export const customMotionVars = (
   to: MotionState | undefined,
   baseRotation = 0,
   shrink = 1,
+  layer = 0,
 ): Record<string, string> => {
+  const p = layer === 0 ? 'mv' : `mv${layer}`;
   const f = { ...DEFAULT_MOTION_FROM, ...from };
   const t = { ...DEFAULT_MOTION_TO, ...to };
   const state = (key: 'f' | 't', s: Required<MotionState>) => ({
-    [`--mv-${key}x`]: `${Math.round(num(s.x, 0) * shrink)}px`,
-    [`--mv-${key}y`]: `${Math.round(num(s.y, 0) * shrink)}px`,
-    [`--mv-${key}o`]: String(Math.min(1, Math.max(0, num(s.opacity, 1)))),
-    [`--mv-${key}s`]: String(Math.max(0, num(s.scale, 1))),
-    [`--mv-${key}r`]: `${num(baseRotation, 0) + num(s.rotate, 0)}deg`,
+    [`--${p}-${key}x`]: `${Math.round(num(s.x, 0) * shrink)}px`,
+    [`--${p}-${key}y`]: `${Math.round(num(s.y, 0) * shrink)}px`,
+    [`--${p}-${key}o`]: String(Math.min(1, Math.max(0, num(s.opacity, 1)))),
+    [`--${p}-${key}s`]: String(Math.max(0, num(s.scale, 1))),
+    [`--${p}-${key}r`]: `${num(baseRotation, 0) + num(s.rotate, 0)}deg`,
   });
   return { ...state('f', f), ...state('t', t) };
 };

@@ -75,6 +75,10 @@ export interface ElementStyles {
   animation?: string;
   animationTrigger?: 'hover' | 'once' | 'loop' | 'scroll'; // 'scroll': plays once when the visitor scrolls to it (published page and preview)
   animationDuration?: number;
+  // animation 'custom': the states the element moves from and to (utils/customMotion) and whether it goes back and forth
+  animationFrom?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number };
+  animationTo?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number };
+  animationAlternate?: boolean;
   rotation?: number;
   objectFit?: 'cover' | 'contain' | 'fill' | 'none';
   imageFilter?: string;

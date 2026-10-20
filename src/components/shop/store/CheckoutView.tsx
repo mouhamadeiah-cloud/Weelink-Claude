@@ -6,6 +6,7 @@
 // elements side by side; older cart elements show both halves in one (CheckoutView). Their
 // background, border, corners, font, text colour, accent and texts come from the elements.
 import React, { useMemo, useState } from 'react';
+import { canRequestAccount, requestAccountOpen, useCustomerPrefill, useCustomerSession } from '../../customers/customerSession';
 import {
   Minus, Plus, ShoppingBag, Trash2, Truck, Wallet, Banknote, Copy, Check, ImagePlus, Loader2, CheckCircle2, Clock, MessageCircle, ClipboardList,
 } from 'lucide-react';
@@ -184,7 +185,10 @@ const FormBody: React.FC<PartProps & { onPlaced: (o: ShopOrder) => void }> = ({ 
   const accent = look.accent;
 
   const [form, setForm] = useState({ name: '', province: '', address: '', email: '', whatsapp: '', note: '' });
-  const [register, setRegister] = useState(false);
+  useCustomerPrefill((c) => setForm((f) => ({ ...f, name: f.name || c.name, address: f.address || c.address, email: f.email || c.email, whatsapp: f.whatsapp || c.phone })));
+  const customer = useCustomerSession();
+  // A signed-in customer is also saved in the shop's customer list.
+  const register = !!customer;
   const [paid, setPaid] = useState(false); // the visitor pressed "لقد دفعت"
   const [txn, setTxn] = useState('');
   const [shot, setShot] = useState('');
@@ -281,13 +285,19 @@ const FormBody: React.FC<PartProps & { onPlaced: (o: ShopOrder) => void }> = ({ 
             <input className={`${fieldClass} @lg:col-span-2`} placeholder="العنوان (المدينة، الحي، الشارع) *" value={form.address} onChange={setField('address')} aria-label="العنوان" />
           )}
         </div>
-        <label className="flex items-start gap-2.5 p-3 rounded-xl border border-(--line) cursor-pointer">
-          <input type="checkbox" checked={register} onChange={(e) => setRegister(e.target.checked)} className="mt-0.5 w-4 h-4 accent-(--accent)" />
-          <span className="text-sm">
-            <span className="font-semibold">أنشئ حساباً في المتجر</span>
-            <span className="block text-xs text-(--muted)">نحفظ بياناتك لطلباتك القادمة.</span>
-          </span>
-        </label>
+        {customer ? (
+          <div className="p-3 rounded-xl border border-(--line) text-sm">
+            <span className="font-semibold">داخل بحسابك: {customer.profile.name}</span>
+            <span className="block text-xs text-(--muted)">بياناتك محفوظة لطلباتك القادمة.</span>
+          </div>
+        ) : (
+          canRequestAccount() && (
+            <button type="button" onClick={requestAccountOpen} className="w-full p-3 rounded-xl border border-(--line) text-start cursor-pointer">
+              <span className="text-sm font-semibold">سجّل دخولك أو أنشئ حساباً</span>
+              <span className="block text-xs text-(--muted)">نحفظ بياناتك لطلباتك القادمة. يمكنك أيضاً الطلب كزائر.</span>
+            </button>
+          )
+        )}
       </Section>
 
       {canDeliver && canPickup && (

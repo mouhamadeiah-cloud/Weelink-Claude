@@ -13,7 +13,7 @@ import { User } from 'firebase/auth';
 import { collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { db } from './firebase';
 
-export type PageKind = 'restaurant' | 'shop' | 'cars';
+export type PageKind = 'restaurant' | 'shop' | 'cars' | 'site';
 
 export interface CustomerProfile {
   name: string;
@@ -56,7 +56,7 @@ const toCustomer = (uid: string, raw: any): PageCustomer => ({
 export const pageUrl = (kind: PageKind, ownerUid: string) =>
   kind === 'restaurant' ? `${window.location.origin}/?r=${encodeURIComponent(ownerUid)}` : '';
 
-const PAGE_KIND_LABELS: Record<PageKind, string> = { restaurant: 'مطعم', shop: 'متجر', cars: 'معرض سيارات' };
+const PAGE_KIND_LABELS: Record<PageKind, string> = { restaurant: 'مطعم', shop: 'متجر', cars: 'معرض سيارات', site: 'صفحة' };
 
 // This customer's profile on that page, or null before they joined it.
 export const readMyCustomerProfile = async (ownerUid: string, user: User): Promise<PageCustomer | null> => {
@@ -117,7 +117,7 @@ export const listJoinedPages = async (customerUid: string): Promise<JoinedPage[]
   return snap.docs
     .map((d) => {
       const raw: any = d.data();
-      const kind: PageKind = raw?.kind === 'shop' || raw?.kind === 'cars' ? raw.kind : 'restaurant';
+      const kind: PageKind = raw?.kind === 'shop' || raw?.kind === 'cars' || raw?.kind === 'site' ? raw.kind : 'restaurant';
       return { ownerUid: d.id, name: str(raw?.name, 100), kind, joinedAt: str(raw?.joinedAt, 40) };
     })
     .sort((a, b) => b.joinedAt.localeCompare(a.joinedAt));

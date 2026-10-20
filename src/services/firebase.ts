@@ -84,6 +84,8 @@ export async function loginWithGoogle() {
 // Function to log out
 export async function logoutUser() {
   try {
+    // The other Weelink pages must not sign this person in again (see services/sharedLogin.ts).
+    await fetch('/api/email-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'session-clear' }) }).catch(() => {});
     await signOut(auth);
   } catch (error) {
     console.warn('Logout Error: ', error);

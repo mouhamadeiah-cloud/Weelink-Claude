@@ -83,6 +83,7 @@ import { deserializeElements, sanitizeData, serializeElements } from './utils/el
 
 // Firebase Imports
 import { auth, db, loginWithGoogle, logoutUser } from './services/firebase';
+import { rememberLogin } from './services/sharedLogin';
 import { hostAnswerImages, hostLargeImages, largeInlineImages, replaceImages } from './utils/answerImages';
 import { isSigningIn, resolveAccountId, takeInviteProblem } from './services/accounts';
 import { Access, OWNER_ACCESS, loadAccess } from './services/members';
@@ -952,6 +953,7 @@ export default function App() {
       // An anonymous user is a restaurant device in another tab, not an owner.
       const user = signedIn && !signedIn.isAnonymous ? signedIn : null;
       setCurrentUser(user);
+      if (user?.emailVerified) rememberLogin(user);
       // The sign-in screen opens the account itself; a token refresh changes nothing.
       const uid = user ? user.uid : null;
       if (isSigningIn() || uid === handledAuthUid.current) return;

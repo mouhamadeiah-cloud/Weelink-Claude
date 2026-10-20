@@ -217,12 +217,19 @@
   100% { transform: translate3d(0, 0, 0); }
 }
 
+/* «حركة مخصصة»: from the owner's first state to the second (utils/customMotion sets the variables). */
+@keyframes custom-move {
+  from { transform: translate(var(--mv-fx, 0px), var(--mv-fy, 0px)) rotate(var(--mv-fr, 0deg)) scale(var(--mv-fs, 1)); opacity: var(--mv-fo, 1); }
+  to { transform: translate(var(--mv-tx, 0px), var(--mv-ty, 0px)) rotate(var(--mv-tr, 0deg)) scale(var(--mv-ts, 1)); opacity: var(--mv-to, 1); }
+}
+
 /* Trigger Class for Hover animations */
 .hover-animate:hover {
   animation-name: var(--anim-name) !important;
   animation-duration: var(--anim-duration, 1.5s) !important;
   animation-iteration-count: infinite !important;
   animation-timing-function: var(--anim-timing, ease-out) !important;
+  animation-direction: var(--anim-direction, normal) !important;
 }
 
 /* "Fixed" slide/element backgrounds (see syncFixedBackgrounds in CanvasWorkspace.tsx).

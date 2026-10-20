@@ -3,6 +3,7 @@ import React from 'react';
 import { Check } from 'lucide-react';
 import { CanvasElement } from '../../../types';
 import { RightDrawerProps } from '../types';
+import { DEFAULT_MOTION_FROM, DEFAULT_MOTION_TO, MotionState } from '../../../utils/customMotion';
 
 interface AnimationSectionProps {
   styles: CanvasElement['styles'];
@@ -44,7 +45,8 @@ export const AnimationSection = ({
     { id: 'heartbeat', name: 'خفقان سريع', desc: 'نبضتان سريعتان كنبض القلب', arrow: '💗 ❤️', delay: 2 },
     { id: 'rubberband', name: 'مطاط مرن', desc: 'تمطط جانبي مرن ومرح', arrow: '↔️ 🎗️', delay: 2 },
     { id: 'swing', name: 'تأرجح مائل', desc: 'أرجوحة لطيفة من الأعلى', arrow: '⤾ 📐', delay: 2 },
-    { id: 'jello', name: 'تموج هلامي', desc: 'تموج مائل مرتعش وممتع', arrow: '🍮 〰️', delay: 2 }
+    { id: 'jello', name: 'تموج هلامي', desc: 'تموج مائل مرتعش وممتع', arrow: '🍮 〰️', delay: 2 },
+    { id: 'custom', name: 'حركة مخصصة ✎', desc: 'من حالة إلى حالة تحددها أنت', arrow: 'A ➔ B', delay: 1.2 }
   ];
 
   return (
@@ -118,6 +120,50 @@ export const AnimationSection = ({
             <span>10ث</span>
             <span>20ث (بطيء)</span>
           </div>
+        </div>
+      )}
+
+      {/* Custom motion: the two states the element moves between */}
+      {currentAnimation === 'custom' && (
+        <div className="space-y-2">
+          {([
+            { key: 'animationFrom' as const, title: 'حالة البداية', state: { ...DEFAULT_MOTION_FROM, ...styles.animationFrom } },
+            { key: 'animationTo' as const, title: 'حالة النهاية', state: { ...DEFAULT_MOTION_TO, ...styles.animationTo } },
+          ]).map(({ key, title, state }) => {
+            const set = (patch: MotionState) => onUpdateElementStyles({ [key]: { ...(styles[key] || {}), ...patch } });
+            const rows: { field: keyof MotionState; label: string; min: number; max: number; step: number; unit: string; scale?: number }[] = [
+              { field: 'x', label: 'الإزاحة أفقياً', min: -600, max: 600, step: 10, unit: 'px' },
+              { field: 'y', label: 'الإزاحة عمودياً', min: -600, max: 600, step: 10, unit: 'px' },
+              { field: 'opacity', label: 'الشفافية', min: 0, max: 100, step: 5, unit: '%', scale: 100 },
+              { field: 'scale', label: 'الحجم', min: 10, max: 300, step: 5, unit: '%', scale: 100 },
+              { field: 'rotate', label: 'الدوران', min: -360, max: 360, step: 5, unit: '°' },
+            ];
+            return (
+              <div key={key} className="space-y-1.5 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
+                <span className="text-xs font-bold text-neutral-800 block">{title}</span>
+                {rows.map((r) => {
+                  const shown = Math.round((state[r.field] as number) * (r.scale || 1));
+                  return (
+                    <label key={r.field} className="block">
+                      <span className="flex justify-between text-xs text-neutral-600">
+                        <span>{r.label}</span>
+                        <span className="font-mono text-brand font-bold">{shown}{r.unit}</span>
+                      </span>
+                      <input
+                        type="range" min={r.min} max={r.max} step={r.step} value={shown}
+                        onChange={(e) => set({ [r.field]: Number(e.target.value) / (r.scale || 1) })}
+                        className="w-full accent-brand h-1.5 bg-neutral-200 rounded-lg cursor-pointer"
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            );
+          })}
+          <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
+            <input type="checkbox" checked={Boolean(styles.animationAlternate)} onChange={(e) => onUpdateElementStyles({ animationAlternate: e.target.checked })} />
+            ذهاب وإياب (المستمر ومرور الماوس يعملان هكذا دائماً)
+          </label>
         </div>
       )}
 

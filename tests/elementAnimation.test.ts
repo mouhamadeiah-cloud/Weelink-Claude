@@ -82,3 +82,35 @@ test('the animation card lists the extra animations and offers to add one', () =
   assert.match(html, /الحركة 2/);
   assert.match(html, /أضف حركة أخرى/);
 });
+
+test('«مع التمرير» ties the animation to the scrolling itself, linear, from the entry to the middle of the screen', async () => {
+  const { usesScrub, SCRUB_RANGE } = await import('../src/utils/elementAnimation');
+  const b = buildElementAnimation({ animation: 'custom', animationTrigger: 'scrub' } as any, { ...ctx, waits: true, scrub: true });
+  assert.equal(b.style.animationTimeline, 'view()');
+  assert.equal(b.style.animationRange, SCRUB_RANGE);
+  assert.equal(b.style.animationDuration, 'auto');
+  assert.equal(b.style.animationTimingFunction, 'linear');
+  assert.equal(b.style.animationFillMode, 'both');
+  assert.equal(b.waitsForView, false); // nothing waits to be seen: the scrolling drives it
+  assert.equal(usesScrub({ animation: 'fade', animationLayers: [{ animation: 'custom', animationTrigger: 'scrub' }] } as any), true);
+  assert.equal(usesScrub({ animation: 'fade', animationTrigger: 'scrub', animationLayers: [] } as any), true);
+  assert.equal(usesScrub({ animation: 'none', animationTrigger: 'scrub' } as any), false);
+});
+
+test('«مع التمرير» keeps the element still in the editor and plays as «عند التمرير» in a browser without scroll timelines', () => {
+  const editor = buildElementAnimation({ animation: 'custom', animationTrigger: 'scrub' } as any, { ...ctx, waits: false, scrub: true });
+  assert.equal(editor.any, false);
+  assert.equal(editor.style.animationName, undefined);
+  const old = buildElementAnimation({ animation: 'fade', animationTrigger: 'scrub' } as any, { ...ctx, waits: true, scrub: false });
+  assert.equal(old.repeatsOnScroll, true);
+  assert.equal(old.style.animationTimeline, 'auto');
+});
+
+test('a scrubbed layer and an ordinary one share an element, each with its own timeline', () => {
+  const b = buildElementAnimation({
+    animation: 'fade', animationTrigger: 'once',
+    animationLayers: [{ animation: 'custom', animationTrigger: 'scrub' }],
+  } as any, { ...ctx, waits: true, scrub: true });
+  assert.equal(b.style.animationTimeline, 'auto, view()');
+  assert.equal(b.style.animationRange, 'normal, entry 0% cover 45%');
+});

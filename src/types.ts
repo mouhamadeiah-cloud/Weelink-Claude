@@ -73,14 +73,14 @@ export interface ElementStyles {
   fontFamily?: string;
   listStyle?: 'none' | 'bullet' | 'numeric';
   animation?: string;
-  animationTrigger?: 'hover' | 'once' | 'loop' | 'scroll'; // 'scroll': plays once when the visitor scrolls to it (published page and preview)
+  animationTrigger?: 'hover' | 'once' | 'loop' | 'scroll' | 'scrub'; // 'scroll': plays when the visitor scrolls to it, again each return; 'scrub': follows the scrolling itself (published page and preview)
   animationDuration?: number;
   // animation 'custom': the states the element moves from and to (utils/customMotion) and whether it goes back and forth
   animationFrom?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number };
   animationTo?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number };
   animationAlternate?: boolean;
   // Up to three more animations on top of the first (utils/elementAnimation), each with the same fields as above
-  animationLayers?: { animation?: string; animationTrigger?: 'hover' | 'once' | 'loop' | 'scroll'; animationDuration?: number; animationFrom?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number }; animationTo?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number }; animationAlternate?: boolean }[];
+  animationLayers?: { animation?: string; animationTrigger?: 'hover' | 'once' | 'loop' | 'scroll' | 'scrub'; animationDuration?: number; animationFrom?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number }; animationTo?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number }; animationAlternate?: boolean }[];
   rotation?: number;
   objectFit?: 'cover' | 'contain' | 'fill' | 'none';
   imageFilter?: string;

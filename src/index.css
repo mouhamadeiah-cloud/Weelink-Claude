@@ -246,6 +246,8 @@
   animation-fill-mode: var(--h-fill, none) !important;
   animation-direction: var(--h-dir, normal) !important;
   animation-composition: var(--h-comp, replace) !important;
+  animation-timeline: var(--h-timeline, auto) !important;
+  animation-range: var(--h-range, normal) !important;
 }
 
 /* "Fixed" slide/element backgrounds (see syncFixedBackgrounds in CanvasWorkspace.tsx).

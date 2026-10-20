@@ -87,6 +87,7 @@ const AnimationEditor = ({
             { id: 'hover', label: 'مرور الماوس 🖱️' },
             { id: 'once', label: 'فتح الصفحة 🔄' },
             { id: 'scroll', label: 'عند التمرير 📜' },
+            { id: 'scrub', label: 'مع التمرير ↕' },
             { id: 'loop', label: 'مستمر دائم 🔁' }
           ].map((trig) => {
             const isSelected = currentTrigger === trig.id;
@@ -106,6 +107,11 @@ const AnimationEditor = ({
             );
           })}
         </div>
+        {currentTrigger === 'scrub' && (
+          <p className="text-xs text-neutral-500 leading-relaxed">
+            «مع التمرير» بتتقدم الحركة مع إصبع الزائر نفسه: العنصر على حالة البداية وهو داخل من أسفل الشاشة، وعلى حالة النهاية لما يوصل لنص الشاشة تقريباً، وبترجع لو رجع لفوق. بتشتغل بالمعاينة وعلى الصفحة المنشورة بالمتصفحات الحديثة (وغيرها بتشتغل مرة عند الوصول). بالمحرر العنصر بيبقى ثابت.
+          </p>
+        )}
         {currentTrigger === 'scroll' && (
           <p className="text-xs text-neutral-500 leading-relaxed">
             «عند التمرير» بتشتغل بالمعاينة (زر العين) وعلى الصفحة المنشورة: العنصر بيستنى لحد ما الزائر يوصل له، وبتعيد الحركة كل ما رجع لعنده من فوق أو من تحت. بالمحرر نفسه الحركة بتشتغل مرة وحدة عند الفتح.

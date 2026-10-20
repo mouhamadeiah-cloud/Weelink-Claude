@@ -15,7 +15,7 @@ import {
 import { SLIDE_DIVIDER_HEIGHT, slideDividerMask, slideDividerPath } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
-import { buildElementAnimation } from '../utils/elementAnimation';
+import { buildElementAnimation, usesScrub } from '../utils/elementAnimation';
 import { MOBILE_CANVAS_WIDTH, resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
 import { LottiePlayer } from './LottiePlayer';
 import { getTextEffectStyles } from '../utils/textEffects';
@@ -3013,7 +3013,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   clipPath: slide.backgroundAttachment === 'fixed' ? 'inset(0px)' : undefined,
                   // `overflow: hidden` makes the slide a scroll container, which would hijack the fixed
                   // background's scroll timeline; `clip` clips the same way without that side effect.
-                  overflow: (slide.backgroundAttachment === 'fixed' || slideElements.some(el => el.styles.backgroundAttachment === 'fixed')) ? 'clip' : undefined,
+                  overflow: (slide.backgroundAttachment === 'fixed' || slideElements.some(el => el.styles.backgroundAttachment === 'fixed' || ((isPreviewActive || isPublicSite) && usesScrub(el.styles)))) ? 'clip' : undefined,
                 }}
               >
                 {/* Drag Over Drop Target Feedback */}

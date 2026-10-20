@@ -1123,26 +1123,38 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // IntersectionObserver nothing is left waiting.
   useEffect(() => {
     if (!(isPublicSite || isPreviewActive)) return;
-    const waiting = () => document.querySelectorAll('[data-scroll-anim]:not([data-seen])');
+    const waiting = () => document.querySelectorAll('[data-scroll-anim]:not([data-seen]):not([data-watched])');
     if (typeof IntersectionObserver === 'undefined') {
       waiting().forEach((el) => el.setAttribute('data-seen', '1'));
       return;
     }
     const io = new IntersectionObserver(
       (entries) => entries.forEach((e) => {
-        if (!e.isIntersecting) return;
-        (e.target as HTMLElement).setAttribute('data-seen', '1');
-        io.unobserve(e.target);
+        const node = e.target as HTMLElement;
+        const repeats = node.getAttribute('data-scroll-anim') === 'repeat';
+        if (e.isIntersecting) {
+          node.setAttribute('data-seen', '1');
+          if (!repeats) io.unobserve(node);
+        } else if (repeats && node.hasAttribute('data-seen')) {
+          // «عند التمرير» plays again each time the element comes back into view, from either side:
+          // rewind it to its first frame and wait.
+          node.removeAttribute('data-seen');
+          const name = node.style.animationName;
+          node.style.animationName = 'none';
+          void node.offsetWidth;
+          node.style.animationName = name;
+        }
       }),
       { threshold: 0.12 }
     );
-    const watch = () => waiting().forEach((el) => io.observe(el));
+    const watch = () => waiting().forEach((el) => { el.setAttribute('data-watched', '1'); io.observe(el); });
     watch();
     const mo = new MutationObserver(watch);
     mo.observe(document.body, { childList: true, subtree: true });
     return () => {
       io.disconnect();
       mo.disconnect();
+      document.querySelectorAll('[data-watched]').forEach((el) => el.removeAttribute('data-watched'));
     };
   }, [elements, slides, isPublicSite, isPreviewActive, previewMode]);
 
@@ -3241,7 +3253,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   ? 'ring-2 ring-[#0071e3] shadow-[0_4px_24px_rgba(0,113,227,0.15)]' 
                                   : 'hover:ring-1 hover:ring-[#0071e3]/40'
                       } ${isAnimHover ? 'hover-animate' : ''}`}
-                      data-scroll-anim={waitsForView && anim !== 'none' ? '1' : undefined}
+                      data-scroll-anim={waitsForView && anim !== 'none' ? (animTrigger === 'scroll' ? 'repeat' : '1') : undefined}
                       style={{
                         left: `${spansPage ? elem.x - bleed : elem.x}px`,
                         top: `${elem.y}px`,

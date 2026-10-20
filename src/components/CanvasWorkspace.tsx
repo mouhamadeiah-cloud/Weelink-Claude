@@ -929,31 +929,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const navFlowHeight = !hideNavbar && navLayout === 'horizontal' && !navbar.posY ? (navbar.height ?? 60) : 0;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
-  // Entrance animations of the preview and the published page start when the element comes into view
-  // (not at load, when a lower slide is still off the screen).
-  useEffect(() => {
-    if (!(isPreviewActive || isPublicSite) || typeof IntersectionObserver === 'undefined') return;
-    const run = (node: Element) => ((node as HTMLElement).style.animationPlayState = 'running');
-    let fired = false;
-    const seen = new IntersectionObserver((entries) => {
-      fired = true;
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        run(entry.target);
-        seen.unobserve(entry.target);
-      });
-    }, { threshold: 0.15 });
-    document.querySelectorAll('[data-view-anim]').forEach((node) => {
-      if ((node as HTMLElement).style.animationPlayState === 'paused') seen.observe(node);
-    });
-    // Fallback if the observer never reports (so nothing stays hidden).
-    const fallback = window.setTimeout(() => !fired && document.querySelectorAll('[data-view-anim]').forEach(run), 3000);
-    return () => {
-      seen.disconnect();
-      window.clearTimeout(fallback);
-    };
-  }, [isPreviewActive, isPublicSite, slides, elements, previewMode]);
-
   useEffect(() => {
     if (!isNavHamburger && !isNavIconOnly) setIsNavMenuOpen(false);
   }, [isNavHamburger, isNavIconOnly]);
@@ -1142,10 +1117,17 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   // The phone frame is 380 wide with a 10px border round the 360-wide phone page; the published
   // phone view has no frame, so its page is the 360 the phone layout is drawn on.
-  // An element set to «عند التمرير» waits (its animation paused on the first frame, see index.css) until
-  // the visitor scrolls it into view, then plays once. Only on the published page and in the preview.
+  // An element set to «عند التمرير» (or «فتح الصفحة») waits, its animation paused on the first frame (see
+  // index.css), until the visitor scrolls it into view, then plays once. Only on the published page and in
+  // the preview. Elements that appear later (a re-rendered slide) are picked up too, and without an
+  // IntersectionObserver nothing is left waiting.
   useEffect(() => {
-    if (!(isPublicSite || isPreviewActive) || typeof IntersectionObserver === 'undefined') return;
+    if (!(isPublicSite || isPreviewActive)) return;
+    const waiting = () => document.querySelectorAll('[data-scroll-anim]:not([data-seen])');
+    if (typeof IntersectionObserver === 'undefined') {
+      waiting().forEach((el) => el.setAttribute('data-seen', '1'));
+      return;
+    }
     const io = new IntersectionObserver(
       (entries) => entries.forEach((e) => {
         if (!e.isIntersecting) return;
@@ -1154,8 +1136,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       }),
       { threshold: 0.12 }
     );
-    document.querySelectorAll('[data-scroll-anim]:not([data-seen])').forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    const watch = () => waiting().forEach((el) => io.observe(el));
+    watch();
+    const mo = new MutationObserver(watch);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
   }, [elements, slides, isPublicSite, isPreviewActive, previewMode]);
 
   const baseWidth = previewMode === 'mobile' ? (isPublicSite ? MOBILE_CANVAS_WIDTH : 380) : (previewMode === 'tablet' ? 768 : 1280);
@@ -3189,7 +3177,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   // A ticker never stops after one pass: it runs round and round (unless it waits for the mouse).
                   const isAnimLoop = animTrigger === 'loop' || (isMarquee && animTrigger !== 'hover');
                   const isAnimHover = animTrigger === 'hover';
-                  const waitsForView = (isPreviewActive || isPublicSite) && !isAnimHover && !isMarquee && animTrigger === 'once';
+                  const waitsForView = (isPreviewActive || isPublicSite) && !isMarquee && (animTrigger === 'once' || animTrigger === 'scroll');
                   // The ticker crosses the whole page: from past the right edge to past the left one.
                   const marqueeVars = isMarquee
                     ? { '--marquee-from': `${pageWidth - elem.x + bleed}px`, '--marquee-to': `${-(elem.x + elem.width) - bleed}px` }
@@ -3208,8 +3196,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       animationIterationCount: isAnimLoop ? 'infinite' : '1',
                       animationTimingFunction: ['marquee-rtl', 'marquee-ltr'].includes(anim) ? 'linear' : 'ease-out',
                       animationFillMode: isAnimLoop ? 'none' : (waitsForView ? 'both' : 'forwards'),
-                      // On the preview and the published page an entrance waits (hidden) until it scrolls into view.
-                      ...(waitsForView && !isAnimLoop ? { animationPlayState: 'paused' } : {}),
                     }
                   ) : {};
 
@@ -3217,7 +3203,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     <div
                       key={elem.id}
                       id={`canvas-elem-${elem.id}`}
-                      data-view-anim={waitsForView && anim !== 'none' ? '' : undefined}
                       onMouseDown={(e) => !isPreviewActive && !linkCopySource && handleElementMouseDown(e, elem)}
                       onTouchStart={(e) => !isPreviewActive && !linkCopySource && handleElementTouchStart(e, elem)}
                       onTouchMove={handleElementTouchMove}
@@ -3256,7 +3241,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   ? 'ring-2 ring-[#0071e3] shadow-[0_4px_24px_rgba(0,113,227,0.15)]' 
                                   : 'hover:ring-1 hover:ring-[#0071e3]/40'
                       } ${isAnimHover ? 'hover-animate' : ''}`}
-                      data-scroll-anim={animTrigger === 'scroll' && anim !== 'none' && (isPreviewActive || isPublicSite) ? '1' : undefined}
+                      data-scroll-anim={waitsForView && anim !== 'none' ? '1' : undefined}
                       style={{
                         left: `${spansPage ? elem.x - bleed : elem.x}px`,
                         top: `${elem.y}px`,

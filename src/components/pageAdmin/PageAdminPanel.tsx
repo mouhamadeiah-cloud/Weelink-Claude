@@ -8,6 +8,7 @@ import { BarChart3, CalendarDays, Globe2, Loader2, MessageCircle, PencilLine, Sp
 import { DayStats, readStats } from '../../services/siteStats';
 import type { ProjectKey } from '../../utils/projectKeys';
 import { BookingsSection } from './BookingsSection';
+import { PageCustomersList } from '../customers/PageCustomersList';
 import { InquiriesSection } from './InquiriesSection';
 import { RatingsSection } from './RatingsSection';
 import { watchBookings } from '../../services/bookings';
@@ -98,6 +99,8 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
           <BookingsSection owner={owner} project={project} watch={watch} />
 
           <InquiriesSection owner={owner} project={project} />
+
+          <PageCustomersList ownerUid={owner} isOwner />
 
           <RatingsSection owner={owner} project={project} pageName={pageName} />
 

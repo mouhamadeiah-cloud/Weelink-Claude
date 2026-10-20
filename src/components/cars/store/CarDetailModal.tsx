@@ -2,7 +2,9 @@
 // main facts, the specification table, features, condition and description, with WhatsApp and
 // call buttons that tell the showroom which car the visitor means, and «احجز تجربة قيادة» /
 // «اطلب السيارة» forms whose requests land in the showroom's «طلبات الزوار».
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
+import { BookingPageContext } from '../../../services/bookings';
+import { notifyOwner } from '../../../services/contact';
 import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, ImageOff, Calendar, Gauge, Settings2, Fuel, Phone, MessageCircle, Check, ShieldCheck, KeyRound, ShoppingBag, CheckCircle2 } from 'lucide-react';
 import { Car, CarRequestType, CarSettings } from '../carTypes';
@@ -56,6 +58,7 @@ const REQUEST_TEXT: Record<CarRequestType, { title: string; button: string; date
 
 const RequestForm: React.FC<{ car: Car; type: CarRequestType; settings: CarSettings; accent: string; onDone: () => void }> = ({ car, type, settings, accent, onDone }) => {
   const submit = useCarRequest();
+  const page = useContext(BookingPageContext);
   const [f, setF] = useState({ name: '', phone: '', preferredDate: '', message: '' });
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
@@ -69,6 +72,13 @@ const RequestForm: React.FC<{ car: Car; type: CarRequestType; settings: CarSetti
     setError('');
     const r = { type, carId: car.id, carLabel: label, name: f.name.trim(), phone: f.phone.trim(), preferredDate: f.preferredDate, message: f.message.trim() };
     submit?.(r);
+    if (page?.live) {
+      void notifyOwner({
+        owner: page.owner, project: page.project, pageName: page.pageName, kind: 'car',
+        name: r.name, phone: r.phone,
+        message: [`${t.title}: ${label}`, r.preferredDate ? `الموعد: ${r.preferredDate}` : '', r.message].filter(Boolean).join('\n'),
+      });
+    }
     if (settings.whatsappNumber) {
       const text = [
         `مرحبًا، ${type === 'testDrive' ? 'أود حجز تجربة قيادة' : 'أود طلب'} السيارة ${label}`,

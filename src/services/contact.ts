@@ -13,11 +13,12 @@ export interface Inquiry {
   phone: string;
   email: string;
   message: string;
+  kind?: 'inquiry' | 'order' | 'car';
   read: boolean;
   createdAt: string;
 }
 
-export type NewInquiry = { owner: string; project: ProjectKey; pageName: string; name: string; phone: string; email: string; message: string; website: string };
+export type NewInquiry = { owner: string; project: ProjectKey; pageName: string; name: string; phone: string; email: string; message: string; website: string; kind?: 'inquiry' | 'order' | 'car' | 'restaurant' };
 
 export const sendInquiry = async (m: NewInquiry): Promise<{ ok: true } | { error: string }> => {
   try {
@@ -28,6 +29,13 @@ export const sendInquiry = async (m: NewInquiry): Promise<{ ok: true } | { error
     return { error: 'offline' };
   }
 };
+
+// Tells the page's owner about a visitor's order or request (the server saves it and emails the owner).
+export const notifyOwner = (m: Omit<NewInquiry, 'website' | 'email'> & { email?: string }) =>
+  sendInquiry({ email: '', ...m, website: '' }).then((out) => {
+    if ('error' in out) console.warn('Could not tell the owner:', out.error);
+    return out;
+  });
 
 export const contactErrorText = (code: string) =>
   ({

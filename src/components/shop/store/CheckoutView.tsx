@@ -5,7 +5,9 @@
 // The summary (the 'cart' element) and the order card (the 'checkout' element) are usually two
 // elements side by side; older cart elements show both halves in one (CheckoutView). Their
 // background, border, corners, font, text colour, accent and texts come from the elements.
-import React, { useMemo, useState } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
+import { BookingPageContext } from '../../../services/bookings';
+import { notifyOwner } from '../../../services/contact';
 import { canRequestAccount, requestAccountOpen, useCustomerPrefill, useCustomerSession } from '../../customers/customerSession';
 import {
   Minus, Plus, ShoppingBag, Trash2, Truck, Wallet, Banknote, Copy, Check, ImagePlus, Loader2, CheckCircle2, Clock, MessageCircle, ClipboardList,
@@ -181,6 +183,7 @@ const SummaryBody: React.FC<PartProps> = ({ look, isPreviewActive }) => {
 // `onPlaced` shows the thank-you screen in place of the whole element.
 const FormBody: React.FC<PartProps & { onPlaced: (o: ShopOrder) => void }> = ({ look, onPlaced }) => {
   const updateShop = useShopUpdate();
+  const page = useContext(BookingPageContext);
   const { items, shop, s, currency, canDeliver, canPickup, method, wallets, offersCash, pay, walletId, delivering, subtotal, deliveryFee, wallet, walletMeta, fee, total } = useCheckout();
   const accent = look.accent;
 
@@ -266,6 +269,21 @@ const FormBody: React.FC<PartProps & { onPlaced: (o: ShopOrder) => void }> = ({ 
         : d;
       return addOrder(next, { ...order, number: nextOrderNumber(next) });
     });
+    // A published page has no admin data to write to: the order is saved for the owner and emailed.
+    if (page?.live) {
+      const lines = order.items.map((i) => `• ${i.name}${i.variant ? ` (${i.variant})` : ''} × ${i.qty} = ${formatPrice(i.price * i.qty, currency)}`);
+      void notifyOwner({
+        owner: page.owner, project: page.project, pageName: page.pageName, kind: 'order',
+        name: contact.name, phone: contact.whatsapp, email: contact.email,
+        message: [
+          `طلب #${order.number}`, ...lines,
+          `المجموع: ${formatPrice(order.total, currency)}`,
+          order.deliveryMethod === 'delivery' ? `توصيل إلى: ${[contact.province, contact.address].filter(Boolean).join('، ')}` : 'استلام من المتجر',
+          order.paymentMethod === 'cash' ? 'الدفع: كاش' : `الدفع: محفظة (رقم العملية ${txn.trim()})`,
+          order.note ? `ملاحظة: ${order.note}` : '',
+        ].filter(Boolean).join('\n'),
+      });
+    }
     onPlaced(order);
     clearCart();
   };

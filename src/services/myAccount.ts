@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { syncCustomerCards } from './pageCustomers';
 import { subscribeMyOrders } from './designOrders';
 import { isFirstOfKind, kindOf, restaurantIdOf } from '../utils/projectKeys';
 import type { BillingOrder, ProjectPeriod } from './billing';
@@ -25,11 +26,25 @@ export const readPhone = async (uid: string): Promise<string> => {
   return String(dir?.data()?.contactInfo?.phone || '');
 };
 
-export const saveProfile = async (user: User, name: string, phone: string) => {
+/** The person's one card: name, phone, address. Every page they joined keeps a copy (syncCustomerCards). */
+export const readAddress = async (uid: string): Promise<string> => {
+  const snap = await getDoc(doc(db, 'designs', uid)).catch(() => null);
+  const address = snap?.data()?.profile?.address;
+  return typeof address === 'string' ? address : '';
+};
+
+export const readCard = async (user: User): Promise<{ name: string; phone: string; address: string }> => {
+  const [phone, address] = await Promise.all([readPhone(user.uid).catch(() => ''), readAddress(user.uid)]);
+  return { name: user.displayName || (user.email || '').split('@')[0], phone, address };
+};
+
+export const saveProfile = async (user: User, name: string, phone: string, address = '') => {
   const cleanName = name.trim().slice(0, 80);
   const cleanPhone = phone.trim().slice(0, 40);
+  const cleanAddress = address.trim().slice(0, 300);
   if (cleanName !== (user.displayName || '')) await updateProfile(user, { displayName: cleanName });
-  await setDoc(doc(db, 'designs', user.uid), { profile: { phone: cleanPhone } }, { merge: true });
+  await setDoc(doc(db, 'designs', user.uid), { profile: { phone: cleanPhone, address: cleanAddress } }, { merge: true });
+  await syncCustomerCards(user, { name: cleanName, phone: cleanPhone, address: cleanAddress }).catch(() => {});
   // Only into answers that already exist: a new platform_directory doc would open the Wee AI questions.
   const dir = doc(db, 'platform_directory', user.uid);
   if ((await getDoc(dir).catch(() => null))?.exists()) {

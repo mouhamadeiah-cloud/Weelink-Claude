@@ -18,7 +18,7 @@ import {
   readMyCustomerProfile,
   saveCustomerProfile,
 } from '../../services/pageCustomers';
-import { readPhone } from '../../services/myAccount';
+import { readCard } from '../../services/myAccount';
 import { forgetLogin, rememberLogin, resumeLogin } from '../../services/sharedLogin';
 import { setCustomerSession } from './customerSession';
 import { ORDER_STATUSES } from '../restaurant/restaurantTypes';
@@ -235,7 +235,7 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
       try {
         const own = joined
           ? { name: joined.name, phone: joined.phone, address: joined.address }
-          : { name: u.displayName || (u.email || '').split('@')[0], phone: await readPhone(u.uid).catch(() => ''), address: '' };
+          : await readCard(u);
         await saveCustomerProfile(ownerUid, { name: pageName, kind }, u, { ...own, marketing: profile.marketing }, joined?.joinedAt);
         setSaved(true);
         window.setTimeout(() => setSaved(false), 2500);

@@ -1,5 +1,5 @@
 // «حسابي»: the person's own page under the top bar (not a window): their details and password, their
-// projects (edit, pause, delete), their designs when they are a designer, the bell's notices, the
+// projects (edit, pause, delete), the bell's notices, the
 // subscription with its payments and AI balance, and signing out or deleting the account.
 import React, { useEffect, useMemo, useState } from 'react';
 import type { ComponentProps } from 'react';
@@ -21,6 +21,7 @@ type NavProps = Omit<ComponentProps<typeof PlatformNav>, 'current' | 'extra'>;
 
 interface AccountPageProps extends NavProps {
   accountId: string;
+  // The account page of the designer's role: only what belongs to the account itself (no projects, no subscription).
   isDesigner: boolean;
   projects: MyProject[] | null;
   loadingType?: ProjectType | null;
@@ -28,7 +29,6 @@ interface AccountPageProps extends NavProps {
   onOpenProject: (key: string) => void;
   onPauseProject: (key: string) => Promise<boolean>;
   onDeleteProject: (key: string) => Promise<boolean>;
-  onOpenDesigner: () => void;
   onAccountDeleted: () => void;
 }
 
@@ -66,7 +66,7 @@ const Note: React.FC<{ tone?: 'ok' | 'error'; children: React.ReactNode }> = ({ 
 );
 
 export const AccountPage: React.FC<AccountPageProps> = (props) => {
-  const { user, accountId, isDesigner, projects, loadingType, section, onOpenProject, onPauseProject, onDeleteProject, onOpenDesigner, onAccountDeleted, ...nav } = props;
+  const { user, accountId, isDesigner, projects, loadingType, section, onOpenProject, onPauseProject, onDeleteProject, onAccountDeleted, ...nav } = props;
   const owner = !!user && user.uid === accountId;
   const [account, setAccount] = useState<MyAccountData | null | undefined>(undefined);
 
@@ -90,10 +90,9 @@ export const AccountPage: React.FC<AccountPageProps> = (props) => {
   const links: [string, string][] = [
     ['profile', 'معلوماتي'],
     ['security', 'كلمة السر'],
-    ['projects', 'مشاريعي'],
-    ...(isDesigner ? ([['designs', 'تصميماتي']] as [string, string][]) : []),
+    ...(isDesigner ? [] : ([['projects', 'مشاريعي']] as [string, string][])),
     ['notices', 'الإشعارات'],
-    ['billing', 'الاشتراك والدفعات'],
+    ...(isDesigner ? [] : ([['billing', 'الاشتراك والدفعات']] as [string, string][])),
     ['danger', 'الخروج والحساب'],
   ];
 
@@ -121,10 +120,9 @@ export const AccountPage: React.FC<AccountPageProps> = (props) => {
 
         <ProfileSection key={user.uid} user={user} />
         <SecuritySection user={user} />
-        <ProjectsSection projects={projects} account={account} owner={owner} loadingType={loadingType} onOpen={onOpenProject} onPause={onPauseProject} onDelete={onDeleteProject} onAdd={nav.onStart} user={user} onOrder={reload} />
-        {isDesigner && <DesignsSection uid={user.uid} onOpenDesigner={onOpenDesigner} />}
+        {!isDesigner && <ProjectsSection projects={projects} account={account} owner={owner} loadingType={loadingType} onOpen={onOpenProject} onPause={onPauseProject} onDelete={onDeleteProject} onAdd={nav.onStart} user={user} onOrder={reload} />}
         <NoticesSection accountId={accountId} uid={user.uid} email={user.email || ''} />
-        <BillingSection account={account} projects={projects} />
+        {!isDesigner && <BillingSection account={account} projects={projects} />}
         <DangerSection user={user} owner={owner} projects={projects} onPause={onPauseProject} onDeleted={onAccountDeleted} onLogout={nav.onLogout} />
       </main>
     </div>
@@ -321,44 +319,6 @@ const ProjectsSection: React.FC<{
             <Checkout user={user} owner={user.uid} project={paying.key} paidUntil={account?.projects[paying.key]?.paidUntil} onOrder={onOrder} />
           </div>
         </div>
-      )}
-    </Section>
-  );
-};
-
-// ---------- تصميماتي ----------
-
-const SLIDE_STATUS: Record<string, { text: string; cls: string }> = {
-  approved: { text: 'بالمعرض', cls: 'bg-brand/10 text-brand' },
-  pending: { text: 'قيد المراجعة', cls: 'bg-bg text-muted' },
-  rejected: { text: 'مرفوض', cls: 'bg-danger/10 text-danger' },
-};
-
-const DesignsSection: React.FC<{ uid: string; onOpenDesigner: () => void }> = ({ uid, onOpenDesigner }) => {
-  const [slides, setSlides] = useState<{ id: string; name: string; status: string }[] | null>(null);
-  useEffect(() => {
-    getDocs(query(collection(db, 'gallerySlides'), where('designerUid', '==', uid)))
-      .then((snap) => setSlides(snap.docs.map((d) => ({ id: d.id, name: String(d.data().name || ''), status: String(d.data().status || 'pending') }))))
-      .catch(() => setSlides([]));
-  }, [uid]);
-  return (
-    <Section id="designs" title="تصميماتي" icon={<Palette size={18} />} actions={<button type="button" onClick={onOpenDesigner} className={ghostBtn}>افتح وضع المصمم <ArrowLeft size={13} /></button>}>
-      {slides === null ? (
-        <p className="flex items-center gap-2 text-sm text-muted"><Loader2 size={15} className="animate-spin" /> عم نجيب تصميماتك…</p>
-      ) : slides.length === 0 ? (
-        <p className="text-sm text-muted">ما بعتت تصاميم للمعرض لسا.</p>
-      ) : (
-        <ul className="divide-y divide-line">
-          {slides.map((s) => {
-            const st = SLIDE_STATUS[s.status] || SLIDE_STATUS.pending;
-            return (
-              <li key={s.id} className="flex items-center justify-between gap-3 py-2.5">
-                <span className="truncate text-sm font-bold">{s.name || 'بدون اسم'}</span>
-                <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${st.cls}`}>{st.text}</span>
-              </li>
-            );
-          })}
-        </ul>
       )}
     </Section>
   );

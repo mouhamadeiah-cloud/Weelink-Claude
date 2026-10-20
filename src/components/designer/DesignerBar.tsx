@@ -15,6 +15,8 @@ interface DesignerBarProps {
   onNew: (kind: DesignKind) => void;
   onDelete: (slot: string) => void;
   // The orders customers made to this designer («طلبات التصميم»).
+  // Back to the studio screen.
+  onStudio?: () => void;
   onOrders?: () => void;
   // The designer's earnings, rating and slides («لوحة المصمم»).
   onDashboard?: () => void;
@@ -24,7 +26,7 @@ interface DesignerBarProps {
   client?: { expiresAt: number; onLeave: () => void };
 }
 
-export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, busy, onOpen, onNew, onDelete, onOrders, onDashboard, attention = 0, client }) => {
+export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, busy, onOpen, onNew, onDelete, onStudio, onOrders, onDashboard, attention = 0, client }) => {
   const full = drafts.length >= MAX_DRAFTS;
   const left = client ? Math.max(0, client.expiresAt - Date.now()) : 0;
   const leftText = left >= 86400000 ? `${Math.floor(left / 86400000)} يوم` : `${Math.max(1, Math.ceil(left / 3600000))} ساعة`;
@@ -38,7 +40,11 @@ export const DesignerBar: React.FC<DesignerBarProps> = ({ drafts, activeSlot, bu
       </div>
     )}
     <div dir="rtl" className="w-full bg-brand/5 border-b border-brand/15 px-4 lg:px-6 py-2 flex flex-wrap items-center gap-x-4 gap-y-2 z-30">
-      <span className="text-xs font-bold text-brand shrink-0">وضع المصمم</span>
+      {onStudio ? (
+        <button type="button" onClick={onStudio} disabled={busy} className="shrink-0 h-8 px-3 rounded-ctl bg-ink text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer disabled:cursor-wait">← الاستوديو</button>
+      ) : (
+        <span className="text-xs font-bold text-brand shrink-0">وضع المصمم</span>
+      )}
 
       <div className="flex items-center gap-1.5 overflow-x-auto min-w-0 flex-1" role="tablist" aria-label="مسوداتك">
         {drafts.map((d, i) => (

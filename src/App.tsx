@@ -21,6 +21,7 @@ import { StandardAuth } from './components/StandardAuth';
 import { readDesigner } from './services/designers';
 import { readRole, setRoleState, writeRole, type Role } from './services/accountRole';
 import { RolePicker } from './components/platform/RolePicker';
+import { StudioPage } from './components/designer/StudioPage';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
 import { openClientPage, saveClientPage, accessErrorText, activeAccess, revokeAccessCode } from './services/designAccess';
@@ -264,6 +265,8 @@ export default function App() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  // The designer's studio screen (components/designer/StudioPage): shown over the editor, which holds the open draft.
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
   const orderAttention = useOrderAttention(currentUser && !currentUser.isAnonymous && designerMode ? currentUser.uid : '');
   // The hired designer inside a customer's page with the 3-day code: the editor holds that page, saves go
   // to /api/design-access, and nothing can be exported from it.
@@ -1998,6 +2001,7 @@ export default function App() {
     designerModeRef.current = false;
     draftReadyRef.current = false;
     setDesignerMode(false);
+    setIsStudioOpen(false);
     setIsDesigner(false);
     setIsExportOpen(false);
     setIsOrdersOpen(false);
@@ -2011,6 +2015,31 @@ export default function App() {
     setIsStartActive(true);
   };
 
+  // Back to the studio screen from the editor: the open draft is saved first.
+  const openStudio = async () => {
+    if (!designerRole) return;
+    if (designerModeRef.current) {
+      if (draftBusy || !confirmLeaveGalleryEdit()) return;
+      await saveActiveDraft();
+    }
+    setIsHomeActive(false);
+    setIsStartActive(false);
+    setIsLawActive(false);
+    setIsAccountActive(false);
+    setIsPreviewActive(false);
+    if (!designerModeRef.current) await enterDesignerMode();
+    setIsStudioOpen(true);
+  };
+  const studioOpenDraft = async (slot: string) => {
+    await switchDraft(slot);
+    if (activeSlotRef.current === slot) setIsStudioOpen(false);
+  };
+  const studioNewDraft = async (kind: DesignKind) => {
+    const before = draftsRef.current.length;
+    await newDraft(kind);
+    if (draftsRef.current.length > before) setIsStudioOpen(false);
+  };
+
   // Switching the role of this sign-in. To the user's role: the studio closes first (its open draft is saved), and
   // if that is cancelled nothing changes. To the designer's role: the studio opens once the screen is clear.
   const switchRole = async (next: Role) => {
@@ -2021,6 +2050,7 @@ export default function App() {
         if (designerModeRef.current) return;
       }
       writeRole(currentUser.uid, 'user');
+      setIsStudioOpen(false);
       setRoleTick((t) => t + 1);
       return;
     }
@@ -2044,12 +2074,12 @@ export default function App() {
     setIsStartActive(false);
     setIsLawActive(false);
     setIsAccountActive(false);
-    enterDesignerMode();
+    enterDesignerMode().then(() => setIsStudioOpen(true));
   });
 
   // The role and its switch, for the top bar of the platform's own screens.
   useEffect(() => {
-    setRoleState({ isDesignerAccount: isDesigner, role: roleNow, switchTo: (r) => void switchRole(r) });
+    setRoleState({ isDesignerAccount: isDesigner, role: roleNow, switchTo: (r) => void switchRole(r), openStudio });
   });
 
   const handleLogout = async () => {
@@ -4353,7 +4383,8 @@ export default function App() {
         section={accountSection}
         onHome={() => {
           setIsAccountActive(false);
-          setIsHomeActive(true);
+          if (designerRole) setIsStudioOpen(true);
+          else setIsHomeActive(true);
         }}
         onStart={() => {
           setIsAccountActive(false);
@@ -4380,14 +4411,6 @@ export default function App() {
         }}
         onPauseProject={pauseProject}
         onDeleteProject={deleteProject}
-        onOpenDesigner={async () => {
-          setIsAccountActive(false);
-          setIsStartActive(false);
-          setIsHomeActive(false);
-          setIsAuthActive(false);
-          setIsProjectChosen(true);
-          await enterDesignerMode();
-        }}
         onAccountDeleted={resetAfterSignOut}
       />
     );
@@ -4499,6 +4522,30 @@ export default function App() {
   // A designer's account asks, at every sign-in, which role to work in (services/accountRole).
   if (!isAuthActive && currentUser && !currentUser.isAnonymous && isDesigner && roleNow === null) {
     return <RolePicker name={designerName} onPick={chooseRole} onLogout={handleLogout} />;
+  }
+
+  // The designer's role lands on the studio screen; the editor opens from it on a draft.
+  if (!isAuthActive && designerRole && designerMode && isStudioOpen && currentUser) {
+    return (
+      <>
+        <StudioPage
+          user={currentUser}
+          name={designerName}
+          drafts={drafts}
+          busy={draftBusy}
+          attention={orderAttention}
+          onOpenDraft={studioOpenDraft}
+          onNewDraft={studioNewDraft}
+          onDeleteDraft={removeDraft}
+          onOrders={() => setIsOrdersOpen(true)}
+          onDashboard={() => setIsDashboardOpen(true)}
+          onAccount={() => { setIsStudioOpen(false); openMyAccount(); }}
+          onLogout={handleLogout}
+        />
+        {isDashboardOpen && <DesignerDashboard user={currentUser} onClose={() => setIsDashboardOpen(false)} />}
+        {isOrdersOpen && <DesignOrdersPanel user={currentUser} onClose={() => setIsOrdersOpen(false)} onEnterClientPage={async (id, code) => { const r = await openClientSession(id, code); if (r.ok) { setIsOrdersOpen(false); setIsStudioOpen(false); } return r; }} />}
+      </>
+    );
   }
 
   if (isAuthActive) {
@@ -4700,7 +4747,7 @@ export default function App() {
           <GalleryEditBar as={galleryEdit.as} name={galleryEdit.name} kind={galleryEdit.kind} status={galleryEdit.status} pendingEdit={galleryEdit.pendingEdit} saving={gallerySaving} savedNote={gallerySavedNote} onSave={saveGalleryEdit} onLeave={leaveGalleryEdit} />
         )}
         {designerMode && !isPreviewActive && !galleryEdit && (
-          <DesignerBar drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} onOrders={() => setIsOrdersOpen(true)} onDashboard={() => setIsDashboardOpen(true)} attention={orderAttention} client={clientSession ? { expiresAt: clientSession.expiresAt, onLeave: () => switchDraft(draftsRef.current[0]?.slot || '') } : undefined} />
+          <DesignerBar onStudio={openStudio} drafts={drafts} activeSlot={activeSlot} busy={draftBusy} onOpen={switchDraft} onNew={newDraft} onDelete={removeDraft} onOrders={() => setIsOrdersOpen(true)} onDashboard={() => setIsDashboardOpen(true)} attention={orderAttention} client={clientSession ? { expiresAt: clientSession.expiresAt, onLeave: () => switchDraft(draftsRef.current[0]?.slot || '') } : undefined} />
         )}
 
         {/* 2. Secondary Edit Bar directly beneath (narrow screens; wide ones dock it beside the panel) */}

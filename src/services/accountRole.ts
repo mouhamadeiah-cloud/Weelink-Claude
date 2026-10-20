@@ -32,13 +32,15 @@ export interface RoleState {
   isDesignerAccount: boolean;
   role: Role | null;
   switchTo?: (role: Role) => void;
+  // The designer's studio screen (the platform's own top bar leads there in the designer's role).
+  openStudio?: () => void;
 }
 
 let state: RoleState = { isDesignerAccount: false, role: null };
 const listeners = new Set<() => void>();
 
 export const setRoleState = (next: RoleState) => {
-  if (next.isDesignerAccount === state.isDesignerAccount && next.role === state.role && next.switchTo === state.switchTo) return;
+  if (next.isDesignerAccount === state.isDesignerAccount && next.role === state.role && next.switchTo === state.switchTo && next.openStudio === state.openStudio) return;
   state = next;
   listeners.forEach((l) => l());
 };

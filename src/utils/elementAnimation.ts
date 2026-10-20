@@ -19,6 +19,17 @@ export const defaultDuration = (anim: string) =>
   ['fade', 'slide-up', 'slide-down', 'slide-left', 'slide-right', 'scale-up', 'scale-down', CUSTOM_MOTION].includes(anim) ? 1.2 :
   ['pulse', 'brightness', 'shake', 'bounce', 'flash', 'float', 'heartbeat', 'rubberband', 'swing', 'jello'].includes(anim) ? 2 : 1.5;
 
+// «مع التمرير»: the animation follows the scrolling itself (CSS scroll-driven animations): the element is at the first
+// state as it enters from the bottom of the screen and at the last one when it has come up to the middle. Where the
+// browser lacks them the trigger plays as «عند التمرير».
+export const SCRUB_RANGE = 'entry 0% cover 45%';
+export const scrubSupported = () => typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('animation-timeline: view()');
+
+// An element with a «مع التمرير» animation: its slide must clip with `overflow: clip`, since `hidden` would make the slide
+// the scroll container the animation follows (the same rule the fixed backgrounds keep).
+export const usesScrub = (styles: Styles) =>
+  [styles, ...(styles.animationLayers || [])].some((l) => l.animationTrigger === 'scrub' && (l.animation || 'none') !== 'none');
+
 export interface AnimationContext {
   rotation?: number;
   x: number;
@@ -28,6 +39,8 @@ export interface AnimationContext {
   phone: boolean;
   // The preview and the published page hold an entrance until it is seen.
   waits: boolean;
+  // Whether the browser can tie an animation to the scrolling (defaults to asking the browser).
+  scrub?: boolean;
 }
 
 export interface BuiltAnimation {
@@ -47,11 +60,19 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
   let waitsForView = false;
   let repeatsOnScroll = false;
   let hasHover = false;
+  const canScrub = ctx.scrub ?? scrubSupported();
 
   all.forEach((layer, index) => {
     const anim = layer.animation || 'none';
     if (anim === 'none') return;
-    const trigger = layer.animationTrigger || 'once';
+    let trigger = layer.animationTrigger || 'once';
+    // Tied to the scrolling only on the preview and the published page; the editor keeps the element still, and a
+    // browser without scroll-driven animations plays it as «عند التمرير».
+    const scrubbed = trigger === 'scrub' && ctx.waits && canScrub;
+    if (trigger === 'scrub') {
+      if (!ctx.waits) return;
+      if (!scrubbed) trigger = 'scroll';
+    }
     const isMarquee = MARQUEES.includes(anim);
     const custom = anim === CUSTOM_MOTION;
     const hover = trigger === 'hover';
@@ -77,7 +98,10 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
       fill: loop || hover ? 'none' : waits ? 'both' : 'forwards',
       direction: custom ? customMotionDirection(trigger, layer.animationAlternate) : 'normal',
       composition: index === 0 ? 'replace' : 'add',
+      timeline: 'auto',
+      range: 'normal',
     };
+    if (scrubbed) Object.assign(one, { duration: 'auto', count: '1', timing: 'linear', fill: 'both', direction: 'normal', timeline: 'view()', range: SCRUB_RANGE });
     if (!hover) idle.push(one);
     hovered.push(one);
   });
@@ -90,6 +114,8 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
     [`${prefix}fill`]: list.map((l) => l.fill).join(', '),
     [`${prefix}dir`]: list.map((l) => l.direction).join(', '),
     [`${prefix}comp`]: list.map((l) => l.composition).join(', '),
+    [`${prefix}timeline`]: list.map((l) => l.timeline).join(', '),
+    [`${prefix}range`]: list.map((l) => l.range).join(', '),
   });
   const style: Record<string, string> = { ...vars };
   if (idle.length) {
@@ -97,6 +123,7 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
     Object.assign(style, {
       animationName: l.name, animationDuration: l.duration, animationIterationCount: l.count, animationTimingFunction: l.timing,
       animationFillMode: l.fill, animationDirection: l.dir, animationComposition: l.comp,
+      animationTimeline: l.timeline, animationRange: l.range,
     });
   }
   // While the mouse is over the element: the idle animations and the hover ones together (index.css reads these).

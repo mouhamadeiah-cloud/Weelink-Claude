@@ -4,10 +4,12 @@ import { auth } from '../services/firebase';
 import { SignInError, registerOwner, resolveAccountId, signInOwner } from '../services/accounts';
 import { EmailCodeProblem, emailCodeErrorText, needsEmailCode, sendEmailCode, verifyEmailCode } from '../services/emailCode';
 import { pendingInvite } from '../services/members';
-import { DESIGNER_NAME_MAX, becomeDesigner } from '../services/designers';
+import { DESIGNER_NAME_MAX, becomeDesigner, readDesigner } from '../services/designers';
+import type { Role } from '../services/accountRole';
 
 interface StandardAuthProps {
-  onLoginWithGoogle: () => Promise<void>;
+  // The role chosen on the sign-in screen: «مصمم» only enters an account that has a designer profile.
+  onLoginWithGoogle: (role: Role) => Promise<void>;
   // asDesigner: the account was just made through «انضم لمصممينا»; the app opens the designer's page.
   onAuthSuccess: (userUid: string, isNewUser: boolean, asDesigner?: boolean) => void;
   // Opens on the designers' sign-up (from the start page's «انضم لمصممينا» card).
@@ -36,6 +38,8 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
   // 'designer': «انضم لمصممينا», a signup that also makes the account a designer.
   const [mode, setMode] = useState<'login' | 'signup' | 'code' | 'designer'>(initialMode);
   const [designerName, setDesignerName] = useState('');
+  // The role to sign in as (Eyad, 21 Oct): a designer's account is a user's or a designer's at each sign-in, never both at once.
+  const [loginRole, setLoginRole] = useState<Role>('user');
 
   // Input States
   const [email, setEmail] = useState<string>('');
@@ -134,7 +138,13 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
     setLoading(true);
     setError(null);
     try {
-      await finishSignIn(await signInOwner(email.trim().toLowerCase(), password), false);
+      const accountId = await signInOwner(email.trim().toLowerCase(), password);
+      if (loginRole === 'designer' && !(auth.currentUser && (await readDesigner(auth.currentUser.uid)))) {
+        await auth.signOut().catch(() => {});
+        setError('هذا الحساب ليس حساب مصمم. اختر «مستخدم»، أو سجّل كمصمم من صفحة إنشاء الحساب.');
+        return;
+      }
+      await finishSignIn(accountId, false, loginRole === 'designer');
     } catch (err) {
       console.warn('Authentication login failure:', err);
       setError(signInErrorText(err));
@@ -165,7 +175,17 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const { accountId, isNew } = await registerOwner(email.trim().toLowerCase(), password);
+      const mail = email.trim().toLowerCase();
+      let accountId: string;
+      let isNew = true;
+      try {
+        ({ accountId, isNew } = await registerOwner(mail, password));
+      } catch (err) {
+        // An account that exists already becomes a designer by proving it is theirs (the same email and password).
+        if (!(err instanceof SignInError && err.kind === 'exists')) throw err;
+        accountId = await signInOwner(mail, password);
+        isNew = false;
+      }
       const user = auth.currentUser;
       if (user) await becomeDesigner(user.uid, designerName);
       await finishSignIn(accountId, isNew, true);
@@ -275,6 +295,18 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
             <div className="space-y-6">
               <form onSubmit={handleLogin} className="space-y-4">
                 <h1 className="text-heading font-bold">هل لديك حساب</h1>
+                <div className="grid grid-cols-2 gap-1 p-1 bg-bg border border-line rounded-ctl" role="radiogroup" aria-label="الدخول كـ">
+                  {([['user', 'دخول كمستخدم'], ['designer', 'دخول كمصمم']] as [Role, string][]).map(([r, label]) => (
+                    <button
+                      key={r}
+                      type="button"
+                      role="radio"
+                      aria-checked={loginRole === r}
+                      onClick={() => { setLoginRole(r); setError(null); }}
+                      className={`h-9 rounded-md text-xs font-bold transition cursor-pointer ${loginRole === r ? 'bg-surface text-brand ring-1 ring-brand/30' : 'text-muted hover:text-ink'}`}
+                    >{label}</button>
+                  ))}
+                </div>
                 {emailField}
                 {passwordField('كلمة السر', password, setPassword, showPassword, () => setShowPassword(!showPassword), 'password', 'current-password')}
                 {errorLine}
@@ -291,7 +323,7 @@ export const StandardAuth: React.FC<StandardAuthProps> = ({
               <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={onLoginWithGoogle}
+                  onClick={() => onLoginWithGoogle(loginRole)}
                   className="w-full h-11 rounded-ctl border border-line bg-surface hover:bg-bg text-sm font-bold text-ink transition cursor-pointer flex items-center justify-center gap-2"
                 >
                   <GoogleMark /> سجّل بحساب Google

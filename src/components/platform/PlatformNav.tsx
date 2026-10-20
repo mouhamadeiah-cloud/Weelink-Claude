@@ -6,6 +6,7 @@ import React from 'react';
 import type { User } from 'firebase/auth';
 import { Bell, UserRound } from 'lucide-react';
 import { useNotices } from '../../services/myAccount';
+import { ROLE_LABEL, useRoleState } from '../../services/accountRole';
 
 type NavScreen = 'home' | 'start' | 'law' | 'account';
 
@@ -33,6 +34,9 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
   const signedIn = !!user && !user.isAnonymous;
   const firstName = user ? (user.displayName || user.email?.split('@')[0] || '').split(' ')[0] : '';
   const notices = useNotices(user?.uid || '', user?.uid || '', signedIn);
+  // A designer's account shows the role of this sign-in and switches it.
+  const roleState = useRoleState();
+  const otherRole = roleState.role === 'designer' ? 'user' : 'designer';
 
   return (
     <header dir="rtl" className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
@@ -51,6 +55,18 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
         <div className="flex shrink-0 items-center gap-0.5">
           {signedIn ? (
             <>
+              {roleState.isDesignerAccount && roleState.role && roleState.switchTo && (
+                <button
+                  type="button"
+                  onClick={() => roleState.switchTo?.(otherRole)}
+                  title={`أنت داخل كـ${ROLE_LABEL[roleState.role]}. اضغط للدخول كـ${ROLE_LABEL[otherRole]}`}
+                  className="me-1 inline-flex shrink-0 items-center gap-1.5 rounded-md border border-line px-2 py-1 text-xs font-medium text-muted hover:text-ink"
+                >
+                  <span className="font-bold text-ink">{ROLE_LABEL[roleState.role]}</span>
+                  <span aria-hidden="true">⇄</span>
+                  <span>{ROLE_LABEL[otherRole]}</span>
+                </button>
+              )}
               <button type="button" onClick={() => onMyAccount('notices')} className="relative rounded-md p-1.5 text-muted hover:text-ink" aria-label={notices.length ? `${notices.length} إشعارات` : 'الإشعارات'}>
                 <Bell size={17} />
                 {notices.length > 0 && (

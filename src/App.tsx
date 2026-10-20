@@ -18,7 +18,9 @@ import { RightDrawer, DrawerSection } from './components/RightDrawer';
 import { ProjectSettingsSection } from './components/rightDrawer/sections/ProjectSettingsSection';
 import { WorkspaceHub } from './components/WorkspaceHub';
 import { StandardAuth } from './components/StandardAuth';
-import { becomeDesigner, readDesigner } from './services/designers';
+import { readDesigner } from './services/designers';
+import { readRole, setRoleState, writeRole, type Role } from './services/accountRole';
+import { RolePicker } from './components/platform/RolePicker';
 import { DRAFT_SLOTS, deleteDraft, freeSlot, listDrafts, readDraft, saveDraft, type DraftMeta } from './services/designerDrafts';
 import { DesignerBar } from './components/designer/DesignerBar';
 import { openClientPage, saveClientPage, accessErrorText, activeAccess, revokeAccessCode } from './services/designAccess';
@@ -429,6 +431,21 @@ export default function App() {
       alive = false;
     };
   }, [currentUser]);
+  // The role of this sign-in (services/accountRole): a designer's account works as a user or as a designer, chosen at
+  // every sign-in. Designer features show only in the designer's role.
+  const [, setRoleTick] = useState(0);
+  const roleNow: Role | null = currentUser && !currentUser.isAnonymous ? (isDesigner ? readRole(currentUser.uid) : 'user') : null;
+  const designerRole = isDesigner && roleNow === 'designer';
+  const studioPendingRef = useRef(false);
+  // A page reload inside the studio comes back to the studio (once per load); every other way in sets the pending flag itself.
+  const studioHandledRef = useRef(false);
+  const chooseRole = (r: Role) => {
+    if (!currentUser) return;
+    writeRole(currentUser.uid, r);
+    if (r === 'designer') studioPendingRef.current = true;
+    studioHandledRef.current = true;
+    setRoleTick((t) => t + 1);
+  };
   // Whether the open project is published (the «نشر» button shows «منشورة»).
   useEffect(() => {
     setPublishedName(null);
@@ -1707,10 +1724,15 @@ export default function App() {
   };
 
   // Auth Action Handlers
-  const handleLogin = async () => {
+  const handleLogin = async (role: Role = 'user') => {
     try {
       const user = await loginWithGoogle();
-      if (user) handleAuthSuccess(await resolveAccountId(user), false);
+      if (user && role === 'designer' && !(await readDesigner(user.uid))) {
+        await logoutUser().catch(() => {});
+        window.alert('هذا الحساب ليس حساب مصمم. اختر «دخول كمستخدم»، أو سجّل كمصمم من صفحة إنشاء الحساب.');
+        return;
+      }
+      if (user) handleAuthSuccess(await resolveAccountId(user), false, role === 'designer');
     } catch (e: any) {
       console.warn("Google Login caught info:", e);
       const errorCode = e?.code || '';
@@ -1744,6 +1766,11 @@ export default function App() {
 
   const handleAuthSuccess = (userUid: string, isNewUser: boolean, asDesigner = false) => {
     handledAuthUid.current = auth.currentUser && !auth.currentUser.isAnonymous ? auth.currentUser.uid : null;
+    // The sign-in screen asked for the role: a designer enters the studio, anyone else works as a user.
+    if (auth.currentUser) writeRole(auth.currentUser.uid, asDesigner ? 'designer' : 'user');
+    studioPendingRef.current = asDesigner;
+    studioHandledRef.current = true;
+    setRoleTick((t) => t + 1);
     resetAccountMemory();
     setAuthMode('login');
     setActiveUserUid(userUid);
@@ -1797,8 +1824,8 @@ export default function App() {
       setIsChatActive(false);
       // A new account answers Wee AI's questions on the start page, then the editor builds its page.
       // A designer answers the same questions as everyone (for the free page), then lands on an empty slide.
-      if (!pendingBuildRef.current) {
-        setStartKind(asDesigner ? 'page' : null);
+      if (!pendingBuildRef.current && !asDesigner) {
+        setStartKind(null);
         setIsHomeActive(false);
         setIsStartActive(true);
       }
@@ -1839,12 +1866,7 @@ export default function App() {
         isInitialLoadComplete.current = true;
         if (pendingBuildRef.current) openGuestBuild(userUid);
         else if (afterSignInRef.current === 'account') openMyPage(userUid);
-        // A returning designer comes back to their page, in the editor.
-        else if (auth.currentUser && (await readDesigner(auth.currentUser.uid))) {
-          setIsHomeActive(false);
-          setIsStartActive(false);
-          handleChooseProject('page', userUid);
-        }
+        // A designer who signed in as one goes to the studio (the effect below opens it once the account is loaded).
       });
     }
     if (isNewUser && pendingBuildRef.current) openGuestBuild(userUid);
@@ -1894,42 +1916,16 @@ export default function App() {
     setIsStartActive(false);
   };
 
-  // «انضم لمصممينا» on the start page: a visitor goes to the designers' sign-up; a signed-in owner
-  // becomes a designer (their name for the gallery asked once) and lands on their page in the editor.
-  const joinDesigners = async () => {
-    const user = auth.currentUser;
-    if (!user || user.isAnonymous) {
-      afterSignInRef.current = 'build';
-      pendingBuildRef.current = null;
-      setAuthMode('designer');
-      setIsStartActive(false);
-      setIsAuthActive(true);
-      return;
-    }
-    try {
-      const have = await readDesigner(user.uid);
-      if (have) setDesignerName(have.name);
-      else {
-        const name = (window.prompt('اسمك كما سيظهر للزبائن في معرض المصممين:') || '').trim();
-        if (name.length < 2) return;
-        setDesignerName((await becomeDesigner(user.uid, name)).name);
-      }
-    } catch (err) {
-      console.warn('Could not make the designer profile:', err);
-      window.alert('تعذّر إنشاء حساب المصمم. حاول مرة ثانية بعد قليل.');
-      return;
-    }
-    setIsDesigner(true);
-    // Questions first, like any new page of the free kind (name, address, city, work); an owner who
-    // already has a page goes straight to it.
-    if (ownedRef.current.page) {
-      setIsStartActive(false);
-      await handleChooseProject('page', activeUserUid);
-    } else {
-      setStartKind('page');
-      setIsStartActive(true);
-    }
+  // «انضم لمصممينا» on the start page: a visitor goes to the designers' sign-up. A designer is made only there
+  // (a signed-in account does not become one from inside the user's space).
+  const joinDesigners = () => {
+    afterSignInRef.current = 'build';
+    pendingBuildRef.current = null;
+    setAuthMode('designer');
+    setIsStartActive(false);
+    setIsAuthActive(true);
   };
+
 
   // «أضف لصفحتي مجاناً» on a gallery design: the signed-in owner's page opens, and the design (its
   // slides, or the slides of a page, without the navbar) is added at the end of the page's first page,
@@ -2014,6 +2010,47 @@ export default function App() {
     setStartKind(null);
     setIsStartActive(true);
   };
+
+  // Switching the role of this sign-in. To the user's role: the studio closes first (its open draft is saved), and
+  // if that is cancelled nothing changes. To the designer's role: the studio opens once the screen is clear.
+  const switchRole = async (next: Role) => {
+    if (!currentUser || !isDesigner || roleNow === next) return;
+    if (next === 'user') {
+      if (designerModeRef.current) {
+        await exitDesignerMode();
+        if (designerModeRef.current) return;
+      }
+      writeRole(currentUser.uid, 'user');
+      setRoleTick((t) => t + 1);
+      return;
+    }
+    if (screenRef.current === 'editor') await flushProjectSave();
+    chooseRole('designer');
+  };
+
+  // The designer's role opens the studio (the editor on the designer's drafts) as soon as the account is loaded.
+  useEffect(() => {
+    if (!studioHandledRef.current && designerRole && !isAuthActive && !isFirebaseLoading) {
+      studioHandledRef.current = true;
+      studioPendingRef.current = true;
+    }
+    if (!studioPendingRef.current || isAuthActive || isFirebaseLoading || !isDesigner || designerMode || draftBusy || !projectReadyRef.current) return;
+    if (currentUser && readRole(currentUser.uid) !== 'designer') {
+      studioPendingRef.current = false;
+      return;
+    }
+    studioPendingRef.current = false;
+    setIsHomeActive(false);
+    setIsStartActive(false);
+    setIsLawActive(false);
+    setIsAccountActive(false);
+    enterDesignerMode();
+  });
+
+  // The role and its switch, for the top bar of the platform's own screens.
+  useEffect(() => {
+    setRoleState({ isDesignerAccount: isDesigner, role: roleNow, switchTo: (r) => void switchRole(r) });
+  });
 
   const handleLogout = async () => {
     if (confirm('هل أنت متأكد من رغبتك في تسجيل الخروج من الحساب السحابي؟')) {
@@ -4310,7 +4347,7 @@ export default function App() {
       <AccountPage
         user={currentUser}
         accountId={activeUserUid}
-        isDesigner={isDesigner}
+        isDesigner={designerRole}
         projects={myProjects}
         loadingType={projectLoading}
         section={accountSection}
@@ -4446,7 +4483,7 @@ export default function App() {
         owned={(Object.keys(ownedRef.current) as ProjectType[]).filter((k) => ownedRef.current[k])}
         onDesigner={joinDesigners}
         onAddDesign={addGalleryDesign}
-        onEditDesign={isDesigner ? editMyDesign : undefined}
+        onEditDesign={designerRole ? editMyDesign : undefined}
         onSignUp={(kind) => {
           afterSignInRef.current = 'build';
           pendingBuildRef.current = null;
@@ -4457,6 +4494,11 @@ export default function App() {
         }}
       />
     );
+  }
+
+  // A designer's account asks, at every sign-in, which role to work in (services/accountRole).
+  if (!isAuthActive && currentUser && !currentUser.isAnonymous && isDesigner && roleNow === null) {
+    return <RolePicker name={designerName} onPick={chooseRole} onLogout={handleLogout} />;
   }
 
   if (isAuthActive) {
@@ -4651,7 +4693,7 @@ export default function App() {
           isPublished={!!publishedName}
           isDesigner={isDesigner}
           isDesignerMode={designerMode}
-          onToggleDesignerMode={designerMode ? exitDesignerMode : enterDesignerMode}
+          onToggleDesignerMode={() => switchRole(designerRole ? 'user' : 'designer')}
           onExportSlide={clientSession || galleryEdit ? undefined : () => setIsExportOpen(true)}
         />
         {designerMode && !isPreviewActive && galleryEdit && (

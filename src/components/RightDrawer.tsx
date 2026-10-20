@@ -94,7 +94,8 @@ import { TextEffectsGallery, TextEffectsPicker } from './rightDrawer/TextEffects
 import { LottieGallery, LottieSettings } from './rightDrawer/LottiePicker';
 import { textEffectById } from '../utils/textEffects';
 import { elementDisplayName } from '../utils/elementLabels';
-import { inspectorGroups, inspectorHelp, InspectorGroupId, InspectorTarget } from './rightDrawer/inspectorGroups';
+import { groupShortcuts, inspectorGroups, inspectorHelp, InspectorGroupId, InspectorShortcutId, InspectorTarget } from './rightDrawer/inspectorGroups';
+import { shortcutIcon } from './EditorColumn';
 import { ADD_VIDEO, IntroVideo, STRUCTURE_VIDEO, WEEAI_VIDEO, addChapterFor, chapterOf, introChapterFor, introVideoFor } from './introVideos/introVideos';
 import { IntroVideoPlayer, IntroVideoMode } from './introVideos/IntroVideoPlayer';
 import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
@@ -1194,11 +1195,42 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectionKey, activeSection]);
 
+  // The part of each card last picked in its quick-access row (or showing at the top while scrolling).
+  const [activePart, setActivePart] = useState<Record<string, string>>({});
+  // A chip of the row under a group's explainer: brings that part of the card into view.
+  const gotoPart = (g: InspectorGroupId, id: InspectorShortcutId) => {
+    if (id === 'font-family') setTextSubSection('family');
+    if (id === 'font-size') setTextSubSection('size');
+    setActivePart((prev) => ({ ...prev, [g]: id }));
+    spyPausedUntil.current = Date.now() + 900;
+    const marker = id === 'font-family' || id === 'font-size' ? 'typography' : id;
+    const scrollToPart = () => {
+      const box = toolScrollRef.current;
+      const card = box?.querySelector<HTMLElement>(`[data-inspector-group="${g}"]`);
+      const target = card?.querySelector<HTMLElement>(`[data-inspector-section="${marker}"]`) || card;
+      if (!box || !target) return;
+      const top = target.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+      box.scrollTo({ top: Math.max(0, top - 10), behavior: 'smooth' });
+    };
+    window.setTimeout(scrollToPart, 60);
+    window.setTimeout(scrollToPart, 320);
+  };
+
   // The column highlights the group at the top of the panel while it scrolls.
   const handleInspectorScroll = () => {
     if (activeSection !== 'inspector' || !onInspectorGroupChange || Date.now() < spyPausedUntil.current) return;
     const box = toolScrollRef.current;
     if (!box) return;
+    // The quick-access chip of the part showing at the top of each open card lights up.
+    const seen: Record<string, string> = {};
+    box.querySelectorAll<HTMLElement>('[data-inspector-group]').forEach((card) => {
+      let part = '';
+      card.querySelectorAll<HTMLElement>('[data-inspector-section]').forEach((el) => {
+        if (el.getBoundingClientRect().top - box.getBoundingClientRect().top < 120) part = el.dataset.inspectorSection || '';
+      });
+      if (part) seen[card.dataset.inspectorGroup || ''] = part === 'typography' ? 'font-family' : part;
+    });
+    setActivePart((prev) => (Object.keys(seen).every((k) => prev[k] === seen[k]) ? prev : { ...prev, ...seen }));
     // At the very bottom the last cards can't reach the top; keep whichever one was picked.
     if (box.scrollTop > 0 && box.scrollTop + box.clientHeight >= box.scrollHeight - 2) return;
     let current: InspectorGroupId | null = null;
@@ -1417,6 +1449,27 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             {introVideo?.id === g.id && (
               <div data-intro-for={g.id}>
                 <IntroVideoPlayer video={introVideo} mode={introVideoMode} onModeChange={setIntroVideoMode} timeRef={introVideoTime} chapter={chapterOf(introVideo, introChapter)} onChapter={pickIntroChapter} />
+              </div>
+            )}
+            {open && groupShortcuts(g, inspectorTarget).length > 0 && (
+              <div role="group" aria-label={`أقسام ${g.title}`} className="flex gap-1.5 overflow-x-auto scrollbar-none rounded-2xl border border-brand/25 bg-brand/[0.07] p-1.5">
+                {groupShortcuts(g, inspectorTarget).map((part) => {
+                  const on = (activePart[g.id] ?? groupShortcuts(g, inspectorTarget)[0].id) === part.id;
+                  return (
+                    <button
+                      key={part.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => gotoPart(g.id, part.id)}
+                      className={`shrink-0 min-w-[64px] flex flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition-colors cursor-pointer active:scale-95 ${
+                        on ? 'bg-brand text-white shadow-sm' : 'bg-white text-brand border border-brand/20 hover:bg-brand/10'
+                      }`}
+                    >
+                      <span className="flex h-5 w-5 items-center justify-center">{shortcutIcon(part.id)}</span>
+                      <span className="leading-tight whitespace-nowrap">{part.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
             <InspectorCard

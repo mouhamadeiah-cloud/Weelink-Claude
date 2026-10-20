@@ -76,7 +76,7 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
   // Tabs: 'color' (لون) | 'image' (الصورة) | 'gallery' (المعرض)
   // Matching user's drawing:
   // [ لون ] [ الصورة ] [ المعرض ]
-  const [activeTab, setActiveTab] = useState<'color' | 'image' | 'gallery' | 'video'>(currentBgVideo ? 'video' : 'color');
+  const [activeTab, setActiveTab] = useState<'color' | 'image' | 'gallery' | 'video'>(currentBgVideo ? 'video' : currentBgImage ? 'image' : 'color');
   const [videoCategory, setVideoCategory] = useState<string>('الكل');
 
   // Custom Color State
@@ -749,8 +749,8 @@ export const BackgroundDrawerSection: React.FC<BackgroundDrawerSectionProps> = (
         </div>
       )}
 
-      {/* Active Image Card & Controls - Unified below the tab content for Image and Gallery tabs */}
-      {(activeTab === 'image' || activeTab === 'gallery') && currentBgImage && !currentBgVideo && (
+      {/* Active Image Card & Controls (size, fixed or scrolling): under every tab but the video one, so it is found whichever tab the panel opens on */}
+      {activeTab !== 'video' && currentBgImage && !currentBgVideo && (
         <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/80 space-y-3 mt-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-neutral-800">

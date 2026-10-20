@@ -6,6 +6,7 @@ import { Phone, MessageCircle, Trash2, KeyRound, ShoppingBag, UserPlus, FileText
 import { CarRequest, CarRequestStatus } from '../carTypes';
 import { emptyCustomer, saveCustomer } from '../carMoney';
 import { Card, EmptyState, formatDate } from '../../shop/adminUi';
+import { VisitorRequests } from '../../pageAdmin/VisitorRequests';
 import { CarTabProps } from './CarEditor';
 import { customerWhatsapp } from './moneyUi';
 
@@ -39,11 +40,12 @@ export const CarRequestsTab: React.FC<CarTabProps> = ({ data, update, onNewDocum
 
   return (
     <div className="space-y-4">
+      <VisitorRequests kind="car" />
       <div className="rounded-2xl bg-blue-50 border border-blue-100 p-3 flex gap-2 text-xs text-[#0b4f9c] leading-relaxed">
         <Info size={15} className="shrink-0 mt-0.5" />
         <span>
           يظهر في صفحة كل سيارة زرّا «احجز تجربة قيادة» و«اطلب السيارة». يُضاف كل طلب هنا ويُضاف صاحبه إلى الزبائن كـ«مهتم»، وتصلك رسالة واتساب أيضًا.
-          حاليًا يصل الطلب إلى هذه القائمة من المعاينة على جهازك؛ أما طلبات زوار الموقع المنشور فتحتاج خدمة النشر في المنصة، وحتى ذلك الحين تصلك عبر واتساب.
+          طلبات زوار الموقع المنشور بتظهر بالقائمة الأولى وبتوصلك على الإيميل، والقائمة تحتها لطلبات المعاينة على جهازك.
         </span>
       </div>
 

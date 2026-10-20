@@ -123,6 +123,28 @@ export const listJoinedPages = async (customerUid: string): Promise<JoinedPage[]
     .sort((a, b) => b.joinedAt.localeCompare(a.joinedAt));
 };
 
+// The person edited their own card in «حسابي»: every page they joined gets the new name, phone and
+// address (the consent, email and join date stay as they were).
+export const syncCustomerCards = async (user: User, card: { name: string; phone: string; address: string }) => {
+  const pages = await listJoinedPages(user.uid);
+  await Promise.all(
+    pages.map(async (p) => {
+      const snap = await getDoc(customerDoc(p.ownerUid, user.uid));
+      if (!snap.exists()) return;
+      const old = toCustomer(user.uid, snap.data());
+      await setDoc(customerDoc(p.ownerUid, user.uid), {
+        email: old.email || (user.email || '').toLowerCase(),
+        name: str(card.name, 100) || old.name,
+        phone: str(card.phone, 40),
+        address: str(card.address, 300),
+        marketing: old.marketing,
+        joinedAt: old.joinedAt,
+        updatedAt: new Date().toISOString(),
+      }).catch(() => {});
+    })
+  );
+};
+
 // This customer's orders at a restaurant, newest first. Sorted here: a query on the customer and the
 // date together would need an index made by hand in Firebase.
 export const listMyRestaurantOrders = async (ownerUid: string, customerUid: string) => {

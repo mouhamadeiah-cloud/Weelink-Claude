@@ -13,7 +13,7 @@ import type { MyProject } from '../onboarding/StartPage';
 import type { ProjectType } from '../shop/shopTypes';
 import { formatPounds } from '../../data/plans';
 import {
-  authErrorText, changePassword, confirmIdentity, deleteAccountData, fetchMyAccount, readPhone, saveProfile,
+  authErrorText, changePassword, confirmIdentity, deleteAccountData, fetchMyAccount, readCard, saveProfile,
   sendPasswordReset, useNotices, usesPassword, type MyAccountData, type Notice,
 } from '../../services/myAccount';
 
@@ -136,17 +136,18 @@ export const AccountPage: React.FC<AccountPageProps> = (props) => {
 const ProfileSection: React.FC<{ user: NonNullable<NavProps['user']> }> = ({ user }) => {
   const [name, setName] = useState(user.displayName || '');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   useEffect(() => {
-    readPhone(user.uid).then(setPhone).catch(() => {});
+    readCard(user).then((c) => { setPhone(c.phone); setAddress(c.address); }).catch(() => {});
   }, [user.uid]);
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setNote(null);
     try {
-      await saveProfile(user, name, phone);
+      await saveProfile(user, name, phone, address);
       setNote({ tone: 'ok', text: 'انحفظت معلوماتك.' });
     } catch {
       setNote({ tone: 'error', text: 'ما قدرنا نحفظ. جرّب مرة تانية.' });
@@ -158,6 +159,7 @@ const ProfileSection: React.FC<{ user: NonNullable<NavProps['user']> }> = ({ use
       <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
         <Field label="الاسم"><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="name" /></Field>
         <Field label="رقم الهاتف"><input className={inputCls} value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={40} inputMode="tel" dir="ltr" autoComplete="tel" placeholder="+963…" /></Field>
+        <Field label="العنوان"><input className={inputCls} value={address} onChange={(e) => setAddress(e.target.value)} maxLength={300} autoComplete="street-address" /></Field>
         <Field label="الإيميل"><input className={inputCls} value={user.email || ''} disabled dir="ltr" /></Field>
         <Field label="تاريخ التسجيل"><input className={inputCls} value={dateText(user.metadata.creationTime)} disabled /></Field>
         <div className="sm:col-span-2 flex flex-wrap items-center gap-3">

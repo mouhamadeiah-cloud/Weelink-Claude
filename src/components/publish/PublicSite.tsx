@@ -8,6 +8,7 @@ import { SuspendedGate } from './SuspendedGate';
 import { PublishedSite, SiteSeo, letterIcon, loadPublishedSite } from '../../services/sites';
 import { PublicRestaurantSite } from '../restaurant/PublicRestaurantSite';
 import { SiteView } from './SiteView';
+import { useAccountNav } from '../customers/useAccountNav';
 import { countContact, countVisit, isContactLink } from '../../services/siteStats';
 import { BookingPageContext } from '../../services/bookings';
 import { kindOf, restaurantIdOf } from '../../utils/projectKeys';
@@ -86,6 +87,13 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
     [ready]
   );
 
+  const { navActions, account } = useAccountNav({
+    ownerUid: ready?.owner || '',
+    pageName: ready?.pages?.[0]?.navbar?.brandName || ready?.seo?.title || ready?.name || '',
+    kind: ready && kindOf(ready.project) !== 'restaurant' ? (kindOf(ready.project) === 'shop' ? 'shop' : kindOf(ready.project) === 'cars' ? 'cars' : 'site') : 'site',
+    accent: '#0071e3',
+  });
+
   if (site === 'loading') {
     return <div className="min-h-[100dvh] flex items-center justify-center bg-white"><Loader2 size={36} className="animate-spin text-[#0071e3]" /></div>;
   }
@@ -109,7 +117,8 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
     <SuspendedGate owner={ready.owner} project={ready.project}>
     <BookingPageContext.Provider value={bookingPage}>
     <div className="h-[100dvh]">
-      <SiteView project={ready.project} pages={ready.pages} elements={elements} data={ready.data} phone={phone} pageId={pageId} onSelectPage={selectPage} onContactClick={(url) => isContactLink(url) && countContact(ready.owner, ready.project)} />
+      {account}
+      <SiteView project={ready.project} pages={ready.pages} elements={elements} data={ready.data} phone={phone} pageId={pageId} onSelectPage={selectPage} onContactClick={(url) => isContactLink(url) && countContact(ready.owner, ready.project)} navActions={navActions} />
     </div>
     </BookingPageContext.Provider>
     </SuspendedGate>

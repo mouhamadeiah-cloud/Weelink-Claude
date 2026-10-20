@@ -42,6 +42,16 @@ const SCOPES = 'https://www.googleapis.com/auth/cloud-platform https://www.googl
 const tokens = new WeakMap<App, { token: string; until: number }>();
 const signingKeys = new WeakMap<App, Promise<CryptoKey>>();
 
+const serviceKey = (app: App, pem = (app.credential.private_key || app.credential.privateKey || '').replace(/\\n/g, '\n')) => {
+  let key = signingKeys.get(app);
+  if (!key) {
+    const der = Uint8Array.from(atob(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '')), (ch) => ch.charCodeAt(0));
+    key = crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+    signingKeys.set(app, key);
+  }
+  return key;
+};
+
 // An OAuth access token for the service account (JWT bearer grant), kept until a minute before it expires.
 const accessToken = async (app: App): Promise<string> => {
   if (env('FIRESTORE_EMULATOR_HOST') || env('FIREBASE_AUTH_EMULATOR_HOST')) return 'owner';
@@ -49,12 +59,7 @@ const accessToken = async (app: App): Promise<string> => {
   if (cached && cached.until > Date.now()) return cached.token;
   const email = app.credential.client_email || app.credential.clientEmail || '';
   const pem = (app.credential.private_key || app.credential.privateKey || '').replace(/\\n/g, '\n');
-  let key = signingKeys.get(app);
-  if (!key) {
-    const der = Uint8Array.from(atob(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '')), (ch) => ch.charCodeAt(0));
-    key = crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
-    signingKeys.set(app, key);
-  }
+  const key = serviceKey(app, pem);
   const now = Math.floor(Date.now() / 1000);
   const unsigned = `${b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64url(JSON.stringify({ iss: email, scope: SCOPES, aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 }))}`;
   const signature = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', await key, new TextEncoder().encode(unsigned)));
@@ -668,6 +673,16 @@ export class Auth {
     if (props.password !== undefined) body.password = props.password;
     await call(this.app, `${this.base}/accounts:update`, { body });
     return this.getUser(uid);
+  }
+  // A sign-in token the browser trades for a session with signInWithCustomToken; valid for an hour.
+  async createCustomToken(uid: string): Promise<string> {
+    const email = this.app.credential.client_email || this.app.credential.clientEmail || '';
+    const now = Math.floor(Date.now() / 1000);
+    const unsigned = `${b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64url(
+      JSON.stringify({ iss: email, sub: email, aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit', iat: now, exp: now + 3600, uid })
+    )}`;
+    const signature = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', await serviceKey(this.app), new TextEncoder().encode(unsigned)));
+    return `${unsigned}.${b64url(signature)}`;
   }
   async revokeRefreshTokens(uid: string) {
     await call(this.app, `${this.base}/accounts:update`, { body: { localId: uid, validSince: String(Math.floor(Date.now() / 1000)) } });

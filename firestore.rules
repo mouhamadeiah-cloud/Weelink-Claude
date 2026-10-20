@@ -351,7 +351,7 @@ service cloud.firestore {
       allow create, update: if isConfirmedUser(customerUid) && isValidId(ownerId)
         && incoming().keys().hasOnly(['name', 'kind', 'joinedAt'])
         && incoming().name is string && incoming().name.size() <= 100
-        && incoming().kind in ['restaurant', 'shop', 'cars']
+        && incoming().kind in ['restaurant', 'shop', 'cars', 'site']
         && incoming().joinedAt is string && incoming().joinedAt.size() <= 40;
     }
 

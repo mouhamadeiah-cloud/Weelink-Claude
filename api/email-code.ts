@@ -2,6 +2,7 @@
 //
 //   POST /api/email-code  { action: 'send' }                 → { sent: true } | { skipped: true }
 //   POST /api/email-code  { action: 'verify', code: '123456' } → { verified: true }
+//   POST /api/email-code  { action: 'session-set' | 'session-resume' | 'session-clear' }  shared sign-in cookie (see below)
 //   both with  Authorization: Bearer <Firebase ID token>
 //   GET  /api/email-code  → which settings this deployment sees (no secret values) and whether
 //                           the sender's domain is verified in Resend
@@ -17,7 +18,7 @@
 //                             account owner's own address, which is enough for a test)
 // While either is missing, 'send' answers { skipped: true } and the sign-up goes on without a code.
 
-import { createHash, randomInt } from 'node:crypto';
+import { createHash, createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { cert, getApps, initializeApp, getAuth, getFirestore } from '../server/firebase.js';
 import { Resend } from 'resend';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
@@ -44,6 +45,33 @@ const firebaseAdmin = () => {
   const app = getApps()[0] || initializeApp({ credential: cert(account), projectId: firebaseConfig.projectId });
   const databaseId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
   return { auth: getAuth(app), db: databaseId ? getFirestore(app, databaseId) : getFirestore(app) };
+};
+
+// Shared sign-in across the pages of Weelink: after a customer signs in, a signed cookie on the
+// parent domain (testweelink.de) lets every other page under it sign them in again without asking.
+// The cookie holds only the uid and an expiry, signed with a key made from the service account;
+// 'session-resume' trades it for a Firebase custom token.
+const SESSION_COOKIE = 'wl_sid';
+const SESSION_DAYS = 30;
+
+const sessionSig = (value: string) => createHmac('sha256', createHash('sha256').update(process.env.FIREBASE_SERVICE_ACCOUNT || '').digest()).update(value).digest('base64url');
+
+const cookieDomain = (request: Request) => {
+  const host = new URL(request.url).hostname;
+  if (/^[\d.]+$/.test(host) || !host.includes('.')) return '';
+  return `; Domain=${host.split('.').slice(-2).join('.')}`;
+};
+
+const cookieHeader = (request: Request, value: string, maxAge: number) =>
+  `${SESSION_COOKIE}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax${cookieDomain(request)}`;
+
+const readSession = (request: Request) => {
+  const raw = /(?:^|;\s*)wl_sid=([^;]+)/.exec(request.headers.get('cookie') || '')?.[1] || '';
+  const [uid, exp, sig] = raw.split('.');
+  if (!uid || !exp || !sig || Number(exp) < Date.now()) return null;
+  const want = Buffer.from(sessionSig(`${uid}.${exp}`));
+  const got = Buffer.from(sig);
+  return want.length === got.length && timingSafeEqual(want, got) ? uid : null;
 };
 
 const hashCode = (uid: string, code: string) => createHash('sha256').update(`${uid}:${code}`).digest('hex');
@@ -91,6 +119,25 @@ export default {
     const from = process.env.EMAIL_FROM;
     const resendKey = process.env.RESEND_API_KEY;
     const body = (await request.json().catch(() => ({}))) as { action?: string; code?: unknown };
+    // The shared sign-in needs only the Firebase key, not the email settings.
+    if (admin && body.action === 'session-clear') {
+      return new Response(JSON.stringify({ cleared: true }), { headers: { 'Content-Type': 'application/json', 'Set-Cookie': cookieHeader(request, '', 0) } });
+    }
+    if (admin && body.action === 'session-resume') {
+      const uid = readSession(request);
+      const account = uid ? await admin.auth.getUser(uid).catch(() => null) : null;
+      if (!uid || !account || account.disabled || !account.emailVerified) return json({ signedIn: false });
+      return json({ signedIn: true, customToken: await admin.auth.createCustomToken(uid) });
+    }
+    if (admin && body.action === 'session-set') {
+      const idToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      const who = idToken ? await admin.auth.verifyIdToken(idToken).catch(() => null) : null;
+      if (!who?.email || !who.email_verified) return json({ error: 'unauthorized' }, 401);
+      const exp = Date.now() + SESSION_DAYS * 86400_000;
+      return new Response(JSON.stringify({ saved: true }), {
+        headers: { 'Content-Type': 'application/json', 'Set-Cookie': cookieHeader(request, `${who.uid}.${exp}.${sessionSig(`${who.uid}.${exp}`)}`, SESSION_DAYS * 86400) },
+      });
+    }
     if (!admin || !from || !resendKey) {
       return body.action === 'send' ? json({ skipped: true }) : json({ error: 'not_configured' }, 503);
     }

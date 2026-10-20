@@ -18,6 +18,7 @@ import {
   readMyCustomerProfile,
   saveCustomerProfile,
 } from '../../services/pageCustomers';
+import { forgetLogin, rememberLogin, resumeLogin } from '../../services/sharedLogin';
 import { setCustomerSession } from './customerSession';
 import { ORDER_STATUSES } from '../restaurant/restaurantTypes';
 import { formatMoney } from '../shop/adminUi';
@@ -28,6 +29,11 @@ interface CustomerAccountProps {
   kind: PageKind;
   accent: string;
   currency?: string;
+  // Opened from the page's navbar entry instead of the floating button.
+  open?: boolean;
+  onClose?: () => void;
+  // Who is signed in on this page, for the navbar entry (name, or '' when nobody is).
+  onStatus?: (s: { signedIn: boolean; name: string }) => void;
 }
 
 type Step = 'signin' | 'signup' | 'code' | 'profile' | 'account';
@@ -43,8 +49,11 @@ const signInErrorText = (e: unknown, register = false) => {
 
 const EMPTY_PROFILE: CustomerProfile = { name: '', phone: '', address: '', marketing: false };
 
-export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, pageName, kind, accent, currency = '' }) => {
-  const [open, setOpen] = useState(false);
+export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, pageName, kind, accent, currency = '', open: openProp, onClose, onStatus }) => {
+  const controlled = openProp !== undefined;
+  const [openOwn, setOpenOwn] = useState(false);
+  const open = controlled ? !!openProp : openOwn;
+  const setOpen = (v: boolean) => (controlled ? (!v && onClose?.()) : setOpenOwn(v));
   const [user, setUser] = useState<User | null>(null);
   const [joined, setJoined] = useState<PageCustomer | null>(null);
   const [step, setStep] = useState<Step>('signin');
@@ -89,6 +98,7 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
       onAuthStateChanged(auth, (u) => {
         const real = u && !u.isAnonymous ? u : null;
         setUser(real);
+        if (real?.emailVerified) rememberLogin(real);
         if (real) arrive(real);
         else {
           setJoined(null);
@@ -99,6 +109,11 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [ownerUid]
   );
+
+  // Another Weelink page may have the customer signed in already.
+  useEffect(() => {
+    resumeLogin();
+  }, []);
 
   useEffect(() => {
     if (resendWait <= 0) return;
@@ -245,6 +260,7 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
   };
 
   const handleSignOut = () => run(async () => {
+    await forgetLogin();
     await auth.signOut().catch(() => {});
     setEmail('');
     setPassword('');
@@ -255,10 +271,15 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
   const primary = 'w-full h-11 rounded-2xl text-white text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60';
   const link = 'text-xs font-bold text-black/50 hover:text-black underline decoration-black/20 cursor-pointer';
   const firstName = (joined?.name || '').split(' ')[0];
+  const shownName = firstName || (user?.displayName || '').split(' ')[0] || (user?.email || '').split('@')[0] || '';
+  useEffect(() => {
+    onStatus?.({ signedIn: !!user, name: shownName });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, shownName]);
 
   return (
     <>
-      <button
+      {!controlled && <button
         type="button"
         onClick={() => setOpen(true)}
         className="fixed top-3 left-3 z-[1000] h-10 px-4 rounded-full bg-white/95 backdrop-blur shadow-[0_6px_20px_rgba(0,0,0,0.15)] text-sm font-bold flex items-center gap-2 cursor-pointer"
@@ -267,7 +288,7 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
       >
         <UserRound size={18} />
         {joined ? firstName || 'حسابي' : 'سجّل كزبون'}
-      </button>
+      </button>}
 
       {open && (
         <div className="fixed inset-0 z-[1001] bg-black/40 flex items-end sm:items-center justify-center" onClick={() => setOpen(false)}>

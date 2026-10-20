@@ -47,7 +47,8 @@ import {
   Download,
   ChevronUp,
   ChevronDown,
-  Settings
+  Settings,
+  UserRound
 } from 'lucide-react';
 
 interface CanvasWorkspaceProps {
@@ -102,7 +103,7 @@ interface CanvasWorkspaceProps {
   chromeHeight?: number;
   // Extra entries at the end of the navbar that run an action, not a link: «الإدارة» for the
   // signed-in owner looking at their own page. Visitors never get them.
-  navActions?: { id: string; label: string; onClick: () => void }[];
+  navActions?: { id: string; label: string; onClick: () => void; icon?: 'person' }[];
   // A WhatsApp, call or email link on the page was opened (the page's counters).
   onContactClick?: (url: string) => void;
   // The docked editor's bar of quick tools, drawn above the selected element.
@@ -2212,6 +2213,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         {cartCount > 99 ? '99+' : cartCount}
       </span>
     ) : null;
+  // A navbar action with an icon (the visitor's account) shows it beside its name.
+  const navActionIcon = (id: string) =>
+    navActions?.find((a) => a.id === id)?.icon === 'person' ? <UserRound size={15} className="inline-block me-1.5 -mt-0.5" aria-hidden="true" /> : null;
   const navActionItems = (navActions || []).map((a) => ({ id: a.id, label: a.label, href: '#', linkType: undefined as 'page' | undefined, linkTargetId: undefined as string | undefined }));
   const effectiveNavItems = [...(allPages && allPages.length > 0 ? [...navPageLinkItems, ...navCustomItems] : navbar.items), ...navActionItems];
   // Runs the navbar action of this entry, if it is one.
@@ -2526,7 +2530,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       className={`px-5 py-2.5 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink || isNavSlideLink(item) ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
                       style={{ fontFamily: navbar.itemsFontFamily || undefined }}
                     >
-                      {navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}
+                      {navActionIcon(item.id)}{navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}
                     </span>
                   );
                 })}
@@ -2716,7 +2720,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       borderRadius: navbar.itemsFrameBorderRadius ? `${navbar.itemsFrameBorderRadius}px` : undefined,
                     }}
                   >
-                    {navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}
+                    {navActionIcon(item.id)}{navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}
                   </span>
                 );
               })}
@@ -2785,7 +2789,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     className={`px-6 py-3 text-sm ${isCurrent ? 'font-bold' : 'font-medium'} ${isPageLink || isNavSlideLink(item) ? 'cursor-pointer hover:bg-black/[0.04]' : 'cursor-default'}`}
                     style={{ fontFamily: navbar.itemsFontFamily || undefined }}
                   >
-                    {navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}
+                    {navActionIcon(item.id)}{navPartLabel(navItemPartId(item), item.label)}{cartBadge(item)}
                   </span>
                 );
               })}

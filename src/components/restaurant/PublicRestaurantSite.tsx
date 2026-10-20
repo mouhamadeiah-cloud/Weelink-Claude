@@ -13,7 +13,7 @@ import { loadPublishedRestaurant, placeOrder, PublishedRestaurant } from './rest
 import { RestaurantDataContext, RestaurantOrderContext } from './store/RestaurantDataContext';
 import { readTableFromUrl } from './tableStore';
 import type { MenuOrder } from './restaurantTypes';
-import { CustomerAccount } from '../customers/CustomerAccount';
+import { useAccountNav } from '../customers/useAccountNav';
 import { getCustomerSession } from '../customers/customerSession';
 import { sendOrderConfirmation } from './orderStatus';
 import { countContact, countVisit, isContactLink } from '../../services/siteStats';
@@ -65,6 +65,9 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
     [uid]
   );
 
+  const readySite = site && typeof site !== 'string' ? site : null;
+  const { navActions, account } = useAccountNav({ ownerUid: uid, pageName: readySite?.admin.settings.name || '', kind: 'restaurant', accent: '#B5562B', currency: readySite?.admin.settings.currency });
+
   if (site === 'loading') {
     return <div className="min-h-[100dvh] flex items-center justify-center bg-white"><Loader2 size={36} className="animate-spin text-[#B5562B]" /></div>;
   }
@@ -90,7 +93,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
       <BookingPageContext.Provider value={{ owner: ownerOfRestaurant(uid), project: restaurantKeyOf(uid), pageName: site.admin.settings.name || '', live: true }}>
       <RestaurantOrderContext.Provider value={submit}>
         <div className="h-[100dvh] flex flex-col bg-white">
-          <CustomerAccount ownerUid={uid} pageName={site.admin.settings.name} kind="restaurant" accent="#B5562B" currency={site.admin.settings.currency} />
+          {account}
           <CanvasWorkspace
             isPublicSite
             isPreviewActive
@@ -111,6 +114,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
             onDeleteElement={noop}
             onDuplicateElement={noop}
             onContactClick={(url) => isContactLink(url) && countContact(ownerOfRestaurant(uid), restaurantKeyOf(uid))}
+            navActions={navActions}
           />
         </div>
       </RestaurantOrderContext.Provider>

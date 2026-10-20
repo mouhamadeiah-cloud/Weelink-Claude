@@ -15,7 +15,7 @@ import {
 import { SLIDE_DIVIDER_HEIGHT, slideDividerMask, slideDividerPath } from './SlideDividers';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { MASK_SHAPES } from '../utils/maskShapes';
-import { customMotionDirection, customMotionVars, CUSTOM_MOTION, CUSTOM_MOTION_KEYFRAMES } from '../utils/customMotion';
+import { buildElementAnimation } from '../utils/elementAnimation';
 import { MOBILE_CANVAS_WIDTH, resolveMobileElement, resolveMobileSlideHeight } from '../utils/mobileLayout';
 import { LottiePlayer } from './LottiePlayer';
 import { getTextEffectStyles } from '../utils/textEffects';
@@ -3178,48 +3178,16 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   const effectiveContentOpacity = (elem.styles.contentOpacity ?? elem.styles.opacity ?? 1) * (slide.opacity ?? 1);
                   const effectiveBgOpacity = elem.styles.backgroundOpacity ?? 1;
 
-                  const anim = elem.styles?.animation || 'none';
-                  const animTrigger = elem.styles?.animationTrigger || 'once';
-                  const animDuration = elem.styles?.animationDuration || (
-                    ['spin-slow'].includes(anim) ? 10 :
-                    ['marquee-rtl', 'marquee-ltr'].includes(anim) ? 12 :
-                    ['fade', 'slide-up', 'slide-down', 'slide-left', 'slide-right', 'scale-up', 'scale-down'].includes(anim) ? 1.2 :
-                    ['pulse', 'brightness', 'shake', 'bounce', 'flash', 'float', 'heartbeat', 'rubberband', 'swing', 'jello'].includes(anim) ? 2 : 1.5
-                  );
-                  const isCustomMotion = anim === CUSTOM_MOTION;
-                  const animName = isCustomMotion ? CUSTOM_MOTION_KEYFRAMES : anim;
-                  const customVars = isCustomMotion
-                    ? customMotionVars(elem.styles?.animationFrom, elem.styles?.animationTo, elem.rotation || 0, previewMode === 'mobile' ? 0.5 : 1)
-                    : {};
-                  const isMarquee = anim === 'marquee-rtl' || anim === 'marquee-ltr';
-                  // A ticker never stops after one pass: it runs round and round (unless it waits for the mouse).
-                  const isAnimLoop = animTrigger === 'loop' || (isMarquee && animTrigger !== 'hover');
-                  const isAnimHover = animTrigger === 'hover';
-                  const waitsForView = (isPreviewActive || isPublicSite) && !isMarquee && (animTrigger === 'once' || animTrigger === 'scroll');
-                  // The ticker crosses the whole page: from past the right edge to past the left one.
-                  const marqueeVars = isMarquee
-                    ? { '--marquee-from': `${pageWidth - elem.x + bleed}px`, '--marquee-to': `${-(elem.x + elem.width) - bleed}px` }
-                    : {};
-                  
-                  const animationStyle = anim && anim !== 'none' ? (
-                    isAnimHover ? {
-                      ...marqueeVars,
-                      '--anim-name': animName,
-                      '--anim-duration': `${animDuration}s`,
-                      '--anim-timing': ['marquee-rtl', 'marquee-ltr'].includes(anim) ? 'linear' : isCustomMotion ? 'ease-in-out' : 'ease-out',
-                      ...customVars,
-                      ...(isCustomMotion ? { '--anim-direction': customMotionDirection('hover', elem.styles?.animationAlternate) } : {}),
-                    } : {
-                      ...marqueeVars,
-                      ...customVars,
-                      animationName: animName,
-                      ...(isCustomMotion ? { animationDirection: customMotionDirection(animTrigger, elem.styles?.animationAlternate) } : {}),
-                      animationDuration: `${animDuration}s`,
-                      animationIterationCount: isAnimLoop ? 'infinite' : '1',
-                      animationTimingFunction: ['marquee-rtl', 'marquee-ltr'].includes(anim) ? 'linear' : isCustomMotion ? 'ease-in-out' : 'ease-out',
-                      animationFillMode: isAnimLoop ? 'none' : (waitsForView ? 'both' : 'forwards'),
-                    }
-                  ) : {};
+                  const built = buildElementAnimation(elem.styles || {}, {
+                    rotation: elem.rotation,
+                    x: elem.x,
+                    width: elem.width,
+                    pageWidth,
+                    bleed,
+                    phone: previewMode === 'mobile',
+                    waits: isPreviewActive || isPublicSite,
+                  });
+                  const animationStyle = built.style;
 
                     return (
                     <div
@@ -3262,8 +3230,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                 : isSelected 
                                   ? 'ring-2 ring-[#0071e3] shadow-[0_4px_24px_rgba(0,113,227,0.15)]' 
                                   : 'hover:ring-1 hover:ring-[#0071e3]/40'
-                      } ${isAnimHover ? 'hover-animate' : ''}`}
-                      data-scroll-anim={waitsForView && anim !== 'none' ? (animTrigger === 'scroll' ? 'repeat' : '1') : undefined}
+                      } ${built.hasHover ? 'hover-animate' : ''}`}
+                      data-scroll-anim={built.waitsForView ? (built.repeatsOnScroll ? 'repeat' : '1') : undefined}
                       style={{
                         left: `${spansPage ? elem.x - bleed : elem.x}px`,
                         top: `${elem.y}px`,

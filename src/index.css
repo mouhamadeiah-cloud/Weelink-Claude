@@ -217,19 +217,35 @@
   100% { transform: translate3d(0, 0, 0); }
 }
 
-/* «حركة مخصصة»: from the owner's first state to the second (utils/customMotion sets the variables). */
+/* «حركة مخصصة»: from the owner's first state to the second (utils/customMotion sets the variables).
+   The first animation of an element reads --mv-*, its extra ones --mv1-* … --mv3-*. */
 @keyframes custom-move {
   from { transform: translate(var(--mv-fx, 0px), var(--mv-fy, 0px)) rotate(var(--mv-fr, 0deg)) scale(var(--mv-fs, 1)); opacity: var(--mv-fo, 1); }
   to { transform: translate(var(--mv-tx, 0px), var(--mv-ty, 0px)) rotate(var(--mv-tr, 0deg)) scale(var(--mv-ts, 1)); opacity: var(--mv-to, 1); }
 }
+@keyframes custom-move-1 {
+  from { transform: translate(var(--mv1-fx, 0px), var(--mv1-fy, 0px)) rotate(var(--mv1-fr, 0deg)) scale(var(--mv1-fs, 1)); opacity: var(--mv1-fo, 1); }
+  to { transform: translate(var(--mv1-tx, 0px), var(--mv1-ty, 0px)) rotate(var(--mv1-tr, 0deg)) scale(var(--mv1-ts, 1)); opacity: var(--mv1-to, 1); }
+}
+@keyframes custom-move-2 {
+  from { transform: translate(var(--mv2-fx, 0px), var(--mv2-fy, 0px)) rotate(var(--mv2-fr, 0deg)) scale(var(--mv2-fs, 1)); opacity: var(--mv2-fo, 1); }
+  to { transform: translate(var(--mv2-tx, 0px), var(--mv2-ty, 0px)) rotate(var(--mv2-tr, 0deg)) scale(var(--mv2-ts, 1)); opacity: var(--mv2-to, 1); }
+}
+@keyframes custom-move-3 {
+  from { transform: translate(var(--mv3-fx, 0px), var(--mv3-fy, 0px)) rotate(var(--mv3-fr, 0deg)) scale(var(--mv3-fs, 1)); opacity: var(--mv3-fo, 1); }
+  to { transform: translate(var(--mv3-tx, 0px), var(--mv3-ty, 0px)) rotate(var(--mv3-tr, 0deg)) scale(var(--mv3-ts, 1)); opacity: var(--mv3-to, 1); }
+}
 
-/* Trigger Class for Hover animations */
+/* Trigger Class for Hover animations: while the mouse is over the element it plays its idle animations
+   and the hover ones together (utils/elementAnimation writes the --h-* lists). */
 .hover-animate:hover {
-  animation-name: var(--anim-name) !important;
-  animation-duration: var(--anim-duration, 1.5s) !important;
-  animation-iteration-count: infinite !important;
-  animation-timing-function: var(--anim-timing, ease-out) !important;
-  animation-direction: var(--anim-direction, normal) !important;
+  animation-name: var(--h-name) !important;
+  animation-duration: var(--h-duration, 1.5s) !important;
+  animation-iteration-count: var(--h-count, infinite) !important;
+  animation-timing-function: var(--h-timing, ease-out) !important;
+  animation-fill-mode: var(--h-fill, none) !important;
+  animation-direction: var(--h-dir, normal) !important;
+  animation-composition: var(--h-comp, replace) !important;
 }
 
 /* "Fixed" slide/element backgrounds (see syncFixedBackgrounds in CanvasWorkspace.tsx).

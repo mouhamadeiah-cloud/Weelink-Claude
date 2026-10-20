@@ -13,14 +13,17 @@ interface AnimationSectionProps {
   onPlace?: (x: number, y: number) => void;
   // The phone view: a phone plays a motion's shift at half size, so a shift dragged there is stored doubled.
   phone?: boolean;
+  // An extra animation of the element: no intro, and no tickers.
+  extra?: boolean;
 }
 
-export const AnimationSection = ({
+const AnimationEditor = ({
   styles,
   onUpdateElementStyles,
   element,
   onPlace,
   phone = false,
+  extra = false,
 }: AnimationSectionProps) => {
   // The state being set by dragging: the element is dragged on the canvas, then dropped here, and goes back to its place.
   const [dragging, setDragging] = useState<{ key: 'animationFrom' | 'animationTo'; id: string; x: number; y: number } | null>(null);
@@ -65,14 +68,14 @@ export const AnimationSection = ({
   return (
     <div className="space-y-4 text-right animate-fade" dir="rtl">
       {/* Header info */}
-      <div className="bg-brand/5 border border-brand/10 p-3 rounded-xl">
+      {!extra && <div className="bg-brand/5 border border-brand/10 p-3 rounded-xl">
         <span className="text-xs font-bold text-brand block mb-1">
           لوحة الحركات والأنيميشن التفاعلي:
         </span>
         <p className="text-xs text-neutral-500 leading-relaxed">
           اختر نمط الحركة والسرعة والحدث المناسب لتنشيط وتحريك العناصر والشرائط الإخبارية على الصفحة.
         </p>
-      </div>
+      </div>}
 
       {/* 1. Trigger Selection */}
       <div className="space-y-2">
@@ -216,7 +219,7 @@ export const AnimationSection = ({
           اختر حركة من الحركات الـ ٢٠+ المبتكرة:
         </span>
         <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
-          {ANIMATIONS_LIST.map((animItem) => {
+          {ANIMATIONS_LIST.filter((a) => !(extra && (a.id === 'none' || a.id.startsWith('marquee')))).map((animItem) => {
             const isSelected = currentAnimation === animItem.id;
             return (
               <button
@@ -272,6 +275,46 @@ export const AnimationSection = ({
           })}
         </div>
       </div>
+    </div>
+  );
+};
+
+const MAX_EXTRA = 3;
+
+export const AnimationSection = (props: Omit<AnimationSectionProps, 'extra'>) => {
+  const { styles, onUpdateElementStyles } = props;
+  const layers = styles.animationLayers || [];
+  const setLayers = (next: typeof layers) => onUpdateElementStyles({ animationLayers: next.length ? next : undefined });
+  return (
+    <div className="space-y-4">
+      <AnimationEditor {...props} />
+      {(styles.animation || 'none') !== 'none' && (
+        <div className="space-y-3 pt-2 border-t border-neutral-200">
+          <span className="text-xs font-bold text-neutral-800 block">حركات إضافية لنفس العنصر ({layers.length}/{MAX_EXTRA}):</span>
+          <p className="text-xs text-neutral-500 leading-relaxed">تعمل فوق الحركة الأولى معاً، ولكل واحدة حدثها وسرعتها. مثال: دخول مرة واحدة مع نبض مستمر.</p>
+          {layers.map((layer, i) => (
+            <div key={i} className="space-y-2 p-2.5 rounded-xl border border-neutral-200 bg-white">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-brand">الحركة {i + 2}</span>
+                <button type="button" onClick={() => setLayers(layers.filter((_, k) => k !== i))} className="text-xs font-bold text-red-600 cursor-pointer">حذف</button>
+              </div>
+              <AnimationEditor
+                {...props}
+                extra
+                styles={layer as CanvasElement['styles']}
+                onUpdateElementStyles={(patch) => setLayers(layers.map((l, k) => (k === i ? { ...l, ...(patch as object) } : l)))}
+              />
+            </div>
+          ))}
+          {layers.length < MAX_EXTRA && (
+            <button
+              type="button"
+              onClick={() => setLayers([...layers, { animation: 'pulse', animationTrigger: 'loop', animationDuration: 2 }])}
+              className="w-full py-2 rounded-xl border border-dashed border-brand text-xs font-bold text-brand hover:bg-brand/5 cursor-pointer"
+            >+ أضف حركة أخرى</button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -37,6 +37,9 @@ interface WeeAIChatProps {
   pageKind?: ProjectType;
   // Fills its own box (the start page) instead of sitting under the control panel's tabs.
   embedded?: boolean;
+  // In the docked panel: takes the place of the other tabs' content under the breadcrumb, like them,
+  // instead of lying over the panel.
+  inFlow?: boolean;
   // The questions live on the start page (Eyad, 12 Oct): in the editor the panel shows the answers
   // and the build buttons, and this opens the questions again.
   onEditAnswers?: () => void;
@@ -177,6 +180,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   onRestorePage,
   pageKind,
   embedded,
+  inFlow,
   onEditAnswers,
   fromStart,
   restoreAvailable,
@@ -557,7 +561,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   // IF EXPANDED: Positioned exactly below top drag handle/headers (64px offset) so handle remains free!
   return (
     <div 
-      className={`absolute ${embedded ? 'top-0' : 'top-[64px]'} left-0 right-0 bottom-0 z-30 bg-white flex flex-col overflow-hidden text-right select-none font-sans`}
+      className={`${inFlow ? 'relative flex-1 min-h-0' : `absolute ${embedded ? 'top-0' : 'top-[64px]'} left-0 right-0 bottom-0 z-30`} bg-white flex flex-col overflow-hidden text-right select-none font-sans`}
       dir="rtl"
     >
       {/* Dynamic Typewriter Active Question Header */}
@@ -575,15 +579,15 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           </div>
         </div>
 
-        {/* Minimize Button */}
-        <button
+        {/* Minimize Button (the docked panel's column has Wee AI's own tile for that) */}
+        {!inFlow && <button
           type="button"
           onClick={toggleCollapse}
           className="w-7 h-7 rounded-lg hover:bg-neutral-200 border border-neutral-200/50 text-neutral-500 hover:text-black flex items-center justify-center transition-all cursor-pointer shrink-0 mt-0.5"
           title="تصغير المحاورة لأسفل لوحة التحكم"
         >
           <ChevronDown size={15} strokeWidth={2.4} />
-        </button>
+        </button>}
       </div>
 
       {introSlot && <div className="p-3 pb-0 shrink-0">{introSlot}</div>}

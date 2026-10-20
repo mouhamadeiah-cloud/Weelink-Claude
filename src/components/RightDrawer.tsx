@@ -214,6 +214,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const [internalWeeAiChatCollapsed, setInternalWeeAiChatCollapsed] = useState<boolean>(true);
   const isWeeAiChatCollapsed = externalIsWeeAiChatCollapsed !== undefined ? externalIsWeeAiChatCollapsed : internalWeeAiChatCollapsed;
   const toggleWeeAiChat = externalOnToggleWeeAiChat || (() => setInternalWeeAiChatCollapsed(prev => !prev));
+  // Wee AI shows in the docked panel's own content area, like every other tab of the column.
+  const weeAiInFlow = isDocked && !isWeeAiChatCollapsed;
 
   // Shared handler for ImageDrawerSection's onAddImage — used by BOTH call sites
   // (add-new-image entry point and add-image/replace-existing entry point) so the
@@ -5791,7 +5793,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                   {label}
                 </button>
               );
-              const showingSettings = activeTab === 'tool';
+              const showingSettings = activeTab === 'tool' && !weeAiInFlow;
               const steps: React.ReactNode[] = [
                 crumb(projectName || 'المشروع', () => onSelectSection('project-settings'), showingSettings && activeSection === 'project-settings', 'project'),
                 crumb(currentPage.name, () => onSelectSection('page-settings'), showingSettings && activeSection === 'page-settings', 'page'),
@@ -5850,7 +5852,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         </div>}
 
         {/* TAB 1: الهيكل (Structure) */}
-        {activeTab === 'structure' && (
+        {activeTab === 'structure' && !weeAiInFlow && (
           <div className="flex-1 overflow-y-auto p-3 space-y-2.5 bg-white text-right">
             {panelVideo('structure')}
             {pages.map((p) => {
@@ -6123,7 +6125,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
         )}
 
         {/* TAB 2: تعديل الصفحة / أداة التعديل */}
-        {activeTab === 'tool' && (
+        {activeTab === 'tool' && !weeAiInFlow && (
           <div ref={toolScrollRef} onScroll={handleInspectorScroll} className="relative flex-1 overflow-y-auto p-3.5 space-y-4 bg-white text-right">
             {activeSection === 'inspector' ? renderInspector() : renderSection(activeSection)}
 
@@ -6137,6 +6139,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           userEmail={userEmail || ''}
           onCompleteChat={onCompleteChat}
           isCollapsed={isWeeAiChatCollapsed}
+          inFlow={weeAiInFlow}
           onToggleCollapse={toggleWeeAiChat}
           onStepChange={onStepChange}
           onBuildPage={onBuildPage}

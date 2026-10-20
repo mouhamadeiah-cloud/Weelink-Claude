@@ -7,7 +7,7 @@ import { CanvasElement } from '../types';
 import { customMotionDirection, customMotionKeyframes, customMotionVars, CUSTOM_MOTION } from './customMotion';
 
 type Styles = CanvasElement['styles'];
-export type AnimationLayer = Pick<Styles, 'animation' | 'animationTrigger' | 'animationDuration' | 'animationFrom' | 'animationTo' | 'animationAlternate'>;
+export type AnimationLayer = Pick<Styles, 'animation' | 'animationTrigger' | 'animationDuration' | 'animationFrom' | 'animationTo' | 'animationAlternate' | 'animationScrub'>;
 
 export const MAX_EXTRA_ANIMATIONS = 3;
 
@@ -23,6 +23,10 @@ export const defaultDuration = (anim: string) =>
 // state as it enters from the bottom of the screen and at the last one when it has come up to the middle. Where the
 // browser lacks them the trigger plays as «عند التمرير».
 export const SCRUB_RANGE = 'entry 0% cover 45%';
+// Which part of the element's pass over the screen drives it: «enter» (as it comes up from the bottom to the middle),
+// «leave» (as it goes out at the top: for what is on the screen from the start, like a cover), or «through» (the whole pass).
+export const SCRUB_RANGES = { enter: SCRUB_RANGE, leave: 'exit 0% exit 100%', through: 'cover 0% cover 100%' } as const;
+export type ScrubPart = keyof typeof SCRUB_RANGES;
 export const scrubSupported = () => typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('animation-timeline: view()');
 
 // An element with a «مع التمرير» animation: its slide must clip with `overflow: clip`, since `hidden` would make the slide
@@ -101,7 +105,7 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
       timeline: 'auto',
       range: 'normal',
     };
-    if (scrubbed) Object.assign(one, { duration: 'auto', count: '1', timing: 'linear', fill: 'both', direction: 'normal', timeline: 'view()', range: SCRUB_RANGE });
+    if (scrubbed) Object.assign(one, { duration: 'auto', count: '1', timing: 'linear', fill: 'both', direction: 'normal', timeline: 'view()', range: SCRUB_RANGES[layer.animationScrub || 'enter'] || SCRUB_RANGE });
     if (!hover) idle.push(one);
     hovered.push(one);
   });

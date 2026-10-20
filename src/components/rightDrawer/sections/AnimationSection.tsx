@@ -108,6 +108,20 @@ const AnimationEditor = ({
           })}
         </div>
         {currentTrigger === 'scrub' && (
+          <label className="flex items-center justify-between gap-2 text-xs text-neutral-700">
+            <span className="font-bold">متى تتحرك؟</span>
+            <select
+              value={styles.animationScrub || 'enter'}
+              onChange={(e) => onUpdateElementStyles({ animationScrub: e.target.value as 'enter' | 'leave' | 'through' })}
+              className="h-8 rounded-lg border border-neutral-200 bg-white px-2 text-xs"
+            >
+              <option value="enter">وهو داخل من أسفل الشاشة</option>
+              <option value="leave">وهو خارج من أعلى الشاشة (للغلاف)</option>
+              <option value="through">طوال مروره على الشاشة</option>
+            </select>
+          </label>
+        )}
+        {currentTrigger === 'scrub' && (
           <p className="text-xs text-neutral-500 leading-relaxed">
             «مع التمرير» بتتقدم الحركة مع إصبع الزائر نفسه: العنصر على حالة البداية وهو داخل من أسفل الشاشة، وعلى حالة النهاية لما يوصل لنص الشاشة تقريباً، وبترجع لو رجع لفوق. بتشتغل بالمعاينة وعلى الصفحة المنشورة بالمتصفحات الحديثة (وغيرها بتشتغل مرة عند الوصول). بالمحرر العنصر بيبقى ثابت.
           </p>

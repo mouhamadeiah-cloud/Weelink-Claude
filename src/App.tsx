@@ -3257,47 +3257,31 @@ export default function App() {
     handleUpdateElementStyles({ listStyle: current === 'numeric' ? 'none' : 'numeric' });
   };
 
-  const handleMoveLayerUp = () => {
+  // One layer up or down: past the nearest element that actually overlaps the selected one, so the
+  // step shows on the canvas (the next element in the list may sit elsewhere on the slide and swapping
+  // with it would change nothing visible). With nothing overlapping on that side it swaps with its
+  // neighbour in the list, so its place among the layers still moves.
+  const moveOneLayer = (dir: 1 | -1) => {
     if (!selectedElement) return;
     const thisSlideElements = elements.filter(el => el.slideId === selectedElement.slideId);
     const index = thisSlideElements.findIndex(el => el.id === selectedElement.id);
-    if (index < thisSlideElements.length - 1) {
-      const updatedThisSlide = [...thisSlideElements];
-      const temp = updatedThisSlide[index];
-      updatedThisSlide[index] = updatedThisSlide[index + 1];
-      updatedThisSlide[index + 1] = temp;
-
-      let slideIndex = 0;
-      const copy = elements.map(el => {
-        if (el.slideId === selectedElement.slideId) {
-          return updatedThisSlide[slideIndex++];
-        }
-        return el;
-      });
-      pushToHistory(copy);
+    if (index === -1) return;
+    const overlaps = (o: CanvasElement) =>
+      o.x < selectedElement.x + selectedElement.width && o.x + o.width > selectedElement.x &&
+      o.y < selectedElement.y + selectedElement.height && o.y + o.height > selectedElement.y;
+    let to = -1;
+    for (let i = index + dir; i >= 0 && i < thisSlideElements.length; i += dir) {
+      if (overlaps(thisSlideElements[i])) { to = i; break; }
     }
+    if (to === -1) to = index + dir;
+    if (to < 0 || to >= thisSlideElements.length) return;
+    const updatedThisSlide = thisSlideElements.filter(el => el.id !== selectedElement.id);
+    updatedThisSlide.splice(to, 0, thisSlideElements[index]);
+    let slideIndex = 0;
+    pushToHistory(elements.map(el => (el.slideId === selectedElement.slideId ? updatedThisSlide[slideIndex++] : el)));
   };
-
-  const handleMoveLayerDown = () => {
-    if (!selectedElement) return;
-    const thisSlideElements = elements.filter(el => el.slideId === selectedElement.slideId);
-    const index = thisSlideElements.findIndex(el => el.id === selectedElement.id);
-    if (index > 0) {
-      const updatedThisSlide = [...thisSlideElements];
-      const temp = updatedThisSlide[index];
-      updatedThisSlide[index] = updatedThisSlide[index - 1];
-      updatedThisSlide[index - 1] = temp;
-
-      let slideIndex = 0;
-      const copy = elements.map(el => {
-        if (el.slideId === selectedElement.slideId) {
-          return updatedThisSlide[slideIndex++];
-        }
-        return el;
-      });
-      pushToHistory(copy);
-    }
-  };
+  const handleMoveLayerUp = () => moveOneLayer(1);
+  const handleMoveLayerDown = () => moveOneLayer(-1);
 
   const handleMoveLayerToFront = () => {
     if (!selectedElement) return;

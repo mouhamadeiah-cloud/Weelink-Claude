@@ -17,6 +17,7 @@ import { auth, db } from './firebase';
 import type { CanvasElement, Page } from '../types';
 import type { PublicPlace } from './place';
 import { mirrorMedia } from './mirror';
+import { serializeElements } from '../utils/elementStorage';
 import { isFirstOfKind, kindOf, type ProjectKey } from '../utils/projectKeys';
 
 // The domain under which every published page gets its free address. Changing it changes every
@@ -150,7 +151,8 @@ export const publishSite = async (
       project,
       owner,
       pages: clean(mirrorMedia(content.pages)),
-      elements: clean(mirrorMedia(content.elements)),
+      // A table's rows are stored as [{ row }]: Firestore rejects arrays inside arrays.
+      elements: clean(serializeElements(mirrorMedia(content.elements))),
       data: content.data === undefined ? null : clean(mirrorMedia(content.data)),
       publishedAt: now,
       hash: contentHash(content),

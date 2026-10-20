@@ -3,7 +3,7 @@
 // name opens its live site (orders, customers) as /?r=<uid> does.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { withLocalGraphics } from '../../utils/localGraphics';
+import { deserializeElements } from '../../utils/elementStorage';
 import { SuspendedGate } from './SuspendedGate';
 import { PublishedSite, SiteSeo, letterIcon, loadPublishedSite } from '../../services/sites';
 import { PublicRestaurantSite } from '../restaurant/PublicRestaurantSite';
@@ -59,7 +59,7 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
   useEffect(() => {
     loadPublishedSite(where)
       .then((s) => {
-        setSite(s ? { ...s, elements: (s.elements || []).map(withLocalGraphics) } : null);
+        setSite(s ? { ...s, elements: deserializeElements(s.elements || []) } : null);
         if (s?.pages?.[0]) setPageId(s.pages[0].id);
         const title = s?.pages?.[0]?.navbar?.brandName || '';
         if (s) {

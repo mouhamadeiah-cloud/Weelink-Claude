@@ -66,7 +66,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
   );
 
   const readySite = site && typeof site !== 'string' ? site : null;
-  const { navActions, account } = useAccountNav({ ownerUid: uid, pageName: readySite?.admin.settings.name || '', kind: 'restaurant', accent: '#B5562B', currency: readySite?.admin.settings.currency });
+  const { navActions, account } = useAccountNav({ ownerUid: uid, pageName: readySite?.admin.settings.name || '', kind: 'restaurant', accent: '#B5562B', currency: readySite?.admin.settings.currency, project: restaurantKeyOf(uid), owner: ownerOfRestaurant(uid) });
 
   if (site === 'loading') {
     return <div className="min-h-[100dvh] flex items-center justify-center bg-white"><Loader2 size={36} className="animate-spin text-[#B5562B]" /></div>;

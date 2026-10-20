@@ -92,6 +92,7 @@ export const PublicSite: React.FC<{ where: { name: string } | { host: string } }
     pageName: ready?.pages?.[0]?.navbar?.brandName || ready?.seo?.title || ready?.name || '',
     kind: ready && kindOf(ready.project) !== 'restaurant' ? (kindOf(ready.project) === 'shop' ? 'shop' : kindOf(ready.project) === 'cars' ? 'cars' : 'site') : 'site',
     accent: '#0071e3',
+    project: ready?.project,
   });
 
   if (site === 'loading') {

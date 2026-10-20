@@ -13,9 +13,11 @@ interface InquiriesSectionProps {
   owner: string;
   project: ProjectKey;
   watch?: typeof watchInquiries;
+  // 'order' / 'car': only the visitors' orders / car requests (shown in the orders tab); otherwise the messages.
+  kind?: 'order' | 'car';
 }
 
-export const InquiriesSection: React.FC<InquiriesSectionProps> = ({ owner, project, watch = watchInquiries }) => {
+export const InquiriesSection: React.FC<InquiriesSectionProps> = ({ owner, project, watch = watchInquiries, kind }) => {
   const [rows, setRows] = useState<Inquiry[] | null | 'error'>(null);
   const [failed, setFailed] = useState(false);
 
@@ -24,14 +26,14 @@ export const InquiriesSection: React.FC<InquiriesSectionProps> = ({ owner, proje
     return watch(owner, project, setRows, () => setRows('error'));
   }, [owner, project]);
 
-  const list = Array.isArray(rows) ? rows : [];
+  const list = (Array.isArray(rows) ? rows : []).filter((r) => (kind ? r.kind === kind : r.kind !== 'order' && r.kind !== 'car'));
   const unread = list.filter((r) => !r.read).length;
   const run = (job: Promise<unknown>) => job.then(() => setFailed(false), () => setFailed(true));
 
   return (
     <section className="rounded-2xl bg-white border border-neutral-200 p-4 space-y-3">
       <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
-        <MessageSquare size={15} /> الرسائل
+        <MessageSquare size={15} /> {kind === 'order' ? 'طلبات زوار الموقع' : kind === 'car' ? 'طلبات زوار الموقع المنشور' : 'الرسائل'}
         {unread > 0 && <span className="px-2 py-0.5 rounded-full bg-brand text-white text-[11px]">{unread.toLocaleString('ar-SY')} جديدة</span>}
       </div>
       {rows === null ? (
@@ -39,7 +41,7 @@ export const InquiriesSection: React.FC<InquiriesSectionProps> = ({ owner, proje
       ) : rows === 'error' ? (
         <div className="text-xs text-neutral-500">ما قدرنا نقرأ الرسائل هلق. جرّب بعد شوي.</div>
       ) : list.length === 0 ? (
-        <div className="text-xs text-neutral-500 leading-relaxed">ما وصلتك رسائل بعد. أضف «نموذج تواصل» من «إضافة» وبتوصلك رسائل زوارك هون وعالإيميل.</div>
+        <div className="text-xs text-neutral-500 leading-relaxed">{kind ? 'ما وصلتك طلبات من الموقع المنشور بعد. كل طلب بيوصلك هون وعالإيميل.' : 'ما وصلتك رسائل بعد. أضف «نموذج تواصل» من «إضافة» وبتوصلك رسائل زوارك هون وعالإيميل.'}</div>
       ) : (
         <ul className="space-y-2">
           {list.map((r) => (

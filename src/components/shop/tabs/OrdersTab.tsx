@@ -6,6 +6,7 @@ import {
   ShopOrder, ShopOrderItem, OrderStatus, ORDER_STATUSES, PAYMENT_METHODS, PaymentMethodId, newId,
 } from '../shopTypes';
 import { Card, Field, inputClass, inputFitClass, textareaClass, PrimaryButton, GhostButton, EmptyState, formatMoney, formatDate } from '../adminUi';
+import { VisitorRequests } from '../../pageAdmin/VisitorRequests';
 import { AdminTabProps } from './tabProps';
 import { deliveryQuote, totalStock, tracksStock, unitPriceFor, variantLabel } from '../productModel';
 import { addOrder, applyOrderStock, enabledPaymentMethods, nextOrderNumber, orderConfirmationText, orderItemName, whatsappLink } from '../orderModel';
@@ -202,6 +203,7 @@ export const OrdersTab: React.FC<AdminTabProps> = ({ data, update }) => {
 
   return (
     <div className="space-y-4">
+      <VisitorRequests kind="order" />
       <div className="flex flex-wrap items-center gap-2">
         {[{ id: 'all' as const, label: 'الكل', color: '#1d1d1f' }, ...ORDER_STATUSES].map((s) => {
           const count = s.id === 'all' ? data.orders.length : data.orders.filter((o) => o.status === s.id).length;

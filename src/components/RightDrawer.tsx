@@ -1284,7 +1284,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           st.borderWidth ? `إطار ${st.borderWidth}px` : 'بدون إطار',
           st.borderRadius ? `زوايا ${st.borderRadius}` : '',
           st.opacity !== undefined && st.opacity < 1 ? `شفافية ${Math.round(st.opacity * 100)}%` : '',
-          st.glowIntensity ? 'ظل' : ''
+          st.glowIntensity ? 'ظل' : '',
+          selectedElement && `${Math.round(selectedElement.width)}×${Math.round(selectedElement.height)}`
         );
       case 'layout':
         if (!selectedElement) return `${elements.filter((e) => e.slideId === activeSlideId).length} عنصر بالشريحة`;

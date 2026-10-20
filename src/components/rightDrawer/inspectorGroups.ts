@@ -68,9 +68,9 @@ export const inspectorGroups = (target: InspectorTarget): InspectorGroup[] => {
     // The animation's own colours are with the animation, in its content card.
     sections: type === 'image' ? ['color'] : type === 'lottie' ? ['background'] : ['color', 'background'],
   });
-  groups.push({ id: 'shape', title: 'شكل العنصر', label: 'الشكل', sections: shapeSections });
-  // An element with its own settings shows its size inside them already.
-  if (!hasSettings) groups.push({ id: 'layout', title: 'مكان العنصر وحجمه', label: 'المكان', sections: ['format'] });
+  // The element's place, size and rotation are the last part of its shape; an element with its own
+  // settings shows its size inside them already.
+  groups.push({ id: 'shape', title: hasSettings ? 'شكل العنصر' : 'شكل العنصر ومكانه', label: 'الشكل', sections: hasSettings ? shapeSections : [...shapeSections, 'format'] });
   // The element's own place among the others on the slide: up or down one layer, over all or under all.
   groups.push({ id: 'layers', title: 'طبقات العنصر', label: 'الطبقات', sections: ['layers'] });
   groups.push({ id: 'link', title: 'رابط العنصر', label: 'الرابط', sections: ['link'] });
@@ -140,7 +140,7 @@ export const inspectorHelp = (id: InspectorGroupId, target: InspectorTarget): st
       if (kind === 'element' && target.type === 'image') return 'غيّر ألوان الصورة: صبغة بلون، أبيض وأسود، تفتيح أو تغميق، بدون ما تتغير الصورة الأصلية.';
       return 'لون الكتابة ولون الخلفية خلف العنصر. «ألوان صفحتك» هي الألوان الخمسة اللي اخترتها لكل الموقع، فإذا استعملتها بيضل موقعك متناسق.';
     case 'shape':
-      return 'الإطار حول العنصر وتدوير زواياه، الشفافية (كم بيبيّن اللي وراه)، والظل: خارجي بيرفع العنصر عن الصفحة، وداخلي بيعطيه توهج من جوا.';
+      return 'الإطار حول العنصر وتدوير زواياه، الشفافية (كم بيبيّن اللي وراه)، والظل: خارجي بيرفع العنصر عن الصفحة، وداخلي بيعطيه توهج من جوا. وبالآخر مكان العنصر وحجمه بالأرقام وتدويره، وفيك تحرّكه بالأسهم من الكيبورد.';
     case 'layout':
       if (kind === 'slide') return 'كل العناصر بهالشريحة بالترتيب: اللي فوق بالقائمة بيطلع فوق الباقي على الصفحة. اسحب لتغيير الترتيب.';
       return 'مكان العنصر وحجمه بالأرقام وتدويره. فيك كمان تحرّكه بالأسهم من الكيبورد.';

@@ -2,6 +2,7 @@
 // the owner's view of it) «إرسال» saves the message and emails the owner (/api/contact); in the editor it
 // only shows what a visitor would see. The page comes from BookingPageContext.
 import React, { useContext, useState } from 'react';
+import { useCustomerPrefill } from '../customers/customerSession';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { BookingPageContext } from '../../services/bookings';
 import { contactErrorText, sendInquiry } from '../../services/contact';
@@ -15,6 +16,11 @@ export const ContactFormWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+  useCustomerPrefill((c) => {
+    setName((v) => v || c.name);
+    setPhone((v) => v || c.phone);
+    setEmail((v) => v || c.email);
+  });
   const [website, setWebsite] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

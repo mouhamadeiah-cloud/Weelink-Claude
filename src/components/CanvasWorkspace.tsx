@@ -30,6 +30,7 @@ import { useMenuCart, menuCartCount } from './restaurant/menuCartStore';
 import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
+import { useCustomerPrefill } from './customers/customerSession';
 import { BookingPageContext, createBooking, dayKey, readTaken } from '../services/bookings';
 import { NavbarStars, RatingsWidget } from './ratings/RatingsUI';
 import { ContactFormWidget } from './contact/ContactFormWidget';
@@ -123,6 +124,12 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  useCustomerPrefill((c) => {
+    setName((v) => v || c.name);
+    setPhone((v) => v || c.phone);
+    setAddress((v) => v || c.address);
+    setEmail((v) => v || c.email);
+  });
   const [desc, setDesc] = useState('');
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);

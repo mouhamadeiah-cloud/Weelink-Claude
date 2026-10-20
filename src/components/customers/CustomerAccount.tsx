@@ -79,7 +79,7 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
       setJoined(mine);
       if (mine) {
         setProfile({ name: mine.name, phone: mine.phone, address: mine.address, marketing: mine.marketing });
-        setCustomerSession({ uid: u.uid, profile: mine });
+        setCustomerSession({ uid: u.uid, email: u.email || '', profile: mine });
         setStep('account');
       } else {
         setProfile((p) => ({ ...p, name: p.name || u.displayName || '' }));

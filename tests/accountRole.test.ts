@@ -58,3 +58,21 @@ test('the sign-in screen asks for the role, and a signed-in account no longer be
   const start = readFileSync(new URL('../src/components/onboarding/StartPage.tsx', import.meta.url), 'utf8');
   assert.match(start, /\{!signedIn && <button/);
 });
+
+test('the studio screen has the drafts, the orders and numbers, the gallery designs, and nothing of the user\'s projects', () => {
+  // (read as text: rendering it would start Firebase, which keeps the test process open)
+  const studio = readFileSync(new URL('../src/components/designer/StudioPage.tsx', import.meta.url), 'utf8');
+  for (const part of ['استوديو المصمم', 'مسوداتي', 'شريحة جديدة', 'صفحة جديدة', 'طلبات التصميم', 'لوحتي', 'تصاميمي في المعرض', 'onOpenDraft', 'onDeleteDraft']) assert.ok(studio.includes(part), part);
+  assert.doesNotMatch(studio, /مشاريعي|اعمل مشروعك/);
+  const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  assert.match(app, /designerRole && designerMode && isStudioOpen/); // the designer's role lands on the studio
+  assert.match(app, /onStudio=\{openStudio\}/); // and the editor leads back to it
+});
+
+test('the designer\'s role keeps the user\'s projects and subscription off the account page and out of the top bar', () => {
+  const account = readFileSync(new URL('../src/components/platform/AccountPage.tsx', import.meta.url), 'utf8');
+  assert.match(account, /!isDesigner && <ProjectsSection/);
+  assert.match(account, /!isDesigner && <BillingSection/);
+  const nav = readFileSync(new URL('../src/components/platform/PlatformNav.tsx', import.meta.url), 'utf8');
+  assert.match(nav, /inStudio \?/);
+});

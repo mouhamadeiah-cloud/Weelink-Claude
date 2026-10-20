@@ -37,18 +37,26 @@ export const PlatformNav: React.FC<Props> = ({ current, user, onHome, onStart, o
   // A designer's account shows the role of this sign-in and switches it.
   const roleState = useRoleState();
   const otherRole = roleState.role === 'designer' ? 'user' : 'designer';
+  // In the designer's role the bar carries the studio, not the user's projects.
+  const inStudio = signedIn && roleState.role === 'designer' && !!roleState.openStudio;
 
   return (
     <header dir="rtl" className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
       <nav className="mx-auto flex h-12 max-w-6xl items-center gap-1 px-3 sm:px-4" aria-label="Weelink">
-        <button type="button" onClick={onStart} className="me-2 flex shrink-0 items-center gap-2" aria-label="weelink">
+        <button type="button" onClick={() => (inStudio ? roleState.openStudio?.() : onStart())} className="me-2 flex shrink-0 items-center gap-2" aria-label="weelink">
           <span className="flex h-7 w-7 items-center justify-center rounded-ctl bg-brand text-sm font-bold text-white">W</span>
           <span className="hidden font-logo text-base font-bold tracking-tight sm:inline">weelink</span>
         </button>
         <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
-          <button type="button" onClick={onStart} aria-current={current === 'start' ? 'page' : undefined} className={itemCls(current === 'start')}>اعمل مشروعك</button>
-          <button type="button" onClick={onHome} aria-current={current === 'home' ? 'page' : undefined} className={itemCls(current === 'home')}>خدماتنا</button>
-          {signedIn && <button type="button" onClick={onOpenMyPage} className={itemCls(false)}>مشروعي</button>}
+          {inStudio ? (
+            <button type="button" onClick={() => roleState.openStudio?.()} className={itemCls(false)}>استوديو المصمم</button>
+          ) : (
+            <>
+              <button type="button" onClick={onStart} aria-current={current === 'start' ? 'page' : undefined} className={itemCls(current === 'start')}>اعمل مشروعك</button>
+              <button type="button" onClick={onHome} aria-current={current === 'home' ? 'page' : undefined} className={itemCls(current === 'home')}>خدماتنا</button>
+              {signedIn && <button type="button" onClick={onOpenMyPage} className={itemCls(false)}>مشروعي</button>}
+            </>
+          )}
           {extra}
           <button type="button" onClick={onLaw} aria-current={current === 'law' ? 'page' : undefined} className={itemCls(current === 'law')}>قانون الصفحة</button>
         </div>

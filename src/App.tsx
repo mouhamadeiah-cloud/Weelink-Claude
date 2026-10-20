@@ -4806,6 +4806,7 @@ export default function App() {
       <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
       <RightDrawer
         key={activeUserUid}
+        previewMode={previewMode}
         isShopProject={project === 'shop'}
         isCarProject={project === 'cars'}
         isRestaurantProject={project === 'restaurant'}

@@ -78,6 +78,8 @@ export interface RightDrawerProps {
   onSelectElement: (id: string | null) => void;
   onUpdateElementStyles: (styles: Partial<CanvasElement['styles']>) => void;
   onUpdateElement: (data: Partial<CanvasElement>) => void;
+  // The editor's device view: on «mobile» an element with a phone layout is moved within that layout.
+  previewMode?: 'desktop' | 'tablet' | 'mobile';
   onDeleteElement: (id: string) => void;
   onDuplicateElement: (id: string) => void;
   onToggleLock: () => void;

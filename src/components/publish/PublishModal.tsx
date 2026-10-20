@@ -631,7 +631,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({ open: openProp, onCl
       setSite(s);
       onPublishedChange(s?.name || name);
     } catch (e: any) {
-      setError(e?.message === 'name-taken' ? 'سبقك أحد إلى هذا الاسم. اختر اسماً آخر.' : String(e?.message || '').includes('exceeds the maximum') ? 'الصفحة كبيرة جداً للنشر. صغّر الصور المرفوعة وحاول مرة أخرى.' : 'تعذر النشر. تحقق من الإنترنت وحاول مرة أخرى.');
+      setError(e?.message === 'name-taken' ? 'سبقك أحد إلى هذا الاسم. اختر اسماً آخر.' : String(e?.message || '').includes('exceeds the maximum') ? 'الصفحة كبيرة جداً للنشر. صغّر الصور المرفوعة وحاول مرة أخرى.' : `تعذر النشر. تحقق من الإنترنت وحاول مرة أخرى. (رمز: ${String(e?.code || e?.message || 'unknown').slice(0, 60)})`);
+      console.warn('Publish failed:', e);
     }
     setBusy(false);
   };

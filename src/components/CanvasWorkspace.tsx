@@ -928,6 +928,32 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // them down; anywhere else, and as a column or icon, it floats over them.
   const navFlowHeight = !hideNavbar && navLayout === 'horizontal' && !navbar.posY ? (navbar.height ?? 60) : 0;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+
+  // Entrance animations of the preview and the published page start when the element comes into view
+  // (not at load, when a lower slide is still off the screen).
+  useEffect(() => {
+    if (!(isPreviewActive || isPublicSite) || typeof IntersectionObserver === 'undefined') return;
+    const run = (node: Element) => ((node as HTMLElement).style.animationPlayState = 'running');
+    let fired = false;
+    const seen = new IntersectionObserver((entries) => {
+      fired = true;
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        run(entry.target);
+        seen.unobserve(entry.target);
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('[data-view-anim]').forEach((node) => {
+      if ((node as HTMLElement).style.animationPlayState === 'paused') seen.observe(node);
+    });
+    // Fallback if the observer never reports (so nothing stays hidden).
+    const fallback = window.setTimeout(() => !fired && document.querySelectorAll('[data-view-anim]').forEach(run), 3000);
+    return () => {
+      seen.disconnect();
+      window.clearTimeout(fallback);
+    };
+  }, [isPreviewActive, isPublicSite, slides, elements, previewMode]);
+
   useEffect(() => {
     if (!isNavHamburger && !isNavIconOnly) setIsNavMenuOpen(false);
   }, [isNavHamburger, isNavIconOnly]);
@@ -3163,6 +3189,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   // A ticker never stops after one pass: it runs round and round (unless it waits for the mouse).
                   const isAnimLoop = animTrigger === 'loop' || (isMarquee && animTrigger !== 'hover');
                   const isAnimHover = animTrigger === 'hover';
+                  const waitsForView = (isPreviewActive || isPublicSite) && !isAnimHover && !isMarquee && animTrigger === 'once';
                   // The ticker crosses the whole page: from past the right edge to past the left one.
                   const marqueeVars = isMarquee
                     ? { '--marquee-from': `${pageWidth - elem.x + bleed}px`, '--marquee-to': `${-(elem.x + elem.width) - bleed}px` }
@@ -3180,7 +3207,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       animationDuration: `${animDuration}s`,
                       animationIterationCount: isAnimLoop ? 'infinite' : '1',
                       animationTimingFunction: ['marquee-rtl', 'marquee-ltr'].includes(anim) ? 'linear' : 'ease-out',
-                      animationFillMode: isAnimLoop ? 'none' : 'forwards',
+                      animationFillMode: isAnimLoop ? 'none' : (waitsForView ? 'both' : 'forwards'),
+                      // On the preview and the published page an entrance waits (hidden) until it scrolls into view.
+                      ...(waitsForView && !isAnimLoop ? { animationPlayState: 'paused' } : {}),
                     }
                   ) : {};
 
@@ -3188,6 +3217,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     <div
                       key={elem.id}
                       id={`canvas-elem-${elem.id}`}
+                      data-view-anim={waitsForView && anim !== 'none' ? '' : undefined}
                       onMouseDown={(e) => !isPreviewActive && !linkCopySource && handleElementMouseDown(e, elem)}
                       onTouchStart={(e) => !isPreviewActive && !linkCopySource && handleElementTouchStart(e, elem)}
                       onTouchMove={handleElementTouchMove}

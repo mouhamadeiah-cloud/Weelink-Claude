@@ -68,3 +68,14 @@ The ready-slide panel stays for adding any slide, and booking stays an option. A
 ### Checked in the code
 - The existing `prices` ready slides are package tiers (pricing elements), **not** a row price list. A new «قائمة أسعار» slide/element with editable rows is needed (4a).
 - «خدماتي» in the page admin has item numbers, prices and pictures: the free types must not use it for their price list.
+
+### Questions (Wee AI) — changes (Eyad, 21 Oct)
+Today (src/components/WeeAIChat.tsx): 1 owner · 2 address · 3 contact · 4 category · 5 description · 6 colour · 7 divider style · 8 gallery photos (up to 5) · 9 logo · 10 intro background · 11 effects · 12 notes.
+- **Remove** the photo steps: 8 (gallery), 10 (intro background) and 9 (logo, the step 1 field already takes it). Pictures come from the image search by service; the owner swaps them in the editor (the 7-photo limit stays on the editor side). The `heroBg` / `gallery` / `logo` flags the server gets then come from what is already on the project, not from the questions.
+- **Remove** step 7 (divider style) and 11 (effects) only if the user says so; not touched here.
+- **Add** three choice steps, each a set of tick boxes:
+  1. **صفحات اختيارية** (the owner marks the pages he wants; e.g. حجز، تقييمات، معرض أعمال، فريق، الأسئلة الشائعة): each becomes a page in the model after the base ones. Per package: the list offered is the type's own.
+  2. **شرائح اختيارية**: slides the owner marks inside the pages: حجز مواعيد، التقييمات (also switches the ratings system on), القوانين والخصوصية (ticked by default, he may untick), لماذا نحن، أرقام، فريق.
+  3. (Free restaurant / shop / cars) his price-list items, typed as name and price, or skipped to fill in the editor.
+- Questions are data (`wizardSteps`) read by the chat and by the model editor, so the admin can later add, remove or reorder them without code. The answers each tick maps to a model section (`when: answers.optionalSlides includes 'ratings'`).
+- Old saved answers (photo fields, 12-step numbering) keep loading: the steps are re-numbered by id, not by position.

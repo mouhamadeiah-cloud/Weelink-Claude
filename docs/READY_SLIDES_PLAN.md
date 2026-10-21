@@ -109,3 +109,9 @@ Today (src/components/WeeAIChat.tsx): 1 owner · 2 address · 3 contact · 4 cat
 ### Contact methods in the build (checked 21 Oct)
 - The questions collect WhatsApp, phone, address, Facebook and TikTok. The builder already used the first three (the contact slides' system slots, dropped when empty); **Facebook and TikTok were never shown**. Now the contact section gets one button each (`contactType` facebook / tiktok, the platform's own contact link) under the slide's content, with the slide and its phone layout made taller to hold them. A value that is not a Facebook / TikTok address is ignored.
 - Working hours are not asked, so the `hours` slots are always dropped.
+
+### The gallery's photo viewer (21 Oct)
+- The viewer the older gallery pages used is the editor's `gallery` block (main photo + thumbnails; a click opens the full-screen viewer with next / previous, arrow keys and thumbnails). The AI-built gallery sections used loose `image` frames, so it was gone from new pages.
+- `lightboxGroup` on an image element (types.ts): in the preview and on the published page a click opens that viewer on every image of the slide with the same group, in reading order (`src/utils/imageGroup.ts`). The builder gives the photo frames of every `gallery` section the group `photos` (code templates and gallery slides alike); the editor's image panel has a «تكبير عند النقر» tick for any image.
+- New AI-only template `gallery.viewer` (the gallery block itself, filled with the owner's photos, dropped when there are none); it is not in the editor's ready-slide panel so the keys of the slides copied to the gallery do not move. `catalog` regenerated.
+- Still to do: the photo count from the package (5 / 15) in `galleryOf`, the question and `cleanAssets`.

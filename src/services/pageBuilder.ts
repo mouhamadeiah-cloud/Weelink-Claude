@@ -374,6 +374,13 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
       continue;
     }
     if (key === 'form') continue;
+    // The photo-viewer block takes the owner's photos; without any it goes.
+    if (key === 'gallery' && el.type === 'gallery') {
+      const urls = galleryOf(ctx.answers);
+      if (!urls.length) removed.add(i);
+      else el.galleryConfig = { ...(el.galleryConfig as NonNullable<typeof el.galleryConfig>), items: urls.map((url, n) => ({ id: `g${n}`, url, title: '' })), activeImageIndex: 0 };
+      continue;
+    }
     if (IMAGE.test(key) || el.type === 'image') {
       const url = (await imageFor(section.images[key], ctx)) || (ctx.fallbackQuery && !key.startsWith('photos.') ? await ctx.photo(ctx.fallbackQuery) : null);
       if (url) Object.assign(el, { content: url, imageUrl: url });
@@ -483,6 +490,8 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
       Object.assign(styles, { animation: section.entrance, animationTrigger: 'once', animationDuration: 0.8 });
     }
     el = { ...el, styles };
+    // The gallery's photos open in the photo viewer, one after another.
+    if (section.section === 'gallery' && el.type === 'image' && /^photos\./.test(el.aiSlot || '')) el = { ...el, lightboxGroup: 'photos' };
     return { ...el, id: `${slideId}-el-${j}`, slideId } as CanvasElement;
   });
 

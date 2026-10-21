@@ -1,3 +1,4 @@
+import { lightboxFor } from '../utils/imageGroup';
 import { cleanHtml, isSafeUrl } from '../utils/safeHtml';
 import React, { useRef, useState, useEffect, useMemo, useContext } from 'react';
 import { BackgroundVideo } from './BackgroundVideo';
@@ -3759,7 +3760,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                         {elem.type === 'image' && (
                           <div 
+                            onClick={elem.lightboxGroup && elem.imageUrl && (isPublicSite || isPreviewActive) ? (e) => {
+                              e.stopPropagation();
+                              const view = lightboxFor(layoutElements, elem);
+                              setLightboxState({ isOpen: true, items: view.items, activeIndex: view.activeIndex, title: '' });
+                            } : undefined}
                             className={`w-full h-full flex items-center justify-center overflow-hidden rounded-xl select-none relative ${
+                              elem.lightboxGroup && (isPublicSite || isPreviewActive) ? 'cursor-zoom-in ' : ''
+                            }${
                               elem.styles.objectFit === 'contain' ? 'bg-transparent border-0' : 'bg-neutral-100 border border-black/[0.04]'
                             }`}
                             style={{

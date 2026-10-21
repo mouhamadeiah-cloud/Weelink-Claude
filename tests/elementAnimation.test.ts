@@ -114,3 +114,27 @@ test('a scrubbed layer and an ordinary one share an element, each with its own t
   assert.equal(b.style.animationTimeline, 'auto, view()');
   assert.equal(b.style.animationRange, 'normal, entry 0% cover 45%');
 });
+
+test('in the editor a custom motion is a still state: the one being edited, otherwise the first (never quite invisible)', () => {
+  const styles = { animation: 'custom', animationTrigger: 'once', animationFrom: { opacity: 0, x: -80 }, animationTo: { x: 0, y: 0, opacity: 1, scale: 1, rotate: 0 } } as any;
+  const edit = { ...ctx, waits: false };
+  const first = buildElementAnimation(styles, { ...edit, still: 'from' });
+  assert.equal(first.style.animationName, 'custom-move');
+  assert.equal(first.style.animationPlayState, 'paused');
+  assert.equal(first.style.animationDelay, '0s');
+  assert.equal(first.style['--mv-fo'], '0'); // exactly what the sliders show
+  const last = buildElementAnimation(styles, { ...edit, still: 'to' });
+  assert.equal(last.style.animationDelay, '-1s'); // held at the end
+  const idle = buildElementAnimation(styles, { ...edit, still: 'idle' });
+  assert.equal(idle.style['--mv-fo'], '0.25'); // after leaving the panel: the first state, but selectable
+  assert.equal(idle.style.animationPlayState, 'paused');
+  // the preview and the published page play it
+  const live = buildElementAnimation(styles, { ...ctx, waits: true, still: 'from' });
+  assert.equal(live.style.animationPlayState, 'running');
+});
+
+test('a hover lists its own delay and play state so the lists stay aligned', () => {
+  const b = buildElementAnimation({ animation: 'custom', animationTrigger: 'once', animationLayers: [{ animation: 'shake', animationTrigger: 'hover' }] } as any, { ...ctx, waits: false, still: 'idle' });
+  assert.equal(b.style['--h-play'], 'paused, running');
+  assert.equal(b.style['--h-delay'], '0s, 0s');
+});

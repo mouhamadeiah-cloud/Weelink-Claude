@@ -248,6 +248,8 @@
   animation-composition: var(--h-comp, replace) !important;
   animation-timeline: var(--h-timeline, auto) !important;
   animation-range: var(--h-range, normal) !important;
+  animation-play-state: var(--h-play, running) !important;
+  animation-delay: var(--h-delay, 0s) !important;
 }
 
 /* "Fixed" slide/element backgrounds (see syncFixedBackgrounds in CanvasWorkspace.tsx).

@@ -267,6 +267,8 @@ export default function App() {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   // The designer's studio screen (components/designer/StudioPage): shown over the editor, which holds the open draft.
   const [isStudioOpen, setIsStudioOpen] = useState(false);
+  // The custom motion being edited in the animation panel: the element shows that state on the page (services: utils/customMotion).
+  const [motionPreview, setMotionPreview] = useState<{ id: string; which: 'from' | 'to' } | null>(null);
   const orderAttention = useOrderAttention(currentUser && !currentUser.isAnonymous && designerMode ? currentUser.uid : '');
   // The hired designer inside a customer's page with the 3-day code: the editor holds that page, saves go
   // to /api/design-access, and nothing can be exported from it.
@@ -2727,6 +2729,16 @@ export default function App() {
     pushToHistory(updated);
   };
 
+  // The owner finished with a custom motion: the element is locked, so it stays where its first state is. Unlocked by
+  // hand it stays unlocked until the motion is finished again (Eyad, 21 Oct).
+  const lockAfterMotion = (id: string) => {
+    const els = elementsRef.current;
+    if (els.some((el) => el.id === id && el.styles.animation === 'custom' && !el.isLocked)) pushToHistory(els.map((el) => (el.id === id ? { ...el, isLocked: true } : el)));
+  };
+  // The panel calls it from an effect that may be a render old: the latest one does it.
+  const lockAfterMotionRef = useRef(lockAfterMotion);
+  lockAfterMotionRef.current = lockAfterMotion;
+
   const handleUpdateElementPosition = (id: string, x: number, y: number) => {
     const target = elements.find(el => el.id === id);
     if (!target) return;
@@ -4772,6 +4784,7 @@ export default function App() {
         <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : null}>
         <ShopUpdateContext.Provider value={project === 'shop' ? updateShopAdmin : null}>
         <CanvasWorkspace
+          motionPreview={motionPreview}
           previewMode={previewMode}
           slides={currentPage.slides}
           activeSlideId={activeSlideId}
@@ -4895,6 +4908,8 @@ export default function App() {
       <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
       <RightDrawer
         key={activeUserUid}
+        onMotionPreview={(id, which) => setMotionPreview((m) => (which ? { id, which } : m && m.id === id ? null : m))}
+        onMotionFinish={(id) => lockAfterMotionRef.current(id)}
         previewMode={previewMode}
         isShopProject={project === 'shop'}
         isCarProject={project === 'cars'}

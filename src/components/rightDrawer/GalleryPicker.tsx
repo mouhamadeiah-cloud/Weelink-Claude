@@ -8,7 +8,7 @@ import { GallerySlide, listApprovedSlides } from '../../services/galleryView';
 const PAGE_SIZE = 10;
 // One load for every opening of the panel for a few minutes (the gallery is the same for everyone).
 let cache: { at: number; list: Promise<GallerySlide[]> } | null = null;
-const loadGallery = () => {
+export const loadGallery = () => {
   if (!cache || Date.now() - cache.at > 5 * 60_000) {
     const list = listApprovedSlides();
     list.catch(() => { cache = null; });
@@ -20,6 +20,26 @@ const loadGallery = () => {
 // What goes with a gallery page when it joins the project: the name asked by the editor's usual «اسم الصفحة الجديدة» window (it
 // becomes the page's name in the navbar), the project's colours and fonts, and which navbar stays.
 export interface AddPageOptions { name: string; fit: boolean; navbar: 'mine' | 'design' }
+
+// One gallery design in a list of the add panel: drawn live, its name and designer, and the button that adds it.
+export const GalleryCard: React.FC<{ g: GallerySlide; addLabel: string; onAdd: () => void }> = ({ g, addLabel, onAdd }) => (
+  <article className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+    <div className="pointer-events-none">
+      {g.kind === 'page' && g.page ? <LivePage page={g.page} elements={g.elements} maxHeight={260} /> : <LiveSlide slide={g.slide} elements={g.elements} />}
+    </div>
+    <div className="flex items-center gap-2 border-t border-neutral-100 px-2.5 py-2">
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-xs font-bold text-neutral-800">{g.name}</div>
+        <div className="flex items-center gap-1 truncate text-xs text-neutral-500">
+          {g.designerName || 'مصمم'}{g.official && <BadgeCheck size={12} className="shrink-0 text-brand" />}
+        </div>
+      </div>
+      <button type="button" onClick={onAdd} className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">
+        <Plus size={13} /> {addLabel}
+      </button>
+    </div>
+  </article>
+);
 
 interface Props {
   kind: 'slide' | 'page';
@@ -70,22 +90,7 @@ export const GalleryPicker: React.FC<Props> = ({ kind, fit, onFit, designNavbar,
         </label>
       )}
       {list.slice(0, count).map((g) => (
-        <article key={g.id} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-          <div className="pointer-events-none">
-            {g.kind === 'page' && g.page ? <LivePage page={g.page} elements={g.elements} maxHeight={260} /> : <LiveSlide slide={g.slide} elements={g.elements} />}
-          </div>
-          <div className="flex items-center gap-2 border-t border-neutral-100 px-2.5 py-2">
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-bold text-neutral-800">{g.name}</div>
-              <div className="flex items-center gap-1 truncate text-xs text-neutral-500">
-                {g.designerName || 'مصمم'}{g.official && <BadgeCheck size={12} className="shrink-0 text-brand" />}
-              </div>
-            </div>
-            <button type="button" onClick={() => addOne(g)} className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-hover">
-              <Plus size={13} /> {kind === 'page' ? 'إضافة كصفحة' : 'إضافة'}
-            </button>
-          </div>
-        </article>
+        <GalleryCard key={g.id} g={g} addLabel={kind === 'page' ? 'إضافة كصفحة' : 'إضافة'} onAdd={() => addOne(g)} />
       ))}
       {list.length > count && (
         <button type="button" onClick={() => setCount((c) => c + PAGE_SIZE)} className="w-full rounded-xl border border-neutral-200 py-2 text-xs font-bold text-neutral-700 transition hover:border-brand hover:text-brand">

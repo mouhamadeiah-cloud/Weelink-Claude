@@ -101,6 +101,7 @@ import { IntroVideoPlayer, IntroVideoMode } from './introVideos/IntroVideoPlayer
 import { EDITOR_BAR_HEIGHT as SHEET_BAR_HEIGHT, EDITOR_COLUMN_WIDTH } from './EditorColumn';
 import { CLIP_GROUPS } from '../utils/clipShapes';
 import { GalleryPicker, type AddPageOptions } from './rightDrawer/GalleryPicker';
+import { ReadyFromGallery, useReadyFromGallery } from './rightDrawer/ReadyFromGallery';
 import { SIXTY_FONTS, READY_SLIDE_CATEGORIES, getSlideTemplatePayload, slideTemplateCount } from '../data/slideTemplates';
 import { lookSlide } from '../services/applyLook';
 import { pageLookById } from '../data/pageLooks';
@@ -368,6 +369,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const [galleryFit, setGalleryFit] = useState(true);
   const [galleryNavbar, setGalleryNavbar] = useState(false);
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<string | null>(null);
+  // The gallery slides the admin added to the open ready-slide category.
+  const readyFromGallery = useReadyFromGallery(activeTemplateCategory);
 
   // --- Draggable & Minimization States & Handlers for Control Panel ---
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -6200,7 +6203,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 {READY_SLIDE_CATEGORIES.find(c => c.id === activeTemplateCategory)?.name || 'الشرائح الجاهزة'}
               </span>
               <span className="text-xs text-brand font-bold bg-brand/5 border border-brand/10 px-1.5 py-0.5 rounded-full">
-                {activeTemplateCategory ? slideTemplateCount(activeTemplateCategory) : 10} تصاميم
+                {activeTemplateCategory ? slideTemplateCount(activeTemplateCategory) + readyFromGallery.length : 10} تصاميم
               </span>
             </div>
             
@@ -6241,6 +6244,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 />
               );
             })}
+            <ReadyFromGallery slides={readyFromGallery} onAdd={(g) => { if (onAddGallerySlide) onAddGallerySlide(g, true); setActiveTemplateCategory(null); }} />
           </div>
         </div>
       </aside>

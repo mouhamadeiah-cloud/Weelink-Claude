@@ -2,11 +2,12 @@
 // until the platform approves or rejects them. A rejection needs a reason. The preview is the live
 // slide, drawn the way the gallery will draw it (videos and motion play). Only an approved slide ever appears in the gallery.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Eye, FileText, Loader2, Pencil, ShieldCheck, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react';
+import { Check, Eye, FileText, LayoutGrid, Loader2, Pencil, ShieldCheck, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react';
 import { ToolBar, ToolButton, ToolMenu, ToolSpacer, type MenuItem } from '../ui/FloatingTools';
-import { AdminError, GallerySlideRow, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
+import { AdminError, GallerySlideRow, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminReadyAdd, adminReadyRemove, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
 import { DesignViewer } from '../gallery/DesignViewer';
 import { categoriesFor, categoryLabel, slidesWord } from '../../data/slideCategories';
+import { GALLERY_READY_CATEGORIES } from '../../data/readyCategories';
 import { LivePage, LiveSlide } from '../gallery/LiveSlide';
 import { deserializeElements } from '../../utils/elementStorage';
 import { findContactInfo, findNavbarContact, CONTACT_KIND_LABEL } from '../../utils/contactCheck';
@@ -22,6 +23,9 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   const [editingInfo, setEditingInfo] = useState(false);
+  // «الشرائح الجاهزة»: an approved slide is added to one of the editor's ready-slide categories.
+  const [readying, setReadying] = useState(false);
+  const [readyCat, setReadyCat] = useState(row.ready || GALLERY_READY_CATEGORIES[0].id);
   const [info, setInfo] = useState({ name: row.name, category: row.category, designerName: row.designerName });
   // A second look at the texts, the same check the designer's export runs.
   const elements = useMemo(() => deserializeElements(row.elements), [row.elements]);
@@ -69,14 +73,30 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
     }
     setBusy(false);
   };
+  const setReady = async (add: boolean) => {
+    setBusy(true);
+    setError('');
+    try {
+      if (add) await adminReadyAdd(row.id, readyCat);
+      else await adminReadyRemove(row.id);
+      setReadying(false);
+      onChanged();
+    } catch (e) {
+      const code = (e as AdminError)?.code;
+      if (code === 'session') return onSessionEnd();
+      setError('تعذّر الحفظ. جرّب مرة ثانية.');
+    }
+    setBusy(false);
+  };
   const edit = () => {
     if (!openGalleryEditor(row.id)) setError('تعذّر فتح لوحة المصمم. اسمح للنوافذ المنبثقة وجرّب مرة ثانية.');
   };
 
-  const panelOpen = details || editingInfo || rejecting || !!error;
+  const panelOpen = details || editingInfo || rejecting || readying || !!error;
   const items: MenuItem[] = [
     { id: 'details', label: 'التفاصيل', icon: <FileText size={14} />, onClick: () => setDetails((v) => !v) },
     ...(row.isEdit ? [] : [{ id: 'info', label: 'الاسم والتصنيف والمصمم', icon: <SlidersHorizontal size={14} />, onClick: () => setEditingInfo((v) => !v) }]),
+    ...(row.status === 'approved' && row.kind === 'slide' && !row.isEdit ? [{ id: 'ready', label: row.ready ? 'في الشرائح الجاهزة' : 'إضافة إلى الشرائح الجاهزة', icon: <LayoutGrid size={14} />, onClick: () => setReadying((v) => !v) }] : []),
     ...(row.status === 'pending' ? [{ id: 'reject', label: 'رفض', icon: <X size={14} />, onClick: () => setRejecting(true), danger: true }] : []),
     ...(row.status === 'approved' ? [{ id: 'withdraw', label: 'سحبها من المعرض', icon: <Undo2 size={14} />, onClick: () => setRejecting(true), danger: true }] : []),
     ...(row.isEdit ? [] : [{ id: 'del', label: 'حذف نهائي', icon: <Trash2 size={14} />, onClick: remove, danger: true }]),
@@ -86,6 +106,7 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
     <>
       <div className="pointer-events-none absolute right-2 top-2 z-10 flex flex-wrap gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         {row.isEdit && <span className="rounded-full bg-warn px-2 py-0.5 text-tiny font-bold text-white shadow">تعديل من المصمم</span>}
+        {row.ready && <span className="rounded-full bg-brand px-2 py-0.5 text-tiny font-bold text-white shadow">في الجاهزة · {GALLERY_READY_CATEGORIES.find((c) => c.id === row.ready)?.name || row.ready}</span>}
         {contact.length > 0 && <span className="rounded-full bg-danger px-2 py-0.5 text-tiny font-bold text-white shadow">فيها بيانات تواصل</span>}
       </div>
 
@@ -93,7 +114,7 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
         <div dir="rtl" className="absolute inset-x-2 bottom-11 z-20 flex max-h-[min(60vh,80%)] flex-col gap-2 overflow-y-auto rounded-xl border border-line bg-surface p-3 text-small text-ink shadow-xl" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between">
             <p className="truncate font-semibold">{row.name}</p>
-            <button type="button" aria-label="إغلاق" onClick={() => { setDetails(false); setEditingInfo(false); setRejecting(false); setReason(''); setError(''); }} className="rounded-full p-1 text-muted hover:bg-bg"><X className="h-4 w-4" /></button>
+            <button type="button" aria-label="إغلاق" onClick={() => { setDetails(false); setEditingInfo(false); setRejecting(false); setReadying(false); setReason(''); setError(''); }} className="rounded-full p-1 text-muted hover:bg-bg"><X className="h-4 w-4" /></button>
           </div>
           {error && <p role="alert" className="text-danger">{error}</p>}
           {details && (
@@ -120,6 +141,21 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
               <div className="flex gap-2">
                 <button type="button" disabled={busy} onClick={saveInfo} className="rounded-ctl bg-brand px-4 py-1.5 font-medium text-white disabled:opacity-50">حفظ</button>
                 <button type="button" onClick={() => setEditingInfo(false)} className="rounded-ctl px-4 py-1.5 text-muted hover:bg-bg">إلغاء</button>
+              </div>
+            </div>
+          )}
+          {readying && (
+            <div className="flex flex-col gap-2">
+              <p className="text-muted">{row.ready ? `هذه الشريحة في «${GALLERY_READY_CATEGORIES.find((c) => c.id === row.ready)?.name || row.ready}» من الشرائح الجاهزة.` : 'تظهر الشريحة في لوحة «شرائح جاهزة» في المحرر ضمن الفئة التي تختارها، ويبقى أصلها في المعرض.'}</p>
+              <label className="flex flex-col gap-1">الفئة
+                <select value={readyCat} onChange={(e) => setReadyCat(e.target.value)} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand">
+                  {GALLERY_READY_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                </select>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={busy || readyCat === row.ready} onClick={() => setReady(true)} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-4 py-1.5 font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} {row.ready ? 'نقل إلى هذه الفئة' : 'إضافة'}</button>
+                {row.ready && <button type="button" disabled={busy} onClick={() => setReady(false)} className="rounded-ctl border border-line px-4 py-1.5 text-danger hover:bg-bg">إزالة من الجاهزة</button>}
+                <button type="button" onClick={() => setReadying(false)} className="rounded-ctl px-4 py-1.5 text-muted hover:bg-bg">إغلاق</button>
               </div>
             </div>
           )}

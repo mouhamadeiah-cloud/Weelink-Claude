@@ -9,9 +9,9 @@ const db = getFirestore() as any;
 const gallery = (id: string, extra: any = {}) => store.set(`gallerySlides/${id}`, { kind: 'slide', name: `شريحة ${id}`, category: 'hero', status: 'approved', ...extra });
 const reset = () => { for (const k of [...store.keys()]) if (k.startsWith('gallerySlides/') || k.startsWith('readySlides/')) store.delete(k); };
 
-test('the shop, showroom, menu, booking and contact categories stay in the code; the others take gallery slides', () => {
-  assert.deepEqual(FIXED_READY_CATEGORIES.sort(), ['booking', 'cars', 'contact', 'gallery', 'restaurant', 'shop']);
-  assert.ok(GALLERY_READY_CATEGORIES.length === READY_SLIDE_CATEGORIES.length - 6);
+test('the shop, showroom and menu categories stay in the code; the others take gallery slides', () => {
+  assert.deepEqual(FIXED_READY_CATEGORIES.sort(), ['cars', 'restaurant', 'shop']);
+  assert.ok(GALLERY_READY_CATEGORIES.length === READY_SLIDE_CATEGORIES.length - 3);
   for (const c of GALLERY_READY_CATEGORIES) assert.ok(!FIXED_READY_CATEGORIES.includes(c.id));
   assert.ok(GALLERY_READY_CATEGORIES.some((c) => c.id === 'intro') && GALLERY_READY_CATEGORIES.some((c) => c.id === 'special_offer'));
 });
@@ -44,7 +44,7 @@ test('refused: a slide not in the gallery, a pending or rejected one, a page, a 
   assert.deepEqual(await addReady(db, 'r', 'intro', 'x'), { error: 'not_approved' });
   assert.deepEqual(await addReady(db, 'pg', 'intro', 'x'), { error: 'not_a_slide' });
   assert.deepEqual(await addReady(db, 'ok', 'shop', 'x'), { error: 'bad_category' });
-  assert.deepEqual(await addReady(db, 'ok', 'contact', 'x'), { error: 'bad_category' });
+  assert.deepEqual(await addReady(db, 'ok', 'restaurant', 'x'), { error: 'bad_category' });
   assert.deepEqual(await addReady(db, 'ok', 'made-up', 'x'), { error: 'bad_category' });
   assert.deepEqual(await readyMap(db), {});
 });

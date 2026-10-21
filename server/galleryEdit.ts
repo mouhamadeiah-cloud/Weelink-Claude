@@ -28,7 +28,7 @@ export type Checked = { error: string; kinds?: string[] } | { slide: any; page: 
 const clean = (v: unknown): any => JSON.parse(JSON.stringify(v ?? null));
 
 // A design as the editor holds it, made ready to store; or why it cannot be stored.
-export const checkDesign = (input: DesignInput): Checked => {
+export const checkDesign = (input: DesignInput, opts: { allowContact?: boolean } = {}): Checked => {
   const slides = input.page?.slides;
   const elements = input.elements;
   if (!Array.isArray(slides) || slides.length < 1 || !Array.isArray(elements)) return { error: 'bad_request' };
@@ -46,7 +46,7 @@ export const checkDesign = (input: DesignInput): Checked => {
     if (typeof e.linkUrl === 'string' && e.linkUrl && !SAFE_LINK.test(e.linkUrl.trim())) return { error: 'unsafe_link' };
   }
   const found = [...findContactInfo(elements), ...(input.kind === 'page' ? findNavbarContact(input.page?.navbar) : [])];
-  if (found.length) return { error: 'contact', kinds: [...new Set(found.map((f) => f.kind))] };
+  if (found.length && !opts.allowContact) return { error: 'contact', kinds: [...new Set(found.map((f) => f.kind))] };
 
   const out: any = { slide: clean(slides[0]), page: input.kind === 'page' ? clean({ navbar: input.page?.navbar, slides }) : undefined, elements: clean(elements) };
   if (input.name !== undefined) {
@@ -92,7 +92,8 @@ export const adminSave = async (db: any, id: string, input: Omit<DesignInput, 'k
   const live = (await ref.get()).data() as Record<string, any> | undefined;
   if (!live) return { error: 'not_found' };
   const kind = live.kind === 'page' ? 'page' : 'slide';
-  const checked = checkDesign({ ...input, kind });
+  // Weelink's own designs carry example phone numbers and addresses (the contact slides): the admin may keep editing them.
+  const checked = checkDesign({ ...input, kind }, { allowContact: live.official === true });
   if ('error' in checked) return checked;
   const { page, ...rest } = checked;
   await ref.update({ ...rest, ...(kind === 'page' ? { page } : {}), editedBy: `admin:${by}`, editedAt: Date.now() });

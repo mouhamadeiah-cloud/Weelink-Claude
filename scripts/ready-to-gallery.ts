@@ -1,5 +1,5 @@
 // Writes src/data/galleryReady/ready.json: the ready slides of the code (every category but the fixed ones: shop, showroom,
-// menu, booking, contact) as gallery slides, so the admin site can copy them into the gallery (server/readyCopy.ts) and the gallery
+// menu) as gallery slides, so the admin site can copy them into the gallery (server/readyCopy.ts) and the gallery
 // becomes the one place designs live (Eyad, 21 Oct; docs/READY_SLIDES_PLAN.md, step 2).
 //
 //   npm run ready-to-gallery      (the file is committed; run again only if the code's ready slides changed before the copy)
@@ -10,7 +10,7 @@ import { getSlideTemplatePayload, slideTemplateCount } from '../src/data/slideTe
 // The gallery's categories (src/data/slideCategories.ts) have no «شركاء» or «فيديو»: the nearest one, or «أخرى».
 export const GALLERY_CATEGORY_OF: Record<string, string> = {
   intro: 'hero', about: 'about', special_offer: 'offers', prices: 'services', team: 'team', features: 'services', gallery: 'gallery', table: 'services',
-  video: 'other', bio: 'about', services: 'services', projects: 'gallery', partners: 'other', map: 'contact', privacy: 'legal',
+  video: 'other', bio: 'about', services: 'services', projects: 'gallery', partners: 'other', map: 'contact', privacy: 'legal', contact: 'contact', booking: 'booking',
 };
 
 const items: any[] = [];
@@ -19,7 +19,8 @@ for (const cat of GALLERY_READY_CATEGORIES) {
   for (let index = 0; index < count; index++) {
     const { elements, ...slide } = getSlideTemplatePayload(cat.id, index, cat.name) as any;
     items.push({
-      key: `${cat.id}-${index + 1}`,
+      // A design with an id (the wee ones the galleries were rebuilt as) is keyed by it, so adding or moving others never moves its key.
+      key: cat.id === 'gallery' && slide.aiTemplate ? String(slide.aiTemplate) : `${cat.id}-${index + 1}`,
       readyCategory: cat.id,
       index,
       name: `${cat.name} · ${String(slide.name || `نموذج ${index + 1}`).slice(0, 40)}`,

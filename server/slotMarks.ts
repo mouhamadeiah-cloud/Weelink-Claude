@@ -30,7 +30,9 @@ export const markSlots = async (db: Db, galleryId: string, marks: unknown, by: s
     if (!isSlotName(name)) return { error: 'bad_marks', detail: `خانة غير معروفة: ${name}` };
     const allowedSingle = SLOT_NAMES[kind];
     const indexed = /\./.test(name);
-    const fits = indexed ? (kind === 'image' ? /^photos\./.test(name) : kind === 'text' ? !/^photos\./.test(name) : /^(chips|points|items|packages)\./.test(name)) : allowedSingle.includes(name);
+    const fits = kind === 'map' || kind === 'form' || kind === 'gallery'
+      ? allowedSingle.includes(name)
+      : indexed ? (kind === 'image' ? /^photos\./.test(name) : kind === 'text' ? !/^photos\./.test(name) : /^(chips|points|items|packages)\./.test(name)) : allowedSingle.includes(name);
     if (!fits) return { error: 'bad_marks', detail: `الخانة ${name} لا تناسب عنصراً من نوع ${el.type}` };
   }
   const next = elements.map((e) => {

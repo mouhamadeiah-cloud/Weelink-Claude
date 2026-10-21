@@ -65,10 +65,10 @@ const SlotMarker: React.FC<{ id: string; onSaved: () => void; onSessionEnd: () =
           <input list={`slots-${slotKindOf(e.type)}`} value={marks[e.id] || ''} onChange={(ev) => setMarks((m) => ({ ...m, [e.id]: ev.target.value }))} placeholder="بلا خانة" dir="ltr" className="min-w-0 flex-1 rounded-ctl border border-line bg-white px-2 py-1" />
         </label>
       ))}
-      {(['text', 'button', 'image'] as const).map((k) => (
+      {(['text', 'button', 'image', 'map', 'form', 'gallery'] as const).map((k) => (
         <datalist key={k} id={`slots-${k}`}>
           {SLOT_NAMES[k].map((n) => <option key={n} value={n} />)}
-          {k === 'text' && ['points.0.title', 'points.0.text', 'points.1.title', 'points.1.text', 'chips.0', 'chips.1', 'facts.0.number', 'facts.0.label', 'caption.0'].map((n) => <option key={n} value={n} />)}
+          {k === 'text' && ['points.0.title', 'points.0.text', 'points.1.title', 'points.1.text', 'chips.0', 'chips.1', 'facts.0.number', 'facts.0.label', 'caption.0', 'phone.value', 'phone.label', 'whatsapp.value', 'whatsapp.label', 'address.value', 'address.label', 'hours.value', 'hours.label'].map((n) => <option key={n} value={n} />)}
           {k === 'image' && ['photos.0', 'photos.1'].map((n) => <option key={n} value={n} />)}
         </datalist>
       ))}

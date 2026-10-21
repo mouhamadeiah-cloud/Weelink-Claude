@@ -28,10 +28,11 @@ export const planSectionId = (s: ModelSection) => (s.part === 'front' ? 'intro' 
 const placeOf = (id: string, index: number): CodeSection['place'] => (index === 0 ? 'first' : id === 'contact' || id === 'privacy' ? 'last' : 'any');
 const nameOf = (s: ModelSection) => MODEL_CATEGORIES.find((c) => c.id === s.category)?.name || s.category;
 
-// How many photos a gallery slide holds: its photo frames, or what the photo-viewer block takes.
+// How many photos a gallery slide holds: its photo frames, or what the photo-gallery block takes.
 export const photoCapacity = (template: string, spec?: TemplateSpec) => {
-  const viewer = /^gallery\.view(\d+)/.exec(template); // gallery.view5a … hold 5, gallery.view15a … hold 15
-  return viewer ? +viewer[1] : Object.keys(spec?.slots || {}).filter((k) => /^photos\.\d+$/.test(k)).length;
+  // The photo-gallery block takes up to fifteen (the package's gallery cuts the owner's list); frames hold what they have.
+  if (/^gallery\.block\d+$/.test(template)) return 15;
+  return Object.keys(spec?.slots || {}).filter((k) => /^photos\.\d+$/.test(k)).length;
 };
 
 const shuffled = <T,>(list: T[], rng: () => number) => {

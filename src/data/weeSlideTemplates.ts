@@ -504,20 +504,20 @@ const PRICES: (() => WeeSlide)[] = [
 ];
 
 // The galleries (Eyad, 21 Oct): the editor's photo-gallery block beside a short explanation. A click on a photo opens the photo viewer,
-// which goes through the photos one after another. Three designs hold up to 5 photos and five hold up to 15 (the thumbnails of a long
-// gallery move sideways or up and down). The builder puts the owner's photos in the block and drops the slide when there are none.
+// which goes through the photos one after another. Every design takes one to fifteen photos (the package decides how many: 5 on the
+// free page); past five photos the thumbnails move sideways, or the grid or column moves up and down. The builder puts the owner's photos in
+// the block and drops the slide when there are none.
 type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
 interface GalleryDesign {
-  id: string; // gallery.view5a …, gallery.view15a …
+  id: string; // gallery.block1 …
   name: string;
   look: Look;
   layout: GalleryLayout;
-  photos: 5 | 15;
   text: 'right' | 'left'; // which side the explanation stands on (right = where reading starts)
   button?: boolean;
   eyebrow?: string;
 }
-const SAMPLE_PHOTOS = ['k1', 'p1', 'l1', 'k2', 'p2', 'l2', 'k3', 'p3', 'l3', 'k4', 'p4', 'l4', 'k5', 'p5', 'l5'];
+const SAMPLE_PHOTOS = ['k1', 'p1', 'l1', 'k2', 'p2'];
 
 const galleryDesign = (d: GalleryDesign) => (): WeeSlide => {
   const L = d.look;
@@ -525,7 +525,6 @@ const galleryDesign = (d: GalleryDesign) => (): WeeSlide => {
   const textW = 340;
   const textX = d.text === 'right' ? 1184 - textW : 96;
   const blockX = d.text === 'right' ? 96 : 96 + textW + 48;
-  const samples = SAMPLE_PHOTOS.slice(0, d.photos === 5 ? 5 : 9);
   // Phone: the title, the explanation, the gallery, then the button.
   const phoneBlockY = d.eyebrow ? 270 : 240;
   const phoneH = phoneBlockY + 370 + (d.button ? 80 : 20);
@@ -542,23 +541,21 @@ const galleryDesign = (d: GalleryDesign) => (): WeeSlide => {
       ...(d.button ? [on(button(L, { x: d.text === 'right' ? textX + textW - 190 : textX, y: 500, width: 190, height: 52 }, 'تواصل معنا'), 20, phoneBlockY + 386, 190, 48)] : []),
       on(el('gallery', 'معرض صور', { x: blockX, y: 80, width: blockW, height: 500 }, '', { borderRadius: 18, backgroundColor: L.card }, {
         ...slot('gallery'),
-        galleryConfig: { layout: d.layout, items: samples.map((n, i) => ({ id: `g${i}`, url: photo(n), title: '' })), activeImageIndex: 0, showThumbnails: true, gap: 10, borderRadius: 14, objectFit: 'cover' },
+        galleryConfig: { layout: d.layout, items: SAMPLE_PHOTOS.map((n, i) => ({ id: `g${i}`, url: photo(n), title: '' })), activeImageIndex: 0, showThumbnails: true, gap: 10, borderRadius: 14, objectFit: 'cover' },
       }), 20, phoneBlockY, 320, 360),
     ],
   };
 };
 
 const GALLERY: (() => WeeSlide)[] = [
-  // Up to 5 photos
-  galleryDesign({ id: 'gallery.view5a', name: 'معرض 5 صور · شرح يمين', look: KITCHEN, layout: 'top-main', photos: 5, text: 'right', eyebrow: 'معرض الصور' }),
-  galleryDesign({ id: 'gallery.view5b', name: 'معرض 5 صور · مصغرات جانبية', look: PAINTER, layout: 'left-main-row', photos: 5, text: 'left', button: true }),
-  galleryDesign({ id: 'gallery.view5c', name: 'معرض 5 صور · داكن', look: LAW, layout: 'top-main', photos: 5, text: 'left' }),
-  // Up to 15 photos
-  galleryDesign({ id: 'gallery.view15a', name: 'معرض 15 صورة · شريط مصغرات', look: PAINTER, layout: 'top-main', photos: 15, text: 'right', eyebrow: 'أعمالنا' }),
-  galleryDesign({ id: 'gallery.view15b', name: 'معرض 15 صورة · شبكة يسار', look: KITCHEN, layout: 'left-thumbnails', photos: 15, text: 'left', button: true }),
-  galleryDesign({ id: 'gallery.view15c', name: 'معرض 15 صورة · شبكة يمين', look: LAW, layout: 'right-thumbnails', photos: 15, text: 'right' }),
-  galleryDesign({ id: 'gallery.view15d', name: 'معرض 15 صورة · عمود مصغرات', look: KITCHEN, layout: 'left-main-row', photos: 15, text: 'right', eyebrow: 'لمحات' }),
-  galleryDesign({ id: 'gallery.view15e', name: 'معرض 15 صورة · دافئ', look: KITCHEN, layout: 'top-main', photos: 15, text: 'left', button: true }),
+  galleryDesign({ id: 'gallery.block1', name: 'معرض · شرح يمين', look: KITCHEN, layout: 'top-main', text: 'right', eyebrow: 'معرض الصور' }),
+  galleryDesign({ id: 'gallery.block2', name: 'معرض · مصغرات جانبية', look: PAINTER, layout: 'left-main-row', text: 'left', button: true }),
+  galleryDesign({ id: 'gallery.block3', name: 'معرض · داكن', look: LAW, layout: 'top-main', text: 'left' }),
+  galleryDesign({ id: 'gallery.block4', name: 'معرض · شريط مصغرات', look: PAINTER, layout: 'top-main', text: 'right', eyebrow: 'أعمالنا' }),
+  galleryDesign({ id: 'gallery.block5', name: 'معرض · شبكة يسار', look: KITCHEN, layout: 'left-thumbnails', text: 'left', button: true }),
+  galleryDesign({ id: 'gallery.block6', name: 'معرض · شبكة يمين', look: LAW, layout: 'right-thumbnails', text: 'right' }),
+  galleryDesign({ id: 'gallery.block7', name: 'معرض · عمود مصغرات', look: KITCHEN, layout: 'left-main-row', text: 'right', eyebrow: 'لمحات' }),
+  galleryDesign({ id: 'gallery.block8', name: 'معرض · دافئ', look: KITCHEN, layout: 'top-main', text: 'left', button: true }),
 ];
 
 const CONTACT: (() => WeeSlide)[] = [

@@ -21,6 +21,7 @@ import { lookOf, ownerPalette, recolourDeep, targetColours, textOn, toneColours,
 import { fitTexts, fitTextsPhone, listItems, reflowList, type FlexEl } from '../utils/flexLayout';
 import { arrangeSlideForMobile } from '../utils/mobileLayout';
 import type { ProjectType } from '../components/shop/shopTypes';
+import { deserializeElements } from '../utils/elementStorage';
 
 export type BuildKind = 'free' | 'restaurant' | 'shop' | 'cars';
 export const KIND_OF_PROJECT: Record<ProjectType, BuildKind> = { page: 'free', restaurant: 'restaurant', shop: 'shop', cars: 'cars' };
@@ -36,7 +37,10 @@ interface PlannedSection {
   images: Record<string, string>;
   entrance: string; // an editor animation, or 'none'
 }
+// A gallery slide the server chose for a section (server/pagePicker.ts): the template id is `g:{id}`.
+export interface GalleryPayload { slide: Record<string, any>; elements: any[]; name?: string }
 export interface Plan {
+  extra?: Record<string, GalleryPayload>; // the gallery slides the plan uses, by template id
   look: string; // the page look Wee AI chose (its colours and two fonts)
   navbar: { layout: 'horizontal' | 'hamburger' | 'vertical'; sticky: boolean; tone: 'light' | 'tint' | 'accent' | 'dark' };
   accentColor?: string; // the owner's own colour only
@@ -116,20 +120,20 @@ const failureMessage = (status: number, data: { reason?: string; detail?: string
   return `${lead} جرّب مرة ثانية بعد شوي. (السبب للدعم: ${reason}${detail})`;
 };
 
-export const requestPagePlan = async (kind: BuildKind, profile: Record<string, string>, assets: ReturnType<typeof pageAssets>, project?: string): Promise<PlanResult> => {
+export const requestPagePlan = async (kind: BuildKind, profile: Record<string, string>, assets: ReturnType<typeof pageAssets>, project?: string, model: { flavor?: string; ticked?: string[] } = {}): Promise<PlanResult> => {
   const user = auth.currentUser;
   if (!user) return { ok: false, message: 'سجّل الدخول أولاً حتى يبني Wee AI صفحتك.' };
   try {
     const res = await fetch('/api/build-page', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
-      body: JSON.stringify({ kind, profile, assets, project }),
+      body: JSON.stringify({ kind, profile, assets, project, ...(model.flavor ? { flavor: model.flavor } : {}), ...(model.ticked ? { ticked: model.ticked } : {}) }),
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && Array.isArray(data.plan?.sections)) {
       // The tokens this build used, for working out its cost (browser console).
       if (data.usage) console.info('Wee AI build tokens:', data.usage);
-      return { ok: true, plan: data.plan };
+      return { ok: true, plan: data.extra ? { ...data.plan, extra: data.extra } : data.plan };
     }
     if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
     if (data.error === 'no_tokens') return { ok: false, message: 'انتهى رصيد Wee AI في حسابك. تواصل مع الإدارة لشحن رصيد جديد.' };
@@ -148,8 +152,21 @@ export const requestPagePlan = async (kind: BuildKind, profile: Record<string, s
 
 type Draft = Omit<CanvasElement, 'id' | 'slideId'> & { id?: string; slideId?: string };
 
+/** A gallery slide as a ready slide: the designer's slide and elements, whose marked texts the AI fills. */
+const galleryReady = (g: GalleryPayload): Record<string, any> & { elements: Draft[] } => {
+  const { id: _id, aiTemplate: _ai, ...slide } = g.slide || {};
+  return {
+    ...slide,
+    name: slide.name || g.name || 'شريحة',
+    height: Number(slide.height) || 560,
+    backgroundColor: slide.backgroundColor || '#ffffff',
+    elements: deserializeElements(JSON.parse(JSON.stringify(g.elements || []))).map(({ id: _e, slideId: _s, ...el }) => el as Draft),
+  };
+};
+
 /** A ready slide by its AI id, fresh. */
-const readySlide = (template: string): (Record<string, any> & { elements: Draft[] }) | null => {
+const readySlide = (template: string, extra?: Record<string, GalleryPayload>): (Record<string, any> & { elements: Draft[] }) | null => {
+  if (template.startsWith('g:')) return extra?.[template] ? galleryReady(extra[template]) : null;
   if (WEE_SLIDE_BY_ID[template]) return JSON.parse(JSON.stringify(WEE_SLIDE_BY_ID[template]()));
   for (const [kind, ids] of Object.entries(STORE_SLIDE_IDS)) {
     const i = ids.indexOf(template);
@@ -178,6 +195,7 @@ const IMAGE = /^(image|avatar|photos\.\d+)$/;
 const ITEM_HEAD = /^(.*\.\d+)\.(name|title|number)$/;
 
 interface Context {
+  extra?: Record<string, GalleryPayload>;
   kind: BuildKind;
   answers: WeeAnswers;
   facts: Record<string, string>;
@@ -292,7 +310,7 @@ const ANIMATED = /^(fade|slide-up|slide-left|slide-right|scale-up)$/;
 
 /** One planned section as a slide and its elements. */
 const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, page: TargetColours, fonts: { head: string; body: string }, motion: boolean) => {
-  const ready = readySlide(planned.template);
+  const ready = readySlide(planned.template, ctx.extra);
   if (!ready) return null;
   const slideId = ctx.slideIds[index];
   const { aiTemplate, name, backgroundColor, backgroundImage, backgroundVideo, backgroundOpacity, backgroundAttachment } = ready;
@@ -576,6 +594,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
   };
   const stamp = Date.now().toString(36);
   const ctx: Context = {
+    extra: plan.extra,
     kind,
     answers,
     facts: buildProfile(answers, input.siteName),

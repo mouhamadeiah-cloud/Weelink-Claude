@@ -193,7 +193,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const finishedRef = useRef(false);
   const isGuest = userId === WEE_GUEST_ID;
   // The words of the questions: the flavour's when there is one.
-  const tone = flavor || pageKind;
+  // The flavour of the answers: the one asked for on the start page, else (in the editor) the one saved with them.
+  const [savedFlavor, setSavedFlavor] = useState<ProjectType | undefined>();
+  const ownFlavor = flavor ?? (fromStart ? undefined : savedFlavor);
+  const tone = ownFlavor || pageKind;
   const catalogSource = categorySourceOf(tone);
   const labels = CATALOG_LABELS[catalogSource];
   // Local collapsed state if not externally controlled
@@ -348,6 +351,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       // Answers given for another kind of page keep the owner's own details (name, address,
       // contacts, look), not what that business was: its name, kind, description and offer.
       const otherKind = !!pageKind && !!data.pageKind && data.pageKind !== pageKind;
+      setSavedFlavor(['restaurant', 'shop', 'cars'].includes(data.flavor) ? data.flavor : undefined);
       if (data.personalInfo) setPersonalInfo({ pageName: '', ...data.personalInfo, ...(otherKind ? { pageName: '' } : {}) });
       if (data.addressInfo) setAddressInfo({ placeType: 'city', area: '', district: '', subdistrict: '', village: '', ...data.addressInfo });
       if (data.contactInfo) setContactInfo(data.contactInfo);
@@ -446,7 +450,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       catalogInfo,
       aiAnswers,
       ...(pageKind ? { pageKind } : {}),
-      ...(flavor ? { flavor } : {}),
+      ...(ownFlavor ? { flavor: ownFlavor } : {}),
       currentStep: finishedRef.current ? 13 : nextStep,
       updatedAt: new Date().toISOString()
     };
@@ -1509,7 +1513,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   finishedRef.current = true;
                   setStep(13);
                   saveProgress(13);
-                  onCompleteChat?.({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(flavor ? { flavor } : {}) });
+                  onCompleteChat?.({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(ownFlavor ? { flavor: ownFlavor } : {}) });
                 }}
                 className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5"
               >
@@ -1532,7 +1536,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             {embedded && onCompleteChat && (
               <button
                 type="button"
-                onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(flavor ? { flavor } : {}) })}
+                onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(ownFlavor ? { flavor: ownFlavor } : {}) })}
                 className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 {isGuest ? 'اعمل حسابك لتنحفظ صفحتك' : 'افتح صفحتي بالمحرر'}
@@ -1566,7 +1570,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             setIsBuilding(true);
             setWriteNote(null);
             try {
-              const note = await onBuildPage({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers });
+              const note = await onBuildPage({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(ownFlavor ? { flavor: ownFlavor } : {}) });
               setWriteNote(note);
               if (note.ok) setCanRestore(true);
             } finally {

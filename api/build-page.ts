@@ -25,6 +25,9 @@ import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
 import designer from '../src/data/ai/weelinkDesigner.json' with { type: 'json' };
 import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
 import { limitsOf } from '../src/utils/planLimits.js';
+import { modelOf } from '../src/data/pageModels.js';
+import { readModels } from '../server/pageModels.js';
+import { galleryPool, pickSections, sectionsFor, type GallerySlideData, type Picked } from '../server/pagePicker.js';
 
 // A fixed model, not «latest», so a newer and dearer Flash never comes in on its own (Eyad, 12 Oct).
 // Both can be changed in Cloudflare without code: GEMINI_MODEL, and GEMINI_THINKING (minimal, low,
@@ -292,17 +295,21 @@ const specOf = (t: TemplateSpec, key: string): { kind: 'text' | 'button' | 'imag
 };
 
 /** Gemini's answer checked against the catalogue: only what Weelink can build safely comes back. */
-export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>, assets: Assets): Plan => {
+export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>, assets: Assets, over?: Pick<Picked, 'pool' | 'templates'>): Plan => {
+  // With a model (server/pagePicker.ts) the sections and their slides are fixed: the AI only writes their texts.
+  const T: Record<string, TemplateSpec> = over ? { ...TEMPLATES, ...over.templates } : TEMPLATES;
   const owners = ownersNumbers(profile);
   const motion = /حرك/.test(profile['الحركة'] || '') && !/هادئ/.test(profile['الحركة'] || '');
   const hasServices = !!profile['الخدمات'];
   const description = profile['الوصف'] || '';
   // «من نحن» tells the owner's own description (Eyad, 12 Oct), so it is on every page that has one.
-  const pool = SECTIONS[kind]
-    .filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true))
-    .map((s) => (s.id === 'about' && description ? { ...s, required: true } : s));
+  const pool: Section[] = over
+    ? over.pool
+    : SECTIONS[kind]
+        .filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true))
+        .map((s) => (s.id === 'about' && description ? { ...s, required: true } : s));
   const answered: any[] = Array.isArray(raw?.sections) ? raw.sections : [];
-  const imageTemplate = (s: Section) => s.templates.find((t) => Object.values(TEMPLATES[t].slots).some((v) => v.kind === 'image'));
+  const imageTemplate = (s: Section) => s.templates.find((t) => Object.values(T[t].slots).some((v) => v.kind === 'image'));
 
   // The AI's order, each section once; then any required one it left out.
   const chosen: { section: Section; given: any }[] = [];
@@ -310,18 +317,18 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
     const section = pool.find((s) => s.id === given?.section) || pool.find((s) => s.templates.includes(given?.template) && !chosen.some((c) => c.section === s));
     if (section && !chosen.some((c) => c.section === section)) chosen.push({ section, given });
   }
-  for (const section of pool) if (section.required && !chosen.some((c) => c.section === section)) chosen.push({ section, given: null });
+  for (const section of pool) if ((section.required || over) && !chosen.some((c) => c.section === section)) chosen.push({ section, given: null });
   // At least two sections carry a photo, not the entrance alone (Eyad, 14 Oct): «من نحن» takes the
   // design with a photo, and is added when the owner wrote a description and the AI left it out.
   const withPhoto = (c: { section: Section; given: any }) => {
     const t = c.section.templates.includes(c.given?.template) ? c.given.template : c.section.templates[0];
-    return Object.values(TEMPLATES[t].slots).some((v) => v.kind === 'image');
+    return Object.values(T[t].slots).some((v) => v.kind === 'image');
   };
   const forcePhoto = new Set<Section>();
   // (Only when the AI gave some photo search to take the second photo from: Weelink never shows
   // the example's own photo for another business.)
   const hasQuery = answered.some((s) => pairs(s?.images, 'ref').some(([, ref]) => IMAGE_QUERY.test(ref.trim())));
-  if (hasQuery && chosen.filter(withPhoto).length < 2) {
+  if (!over && hasQuery && chosen.filter(withPhoto).length < 2) {
     const about = pool.find((s) => s.id === 'about' && imageTemplate(s));
     if (about && chosen.some((c) => c.section === about)) forcePhoto.add(about);
     else if (about && description) {
@@ -330,11 +337,11 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
     }
   }
   const rank = (s: Section) => (s.place === 'first' ? 0 : s.place === 'last' ? 2 + pool.indexOf(s) / 100 : 1);
-  chosen.sort((a, b) => rank(a.section) - rank(b.section));
+  chosen.sort((a, b) => (over ? pool.indexOf(a.section) - pool.indexOf(b.section) : rank(a.section) - rank(b.section)));
 
   const sections: PlannedSection[] = chosen.map(({ section, given }): PlannedSection | null => {
     const template = forcePhoto.has(section) ? imageTemplate(section)! : section.templates.includes(given?.template) ? given.template : section.templates[0];
-    const spec = TEMPLATES[template];
+    const spec = T[template];
     const slots: Record<string, string> = {};
     for (const [key, value] of pairs(given?.slots, 'value')) {
       const s = specOf(spec, key);
@@ -380,7 +387,7 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
       }
     }
     // A section with no text and no photo is an empty slide: it never goes into the page.
-    if (!section.required && section.id !== 'intro' && section.id !== 'contact' && !Object.values(slots).some(Boolean) && !Object.keys(images).length) return null;
+    if (!section.required && section.id !== 'intro' && section.id !== 'contact' && section.id !== 'privacy' && !Object.values(slots).some(Boolean) && !Object.keys(images).length) return null;
     const tone = TONES.includes(given?.tone) ? given.tone : 'light';
     const entrance = motion && ENTRANCES.includes(given?.entrance) ? given.entrance : motion ? 'fade' : 'none';
     return { section: section.id, template, tone, slots, icons, links, images, entrance };
@@ -416,23 +423,23 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
 
 // The catalogue as Gemini reads it: each section of this page type with its example slides, their
 // single slots (number = character limit, button:N, image) and their lists (fields and limits).
+const catalogOf = (pool: Section[], specs: Record<string, TemplateSpec>) =>
+  pool.map((s) => ({
+    section: s.id,
+    name: s.name,
+    required: s.required,
+    place: s.place,
+    templates: s.templates.map((t) => ({
+      template: t,
+      name: specs[t].name,
+      slots: Object.fromEntries(Object.entries(specs[t].slots).map(([k, v]) => [k, v.kind === 'text' ? v.max : `${v.kind}${v.max ? `:${v.max}` : ''}`])),
+      ...(Object.keys(specs[t].lists).length
+        ? { lists: Object.fromEntries(Object.entries(specs[t].lists).map(([k, v]) => [k, { exampleCount: v.count, fields: v.fields }])) }
+        : {}),
+    })),
+  }));
 const catalogFor = (kind: Kind, hasServices: boolean, assets: Assets) =>
-  SECTIONS[kind]
-    .filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true))
-    .map((s) => ({
-      section: s.id,
-      name: s.name,
-      required: s.required,
-      place: s.place,
-      templates: s.templates.map((t) => ({
-        template: t,
-        name: TEMPLATES[t].name,
-        slots: Object.fromEntries(Object.entries(TEMPLATES[t].slots).map(([k, v]) => [k, v.kind === 'text' ? v.max : `${v.kind}${v.max ? `:${v.max}` : ''}`])),
-        ...(Object.keys(TEMPLATES[t].lists).length
-          ? { lists: Object.fromEntries(Object.entries(TEMPLATES[t].lists).map(([k, v]) => [k, { exampleCount: v.count, fields: v.fields }])) }
-          : {}),
-      })),
-    }));
+  catalogOf(SECTIONS[kind].filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true)), TEMPLATES);
 
 // One worked example of the answer's shape and quality (a dentist), to learn from, not to copy.
 const EXAMPLE = {
@@ -566,7 +573,7 @@ const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number, usage: Usa
 
 // What is the same for every build comes first and the owner's card last: Gemini reuses (caches) a
 // prompt's unchanged beginning, which makes a build faster and its repeated part cheaper.
-export const buildPrompt = (kind: Kind, profile: Record<string, string>, assets: Assets) =>
+export const buildPrompt = (kind: Kind, profile: Record<string, string>, assets: Assets, over?: Pick<Picked, 'pool' | 'templates'>) =>
   [
     `looks (اختر واحداً منها فقط لكل الصفحة: اسمه، لمن يناسب، ألوانه، وخطّاه): ${JSON.stringify(Object.fromEntries(Object.entries(LOOKS).map(([id, l]) => [id, `${l.name}، يناسب: ${l.forWho}. خلفية ${l.bg} ونص ${l.ink} وتمييز ${l.accent}. خط العناوين ${l.head} والنص ${l.body}`])))}`,
     `icons: ${JSON.stringify([...ICONS])}`,
@@ -574,11 +581,56 @@ export const buildPrompt = (kind: Kind, profile: Record<string, string>, assets:
     `مثال على شكل الرد وجودته لعيادة أسنان (تعلّم منه الأسلوب، لا تنسخه، ولا تستعمل أسماءه أو نصوصه):\n${JSON.stringify(EXAMPLE)}`,
     `نوع الصفحة: ${kind}`,
     `الأنسب لهذا النوع عادةً: ${JSON.stringify(SUITS[kind])}`,
-    `الكتالوج (الأقسام المتاحة لهذه الصفحة؛ لكل شريحة مثال خاناتها: رقم = حد الأحرف لنص، button:حد = زر، image = صورة؛ و lists = قوائم تختار عدد عناصرها):\n${JSON.stringify(catalogFor(kind, !!profile['الخدمات'], assets))}`,
+    over
+      ? `أقسام هذه الصفحة وشرائحها (اختارها الخادم مسبقاً وبهذا الترتيب: لا تضف قسماً ولا تحذف ولا تبدّل شريحة. لكل شريحة خاناتها: رقم = حد الأحرف لنص، button:حد = زر، image = صورة؛ و lists = قوائم تختار عدد عناصرها):\n${JSON.stringify(catalogOf(over.pool, { ...TEMPLATES, ...over.templates }))}`
+      : `الكتالوج (الأقسام المتاحة لهذه الصفحة؛ لكل شريحة مثال خاناتها: رقم = حد الأحرف لنص، button:حد = زر، image = صورة؛ و lists = قوائم تختار عدد عناصرها):\n${JSON.stringify(catalogFor(kind, !!profile['الخدمات'], assets))}`,
     `assets (صور صاحب العمل المتوفرة): ${JSON.stringify({ heroBg: assets.heroBg, galleryCount: assets.gallery, logo: assets.logo })}`,
     `بطاقة صاحب العمل (profile):\n${JSON.stringify(profile, null, 1)}`,
-    'صمّم الآن صفحة هذا العمل بالذات. اختر الأقسام التي يحتاجها فعلاً وبترتيب يقنع زائره، وأعد JSON فقط.',
+    over
+      ? 'اكتب الآن نصوص أقسام هذا العمل بالذات (خاناتها، وكلمات بحث صورها، وأيقونات بطاقاتها، ونبرة كل قسم وحركة دخوله)، واختر نمط الصفحة وشريط التنقل، وأعد JSON فقط.'
+      : 'صمّم الآن صفحة هذا العمل بالذات. اختر الأقسام التي يحتاجها فعلاً وبترتيب يقنع زائره، وأعد JSON فقط.',
   ].join('\n\n');
+
+// ---------- The page's model (docs/READY_SLIDES_PLAN.md step 4c) ----------
+
+const FLAVORS = ['restaurant', 'shop', 'cars'];
+
+// The package the project builds as: a paid one while its access lasts, else the free page (with the flavour of a free restaurant, shop or
+// showroom page), else the smallest of its kind.
+const planFor = async (db: NonNullable<ReturnType<typeof getFirestore>>, uid: string, project: string, flavor: string, now = Date.now()) => {
+  const a = (await db.collection('projectAccess').doc(`${uid}__${project}`).get()).data() as { plan?: string; paidUntil?: number } | undefined;
+  if (a?.plan && Number(a.paidUntil) > now) return a.plan;
+  const type = project.split('-')[0];
+  return type === 'page' ? (FLAVORS.includes(flavor) ? `${flavor}-free` : 'page-free') : `${type}-30`;
+};
+
+// Services the owner priced: «name: price» lines where the price is not «حسب الطلب».
+const hasPricedServices = (profile: Record<string, string>) => (profile['الخدمات'] || '').split('؛').some((l) => /:\s*\S/.test(l) && !l.includes(ON_REQUEST));
+
+/**
+ * The sections and slides this page is built from, chosen by the server from the project's model; null when it cannot be done (no database,
+ * a kind that still builds the old way, a model with nothing to build from), and then the AI plans the page as before.
+ * Only the page projects use it for now: a restaurant, shop or showroom still plans its home page with the AI.
+ */
+const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: string; project: string; kind: Kind; flavor: string; ticked: string[] | undefined; profile: Record<string, string>; assets: Assets }) => {
+  if (!db || o.kind !== 'free') return null;
+  try {
+    const planId = await planFor(db, o.uid, o.project, o.flavor);
+    const model = (await readModels(db)).find((m) => m.id === modelOf(planId));
+    if (!model) return null;
+    const last = ((await db.collection('platform_build_picks').doc(`${o.uid}__${o.project}`).get()).data() as { last?: string[] } | undefined)?.last;
+    const picked = await pickSections({
+      sections: sectionsFor(model.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked }),
+      codeSections: SECTIONS.free,
+      gallery: await galleryPool(db),
+      avoid: new Set(Array.isArray(last) ? last : []),
+    });
+    return picked.pool.length ? picked : null;
+  } catch (err) {
+    console.error('model pick failed:', (err as Error)?.message);
+    return null;
+  }
+};
 
 export default {
   async fetch(request: Request): Promise<Response> {
@@ -607,7 +659,10 @@ export default {
     const meter = await meterOpen(uid);
     if (meter === 'empty') return json({ error: 'no_tokens' }, 402);
 
-    const prompt = buildPrompt(kind, profile, assets);
+    const flavor = typeof body?.flavor === 'string' ? body.flavor : '';
+    const ticked = Array.isArray(body?.ticked) ? body.ticked.filter((t: unknown): t is string => typeof t === 'string' && /^[a-z_]+(:[a-zA-Z]+)?$/.test(t)).slice(0, 30) : undefined;
+    const over = await modelPick(meterDb(), { uid, project, kind, flavor, ticked, profile, assets });
+    const prompt = buildPrompt(kind, profile, assets, over || undefined);
     const started = Date.now();
     const usage: Usage[] = [];
     try {
@@ -623,10 +678,20 @@ export default {
       }
       const tokens = sumUsage(usage);
       console.log(`build-page: ${kind} planned in ${Date.now() - started} ms, tokens ${JSON.stringify(tokens)}`);
-      const plan = checkPlan(raw, kind, profile, assets);
+      const plan = checkPlan(raw, kind, profile, assets, over || undefined);
       await meterClose(meter, 'build-page', MODEL, tokens, true, '', Date.now() - started);
       await countBuild(allowance);
-      return json({ plan, usage: tokens });
+      // The gallery slides the plan uses go with it, for the browser to build from; the templates are remembered to vary the next build.
+      const extra: Record<string, GallerySlideData> = {};
+      if (over) {
+        for (const s of plan.sections) if (over.extra[s.template]) extra[s.template] = over.extra[s.template];
+        try {
+          await meterDb()?.collection('platform_build_picks').doc(`${uid}__${project}`).set({ last: plan.sections.map((s) => s.template), at: Date.now() });
+        } catch (err) {
+          console.error('build picks not saved:', (err as Error)?.message);
+        }
+      }
+      return json({ plan, ...(Object.keys(extra).length ? { extra } : {}), usage: tokens });
     } catch (err) {
       const failure = err instanceof BuildFailure ? err : new BuildFailure('check', String((err as Error)?.message || '').slice(0, 200));
       await meterClose(meter, 'build-page', MODEL, sumUsage(usage), false, failure.reason, Date.now() - started);

@@ -100,3 +100,8 @@ Today (src/components/WeeAIChat.tsx): 1 owner · 2 address · 3 contact · 4 cat
 - Browser: `buildPageFromPlan` builds a `g:{id}` section from its payload like any ready slide; `requestPagePlan` sends the answers' `flavor`; `WeeAIChat` keeps the flavour with the saved answers.
 - Not yet: the questions for optional pages and slides (`ticked` is accepted by the server but nothing sends it, so «يختاره الزبون» sections use their default), the 1–15 photo gallery layout, price list slide, paid restaurant/shop/showroom on models.
 - Cloudflare: the worker serves the same `api/*.ts` handlers, so nothing new to register; the 12-function limit no longer binds.
+
+### Step 4d — optional sections in the questions, and the ratings decision (done)
+- Step 12 of Wee AI's questions now starts with tick boxes (`src/data/optionalSections.ts`: لماذا نحن، التقييمات، الشروط والخصوصية; privacy ticked from the start). The ticked ids are saved with the answers (`aiAnswers.optionalSections`; nothing saved = the defaults) and sent to `/api/build-page` as `ticked`. Only the sections the builder can make today are offered; the others (team, video, projects, partners, booking) join when the admin has slides marked for them.
+- Ratings: the browser builder adds the «التقييمات» slide (title + ratings box, in the page's colours) before the contact and terms when ticked. The page project no longer adds it by itself and the free page no longer locks it (Eyad, 21 Oct: added after a «نعم», removable, or added from the editor). Paid restaurant, shop and showroom keep their suggest-once behaviour.
+- Not yet: optional *pages* (a page project builds one page), the 1–15 photo gallery layout, the price list slide, paid kinds on models.

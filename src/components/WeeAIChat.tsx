@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { OPTIONAL_SECTIONS, tickedSections } from '../data/optionalSections';
 import { db } from '../services/firebase';
 import { WeeDots } from './ui/WeeDots';
 import { SYRIAN_GOVERNORATES, GOVERNORATE_CENTERS, addressFromPoint, areasOf, findSubdistrict, findVillage, subdistrictsOf, villagesOf, useGovernoratePlaces } from '../utils/syriaLists';
@@ -274,6 +275,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     dividerStyle: 'straight',
     wantsGallery: true,
     galleryImages: [] as string[],
+    optionalSections: undefined as string[] | undefined,
     heroBgImage: '',
     motionEffects: 'صفحة هادئة وجادة',
     specialInstructions: '',
@@ -336,6 +338,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       dividerStyle: 'straight',
       wantsGallery: true,
       galleryImages: [],
+      optionalSections: undefined,
       heroBgImage: '',
       motionEffects: 'صفحة هادئة وجادة',
       specialInstructions: '',
@@ -1490,6 +1493,29 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {/* STEP 12: ما يجب الانتباه له */}
         {step === 12 && (
           <div className="space-y-3.5">
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold text-neutral-700">أقسام إضافية تريدها في صفحتك (اختياري):</p>
+              {OPTIONAL_SECTIONS.map((o) => {
+                const on = tickedSections(aiAnswers.optionalSections).includes(o.id);
+                return (
+                  <label key={o.id} className="flex items-start gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={(e) => setAiAnswers((p) => {
+                        const now = tickedSections(p.optionalSections);
+                        return { ...p, optionalSections: e.target.checked ? [...now, o.id] : now.filter((id) => id !== o.id) };
+                      })}
+                      className="mt-0.5"
+                    />
+                    <span className="text-xs">
+                      <span className="font-bold text-neutral-800">{o.label}</span>
+                      <span className="block text-neutral-500 font-semibold">{o.hint}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
             <textarea
               value={aiAnswers.specialInstructions}
               onChange={e => setAiAnswers(p => ({ ...p, specialInstructions: e.target.value }))}

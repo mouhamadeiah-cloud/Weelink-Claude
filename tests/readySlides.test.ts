@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { addReady, dropReadyFor, readyMap, removeReady } from '../server/readySlides.ts';
+import { addReady, adoptSeeded, dropReadyFor, moveReady, readyMap, readyOverview, removeReady, setUseGallery } from '../server/readySlides.ts';
 import { FIXED_READY_CATEGORIES, GALLERY_READY_CATEGORIES, READY_SLIDE_CATEGORIES } from '../src/data/readyCategories.ts';
 import { getFirestore, store } from './fakeAdmin.ts';
 
@@ -66,4 +66,36 @@ test('everyone reads readySlides, nobody writes it from the browser, and the adm
   const admin = readFileSync(new URL('../api/admin.ts', import.meta.url), 'utf8');
   assert.match(admin, /CONTENT_ONLY = \[[^\]]*'ready-add', 'ready-remove'/);
   assert.match(admin, /if \(decision === 'reject'\) await dropReadyFor\(db, id\)/);
+});
+
+test('up and down move a slide one place inside its category and the places stay 1..n', async () => {
+  reset();
+  for (const id of ['a', 'b', 'c']) { gallery(id); await addReady(db, id, 'intro', 'x'); }
+  assert.deepEqual(await moveReady(db, 'c', 'up'), { ok: true, order: 2 });
+  assert.deepEqual((await readyOverview(db)).find((c) => c.id === 'intro')!.items.map((i) => i.id), ['a', 'c', 'b']);
+  assert.deepEqual(await moveReady(db, 'a', 'up'), { ok: true, order: 1 }); // already first: stays
+  assert.deepEqual(await moveReady(db, 'b', 'down'), { ok: true, order: 3 });
+  assert.deepEqual(await moveReady(db, 'zzz', 'up'), { error: 'not_found' });
+});
+
+test('the copied official slides that were approved take their original category and place, once', async () => {
+  reset();
+  const seeded = (id: string, category: string, index: number, extra: any = {}) => gallery(id, { designerUid: 'weelink-ai', official: true, seededFrom: { category, index }, ...extra });
+  seeded('s2', 'intro', 1); seeded('s1', 'intro', 0); seeded('p', 'about', 0, { status: 'pending' }); seeded('f', 'shop', 0);
+  gallery('mine'); await addReady(db, 'mine', 'intro', 'x'); // already placed: stays first
+  assert.deepEqual(await adoptSeeded(db, 'admin:eyad'), { adopted: 2, categories: 1 });
+  const intro = (await readyOverview(db)).find((c) => c.id === 'intro')!.items.map((i) => i.id);
+  assert.deepEqual(intro, ['mine', 's1', 's2']);
+  assert.deepEqual(await adoptSeeded(db, 'admin:eyad'), { adopted: 0, categories: 0 });
+});
+
+test('the switch to gallery slides needs an approved slide in the category', async () => {
+  reset(); store.delete('readyConfig/intro');
+  assert.deepEqual(await setUseGallery(db, 'intro', true, 'x'), { error: 'empty' });
+  assert.deepEqual(await setUseGallery(db, 'shop', true, 'x'), { error: 'bad_category' });
+  gallery('a'); await addReady(db, 'a', 'intro', 'x');
+  assert.deepEqual(await setUseGallery(db, 'intro', true, 'x'), { ok: true, useGallery: true });
+  assert.equal((await readyOverview(db)).find((c) => c.id === 'intro')!.useGallery, true);
+  assert.deepEqual(await setUseGallery(db, 'intro', false, 'x'), { ok: true, useGallery: false });
+  assert.equal((await readyOverview(db)).find((c) => c.id === 'intro')!.useGallery, false);
 });

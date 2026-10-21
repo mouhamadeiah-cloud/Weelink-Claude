@@ -2,26 +2,28 @@
 // editor's ready-slide panel: the same cards as «من معرض التصاميم», in the admin's order, added with the page's style.
 import React, { useEffect, useState } from 'react';
 import { GalleryCard, loadGallery } from './GalleryPicker';
-import { readyByCategory } from '../../services/readySlides';
+import { galleryOnlyCategories, readyByCategory } from '../../services/readySlides';
 import type { GallerySlide } from '../../services/galleryView';
 
 // The slides of a category (none while loading or if the list cannot be read: the code's own slides are always there).
-export const useReadyFromGallery = (categoryId: string | null): GallerySlide[] => {
-  const [slides, setSlides] = useState<GallerySlide[]>([]);
+// `replacesCode`: the admin switched the category to the gallery, so the code's slides are hidden, but only when it has slides to show.
+export const useReadyFromGallery = (categoryId: string | null): { slides: GallerySlide[]; replacesCode: boolean } => {
+  const [state, setState] = useState<{ slides: GallerySlide[]; replacesCode: boolean }>({ slides: [], replacesCode: false });
   useEffect(() => {
-    setSlides([]);
+    setState({ slides: [], replacesCode: false });
     if (!categoryId) return;
     let alive = true;
-    Promise.all([readyByCategory(), loadGallery()])
-      .then(([byCategory, all]) => {
+    Promise.all([readyByCategory(), loadGallery(), galleryOnlyCategories().catch(() => new Set<string>())])
+      .then(([byCategory, all, only]) => {
         if (!alive) return;
         const byId = new Map(all.map((g) => [g.id, g]));
-        setSlides((byCategory[categoryId] || []).map((id) => byId.get(id)).filter((g): g is GallerySlide => !!g && g.kind === 'slide'));
+        const slides = (byCategory[categoryId] || []).map((id) => byId.get(id)).filter((g): g is GallerySlide => !!g && g.kind === 'slide');
+        setState({ slides, replacesCode: only.has(categoryId) && slides.length > 0 });
       })
       .catch(() => {});
     return () => { alive = false; };
   }, [categoryId]);
-  return slides;
+  return state;
 };
 
 export const ReadyFromGallery: React.FC<{ slides: GallerySlide[]; onAdd: (g: GallerySlide) => void }> = ({ slides, onAdd }) => {

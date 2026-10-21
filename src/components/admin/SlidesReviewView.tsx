@@ -222,7 +222,9 @@ const ReadyCopyBox: React.FC<{ onSessionEnd: () => void; onDone: () => void }> =
       onDone();
     } catch (e) {
       if ((e as AdminError)?.code === 'session') return onSessionEnd();
-      setNote('تعذّر النسخ، أعد المحاولة: ما نُسخ يبقى ولا يُكرَّر.');
+      const err = e as AdminError;
+      console.warn('ready-copy failed', e);
+      setNote(`تعذّر النسخ (${err?.code || err?.message || 'خطأ غير معروف'}${err?.extra?.status ? ` · HTTP ${err.extra.status}` : ''}). ما نُسخ يبقى ولا يُكرَّر، فأعد المحاولة. إن تكرر الخطأ أرسل لي هذه الجملة.`);
     }
     setBusy(false);
   };

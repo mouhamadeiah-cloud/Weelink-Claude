@@ -19,3 +19,15 @@ export const readyByCategory = (): Promise<Record<string, string[]>> => {
   }
   return cache.map;
 };
+
+let cfgCache: { at: number; set: Promise<Set<string>> } | null = null;
+
+// The categories whose slides come from the gallery instead of the code (readyConfig/{category}.useGallery).
+export const galleryOnlyCategories = (): Promise<Set<string>> => {
+  if (!cfgCache || Date.now() - cfgCache.at > 5 * 60_000) {
+    const set = getDocs(collection(db, 'readyConfig')).then((snap) => new Set(snap.docs.filter((d) => d.data().useGallery === true).map((d) => d.id)));
+    set.catch(() => { cfgCache = null; });
+    cfgCache = { at: Date.now(), set };
+  }
+  return cfgCache.set;
+};

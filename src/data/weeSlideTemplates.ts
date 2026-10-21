@@ -1200,6 +1200,26 @@ const grouped = (make: () => WeeSlide) => (): WeeSlide => {
   return { ...slide, elements: groupTemplateCards(slide.elements as any[], (e) => CARD_NAMES.some((n) => e.name?.startsWith(n))) };
 };
 
+// Designs only the AI page build uses: they are not in the editor's ready-slide panel, so the keys of the ready slides copied to the gallery (scripts/ready-to-gallery.ts) stay where they are.
+const AI_ONLY: (() => WeeSlide)[] = [
+  // gallery.viewer: the editor's photo-gallery block (a large photo and its thumbnails); a click opens the photo viewer, which goes
+  // through the photos one after another. The builder puts the owner's photos in it (up to the package's gallery) and drops it when there are none.
+  () => ({
+    aiTemplate: 'gallery.viewer',
+    name: 'معرض متصفح صور',
+    height: 700,
+    mobileHeight: 640,
+    backgroundColor: P_.bg,
+    elements: [
+      on(heading(P_, { x: 96, y: 70, width: 1088, height: 60 }, 'من شغلنا', 42, {}, 'title'), 20, 40, 320, 60),
+      on(el('gallery', 'معرض صور', { x: 140, y: 160, width: 1000, height: 480 }, '', { borderRadius: 18 }, {
+        ...slot('gallery'),
+        galleryConfig: { layout: 'top-main', items: ['p1', 'p2', 'p3', 'p4'].map((n, i) => ({ id: `g${i}`, url: photo(n), title: '' })), activeImageIndex: 0, showThumbnails: true, gap: 10, borderRadius: 14, objectFit: 'cover' },
+      }), 20, 120, 320, 480),
+    ],
+  }),
+];
+
 // Ready-slide categories the designs open, first in their category's list.
 export const WEE_SLIDES: Record<string, (() => WeeSlide)[]> = Object.fromEntries(
   Object.entries({ intro: HERO, about: ABOUT, prices: PRICES, gallery: GALLERY, contact: CONTACT, privacy: LEGAL, team: TEAM, special_offer: OFFER }).map(([id, list]) => [id, list.map(grouped)]),
@@ -1209,5 +1229,5 @@ export const weeSlideCount = (categoryId: string) => WEE_SLIDES[categoryId]?.len
 
 // Every design by its id, for the AI page build.
 export const WEE_SLIDE_BY_ID: Record<string, () => WeeSlide> = Object.fromEntries(
-  Object.values(WEE_SLIDES).flat().map((make) => [make().aiTemplate, make]),
+  [...Object.values(WEE_SLIDES).flat(), ...AI_ONLY].map((make) => [make().aiTemplate, make]),
 );

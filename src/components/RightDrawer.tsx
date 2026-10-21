@@ -1400,6 +1400,18 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
             <ImageIcon size={14} />
             تبديل الصورة
           </button>
+          <label className="flex items-start gap-2 rounded-[10px] border border-neutral-200 px-2.5 py-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!el.lightboxGroup}
+              onChange={(e) => onUpdateElement({ lightboxGroup: e.target.checked ? 'slide' : undefined })}
+              className="mt-0.5"
+            />
+            <span className="text-xs">
+              <span className="font-bold text-neutral-800">تكبير عند النقر</span>
+              <span className="block text-neutral-500 font-semibold">تُعرض كل صور الشريحة المعلَّمة هكذا تباعاً في متصفح الصور</span>
+            </span>
+          </label>
           <InspectorSubheading>صورة بشكل</InspectorSubheading>
           <div className="max-h-56 overflow-y-auto rounded-xl border border-neutral-200 p-1">
             {option('بدون قص (مستطيل طبيعي)', !el.clipPath, () => onUpdateElement({ clipPath: undefined }), 'none')}

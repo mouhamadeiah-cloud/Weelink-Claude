@@ -83,7 +83,8 @@
     "templates": [
      "gallery.mosaic",
      "gallery.strip",
-     "gallery.frames"
+     "gallery.frames",
+     "gallery.viewer"
     ]
    },
    {
@@ -171,7 +172,8 @@
     "templates": [
      "gallery.mosaic",
      "gallery.strip",
-     "gallery.frames"
+     "gallery.frames",
+     "gallery.viewer"
     ]
    },
    {
@@ -271,7 +273,8 @@
     "templates": [
      "gallery.mosaic",
      "gallery.strip",
-     "gallery.frames"
+     "gallery.frames",
+     "gallery.viewer"
     ]
    },
    {
@@ -375,6 +378,93 @@
   ]
  },
  "templates": {
+  "hero.forest": {
+   "name": "مدخل مشهد سينمائي (غابة)",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "title": {
+     "kind": "text",
+     "max": 60
+    },
+    "sub": {
+     "kind": "text",
+     "max": 240
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 24
+    },
+    "background": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "hero.paper": {
+   "name": "مدخل مشهد سينمائي (ورق دافئ)",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "title": {
+     "kind": "text",
+     "max": 60
+    },
+    "sub": {
+     "kind": "text",
+     "max": 240
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 24
+    },
+    "background": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "hero.disc": {
+   "name": "مدخل مشهد سينمائي (دائرة تتسع)",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 60
+    },
+    "sub": {
+     "kind": "text",
+     "max": 240
+    },
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "note": {
+     "kind": "text",
+     "max": 120
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    },
+    "background": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
   "hero.cover": {
    "name": "مدخل بصورة كاملة",
    "slots": {
@@ -922,6 +1012,290 @@
   "legal.accordion": {
    "name": "الشروط والخصوصية أسئلة",
    "slots": {},
+   "lists": {}
+  },
+  "team.cards": {
+   "name": "فريق أربع بطاقات",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "image": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "team.spotlight": {
+   "name": "فريق واجهة قائدة الفريق",
+   "slots": {
+    "image": {
+     "kind": "image"
+    },
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "team.mosaic": {
+   "name": "فريق فسيفساء صور",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    },
+    "image": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "team.ribbon": {
+   "name": "فريق شريط وصور دائرية",
+   "slots": {
+    "image": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "team.leader": {
+   "name": "فريق قائد وأربعة أعضاء",
+   "slots": {
+    "image": {
+     "kind": "image"
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "team.path": {
+   "name": "فريق مسار بخطوات",
+   "slots": {},
+   "lists": {}
+  },
+  "team.banner": {
+   "name": "فريق على صورة بأوراق زجاجية",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "image": {
+     "kind": "image"
+    },
+    "background": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "team.numbers": {
+   "name": "فريق أرقام وأشخاص",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "image": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "team.orbit": {
+   "name": "فريق مدار دائري",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "image": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "team.join": {
+   "name": "فريق انضم إلينا",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    },
+    "image": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "offer.homecook": {
+   "name": "عرض طبخ منزلي",
+   "slots": {
+    "image": {
+     "kind": "image"
+    },
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    },
+    "whatsapp": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "offer.restaurant": {
+   "name": "عرض مطعم",
+   "slots": {
+    "cta": {
+     "kind": "button",
+     "max": 24
+    },
+    "background": {
+     "kind": "image"
+    }
+   },
+   "lists": {}
+  },
+  "offer.shop": {
+   "name": "عرض متجر إلكتروني",
+   "slots": {
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "offer.dental": {
+   "name": "عرض عيادة أسنان",
+   "slots": {
+    "image": {
+     "kind": "image"
+    },
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "offer.salon": {
+   "name": "عرض صالون تجميل",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "offer.gym": {
+   "name": "عرض نادي رياضي",
+   "slots": {
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "offer.garage": {
+   "name": "عرض ورشة سيارات",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "offer.flowers": {
+   "name": "عرض محل ورد",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "offer.school": {
+   "name": "عرض دورات لغات",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "offer.furniture": {
+   "name": "عرض نجارة وأثاث",
+   "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "gallery.viewer": {
+   "name": "معرض متصفح صور",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 60
+    }
+   },
    "lists": {}
   },
   "rest.front": {

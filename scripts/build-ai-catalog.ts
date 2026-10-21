@@ -24,7 +24,7 @@ for (const [kind, ids] of Object.entries(STORE_SLIDE_IDS)) {
 
 const HERO = ['hero.cover', 'hero.split', 'hero.band'];
 const ABOUT = ['about.story', 'about.quote', 'about.points'];
-const GALLERY = ['gallery.mosaic', 'gallery.strip', 'gallery.frames'];
+const GALLERY = ['gallery.mosaic', 'gallery.strip', 'gallery.frames', 'gallery.viewer'];
 const CONTACT = ['contact.card', 'contact.band', 'contact.form'];
 const LEGAL = ['legal.columns', 'legal.accordion'];
 

@@ -57,3 +57,42 @@ test('the contact section shows the owner\'s Facebook and TikTok as buttons; a b
   assert.equal(bad.elements.filter((e: any) => e.type === 'button').length, 0);
   assert.deepEqual(socialLinks(undefined), []);
 });
+
+test('the photos of a gallery section open in the viewer: its photo frames share a group', async () => {
+  const frame = (id: string, x: number, slot: string) => ({ id, type: 'image', slideId: 's', x, y: 140, width: 300, height: 260, content: 'u', imageUrl: 'u', aiSlot: slot, styles: { objectFit: 'cover' } });
+  const extra = { 'g:gal': { name: 'معرض', slide: { height: 520, backgroundColor: '#ffffff' }, elements: [
+    { id: 't', type: 'heading', slideId: 's', x: 100, y: 40, width: 600, height: 60, content: 'x', aiSlot: 'title', styles: { fontSize: 30, color: '#111111' } },
+    frame('p0', 100, 'photos.0'), frame('p1', 450, 'photos.1'), frame('p2', 800, 'photos.2'),
+    { id: 'logo', type: 'image', slideId: 's', x: 20, y: 20, width: 40, height: 40, content: 'l', imageUrl: 'l', aiSlot: 'image', styles: {} },
+  ] } };
+  const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, extra, sections: [
+    { section: 'gallery', template: 'g:gal', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: { 'photos.0': 'user:gallery:1', 'photos.1': 'user:gallery:2', 'photos.2': 'user:gallery:3' }, entrance: 'none' },
+    { section: 'about', template: 'g:gal', tone: 'light', slots: { title: 'من نحن' }, icons: {}, links: {}, images: {}, entrance: 'none' },
+  ] };
+  const answers: any = { aiAnswers: { galleryImages: ['https://x/1.jpg', 'https://x/2.jpg', 'https://x/3.jpg'] } };
+  const page: any = { id: 'p1', name: 'الرئيسية', slug: '/', slides: [{ id: 'old', name: 'x', height: 500, backgroundColor: '#fff' }], navbar: { brandName: 'x' } };
+  const r: any = await buildPageFromPlan(plan, { kind: 'free', answers, siteName: 'تجربة', pages: [page], elements: [], activePageId: 'p1' }, async () => 'https://x/search.jpg');
+  const [galleryId, aboutId] = r.pages[0].slides.map((s: any) => s.id);
+  const grouped = r.elements.filter((e: any) => e.lightboxGroup);
+  assert.deepEqual(grouped.map((e: any) => e.aiSlot).sort(), ['photos.0', 'photos.1', 'photos.2']);
+  assert.ok(grouped.every((e: any) => e.slideId === galleryId));
+  assert.ok(!r.elements.some((e: any) => e.slideId === aboutId && e.lightboxGroup)); // another section's photos are not in it
+});
+
+test('the photo-viewer gallery takes the owner\'s photos in order and goes when there are none', async () => {
+  const build = (galleryImages: string[]) => {
+    const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, sections: [
+      { section: 'intro', template: 'hero.cover', tone: 'light', slots: { title: 'مرحبا', sub: 'أهلاً بكم في مطعمنا', eyebrow: 'مطعم' }, icons: {}, links: {}, images: {}, entrance: 'none' },
+      { section: 'gallery', template: 'gallery.viewer', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: {}, entrance: 'none' },
+    ] };
+    const page: any = { id: 'p1', name: 'الرئيسية', slug: '/', slides: [{ id: 'old', name: 'x', height: 500, backgroundColor: '#fff' }], navbar: { brandName: 'x' } };
+    return buildPageFromPlan(plan, { kind: 'free', answers: { aiAnswers: { galleryImages } } as any, siteName: 'تجربة', pages: [page], elements: [], activePageId: 'p1' }, async () => 'https://x/s.jpg') as Promise<any>;
+  };
+  const withPhotos = await build(['https://x/1.jpg', 'https://x/2.jpg', 'https://x/3.jpg']);
+  const block = withPhotos.elements.find((e: any) => e.type === 'gallery');
+  assert.deepEqual(block.galleryConfig.items.map((i: any) => i.url), ['https://x/1.jpg', 'https://x/2.jpg', 'https://x/3.jpg']);
+  assert.equal(block.galleryConfig.layout, 'top-main');
+  const without = await build([]);
+  assert.ok(!without.elements.some((e: any) => e.type === 'gallery'));
+  assert.equal(without.pages[0].slides.length, 1); // the empty gallery section is not built
+});

@@ -243,6 +243,8 @@ export interface CanvasElement {
   badgePosition?: 'right' | 'left';
   authorText?: string;
   clipPath?: string;
+  // Images of a slide with the same group open together in the photo viewer when clicked, one after another (src/utils/imageGroup.ts).
+  lightboxGroup?: string;
   tableConfig?: {
     rows: number;
     cols: number;

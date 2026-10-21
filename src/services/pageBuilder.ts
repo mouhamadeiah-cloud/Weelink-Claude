@@ -190,6 +190,18 @@ const whatsappLink = (num: string) => ({ linkType: 'contact' as const, contactTy
 const phoneLink = (num: string) => ({ linkType: 'contact' as const, contactType: 'phone' as const, contactValue: num, linkUrl: `tel:${num.replace(/[^0-9+]/g, '')}`, linkTargetId: undefined });
 const noLink = { linkType: undefined, linkUrl: undefined, linkTargetId: undefined, contactType: undefined, contactValue: undefined };
 
+// The owner's social pages from the contact question (Facebook, TikTok): a link as typed, or the bare address given a https://.
+const SOCIAL: { type: 'facebook' | 'tiktok'; label: string; host: RegExp }[] = [
+  { type: 'facebook', label: 'فيسبوك', host: /^(?:https?:\/\/)?(?:www\.|m\.|web\.)?(?:facebook|fb)\.com\/\S+/i },
+  { type: 'tiktok', label: 'تيك توك', host: /^(?:https?:\/\/)?(?:www\.|vm\.)?tiktok\.com\/\S+/i },
+];
+export const socialLinks = (contact: WeeAnswers['contactInfo']) =>
+  SOCIAL.flatMap((n) => {
+    const raw = (contact?.[n.type] || '').trim();
+    if (!n.host.test(raw)) return [];
+    return [{ type: n.type, label: n.label, url: /^https?:\/\//i.test(raw) ? raw : `https://${raw}` }];
+  });
+
 const SYSTEM = /^(phone|whatsapp|address|hours)\.(label|value)$/;
 const IMAGE = /^(image|avatar|photos\.\d+)$/;
 // The first part of a list item: without it the item's other parts go too.
@@ -473,6 +485,27 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
     el = { ...el, styles };
     return { ...el, id: `${slideId}-el-${j}`, slideId } as CanvasElement;
   });
+
+  // The contact section also shows the owner's Facebook and TikTok pages, as buttons under what the slide has.
+  const socials = section.section === 'contact' ? socialLinks(ctx.answers.contactInfo) : [];
+  if (socials.length) {
+    const w = 190;
+    const gap = 16;
+    const x0 = Math.round((1280 - (socials.length * w + (socials.length - 1) * gap)) / 2);
+    const top = height;
+    height += 96;
+    const phoneTop = mobileHeight;
+    socials.forEach((n, i) => {
+      elements.push({
+        id: `${slideId}-el-${elements.length}`, slideId, name: `زر ${n.label}`, type: 'button', content: n.label,
+        x: x0 + i * (w + gap), y: top + 24, width: w, height: 48,
+        styles: { backgroundColor: to.accent, color: textOn(to.accent), fontSize: 16, fontWeight: 'bold', borderRadius: 9999, textAlign: 'center', fontFamily: fonts.body },
+        linkType: 'contact', contactType: n.type, contactValue: n.url, linkUrl: n.url, linkTargetId: undefined,
+        ...(phoneTop !== undefined ? { mobile: { x: 36, y: phoneTop + 24 + i * 60, width: 288, height: 48, fontScale: 1 } } : {}),
+      } as CanvasElement);
+    });
+    if (mobileHeight !== undefined) mobileHeight += 24 + socials.length * 60 + 12;
+  }
 
   // A faint photo wash fades the slide colour with it, to near white: on a dark section it goes.
   const wash = (backgroundOpacity ?? 1) < 0.5;

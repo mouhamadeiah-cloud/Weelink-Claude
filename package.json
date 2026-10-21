@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "ai-catalog": "tsx scripts/build-ai-catalog.ts",
     "test": "node --import tsx --import ./tests/alias.mjs --test tests/*.test.ts",
-    "gallery-pages": "tsx scripts/build-gallery-pages.ts"
+    "gallery-pages": "tsx scripts/build-gallery-pages.ts",
+    "ready-to-gallery": "tsx scripts/ready-to-gallery.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

@@ -29,3 +29,30 @@
 - Admin view «الشرائح الجاهزة» (`ReadySlidesView`): per category, slides in order with أعلى/أسفل, move to another category, take out; «اعتماد الشرائح المنسوخة» places approved copied slides in their original category and order.
 - Per-category switch «استعمل شرائح المعرض بدل شرائح الكود» (`readyConfig/{category}.useGallery`); refused when the category has no approved slide. The editor hides the code's slides for a switched category only while it has gallery slides to show.
 - Server: `moveReady`, `adoptSeeded`, `setUseGallery`, `readyOverview` in `server/readySlides.ts`; actions `ready-overview|move|adopt|use-gallery`. Needs the new `readyConfig` rule published.
+
+## Step 4 — new «ابن صفحتي»: fixed models, random slides, AI writes text only (plan, Eyad 21 Oct)
+Principle: the free page is the base that every page has; each other type (مطعم، سيارات، متجر، برو) is the base + its own intro + its own section. The AI only writes texts and image searches; the server picks the slides.
+
+### Models (النماذج): the sections of a page, in order
+- **الأساس (حرة)**: مدخل ← من نحن ← خدمات ← [أسعار: إن ذكر خدمات بأسعار] ← [معرض: إن رفع صوراً] ← تواصل ← قوانين وخصوصية. Optional, owner ticks them before the build: لماذا نحن، أرقام، مواعيد، فريق.
+- **مطعم / متجر / سيارات**: مدخل خاص بالنوع ← قسم النوع (المنيو / المنتجات / السيارات: من الكود، يقرأ بيانات حية) ← من نحن ← [معرض] ← تواصل ← خصوصية.
+- **برو**: the same model of its type + more optional sections (فريق، شركاء، آخر مشاريعنا، فيديو) and more slides per page.
+- Every model starts with an intro slide.
+
+### What a section holds (احتواء الشرائح)
+A section = { ready category, required?, condition, how many slides (1 by default) }. Slides come from `readySlides` of that category when the category is switched to the gallery, or from the code for the fixed categories.
+A slide is eligible only if: approved, in the ready list, switched on, its text slots are marked (aiSlot with a character limit), and it is not already used in this page.
+Pick: random among the eligible, weighted by likes and uses, never the same slide as the owner's previous build. The page style (lookSlide) is applied after the pick.
+
+### What the AI does
+Gets the owner's card + the chosen slides' slots (name, character limit, how many items) and returns the texts, plus one English image search per image slot, derived from the service next to it. The owner's own photos come first; the search is the fallback; a default photo of the category if the search fails. Today's checks stay (limits, no invented prices, no links, no emoji).
+
+### After the build
+The ready-slide panel stays for adding any slide, and booking stays an option. A button «املأها من بطاقتي» asks the AI for the texts of that one slide only.
+
+### Phases
+4a. Models as data (`pageModels/{type}`, defaults in code) + an admin tab to edit them.
+4b. Slot marking tool in the admin + the eligibility rule.
+4c. New server build: picks the slides, AI text-only prompt, images by service; tests.
+4d. «املأها من بطاقتي».
+4e. Remove the old catalog (`ai-catalog`, buildCatalog.json) once the new build is live.

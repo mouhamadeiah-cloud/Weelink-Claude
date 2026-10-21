@@ -174,6 +174,8 @@ export interface GallerySlideRow {
   kind: 'slide' | 'page'; slide: any; page: any; elements: any[];
   // Made by Weelink itself («Weelink AI»); changed by hand by someone; a designer's change to an approved design waiting for review.
   official?: boolean; editedBy?: string; isEdit?: boolean;
+  // The ready-slide category it was added to («شرائح جاهزة» in the editor), if any.
+  ready?: string;
 }
 export const adminSlides = (status: SlideStatus) => call<{ rows: GallerySlideRow[]; counts: { pending: number } }>({ action: 'slides-review-list', status });
 // Editing a design in the gallery: the admin edits anything (it changes in place), in the designer's panel (src/App.tsx opens it
@@ -201,6 +203,8 @@ export interface SeedStatus { total: number; published: number; staged: number; 
 export interface SeedResult { published: string[]; waiting: string[]; limited: boolean; spent: number; failed: string[] }
 export const adminSeedStatus = () => call<SeedStatus>({ action: 'gallery-seed-status' });
 export const adminSeed = (opts: { overwrite?: boolean; publish?: boolean } = {}) => call<SeedResult>({ action: 'gallery-seed', overwrite: !!opts.overwrite, publish: !!opts.publish });
+export const adminReadyAdd = (id: string, category: string) => call<{ ok: true; category: string }>({ action: 'ready-add', id, category });
+export const adminReadyRemove = (id: string) => call<{ ok: true }>({ action: 'ready-remove', id });
 export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });
 
 // Hiring a designer: the office takes the customer's money, holds it until the design is confirmed, then pays the

@@ -75,6 +75,7 @@ import { Resend } from 'resend';
 import { mailOrder } from '../server/orderMail.js';
 import { recountDesigner } from '../server/designerStats.js';
 import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
+import { addReady, dropReadyFor, readyMap, removeReady } from '../server/readySlides.js';
 import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
 import { createCheckout, handleWebhook, stripeConfig } from '../server/stripe.js';
 import { runCleanup } from '../server/cleanup.js';
@@ -245,7 +246,7 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
 const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply', 'orders', 'order', 'order-approve', 'order-reject', 'order-extend', 'billing-settings'];
 // The designers' gallery and the rating reports are the content reviewers' work (the owner too).
-const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'slide-edit-review', 'reports', 'report-decide'];
+const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'ready-add', 'ready-remove', 'slide-edit-review', 'reports', 'report-decide'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup', 'billing-enforce', 'test-account', 'subscriber-delete', 'cleanup'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'deleted-list', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
@@ -1126,9 +1127,10 @@ export default {
 
     if (action === 'slides-review-list') {
       const status = SLIDE_STATUSES.includes(String(body.status)) ? String(body.status) : 'pending';
-      const [snap, pendingCount] = await Promise.all([
+      const [snap, pendingCount, ready] = await Promise.all([
         db.collection('gallerySlides').where('status', '==', status).limit(240).get(),
         db.collection('gallerySlides').where('status', '==', 'pending').select('derivedFrom').get(),
+        readyMap(db),
       ]);
       // The slides taken from a page follow the page's decision: they are listed only among the approved ones.
       const rows = snap.docs
@@ -1140,7 +1142,7 @@ export default {
             id: d.id, name: String(x.name || ''), category: String(x.category || ''), designerUid: String(x.designerUid || ''),
             designerName: String(x.designerName || ''), status: String(x.status || 'pending'), lawVersion: Number(x.lawVersion) || 0,
             acceptedAt: String(x.acceptedAt || ''), createdAt: x.createdAt?.toMillis?.() || 0, reason: String(x.reason || ''),
-            reviewedBy: String(x.reviewedBy || ''), official: x.official === true, editedBy: String(x.editedBy || ''), kind: x.kind === 'page' ? 'page' : 'slide', slide: x.slide || {}, page: x.kind === 'page' ? x.page || null : null,
+            reviewedBy: String(x.reviewedBy || ''), ready: ready[d.id] || '', official: x.official === true, editedBy: String(x.editedBy || ''), kind: x.kind === 'page' ? 'page' : 'slide', slide: x.slide || {}, page: x.kind === 'page' ? x.page || null : null,
             elements: Array.isArray(x.elements) ? x.elements : [],
           };
         })
@@ -1170,6 +1172,7 @@ export default {
         ...(decision === 'approve' ? { approvedAt: Date.now(), likes: Number(cur?.likes) || 0, dislikes: Number(cur?.dislikes) || 0 } : {}),
       });
       // The slides taken from this page (Weelink's own pages) get the same decision.
+      if (decision === 'reject') await dropReadyFor(db, id); // a withdrawn slide leaves the ready slides too
       const derived = await db.collection('gallerySlides').where('derivedFrom', '==', id).get();
       for (const d of derived.docs) {
         await d.ref.update({
@@ -1197,7 +1200,23 @@ export default {
       const id = String(body.id || '').slice(0, 128);
       const r = await deleteDesign(db, id);
       if ('error' in r) return json({ error: 'not-found' }, 404);
+      await dropReadyFor(db, id);
       await audit(session.u, `gallery-doc-delete:${id}`);
+      return json({ ok: true });
+    }
+    // An approved gallery slide goes into one of the editor's ready-slide categories, or leaves it (server/readySlides.ts).
+    if (action === 'ready-add') {
+      const id = String(body.id || '').slice(0, 128);
+      const r = await addReady(db, id, String(body.category || ''), session.u);
+      if ('error' in r) return json({ error: r.error }, r.error === 'not_found' ? 404 : 400);
+      await audit(session.u, `ready-add:${id}:${r.category}`);
+      return json({ ok: true, category: r.category });
+    }
+    if (action === 'ready-remove') {
+      const id = String(body.id || '').slice(0, 128);
+      const r = await removeReady(db, id);
+      if ('error' in r) return json({ error: 'not-found' }, 404);
+      await audit(session.u, `ready-remove:${id}`);
       return json({ ok: true });
     }
     if (action === 'slide-edit-review') {

@@ -370,7 +370,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   const [galleryNavbar, setGalleryNavbar] = useState(false);
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<string | null>(null);
   // The gallery slides the admin added to the open ready-slide category.
-  const readyFromGallery = useReadyFromGallery(activeTemplateCategory);
+  const { slides: readyFromGallery, replacesCode: readyReplacesCode } = useReadyFromGallery(activeTemplateCategory);
+  const readyCodeCount = activeTemplateCategory && !readyReplacesCode ? slideTemplateCount(activeTemplateCategory) : 0;
 
   // --- Draggable & Minimization States & Handlers for Control Panel ---
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -6203,7 +6204,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 {READY_SLIDE_CATEGORIES.find(c => c.id === activeTemplateCategory)?.name || 'الشرائح الجاهزة'}
               </span>
               <span className="text-xs text-brand font-bold bg-brand/5 border border-brand/10 px-1.5 py-0.5 rounded-full">
-                {activeTemplateCategory ? slideTemplateCount(activeTemplateCategory) + readyFromGallery.length : 10} تصاميم
+                {activeTemplateCategory ? readyCodeCount + readyFromGallery.length : 10} تصاميم
               </span>
             </div>
             
@@ -6224,7 +6225,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 كل شريحة معروضة بشكلها وارتفاعها الحقيقي. الصور والبيانات هنا افتراضية، وبعد الإضافة تظهر صورك وبياناتك.
               </p>
             )}
-            {activeTemplateCategory && Array.from({ length: slideTemplateCount(activeTemplateCategory) }).map((_, idx) => {
+            {activeTemplateCategory && Array.from({ length: readyCodeCount }).map((_, idx) => {
               const cat = READY_SLIDE_CATEGORIES.find(c => c.id === activeTemplateCategory);
               const catName = cat ? cat.name : 'شريحة';
               // Shown and added in the page's look («ستايل الصفحة») when it has one.

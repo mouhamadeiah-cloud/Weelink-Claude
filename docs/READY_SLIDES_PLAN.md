@@ -23,3 +23,9 @@
 - في مراجعة الشرائح صندوق «الشرائح الجاهزة في المعرض»: «نسخ الشرائح الجاهزة إلى المعرض» (على دفعات من 30)، «إعادة نسخ غير المعدّل»، «نشر الكل مباشرة». تُكتب باسم «Weelink AI» وبحالة «بانتظار المراجعة» ومعها `seededFrom` (الفئة والمكان الأصليان).
 - لوحة المحرر لا تتغير: لا تُنشأ وثائق `readySlides` ولا تتكرر الشرائح عند القبول.
 - تنبيه: المعرض يقرأ أول 60 شريحة مقبولة (`GALLERY_LIMIT`)؛ نشر 167 شريحة رسمية دفعة واحدة سيزاحم تصاميم المصممين. الأفضل نشر ما تختاره الإدارة فقط (الخطوة 3).
+
+
+## Step 3 — admin tool (done)
+- Admin view «الشرائح الجاهزة» (`ReadySlidesView`): per category, slides in order with أعلى/أسفل, move to another category, take out; «اعتماد الشرائح المنسوخة» places approved copied slides in their original category and order.
+- Per-category switch «استعمل شرائح المعرض بدل شرائح الكود» (`readyConfig/{category}.useGallery`); refused when the category has no approved slide. The editor hides the code's slides for a switched category only while it has gallery slides to show.
+- Server: `moveReady`, `adoptSeeded`, `setUseGallery`, `readyOverview` in `server/readySlides.ts`; actions `ready-overview|move|adopt|use-gallery`. Needs the new `readyConfig` rule published.

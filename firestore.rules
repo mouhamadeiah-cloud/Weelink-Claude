@@ -555,6 +555,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Per ready-slide category: whether the editor shows the gallery's slides instead of the code's
+    // (server/readySlides.ts). Everyone reads it; only the admin site writes it.
+    match /readyConfig/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // A voter's likes and dislikes on gallery slides (api/gallery.ts writes them, with the slides'
     // counters): they read their own, to show which slides they voted on.
     match /galleryVotes/{uid} {

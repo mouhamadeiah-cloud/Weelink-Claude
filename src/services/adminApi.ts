@@ -181,7 +181,7 @@ export const adminSlides = (status: SlideStatus) => call<{ rows: GallerySlideRow
 // Editing a design in the gallery: the admin edits anything (it changes in place), in the designer's panel (src/App.tsx opens it
 // with the session handed over by openGalleryEditor) or here for the name and category.
 interface GalleryDoc { id: string; kind: 'slide' | 'page'; name: string; category: string; designerUid: string; designerName: string; status: SlideStatus; official: boolean; slide: any; page: any; elements: any[] }
-const adminGalleryDoc = (id: string) => call<{ design: GalleryDoc; pendingEdit: boolean }>({ action: 'gallery-doc', id });
+export const adminGalleryDoc = (id: string) => call<{ design: GalleryDoc; pendingEdit: boolean }>({ action: 'gallery-doc', id });
 export const adminGallerySave = (id: string, d: { page: any; elements: any[]; name?: string; category?: string; designerName?: string }) => call<{ ok: true }>({ action: 'gallery-doc-save', id, ...d });
 export const adminGalleryDelete = (id: string) => call<{ ok: true }>({ action: 'gallery-doc-delete', id });
 export const adminEditReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ ok: true }>({ action: 'slide-edit-review', id, decision, reason });
@@ -207,6 +207,11 @@ export interface ReadyCopyStatus { total: number; copied: number; published: num
 export const adminReadyCopyStatus = () => call<ReadyCopyStatus>({ action: 'ready-copy-status' });
 export const adminReadyCopy = (opts: { publish?: boolean; overwrite?: boolean; from?: number } = {}) => call<{ written: number; kept: number; next: number | null; total: number }>({ action: 'ready-copy', publish: !!opts.publish, overwrite: !!opts.overwrite, from: opts.from || 0, limit: 30 });
 export const adminReadyAdd = (id: string, category: string) => call<{ ok: true; category: string }>({ action: 'ready-add', id, category });
+export interface ReadyCategory { id: string; name: string; icon: string; useGallery: boolean; items: { id: string; name: string; designerName: string; official: boolean; approved: boolean }[] }
+export const adminReadyOverview = () => call<{ categories: ReadyCategory[] }>({ action: 'ready-overview' });
+export const adminReadyMove = (id: string, dir: 'up' | 'down') => call<{ ok: true }>({ action: 'ready-move', id, dir });
+export const adminReadyAdopt = () => call<{ adopted: number; categories: number }>({ action: 'ready-adopt' });
+export const adminReadyUseGallery = (category: string, on: boolean) => call<{ ok: true; useGallery: boolean }>({ action: 'ready-use-gallery', category, on });
 export const adminReadyRemove = (id: string) => call<{ ok: true }>({ action: 'ready-remove', id });
 export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });
 

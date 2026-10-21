@@ -79,7 +79,7 @@ const call = async <T,>(body: Record<string, unknown>): Promise<T> => {
     throw new AdminError('network');
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new AdminError(String(data.error || 'failed'), data);
+  if (!res.ok) throw new AdminError(String(data.error || 'failed'), { ...data, status: res.status });
   return data as T;
 };
 

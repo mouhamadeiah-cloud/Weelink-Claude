@@ -83,7 +83,7 @@ test('the photo-viewer gallery takes the owner\'s photos in order and goes when 
   const build = (galleryImages: string[]) => {
     const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, sections: [
       { section: 'intro', template: 'hero.cover', tone: 'light', slots: { title: 'مرحبا', sub: 'أهلاً بكم في مطعمنا', eyebrow: 'مطعم' }, icons: {}, links: {}, images: {}, entrance: 'none' },
-      { section: 'gallery', template: 'gallery.view5a', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: {}, entrance: 'none' },
+      { section: 'gallery', template: 'gallery.block1', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: {}, entrance: 'none' },
     ] };
     const page: any = { id: 'p1', name: 'الرئيسية', slug: '/', slides: [{ id: 'old', name: 'x', height: 500, backgroundColor: '#fff' }], navbar: { brandName: 'x' } };
     return buildPageFromPlan(plan, { kind: 'free', answers: { aiAnswers: { galleryImages } } as any, siteName: 'تجربة', pages: [page], elements: [], activePageId: 'p1' }, async () => 'https://x/s.jpg') as Promise<any>;
@@ -91,7 +91,7 @@ test('the photo-viewer gallery takes the owner\'s photos in order and goes when 
   const withPhotos = await build(['https://x/1.jpg', 'https://x/2.jpg', 'https://x/3.jpg']);
   const block = withPhotos.elements.find((e: any) => e.type === 'gallery');
   assert.deepEqual(block.galleryConfig.items.map((i: any) => i.url), ['https://x/1.jpg', 'https://x/2.jpg', 'https://x/3.jpg']);
-  assert.equal(block.galleryConfig.layout, 'top-main'); // gallery.view5a
+  assert.equal(block.galleryConfig.layout, 'top-main'); // gallery.block1
   const without = await build([]);
   assert.ok(!without.elements.some((e: any) => e.type === 'gallery'));
   assert.equal(without.pages[0].slides.length, 1); // the empty gallery section is not built
@@ -102,7 +102,7 @@ test('a gallery of up to 15 photos: the 15-photo viewer takes them all in order;
   const build = (maxPhotos?: number) => {
     const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, sections: [
       { section: 'intro', template: 'hero.cover', tone: 'light', slots: { title: 'مرحبا', sub: 'أهلاً بكم', eyebrow: 'مطعم' }, icons: {}, links: {}, images: {}, entrance: 'none' },
-      { section: 'gallery', template: 'gallery.view15a', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: {}, entrance: 'none' },
+      { section: 'gallery', template: 'gallery.block4', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: {}, entrance: 'none' },
     ] };
     const page: any = { id: 'p1', name: 'الرئيسية', slug: '/', slides: [{ id: 'old', name: 'x', height: 500, backgroundColor: '#fff' }], navbar: { brandName: 'x' } };
     return buildPageFromPlan(plan, { kind: 'free', answers: { aiAnswers: { galleryImages: urls } } as any, siteName: 'تجربة', pages: [page], elements: [], activePageId: 'p1', ...(maxPhotos ? { maxPhotos } : {}) }, async () => null) as Promise<any>;

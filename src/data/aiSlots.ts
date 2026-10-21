@@ -75,14 +75,17 @@ const SINGLE_TEXT = ['eyebrow', 'title', 'sub', 'text', 'note', 'quote', 'owner'
 const SINGLE_BUTTON = ['cta', 'whatsapp', 'phone'];
 const SINGLE_IMAGE = ['image', 'avatar'];
 const INDEXED = /^(?:(?:chips|facts|points|items|packages)\.\d+(?:\.[a-z]+)?|photos\.\d+|caption\.\d+)$/;
-export const SLOT_NAMES = { text: SINGLE_TEXT, button: SINGLE_BUTTON, image: SINGLE_IMAGE };
+// The elements Weelink fills itself (the map from the address, the contact form, the owner's photos in the photo-gallery block) have one slot each.
+export const SLOT_NAMES = { text: SINGLE_TEXT, button: SINGLE_BUTTON, image: SINGLE_IMAGE, map: ['map'], form: ['form'], gallery: ['gallery'] };
 
 /** Is this a slot name the builder knows? */
 export const isSlotName = (name: string) => [...SINGLE_TEXT, ...SINGLE_BUTTON, ...SINGLE_IMAGE].includes(name) || INDEXED.test(name) || SYSTEM_SLOTS.test(name);
 
-/** The slot kind an element can carry: its text, its button, its photo; none for shapes, icons and the rest. */
-export const slotKindOf = (type: string): 'text' | 'button' | 'image' | null =>
-  type === 'heading' || type === 'paragraph' || type === 'badge' ? 'text' : type === 'button' ? 'button' : type === 'image' ? 'image' : null;
+/** The slot kind an element can carry: its text, its button, its photo, its map, its form, its photo gallery; none for shapes, icons and the rest. */
+export type SlotKind = keyof typeof SLOT_NAMES;
+export const slotKindOf = (type: string): SlotKind | null =>
+  type === 'heading' || type === 'paragraph' || type === 'badge' ? 'text'
+  : type === 'button' ? 'button' : type === 'image' ? 'image' : type === 'map' ? 'map' : type === 'contactForm' ? 'form' : type === 'gallery' ? 'gallery' : null;
 
 export interface Eligibility { eligible: boolean; slots: number; problems: string[] }
 

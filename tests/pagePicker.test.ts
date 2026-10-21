@@ -93,44 +93,44 @@ test('the pool over the database reads the ready slides and the switches, and re
 import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
 import { photoCapacity } from '../server/pagePicker.ts';
 
-test('the gallery section takes only a slide that holds all the owner\'s photos: frames hold 5, the viewers 5 and 15', async () => {
+test('the gallery section takes only a slide that holds all the owner\'s photos: the photo-gallery block holds 15', async () => {
   const codeSections = (catalog.sections as any).free as CodeSection[];
   const specs = catalog.templates as any;
-  assert.deepEqual(['gallery.view5a', 'gallery.view5b', 'gallery.view5c', 'gallery.view15a', 'gallery.view15e'].map((t) => photoCapacity(t, specs[t])), [5, 5, 5, 15, 15]);
+  assert.deepEqual(['gallery.block1', 'gallery.block5', 'gallery.block8'].map((t) => photoCapacity(t, specs[t])), [15, 15, 15]);
   const sections = DEFAULT_MODELS[0].sections.filter((s) => s.category === 'gallery');
   const gallery: GalleryPool = { ids: () => [], useGallery: () => false, load: async () => null };
   for (let k = 0; k < 20; k++) {
     const many = await pickSections({ sections, codeSections, specs, photos: 12, gallery, rng: Math.random });
-    assert.match(many.pool[0].templates[0], /^gallery\.view15[a-e]$/);
+    assert.match(many.pool[0].templates[0], /^gallery\.block[1-8]$/);
     const few = await pickSections({ sections, codeSections, specs, photos: 3, gallery, rng: Math.random });
-    assert.match(few.pool[0].templates[0], /^gallery\.view(5[a-c]|15[a-e])$/);
+    assert.match(few.pool[0].templates[0], /^gallery\.block[1-8]$/);
   }
   // A gallery slide of the gallery with only three photo frames cannot hold 12.
   const three: GalleryPool = { ids: () => ['g3'], useGallery: () => true, load: async () => ({ name: 'x', slide: {}, elements: [0, 1, 2].map((i) => ({ id: `p${i}`, type: 'image', aiSlot: `photos.${i}` })).concat([{ id: 't', type: 'heading', aiSlot: 'title' } as any]) }) };
   const r = await pickSections({ sections, codeSections, specs, photos: 12, gallery: three });
-  assert.match(r.pool[0].templates[0], /^gallery\.view15[a-e]$/);
+  assert.match(r.pool[0].templates[0], /^gallery\.block[1-8]$/);
 });
 
-test('the fixed categories (the photo gallery among them) never take gallery slides, even ones that were added to them', async () => {
+test('the fixed categories (shop, showroom, menu) never take gallery slides, even ones that were added to them', async () => {
   const db = getFirestore() as any;
   for (const k of [...store.keys()]) if (/^(gallerySlides|readySlides|readyConfig)\//.test(k)) store.delete(k);
-  store.set('readySlides/x', { category: 'gallery', order: 1 });
+  store.set('readySlides/x', { category: 'shop', order: 1 });
   store.set('readySlides/y', { category: 'intro', order: 1 });
-  store.set('readyConfig/gallery', { useGallery: true });
+  store.set('readyConfig/shop', { useGallery: true });
   const p = await galleryPool(db);
-  assert.deepEqual(p.ids('gallery'), []);
-  assert.equal(p.useGallery('gallery'), false);
+  assert.deepEqual(p.ids('shop'), []);
+  assert.equal(p.useGallery('shop'), false);
   assert.deepEqual(p.ids('intro'), ['y']);
 });
 
 import { WEE_SLIDES } from '../src/data/weeSlideTemplates.ts';
 import { slideTemplateCount } from '../src/data/slideTemplates.ts';
 
-test('the gallery category holds exactly eight slides: three for 5 photos and five for 15, each beside an explanation', () => {
+test('the gallery category holds exactly eight slides, each beside an explanation, in all four layouts', () => {
   const made = WEE_SLIDES.gallery.map((m) => m() as any);
   assert.equal(made.length, 8);
   assert.equal(slideTemplateCount('gallery'), 8); // the editor's panel lists only these
-  assert.deepEqual(made.map((s) => s.aiTemplate), ['gallery.view5a', 'gallery.view5b', 'gallery.view5c', 'gallery.view15a', 'gallery.view15b', 'gallery.view15c', 'gallery.view15d', 'gallery.view15e']);
+  assert.deepEqual(made.map((s) => s.aiTemplate), ['gallery.block1', 'gallery.block2', 'gallery.block3', 'gallery.block4', 'gallery.block5', 'gallery.block6', 'gallery.block7', 'gallery.block8']);
   for (const s of made) {
     const block = s.elements.find((e: any) => e.type === 'gallery');
     assert.ok(block, `${s.aiTemplate} has the photo-gallery block`);

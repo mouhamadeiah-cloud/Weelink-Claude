@@ -1869,6 +1869,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
                         const items = config.items || [];
                         const layout = config.layout || 'top-main';
+                        // The photo chosen on the page (a click on a thumbnail or on the large photo): its card is marked here.
+                        const activePhoto = Math.min(Math.max(0, config.activeImageIndex ?? 0), Math.max(0, items.length - 1));
 
                         const updateGalleryConfig = (partial: Partial<typeof config>) => {
                           onUpdateElement({
@@ -1900,7 +1902,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         // A new photo past the package's limit is refused; replacing one is always fine.
                         const galleryFull = (idx: number) => {
                           if (idx !== -1 || items.length < galleryLimit) return false;
-                          window.alert(`باقتك بتسمح بـ ${galleryLimit} صور بالمعرض. رقّي الباقة لتضيف أكتر.`);
+                          window.alert(`وصل معرضك لحد باقتك (${galleryLimit} صور). احذف صورة، أو رقّي باقتك من «حسابي» لتضيف أكتر.`);
                           return true;
                         };
                         const handleTriggerDeviceUpload = (idx: number) => {
@@ -2005,8 +2007,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                         };
 
                         const handleDeleteImage = (idx: number) => {
-                          if (items.length <= 2) {
-                            alert('يجب أن يحتوي المعرض على صورتين على الأقل');
+                          if (items.length <= 1) {
+                            alert('هذه آخر صورة في المعرض. بدّلها بصورة أخرى، أو احذف المعرض كله من العنصر.');
                             return;
                           }
                           const newItems = items.filter((_, i) => i !== idx);
@@ -2030,7 +2032,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   <Images size={16} />
                                 </div>
                                 <div>
-                                  <h3 className="text-xs font-bold text-neutral-900">إعدادات معرض الصور (٥ صور)</h3>
+                                  <h3 className="text-xs font-bold text-neutral-900">إعدادات معرض الصور (حتى {Number.isFinite(galleryLimit) ? Math.min(15, galleryLimit) : 15} صورة)</h3>
                                   <p className="text-xs text-neutral-500">تحكم بالصور، الترتيب، والتنسيقات الأربعة</p>
                                 </div>
                               </div>
@@ -2165,7 +2167,17 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                   return (
                                     <div
                                       key={item.id || idx}
-                                      className="p-2 bg-neutral-50 rounded-xl border border-neutral-200/80 flex items-center gap-2 transition-all hover:border-neutral-300"
+                                      ref={(node) => {
+                                        // The photo chosen on the page: its card comes into view once.
+                                        if (node && idx === activePhoto && node.dataset.seen !== String(activePhoto)) {
+                                          node.dataset.seen = String(activePhoto);
+                                          node.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+                                        }
+                                      }}
+                                      onClick={() => idx !== activePhoto && updateGalleryConfig({ activeImageIndex: idx })}
+                                      className={`p-2 rounded-xl border flex items-center gap-2 transition-all cursor-pointer ${
+                                        idx === activePhoto ? 'bg-blue-50 border-brand ring-1 ring-brand/40' : 'bg-neutral-50 border-neutral-200/80 hover:border-neutral-300'
+                                      }`}
                                     >
                                       <div className="w-12 h-10 rounded-lg overflow-hidden bg-neutral-200 shrink-0 border border-neutral-300 relative">
                                         {isUploadingThis ? (
@@ -2251,7 +2263,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                                             <ArrowDown size={11} strokeWidth={2.2} />
                                           </button>
                                         </div>
-                                        {items.length > 2 && (
+                                        {items.length > 1 && (
                                           <button
                                             type="button"
                                             onClick={() => handleDeleteImage(idx)}

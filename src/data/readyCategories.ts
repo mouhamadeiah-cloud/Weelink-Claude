@@ -23,7 +23,7 @@ export const READY_SLIDE_CATEGORIES = [
   { id: 'privacy', name: 'قوانين وخصوصية', desc: 'الشروط والأحكام وسياسة الخصوصية', icon: '🔒' }
 ];
 
-// Their slides read live shop, showroom or menu data, or are the platform's own contact, booking and photo-viewer blocks: they stay
-// in the code and the admin cannot add a gallery design to them (Eyad, 21 Oct).
-export const FIXED_READY_CATEGORIES = ['shop', 'cars', 'restaurant', 'booking', 'contact', 'gallery'];
+// Their slides read live shop, showroom or menu data: they stay in the code and the admin cannot add a gallery design to them
+// (Eyad, 21 Oct). The contact, booking and gallery blocks are elements like any other, so a designer can design those slides too.
+export const FIXED_READY_CATEGORIES = ['shop', 'cars', 'restaurant'];
 export const GALLERY_READY_CATEGORIES = READY_SLIDE_CATEGORIES.filter((c) => !FIXED_READY_CATEGORIES.includes(c.id));

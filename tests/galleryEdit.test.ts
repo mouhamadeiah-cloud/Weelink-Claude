@@ -48,6 +48,13 @@ test('the admin save is checked like an export', async () => {
   assert.equal(store.get('gallerySlides/g1').elements[0].content, 'مرحبا بكم');
 });
 
+test('Weelink\'s own designs (the contact slides carry example numbers) can still be edited by the admin, a designer\'s cannot', async () => {
+  seed('approved', { official: true });
+  const ok: any = await adminSave(db, 'g1', { page: page(), elements: [el('e1', 's1', { content: 'اتصل 0933 123 456' })] }, 'eyad');
+  assert.ok(ok.ok, JSON.stringify(ok));
+  assert.equal(store.get('gallerySlides/g1').elements[0].content, 'اتصل 0933 123 456');
+});
+
 test('a designer edits only their own design', async () => {
   seed('approved');
   assert.equal(((await designerSave(db, 'someone-else', 'g1', { page: page(), elements: [el('e1', 's1')] })) as any).error, 'not_found');

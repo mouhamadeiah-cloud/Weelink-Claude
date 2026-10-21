@@ -66,3 +66,17 @@ test('the ready overview tells which slides are marked for the AI', async () => 
   const items = (await readyOverview(db)).find((c) => c.id === 'intro')!.items;
   assert.deepEqual(items.map((i) => [i.id, i.eligible, i.slots]), [['a', true, 2], ['b', false, 0]]);
 });
+
+test('the map, the contact form and the photo-gallery block take their one slot each, and the contact slides\' system texts are offered', async () => {
+  reset();
+  store.set('gallerySlides/c', { kind: 'slide', name: 'تواصل', category: 'contact', status: 'approved', slide: { id: 's' }, elements: [
+    { id: 't', type: 'heading' }, { id: 'ph', type: 'paragraph' }, { id: 'm', type: 'map' }, { id: 'f', type: 'contactForm' }, { id: 'g', type: 'gallery' }, { id: 'cal', type: 'calendar' },
+  ] });
+  assert.deepEqual(['map', 'contactForm', 'gallery', 'calendar'].map(slotKindOf), ['map', 'form', 'gallery', null]);
+  const r: any = await markSlots(db, 'c', { t: 'title', ph: 'phone.value', m: 'map', f: 'form', g: 'gallery' }, 'x');
+  assert.equal(r.eligible, true);
+  assert.equal(r.slots, 5);
+  assert.equal(((await markSlots(db, 'c', { m: 'title' }, 'x')) as any).error, 'bad_marks'); // a map takes only «map»
+  assert.equal(((await markSlots(db, 'c', { f: 'map' }, 'x')) as any).error, 'bad_marks');
+  assert.equal(((await markSlots(db, 'c', { cal: 'title' }, 'x')) as any).error, 'bad_marks'); // the calendar carries nothing
+});

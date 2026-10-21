@@ -34,3 +34,30 @@ test('the gallery block moves its thumbnails sideways past five photos, and the 
   assert.match(chat, /prev\.galleryImages\.length >= galleryMax/);
   assert.doesNotMatch(chat, /slice\(0, 5\)\.forEach/);
 });
+
+test('the viewer is drawn on the page itself, above everything, and its clicks stay out of the canvas', async () => {
+  const { readFileSync } = await import('node:fs');
+  const canvas = readFileSync(new URL('../src/components/CanvasWorkspace.tsx', import.meta.url), 'utf8');
+  assert.match(canvas, /createPortal\(\s*<div[\s\S]*?role="dialog"[\s\S]*?document\.body\s*\)/);
+  assert.match(canvas, /zIndex: 2147483000/);
+  assert.match(canvas, /onPointerDown=\{\(e\) => e\.stopPropagation\(\)\}/);
+});
+
+test('in the editor a click on the gallery photo selects it; the viewer opens from the «تكبير» button, on the page a click opens it', async () => {
+  const { readFileSync } = await import('node:fs');
+  const canvas = readFileSync(new URL('../src/components/CanvasWorkspace.tsx', import.meta.url), 'utf8');
+  assert.match(canvas, /const viewing = isPreviewActive \|\| isPublicSite;/);
+  assert.match(canvas, /onClick=\{viewing \? handleOpenLightbox : undefined\}/); // the covering overlay no longer takes the editor's clicks
+  assert.match(canvas, /\$\{viewing \? '' : 'pointer-events-none'\}/);
+  assert.match(canvas, /\{!viewing && \(\s*<button[\s\S]*?تكبير/);
+  assert.doesNotMatch(canvas, /onDoubleClick=\{handleOpenLightbox\}/);
+});
+
+test('the gallery panel marks the chosen photo, lets the last-but-one go, and says the package\'s limit', async () => {
+  const { readFileSync } = await import('node:fs');
+  const panel = readFileSync(new URL('../src/components/RightDrawer.tsx', import.meta.url), 'utf8');
+  assert.match(panel, /const activePhoto = /);
+  assert.match(panel, /items\.length > 1 && \(/); // the delete button stays down to the last photo
+  assert.match(panel, /هذه آخر صورة في المعرض/);
+  assert.doesNotMatch(panel, /إعدادات معرض الصور \(٥ صور\)/);
+});

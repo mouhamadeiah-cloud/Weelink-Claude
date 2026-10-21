@@ -81,14 +81,14 @@
     "required": false,
     "place": "any",
     "templates": [
-     "gallery.view5a",
-     "gallery.view5b",
-     "gallery.view5c",
-     "gallery.view15a",
-     "gallery.view15b",
-     "gallery.view15c",
-     "gallery.view15d",
-     "gallery.view15e"
+     "gallery.block1",
+     "gallery.block2",
+     "gallery.block3",
+     "gallery.block4",
+     "gallery.block5",
+     "gallery.block6",
+     "gallery.block7",
+     "gallery.block8"
     ]
    },
    {
@@ -174,14 +174,14 @@
     "required": false,
     "place": "any",
     "templates": [
-     "gallery.view5a",
-     "gallery.view5b",
-     "gallery.view5c",
-     "gallery.view15a",
-     "gallery.view15b",
-     "gallery.view15c",
-     "gallery.view15d",
-     "gallery.view15e"
+     "gallery.block1",
+     "gallery.block2",
+     "gallery.block3",
+     "gallery.block4",
+     "gallery.block5",
+     "gallery.block6",
+     "gallery.block7",
+     "gallery.block8"
     ]
    },
    {
@@ -279,14 +279,14 @@
     "required": false,
     "place": "any",
     "templates": [
-     "gallery.view5a",
-     "gallery.view5b",
-     "gallery.view5c",
-     "gallery.view15a",
-     "gallery.view15b",
-     "gallery.view15c",
-     "gallery.view15d",
-     "gallery.view15e"
+     "gallery.block1",
+     "gallery.block2",
+     "gallery.block3",
+     "gallery.block4",
+     "gallery.block5",
+     "gallery.block6",
+     "gallery.block7",
+     "gallery.block8"
     ]
    },
    {
@@ -827,8 +827,8 @@
    },
    "lists": {}
   },
-  "gallery.view5a": {
-   "name": "معرض 5 صور · شرح يمين",
+  "gallery.block1": {
+   "name": "معرض · شرح يمين",
    "slots": {
     "eyebrow": {
      "kind": "text",
@@ -845,8 +845,8 @@
    },
    "lists": {}
   },
-  "gallery.view5b": {
-   "name": "معرض 5 صور · مصغرات جانبية",
+  "gallery.block2": {
+   "name": "معرض · مصغرات جانبية",
    "slots": {
     "title": {
      "kind": "text",
@@ -863,8 +863,8 @@
    },
    "lists": {}
   },
-  "gallery.view5c": {
-   "name": "معرض 5 صور · داكن",
+  "gallery.block3": {
+   "name": "معرض · داكن",
    "slots": {
     "title": {
      "kind": "text",
@@ -877,8 +877,8 @@
    },
    "lists": {}
   },
-  "gallery.view15a": {
-   "name": "معرض 15 صورة · شريط مصغرات",
+  "gallery.block4": {
+   "name": "معرض · شريط مصغرات",
    "slots": {
     "eyebrow": {
      "kind": "text",
@@ -895,8 +895,8 @@
    },
    "lists": {}
   },
-  "gallery.view15b": {
-   "name": "معرض 15 صورة · شبكة يسار",
+  "gallery.block5": {
+   "name": "معرض · شبكة يسار",
    "slots": {
     "title": {
      "kind": "text",
@@ -913,8 +913,8 @@
    },
    "lists": {}
   },
-  "gallery.view15c": {
-   "name": "معرض 15 صورة · شبكة يمين",
+  "gallery.block6": {
+   "name": "معرض · شبكة يمين",
    "slots": {
     "title": {
      "kind": "text",
@@ -927,8 +927,8 @@
    },
    "lists": {}
   },
-  "gallery.view15d": {
-   "name": "معرض 15 صورة · عمود مصغرات",
+  "gallery.block7": {
+   "name": "معرض · عمود مصغرات",
    "slots": {
     "eyebrow": {
      "kind": "text",
@@ -945,8 +945,8 @@
    },
    "lists": {}
   },
-  "gallery.view15e": {
-   "name": "معرض 15 صورة · دافئ",
+  "gallery.block8": {
+   "name": "معرض · دافئ",
    "slots": {
     "title": {
      "kind": "text",

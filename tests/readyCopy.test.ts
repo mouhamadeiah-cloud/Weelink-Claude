@@ -27,7 +27,7 @@ test('the copy file holds every ready slide of the code (but the fixed categorie
       assert.notEqual(e.type, 'html', i.key); // raw HTML never goes into the gallery
     }
   }
-  for (const fixed of ['shop', 'cars', 'restaurant', 'booking', 'contact', 'gallery']) assert.ok(!ITEMS.some((i) => i.readyCategory === fixed), fixed);
+  for (const fixed of ['shop', 'cars', 'restaurant']) assert.ok(!ITEMS.some((i) => i.readyCategory === fixed), fixed);
 });
 
 test('the copy stages every slide as an official, pending gallery slide that remembers where it came from', async () => {

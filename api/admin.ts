@@ -76,6 +76,7 @@ import { mailOrder } from '../server/orderMail.js';
 import { recountDesigner } from '../server/designerStats.js';
 import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
 import { addReady, dropReadyFor, readyMap, removeReady } from '../server/readySlides.js';
+import { readyCopy, readyCopyStatus } from '../server/readyCopy.js';
 import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
 import { createCheckout, handleWebhook, stripeConfig } from '../server/stripe.js';
 import { runCleanup } from '../server/cleanup.js';
@@ -246,7 +247,7 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
 const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply', 'orders', 'order', 'order-approve', 'order-reject', 'order-extend', 'billing-settings'];
 // The designers' gallery and the rating reports are the content reviewers' work (the owner too).
-const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'ready-add', 'ready-remove', 'slide-edit-review', 'reports', 'report-decide'];
+const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'ready-add', 'ready-remove', 'ready-copy-status', 'ready-copy', 'slide-edit-review', 'reports', 'report-decide'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup', 'billing-enforce', 'test-account', 'subscriber-delete', 'cleanup'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'deleted-list', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
@@ -1205,6 +1206,13 @@ export default {
       return json({ ok: true });
     }
     // An approved gallery slide goes into one of the editor's ready-slide categories, or leaves it (server/readySlides.ts).
+    // The ready slides of the code become gallery slides of Weelink (server/readyCopy.ts): staged for review, or published at once.
+    if (action === 'ready-copy-status') return json(await readyCopyStatus(db));
+    if (action === 'ready-copy') {
+      const result = await readyCopy(db, { publish: body.publish === true, overwrite: body.overwrite === true, from: Number(body.from) || 0, limit: Number(body.limit) || 30 });
+      await audit(session.u, `ready-copy:${body.from || 0}:${result.written}${body.publish === true ? ':published' : ''}`);
+      return json(result);
+    }
     if (action === 'ready-add') {
       const id = String(body.id || '').slice(0, 128);
       const r = await addReady(db, id, String(body.category || ''), session.u);

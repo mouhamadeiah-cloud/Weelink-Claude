@@ -203,6 +203,9 @@ export interface SeedStatus { total: number; published: number; staged: number; 
 export interface SeedResult { published: string[]; waiting: string[]; limited: boolean; spent: number; failed: string[] }
 export const adminSeedStatus = () => call<SeedStatus>({ action: 'gallery-seed-status' });
 export const adminSeed = (opts: { overwrite?: boolean; publish?: boolean } = {}) => call<SeedResult>({ action: 'gallery-seed', overwrite: !!opts.overwrite, publish: !!opts.publish });
+export interface ReadyCopyStatus { total: number; copied: number; published: number }
+export const adminReadyCopyStatus = () => call<ReadyCopyStatus>({ action: 'ready-copy-status' });
+export const adminReadyCopy = (opts: { publish?: boolean; overwrite?: boolean; from?: number } = {}) => call<{ written: number; kept: number; next: number | null; total: number }>({ action: 'ready-copy', publish: !!opts.publish, overwrite: !!opts.overwrite, from: opts.from || 0, limit: 30 });
 export const adminReadyAdd = (id: string, category: string) => call<{ ok: true; category: string }>({ action: 'ready-add', id, category });
 export const adminReadyRemove = (id: string) => call<{ ok: true }>({ action: 'ready-remove', id });
 export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });

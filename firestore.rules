@@ -521,13 +521,6 @@ service cloud.firestore {
     // agreed to the current version of the page's law; only the platform's admin (api/admin.ts)
     // approves or rejects it, so nobody changes a slide's status from the browser. The gallery
     // reads approved slides; a designer reads their own, whatever their status.
-    // The editor's ready slides taken from the gallery (server/readySlides.ts): which approved slide stands in which
-    // category and in what order. Everyone reads it; only the admin site writes it (through the server).
-    match /readySlides/{id} {
-      allow read: if true;
-      allow write: if false;
-    }
-
     match /gallerySlides/{slideId} {
       allow get: if resource.data.status == 'approved' || (isSignedIn() && resource.data.designerUid == request.auth.uid);
       allow list: if resource.data.status == 'approved' || (isSignedIn() && resource.data.designerUid == request.auth.uid);
@@ -553,6 +546,13 @@ service cloud.firestore {
         && incoming().createdAt == request.time;
       allow update: if false;
       allow delete: if isSignedIn() && resource.data.designerUid == request.auth.uid;
+    }
+
+    // The editor's ready slides taken from the gallery (server/readySlides.ts): which approved slide stands in which
+    // category and in what order. Everyone reads it; only the admin site writes it (through the server).
+    match /readySlides/{id} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // A voter's likes and dislikes on gallery slides (api/gallery.ts writes them, with the slides'

@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Eye, FileText, LayoutGrid, Loader2, Pencil, ShieldCheck, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react';
 import { ToolBar, ToolButton, ToolMenu, ToolSpacer, type MenuItem } from '../ui/FloatingTools';
-import { AdminError, GallerySlideRow, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminReadyAdd, adminReadyRemove, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
+import { AdminError, GallerySlideRow, ReadyCopyStatus, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminReadyAdd, adminReadyCopy, adminReadyCopyStatus, adminReadyRemove, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
 import { DesignViewer } from '../gallery/DesignViewer';
 import { categoriesFor, categoryLabel, slidesWord } from '../../data/slideCategories';
 import { GALLERY_READY_CATEGORIES } from '../../data/readyCategories';
@@ -192,6 +192,57 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onOpen: () => void; onChanged:
   );
 };
 
+// The ready slides of the code, copied into the gallery as slides of Weelink (docs/READY_SLIDES_PLAN.md, step 2): the gallery becomes the one
+// place designs live. The copy is staged for review, or published at once; the editor's panel does not change until the admin chooses.
+const ReadyCopyBox: React.FC<{ onSessionEnd: () => void; onDone: () => void }> = ({ onSessionEnd, onDone }) => {
+  const [status, setStatus] = useState<ReadyCopyStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  const refresh = useCallback(() => adminReadyCopyStatus().then(setStatus).catch((e) => { if ((e as AdminError)?.code === 'session') onSessionEnd(); }), [onSessionEnd]);
+  useEffect(() => { refresh(); }, [refresh]);
+  if (!status || status.total === 0) return null;
+
+  const run = async (opts: { publish?: boolean; overwrite?: boolean }) => {
+    if (opts.overwrite && !window.confirm('إعادة نسخ الشرائح؟ تُستبدل تصاميمها وتبقى إعجاباتها، وما عدّلته بيدك لا يُمس.')) return;
+    if (opts.publish && !window.confirm('نشر كل الشرائح المنسوخة في المعرض مباشرة دون مراجعتها واحدة واحدة؟')) return;
+    setBusy(true);
+    setNote('');
+    try {
+      let from = 0;
+      let written = 0;
+      for (;;) {
+        const r = await adminReadyCopy({ ...opts, from });
+        written += r.written;
+        setNote(`جاري النسخ… ${Math.min(r.next ?? r.total, r.total).toLocaleString('ar-SY')} من ${r.total.toLocaleString('ar-SY')}`);
+        if (r.next === null) break;
+        from = r.next;
+      }
+      setNote(`تم: كُتبت ${written.toLocaleString('ar-SY')} شريحة.`);
+      await refresh();
+      onDone();
+    } catch (e) {
+      if ((e as AdminError)?.code === 'session') return onSessionEnd();
+      setNote('تعذّر النسخ، أعد المحاولة: ما نُسخ يبقى ولا يُكرَّر.');
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-card border border-line bg-surface p-4">
+      <p className="text-small font-medium">الشرائح الجاهزة في المعرض: {status.copied.toLocaleString('ar-SY')} من {status.total.toLocaleString('ar-SY')} منسوخة ({status.published.toLocaleString('ar-SY')} منشورة)</p>
+      <p className="text-small text-muted leading-relaxed">
+        «نسخ الشرائح الجاهزة» يضع شرائح المحرر الجاهزة (ما عدا المتجر والسيارات والمطعم والحجز والتواصل) في المعرض باسم «Weelink AI»، كل واحدة تتذكر فئتها ومكانها الأصليين، وتنتظر مراجعتك. لوحة «شرائح جاهزة» في المحرر لا تتغير الآن.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" disabled={busy} onClick={() => run({})} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-4 py-2 text-small font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} نسخ الشرائح الجاهزة إلى المعرض</button>
+        {status.copied > 0 && <button type="button" disabled={busy} onClick={() => run({ overwrite: true })} className="rounded-ctl border border-line px-4 py-2 text-small text-muted hover:bg-bg disabled:opacity-50">إعادة نسخ غير المعدّل</button>}
+        {status.copied > status.published && <button type="button" disabled={busy} onClick={() => run({ publish: true })} className="rounded-ctl border border-line px-4 py-2 text-small text-muted hover:bg-bg disabled:opacity-50">نشر الكل مباشرة</button>}
+      </div>
+      {note && <p role="status" className="text-small text-muted">{note}</p>}
+    </div>
+  );
+};
+
 // The «Weelink AI» pages: published here, their photos found on Unsplash by the searches written in the pages.
 const SeedBox: React.FC<{ onSessionEnd: () => void; onDone: () => void }> = ({ onSessionEnd, onDone }) => {
   const [status, setStatus] = useState<SeedStatus | null>(null);
@@ -277,6 +328,7 @@ export const SlidesReviewView: React.FC<{ onSessionEnd: () => void }> = ({ onSes
       <h1 className="flex items-center gap-2 text-title font-semibold"><ShieldCheck className="h-6 w-6 text-brand" /> مراجعة الشرائح</h1>
       <p className="text-small text-muted leading-relaxed">الشرائح التي صدّرها المصممون. لا تظهر في المعرض إلا بعد قبولها.</p>
       <SeedBox onSessionEnd={onSessionEnd} onDone={() => load(status)} />
+      <ReadyCopyBox onSessionEnd={onSessionEnd} onDone={() => load(status)} />
       <div className="flex flex-wrap gap-2">
         {TABS.map(([id, label]) => (
           <button key={id} onClick={() => setStatus(id)} className={`rounded-full border px-4 py-1.5 text-small ${status === id ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-muted hover:bg-bg'}`}>

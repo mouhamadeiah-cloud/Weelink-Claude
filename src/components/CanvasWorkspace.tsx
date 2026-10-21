@@ -1,5 +1,6 @@
 import { lightboxFor } from '../utils/imageGroup';
 import { cleanHtml, isSafeUrl } from '../utils/safeHtml';
+import { createPortal } from 'react-dom';
 import React, { useRef, useState, useEffect, useMemo, useContext } from 'react';
 import { BackgroundVideo } from './BackgroundVideo';
 import {
@@ -4124,8 +4125,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             });
                           };
 
+                          // On the live page and in the preview a click opens the viewer; in the editor it selects the block (the viewer
+                          // opens only from the small «تكبير» button), so a photo can be edited.
+                          const viewing = isPreviewActive || isPublicSite;
                           const handleMainScreenClick = (e: React.MouseEvent) => {
-                            if (isPreviewActive) {
+                            if (viewing) {
                               handleOpenLightbox(e);
                             } else {
                               onSelectElement(elem.id);
@@ -4188,10 +4192,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             return (
                               <div
                                 onClick={handleMainScreenClick}
-                                onDoubleClick={handleOpenLightbox}
                                 className={`relative overflow-hidden cursor-pointer select-none group/screen bg-neutral-900 shadow-xs ${extraClass || ''}`}
                                 style={{ borderRadius: `${radius}px` }}
-                                title={isPreviewActive ? "انقر لتكبير وتصفح الصور 🔍" : "انقر للتحديد، أو نقر مزدوج للتكبير 🔍"}
+                                title={viewing ? "انقر لتكبير وتصفح الصور 🔍" : "انقر للتحديد"}
                               >
                                 <img
                                   src={activeItem.url}
@@ -4210,10 +4213,23 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   />
                                 )}
                                 
-                                {/* Hover overlay hint with enlarge button */}
+                                {/* In the editor the viewer opens from this small button only, so a click on the photo selects it */}
+                                {!viewing && (
+                                  <button
+                                    type="button"
+                                    onClick={handleOpenLightbox}
+                                    className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 bg-black/60 hover:bg-black/80 text-white px-2 py-1 rounded-full text-[11px] font-bold shadow-xs opacity-0 group-hover/screen:opacity-100 transition-opacity cursor-pointer"
+                                    title="تكبير الصور وتصفحها"
+                                  >
+                                    <Maximize2 size={12} />
+                                    <span>تكبير</span>
+                                  </button>
+                                )}
+
+                                {/* On the page: hover overlay hint, a click opens the viewer */}
                                 <div 
-                                  onClick={handleOpenLightbox}
-                                  className="absolute inset-0 bg-black/0 group-hover/screen:bg-black/25 transition-all flex items-center justify-center opacity-0 group-hover/screen:opacity-100 cursor-pointer"
+                                  onClick={viewing ? handleOpenLightbox : undefined}
+                                  className={`absolute inset-0 bg-black/0 group-hover/screen:bg-black/25 transition-all flex items-center justify-center opacity-0 group-hover/screen:opacity-100 ${viewing ? '' : 'pointer-events-none'} cursor-pointer`}
                                 >
                                   <div className="bg-black/75 backdrop-blur-xs text-white px-3.5 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 shadow-lg transform translate-y-2 group-hover/screen:translate-y-0 transition-transform">
                                     <Maximize2 size={13} />
@@ -5290,12 +5306,22 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     </svg>
 
     {/* Gallery Lightbox Modal - Fullscreen Interactive Viewer */}
-    {lightboxState?.isOpen && (
+    {/* Drawn on the page itself (a portal), not inside the scaled canvas: there it would sit under the fixed navbar and the pinned
+        elements, and its close button could not be reached. Clicks in it do not reach the canvas under it. */}
+    {lightboxState?.isOpen && typeof document !== 'undefined' && createPortal(
       <div 
-        className="fixed inset-0 z-[9999] bg-black/92 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 select-none animate-in fade-in duration-200"
+        className="fixed inset-0 bg-black/92 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 select-none animate-in fade-in duration-200"
+        style={{ zIndex: 2147483000 }}
         onClick={(e) => {
+          e.stopPropagation();
           if (e.target === e.currentTarget) setLightboxState(null);
         }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="متصفح الصور"
         dir="rtl"
       >
         {/* Header */}
@@ -5404,7 +5430,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             );
           })}
         </div>
-      </div>
+      </div>,
+      document.body
     )}
   </div>
     </>

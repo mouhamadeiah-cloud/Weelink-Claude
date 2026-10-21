@@ -51,7 +51,7 @@ import { ShopDataContext, ShopUpdateContext } from './components/shop/store/Shop
 import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from './components/shop/shopTypes';
 import { laterProjectFields, listProjects, projectDoc } from './services/projects';
 import { isFirstOfKind, isProjectKey, kindOf, localPrefixOf, newProjectKey, restaurantIdOf } from './utils/projectKeys';
-import { ITEM_WORD, UNLIMITED, overLimit, type PlanLimits } from './utils/planLimits';
+import { GALLERY_MAX, ITEM_WORD, UNLIMITED, overLimit, type PlanLimits } from './utils/planLimits';
 import { projectLimits, readGate } from './services/billing';
 import { deleteProjectData } from './services/myAccount';
 import { AccountPage } from './components/platform/AccountPage';
@@ -2183,10 +2183,11 @@ export default function App() {
     }
     // The owner's photos go into the page as links, never as full-size inline images.
     const answers = await hostAnswerImages(given);
-    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections) });
+    const maxPhotos = Math.min(GALLERY_MAX, limitsRef.current.gallery);
+    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections) });
     if (!result.ok) return { ok: false, message: result.message };
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
-    const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId });
+    const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId, maxPhotos });
     if (!built.ok) return { ok: false, message: built.message };
     builtBackupRef.current = { ...before, uid: activeUserUid, project };
     setHasBuildBackup(true);

@@ -24,7 +24,7 @@ import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' 
 import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
 import designer from '../src/data/ai/weelinkDesigner.json' with { type: 'json' };
 import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
-import { limitsOf } from '../src/utils/planLimits.js';
+import { GALLERY_MAX, limitsOf } from '../src/utils/planLimits.js';
 import { modelOf } from '../src/data/pageModels.js';
 import { readModels } from '../server/pageModels.js';
 import { galleryPool, pickSections, sectionsFor, type GallerySlideData, type Picked } from '../server/pagePicker.js';
@@ -129,7 +129,7 @@ const cleanProfile = (raw: unknown): Record<string, string> => {
 
 const cleanAssets = (raw: any): Assets => ({
   heroBg: !!raw?.heroBg,
-  gallery: Math.max(0, Math.min(5, Math.floor(Number(raw?.gallery) || 0))),
+  gallery: Math.max(0, Math.min(GALLERY_MAX, Math.floor(Number(raw?.gallery) || 0))),
   logo: !!raw?.logo,
 });
 
@@ -197,7 +197,7 @@ const BUILD_KIND_PROJECT: Record<string, string> = { free: 'page', restaurant: '
 const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/.test(p);
 const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
-type Allowance = { ref: any; day: string; limit: number; perDay: boolean; over: boolean } | null;
+type Allowance = { ref: any; day: string; limit: number; perDay: boolean; over: boolean; gallery: number } | null;
 
 // null = no limit (no database, paying off, a test account); else whether it is used up, and what to count after a build.
 export const buildAllowance = async (db: ReturnType<typeof getFirestore> | null, uid: string, project: string, now = Date.now()): Promise<Allowance> => {
@@ -213,12 +213,12 @@ export const buildAllowance = async (db: ReturnType<typeof getFirestore> | null,
     const kind = project.split('-')[0];
     // Before paying: a page is free, another kind gets its smallest package.
     const plan = a?.plan && Number(a.paidUntil) > now ? a.plan : kind === 'page' ? 'page-free' : `${kind}-30`;
-    const { builds, perDay } = limitsOf(plan);
+    const { builds, perDay, gallery } = limitsOf(plan);
     const ref = db.collection('platform_builds').doc(`${uid}__${project}`);
     const used = (await ref.get()).data() as { day?: string; today?: number; total?: number } | undefined;
     const day = dayOf(now);
     const count = perDay ? (used?.day === day ? Number(used?.today) || 0 : 0) : Number(used?.total) || 0;
-    return { ref, day, limit: builds, perDay, over: count >= builds };
+    return { ref, day, limit: builds, perDay, over: count >= builds, gallery };
   } catch {
     return null;
   }
@@ -371,7 +371,7 @@ export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>,
     const images: Record<string, string> = {};
     for (const [key, ref] of pairs(given?.images, 'ref')) {
       if (spec.slots[key]?.kind !== 'image') continue;
-      const gallery = /^user:gallery:(\d)$/.exec(ref);
+      const gallery = /^user:gallery:(\d{1,2})$/.exec(ref);
       if (ref === 'user:heroBg' ? assets.heroBg : ref === 'user:logo' ? assets.logo : gallery ? +gallery[1] >= 1 && +gallery[1] <= assets.gallery : IMAGE_QUERY.test(ref.trim())) {
         images[key] = ref.trim();
       }
@@ -622,6 +622,8 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
     const picked = await pickSections({
       sections: sectionsFor(model.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked }),
       codeSections: SECTIONS.free,
+      specs: TEMPLATES,
+      photos: o.assets.gallery,
       gallery: await galleryPool(db),
       avoid: new Set(Array.isArray(last) ? last : []),
     });
@@ -656,6 +658,8 @@ export default {
     const project = isProjectKey(body?.project) ? body.project : BUILD_KIND_PROJECT[kind] || 'page';
     const allowance = await buildAllowance(meterDb(), uid, project);
     if (allowance?.over) return json({ error: 'build_limit', limit: allowance.limit, perDay: allowance.perDay }, 429);
+    // The package's gallery is the most photos the plan may use (only once paying is switched on).
+    if (allowance) assets.gallery = Math.min(assets.gallery, allowance.gallery);
     const meter = await meterOpen(uid);
     if (meter === 'empty') return json({ error: 'no_tokens' }, 402);
 

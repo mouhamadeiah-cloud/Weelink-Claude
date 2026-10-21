@@ -10,6 +10,7 @@ import { ArrowLeft, CarFront, Check, ClipboardList, FileText, Loader2, Palette, 
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
 import { flavorOf, type Flavor } from '../../data/plans';
+import { GALLERY_MAX, limitsOf } from '../../utils/planLimits';
 import { DesignerGallery } from '../gallery/DesignerGallery';
 import { AttentionDot, useOrderAttention } from '../../services/orderAttention';
 import { DesignOrdersPanel } from '../designOrders/DesignOrdersPanel';
@@ -127,9 +128,12 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
   // A free restaurant, shop or showroom package is a page with the type's flavour (plans.ts): the questions use the type's words,
   // and everything after them (answers, build, project) is a page's.
   const [flavor, setFlavor] = useState<Flavor | null>(null);
-  const pickPlan = (planId: string) => {
-    const f = flavorOf(planId);
+  // The package picked: its gallery sets how many photos the gallery question takes.
+  const [planId, setPlanId] = useState('');
+  const pickPlan = (picked: string) => {
+    const f = flavorOf(picked);
     setFlavor(f);
+    setPlanId(picked);
     if (!signedIn) setGuestKind(f ? 'page' : kind || 'page');
     startQuestions(f ? 'page' : kind);
   };
@@ -307,6 +311,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               userEmail={signedIn ? user?.email || "" : ""}
               pageKind={flavor ? 'page' : chosen.type}
               flavor={flavor || undefined}
+              galleryMax={planId ? Math.min(GALLERY_MAX, limitsOf(planId).gallery) : undefined}
               embedded
               fromStart
               isCollapsed={false}

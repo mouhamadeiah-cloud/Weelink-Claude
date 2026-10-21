@@ -4100,6 +4100,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
                           const handleSelectThumbnail = (e: React.MouseEvent, idx: number) => {
                             e.stopPropagation();
+                            (e.currentTarget as HTMLElement).scrollIntoView?.({ inline: 'center', block: 'nearest', behavior: 'smooth' });
                             if (!isPreviewActive) {
                               onSelectElement(elem.id);
                               onSelectSlide(slide.id);
@@ -4242,12 +4243,23 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   <div className="flex-1 min-h-0 w-full">
                                     {renderMainScreen("w-full h-full")}
                                   </div>
-                                  <div 
-                                    className="w-full h-[22%] min-h-[35px] grid grid-cols-5 gap-2 shrink-0 pt-0.5"
-                                    style={{ gap: `${gap}px` }}
-                                  >
-                                    {items.map((item, idx) => renderThumbnail(item, idx, "h-full w-full"))}
-                                  </div>
+                                  {items.length <= 5 ? (
+                                    <div 
+                                      className="w-full h-[22%] min-h-[35px] grid grid-cols-5 gap-2 shrink-0 pt-0.5"
+                                      style={{ gap: `${gap}px` }}
+                                    >
+                                      {items.map((item, idx) => renderThumbnail(item, idx, "h-full w-full"))}
+                                    </div>
+                                  ) : (
+                                    // More than five photos (a package's gallery of up to 15): a strip of thumbnails that moves sideways
+                                    // and keeps the chosen one in view; the full-screen viewer has all of them.
+                                    <div
+                                      className="w-full h-[22%] min-h-[35px] flex shrink-0 pt-0.5 overflow-x-auto overflow-y-hidden snap-x [scrollbar-width:thin]"
+                                      style={{ gap: `${gap}px` }}
+                                    >
+                                      {items.map((item, idx) => renderThumbnail(item, idx, "h-full shrink-0 snap-center aspect-[4/3]"))}
+                                    </div>
+                                  )}
                                 </div>
                               )}
 

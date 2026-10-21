@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { GalleryCard, loadGallery } from './GalleryPicker';
 import { galleryOnlyCategories, readyByCategory } from '../../services/readySlides';
 import type { GallerySlide } from '../../services/galleryView';
+import { FIXED_READY_CATEGORIES } from '../../data/readyCategories';
 
 // The slides of a category (none while loading or if the list cannot be read: the code's own slides are always there).
 // `replacesCode`: the admin switched the category to the gallery, so the code's slides are hidden, but only when it has slides to show.
@@ -11,7 +12,7 @@ export const useReadyFromGallery = (categoryId: string | null): { slides: Galler
   const [state, setState] = useState<{ slides: GallerySlide[]; replacesCode: boolean }>({ slides: [], replacesCode: false });
   useEffect(() => {
     setState({ slides: [], replacesCode: false });
-    if (!categoryId) return;
+    if (!categoryId || FIXED_READY_CATEGORIES.includes(categoryId)) return; // fixed categories: the code's slides only
     let alive = true;
     Promise.all([readyByCategory(), loadGallery(), galleryOnlyCategories().catch(() => new Set<string>())])
       .then(([byCategory, all, only]) => {

@@ -1,6 +1,6 @@
 // Moved verbatim from RightDrawer.tsx (was an inline IIFE in the drawer body).
 import React, { useEffect, useRef, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Lock, Unlock } from 'lucide-react';
 import { CanvasElement } from '../../../types';
 import { RightDrawerProps } from '../types';
 import { MotionState, realMotionState, RELATIVE_MOTION_STATE, resolveMotion, shiftBetween } from '../../../utils/customMotion';
@@ -22,6 +22,8 @@ interface AnimationSectionProps {
   onPreview?: (id: string, which: 'from' | 'to' | null) => void;
   // The owner finished with the custom motion (left the panel or chose another element): the element is locked.
   onFinish?: (id: string) => void;
+  // «تثبيت وقفل» / «فك القفل» of the element, from the panel.
+  onLock?: (locked: boolean) => void;
 }
 
 const AnimationEditor = ({
@@ -35,6 +37,7 @@ const AnimationEditor = ({
   locked = false,
   onPreview,
   onFinish,
+  onLock,
 }: AnimationSectionProps) => {
   // The state being set by dragging: the element is dragged on the canvas, then dropped here, and goes back to its place.
   const [dragging, setDragging] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -127,6 +130,26 @@ const AnimationEditor = ({
       <p className="text-xs text-neutral-500 leading-relaxed">
         {tab === 'from' ? 'البداية = العنصر كما هو على الصفحة، وأي تغيير تعمله عليه أو هون هو قرارك لحالة البداية.' : 'النهاية تبقى كما حفظتها لحد ما تغيّرها هون. العنصر على الصفحة بيبيّن الحالة اللي أنت عليها.'}
       </p>
+      {/* What the editor shows on the element while this panel is closed: a tick on the first or on the last state */}
+      <div className="space-y-1" role="group" aria-label="ما يظهر في المحرر">
+        <span className="text-xs font-bold text-neutral-800 block">يظهر في المحرر:</span>
+        {([['from', 'حالة البداية'], ['to', 'حالة النهاية']] as const).map(([id, label]) => {
+          const on = (styles.animationShow || 'from') === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="checkbox"
+              aria-checked={on}
+              onClick={() => onUpdateElementStyles({ animationShow: id })}
+              className="flex w-full items-center gap-2 text-xs text-neutral-700 cursor-pointer"
+            >
+              <span className={`flex h-4 w-4 items-center justify-center rounded border ${on ? 'border-brand bg-brand text-white' : 'border-neutral-300 bg-white'}`}>{on && <Check size={11} strokeWidth={3} />}</span>
+              {label}
+            </button>
+          );
+        })}
+      </div>
       {element && onPlace && (
         dragging ? (
           <div className="space-y-1.5 p-2 rounded-lg bg-brand/5 border border-brand/20">
@@ -175,6 +198,15 @@ const AnimationEditor = ({
           </label>
         );
       })}
+      {onLock && (
+        <button
+          type="button"
+          onClick={() => onLock(!locked)}
+          className={`w-full h-9 rounded-lg text-xs font-extrabold inline-flex items-center justify-center gap-1.5 cursor-pointer ${locked ? 'bg-white border border-neutral-300 text-neutral-700 hover:border-brand' : 'bg-brand text-white hover:bg-brand-hover'}`}
+        >
+          {locked ? <><Unlock size={14} /> العنصر مقفل · فك القفل</> : <><Lock size={14} /> تثبيت وقفل</>}
+        </button>
+      )}
       <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
         <input type="checkbox" checked={Boolean(styles.animationAlternate)} onChange={(e) => onUpdateElementStyles({ animationAlternate: e.target.checked })} />
         ذهاب وإياب (المستمر ومرور الماوس يعملان هكذا دائماً)

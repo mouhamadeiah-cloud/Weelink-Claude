@@ -74,3 +74,14 @@ test('the animation card offers «set by dragging» once it knows the element', 
   const html = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, element: { id: 'a', x: 1, y: 2 }, onPlace: () => {} }));
   assert.match(html, /حدّد المكان بالسحب/);
 });
+
+test('the custom panel offers «تثبيت وقفل» and a tick for the state the editor shows', () => {
+  const html = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, onLock: () => {} }));
+  assert.match(html, /تثبيت وقفل/);
+  assert.match(html, /يظهر في المحرر/);
+  assert.match(html, /حالة البداية/);
+  assert.match(html, /حالة النهاية/);
+  assert.match(html, /role="checkbox"/);
+  const locked = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, onLock: () => {}, locked: true }));
+  assert.match(locked, /فك القفل/);
+});

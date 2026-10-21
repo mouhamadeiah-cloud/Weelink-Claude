@@ -138,3 +138,17 @@ test('a hover lists its own delay and play state so the lists stay aligned', () 
   assert.equal(b.style['--h-play'], 'paused, running');
   assert.equal(b.style['--h-delay'], '0s, 0s');
 });
+
+test('the editor shows the last state when the owner ticked it, the first otherwise', () => {
+  const base = { animation: 'custom', animationTrigger: 'once', animationFrom: { opacity: 0.4 }, animationTo: { x: 90, y: 0, opacity: 1, scale: 1, rotate: 0 } } as any;
+  const edit = { ...ctx, waits: false, still: 'idle' as const };
+  const first = buildElementAnimation(base, edit);
+  assert.equal(first.style.animationDelay, '0s');
+  assert.equal(first.style['--mv-fo'], '0.4');
+  const last = buildElementAnimation({ ...base, animationShow: 'to' }, edit);
+  assert.equal(last.style.animationDelay, '-1s');
+  // while a state is being edited that state wins over the tick
+  assert.equal(buildElementAnimation({ ...base, animationShow: 'to' }, { ...edit, still: 'from' }).style.animationDelay, '0s');
+  // an invisible state is held at a quarter in the editor, so it can still be picked
+  assert.equal(buildElementAnimation({ ...base, animationFrom: { opacity: 0 }, animationShow: 'from' }, edit).style['--mv-fo'], '0.25');
+});

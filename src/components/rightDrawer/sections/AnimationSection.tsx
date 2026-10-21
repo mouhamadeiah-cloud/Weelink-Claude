@@ -1,6 +1,6 @@
 // Moved verbatim from RightDrawer.tsx (was an inline IIFE in the drawer body).
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Lock, Unlock } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Lock, Unlock } from 'lucide-react';
 import { CanvasElement } from '../../../types';
 import { RightDrawerProps } from '../types';
 import { MotionState, realMotionState, RELATIVE_MOTION_STATE, resolveMotion, shiftBetween } from '../../../utils/customMotion';
@@ -48,6 +48,7 @@ const AnimationEditor = ({
   const isCustom = currentAnimation === 'custom';
   // One set of sliders for the state picked on top; the element on the page shows that state (Eyad, 21 Oct).
   const [tab, setTab] = useState<'from' | 'to'>('from');
+  const [collapsed, setCollapsed] = useState(false);
   const real = extra ? RELATIVE_MOTION_STATE : realMotionState(styles, rotation);
   const resolved = resolveMotion(styles, real);
   const elementId = element?.id;
@@ -115,6 +116,7 @@ const AnimationEditor = ({
   };
   const customPanel = (
     <div key="custom-panel" className="col-span-2 space-y-2 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
+      {!collapsed && (<>
       <div className="grid grid-cols-2 gap-1 p-1 bg-neutral-100 rounded-lg" role="tablist" aria-label="حالة الحركة">
         {([['from', 'البداية'], ['to', 'النهاية']] as const).map(([id, label]) => (
           <button
@@ -126,29 +128,6 @@ const AnimationEditor = ({
             className={`py-1.5 rounded-md text-xs font-extrabold cursor-pointer ${tab === id ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]' : 'text-neutral-600 hover:text-black'}`}
           >{label}</button>
         ))}
-      </div>
-      <p className="text-xs text-neutral-500 leading-relaxed">
-        {tab === 'from' ? 'البداية = العنصر كما هو على الصفحة، وأي تغيير تعمله عليه أو هون هو قرارك لحالة البداية.' : 'النهاية تبقى كما حفظتها لحد ما تغيّرها هون. العنصر على الصفحة بيبيّن الحالة اللي أنت عليها.'}
-      </p>
-      {/* What the editor shows on the element while this panel is closed: a tick on the first or on the last state */}
-      <div className="space-y-1" role="group" aria-label="ما يظهر في المحرر">
-        <span className="text-xs font-bold text-neutral-800 block">يظهر في المحرر:</span>
-        {([['from', 'حالة البداية'], ['to', 'حالة النهاية']] as const).map(([id, label]) => {
-          const on = (styles.animationShow || 'from') === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              role="checkbox"
-              aria-checked={on}
-              onClick={() => onUpdateElementStyles({ animationShow: id })}
-              className="flex w-full items-center gap-2 text-xs text-neutral-700 cursor-pointer"
-            >
-              <span className={`flex h-4 w-4 items-center justify-center rounded border ${on ? 'border-brand bg-brand text-white' : 'border-neutral-300 bg-white'}`}>{on && <Check size={11} strokeWidth={3} />}</span>
-              {label}
-            </button>
-          );
-        })}
       </div>
       {element && onPlace && (
         dragging ? (
@@ -198,6 +177,33 @@ const AnimationEditor = ({
           </label>
         );
       })}
+      <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
+        <input type="checkbox" checked={Boolean(styles.animationAlternate)} onChange={(e) => onUpdateElementStyles({ animationAlternate: e.target.checked })} />
+        ذهاب وإياب (المستمر ومرور الماوس يعملان هكذا دائماً)
+      </label>
+      {/* What the editor shows on the element while this panel is closed: a tick on the first or on the last state */}
+      <div className="space-y-1" role="group" aria-label="ما يظهر في المحرر">
+        <span className="text-xs font-bold text-neutral-800 block">يظهر في المحرر:</span>
+        {([['from', 'حالة البداية'], ['to', 'حالة النهاية']] as const).map(([id, label]) => {
+          const on = (styles.animationShow || 'from') === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="checkbox"
+              aria-checked={on}
+              onClick={() => onUpdateElementStyles({ animationShow: id })}
+              className="flex w-full items-center gap-2 text-xs text-neutral-700 cursor-pointer"
+            >
+              <span className={`flex h-4 w-4 items-center justify-center rounded border ${on ? 'border-brand bg-brand text-white' : 'border-neutral-300 bg-white'}`}>{on && <Check size={11} strokeWidth={3} />}</span>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-neutral-500 leading-relaxed">
+        بعد ما تخلّص بينقفل العنصر تلقائياً ليبقى بمكانه وحالته بالمحرر. لو فكيت القفل وحرّكته أو عدّلت عليه بيصير هذا تعديل لحالة البداية، وبيضل مفكوك لحد ما تضغط «تثبيت وقفل» أو تنهي الحركة من جديد.
+      </p>
       {onLock && (
         <button
           type="button"
@@ -207,10 +213,15 @@ const AnimationEditor = ({
           {locked ? <><Unlock size={14} /> العنصر مقفل · فك القفل</> : <><Lock size={14} /> تثبيت وقفل</>}
         </button>
       )}
-      <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
-        <input type="checkbox" checked={Boolean(styles.animationAlternate)} onChange={(e) => onUpdateElementStyles({ animationAlternate: e.target.checked })} />
-        ذهاب وإياب (المستمر ومرور الماوس يعملان هكذا دائماً)
-      </label>
+      </>)}
+      <button
+        type="button"
+        onClick={() => setCollapsed((c) => !c)}
+        aria-expanded={!collapsed}
+        className="w-full h-7 rounded-md text-xs font-bold text-neutral-500 hover:text-brand inline-flex items-center justify-center gap-1 cursor-pointer"
+      >
+        {collapsed ? <><ChevronDown size={15} /> إظهار إعدادات الحركة المخصصة</> : <><ChevronUp size={15} /> طي إعدادات الحركة المخصصة</>}
+      </button>
     </div>
   );
 

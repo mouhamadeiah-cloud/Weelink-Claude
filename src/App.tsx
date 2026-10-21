@@ -75,6 +75,7 @@ import { applyPageLook, inStartingLook } from './services/applyLook';
 import { formatMoney } from './components/shop/adminUi';
 import { PageLookPicker, type LookSample } from './components/rightDrawer/PageLookPicker';
 import type { PageLook } from './data/pageLooks';
+import { tickedSections } from './data/optionalSections';
 import { KIND_OF_PROJECT, buildPageFromPlan, emptyMainPage, buildProfile, pageAssets, requestPagePlan } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
@@ -401,18 +402,15 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (!projectReadyRef.current || !pages[0] || designerModeRef.current) return;
-    if (project === 'page') {
-      if (!hasRatings) addRatingsSlide();
-    } else if (!pages[0].ratingsSuggested) {
+    // A page project gets the ratings slide from Wee AI's build when the owner ticked it, or adds it himself (Eyad, 21 Oct).
+    if (project === 'page') return;
+    if (!pages[0].ratingsSuggested) {
       if (hasRatings) setPages((prev) => prev.map((p, i) => (i === 0 ? { ...p, ratingsSuggested: true } : p)));
       else addRatingsSlide();
     }
   }, [project, hasRatings, pages[0]?.id, pages[0]?.ratingsSuggested]);
-  const isLockedRatings = (el: CanvasElement) => {
-    if (project !== 'page' || el.type !== 'ratings' || elements.filter((e) => e.type === 'ratings' && e.id !== el.id && pages.some((p) => p.slides.some((sl) => sl.id === e.slideId))).length > 0) return false;
-    setBuildNotice({ busy: false, ok: false, message: 'شريحة التقييمات أساسية بالصفحة المجانية وما بتنشال. فيك تغيّر شكلها ومكانها.' });
-    return true;
-  };
+  // The ratings slide may be removed from any page (it was fixed on the free page before Eyad's 21 Oct decision).
+  const isLockedRatings = (_el: CanvasElement) => false;
   const ratingsSlide = useMemo(() => ({ has: hasRatings, add: addRatingsSlide }), [hasRatings, addRatingsSlide]);
 
   // The page the «حجز مواعيد» calendar books on, and whose bookings the admins list. Only the owner's
@@ -2185,7 +2183,7 @@ export default function App() {
     }
     // The owner's photos go into the page as links, never as full-size inline images.
     const answers = await hostAnswerImages(given);
-    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers), projectKey, { flavor: answers.flavor });
+    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections) });
     if (!result.ok) return { ok: false, message: result.message };
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
     const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId });

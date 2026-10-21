@@ -21,6 +21,8 @@ export interface WeeAnswers {
     heroBgImage?: string;
     services?: { name: string; price: string }[];
     features?: string[];
+    // The optional sections the owner ticked (src/data/optionalSections.ts); nothing saved = the defaults.
+    optionalSections?: string[];
   };
 }
 

@@ -22,6 +22,7 @@ import { fitTexts, fitTextsPhone, listItems, reflowList, type FlexEl } from '../
 import { arrangeSlideForMobile } from '../utils/mobileLayout';
 import type { ProjectType } from '../components/shop/shopTypes';
 import { deserializeElements } from '../utils/elementStorage';
+import { tickedSections } from '../data/optionalSections';
 
 export type BuildKind = 'free' | 'restaurant' | 'shop' | 'cars';
 export const KIND_OF_PROJECT: Record<ProjectType, BuildKind> = { page: 'free', restaurant: 'restaurant', shop: 'shop', cars: 'cars' };
@@ -566,6 +567,19 @@ export const emptyMainPage = (kind: BuildKind, pages: Page[], elements: CanvasEl
   };
 };
 
+/** The «التقييمات» slide of a page whose owner ticked it: a title over the ratings box, in the page's colours. */
+const ratingsSlide = (slideId: string, to: TargetColours, fonts: { head: string; body: string }): { slide: Slide; elements: CanvasElement[] } => {
+  const tone = toneColours(to, 'tint');
+  const base = { slideId, x: 140, width: 1000 };
+  const elements: CanvasElement[] = [
+    { ...base, id: `${slideId}-el-0`, name: 'عنوان التقييمات', type: 'heading', y: 48, height: 60, content: 'آراء زبائننا', styles: { fontSize: 32, fontWeight: 'bold', color: tone.ink, textAlign: 'center', fontFamily: fonts.head } } as CanvasElement,
+    { ...base, id: `${slideId}-el-1`, name: 'التقييمات', type: 'ratings', y: 130, height: 380, content: 'التقييمات', ratingsAccentColor: to.accent, styles: { backgroundColor: to.card, borderRadius: 24 } } as CanvasElement,
+  ];
+  const slide: Slide = { id: slideId, name: 'التقييمات', height: 560, backgroundColor: tone.bg };
+  const { layouts, mobileHeight } = arrangeSlideForMobile(slide, elements.map((e) => ({ ...e, mobile: undefined })));
+  return { slide: { ...slide, mobileHeight }, elements: elements.map((e) => ({ ...e, mobile: layouts.get(e.id) })) };
+};
+
 /** The page built from a checked plan: the target page's slides replaced, the rest of the site recoloured for a store. */
 export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q: string) => Promise<string | null> = photoFinder()): Promise<BuildResult> => {
   const { kind, answers, pages } = input;
@@ -608,9 +622,19 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
   };
 
   const built: { slide: Slide; elements: CanvasElement[] }[] = [];
+  const builtSection: string[] = [];
   for (let i = 0; i < plan.sections.length; i++) {
     const b = await buildSlide(plan.sections[i], i, ctx, to, fonts, plan.motion);
-    if (b) built.push(b);
+    if (b) {
+      built.push(b);
+      builtSection.push(plan.sections[i].section);
+    }
+  }
+  // The owner ticked «التقييمات»: its slide comes before the contact and the terms at the end.
+  if (kind === 'free' && tickedSections(answers.aiAnswers?.optionalSections).includes('ratings')) {
+    let at = built.length;
+    while (at > 0 && ['contact', 'privacy'].includes(builtSection[at - 1])) at -= 1;
+    built.splice(at, 0, ratingsSlide(`slide-ai-${stamp}-ratings`, to, fonts));
   }
   if (!built.length) return { ok: false, message: 'ما قدر Wee AI يبني الصفحة هالمرة. جرّب مرة ثانية.' };
 
@@ -639,7 +663,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
       ...(logo ? { logoUrl: logo } : {}),
       ...(ctx.title ? { brandName: ctx.title } : {}),
     };
-    if (p.id === page.id) return { ...p, slides: built.map((b) => b.slide), navbar, colorPalette: colors, styleLook: undefined, aiLook: look.id };
+    if (p.id === page.id) return { ...p, slides: built.map((b) => b.slide), navbar, colorPalette: colors, styleLook: undefined, aiLook: look.id, ratingsSuggested: true };
     if (!restyle) return { ...p, navbar, aiLook: look.id };
     return {
       ...p,

@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, Plus } from 'lucide-react';
 import type { ProjectType } from '../shop/shopTypes';
-import { ADD_ONS, PLANS, YEARLY_DISCOUNT, formatPounds, readPlan, savePlan, yearlyPrice } from '../../data/plans';
+import { ADD_ONS, PLANS, YEARLY_DISCOUNT, flavorOf, formatPounds, readPlan, savePlan, yearlyPrice } from '../../data/plans';
 
 // Prices are hidden for now (Eyad, 2026-10-18): the packages show what they hold, not what they cost.
 // Set to true to bring back the prices, the monthly/yearly switch and the add-ons' prices.
@@ -28,7 +28,8 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPi
   const before = readPlan(owner, kind);
 
   const pick = (id: string) => {
-    savePlan(owner, kind, id);
+    // A free restaurant, shop or showroom page is a page: nothing to remember under the kind (it would read as the live project's package).
+    if (!flavorOf(id)) savePlan(owner, kind, id);
     onPicked(id);
   };
 
@@ -55,7 +56,7 @@ export const PlanPicker: React.FC<PlanPickerProps> = ({ kind, owner, title, onPi
         </div>}
       </div>
 
-      <div className={`grid gap-3 sm:gap-4 ${plans.length === 2 ? 'sm:grid-cols-2 max-w-3xl' : 'sm:grid-cols-3'}`}>
+      <div className={`grid gap-3 sm:gap-4 ${plans.length === 2 ? 'sm:grid-cols-2 max-w-3xl' : plans.length === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}>
         {plans.map((p, i) => {
           const was = before === p.id;
           const closed = freeTaken && p.monthly === 0;

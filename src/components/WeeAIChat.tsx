@@ -35,6 +35,8 @@ interface WeeAIChatProps {
   // The kind of page being built: its work step offers the store or restaurant categories instead
   // of the occupations. Saved with the answers.
   pageKind?: ProjectType;
+  // A free restaurant, shop or showroom page: a page that asks in that type's words (the answers are a page's, with the flavour saved).
+  flavor?: ProjectType;
   // Fills its own box (the start page) instead of sitting under the control panel's tabs.
   embedded?: boolean;
   // In the docked panel: takes the place of the other tabs' content under the breadcrumb, like them,
@@ -179,6 +181,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   onBuildPage,
   onRestorePage,
   pageKind,
+  flavor,
   embedded,
   inFlow,
   onEditAnswers,
@@ -189,7 +192,9 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   // Answers finished once stay finished while the owner walks through them again.
   const finishedRef = useRef(false);
   const isGuest = userId === WEE_GUEST_ID;
-  const catalogSource = categorySourceOf(pageKind);
+  // The words of the questions: the flavour's when there is one.
+  const tone = flavor || pageKind;
+  const catalogSource = categorySourceOf(tone);
   const labels = CATALOG_LABELS[catalogSource];
   // Local collapsed state if not externally controlled
   const [internalCollapsed, setInternalCollapsed] = useState<boolean>(false);
@@ -410,7 +415,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // Typewriter effect on step / question change
   useEffect(() => {
-    const question = getConciseQuestionText(step, personalInfo.fullName, pageKind);
+    const question = getConciseQuestionText(step, personalInfo.fullName, tone);
     setTypedText('');
     let i = 0;
     const interval = setInterval(() => {
@@ -441,6 +446,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       catalogInfo,
       aiAnswers,
       ...(pageKind ? { pageKind } : {}),
+      ...(flavor ? { flavor } : {}),
       currentStep: finishedRef.current ? 13 : nextStep,
       updatedAt: new Date().toISOString()
     };
@@ -598,7 +604,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           done={step >= 13}
           rows={[
             ['اسم الصفحة', personalInfo.pageName || personalInfo.fullName],
-            [pageKind === 'restaurant' ? 'نوع المطعم' : pageKind === 'shop' ? 'المنتجات' : pageKind === 'cars' ? 'نوع المعرض' : 'العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.subCategory, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
+            [tone === 'restaurant' ? 'نوع المطعم' : tone === 'shop' ? 'المنتجات' : tone === 'cars' ? 'نوع المعرض' : 'العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.subCategory, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
             ['الوصف', aiAnswers.description],
             ['الألوان', colorSummary],
             ['طابع الصفحة', aiAnswers.motionEffects],
@@ -633,12 +639,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
             {/* اسم الصفحة: عنوان المدخل واسم شريط التنقل */}
             <div className="space-y-1">
-              <label className="text-xs font-bold text-neutral-500 block">{PAGE_NAME_LABEL[pageKind || 'page']}</label>
+              <label className="text-xs font-bold text-neutral-500 block">{PAGE_NAME_LABEL[tone || 'page']}</label>
               <input
                 type="text"
                 value={personalInfo.pageName || ''}
                 onChange={e => setPersonalInfo(p => ({ ...p, pageName: e.target.value }))}
-                placeholder={pageKind === 'restaurant' ? 'مثال: مطعم بيت جدي' : pageKind === 'shop' ? 'مثال: متجر لمسة' : pageKind === 'cars' ? 'مثال: معرض الشام للسيارات' : 'مثال: عيادة د. سلمى للأسنان'}
+                placeholder={tone === 'restaurant' ? 'مثال: مطعم بيت جدي' : tone === 'shop' ? 'مثال: متجر لمسة' : tone === 'cars' ? 'مثال: معرض الشام للسيارات' : 'مثال: عيادة د. سلمى للأسنان'}
                 className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
               />
               <p className="text-xs text-neutral-400">هو عنوان صفحتك. إذا تركته فاضي بيصير اسمك هو العنوان.</p>
@@ -651,13 +657,13 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 type="text"
                 value={personalInfo.fullName}
                 onChange={e => setPersonalInfo(p => ({ ...p, fullName: e.target.value }))}
-                placeholder={pageKind && pageKind !== 'page' ? 'اسم صاحب العمل أو الشركة' : 'أدخل الاسم أو اسم الشركة'}
+                placeholder={tone && tone !== 'page' ? 'اسم صاحب العمل أو الشركة' : 'أدخل الاسم أو اسم الشركة'}
                 className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
               />
             </div>
 
             {/* تاريخ الميلاد: لصفحة شخصية فقط */}
-            {(!pageKind || pageKind === 'page') && <div className="space-y-1">
+            {(!tone || tone === 'page') && <div className="space-y-1">
               <label className="text-xs font-bold text-neutral-400 block">تاريخ الميلاد (يمكن تخطيه)</label>
               <input
                 type="date"
@@ -1041,7 +1047,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <textarea
               value={aiAnswers.description}
               onChange={e => setAiAnswers(p => ({ ...p, description: e.target.value }))}
-              placeholder={DESCRIPTION_HINT[pageKind || 'page']}
+              placeholder={DESCRIPTION_HINT[tone || 'page']}
               rows={4}
               className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
             />
@@ -1503,7 +1509,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   finishedRef.current = true;
                   setStep(13);
                   saveProgress(13);
-                  onCompleteChat?.({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers });
+                  onCompleteChat?.({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(flavor ? { flavor } : {}) });
                 }}
                 className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5"
               >
@@ -1526,7 +1532,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             {embedded && onCompleteChat && (
               <button
                 type="button"
-                onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers })}
+                onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(flavor ? { flavor } : {}) })}
                 className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 {isGuest ? 'اعمل حسابك لتنحفظ صفحتك' : 'افتح صفحتي بالمحرر'}

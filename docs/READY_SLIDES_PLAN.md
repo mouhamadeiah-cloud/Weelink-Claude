@@ -80,3 +80,9 @@ Today (src/components/WeeAIChat.tsx): 1 owner · 2 address · 3 contact · 4 cat
   3. (Free restaurant / shop / cars) his price-list items, typed as name and price, or skipped to fill in the editor.
 - Questions are data (`wizardSteps`) read by the chat and by the model editor, so the admin can later add, remove or reorder them without code. The answers each tick maps to a model section (`when: answers.optionalSlides includes 'ratings'`).
 - Old saved answers (photo fields, 12-step numbering) keep loading: the steps are re-numbered by id, not by position.
+
+### Free restaurant / shop / showroom — wiring (done in the free-models step)
+- `PLANS.restaurant|shop|cars` start with `{kind}-free` (price 0). `flavorOf(planId)` says which type a free plan flavours.
+- Picking one starts the questions as a **page** (project key, answers, build and limits are a page's) with `flavor` on the answers; the questions use the type's words (`flavor` prop of `WeeAIChat`). The page asks «خدماتك وأسعارها» as before, which becomes the price list.
+- The free quota is the account's one free project (`freeTaken` now counts any free flavour against `owned.includes('page')`).
+- Not yet: the builder reading `flavor` (4c) and the price-list slide itself.

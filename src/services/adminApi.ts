@@ -66,6 +66,7 @@ export class AdminError extends Error {
   }
 }
 
+import type { ModelSection, PageModel } from '../data/pageModels';
 const call = async <T,>(body: Record<string, unknown>): Promise<T> => {
   const token = getAdminToken();
   let res: Response;
@@ -212,6 +213,9 @@ export const adminReadyOverview = () => call<{ categories: ReadyCategory[] }>({ 
 export const adminReadyMove = (id: string, dir: 'up' | 'down') => call<{ ok: true }>({ action: 'ready-move', id, dir });
 export const adminReadyAdopt = () => call<{ adopted: number; categories: number }>({ action: 'ready-adopt' });
 export const adminReadyUseGallery = (category: string, on: boolean) => call<{ ok: true; useGallery: boolean }>({ action: 'ready-use-gallery', category, on });
+export const adminModels = () => call<{ models: (PageModel & { custom: boolean })[] }>({ action: 'models-get' });
+export const adminModelSave = (id: string, sections: ModelSection[]) => call<{ ok: true; sections: ModelSection[] }>({ action: 'models-save', id, sections });
+export const adminModelReset = (id: string) => call<{ ok: true }>({ action: 'models-reset', id });
 export const adminReadyRemove = (id: string) => call<{ ok: true }>({ action: 'ready-remove', id });
 export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });
 

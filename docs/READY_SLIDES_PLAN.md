@@ -29,3 +29,54 @@
 - Admin view «الشرائح الجاهزة» (`ReadySlidesView`): per category, slides in order with أعلى/أسفل, move to another category, take out; «اعتماد الشرائح المنسوخة» places approved copied slides in their original category and order.
 - Per-category switch «استعمل شرائح المعرض بدل شرائح الكود» (`readyConfig/{category}.useGallery`); refused when the category has no approved slide. The editor hides the code's slides for a switched category only while it has gallery slides to show.
 - Server: `moveReady`, `adoptSeeded`, `setUseGallery`, `readyOverview` in `server/readySlides.ts`; actions `ready-overview|move|adopt|use-gallery`. Needs the new `readyConfig` rule published.
+
+## Step 4 — new «ابن صفحتي»: fixed models, random slides, AI writes text only (plan, Eyad 21 Oct)
+Principle: the free page is the base that every page has; each other type (مطعم، سيارات، متجر، برو) is the base + its own intro + its own section. The AI only writes texts and image searches; the server picks the slides.
+
+### Models (النماذج): the sections of a page, in order
+- **الأساس (حرة)**: مدخل ← من نحن ← خدمات ← [أسعار: إن ذكر خدمات بأسعار] ← [معرض: إن رفع صوراً] ← تواصل ← قوانين وخصوصية. Optional, owner ticks them before the build: لماذا نحن، أرقام، مواعيد، فريق.
+- **مطعم / متجر / سيارات**: مدخل خاص بالنوع ← قسم النوع (المنيو / المنتجات / السيارات: من الكود، يقرأ بيانات حية) ← من نحن ← [معرض] ← تواصل ← خصوصية.
+- **برو**: the same model of its type + more optional sections (فريق، شركاء، آخر مشاريعنا، فيديو) and more slides per page.
+- Every model starts with an intro slide.
+
+### What a section holds (احتواء الشرائح)
+A section = { ready category, required?, condition, how many slides (1 by default) }. Slides come from `readySlides` of that category when the category is switched to the gallery, or from the code for the fixed categories.
+A slide is eligible only if: approved, in the ready list, switched on, its text slots are marked (aiSlot with a character limit), and it is not already used in this page.
+Pick: random among the eligible, weighted by likes and uses, never the same slide as the owner's previous build. The page style (lookSlide) is applied after the pick.
+
+### What the AI does
+Gets the owner's card + the chosen slides' slots (name, character limit, how many items) and returns the texts, plus one English image search per image slot, derived from the service next to it. The owner's own photos come first; the search is the fallback; a default photo of the category if the search fails. Today's checks stay (limits, no invented prices, no links, no emoji).
+
+### After the build
+The ready-slide panel stays for adding any slide, and booking stays an option. A button «املأها من بطاقتي» asks the AI for the texts of that one slide only.
+
+### Phases
+4a. Models as data (`pageModels/{type}`, defaults in code) + an admin tab to edit them.
+4b. Slot marking tool in the admin + the eligibility rule.
+4c. New server build: picks the slides, AI text-only prompt, images by service; tests.
+4d. «املأها من بطاقتي».
+4e. Remove the old catalog (`ai-catalog`, buildCatalog.json) once the new build is live.
+
+### Decisions (Eyad, 21 Oct) — final for step 4
+- Page types (14): تعريفية مجانية / برو؛ مطعم، متجر، سيارات × (مجاني، 30، 60، برو).
+- Free restaurant / shop / cars: the base page + the type's own intro and look + a **manual price list** (name and price rows the user edits by hand; no online order, no photo per item, not in search, no item numbers; no limit on rows). New plan ids with price 0.
+- 30 / 60 / برو differ only by the limits (items, devices, photos, builds); Pro adds optional sections. Adding pages, slides or elements stays free; limiting additions by package (with an upgrade message) is a **later step**.
+- Free page photos: 7 = logo + intro background + 5 in the gallery (already `gallery: 5`).
+- Ratings slide: added only after the owner answers «نعم» to the new Wee AI question about the ratings system; the user can add it later from the editor.
+- Legal / privacy slide: added automatically, the user may delete it (no longer required).
+
+### Checked in the code
+- The existing `prices` ready slides are package tiers (pricing elements), **not** a row price list. A new «قائمة أسعار» slide/element with editable rows is needed (4a).
+- «خدماتي» in the page admin has item numbers, prices and pictures: the free types must not use it for their price list.
+
+### Questions (Wee AI) — changes (Eyad, 21 Oct)
+Today (src/components/WeeAIChat.tsx): 1 owner · 2 address · 3 contact · 4 category · 5 description · 6 colour · 7 divider style · 8 gallery photos (up to 5) · 9 logo · 10 intro background · 11 effects · 12 notes.
+- **Photo steps stay** (8 gallery, 9 logo, 10 intro background) — Eyad changed his mind, 21 Oct. Where an answer has no photo, the image search by service fills the slot.
+- **Prepare for paid galleries of up to 15 photos** (a later step turns it on; `planLimits.ts` already has gallery 5 / 15): the limit is read from the project's package, not written as 5 in the code. Places that hold the 5 today: step 8 of `WeeAIChat.tsx` (`>= 5`, texts), `galleryOf` in `pageBuilder.ts` (`slice(0, 5)`), `cleanAssets` in `api/build-page.ts` (`Math.min(5, …)`). The gallery ready slides must lay out any count from 1 to 15 (grid that grows, or a second gallery slide past a size).
+- **Remove** step 7 (divider style) and 11 (effects) only if the user says so; not touched here.
+- **Add** three choice steps, each a set of tick boxes:
+  1. **صفحات اختيارية** (the owner marks the pages he wants; e.g. حجز، تقييمات، معرض أعمال، فريق، الأسئلة الشائعة): each becomes a page in the model after the base ones. Per package: the list offered is the type's own.
+  2. **شرائح اختيارية**: slides the owner marks inside the pages: حجز مواعيد، التقييمات (also switches the ratings system on), القوانين والخصوصية (ticked by default, he may untick), لماذا نحن، أرقام، فريق.
+  3. (Free restaurant / shop / cars) his price-list items, typed as name and price, or skipped to fill in the editor.
+- Questions are data (`wizardSteps`) read by the chat and by the model editor, so the admin can later add, remove or reorder them without code. The answers each tick maps to a model section (`when: answers.optionalSlides includes 'ratings'`).
+- Old saved answers (photo fields, 12-step numbering) keep loading: the steps are re-numbered by id, not by position.

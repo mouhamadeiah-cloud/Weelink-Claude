@@ -9,6 +9,7 @@ import type { User } from 'firebase/auth';
 import { ArrowLeft, CarFront, Check, ClipboardList, FileText, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
+import { flavorOf, type Flavor } from '../../data/plans';
 import { DesignerGallery } from '../gallery/DesignerGallery';
 import { AttentionDot, useOrderAttention } from '../../services/orderAttention';
 import { DesignOrdersPanel } from '../designOrders/DesignOrdersPanel';
@@ -123,10 +124,19 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
     window.history.pushState({ screen: 'start', kind: type, stage: 'plans' }, '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const startQuestions = () => {
+  // A free restaurant, shop or showroom package is a page with the type's flavour (plans.ts): the questions use the type's words,
+  // and everything after them (answers, build, project) is a page's.
+  const [flavor, setFlavor] = useState<Flavor | null>(null);
+  const pickPlan = (planId: string) => {
+    const f = flavorOf(planId);
+    setFlavor(f);
+    if (!signedIn) setGuestKind(f ? 'page' : kind || 'page');
+    startQuestions(f ? 'page' : kind);
+  };
+  const startQuestions = (asKind: ProjectType | null = kind) => {
     // The account comes before the questions: a visitor is sent to the sign-up page and comes back here.
-    if (!signedIn && kind) {
-      onSignUp(kind);
+    if (!signedIn && asKind) {
+      onSignUp(asKind);
       return;
     }
     setStage('questions');
@@ -260,7 +270,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           <DesignerGallery user={user} onEditDesign={onEditDesign} onAddToMyPage={onAddDesign} onOpenOrders={(id) => setOrders({ id: id || '' })} />
         </main>
       ) : stage === 'plans' ? (
-        <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} title={chosen.title} onPicked={startQuestions} freeTaken={signedIn && chosen.type === 'page' && owned.includes('page')} />
+        <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} title={chosen.title} onPicked={(planId) => pickPlan(planId)} freeTaken={signedIn && owned.includes('page')} />
       ) : (
         <main key="chat" className="max-w-6xl mx-auto px-4 py-4 sm:py-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:gap-6 lg:items-start space-y-3 lg:space-y-0">
           {/* The chosen kind's photo: a banner on a phone, a tall panel beside the questions on a wide screen */}
@@ -292,10 +302,11 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
           </aside>
           <div className="wl-rise relative h-[calc(100dvh-14rem)] lg:h-[calc(100dvh-7rem)] min-h-[440px] rounded-card overflow-hidden border border-line bg-surface lg:order-1" style={{ animationDelay: '120ms' }}>
             <WeeAIChat
-              key={`${chosen.type}-${signedIn ? accountId : WEE_GUEST_ID}`}
+              key={`${chosen.type}${flavor ? '-free' : ''}-${signedIn ? accountId : WEE_GUEST_ID}`}
               userId={signedIn ? accountId : WEE_GUEST_ID}
               userEmail={signedIn ? user?.email || "" : ""}
-              pageKind={chosen.type}
+              pageKind={flavor ? 'page' : chosen.type}
+              flavor={flavor || undefined}
               embedded
               fromStart
               isCollapsed={false}
@@ -303,8 +314,9 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               onStepChange={setStep}
               onCompleteChat={(answers) => {
                 setStep(QUESTION_COUNT + 1);
-                if (signedIn) onBuild(chosen.type, answers);
-                else onSignUp(chosen.type);
+                const buildKind = flavor ? 'page' : chosen.type;
+                if (signedIn) onBuild(buildKind, answers);
+                else onSignUp(buildKind);
               }}
             />
           </div>

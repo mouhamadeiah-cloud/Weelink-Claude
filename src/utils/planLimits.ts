@@ -22,6 +22,9 @@ export const UNLIMITED: PlanLimits = { items: NONE, gallery: NONE, devices: NONE
 const LIMITS: Record<string, PlanLimits> = {
   'page-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false },
   'page-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true },
+  'restaurant-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false },
+  'shop-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false },
+  'cars-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false },
   'restaurant-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true },
   'restaurant-60': { items: 60, gallery: 5, devices: 1, builds: 1, perDay: true },
   'restaurant-pro': { items: NONE, gallery: 15, devices: 4, builds: 5, perDay: true },

@@ -208,7 +208,7 @@ export interface ReadyCopyStatus { total: number; copied: number; published: num
 export const adminReadyCopyStatus = () => call<ReadyCopyStatus>({ action: 'ready-copy-status' });
 export const adminReadyCopy = (opts: { publish?: boolean; overwrite?: boolean; from?: number } = {}) => call<{ written: number; kept: number; next: number | null; total: number }>({ action: 'ready-copy', publish: !!opts.publish, overwrite: !!opts.overwrite, from: opts.from || 0, limit: 30 });
 export const adminReadyAdd = (id: string, category: string) => call<{ ok: true; category: string }>({ action: 'ready-add', id, category });
-export interface ReadyCategory { id: string; name: string; icon: string; useGallery: boolean; items: { id: string; name: string; designerName: string; official: boolean; approved: boolean }[] }
+export interface ReadyCategory { id: string; name: string; icon: string; useGallery: boolean; items: { id: string; name: string; designerName: string; official: boolean; approved: boolean; eligible: boolean; slots: number; problems: string[] }[] }
 export const adminReadyOverview = () => call<{ categories: ReadyCategory[] }>({ action: 'ready-overview' });
 export const adminReadyMove = (id: string, dir: 'up' | 'down') => call<{ ok: true }>({ action: 'ready-move', id, dir });
 export const adminReadyAdopt = () => call<{ adopted: number; categories: number }>({ action: 'ready-adopt' });
@@ -216,6 +216,7 @@ export const adminReadyUseGallery = (category: string, on: boolean) => call<{ ok
 export const adminModels = () => call<{ models: (PageModel & { custom: boolean })[] }>({ action: 'models-get' });
 export const adminModelSave = (id: string, sections: ModelSection[]) => call<{ ok: true; sections: ModelSection[] }>({ action: 'models-save', id, sections });
 export const adminModelReset = (id: string) => call<{ ok: true }>({ action: 'models-reset', id });
+export const adminSlotsMark = (id: string, marks: Record<string, string>) => call<{ ok: true; eligible: boolean; slots: number; problems: string[] }>({ action: 'slots-mark', id, marks });
 export const adminReadyRemove = (id: string) => call<{ ok: true }>({ action: 'ready-remove', id });
 export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });
 

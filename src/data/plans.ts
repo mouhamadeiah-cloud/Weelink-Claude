@@ -50,6 +50,14 @@ export const PLANS: Record<ProjectType, Plan[]> = {
   ],
   restaurant: [
     {
+      id: 'restaurant-free',
+      name: 'مجانية',
+      monthly: 0,
+      art: 'page',
+      tagline: 'صفحة تعريفية لمطعمك مع قائمة أسعار.',
+      features: [FREE_SLIDES, 'قائمة أسعار تعدّلها بإيدك، بدون طلب أونلاين', 'معرض حتى 5 صور', '«ابن صفحتي» مرة وحدة'],
+    },
+    {
       id: 'restaurant-30',
       name: '30',
       monthly: 299000,
@@ -76,6 +84,14 @@ export const PLANS: Record<ProjectType, Plan[]> = {
     },
   ],
   shop: [
+    {
+      id: 'shop-free',
+      name: 'مجانية',
+      monthly: 0,
+      art: 'page',
+      tagline: 'صفحة تعريفية لمتجرك مع قائمة أسعار.',
+      features: [FREE_SLIDES, 'قائمة أسعار تعدّلها بإيدك، بدون سلة وطلب أونلاين', 'معرض حتى 5 صور', '«ابن صفحتي» مرة وحدة'],
+    },
     {
       id: 'shop-30',
       name: '30',
@@ -104,6 +120,14 @@ export const PLANS: Record<ProjectType, Plan[]> = {
   ],
   cars: [
     {
+      id: 'cars-free',
+      name: 'مجانية',
+      monthly: 0,
+      art: 'page',
+      tagline: 'صفحة تعريفية لمعرضك مع قائمة أسعار.',
+      features: [FREE_SLIDES, 'قائمة أسعار تعدّلها بإيدك، بدون عرض سيارات مفصّل', 'معرض حتى 5 صور', '«ابن صفحتي» مرة وحدة'],
+    },
+    {
       id: 'cars-30',
       name: '30',
       monthly: 299000,
@@ -129,6 +153,14 @@ export const PLANS: Record<ProjectType, Plan[]> = {
       features: ['كل شي بباقة 60', 'سيارات بلا حدود', 'معرض حتى 15 صورة', '«ابن صفحتي» حتى 5 مرات باليوم'],
     },
   ],
+};
+
+// The free packages of the restaurant, the shop and the showroom are a free page «with the flavour» of their type (Eyad, 21 Oct): the
+// project is a page (no live menu, products, orders or cars), with the type's front slide and look and a price list typed by hand.
+export type Flavor = 'restaurant' | 'shop' | 'cars';
+export const flavorOf = (planId: string | null | undefined): Flavor | null => {
+  const m = /^(restaurant|shop|cars)-free$/.exec(planId || '');
+  return m ? (m[1] as Flavor) : null;
 };
 
 // Extras bought on top of a package.

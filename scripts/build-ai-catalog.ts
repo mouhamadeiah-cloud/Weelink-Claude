@@ -12,72 +12,7 @@ import { DEFAULT_LOOK, PAGE_LOOKS, suitsKind } from '../src/data/pageLooks';
 
 type Kind = 'free' | 'restaurant' | 'shop' | 'cars';
 
-// Filled by Weelink from the owner's answers, never by the AI.
-const SYSTEM_SLOTS = /^(phone|whatsapp|address|hours)\.(label|value)$|^(map|form)$/;
-const IMAGE_SLOTS = /^(image|avatar|photos\.\d+)$/;
-
-// Generous room: the builder grows a box (and moves what is under it) to fit a longer text, so the
-// limits only keep texts to a sensible length for their part of the design.
-const LIMITS: Record<string, number> = {
-  title: 60, eyebrow: 40, sub: 240, text: 520, note: 120, quote: 220, owner: 40, role: 50, ticker: 160,
-  name: 40, desc: 100, price: 20, unit: 20, number: 8, label: 40, features: 50, caption: 40, chips: 32,
-};
-// A list item's parts are shorter than the section's own.
-const LIST_LIMITS: Record<string, number> = { title: 40, text: 180, name: 40, desc: 100, price: 20, unit: 20, number: 8, label: 40, '': 32 };
-const limitFor = (path: string, type: string) => {
-  if (type === 'button') return 24;
-  const list = /^(?:chips|facts|points|items|packages)\.\d+(?:\.([a-z]+))?$/.exec(path);
-  if (list) return LIST_LIMITS[list[1] || ''] ?? 60;
-  const parts = path.split('.').filter((p) => !/^\d+$/.test(p));
-  return LIMITS[parts[parts.length - 1]] ?? LIMITS[parts[0]] ?? (type === 'heading' ? 60 : 200);
-};
-
-// Lists the AI may make longer or shorter (the builder lays out the items like the example's):
-// chips.N, facts.N.number, points.N.title … One level only; packages' features and price groups'
-// rows keep the example's number of places.
-const LIST = /^(chips|facts|points|items|packages)\.(\d+)(?:\.([a-z]+))?$/;
-const LIST_MAX = 8;
-
-interface SlotSpec {
-  max?: number;
-  kind: 'text' | 'button' | 'image';
-}
-interface ListSpec {
-  count: number; // in the example
-  fields: Record<string, number | 'icon'>; // field ('' for a bare chip) → its character limit
-}
-
-const describe = (slide: { name: string; elements: any[]; backgroundImage?: string; backgroundVideo?: string }) => {
-  const slots: Record<string, SlotSpec> = {};
-  const lists: Record<string, ListSpec> = {};
-  for (const el of slide.elements) {
-    const path: string | undefined = el.aiSlot;
-    if (!path || SYSTEM_SLOTS.test(path)) continue;
-    const list = LIST.exec(path);
-    if (list) {
-      const [, name, index, field = ''] = list;
-      const spec = (lists[name] ||= { count: 0, fields: {} });
-      spec.count = Math.max(spec.count, +index + 1);
-      spec.fields[field] = limitFor(path, el.type);
-      continue;
-    }
-    if (IMAGE_SLOTS.test(path) || el.type === 'image') {
-      slots[path] = { kind: 'image' };
-      continue;
-    }
-    const kind = el.type === 'button' ? 'button' : 'text';
-    slots[path] = { kind, max: limitFor(path, el.type) };
-  }
-  // A card with one icon on it: the AI picks the icon.
-  for (const [name, spec] of Object.entries(lists)) {
-    const first = slide.elements.filter((e) => (e.aiSlot || '').startsWith(`${name}.0`));
-    const card = slide.elements.find((c) => c.isGroupContainer && first.length && first.every((e) => e.x >= c.x && e.y >= c.y && e.x + e.width <= c.x + c.width && e.y + e.height <= c.y + c.height));
-    const icons = card ? slide.elements.filter((e) => e.type === 'icon' && e.x >= card.x && e.y >= card.y && e.x + e.width <= card.x + card.width && e.y + e.height <= card.y + card.height) : [];
-    if (icons.length === 1) spec.fields.icon = 'icon';
-  }
-  if (slide.backgroundImage || slide.backgroundVideo) slots.background = { kind: 'image' };
-  return { name: slide.name, slots, lists };
-};
+import { describe, LIST_MAX } from '../src/data/aiSlots';
 
 const templates: Record<string, ReturnType<typeof describe>> = {};
 for (const [id, make] of Object.entries(WEE_SLIDE_BY_ID)) templates[id] = describe(make());

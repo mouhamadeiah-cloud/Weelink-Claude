@@ -1,6 +1,8 @@
 // The owner's Wee AI answers as the facts «ابن صفحتي» works from (see pageBuilder.ts).
 
 export interface WeeAnswers {
+  // A free restaurant, shop or showroom page (plans.ts flavorOf): a page that builds from that type's free model.
+  flavor?: 'restaurant' | 'shop' | 'cars';
   personalInfo?: { title?: string; fullName?: string; pageName?: string; logoUrl?: string };
   addressInfo?: { governorate?: string; placeType?: string; city?: string; area?: string; district?: string; subdistrict?: string; village?: string; street?: string; details?: string };
   contactInfo?: { whatsapp?: string; phone?: string; facebook?: string; tiktok?: string };

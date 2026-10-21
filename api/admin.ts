@@ -76,6 +76,7 @@ import { mailOrder } from '../server/orderMail.js';
 import { recountDesigner } from '../server/designerStats.js';
 import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
 import { addReady, adoptSeeded, dropReadyFor, moveReady, readyMap, readyOverview, removeReady, setUseGallery } from '../server/readySlides.js';
+import { markSlots } from '../server/slotMarks.js';
 import { readModels, resetModel, saveModel } from '../server/pageModels.js';
 import { readyCopy, readyCopyStatus } from '../server/readyCopy.js';
 import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
@@ -248,7 +249,7 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
 const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply', 'orders', 'order', 'order-approve', 'order-reject', 'order-extend', 'billing-settings'];
 // The designers' gallery and the rating reports are the content reviewers' work (the owner too).
-const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'ready-add', 'ready-remove', 'ready-overview', 'models-get', 'models-save', 'models-reset', 'ready-move', 'ready-adopt', 'ready-use-gallery', 'ready-copy-status', 'ready-copy', 'slide-edit-review', 'reports', 'report-decide'];
+const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'ready-add', 'ready-remove', 'ready-overview', 'slots-mark', 'models-get', 'models-save', 'models-reset', 'ready-move', 'ready-adopt', 'ready-use-gallery', 'ready-copy-status', 'ready-copy', 'slide-edit-review', 'reports', 'report-decide'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup', 'billing-enforce', 'test-account', 'subscriber-delete', 'cleanup'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'deleted-list', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
@@ -1220,6 +1221,13 @@ export default {
       if ('error' in r) return json({ error: r.error }, r.error === 'not_found' ? 404 : 400);
       await audit(session.u, `ready-add:${id}:${r.category}`);
       return json({ ok: true, category: r.category });
+    }
+    if (action === 'slots-mark') {
+      const id = String(body.id || '').slice(0, 128);
+      const r = await markSlots(db, id, body.marks, session.u);
+      if ('error' in r) return json({ error: r.error, detail: r.detail }, r.error === 'not_found' ? 404 : 400);
+      await audit(session.u, `slots-mark:${id}`);
+      return json(r);
     }
     if (action === 'models-get') return json({ models: await readModels(db) });
     if (action === 'models-save') {

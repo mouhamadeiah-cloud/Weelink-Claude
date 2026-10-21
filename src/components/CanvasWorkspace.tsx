@@ -4229,6 +4229,18 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                             );
                           };
 
+                          // The side grid of the "left" and "right" layouts: four thumbnails in a 2×2 block, or, past four photos,
+                          // a two-column grid that moves up and down.
+                          const thumbGrid = items.length <= 4 ? (
+                            <div className="w-[38%] h-full grid grid-cols-2 grid-rows-2 shrink-0" style={{ gap: `${gap}px` }}>
+                              {items.map((item, idx) => renderThumbnail(item, idx, "w-full h-full"))}
+                            </div>
+                          ) : (
+                            <div className="w-[38%] h-full grid grid-cols-2 auto-rows-[32%] content-start overflow-y-auto overflow-x-hidden shrink-0 [scrollbar-width:thin]" style={{ gap: `${gap}px` }}>
+                              {items.map((item, idx) => renderThumbnail(item, idx, "w-full h-full"))}
+                            </div>
+                          );
+
                           return (
                             <div 
                               className="w-full h-full p-2.5 relative select-none flex flex-col overflow-hidden"
@@ -4266,12 +4278,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                               {layout === 'left-thumbnails' && (
                                 // Layout 2: Left 2x2 grid of thumbnails, Right main display
                                 <div className="w-full h-full flex flex-row" style={{ gap: `${gap}px` }}>
-                                  <div 
-                                    className="w-[38%] h-full grid grid-cols-2 grid-rows-2 shrink-0"
-                                    style={{ gap: `${gap}px` }}
-                                  >
-                                    {items.slice(0, 4).map((item, idx) => renderThumbnail(item, idx, "w-full h-full"))}
-                                  </div>
+                                  {thumbGrid}
                                   <div className="flex-1 min-w-0 h-full">
                                     {renderMainScreen("w-full h-full")}
                                   </div>
@@ -4284,12 +4291,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   <div className="flex-1 min-w-0 h-full">
                                     {renderMainScreen("w-full h-full")}
                                   </div>
-                                  <div 
-                                    className="w-[38%] h-full grid grid-cols-2 grid-rows-2 shrink-0"
-                                    style={{ gap: `${gap}px` }}
-                                  >
-                                    {items.slice(0, 4).map((item, idx) => renderThumbnail(item, idx, "w-full h-full"))}
-                                  </div>
+                                  {thumbGrid}
                                 </div>
                               )}
 
@@ -4299,12 +4301,19 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                                   <div className="w-[62%] h-full shrink-0">
                                     {renderMainScreen("w-full h-full")}
                                   </div>
-                                  <div 
-                                    className="flex-1 min-w-0 h-full flex flex-col justify-between"
-                                    style={{ gap: `${gap}px` }}
-                                  >
-                                    {items.slice(0, 4).map((item, idx) => renderThumbnail(item, idx, "flex-1 min-h-0 w-full"))}
-                                  </div>
+                                  {items.length <= 5 ? (
+                                    <div 
+                                      className="flex-1 min-w-0 h-full flex flex-col justify-between"
+                                      style={{ gap: `${gap}px` }}
+                                    >
+                                      {items.map((item, idx) => renderThumbnail(item, idx, "flex-1 min-h-0 w-full"))}
+                                    </div>
+                                  ) : (
+                                    // More than five photos (up to the package's 15): the column moves up and down.
+                                    <div className="flex-1 min-w-0 h-full flex flex-col overflow-y-auto overflow-x-hidden [scrollbar-width:thin]" style={{ gap: `${gap}px` }}>
+                                      {items.map((item, idx) => renderThumbnail(item, idx, "w-full shrink-0 h-[22%] min-h-[48px]"))}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

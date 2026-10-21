@@ -29,9 +29,10 @@ const placeOf = (id: string, index: number): CodeSection['place'] => (index === 
 const nameOf = (s: ModelSection) => MODEL_CATEGORIES.find((c) => c.id === s.category)?.name || s.category;
 
 // How many photos a gallery slide holds: its photo frames, or what the photo-viewer block takes.
-const VIEWER_PHOTOS: Record<string, number> = { 'gallery.viewer': 5, 'gallery.viewer15': 15 };
-export const photoCapacity = (template: string, spec?: TemplateSpec) =>
-  VIEWER_PHOTOS[template] ?? Object.keys(spec?.slots || {}).filter((k) => /^photos\.\d+$/.test(k)).length;
+export const photoCapacity = (template: string, spec?: TemplateSpec) => {
+  const viewer = /^gallery\.view(\d+)/.exec(template); // gallery.view5a … hold 5, gallery.view15a … hold 15
+  return viewer ? +viewer[1] : Object.keys(spec?.slots || {}).filter((k) => /^photos\.\d+$/.test(k)).length;
+};
 
 const shuffled = <T,>(list: T[], rng: () => number) => {
   const out = [...list];

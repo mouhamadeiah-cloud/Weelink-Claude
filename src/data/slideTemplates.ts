@@ -235,7 +235,7 @@ export const customizeElementsForIndex = (elements: any[], categoryId: string, i
 // How many ready slides a category offers.
 // The approved designs of weeSlideTemplates come first in their categories.
 export const slideTemplateCount = (categoryId: string) =>
-  categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : categoryId === 'restaurant' ? REST_SLIDE_COUNT : (categoryId === 'team' || categoryId === 'special_offer') ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
+  categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : categoryId === 'restaurant' ? REST_SLIDE_COUNT : (categoryId === 'team' || categoryId === 'special_offer' || categoryId === 'gallery') ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
 
 export const getSlideTemplatePayload = (categoryId: string, index: number, catName: string) => {
   const wee = weeSlideCount(categoryId);

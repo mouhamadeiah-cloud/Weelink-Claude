@@ -503,116 +503,62 @@ const PRICES: (() => WeeSlide)[] = [
   },
 ];
 
+// The galleries (Eyad, 21 Oct): the editor's photo-gallery block beside a short explanation. A click on a photo opens the photo viewer,
+// which goes through the photos one after another. Three designs hold up to 5 photos and five hold up to 15 (the thumbnails of a long
+// gallery move sideways or up and down). The builder puts the owner's photos in the block and drops the slide when there are none.
+type GalleryLayout = 'top-main' | 'left-thumbnails' | 'right-thumbnails' | 'left-main-row';
+interface GalleryDesign {
+  id: string; // gallery.view5a …, gallery.view15a …
+  name: string;
+  look: Look;
+  layout: GalleryLayout;
+  photos: 5 | 15;
+  text: 'right' | 'left'; // which side the explanation stands on (right = where reading starts)
+  button?: boolean;
+  eyebrow?: string;
+}
+const SAMPLE_PHOTOS = ['k1', 'p1', 'l1', 'k2', 'p2', 'l2', 'k3', 'p3', 'l3', 'k4', 'p4', 'l4', 'k5', 'p5', 'l5'];
+
+const galleryDesign = (d: GalleryDesign) => (): WeeSlide => {
+  const L = d.look;
+  const blockW = 700;
+  const textW = 340;
+  const textX = d.text === 'right' ? 1184 - textW : 96;
+  const blockX = d.text === 'right' ? 96 : 96 + textW + 48;
+  const samples = SAMPLE_PHOTOS.slice(0, d.photos === 5 ? 5 : 9);
+  // Phone: the title, the explanation, the gallery, then the button.
+  const phoneBlockY = d.eyebrow ? 270 : 240;
+  const phoneH = phoneBlockY + 370 + (d.button ? 80 : 20);
+  return {
+    aiTemplate: d.id,
+    name: d.name,
+    height: 660,
+    mobileHeight: phoneH,
+    backgroundColor: L.bg,
+    elements: [
+      ...(d.eyebrow ? [on(eyebrow(L, { x: textX, y: 130, width: textW, height: 24 }, d.eyebrow), 20, 36, 320, 24)] : []),
+      on(heading(L, { x: textX, y: d.eyebrow ? 166 : 140, width: textW, height: 120 }, 'من شغلنا', 42, {}, 'title'), 20, d.eyebrow ? 66 : 36, 320, 64),
+      on(text(L, { x: textX, y: d.eyebrow ? 282 : 262, width: textW, height: 170 }, 'لمحات من أعمالنا. اضغط على أي صورة لتتصفح كل الصور واحدة بعد الأخرى.', 17, { lineHeight: 1.7 }, 'sub'), 20, d.eyebrow ? 136 : 106, 320, 120),
+      ...(d.button ? [on(button(L, { x: d.text === 'right' ? textX + textW - 190 : textX, y: 500, width: 190, height: 52 }, 'تواصل معنا'), 20, phoneBlockY + 386, 190, 48)] : []),
+      on(el('gallery', 'معرض صور', { x: blockX, y: 80, width: blockW, height: 500 }, '', { borderRadius: 18, backgroundColor: L.card }, {
+        ...slot('gallery'),
+        galleryConfig: { layout: d.layout, items: samples.map((n, i) => ({ id: `g${i}`, url: photo(n), title: '' })), activeImageIndex: 0, showThumbnails: true, gap: 10, borderRadius: 14, objectFit: 'cover' },
+      }), 20, phoneBlockY, 320, 360),
+    ],
+  };
+};
+
 const GALLERY: (() => WeeSlide)[] = [
-  // gallery.viewer: the editor's photo-gallery block, a large photo with five thumbnails; a click opens the photo viewer, which goes
-  // through the photos one after another. The builder puts the owner's photos in it and drops it when there are none.
-  () => ({
-    aiTemplate: 'gallery.viewer',
-    name: 'معرض صور (حتى 5)',
-    height: 700,
-    mobileHeight: 640,
-    backgroundColor: P_.bg,
-    elements: [
-      on(heading(P_, { x: 96, y: 70, width: 1088, height: 60 }, 'من شغلنا', 42, {}, 'title'), 20, 40, 320, 60),
-      on(el('gallery', 'معرض صور', { x: 140, y: 160, width: 1000, height: 480 }, '', { borderRadius: 18 }, {
-        ...slot('gallery'),
-        galleryConfig: { layout: 'top-main', items: ['p1', 'p2', 'p3', 'p4', 'p5'].map((n, i) => ({ id: `g${i}`, url: photo(n), title: '' })), activeImageIndex: 0, showThumbnails: true, gap: 10, borderRadius: 14, objectFit: 'cover' },
-      }), 20, 120, 320, 480),
-    ],
-  }),
-
-  // gallery.viewer15: the same block for a gallery of up to fifteen photos: the thumbnails move sideways in a strip, and the viewer has them all.
-  () => ({
-    aiTemplate: 'gallery.viewer15',
-    name: 'معرض صور (حتى 15)',
-    height: 700,
-    mobileHeight: 640,
-    backgroundColor: K_.bg,
-    elements: [
-      on(heading(K_, { x: 96, y: 70, width: 1088, height: 60 }, 'من شغلنا', 42, {}, 'title'), 20, 40, 320, 60),
-      on(el('gallery', 'معرض صور', { x: 140, y: 160, width: 1000, height: 480 }, '', { borderRadius: 18 }, {
-        ...slot('gallery'),
-        galleryConfig: { layout: 'top-main', items: ['k1', 'k2', 'k3', 'k4', 'k5', 'p1', 'p2'].map((n, i) => ({ id: `g${i}`, url: photo(n), title: '' })), activeImageIndex: 0, showThumbnails: true, gap: 10, borderRadius: 14, objectFit: 'cover' },
-      }), 20, 120, 320, 480),
-    ],
-  }),
-
-  // gallery.mosaic: one large photo and four small ones; photos grow under the mouse.
-  () => {
-    // [photo, caption, desktop box, phone box]
-    const items: [string, string, Box, Box][] = [
-      ['k3', 'عجينة بيتية', { x: 648, y: 160, width: 536, height: 494 }, { x: 20, y: 120, width: 320, height: 240 }],
-      ['k1', 'بهارات طازة', { x: 373, y: 160, width: 261, height: 240 }, { x: 186, y: 372, width: 154, height: 150 }],
-      ['k2', 'حبق من الجنينة', { x: 98, y: 160, width: 261, height: 240 }, { x: 20, y: 372, width: 154, height: 150 }],
-      ['k4', 'قهوة بعد الغدا', { x: 373, y: 414, width: 261, height: 240 }, { x: 186, y: 534, width: 154, height: 150 }],
-      ['k5', 'فنجان الضيافة', { x: 98, y: 414, width: 261, height: 240 }, { x: 20, y: 534, width: 154, height: 150 }],
-    ];
-    return {
-      aiTemplate: 'gallery.mosaic',
-      name: 'معرض فسيفساء',
-      height: 720,
-      mobileHeight: 720,
-      backgroundColor: K_.bg,
-      elements: [
-        on(heading(K_, { x: 96, y: 70, width: 1088, height: 60 }, 'من مطبخنا', 42, {}, 'title'), 20, 40, 320, 60),
-        ...items.flatMap(([img, cap, box, m], i) => [
-          on(image(box, photo(img), { borderRadius: 18, animation: 'scale-up', animationTrigger: 'hover' }, {}, `photos.${i}`), m.x, m.y, m.width, m.height),
-          on(caption(K_, { x: box.x + 16, y: box.y + box.height - 42, width: box.width - 32, height: 28 }, cap, `caption.${i}`), m.x + 10, m.y + m.height - 38, m.width - 20, 28, 0.9),
-        ]),
-      ],
-    };
-  },
-
-  // gallery.strip: five tall arched photos in a row.
-  () => {
-    const items: [string, string][] = [['p1', 'ألوان الموسم'], ['p2', 'عدّة المعلم'], ['p3', 'ألوان الأبواب'], ['p4', 'تجهيز الجدران'], ['p5', 'جدار بمربعات']];
-    return {
-      aiTemplate: 'gallery.strip',
-      name: 'معرض أقواس',
-      height: 600,
-      mobileHeight: 890,
-      backgroundColor: P_.bg,
-      dividerShape: 'curve-up',
-      elements: [
-        on(heading(P_, { x: 96, y: 70, width: 1088, height: 60 }, 'من شغلنا', 42, {}, 'title'), 20, 40, 320, 60),
-        ...items.flatMap(([img, cap], i) => {
-          const x = 980 - i * 221;
-          // Phone: two arches a row from the right, the fifth in the middle.
-          const mx = i === 4 ? 103 : i % 2 ? 20 : 186;
-          const my = 130 + Math.floor(i / 2) * 240; // where the arch's curve starts
-          return [
-            on(image({ x, y: 160, width: 204, height: 300 }, photo(img), { imageFilter: 'technicolor' }, { clipPath: 'clip-shape-arch-classic' }, `photos.${i}`), mx, my - 66, 154, 260),
-            on(text(P_, { x, y: 470, width: 204, height: 28 }, cap, 15, { color: P_.ink, fontWeight: 'bold', textAlign: 'center' }, `caption.${i}`), mx, my + 202, 154, 28),
-          ];
-        }),
-      ],
-    };
-  },
-
-  // gallery.frames: three photos on top and two below, each in a frame with its caption.
-  () => {
-    const items: [string, string, Box][] = [
-      ['l1', 'قاعة الاجتماعات', { x: 836, y: 160, width: 348, height: 261 }],
-      ['l2', 'ملفات الموكلين', { x: 466, y: 160, width: 348, height: 261 }],
-      ['l3', 'استشارة قانونية', { x: 96, y: 160, width: 348, height: 261 }],
-      ['l4', 'مكتبة المراجع', { x: 651, y: 476, width: 533, height: 300 }],
-      ['l5', 'الأرشيف', { x: 96, y: 476, width: 533, height: 300 }],
-    ];
-    return {
-      aiTemplate: 'gallery.frames',
-      name: 'معرض إطارات',
-      height: 850,
-      mobileHeight: 1300,
-      backgroundColor: L_.bg,
-      elements: [
-        on(heading(L_, { x: 96, y: 70, width: 1088, height: 60 }, 'من المكتب', 42, {}, 'title'), 20, 40, 320, 60),
-        ...items.flatMap(([img, cap, box], i) => [
-          on(image(box, photo(img), { borderRadius: 16, borderWidth: 8, borderStyle: 'solid', borderColor: L_.line, imageFilter: 'grayscale', animation: 'scale-up', animationTrigger: 'hover' }, {}, `photos.${i}`), 20, 120 + i * 232, 320, 180),
-          on(text(L_, { x: box.x, y: box.y + box.height + 10, width: box.width, height: 26 }, cap, 15, { color: L_.ink, fontWeight: 'bold' }, `caption.${i}`), 20, 306 + i * 232, 320, 26),
-        ]),
-      ],
-    };
-  },
+  // Up to 5 photos
+  galleryDesign({ id: 'gallery.view5a', name: 'معرض 5 صور · شرح يمين', look: KITCHEN, layout: 'top-main', photos: 5, text: 'right', eyebrow: 'معرض الصور' }),
+  galleryDesign({ id: 'gallery.view5b', name: 'معرض 5 صور · مصغرات جانبية', look: PAINTER, layout: 'left-main-row', photos: 5, text: 'left', button: true }),
+  galleryDesign({ id: 'gallery.view5c', name: 'معرض 5 صور · داكن', look: LAW, layout: 'top-main', photos: 5, text: 'left' }),
+  // Up to 15 photos
+  galleryDesign({ id: 'gallery.view15a', name: 'معرض 15 صورة · شريط مصغرات', look: PAINTER, layout: 'top-main', photos: 15, text: 'right', eyebrow: 'أعمالنا' }),
+  galleryDesign({ id: 'gallery.view15b', name: 'معرض 15 صورة · شبكة يسار', look: KITCHEN, layout: 'left-thumbnails', photos: 15, text: 'left', button: true }),
+  galleryDesign({ id: 'gallery.view15c', name: 'معرض 15 صورة · شبكة يمين', look: LAW, layout: 'right-thumbnails', photos: 15, text: 'right' }),
+  galleryDesign({ id: 'gallery.view15d', name: 'معرض 15 صورة · عمود مصغرات', look: KITCHEN, layout: 'left-main-row', photos: 15, text: 'right', eyebrow: 'لمحات' }),
+  galleryDesign({ id: 'gallery.view15e', name: 'معرض 15 صورة · دافئ', look: KITCHEN, layout: 'top-main', photos: 15, text: 'left', button: true }),
 ];
 
 const CONTACT: (() => WeeSlide)[] = [

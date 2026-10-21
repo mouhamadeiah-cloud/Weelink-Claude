@@ -81,11 +81,14 @@
     "required": false,
     "place": "any",
     "templates": [
-     "gallery.mosaic",
-     "gallery.strip",
-     "gallery.frames",
-     "gallery.viewer",
-     "gallery.viewer15"
+     "gallery.view5a",
+     "gallery.view5b",
+     "gallery.view5c",
+     "gallery.view15a",
+     "gallery.view15b",
+     "gallery.view15c",
+     "gallery.view15d",
+     "gallery.view15e"
     ]
    },
    {
@@ -171,11 +174,14 @@
     "required": false,
     "place": "any",
     "templates": [
-     "gallery.mosaic",
-     "gallery.strip",
-     "gallery.frames",
-     "gallery.viewer",
-     "gallery.viewer15"
+     "gallery.view5a",
+     "gallery.view5b",
+     "gallery.view5c",
+     "gallery.view15a",
+     "gallery.view15b",
+     "gallery.view15c",
+     "gallery.view15d",
+     "gallery.view15e"
     ]
    },
    {
@@ -273,11 +279,14 @@
     "required": false,
     "place": "any",
     "templates": [
-     "gallery.mosaic",
-     "gallery.strip",
-     "gallery.frames",
-     "gallery.viewer",
-     "gallery.viewer15"
+     "gallery.view5a",
+     "gallery.view5b",
+     "gallery.view5c",
+     "gallery.view15a",
+     "gallery.view15b",
+     "gallery.view15c",
+     "gallery.view15d",
+     "gallery.view15e"
     ]
    },
    {
@@ -818,157 +827,138 @@
    },
    "lists": {}
   },
-  "gallery.viewer": {
-   "name": "معرض صور (حتى 5)",
+  "gallery.view5a": {
+   "name": "معرض 5 صور · شرح يمين",
    "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
     "title": {
      "kind": "text",
      "max": 60
+    },
+    "sub": {
+     "kind": "text",
+     "max": 240
     }
    },
    "lists": {}
   },
-  "gallery.viewer15": {
-   "name": "معرض صور (حتى 15)",
+  "gallery.view5b": {
+   "name": "معرض 5 صور · مصغرات جانبية",
    "slots": {
     "title": {
      "kind": "text",
      "max": 60
+    },
+    "sub": {
+     "kind": "text",
+     "max": 240
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
     }
    },
    "lists": {}
   },
-  "gallery.mosaic": {
-   "name": "معرض فسيفساء",
+  "gallery.view5c": {
+   "name": "معرض 5 صور · داكن",
    "slots": {
     "title": {
      "kind": "text",
      "max": 60
     },
-    "photos.0": {
-     "kind": "image"
-    },
-    "caption.0": {
+    "sub": {
      "kind": "text",
-     "max": 40
-    },
-    "photos.1": {
-     "kind": "image"
-    },
-    "caption.1": {
-     "kind": "text",
-     "max": 40
-    },
-    "photos.2": {
-     "kind": "image"
-    },
-    "caption.2": {
-     "kind": "text",
-     "max": 40
-    },
-    "photos.3": {
-     "kind": "image"
-    },
-    "caption.3": {
-     "kind": "text",
-     "max": 40
-    },
-    "photos.4": {
-     "kind": "image"
-    },
-    "caption.4": {
-     "kind": "text",
-     "max": 40
+     "max": 240
     }
    },
    "lists": {}
   },
-  "gallery.strip": {
-   "name": "معرض أقواس",
+  "gallery.view15a": {
+   "name": "معرض 15 صورة · شريط مصغرات",
    "slots": {
+    "eyebrow": {
+     "kind": "text",
+     "max": 40
+    },
     "title": {
      "kind": "text",
      "max": 60
     },
-    "photos.0": {
-     "kind": "image"
-    },
-    "caption.0": {
+    "sub": {
      "kind": "text",
-     "max": 40
-    },
-    "photos.1": {
-     "kind": "image"
-    },
-    "caption.1": {
-     "kind": "text",
-     "max": 40
-    },
-    "photos.2": {
-     "kind": "image"
-    },
-    "caption.2": {
-     "kind": "text",
-     "max": 40
-    },
-    "photos.3": {
-     "kind": "image"
-    },
-    "caption.3": {
-     "kind": "text",
-     "max": 40
-    },
-    "photos.4": {
-     "kind": "image"
-    },
-    "caption.4": {
-     "kind": "text",
-     "max": 40
+     "max": 240
     }
    },
    "lists": {}
   },
-  "gallery.frames": {
-   "name": "معرض إطارات",
+  "gallery.view15b": {
+   "name": "معرض 15 صورة · شبكة يسار",
    "slots": {
     "title": {
      "kind": "text",
      "max": 60
     },
-    "photos.0": {
-     "kind": "image"
+    "sub": {
+     "kind": "text",
+     "max": 240
     },
-    "caption.0": {
+    "cta": {
+     "kind": "button",
+     "max": 24
+    }
+   },
+   "lists": {}
+  },
+  "gallery.view15c": {
+   "name": "معرض 15 صورة · شبكة يمين",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 60
+    },
+    "sub": {
+     "kind": "text",
+     "max": 240
+    }
+   },
+   "lists": {}
+  },
+  "gallery.view15d": {
+   "name": "معرض 15 صورة · عمود مصغرات",
+   "slots": {
+    "eyebrow": {
      "kind": "text",
      "max": 40
     },
-    "photos.1": {
-     "kind": "image"
-    },
-    "caption.1": {
+    "title": {
      "kind": "text",
-     "max": 40
+     "max": 60
     },
-    "photos.2": {
-     "kind": "image"
-    },
-    "caption.2": {
+    "sub": {
      "kind": "text",
-     "max": 40
-    },
-    "photos.3": {
-     "kind": "image"
-    },
-    "caption.3": {
+     "max": 240
+    }
+   },
+   "lists": {}
+  },
+  "gallery.view15e": {
+   "name": "معرض 15 صورة · دافئ",
+   "slots": {
+    "title": {
      "kind": "text",
-     "max": 40
+     "max": 60
     },
-    "photos.4": {
-     "kind": "image"
-    },
-    "caption.4": {
+    "sub": {
      "kind": "text",
-     "max": 40
+     "max": 240
+    },
+    "cta": {
+     "kind": "button",
+     "max": 24
     }
    },
    "lists": {}

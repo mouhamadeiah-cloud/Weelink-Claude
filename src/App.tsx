@@ -2185,7 +2185,7 @@ export default function App() {
     }
     // The owner's photos go into the page as links, never as full-size inline images.
     const answers = await hostAnswerImages(given);
-    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers), projectKey);
+    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers), projectKey, { flavor: answers.flavor });
     if (!result.ok) return { ok: false, message: result.message };
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
     const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId });

@@ -93,3 +93,10 @@ Today (src/components/WeeAIChat.tsx): 1 owner · 2 address · 3 contact · 4 cat
 - The «الشرائح الجاهزة» admin screen shows «جاهزة للتوليد · N خانات» or what is missing, and a «الخانات» panel per slide.
 - The committed `buildCatalog.json` is behind the templates (regenerating it adds 361 lines); regenerate it with `npm run ai-catalog` when step 4c lands.
 - Still to do in 4c: the gallery-count rule (1–15 photos) and the picker that reads `eligible` slides.
+
+### Step 4c — the new build (done for page projects)
+- `server/pagePicker.ts`: from the project's model (`modelOf(plan)`, admin-edited `pageModels` over the defaults) and what the owner gave (services, prices, photos, ticked sections), the server fixes the sections and picks one slide for each at random: the code's templates of that section and the gallery slides marked for the AI (`readySlides` + `slotStatus`), a switched category using gallery slides only while one works. The slide of the owner's last build is left for last (`platform_build_picks`).
+- `api/build-page.ts`: with a pick, the prompt lists only the chosen sections and the AI writes their texts, photo searches, icons, tones and entrance; `checkPlan(…, over)` keeps the chosen sections, order and slides whatever the AI answered. The response carries the gallery slides used (`extra`). No pick (paid restaurant, shop and showroom, no database, no sections) = the old AI planning, unchanged.
+- Browser: `buildPageFromPlan` builds a `g:{id}` section from its payload like any ready slide; `requestPagePlan` sends the answers' `flavor`; `WeeAIChat` keeps the flavour with the saved answers.
+- Not yet: the questions for optional pages and slides (`ticked` is accepted by the server but nothing sends it, so «يختاره الزبون» sections use their default), the 1–15 photo gallery layout, price list slide, paid restaurant/shop/showroom on models.
+- Cloudflare: the worker serves the same `api/*.ts` handlers, so nothing new to register; the 12-function limit no longer binds.

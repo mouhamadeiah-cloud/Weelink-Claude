@@ -1,9 +1,9 @@
 // Moved verbatim from RightDrawer.tsx (was an inline IIFE in the drawer body).
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { CanvasElement } from '../../../types';
 import { RightDrawerProps } from '../types';
-import { DEFAULT_MOTION_FROM, DEFAULT_MOTION_TO, MotionState, shiftBetween } from '../../../utils/customMotion';
+import { MotionState, realMotionState, RELATIVE_MOTION_STATE, resolveMotion, shiftBetween } from '../../../utils/customMotion';
 
 interface AnimationSectionProps {
   styles: CanvasElement['styles'];
@@ -15,6 +15,13 @@ interface AnimationSectionProps {
   phone?: boolean;
   // An extra animation of the element: no intro, and no tickers.
   extra?: boolean;
+  // The element's own turn and lock: a custom motion's first state is the element as it is (utils/customMotion).
+  rotation?: number;
+  locked?: boolean;
+  // The editor shows the state being edited («البداية» / «النهاية») on the element; null when the panel lets go of it.
+  onPreview?: (id: string, which: 'from' | 'to' | null) => void;
+  // The owner finished with the custom motion (left the panel or chose another element): the element is locked.
+  onFinish?: (id: string) => void;
 }
 
 const AnimationEditor = ({
@@ -24,13 +31,38 @@ const AnimationEditor = ({
   onPlace,
   phone = false,
   extra = false,
+  rotation = 0,
+  locked = false,
+  onPreview,
+  onFinish,
 }: AnimationSectionProps) => {
   // The state being set by dragging: the element is dragged on the canvas, then dropped here, and goes back to its place.
-  const [dragging, setDragging] = useState<{ key: 'animationFrom' | 'animationTo'; id: string; x: number; y: number } | null>(null);
+  const [dragging, setDragging] = useState<{ id: string; x: number; y: number } | null>(null);
   useEffect(() => {
     if (dragging && dragging.id !== element?.id) setDragging(null);
   }, [dragging, element?.id]);
   const currentAnimation = styles.animation || 'none';
+  const isCustom = currentAnimation === 'custom';
+  // One set of sliders for the state picked on top; the element on the page shows that state (Eyad, 21 Oct).
+  const [tab, setTab] = useState<'from' | 'to'>('from');
+  const real = extra ? RELATIVE_MOTION_STATE : realMotionState(styles, rotation);
+  const resolved = resolveMotion(styles, real);
+  const elementId = element?.id;
+  useEffect(() => {
+    if (!extra && isCustom && elementId) onPreview?.(elementId, tab);
+  }, [extra, isCustom, elementId, tab]);
+  // Leaving the custom motion (another animation, another element, the panel closed): the element lets go of the preview and is
+  // locked. The lock waits a tick, so a remount of the same element (strict mode) does not lock it.
+  const lockTimer = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (extra || !isCustom || !elementId) return;
+    window.clearTimeout(lockTimer.current);
+    return () => {
+      onPreview?.(elementId, null);
+      lockTimer.current = window.setTimeout(() => onFinish?.(elementId), 0);
+    };
+  }, [extra, isCustom, elementId]);
+
   const currentTrigger = styles.animationTrigger || 'once';
   const currentDuration = styles.animationDuration || (
     ['spin-slow'].includes(currentAnimation) ? 10 :
@@ -41,6 +73,7 @@ const AnimationEditor = ({
 
   const ANIMATIONS_LIST = [
     { id: 'none', name: 'بدون حركة ✕', desc: 'إيقاف الحركة بالكامل', arrow: '▫️', delay: 1.5 },
+    { id: 'custom', name: 'حركة مخصصة ✎', desc: 'من حالة إلى حالة تحددها أنت', arrow: 'A ➔ B', delay: 1.2 },
     { id: 'fade', name: 'تلاشي ناعم', desc: 'ظهور تدريجي من الشفافية', arrow: '▫️ ➔ ⬜', delay: 1.2 },
     { id: 'slide-up', name: 'انزلاق لأعلى', desc: 'دخول انسيابي للأعلى', arrow: '⬆️', delay: 1.2 },
     { id: 'slide-down', name: 'انزلاق لأسفل', desc: 'دخول انسيابي للأسفل', arrow: '⬇️', delay: 1.2 },
@@ -61,9 +94,93 @@ const AnimationEditor = ({
     { id: 'heartbeat', name: 'خفقان سريع', desc: 'نبضتان سريعتان كنبض القلب', arrow: '💗 ❤️', delay: 2 },
     { id: 'rubberband', name: 'مطاط مرن', desc: 'تمطط جانبي مرن ومرح', arrow: '↔️ 🎗️', delay: 2 },
     { id: 'swing', name: 'تأرجح مائل', desc: 'أرجوحة لطيفة من الأعلى', arrow: '⤾ 📐', delay: 2 },
-    { id: 'jello', name: 'تموج هلامي', desc: 'تموج مائل مرتعش وممتع', arrow: '🍮 〰️', delay: 2 },
-    { id: 'custom', name: 'حركة مخصصة ✎', desc: 'من حالة إلى حالة تحددها أنت', arrow: 'A ➔ B', delay: 1.2 }
+    { id: 'jello', name: 'تموج هلامي', desc: 'تموج مائل مرتعش وممتع', arrow: '🍮 〰️', delay: 2 }
   ];
+
+  const rows: { field: keyof MotionState; label: string; min: number; max: number; step: number; unit: string; scale?: number }[] = [
+    { field: 'x', label: 'الإزاحة أفقياً', min: -600, max: 600, step: 10, unit: 'px' },
+    { field: 'y', label: 'الإزاحة عمودياً', min: -600, max: 600, step: 10, unit: 'px' },
+    { field: 'opacity', label: 'الشفافية', min: 0, max: 100, step: 5, unit: '%', scale: 100 },
+    { field: 'scale', label: 'الحجم', min: 10, max: 300, step: 5, unit: '%', scale: 100 },
+    { field: 'rotate', label: 'الدوران', min: -360, max: 360, step: 5, unit: '°' },
+  ];
+  const state = resolved[tab];
+  // A change to the first state is the owner's decision for it; the last state stays as it was saved.
+  const write = (patch: MotionState) => {
+    if (tab === 'from') onUpdateElementStyles({ animationFrom: { ...(styles.animationFrom || {}), ...patch }, animationTo: styles.animationTo ?? resolved.to });
+    else onUpdateElementStyles({ animationTo: { ...resolved.to, ...patch } });
+  };
+  const customPanel = (
+    <div key="custom-panel" className="col-span-2 space-y-2 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
+      <div className="grid grid-cols-2 gap-1 p-1 bg-neutral-100 rounded-lg" role="tablist" aria-label="حالة الحركة">
+        {([['from', 'البداية'], ['to', 'النهاية']] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`py-1.5 rounded-md text-xs font-extrabold cursor-pointer ${tab === id ? 'bg-white text-brand shadow-xs ring-1 ring-black/[0.04]' : 'text-neutral-600 hover:text-black'}`}
+          >{label}</button>
+        ))}
+      </div>
+      <p className="text-xs text-neutral-500 leading-relaxed">
+        {tab === 'from' ? 'البداية = العنصر كما هو على الصفحة، وأي تغيير تعمله عليه أو هون هو قرارك لحالة البداية.' : 'النهاية تبقى كما حفظتها لحد ما تغيّرها هون. العنصر على الصفحة بيبيّن الحالة اللي أنت عليها.'}
+      </p>
+      {element && onPlace && (
+        dragging ? (
+          <div className="space-y-1.5 p-2 rounded-lg bg-brand/5 border border-brand/20">
+            <p className="text-xs text-neutral-600 leading-relaxed">اسحب العنصر على الصفحة إلى المكان المطلوب ثم اضغط «تثبيت»؛ يرجع العنصر إلى مكانه بعدها.</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const shift = shiftBetween(dragging, element, phone ? 2 : 1);
+                  write({ x: Math.round((state.x || 0) + shift.x), y: Math.round((state.y || 0) + shift.y) });
+                  onPlace(dragging.x, dragging.y);
+                  setDragging(null);
+                }}
+                className="flex-1 py-1.5 rounded-lg bg-brand text-white text-xs font-bold cursor-pointer"
+              >تثبيت هنا</button>
+              <button
+                type="button"
+                onClick={() => { onPlace(dragging.x, dragging.y); setDragging(null); }}
+                className="flex-1 py-1.5 rounded-lg bg-white border border-neutral-200 text-xs font-bold text-neutral-700 cursor-pointer"
+              >إلغاء</button>
+            </div>
+          </div>
+        ) : locked ? (
+          <p className="text-xs text-amber-700 leading-relaxed">العنصر مقفل بعد ضبط الحركة. فكّ قفله (أيقونة القفل في شريط التحديد) لتسحبه، والمنزلقات تعمل دائماً.</p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setDragging({ id: element.id, x: element.x, y: element.y })}
+            className="w-full py-1.5 rounded-lg bg-white border border-neutral-200 text-xs font-bold text-neutral-700 hover:border-brand cursor-pointer"
+          >✋ حدّد المكان بالسحب</button>
+        )
+      )}
+      {rows.map((r) => {
+        const shown = Math.round((state[r.field] as number) * (r.scale || 1));
+        return (
+          <label key={r.field} className="block">
+            <span className="flex justify-between text-xs text-neutral-600">
+              <span>{r.label}</span>
+              <span className="font-mono text-brand font-bold">{shown}{r.unit}</span>
+            </span>
+            <input
+              type="range" min={r.min} max={r.max} step={r.step} value={shown}
+              onChange={(e) => write({ [r.field]: Number(e.target.value) / (r.scale || 1) })}
+              className="w-full accent-brand h-1.5 bg-neutral-200 rounded-lg cursor-pointer"
+            />
+          </label>
+        );
+      })}
+      <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
+        <input type="checkbox" checked={Boolean(styles.animationAlternate)} onChange={(e) => onUpdateElementStyles({ animationAlternate: e.target.checked })} />
+        ذهاب وإياب (المستمر ومرور الماوس يعملان هكذا دائماً)
+      </label>
+    </div>
+  );
 
   return (
     <div className="space-y-4 text-right animate-fade" dir="rtl">
@@ -159,96 +276,26 @@ const AnimationEditor = ({
         </div>
       )}
 
-      {/* Custom motion: the two states the element moves between */}
-      {currentAnimation === 'custom' && (
-        <div className="space-y-2">
-          {([
-            { key: 'animationFrom' as const, title: 'حالة البداية', state: { ...DEFAULT_MOTION_FROM, ...styles.animationFrom } },
-            { key: 'animationTo' as const, title: 'حالة النهاية', state: { ...DEFAULT_MOTION_TO, ...styles.animationTo } },
-          ]).map(({ key, title, state }) => {
-            const set = (patch: MotionState) => onUpdateElementStyles({ [key]: { ...(styles[key] || {}), ...patch } });
-            const rows: { field: keyof MotionState; label: string; min: number; max: number; step: number; unit: string; scale?: number }[] = [
-              { field: 'x', label: 'الإزاحة أفقياً', min: -600, max: 600, step: 10, unit: 'px' },
-              { field: 'y', label: 'الإزاحة عمودياً', min: -600, max: 600, step: 10, unit: 'px' },
-              { field: 'opacity', label: 'الشفافية', min: 0, max: 100, step: 5, unit: '%', scale: 100 },
-              { field: 'scale', label: 'الحجم', min: 10, max: 300, step: 5, unit: '%', scale: 100 },
-              { field: 'rotate', label: 'الدوران', min: -360, max: 360, step: 5, unit: '°' },
-            ];
-            return (
-              <div key={key} className="space-y-1.5 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
-                <span className="text-xs font-bold text-neutral-800 block">{title}</span>
-                {element && onPlace && (
-                  dragging?.key === key ? (
-                    <div className="space-y-1.5 p-2 rounded-lg bg-brand/5 border border-brand/20">
-                      <p className="text-xs text-neutral-600 leading-relaxed">اسحب العنصر على الصفحة إلى المكان المطلوب ثم اضغط «تثبيت»؛ يرجع العنصر إلى مكانه بعدها.</p>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const shift = shiftBetween(dragging, element, phone ? 2 : 1);
-                            onUpdateElementStyles({ [key]: { ...(styles[key] || {}), ...shift } });
-                            onPlace(dragging.x, dragging.y);
-                            setDragging(null);
-                          }}
-                          className="flex-1 py-1.5 rounded-lg bg-brand text-white text-xs font-bold cursor-pointer"
-                        >تثبيت هنا</button>
-                        <button
-                          type="button"
-                          onClick={() => { onPlace(dragging.x, dragging.y); setDragging(null); }}
-                          className="flex-1 py-1.5 rounded-lg bg-white border border-neutral-200 text-xs font-bold text-neutral-700 cursor-pointer"
-                        >إلغاء</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setDragging({ key, id: element.id, x: element.x, y: element.y })}
-                      className="w-full py-1.5 rounded-lg bg-white border border-neutral-200 text-xs font-bold text-neutral-700 hover:border-brand cursor-pointer"
-                    >✋ حدّد المكان بالسحب</button>
-                  )
-                )}
-                {rows.map((r) => {
-                  const shown = Math.round((state[r.field] as number) * (r.scale || 1));
-                  return (
-                    <label key={r.field} className="block">
-                      <span className="flex justify-between text-xs text-neutral-600">
-                        <span>{r.label}</span>
-                        <span className="font-mono text-brand font-bold">{shown}{r.unit}</span>
-                      </span>
-                      <input
-                        type="range" min={r.min} max={r.max} step={r.step} value={shown}
-                        onChange={(e) => set({ [r.field]: Number(e.target.value) / (r.scale || 1) })}
-                        className="w-full accent-brand h-1.5 bg-neutral-200 rounded-lg cursor-pointer"
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            );
-          })}
-          <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
-            <input type="checkbox" checked={Boolean(styles.animationAlternate)} onChange={(e) => onUpdateElementStyles({ animationAlternate: e.target.checked })} />
-            ذهاب وإياب (المستمر ومرور الماوس يعملان هكذا دائماً)
-          </label>
-        </div>
-      )}
-
       {/* 3. Animations Grid */}
       <div className="space-y-1.5 pt-1">
         <span className="text-xs font-bold text-neutral-800 block">
           اختر حركة من الحركات الـ ٢٠+ المبتكرة:
         </span>
-        <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
+        <div className={`grid grid-cols-2 gap-2 pr-1 ${isCustom ? '' : 'max-h-[360px] overflow-y-auto'}`}>
           {ANIMATIONS_LIST.filter((a) => !(extra && (a.id === 'none' || a.id.startsWith('marquee')))).map((animItem) => {
             const isSelected = currentAnimation === animItem.id;
             return (
+              <React.Fragment key={animItem.id}>
               <button
                 key={animItem.id}
                 type="button"
                 onClick={() => {
+                  // A custom motion starts as the element is (no motion) with its last state saved as it is now.
+                  if (animItem.id === 'custom' && !isCustom) setTab('from');
                   onUpdateElementStyles({ 
                     animation: animItem.id,
                     animationDuration: animItem.id === 'none' ? undefined : animItem.delay,
+                    ...(animItem.id === 'custom' && !isCustom ? { animationFrom: undefined, animationTo: { ...real } } : {}),
                     // A ticker runs for ever; the other trigger choices make it play once or wait for the mouse.
                     ...(animItem.id.startsWith('marquee') ? { animationTrigger: 'loop' as const } : {}),
                   });
@@ -291,6 +338,8 @@ const AnimationEditor = ({
                   {animItem.desc}
                 </span>
               </button>
+              {animItem.id === 'custom' && isCustom && customPanel}
+              </React.Fragment>
             );
           })}
         </div>

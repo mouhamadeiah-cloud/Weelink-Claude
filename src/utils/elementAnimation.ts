@@ -4,7 +4,7 @@
 // others while the mouse is over the element. Layers after the first are composed on top of it
 // (animation-composition: add), so a shift and a pulse can run together.
 import { CanvasElement } from '../types';
-import { customMotionDirection, customMotionKeyframes, customMotionVars, CUSTOM_MOTION } from './customMotion';
+import { customMotionDirection, customMotionKeyframes, customMotionVars, realMotionState, RELATIVE_MOTION_STATE, resolveMotion, CUSTOM_MOTION } from './customMotion';
 
 type Styles = CanvasElement['styles'];
 export type AnimationLayer = Pick<Styles, 'animation' | 'animationTrigger' | 'animationDuration' | 'animationFrom' | 'animationTo' | 'animationAlternate' | 'animationScrub'>;
@@ -45,6 +45,9 @@ export interface AnimationContext {
   waits: boolean;
   // Whether the browser can tie an animation to the scrolling (defaults to asking the browser).
   scrub?: boolean;
+  // The editor shows the first animation of an element in a custom motion as a still state instead of playing it:
+  // 'from' / 'to' while the owner edits that state, 'idle' otherwise (the first state, never quite invisible).
+  still?: 'from' | 'to' | 'idle';
 }
 
 export interface BuiltAnimation {
@@ -85,9 +88,11 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
     if (waits) waitsForView = true;
     if (waits && trigger === 'scroll') repeatsOnScroll = true;
     if (hover) hasHover = true;
+    const stillPose = custom && index === 0 && ctx.still && !ctx.waits && trigger !== 'scrub' ? ctx.still : null;
     if (custom) {
-      // Extra layers sit on top of the first one, which already carries the element's own turn.
-      Object.assign(vars, customMotionVars(layer.animationFrom, layer.animationTo, index === 0 ? ctx.rotation || 0 : 0, ctx.phone ? 0.5 : 1, index));
+      const real = index === 0 ? realMotionState(styles, ctx.rotation) : RELATIVE_MOTION_STATE;
+      const { from, to } = resolveMotion(layer, real);
+      Object.assign(vars, customMotionVars(from, to, ctx.phone ? 0.5 : 1, index, styles.opacity ?? 1, stillPose === 'idle' ? 0.25 : 0));
     }
     if (isMarquee) {
       // The ticker crosses the whole page: from past the right edge to past the left one.
@@ -104,7 +109,10 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
       composition: index === 0 ? 'replace' : 'add',
       timeline: 'auto',
       range: 'normal',
+      play: 'running',
+      delay: '0s',
     };
+    if (stillPose) Object.assign(one, { duration: '1s', count: '1', timing: 'linear', fill: 'both', direction: 'normal', play: 'paused', delay: stillPose === 'to' ? '-1s' : '0s' });
     if (scrubbed) Object.assign(one, { duration: 'auto', count: '1', timing: 'linear', fill: 'both', direction: 'normal', timeline: 'view()', range: SCRUB_RANGES[layer.animationScrub || 'enter'] || SCRUB_RANGE });
     if (!hover) idle.push(one);
     hovered.push(one);
@@ -120,6 +128,8 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
     [`${prefix}comp`]: list.map((l) => l.composition).join(', '),
     [`${prefix}timeline`]: list.map((l) => l.timeline).join(', '),
     [`${prefix}range`]: list.map((l) => l.range).join(', '),
+    [`${prefix}play`]: list.map((l) => l.play).join(', '),
+    [`${prefix}delay`]: list.map((l) => l.delay).join(', '),
   });
   const style: Record<string, string> = { ...vars };
   if (idle.length) {
@@ -127,7 +137,7 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
     Object.assign(style, {
       animationName: l.name, animationDuration: l.duration, animationIterationCount: l.count, animationTimingFunction: l.timing,
       animationFillMode: l.fill, animationDirection: l.dir, animationComposition: l.comp,
-      animationTimeline: l.timeline, animationRange: l.range,
+      animationTimeline: l.timeline, animationRange: l.range, animationPlayState: l.play, animationDelay: l.delay,
     });
   }
   // While the mouse is over the element: the idle animations and the hover ones together (index.css reads these).

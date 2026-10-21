@@ -80,6 +80,9 @@ export interface RightDrawerProps {
   onUpdateElement: (data: Partial<CanvasElement>) => void;
   // The editor's device view: on «mobile» an element with a phone layout is moved within that layout.
   previewMode?: 'desktop' | 'tablet' | 'mobile';
+  // A custom motion in the animation panel: the state shown on the element, and the owner finishing with it (the element is locked).
+  onMotionPreview?: (id: string, which: 'from' | 'to' | null) => void;
+  onMotionFinish?: (id: string) => void;
   onDeleteElement: (id: string) => void;
   onDuplicateElement: (id: string) => void;
   onToggleLock: () => void;

@@ -96,6 +96,8 @@ interface CanvasWorkspaceProps {
   // The guests' own view of a published site (no editor around it): fills the browser window
   // edge to edge, with no device frame, in desktop or phone layout.
   isPublicSite?: boolean;
+  // The editor shows this element's custom motion as the state being edited in the animation panel (the others at their first state).
+  motionPreview?: { id: string; which: 'from' | 'to' } | null;
   // A design shown inside a card (the designers' gallery): the real renderer, so its videos, text
   // motion and effects play, but no scrolling of its own and only as tall as its content.
   embedded?: boolean;
@@ -855,6 +857,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   isNavbarSelected = false,
   onSelectNavbar,
   isPublicSite = false,
+  motionPreview = null,
   embedded = false,
   hideNavbar = false,
   chromeHeight = 104,
@@ -3186,6 +3189,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     bleed,
                     phone: previewMode === 'mobile',
                     waits: isPreviewActive || isPublicSite,
+                    still: motionPreview && motionPreview.id === elem.id ? motionPreview.which : 'idle',
                   });
                   const animationStyle = built.style;
 

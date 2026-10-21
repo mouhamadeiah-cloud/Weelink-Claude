@@ -23,6 +23,7 @@ import { arrangeSlideForMobile } from '../utils/mobileLayout';
 import type { ProjectType } from '../components/shop/shopTypes';
 import { deserializeElements } from '../utils/elementStorage';
 import { tickedSections } from '../data/optionalSections';
+import { GALLERY_MAX } from '../utils/planLimits';
 
 export type BuildKind = 'free' | 'restaurant' | 'shop' | 'cars';
 export const KIND_OF_PROJECT: Record<ProjectType, BuildKind> = { page: 'free', restaurant: 'restaurant', shop: 'shop', cars: 'cars' };
@@ -92,11 +93,12 @@ export const buildProfile = (a: WeeAnswers, siteName: string): Record<string, st
   return { ...businessFacts(a, siteName), ...Object.fromEntries(Object.entries(extra).filter(([, v]) => v)) };
 };
 
-const galleryOf = (a: WeeAnswers) => (a.aiAnswers?.wantsGallery === false ? [] : (a.aiAnswers?.galleryImages || []).filter(Boolean).slice(0, 5));
+// The owner's gallery photos, up to what the package allows (5 on the free page, 15 on Pro).
+const galleryOf = (a: WeeAnswers, max: number = GALLERY_MAX) => (a.aiAnswers?.wantsGallery === false ? [] : (a.aiAnswers?.galleryImages || []).filter(Boolean).slice(0, max));
 
-export const pageAssets = (a: WeeAnswers) => ({
+export const pageAssets = (a: WeeAnswers, max: number = GALLERY_MAX) => ({
   heroBg: !!a.aiAnswers?.heroBgImage,
-  gallery: galleryOf(a).length,
+  gallery: galleryOf(a, max).length,
   logo: !!a.personalInfo?.logoUrl,
 });
 
@@ -208,6 +210,7 @@ const IMAGE = /^(image|avatar|photos\.\d+)$/;
 const ITEM_HEAD = /^(.*\.\d+)\.(name|title|number)$/;
 
 interface Context {
+  maxPhotos: number; // the package's gallery
   extra?: Record<string, GalleryPayload>;
   kind: BuildKind;
   answers: WeeAnswers;
@@ -255,8 +258,8 @@ const imageFor = async (ref: string | undefined, ctx: Context): Promise<string |
   const a = ctx.answers;
   if (ref === 'user:heroBg') return a.aiAnswers?.heroBgImage || null;
   if (ref === 'user:logo') return a.personalInfo?.logoUrl || null;
-  const g = /^user:gallery:(\d)$/.exec(ref);
-  if (g) return galleryOf(a)[+g[1] - 1] || null;
+  const g = /^user:gallery:(\d{1,2})$/.exec(ref);
+  if (g) return galleryOf(a, ctx.maxPhotos)[+g[1] - 1] || null;
   return ctx.photo(ref);
 };
 
@@ -376,7 +379,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
     if (key === 'form') continue;
     // The photo-viewer block takes the owner's photos; without any it goes.
     if (key === 'gallery' && el.type === 'gallery') {
-      const urls = galleryOf(ctx.answers);
+      const urls = galleryOf(ctx.answers, ctx.maxPhotos);
       if (!urls.length) removed.add(i);
       else el.galleryConfig = { ...(el.galleryConfig as NonNullable<typeof el.galleryConfig>), items: urls.map((url, n) => ({ id: `g${n}`, url, title: '' })), activeImageIndex: 0 };
       continue;
@@ -586,6 +589,7 @@ const photoFinder = () => {
 };
 
 export interface BuildInput {
+  maxPhotos?: number; // photos the gallery may hold (the package's)
   kind: BuildKind;
   answers: WeeAnswers;
   siteName: string;
@@ -650,6 +654,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
   };
   const stamp = Date.now().toString(36);
   const ctx: Context = {
+    maxPhotos: input.maxPhotos ?? GALLERY_MAX,
     extra: plan.extra,
     kind,
     answers,

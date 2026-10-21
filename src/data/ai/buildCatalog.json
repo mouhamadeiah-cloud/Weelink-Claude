@@ -84,7 +84,8 @@
      "gallery.mosaic",
      "gallery.strip",
      "gallery.frames",
-     "gallery.viewer"
+     "gallery.viewer",
+     "gallery.viewer15"
     ]
    },
    {
@@ -173,7 +174,8 @@
      "gallery.mosaic",
      "gallery.strip",
      "gallery.frames",
-     "gallery.viewer"
+     "gallery.viewer",
+     "gallery.viewer15"
     ]
    },
    {
@@ -274,7 +276,8 @@
      "gallery.mosaic",
      "gallery.strip",
      "gallery.frames",
-     "gallery.viewer"
+     "gallery.viewer",
+     "gallery.viewer15"
     ]
    },
    {
@@ -815,6 +818,26 @@
    },
    "lists": {}
   },
+  "gallery.viewer": {
+   "name": "معرض صور (حتى 5)",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 60
+    }
+   },
+   "lists": {}
+  },
+  "gallery.viewer15": {
+   "name": "معرض صور (حتى 15)",
+   "slots": {
+    "title": {
+     "kind": "text",
+     "max": 60
+    }
+   },
+   "lists": {}
+  },
   "gallery.mosaic": {
    "name": "معرض فسيفساء",
    "slots": {
@@ -1284,16 +1307,6 @@
     "cta": {
      "kind": "button",
      "max": 24
-    }
-   },
-   "lists": {}
-  },
-  "gallery.viewer": {
-   "name": "معرض متصفح صور",
-   "slots": {
-    "title": {
-     "kind": "text",
-     "max": 60
     }
    },
    "lists": {}

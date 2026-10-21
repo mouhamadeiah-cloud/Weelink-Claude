@@ -10,8 +10,8 @@ const gallery = (id: string, extra: any = {}) => store.set(`gallerySlides/${id}`
 const reset = () => { for (const k of [...store.keys()]) if (k.startsWith('gallerySlides/') || k.startsWith('readySlides/')) store.delete(k); };
 
 test('the shop, showroom, menu, booking and contact categories stay in the code; the others take gallery slides', () => {
-  assert.deepEqual(FIXED_READY_CATEGORIES.sort(), ['booking', 'cars', 'contact', 'restaurant', 'shop']);
-  assert.ok(GALLERY_READY_CATEGORIES.length === READY_SLIDE_CATEGORIES.length - 5);
+  assert.deepEqual(FIXED_READY_CATEGORIES.sort(), ['booking', 'cars', 'contact', 'gallery', 'restaurant', 'shop']);
+  assert.ok(GALLERY_READY_CATEGORIES.length === READY_SLIDE_CATEGORIES.length - 6);
   for (const c of GALLERY_READY_CATEGORIES) assert.ok(!FIXED_READY_CATEGORIES.includes(c.id));
   assert.ok(GALLERY_READY_CATEGORIES.some((c) => c.id === 'intro') && GALLERY_READY_CATEGORIES.some((c) => c.id === 'special_offer'));
 });

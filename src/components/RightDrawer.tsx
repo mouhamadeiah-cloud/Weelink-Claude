@@ -6153,6 +6153,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
 
         {/* Wee AI Chat Container inside the control panel */}
         <WeeAIChat
+          galleryMax={Math.min(15, galleryLimit)}
           key={userId || 'guest'}
           userId={userId || ''}
           userEmail={userEmail || ''}

@@ -23,3 +23,14 @@ test('the engine wires the click to the viewer, only on the public page or in th
   assert.match(canvas, /elem\.lightboxGroup && elem\.imageUrl && \(isPublicSite \|\| isPreviewActive\)/);
   assert.match(canvas, /lightboxFor\(layoutElements, elem\)/);
 });
+
+test('the gallery block moves its thumbnails sideways past five photos, and the questions take the package\'s photos', async () => {
+  const { readFileSync } = await import('node:fs');
+  const canvas = readFileSync(new URL('../src/components/CanvasWorkspace.tsx', import.meta.url), 'utf8');
+  assert.match(canvas, /items\.length <= 5 \?/);
+  assert.match(canvas, /overflow-x-auto overflow-y-hidden snap-x/);
+  const chat = readFileSync(new URL('../src/components/WeeAIChat.tsx', import.meta.url), 'utf8');
+  assert.match(chat, /slice\(0, galleryMax\)/);
+  assert.match(chat, /prev\.galleryImages\.length >= galleryMax/);
+  assert.doesNotMatch(chat, /slice\(0, 5\)\.forEach/);
+});

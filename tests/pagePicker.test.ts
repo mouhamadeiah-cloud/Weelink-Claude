@@ -89,3 +89,36 @@ test('the pool over the database reads the ready slides and the switches, and re
   assert.equal(await p.load('pending'), null);
   assert.equal(await p.load('missing'), null);
 });
+
+import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
+import { photoCapacity } from '../server/pagePicker.ts';
+
+test('the gallery section takes only a slide that holds all the owner\'s photos: frames hold 5, the viewers 5 and 15', async () => {
+  const codeSections = (catalog.sections as any).free as CodeSection[];
+  const specs = catalog.templates as any;
+  assert.deepEqual(['gallery.mosaic', 'gallery.strip', 'gallery.frames', 'gallery.viewer', 'gallery.viewer15'].map((t) => photoCapacity(t, specs[t])), [5, 5, 5, 5, 15]);
+  const sections = DEFAULT_MODELS[0].sections.filter((s) => s.category === 'gallery');
+  const gallery: GalleryPool = { ids: () => [], useGallery: () => false, load: async () => null };
+  for (let k = 0; k < 20; k++) {
+    const many = await pickSections({ sections, codeSections, specs, photos: 12, gallery, rng: Math.random });
+    assert.deepEqual(many.pool[0].templates, ['gallery.viewer15']);
+    const few = await pickSections({ sections, codeSections, specs, photos: 3, gallery, rng: Math.random });
+    assert.ok(['gallery.mosaic', 'gallery.strip', 'gallery.frames', 'gallery.viewer', 'gallery.viewer15'].includes(few.pool[0].templates[0]));
+  }
+  // A gallery slide of the gallery with only three photo frames cannot hold 12.
+  const three: GalleryPool = { ids: () => ['g3'], useGallery: () => true, load: async () => ({ name: 'x', slide: {}, elements: [0, 1, 2].map((i) => ({ id: `p${i}`, type: 'image', aiSlot: `photos.${i}` })).concat([{ id: 't', type: 'heading', aiSlot: 'title' } as any]) }) };
+  const r = await pickSections({ sections, codeSections, specs, photos: 12, gallery: three });
+  assert.deepEqual(r.pool[0].templates, ['gallery.viewer15']);
+});
+
+test('the fixed categories (the photo gallery among them) never take gallery slides, even ones that were added to them', async () => {
+  const db = getFirestore() as any;
+  for (const k of [...store.keys()]) if (/^(gallerySlides|readySlides|readyConfig)\//.test(k)) store.delete(k);
+  store.set('readySlides/x', { category: 'gallery', order: 1 });
+  store.set('readySlides/y', { category: 'intro', order: 1 });
+  store.set('readyConfig/gallery', { useGallery: true });
+  const p = await galleryPool(db);
+  assert.deepEqual(p.ids('gallery'), []);
+  assert.equal(p.useGallery('gallery'), false);
+  assert.deepEqual(p.ids('intro'), ['y']);
+});

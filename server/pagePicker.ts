@@ -4,6 +4,7 @@
 // that the admin marked for the AI (server/slotMarks.ts). The AI then only writes the texts of these slides.
 import { describe } from '../src/data/aiSlots.js';
 import { MODEL_CATEGORIES, type ModelSection } from '../src/data/pageModels.js';
+import { FIXED_READY_CATEGORIES } from '../src/data/readyCategories.js';
 import { slotStatus } from './slotMarks.js';
 
 export interface TemplateSpec { name: string; slots: Record<string, { kind: 'text' | 'button' | 'image'; max?: number }>; lists: Record<string, { count: number; fields: Record<string, number | 'icon'> }> }
@@ -27,6 +28,11 @@ export const planSectionId = (s: ModelSection) => (s.part === 'front' ? 'intro' 
 const placeOf = (id: string, index: number): CodeSection['place'] => (index === 0 ? 'first' : id === 'contact' || id === 'privacy' ? 'last' : 'any');
 const nameOf = (s: ModelSection) => MODEL_CATEGORIES.find((c) => c.id === s.category)?.name || s.category;
 
+// How many photos a gallery slide holds: its photo frames, or what the photo-viewer block takes.
+const VIEWER_PHOTOS: Record<string, number> = { 'gallery.viewer': 5, 'gallery.viewer15': 15 };
+export const photoCapacity = (template: string, spec?: TemplateSpec) =>
+  VIEWER_PHOTOS[template] ?? Object.keys(spec?.slots || {}).filter((k) => /^photos\.\d+$/.test(k)).length;
+
 const shuffled = <T,>(list: T[], rng: () => number) => {
   const out = [...list];
   for (let i = out.length - 1; i > 0; i--) {
@@ -43,7 +49,7 @@ export interface Picked {
 }
 
 /** One ready slide for each section, at random; a slide used in the owner's last build is left for last. */
-export const pickSections = async (o: { sections: ModelSection[]; codeSections: CodeSection[]; gallery: GalleryPool; rng?: () => number; avoid?: Set<string> }): Promise<Picked> => {
+export const pickSections = async (o: { sections: ModelSection[]; codeSections: CodeSection[]; gallery: GalleryPool; rng?: () => number; avoid?: Set<string>; photos?: number; specs?: Record<string, TemplateSpec> }): Promise<Picked> => {
   const rng = o.rng || Math.random;
   const avoid = o.avoid || new Set<string>();
   const out: Picked = { pool: [], templates: {}, extra: {} };
@@ -52,7 +58,9 @@ export const pickSections = async (o: { sections: ModelSection[]; codeSections: 
     const id = planSectionId(s);
     if (out.pool.some((p) => p.id === id)) continue;
     const code = o.codeSections.find((c) => c.id === id);
-    const fromCode = (code?.templates || []).map((t) => ({ template: t }));
+    // The gallery section takes only slides that can hold all of the owner's photos (frames are fixed in number; the viewer slides hold 5 or 15).
+    const holds = (template: string, spec?: TemplateSpec) => id !== 'gallery' || !o.photos || photoCapacity(template, spec || o.specs?.[template]) >= o.photos;
+    const fromCode = (code?.templates || []).filter((t) => holds(t)).map((t) => ({ template: t }));
     const fromGallery = o.gallery.ids(s.category).map((g) => ({ template: `g:${g}`, gallery: g }));
     // A category switched to the gallery uses only gallery slides, while it has one the AI can fill.
     const order = (list: { template: string; gallery?: string }[]) => {
@@ -66,7 +74,9 @@ export const pickSections = async (o: { sections: ModelSection[]; codeSections: 
         if (!c.gallery) { chosen = { template: c.template }; break; }
         const data = await o.gallery.load(c.gallery);
         if (!data) continue;
-        chosen = { template: c.template, data, spec: describe({ name: data.name, elements: data.elements, backgroundImage: data.slide?.backgroundImage, backgroundVideo: data.slide?.backgroundVideo }) as TemplateSpec };
+        const spec = describe({ name: data.name, elements: data.elements, backgroundImage: data.slide?.backgroundImage, backgroundVideo: data.slide?.backgroundVideo }) as TemplateSpec;
+        if (!holds(c.template, spec)) continue;
+        chosen = { template: c.template, data, spec };
         break;
       }
       if (chosen) break;
@@ -92,8 +102,9 @@ export const galleryPool = async (db: { collection: (n: string) => any }): Promi
   }
   const on = new Set<string>(cfg.docs.filter((d: any) => d.data().useGallery === true).map((d: any) => d.id));
   return {
-    ids: (c) => byCategory.get(c) || [],
-    useGallery: (c) => on.has(c),
+    // The fixed categories (booking, contact, the photo gallery…) have programming in their slides: only the code's are used.
+    ids: (c) => (FIXED_READY_CATEGORIES.includes(c) ? [] : byCategory.get(c) || []),
+    useGallery: (c) => !FIXED_READY_CATEGORIES.includes(c) && on.has(c),
     load: async (id) => {
       const snap = await db.collection('gallerySlides').doc(id).get();
       const g = snap.exists ? snap.data() : null;

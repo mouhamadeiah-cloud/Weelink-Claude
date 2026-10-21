@@ -38,6 +38,8 @@ interface WeeAIChatProps {
   pageKind?: ProjectType;
   // A free restaurant, shop or showroom page: a page that asks in that type's words (the answers are a page's, with the flavour saved).
   flavor?: ProjectType;
+  // How many photos the gallery question takes: the package's gallery (5 on the free page, up to 15 on Pro); 5 when not told.
+  galleryMax?: number;
   // Fills its own box (the start page) instead of sitting under the control panel's tabs.
   embedded?: boolean;
   // In the docked panel: takes the place of the other tabs' content under the breadcrumb, like them,
@@ -112,7 +114,7 @@ const normalizeCatalog = (c: any) => ({
   customSpecialty: ''
 });
 
-const getConciseQuestionText = (stepNum: number, name?: string, kind?: ProjectType): string => {
+const getConciseQuestionText = (stepNum: number, name?: string, kind?: ProjectType, photos = 5): string => {
   const own = kind && KIND_QUESTIONS[kind]?.[stepNum];
   if (own) return own;
   switch (stepNum) {
@@ -131,7 +133,7 @@ const getConciseQuestionText = (stepNum: number, name?: string, kind?: ProjectTy
     case 7:
       return "اختر شكل فواصل تنسيق الشرائح المفضل لديك:";
     case 8:
-      return "هل ترغب في معرض أعمال يعرض حتى خمس صور؟";
+      return `هل ترغب في معرض أعمال يعرض حتى ${photos === 5 ? 'خمس' : photos} ${photos === 1 ? 'صورة' : 'صور'}؟`;
     case 9:
       return "يرجى رفع الشعار الرسمي (اللوغو) لصفحتك:";
     case 10:
@@ -183,6 +185,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   onRestorePage,
   pageKind,
   flavor,
+  galleryMax: galleryMaxProp,
   embedded,
   inFlow,
   onEditAnswers,
@@ -198,6 +201,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const [savedFlavor, setSavedFlavor] = useState<ProjectType | undefined>();
   const ownFlavor = flavor ?? (fromStart ? undefined : savedFlavor);
   const tone = ownFlavor || pageKind;
+  const galleryMax = Math.max(1, Math.min(15, Math.floor(galleryMaxProp ?? 5)));
   const catalogSource = categorySourceOf(tone);
   const labels = CATALOG_LABELS[catalogSource];
   // Local collapsed state if not externally controlled
@@ -422,7 +426,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // Typewriter effect on step / question change
   useEffect(() => {
-    const question = getConciseQuestionText(step, personalInfo.fullName, tone);
+    const question = getConciseQuestionText(step, personalInfo.fullName, tone, galleryMax);
     setTypedText('');
     let i = 0;
     const interval = setInterval(() => {
@@ -510,10 +514,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const handleGalleryFilesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    Array.from(files).slice(0, 5).forEach(file => {
+    Array.from(files).slice(0, galleryMax).forEach(file => {
       pickImage(file, 'photo')
         .then(url => setAiAnswers(prev => (
-          prev.galleryImages.length >= 5 ? prev : { ...prev, galleryImages: [...prev.galleryImages, url] }
+          prev.galleryImages.length >= galleryMax ? prev : { ...prev, galleryImages: [...prev.galleryImages, url] }
         )))
         .catch((err) => console.warn('Could not read the image:', err));
     });
@@ -1296,7 +1300,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               <div className="space-y-2 pt-2 border-t border-neutral-100">
                 <label className="w-full py-2 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
                   <Upload size={13} />
-                  <span>رفع حتى 5 صور من الجهاز</span>
+                  <span>رفع حتى {galleryMax} {galleryMax === 1 ? 'صورة' : 'صور'} من الجهاز</span>
                   <input
                     type="file"
                     multiple
@@ -1308,7 +1312,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
                 {aiAnswers.galleryImages.length > 0 && (
                   <div className="grid grid-cols-5 gap-1.5 pt-1">
-                    {aiAnswers.galleryImages.map((img, i) => (
+                    {aiAnswers.galleryImages.slice(0, galleryMax).map((img, i) => (
                       <div key={i} className="relative aspect-square rounded border border-neutral-300 overflow-hidden bg-neutral-100">
                         <img src={img} alt="Thumb" className="w-full h-full object-cover" />
                         <button

@@ -13,6 +13,9 @@ export interface PlanLimits {
   perDay: boolean;
 }
 
+/** The most photos any gallery holds (the Pro packages'); the free page's is 5. */
+export const GALLERY_MAX = 15;
+
 const NONE = Number.POSITIVE_INFINITY;
 export const UNLIMITED: PlanLimits = { items: NONE, gallery: NONE, devices: NONE, builds: NONE, perDay: true };
 

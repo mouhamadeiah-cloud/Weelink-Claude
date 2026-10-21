@@ -7,7 +7,7 @@ import { CanvasElement } from '../types';
 import { customMotionDirection, customMotionKeyframes, customMotionVars, realMotionState, RELATIVE_MOTION_STATE, resolveMotion, CUSTOM_MOTION } from './customMotion';
 
 type Styles = CanvasElement['styles'];
-export type AnimationLayer = Pick<Styles, 'animation' | 'animationTrigger' | 'animationDuration' | 'animationFrom' | 'animationTo' | 'animationAlternate' | 'animationScrub'>;
+export type AnimationLayer = Pick<Styles, 'animation' | 'animationTrigger' | 'animationDuration' | 'animationFrom' | 'animationTo' | 'animationAlternate' | 'animationScrub' | 'animationShow'>;
 
 export const MAX_EXTRA_ANIMATIONS = 3;
 
@@ -88,11 +88,12 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
     if (waits) waitsForView = true;
     if (waits && trigger === 'scroll') repeatsOnScroll = true;
     if (hover) hasHover = true;
-    const stillPose = custom && index === 0 && ctx.still && !ctx.waits && trigger !== 'scrub' ? ctx.still : null;
+    // The editor shows the state being edited, or the one the owner ticked to show (the first by default) when the panel is closed.
+    const stillPose = custom && index === 0 && ctx.still && !ctx.waits && trigger !== 'scrub' ? (ctx.still === 'idle' ? layer.animationShow || 'from' : ctx.still) : null;
     if (custom) {
       const real = index === 0 ? realMotionState(styles, ctx.rotation) : RELATIVE_MOTION_STATE;
       const { from, to } = resolveMotion(layer, real);
-      Object.assign(vars, customMotionVars(from, to, ctx.phone ? 0.5 : 1, index, styles.opacity ?? 1, stillPose === 'idle' ? 0.25 : 0));
+      Object.assign(vars, customMotionVars(from, to, ctx.phone ? 0.5 : 1, index, styles.opacity ?? 1, stillPose && ctx.still === 'idle' ? 0.25 : 0));
     }
     if (isMarquee) {
       // The ticker crosses the whole page: from past the right edge to past the left one.

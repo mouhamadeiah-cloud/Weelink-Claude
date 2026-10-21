@@ -81,6 +81,8 @@ export interface ElementStyles {
   animationAlternate?: boolean;
   // «مع التمرير»: which part of the element's pass over the screen drives it (default 'enter')
   animationScrub?: 'enter' | 'leave' | 'through';
+  // animation 'custom': the state the editor shows while the animation panel is closed (default 'from'); the page plays it
+  animationShow?: 'from' | 'to';
   // Up to three more animations on top of the first (utils/elementAnimation), each with the same fields as above
   animationLayers?: { animation?: string; animationTrigger?: 'hover' | 'once' | 'loop' | 'scroll' | 'scrub'; animationDuration?: number; animationFrom?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number }; animationTo?: { x?: number; y?: number; opacity?: number; scale?: number; rotate?: number }; animationAlternate?: boolean; animationScrub?: 'enter' | 'leave' | 'through' }[];
   rotation?: number;

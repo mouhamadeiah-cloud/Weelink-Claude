@@ -86,3 +86,10 @@ Today (src/components/WeeAIChat.tsx): 1 owner · 2 address · 3 contact · 4 cat
 - Picking one starts the questions as a **page** (project key, answers, build and limits are a page's) with `flavor` on the answers; the questions use the type's words (`flavor` prop of `WeeAIChat`). The page asks «خدماتك وأسعارها» as before, which becomes the price list.
 - The free quota is the account's one free project (`freeTaken` now counts any free flavour against `owned.includes('page')`).
 - Not yet: the builder reading `flavor` (4c) and the price-list slide itself.
+
+### Step 4b — slot marking and eligibility (done)
+- `src/data/aiSlots.ts` holds the slot rules (`describe`, limits, names) that `scripts/build-ai-catalog.ts` used to hold; the script imports them (its output is unchanged by the move). `slideEligibility(elements)`: a title or text to write, known slot names used once, lists counted from 0 without gaps.
+- `server/slotMarks.ts` + action `slots-mark`: the admin marks `aiSlot` on a gallery slide's elements; the slide itself is not touched (an `aiTemplate` on it would make the page looks restyle it as one of the code's designs).
+- The «الشرائح الجاهزة» admin screen shows «جاهزة للتوليد · N خانات» or what is missing, and a «الخانات» panel per slide.
+- The committed `buildCatalog.json` is behind the templates (regenerating it adds 361 lines); regenerate it with `npm run ai-catalog` when step 4c lands.
+- Still to do in 4c: the gallery-count rule (1–15 photos) and the picker that reads `eligible` slides.

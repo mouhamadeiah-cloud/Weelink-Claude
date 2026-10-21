@@ -3,6 +3,7 @@
 // gallerySlides, so the gallery is the one place designs live. Written by the server only (the rules give everyone read).
 import { GALLERY_READY_CATEGORIES } from '../src/data/readyCategories.js';
 import { OFFICIAL_UID } from './gallerySeed.js';
+import { slotStatus } from './slotMarks.js';
 
 const READY_IDS = GALLERY_READY_CATEGORIES.map((c) => c.id);
 const ID_MAX = 128;
@@ -111,12 +112,18 @@ export const setUseGallery = async (db: Db, category: string, on: boolean, by: s
 
 // What the admin screen shows: every category with its switch and its slides in order (names only; the cards load their own preview).
 export const readyOverview = async (db: Db) => {
-  const [rows, cfg, snap] = await Promise.all([readyRows(db), db.collection('readyConfig').get(), db.collection('gallerySlides').where('status', '==', 'approved').select('name', 'designerName', 'official').get()]);
-  const info = new Map<string, any>(snap.docs.map((d: any) => [d.id, d.data()]));
+  const [rows, cfg] = await Promise.all([readyRows(db), db.collection('readyConfig').get()]);
+  // Only the ready slides are read (with their elements, to tell which are marked for the AI), not the whole gallery.
+  const docs = await Promise.all(rows.map((r) => db.collection('gallerySlides').doc(r.id).get()));
+  const info = new Map<string, any>();
+  docs.forEach((d: any) => { if (d.exists && d.data().status === 'approved') info.set(d.id, d.data()); });
   const on = new Set<string>(cfg.docs.filter((d: any) => d.data().useGallery === true).map((d: any) => d.id));
   return GALLERY_READY_CATEGORIES.map((c) => ({
     id: c.id, name: c.name, icon: c.icon, useGallery: on.has(c.id),
-    items: rows.filter((r) => r.category === c.id).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
-      .map((r) => ({ id: r.id, name: String(info.get(r.id)?.name || ''), designerName: String(info.get(r.id)?.designerName || ''), official: info.get(r.id)?.official === true, approved: info.has(r.id) })),
+    items: rows.filter((r) => r.category === c.id).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id)).map((r) => {
+      const g = info.get(r.id);
+      const { eligible, slots, problems } = g ? slotStatus(g.elements) : { eligible: false, slots: 0, problems: [] as string[] };
+      return { id: r.id, name: String(g?.name || ''), designerName: String(g?.designerName || ''), official: g?.official === true, approved: !!g, eligible, slots, problems };
+    }),
   }));
 };

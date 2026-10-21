@@ -71,7 +71,8 @@ The ready-slide panel stays for adding any slide, and booking stays an option. A
 
 ### Questions (Wee AI) — changes (Eyad, 21 Oct)
 Today (src/components/WeeAIChat.tsx): 1 owner · 2 address · 3 contact · 4 category · 5 description · 6 colour · 7 divider style · 8 gallery photos (up to 5) · 9 logo · 10 intro background · 11 effects · 12 notes.
-- **Remove** the photo steps: 8 (gallery), 10 (intro background) and 9 (logo, the step 1 field already takes it). Pictures come from the image search by service; the owner swaps them in the editor (the 7-photo limit stays on the editor side). The `heroBg` / `gallery` / `logo` flags the server gets then come from what is already on the project, not from the questions.
+- **Photo steps stay** (8 gallery, 9 logo, 10 intro background) — Eyad changed his mind, 21 Oct. Where an answer has no photo, the image search by service fills the slot.
+- **Prepare for paid galleries of up to 15 photos** (a later step turns it on; `planLimits.ts` already has gallery 5 / 15): the limit is read from the project's package, not written as 5 in the code. Places that hold the 5 today: step 8 of `WeeAIChat.tsx` (`>= 5`, texts), `galleryOf` in `pageBuilder.ts` (`slice(0, 5)`), `cleanAssets` in `api/build-page.ts` (`Math.min(5, …)`). The gallery ready slides must lay out any count from 1 to 15 (grid that grows, or a second gallery slide past a size).
 - **Remove** step 7 (divider style) and 11 (effects) only if the user says so; not touched here.
 - **Add** three choice steps, each a set of tick boxes:
   1. **صفحات اختيارية** (the owner marks the pages he wants; e.g. حجز، تقييمات، معرض أعمال، فريق، الأسئلة الشائعة): each becomes a page in the model after the base ones. Per package: the list offered is the type's own.

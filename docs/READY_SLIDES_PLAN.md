@@ -56,3 +56,15 @@ The ready-slide panel stays for adding any slide, and booking stays an option. A
 4c. New server build: picks the slides, AI text-only prompt, images by service; tests.
 4d. «املأها من بطاقتي».
 4e. Remove the old catalog (`ai-catalog`, buildCatalog.json) once the new build is live.
+
+### Decisions (Eyad, 21 Oct) — final for step 4
+- Page types (14): تعريفية مجانية / برو؛ مطعم، متجر، سيارات × (مجاني، 30، 60، برو).
+- Free restaurant / shop / cars: the base page + the type's own intro and look + a **manual price list** (name and price rows the user edits by hand; no online order, no photo per item, not in search, no item numbers; no limit on rows). New plan ids with price 0.
+- 30 / 60 / برو differ only by the limits (items, devices, photos, builds); Pro adds optional sections. Adding pages, slides or elements stays free; limiting additions by package (with an upgrade message) is a **later step**.
+- Free page photos: 7 = logo + intro background + 5 in the gallery (already `gallery: 5`).
+- Ratings slide: added only after the owner answers «نعم» to the new Wee AI question about the ratings system; the user can add it later from the editor.
+- Legal / privacy slide: added automatically, the user may delete it (no longer required).
+
+### Checked in the code
+- The existing `prices` ready slides are package tiers (pricing elements), **not** a row price list. A new «قائمة أسعار» slide/element with editable rows is needed (4a).
+- «خدماتي» in the page admin has item numbers, prices and pictures: the free types must not use it for their price list.

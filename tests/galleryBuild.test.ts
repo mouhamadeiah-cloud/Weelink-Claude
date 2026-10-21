@@ -1,6 +1,6 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPageFromPlan } from '../src/services/pageBuilder.ts';
+import { buildPageFromPlan, socialLinks } from '../src/services/pageBuilder.ts';
 // Importing the builder starts Firebase's browser client, which keeps the process alive: close it when the test is over.
 after(async () => {
   const { getApps, deleteApp } = await import('firebase/app');
@@ -44,4 +44,16 @@ test('a ticked «التقييمات» comes before the contact and the terms; un
   assert.ok(!no.elements.some((e: any) => e.type === 'ratings'));
   const unanswered: any = await basic({}, ['intro', 'contact']); // old answers: the defaults, no ratings
   assert.ok(!unanswered.elements.some((e: any) => e.type === 'ratings'));
+});
+
+test('the contact section shows the owner\'s Facebook and TikTok as buttons; a bad address or another section does not', async () => {
+  const contactInfo = { facebook: 'facebook.com/shawarma.homs', tiktok: 'https://www.tiktok.com/@shawarma', phone: '0933123456' };
+  const r: any = await basic({ contactInfo }, ['intro', 'contact']);
+  const buttons = r.elements.filter((e: any) => e.type === 'button');
+  assert.deepEqual(buttons.map((b: any) => [b.content, b.contactType, b.linkUrl]), [['فيسبوك', 'facebook', 'https://facebook.com/shawarma.homs'], ['تيك توك', 'tiktok', 'https://www.tiktok.com/@shawarma']]);
+  assert.ok(buttons.every((b: any) => b.slideId === r.pages[0].slides[1].id)); // on the contact slide only
+  assert.ok(r.pages[0].slides[1].height > r.pages[0].slides[0].height || buttons.length === 2);
+  const bad: any = await basic({ contactInfo: { facebook: 'hello', tiktok: 'javascript:alert(1)' } }, ['intro', 'contact']);
+  assert.equal(bad.elements.filter((e: any) => e.type === 'button').length, 0);
+  assert.deepEqual(socialLinks(undefined), []);
 });

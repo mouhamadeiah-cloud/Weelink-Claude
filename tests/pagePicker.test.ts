@@ -96,19 +96,19 @@ import { photoCapacity } from '../server/pagePicker.ts';
 test('the gallery section takes only a slide that holds all the owner\'s photos: frames hold 5, the viewers 5 and 15', async () => {
   const codeSections = (catalog.sections as any).free as CodeSection[];
   const specs = catalog.templates as any;
-  assert.deepEqual(['gallery.mosaic', 'gallery.strip', 'gallery.frames', 'gallery.viewer', 'gallery.viewer15'].map((t) => photoCapacity(t, specs[t])), [5, 5, 5, 5, 15]);
+  assert.deepEqual(['gallery.view5a', 'gallery.view5b', 'gallery.view5c', 'gallery.view15a', 'gallery.view15e'].map((t) => photoCapacity(t, specs[t])), [5, 5, 5, 15, 15]);
   const sections = DEFAULT_MODELS[0].sections.filter((s) => s.category === 'gallery');
   const gallery: GalleryPool = { ids: () => [], useGallery: () => false, load: async () => null };
   for (let k = 0; k < 20; k++) {
     const many = await pickSections({ sections, codeSections, specs, photos: 12, gallery, rng: Math.random });
-    assert.deepEqual(many.pool[0].templates, ['gallery.viewer15']);
+    assert.match(many.pool[0].templates[0], /^gallery\.view15[a-e]$/);
     const few = await pickSections({ sections, codeSections, specs, photos: 3, gallery, rng: Math.random });
-    assert.ok(['gallery.mosaic', 'gallery.strip', 'gallery.frames', 'gallery.viewer', 'gallery.viewer15'].includes(few.pool[0].templates[0]));
+    assert.match(few.pool[0].templates[0], /^gallery\.view(5[a-c]|15[a-e])$/);
   }
   // A gallery slide of the gallery with only three photo frames cannot hold 12.
   const three: GalleryPool = { ids: () => ['g3'], useGallery: () => true, load: async () => ({ name: 'x', slide: {}, elements: [0, 1, 2].map((i) => ({ id: `p${i}`, type: 'image', aiSlot: `photos.${i}` })).concat([{ id: 't', type: 'heading', aiSlot: 'title' } as any]) }) };
   const r = await pickSections({ sections, codeSections, specs, photos: 12, gallery: three });
-  assert.deepEqual(r.pool[0].templates, ['gallery.viewer15']);
+  assert.match(r.pool[0].templates[0], /^gallery\.view15[a-e]$/);
 });
 
 test('the fixed categories (the photo gallery among them) never take gallery slides, even ones that were added to them', async () => {
@@ -121,4 +121,23 @@ test('the fixed categories (the photo gallery among them) never take gallery sli
   assert.deepEqual(p.ids('gallery'), []);
   assert.equal(p.useGallery('gallery'), false);
   assert.deepEqual(p.ids('intro'), ['y']);
+});
+
+import { WEE_SLIDES } from '../src/data/weeSlideTemplates.ts';
+import { slideTemplateCount } from '../src/data/slideTemplates.ts';
+
+test('the gallery category holds exactly eight slides: three for 5 photos and five for 15, each beside an explanation', () => {
+  const made = WEE_SLIDES.gallery.map((m) => m() as any);
+  assert.equal(made.length, 8);
+  assert.equal(slideTemplateCount('gallery'), 8); // the editor's panel lists only these
+  assert.deepEqual(made.map((s) => s.aiTemplate), ['gallery.view5a', 'gallery.view5b', 'gallery.view5c', 'gallery.view15a', 'gallery.view15b', 'gallery.view15c', 'gallery.view15d', 'gallery.view15e']);
+  for (const s of made) {
+    const block = s.elements.find((e: any) => e.type === 'gallery');
+    assert.ok(block, `${s.aiTemplate} has the photo-gallery block`);
+    assert.equal(block.aiSlot, 'gallery');
+    assert.ok(s.elements.some((e: any) => e.aiSlot === 'title') && s.elements.some((e: any) => e.aiSlot === 'sub'), `${s.aiTemplate} has its explanation`);
+    assert.ok(s.elements.every((e: any) => e.mobile), `${s.aiTemplate} has its phone layout`);
+  }
+  const layouts = new Set(made.map((s) => s.elements.find((e: any) => e.type === 'gallery').galleryConfig.layout));
+  assert.equal(layouts.size, 4); // all four layouts of the block are used
 });

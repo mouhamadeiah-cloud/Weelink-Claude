@@ -85,3 +85,12 @@ test('the custom panel offers «تثبيت وقفل» and a tick for the state t
   const locked = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, onLock: () => {}, locked: true }));
   assert.match(locked, /فك القفل/);
 });
+
+test('the custom panel ends with the tick options, the note on the lock and the lock button, then a fold arrow', () => {
+  const html = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, onLock: () => {} }));
+  const at = (t: string) => html.indexOf(t);
+  const order = ['ذهاب وإياب', 'يظهر في المحرر', 'بيصير هذا تعديل لحالة البداية', 'تثبيت وقفل', 'طي إعدادات الحركة المخصصة'].map(at);
+  assert.ok(order.every((i) => i > 0), JSON.stringify(order));
+  assert.deepEqual([...order].sort((a, b) => a - b), order); // in that order
+  assert.doesNotMatch(html, /البداية = العنصر كما هو/); // the old line above the options is gone
+});

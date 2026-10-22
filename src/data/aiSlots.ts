@@ -72,9 +72,9 @@ export const describe = (slide: { name: string; elements: any[]; backgroundImage
 
 // ---- The slot names of a ready slide ----
 const SINGLE_TEXT = ['eyebrow', 'title', 'sub', 'text', 'note', 'quote', 'owner', 'role', 'ticker'];
-const SINGLE_BUTTON = ['cta', 'whatsapp', 'phone'];
+const SINGLE_BUTTON = ['cta', 'whatsapp', 'phone', 'send'];
 const SINGLE_IMAGE = ['image', 'avatar'];
-const INDEXED = /^(?:(?:chips|facts|points|items|packages)\.\d+(?:\.[a-z]+)?|photos\.\d+|caption\.\d+)$/;
+const INDEXED = /^(?:(?:chips|facts|points|items|packages)\.\d+(?:\.[a-z]+)?|packages\.\d+\.features\.\d+|groups\.\d+\.name|groups\.\d+\.rows\.\d+\.(?:name|price)|photos\.\d+|caption\.\d+)$/;
 /** Is this a slot name the builder knows? */
 export const isSlotName = (name: string) => [...SINGLE_TEXT, ...SINGLE_BUTTON, ...SINGLE_IMAGE].includes(name) || INDEXED.test(name) || SYSTEM_SLOTS.test(name);
 

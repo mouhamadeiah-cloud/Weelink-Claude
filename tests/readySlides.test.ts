@@ -187,6 +187,18 @@ test('plain shape boxes make a list too, so no text keeps its example wording', 
   assert.deepEqual(texts.filter((e: any) => !e.aiSlot).map((e: any) => e.id), []);
 });
 
+test('a left-over text gets an extra slot, a bare step number does not', () => {
+  const out = autoSlots([
+    { ...el('h', 'heading'), y: 120, content: 'عرض الصيف', styles: { fontSize: 48 } },
+    { ...el('s', 'paragraph'), y: 200, content: 'خصم على كل الطلبات هذا الشهر', styles: { fontSize: 20 } },
+    { ...el('p', 'paragraph'), y: 260, content: 'بدل ٨٠ دولاراً', styles: { fontSize: 17 } },
+    { ...el('n', 'heading'), y: 330, width: 44, height: 32, content: '1', styles: { fontSize: 20 } },
+  ] as any[]);
+  assert.equal(out.find((e: any) => e.id === 'p')?.aiSlot, 'extra.0');
+  assert.equal(out.find((e: any) => e.id === 'n')?.aiSlot, undefined);
+  assert.ok(isSlotName('extra.3'));
+});
+
 test('the builder\'s own names for price cards and the send button are accepted', () => {
   for (const n of ['packages.0.features.2', 'groups.1.name', 'groups.0.rows.3.price', 'send']) assert.ok(isSlotName(n), n);
   assert.equal(isSlotName('groups.0.rows.x'), false);

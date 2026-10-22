@@ -18,7 +18,8 @@ import { SLIDE_DIVIDER_OPTIONS } from '../components/SlideDividers';
 import { REST_PAGE_IDS } from '../data/restaurantTemplate';
 import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
 import { applyPageLook, lookColours, slideSource } from './applyLook';
-import { lookOf, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
+import { TEXT_EFFECTS } from '../utils/textEffects';
+import { lookOf, luminance, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
 import { fitTexts, fitTextsPhone, listItems, reflowList, type FlexEl } from '../utils/flexLayout';
 import { arrangeSlideForMobile } from '../utils/mobileLayout';
 import type { ProjectType } from '../components/shop/shopTypes';
@@ -488,6 +489,12 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
     const styles = { ...el.styles };
     if (styles.fontFamily) styles.fontFamily = styles.fontFamily === headFont ? fonts.head : fonts.body;
     if ((el.type === 'button' || el.type === 'badge') && styles.backgroundColor?.toLowerCase() === to.accent.toLowerCase()) styles.color = textOn(to.accent);
+    // A text effect the designer put on the letters stays (it is part of the design, and its colours follow the page's); a moving one goes on a calm page,
+    // and a glow, made for a dark ground, goes on a light one.
+    const effect = styles.textEffect ? TEXT_EFFECTS.find((t) => t.id === styles.textEffect) : undefined;
+    if (effect && ((!motion && (effect.group === 'motion' || effect.id === 'neon-pulse' || effect.id === 'gradient-move')) || (effect.dark && !onPhoto && luminance(to.bg) > 0.5))) {
+      for (const k of ['textEffect', 'textEffectColor', 'textEffectColor2', 'textEffectIntensity', 'textEffectImage']) delete (styles as Record<string, unknown>)[k];
+    }
     if (!motion) {
       if (styles.animationTrigger === 'once' || styles.animationTrigger === 'loop') {
         delete styles.animation;
@@ -496,7 +503,8 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
     } else if (section.section === 'intro' && j === firstButton) {
       // The page's main call to action keeps pulsing on a lively page.
       Object.assign(styles, { animation: 'pulse', animationTrigger: 'loop', animationDuration: 2 });
-    } else if (ANIMATED.test(section.entrance) && styles.animationTrigger !== 'loop' && !el.isGroupContainer && el.width < 1280 * 0.7) {
+    } else if (ANIMATED.test(section.entrance) && !styles.animation && !el.isGroupContainer && el.width < 1280 * 0.7) {
+      // (A part the designer animated keeps its own animation, scroll effects included.)
       Object.assign(styles, { animation: section.entrance, animationTrigger: 'once', animationDuration: 0.8 });
     }
     el = { ...el, styles };

@@ -4,6 +4,7 @@
 // becomes slides and elements: the ready slides recoloured to the palette, their slots filled,
 // what the owner did not give (a phone number, an address, a price) taken off the page with the
 // icons and lines that belonged to it.
+import { autoSlots } from '../data/autoSlots';
 import { auth } from './firebase';
 import type { CanvasElement, Page, Slide } from '../types';
 import { businessFacts, ownerServices, type WeeAnswers } from './weeWriter';
@@ -163,7 +164,7 @@ const galleryReady = (g: GalleryPayload): Record<string, any> & { elements: Draf
     name: slide.name || g.name || 'شريحة',
     height: Number(slide.height) || 560,
     backgroundColor: slide.backgroundColor || '#ffffff',
-    elements: deserializeElements(JSON.parse(JSON.stringify(g.elements || []))).map(({ id: _e, slideId: _s, ...el }) => el as Draft),
+    elements: autoSlots(deserializeElements(JSON.parse(JSON.stringify(g.elements || [])))).map(({ id: _e, slideId: _s, ...el }) => el as Draft),
   };
 };
 
@@ -360,6 +361,12 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   for (let i = 0; i < els.length; i++) {
     const el = els[i];
     const key = el.aiSlot;
+    // An example photo nobody gave a slot is still the example business's: it takes a photo of this one.
+    if (!key && el.type === 'image' && /^https?:/.test(String(el.content || '')) && ctx.fallbackQuery) {
+      const url = await ctx.photo(ctx.fallbackQuery);
+      if (url) Object.assign(el, { content: url, imageUrl: url });
+      continue;
+    }
     if (!key) continue;
     const sys = SYSTEM.exec(key);
     if (sys) {

@@ -171,6 +171,22 @@ test('team cards become points with a title, role and text, and no shared photo 
   assert.equal(out.find((e: any) => e.id === 'n900')?.aiSlot, 'points.0.title');
 });
 
+test('plain shape boxes make a list too, so no text keeps its example wording', () => {
+  const box = (x: number, t: string, d: string) => [
+    { ...el(`s${x}`, 'shape'), x, y: 250, width: 248, height: 200 },
+    { ...el(`t${x}`, 'heading'), x: x + 16, y: 280, width: 216, height: 32, content: t, styles: { fontSize: 22 } },
+    { ...el(`d${x}`, 'paragraph'), x: x + 16, y: 330, width: 216, height: 60, content: d, styles: { fontSize: 15 } },
+  ];
+  const out = autoSlots([
+    { ...el('h', 'heading'), y: 120, content: 'خدماتنا', styles: { fontSize: 48 } },
+    ...box(900, 'تصميم', 'نرسم لك هوية كاملة تناسب عملك'),
+    ...box(600, 'برمجة', 'نبني موقعك بأحدث الأدوات المتاحة'),
+    ...box(300, 'دعم', 'نتابع معك بعد التسليم كل أسبوع'),
+  ] as any[]);
+  const texts = out.filter((e: any) => e.type === 'heading' || e.type === 'paragraph');
+  assert.deepEqual(texts.filter((e: any) => !e.aiSlot).map((e: any) => e.id), []);
+});
+
 test('the builder\'s own names for price cards and the send button are accepted', () => {
   for (const n of ['packages.0.features.2', 'groups.1.name', 'groups.0.rows.3.price', 'send']) assert.ok(isSlotName(n), n);
   assert.equal(isSlotName('groups.0.rows.x'), false);

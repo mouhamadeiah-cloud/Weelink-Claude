@@ -990,7 +990,7 @@ export default function App() {
       await loadUserWorkspace(accountId);
       const problem = takeInviteProblem();
       if (problem) window.alert(problem);
-      if (first || !user) setIsAuthActive(true);
+      if ((first || !user) && !galleryEditRef.current) setIsAuthActive(true);
       setIsFirebaseLoading(false);
       isInitialLoadComplete.current = true;
     });
@@ -1492,7 +1492,8 @@ export default function App() {
   // The admin's editor tab (opened by «تعديل في لوحة المصمم» in the admin site) starts here, once the sign-in check is done.
   const adminEditStarted = useRef(false);
   useEffect(() => {
-    if (isFirebaseLoading || adminEditStarted.current || !new URLSearchParams(window.location.search).has('edit-gallery')) return;
+    // Wait for the first sign-in check: it would otherwise finish after the editor opened and show the login page.
+    if (isFirebaseLoading || !isInitialLoadComplete.current || adminEditStarted.current || !new URLSearchParams(window.location.search).has('edit-gallery')) return;
     adminEditStarted.current = true;
     const handoff = takeAdminHandoff();
     if (!handoff) {

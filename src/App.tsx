@@ -29,6 +29,7 @@ import { useOrderAttention } from './services/orderAttention';
 import { GalleryEditBar } from './components/designer/GalleryEditBar';
 import { adminEditOpen, adminEditSave, designerEditOpen, designerEditSave, editErrorText, readyEditOpen, readyEditSave, takeAdminHandoff, type EditableDesign } from './services/galleryEdit';
 import { GALLERY_READY_CATEGORIES } from './data/readyCategories';
+import { autoSlots } from './data/autoSlots';
 import { DesignerDashboard } from './components/designer/DesignerDashboard';
 import { DesignOrdersPanel } from './components/designOrders/DesignOrdersPanel';
 import { insertDesign } from './services/fitDesign';
@@ -1370,13 +1371,24 @@ export default function App() {
   // ---------- Editing a design of the gallery ----------
   const confirmLeaveGalleryEdit = () => !galleryEditRef.current || JSON.stringify({ pages, elements }) === galleryBaselineRef.current || window.confirm('عندك تعديلات لم تُحفظ على هذا التصميم. تتركها؟');
 
+  // Editing a ready slide: a new element gets its slot at once and the found ones follow the element's place and text, so the bar
+  // always shows what the page builder will read; saving keeps exactly these (Eyad, 22 Oct).
+  const readyEditing = !!galleryEdit?.ready;
+  useEffect(() => {
+    if (!readyEditing) return;
+    const next = autoSlots(elements as any[]) as CanvasElement[];
+    const same = next.every((e, i) => e === elements[i] || (e.aiSlot === elements[i].aiSlot && !!e.aiSlotAuto === !!elements[i].aiSlotAuto));
+    if (!same) setElements(next);
+  }, [readyEditing, elements]);
+
   const loadGalleryDesign = (d: EditableDesign, as: 'admin' | 'designer', pendingEdit: boolean, token?: string, ready = false) => {
     const base = blankDraftPages(d.kind)[0];
     const pageIn: Page = d.kind === 'page'
       ? { ...base, navbar: d.page?.navbar || base.navbar, slides: d.page?.slides?.length ? d.page.slides : base.slides }
       : { ...base, slides: [d.slide] };
     const pagesIn: Page[] = normalizeLegacyNavbarDefaults([pageIn]);
-    const elementsIn = deserializeElements(d.elements);
+    // A ready slide opens with every element's slot in place; they follow the elements while editing (effect below).
+    const elementsIn = ready ? autoSlots(deserializeElements(d.elements) as any[]) as CanvasElement[] : deserializeElements(d.elements);
     draftReadyRef.current = false;
     loadSeqRef.current++;
     setPages(pagesIn);

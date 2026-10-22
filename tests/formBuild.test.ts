@@ -152,3 +152,17 @@ test('form sections and a code-slide section are merged in the model\'s order, w
   assert.equal(merged.sections[0].links.cta, 'slide:2');
   assert.equal(merged.sections[0].links.send, 'whatsapp');
 });
+
+test('a card title shorter than the example is accepted, only a scrap is asked again', () => {
+  const { elements } = slideOf('features-9');
+  const form = slideForm(undefined, elements);
+  const o = { owners: new Set<string>(), assets: { heroBg: false, gallery: 0, logo: false }, icons: new Set<string>(), section: 'why' };
+  const key = form.fields.find((f) => /^points\.\d+\.title$/.test(f.key))!.key;
+  assert.equal(checkValues(form, { [key]: 'جودة عالية' }, o).slots[key], 'جودة عالية');
+  assert.equal(checkValues(form, { [key]: 'ج' }, o).problems.some((p) => p.key === key), true);
+});
+
+test('the example\'s stock photo is a photo slot (about-12), a plain library picture is not', () => {
+  const { elements } = slideOf('about-12');
+  assert.ok(elements.some((e: any) => e.type === 'image' && e.aiSlot === 'image'));
+});

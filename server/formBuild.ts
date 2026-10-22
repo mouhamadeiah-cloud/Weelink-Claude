@@ -217,7 +217,8 @@ export const checkValues = (form: SlideForm, values: Record<string, unknown>, o:
       out.problems.push({ key: f.key, why: 'منسوخ من المثال: اكتب نصاً يخص هذا العمل', was: text });
       continue;
     }
-    if (f.target >= 20 && length < f.min && length < 12) {
+    // A short text is still a text (a card's title is often a word or two): only a scrap is asked again.
+    if (f.target >= 20 && length < 4) {
       out.problems.push({ key: f.key, why: `قصير جداً (المطلوب نحو ${f.target} حرفاً)`, was: text });
       continue;
     }

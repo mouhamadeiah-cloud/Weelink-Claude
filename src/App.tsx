@@ -280,6 +280,8 @@ export default function App() {
   const pageLockRef = useRef(false);
   // A design of the gallery open in the editor (services/galleryEdit.ts): the admin edits any of them, a designer their own.
   const [galleryEdit, setGalleryEdit] = useState<{ id: string; as: 'admin' | 'designer'; name: string; kind: DesignKind; status: string; pendingEdit: boolean } | null>(null);
+  // This tab was opened by the admin site to edit a gallery design: the admin's session, not the browser's account, runs it.
+  const adminEditTab = useRef(typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('edit-gallery'));
   const galleryEditRef = useRef<{ id: string; as: 'admin' | 'designer'; kind: DesignKind; token?: string } | null>(null);
   const galleryBaselineRef = useRef('');
   const [gallerySaving, setGallerySaving] = useState(false);
@@ -990,7 +992,7 @@ export default function App() {
       await loadUserWorkspace(accountId);
       const problem = takeInviteProblem();
       if (problem) window.alert(problem);
-      if ((first || !user) && !galleryEditRef.current) setIsAuthActive(true);
+      if ((first || !user) && !galleryEditRef.current && !adminEditTab.current) setIsAuthActive(true);
       setIsFirebaseLoading(false);
       isInitialLoadComplete.current = true;
     });
@@ -1498,6 +1500,8 @@ export default function App() {
     const handoff = takeAdminHandoff();
     if (!handoff) {
       window.alert('انتهت مهلة فتح التعديل. افتح الإدارة واضغط «تعديل في لوحة المصمم» من جديد.');
+      adminEditTab.current = false;
+      setIsAuthActive(true);
       return;
     }
     (async () => {
@@ -1516,6 +1520,8 @@ export default function App() {
       } catch (e) {
         designerModeRef.current = false;
         window.alert(editErrorText(e));
+        adminEditTab.current = false;
+        setIsAuthActive(true);
       }
     })();
   }, [isFirebaseLoading]);
@@ -2061,6 +2067,7 @@ export default function App() {
 
   // The designer's role opens the studio (the editor on the designer's drafts) as soon as the account is loaded.
   useEffect(() => {
+    if (adminEditTab.current) return;
     if (!studioHandledRef.current && designerRole && !isAuthActive && !isFirebaseLoading) {
       studioHandledRef.current = true;
       studioPendingRef.current = true;
@@ -4532,7 +4539,7 @@ export default function App() {
   }
 
   // A designer's account asks, at every sign-in, which role to work in (services/accountRole).
-  if (!isAuthActive && currentUser && !currentUser.isAnonymous && isDesigner && roleNow === null) {
+  if (!adminEditTab.current && !isAuthActive && currentUser && !currentUser.isAnonymous && isDesigner && roleNow === null) {
     return <RolePicker name={designerName} onPick={chooseRole} onLogout={handleLogout} />;
   }
 

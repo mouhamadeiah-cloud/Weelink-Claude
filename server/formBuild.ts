@@ -356,3 +356,21 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
     sections: planned,
   };
 };
+
+/** The form plan and the code-slide sections in the model's order. The form sections' `slide:N` buttons were numbered among the form
+ * sections only: they are renumbered among all. */
+export const mergePlans = (formPlan: FormPlan, codeSections: FormPlannedSection[], order: string[]): FormPlan => {
+  const byId = new Map<string, FormPlannedSection>([...formPlan.sections, ...codeSections].map((x) => [x.section, x]));
+  const ordered = order.map((id) => byId.get(id)).filter((x): x is FormPlannedSection => !!x);
+  const sections = formPlan.sections.map((fs) => {
+    const links: Record<string, string> = {};
+    for (const [key, to] of Object.entries(fs.links)) {
+      const n = /^slide:(\d+)$/.exec(to);
+      if (!n) { links[key] = to; continue; }
+      const now = ordered.findIndex((x) => x.section === formPlan.sections[+n[1]]?.section);
+      if (now >= 0) links[key] = `slide:${now}`;
+    }
+    return { ...fs, links };
+  });
+  return { ...formPlan, sections: ordered.map((x) => sections.find((f) => f.section === x.section) || x) };
+};

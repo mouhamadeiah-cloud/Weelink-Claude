@@ -72,7 +72,8 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
 
   // Cards (a group box with its texts inside): a set of the same size is one list, each card one item, all its parts named together.
   const inside = (c: SlotEl, e: SlotEl) => e !== c && e.x >= c.x - 2 && e.y >= c.y - 2 && e.x + e.width <= c.x + c.width + 2 && e.y + e.height <= c.y + c.height + 2;
-  const boxes = els.filter((e) => e.isGroupContainer && e.width >= 120 && e.height >= 80 && texts.some((t) => inside(e, t)));
+  // A card is a group box or a plain background shape with at least two texts on it (not the slide's own background).
+  const boxes = els.filter((e) => (e.isGroupContainer || e.type === 'shape') && e.width >= 120 && e.height >= 80 && e.width * e.height < 0.5 * 1280 * bottom && texts.filter((t) => inside(e, t)).length >= (e.isGroupContainer ? 1 : 2));
   const boxSets: T[][] = [];
   for (const b of boxes) {
     const set = boxSets.find((m) => Math.abs(m[0].width - b.width) <= 0.12 * b.width && Math.abs(m[0].height - b.height) <= 0.12 * b.height);
@@ -81,7 +82,9 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
   }
   // Each set of cards is one list, by what its cards hold: figures (facts), a price and its features (packages) or a title with its words (points).
   const next: Record<string, number> = { facts: 0, packages: 0, points: 0 };
-  for (const cardSet of boxSets.filter((m) => m.length >= 2 && m.length <= LIST_CAP).sort((a, b) => b.length - a.length)) {
+  // A lone box counts too when it is a small note under a bigger title («لماذا تختار مركزنا»), not the slide's own panel.
+  const lone = (m: T[]) => m.length === 1 && m[0].type === 'shape' && texts.some((t) => !inside(m[0], t) && t.type === 'heading' && fontOf(t) > 20) && texts.filter((t) => inside(m[0], t) && t.type === 'heading').every((t) => fontOf(t) <= 20);
+  for (const cardSet of boxSets.filter((m) => (m.length >= 2 && m.length <= LIST_CAP) || lone(m)).sort((a, b) => b.length - a.length)) {
     const cardTexts = (c: T) => texts.filter((t) => free(t) && inside(c, t) && t.type !== 'badge').sort((a, b) => a.y - b.y || b.x - a.x);
     const all = cardSet.map(cardTexts);
     if (all.some((ts) => !ts.length)) continue;

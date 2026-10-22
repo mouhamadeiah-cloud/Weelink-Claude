@@ -4,6 +4,7 @@
 // becomes slides and elements: the ready slides recoloured to the palette, their slots filled,
 // what the owner did not give (a phone number, an address, a price) taken off the page with the
 // icons and lines that belonged to it.
+import { autoSlots } from '../data/autoSlots';
 import { auth } from './firebase';
 import type { CanvasElement, Page, Slide } from '../types';
 import { businessFacts, ownerServices, type WeeAnswers } from './weeWriter';
@@ -163,7 +164,7 @@ const galleryReady = (g: GalleryPayload): Record<string, any> & { elements: Draf
     name: slide.name || g.name || 'شريحة',
     height: Number(slide.height) || 560,
     backgroundColor: slide.backgroundColor || '#ffffff',
-    elements: deserializeElements(JSON.parse(JSON.stringify(g.elements || []))).map(({ id: _e, slideId: _s, ...el }) => el as Draft),
+    elements: autoSlots(deserializeElements(JSON.parse(JSON.stringify(g.elements || [])))).map(({ id: _e, slideId: _s, ...el }) => el as Draft),
   };
 };
 

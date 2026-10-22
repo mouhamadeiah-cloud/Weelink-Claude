@@ -5,6 +5,7 @@
 //   designer, design not approved yet (pending or rejected) → changes in place and goes back to «بانتظار المراجعة».
 //   designer, design approved → the change waits in galleryEdits/{id} (server only) while the approved version stays
 //           in the gallery; the admin approves it (it replaces the live one) or rejects it with a reason.
+import { autoSlots } from '../src/data/autoSlots.js';
 import { findContactInfo, findNavbarContact } from '../src/utils/contactCheck.js';
 
 export const SLIDE_CATEGORY_IDS = ['hero', 'about', 'services', 'gallery', 'team', 'reviews', 'offers', 'booking', 'contact', 'menu', 'cars', 'products', 'legal', 'other'];
@@ -48,7 +49,8 @@ export const checkDesign = (input: DesignInput, opts: { allowContact?: boolean }
   const found = [...findContactInfo(elements), ...(input.kind === 'page' ? findNavbarContact(input.page?.navbar) : [])];
   if (found.length && !opts.allowContact) return { error: 'contact', kinds: [...new Set(found.map((f) => f.kind))] };
 
-  const out: any = { slide: clean(slides[0]), page: input.kind === 'page' ? clean({ navbar: input.page?.navbar, slides }) : undefined, elements: clean(elements) };
+  // A slide carries its AI slots wherever it is saved (export, edit), so approving it to the ready slides needs nothing more.
+  const out: any = { slide: clean(slides[0]), page: input.kind === 'page' ? clean({ navbar: input.page?.navbar, slides }) : undefined, elements: input.kind === 'page' ? clean(elements) : autoSlots(clean(elements)) };
   if (input.name !== undefined) {
     const name = String(input.name).replace(/[\u0000-\u001f]/g, ' ').trim();
     if (name.length < 2 || name.length > 60) return { error: 'bad_name' };

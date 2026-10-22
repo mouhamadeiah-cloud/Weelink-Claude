@@ -177,6 +177,8 @@ export interface GallerySlideRow {
   official?: boolean; editedBy?: string; isEdit?: boolean;
   // The ready-slide category it was added to («شرائح جاهزة» in the editor), if any.
   ready?: string;
+  // Can the page builder use it: its slots found from the elements (slides only).
+  slots?: { eligible: boolean; slots: number; problems: string[] } | null;
 }
 export const adminSlides = (status: SlideStatus) => call<{ rows: GallerySlideRow[]; counts: { pending: number } }>({ action: 'slides-review-list', status });
 // Editing a design in the gallery: the admin edits anything (it changes in place), in the designer's panel (src/App.tsx opens it
@@ -217,7 +219,8 @@ export const adminModels = () => call<{ models: (PageModel & { custom: boolean }
 export const adminModelSave = (id: string, sections: ModelSection[]) => call<{ ok: true; sections: ModelSection[] }>({ action: 'models-save', id, sections });
 export const adminModelReset = (id: string) => call<{ ok: true }>({ action: 'models-reset', id });
 export const adminReadyRemove = (id: string) => call<{ ok: true }>({ action: 'ready-remove', id });
-export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '') => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason });
+export type SlideDestination = 'gallery' | 'both' | 'ready';
+export const adminSlideReview = (id: string, decision: 'approve' | 'reject', reason = '', to?: { destination: SlideDestination; readyCategory?: string }) => call<{ status: SlideStatus }>({ action: 'slide-review', id, decision, reason, ...(to || {}) });
 
 // Hiring a designer: the office takes the customer's money, holds it until the design is confirmed, then pays the
 // designer their part (api/design-orders.ts makes the orders).

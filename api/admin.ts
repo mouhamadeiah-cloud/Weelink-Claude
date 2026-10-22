@@ -75,6 +75,9 @@ import { Resend } from 'resend';
 import { mailOrder } from '../server/orderMail.js';
 import { recountDesigner } from '../server/designerStats.js';
 import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
+import { autoSlots } from '../src/data/autoSlots.js';
+import { slideEligibility } from '../src/data/aiSlots.js';
+import { GALLERY_READY_CATEGORIES } from '../src/data/readyCategories.js';
 import { readyFromGallery, readyGet, readyMap, readyMove, readyImportOnce, readyOverview, readyRemove, readySave, readySetCategory } from '../server/readySlides.js';
 import { readModels, resetModel, saveModel } from '../server/pageModels.js';
 import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
@@ -1145,6 +1148,7 @@ export default {
             acceptedAt: String(x.acceptedAt || ''), createdAt: x.createdAt?.toMillis?.() || 0, reason: String(x.reason || ''),
             reviewedBy: String(x.reviewedBy || ''), ready: ready[d.id] || '', official: x.official === true, editedBy: String(x.editedBy || ''), kind: x.kind === 'page' ? 'page' : 'slide', slide: x.slide || {}, page: x.kind === 'page' ? x.page || null : null,
             elements: Array.isArray(x.elements) ? x.elements : [],
+            slots: x.kind === 'page' ? null : slideEligibility(autoSlots(Array.isArray(x.elements) ? x.elements : [])),
           };
         })
         .sort((a, b) => b.createdAt - a.createdAt);
@@ -1164,23 +1168,35 @@ export default {
       if (!snap.exists) return json({ error: 'not-found' }, 404);
       const ids = snap.data()?.kind === 'page' ? PAGE_CATEGORY_IDS : SLIDE_CATEGORY_IDS;
       if (decision === 'approve' && !ids.includes(String(snap.data()?.category))) return json({ error: 'bad-category' }, 400);
-      const status = decision === 'approve' ? 'approved' : 'rejected';
+      // Where an approved slide goes: the gallery (default), the gallery and the ready slides, or the ready slides only.
+      const where = ['gallery', 'both', 'ready'].includes(String(body.destination)) ? String(body.destination) : 'gallery';
+      const readyCat = String(body.readyCategory || '');
+      const toReady = decision === 'approve' && where !== 'gallery';
+      if (toReady) {
+        if (snap.data()?.kind === 'page') return json({ error: 'bad-request' }, 400);
+        if (!GALLERY_READY_CATEGORIES.some((c) => c.id === readyCat)) return json({ error: 'bad-category' }, 400);
+        const found = slideEligibility(autoSlots(Array.isArray(snap.data()?.elements) ? snap.data()?.elements : []));
+        if (!found.eligible) return json({ error: 'not-eligible', problems: found.problems }, 400);
+        const made = await readyFromGallery(db, id, readyCat, session.u);
+        if ('error' in made) return json({ error: made.error }, 400);
+      }
+      const status = decision === 'approve' ? (where === 'ready' ? 'ready' : 'approved') : 'rejected';
       const cur = snap.data() as { likes?: number; dislikes?: number } | undefined;
       // An approved slide starts its counters at zero (a withdrawn one that comes back keeps them);
       // «جديد» in the gallery counts from the approval.
       await ref.update({
         status, reason: decision === 'reject' ? reason : '', reviewedBy: session.u, reviewedAt: Date.now(),
-        ...(decision === 'approve' ? { approvedAt: Date.now(), likes: Number(cur?.likes) || 0, dislikes: Number(cur?.dislikes) || 0 } : {}),
+        ...(decision === 'approve' && where !== 'ready' ? { approvedAt: Date.now(), likes: Number(cur?.likes) || 0, dislikes: Number(cur?.dislikes) || 0 } : {}),
       });
       // The slides taken from this page (Weelink's own pages) get the same decision.
-      const derived = await db.collection('gallerySlides').where('derivedFrom', '==', id).get();
+      const derived = where === 'ready' ? { docs: [] as any[] } : await db.collection('gallerySlides').where('derivedFrom', '==', id).get();
       for (const d of derived.docs) {
         await d.ref.update({
           status, reason: decision === 'reject' ? reason : '', reviewedBy: session.u, reviewedAt: Date.now(),
           ...(decision === 'approve' ? { approvedAt: d.data().approvedAt || Date.now() } : {}),
         });
       }
-      await audit(session.u, `slide-review:${id}:${status}`);
+      await audit(session.u, `slide-review:${id}:${status}${toReady ? `:ready=${readyCat}` : ''}`);
       return json({ status });
     }
 

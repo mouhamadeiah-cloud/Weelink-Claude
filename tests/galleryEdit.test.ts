@@ -117,3 +117,11 @@ test('deleting a page also deletes the slides taken from it, and only those', as
   assert.ok(!store.has('gallerySlides/g1_s1') && !store.has('gallerySlides/g1_s2'));
   assert.ok(store.has('gallerySlides/other_s1'));
 });
+
+test('a saved slide carries its AI slots, a page does not get them', () => {
+  const one: any = checkDesign({ kind: 'slide', page: { slides: [slide('s1')] }, elements: [el('e1', 's1', { styles: { fontSize: 40 } })], name: 'شريحة', category: 'hero' });
+  assert.ok(!one.error, JSON.stringify(one));
+  assert.equal(one.elements[0].aiSlot, 'title');
+  const pg: any = checkDesign({ kind: 'page', page: page(1), elements: [el('e1', 's1')], name: 'صفحة', category: 'p-shop' });
+  assert.equal(pg.elements[0].aiSlot, undefined);
+});

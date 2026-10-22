@@ -36,7 +36,7 @@ export const ReadySlidesView: React.FC<{ onSessionEnd: () => void }> = ({ onSess
   const fail = useCallback((e: unknown) => {
     const code = (e as AdminError)?.code;
     if (code === 'session') return onSessionEnd();
-    setNote(REASONS[code] || 'تعذّر تنفيذ العملية، جرّب مرة ثانية.');
+    setNote(REASONS[code] || `تعذّر تنفيذ العملية، جرّب مرة ثانية. (${code || 'خطأ'})`);
   }, [onSessionEnd]);
   const load = useCallback(() => adminReadyOverview().then((r) => setCats(r.categories)).catch(fail), [fail]);
   useEffect(() => { load(); }, [load]);

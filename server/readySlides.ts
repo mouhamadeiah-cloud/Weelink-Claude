@@ -14,8 +14,11 @@ const ID_MAX = 128;
 type Db = { collection: (name: string) => any };
 type Err = { error: 'not_found' | 'bad_category' | 'not_a_slide' | 'bad_request' | 'too_many_elements' | 'too_big' | 'html_not_allowed' | 'unsafe_link' | 'bad_name'; kinds?: string[] };
 
-const isNew = (d: any) => d.data()?.slide && Array.isArray(d.data()?.elements);
-const readyDocs = async (db: Db): Promise<any[]> => (await db.collection('readySlides').get()).docs.filter(isNew) as any[];
+// The list is read without the slides themselves (a ready slide holds all its elements), so moving, deleting and the overview stay light.
+// A document of the earlier way (only a category and an order) has no `eligible` and is ignored.
+const isNew = (d: any) => typeof d.data()?.category === 'string' && typeof d.data()?.eligible === 'boolean';
+const LIST_FIELDS = ['category', 'order', 'name', 'eligible', 'slotCount', 'problems', 'from'];
+const readyDocs = async (db: Db): Promise<any[]> => (await db.collection('readySlides').select(...LIST_FIELDS).get()).docs.filter(isNew) as any[];
 
 const summary = (d: any) => {
   const x = d.data();

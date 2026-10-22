@@ -190,6 +190,7 @@ test('plain shape boxes make a list too, so no text keeps its example wording', 
 test('a left-over text gets an extra slot, a bare step number does not', () => {
   const out = autoSlots([
     { ...el('h', 'heading'), y: 120, content: 'عرض الصيف', styles: { fontSize: 48 } },
+    { ...el('s', 'paragraph'), y: 200, content: 'خصم على كل الطلبات هذا الشهر', styles: { fontSize: 20 } },
     { ...el('p', 'paragraph'), y: 260, content: 'بدل ٨٠ دولاراً', styles: { fontSize: 17 } },
     { ...el('n', 'heading'), y: 330, width: 44, height: 32, content: '1', styles: { fontSize: 20 } },
   ] as any[]);

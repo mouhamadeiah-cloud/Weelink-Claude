@@ -111,3 +111,24 @@ test('a gallery of up to 15 photos: the 15-photo viewer takes them all in order;
   const five = (await build(5)).elements.find((e: any) => e.type === 'gallery').galleryConfig.items;
   assert.deepEqual(five.map((i: any) => i.url), urls.slice(0, 5));
 });
+
+// Effects and animations the designer put on a slide are part of its design.
+const withEffects = async (motion: boolean, tone: 'light' | 'dark') => {
+  const extra = { 'g:fx': { name: 't', slide: { id: 's1', height: 400, backgroundColor: tone === 'dark' ? '#111111' : '#ffffff' }, elements: [
+    { id: 'a', type: 'heading', slideId: 's1', x: 100, y: 80, width: 600, height: 60, content: 'x', aiSlot: 'title', styles: { fontSize: 30, color: '#111111', textEffect: 'neon-pulse', textEffectColor: '#a855f7', animation: 'scale-up', animationTrigger: 'once' } },
+    { id: 'b', type: 'paragraph', slideId: 's1', x: 100, y: 160, width: 600, height: 60, content: 'y', aiSlot: 'sub', styles: { fontSize: 16, color: '#444444', textEffect: 'soft-glow', textEffectColor: '#38bdf8' } },
+    { id: 'c', type: 'paragraph', slideId: 's1', x: 100, y: 240, width: 600, height: 60, content: 'z', aiSlot: 'note', styles: { fontSize: 16, color: '#444444', textEffect: 'shadow-soft' } },
+  ] } };
+  const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion, extra, sections: [{ section: 'intro', template: 'g:fx', tone, slots: { title: 'عنوان', sub: 'وصف', note: 'ملاحظة' }, icons: {}, links: {}, images: {}, entrance: 'fade' }] };
+  const page: any = { id: 'p1', name: 'الرئيسية', slug: '/', slides: [{ id: 'old', name: 'x', height: 500, backgroundColor: '#fff' }], navbar: { brandName: 'x' } };
+  const r: any = await buildPageFromPlan(plan, { kind: 'free', answers: {} as any, siteName: 'تجربة', pages: [page], elements: [], activePageId: 'p1' }, async () => null);
+  return r.elements.map((e: any) => [e.styles.textEffect, e.styles.animation]);
+};
+
+test('a calm page drops moving effects, a light one drops glows, and a lively page keeps the designer\'s own animation', async () => {
+  const calm = await withEffects(false, 'light');
+  assert.deepEqual(calm.map((c: any[]) => c[0]), [undefined, undefined, 'shadow-soft']);
+  const lively = await withEffects(true, 'dark');
+  assert.deepEqual(lively.map((c: any[]) => c[0]), ['neon-pulse', 'soft-glow', 'shadow-soft']);
+  assert.equal(lively[0][1], 'scale-up', 'its own animation, not the section\'s');
+});

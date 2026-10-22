@@ -27,6 +27,8 @@ import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
 import { GALLERY_MAX, limitsOf } from '../src/utils/planLimits.js';
 import { modelOf } from '../src/data/pageModels.js';
 import { readModels } from '../server/pageModels.js';
+import { ON_REQUEST, clip, cleanText, numbersAreOwners, ownersNumbers } from '../server/aiText.js';
+import { buildFormPlan, type FormSection } from '../server/formBuild.js';
 import { galleryPool, pickSections, sectionsFor, type GallerySlideData, type Picked } from '../server/pagePicker.js';
 
 // A fixed model, not «latest», so a newer and dearer Flash never comes in on its own (Eyad, 12 Oct).
@@ -34,7 +36,6 @@ import { galleryPool, pickSections, sectionsFor, type GallerySlideData, type Pic
 // medium, high), how long the model thinks before answering; thinking is paid as output.
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 const THINKING = (process.env.GEMINI_THINKING || 'low').toUpperCase() as ThinkingLevel;
-const MAX_FIELD = 1200;
 
 type Kind = 'free' | 'restaurant' | 'shop' | 'cars';
 const KINDS: Kind[] = ['free', 'restaurant', 'shop', 'cars'];
@@ -115,7 +116,6 @@ export interface Plan {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
-const clip = (v: unknown, n = MAX_FIELD) => (typeof v === 'string' ? v.slice(0, n) : '');
 
 // The owner's answers, kept to plain short strings.
 const cleanProfile = (raw: unknown): Record<string, string> => {
@@ -249,27 +249,6 @@ const signedInUid = async (request: Request) => {
 };
 
 // ---------- The check (the constitution's rules Weelink can test in code) ----------
-
-// Emoji and pictographs (constitution §4: no AI emoji slop), and the ✓ ★ kind of marks.
-const EMOJI = /[\p{Extended_Pictographic}☀-➿⬀-⯿️]/gu;
-// AI meta wording (§4: no AI badges or texts).
-const AI_WORDS = /((?:بـ?|و)?(?:ال)?ذكاء\s*(?:ال)?اصطناعي|توليد ذكي|مصمم بالذكاء|AI\s*Design|Wee AI|\bAI\b|Gemini)/gi;
-const ON_REQUEST = 'حسب الطلب';
-
-const cleanText = (v: unknown, max: number) =>
-  clip(v, 2000).replace(EMOJI, '').replace(AI_WORDS, '').replace(/[*_#`]/g, '').replace(/\s+/g, ' ').trim().slice(0, max).trim();
-
-const digitsIn = (s: string) => (s.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).match(/\d+/g) || []).map((d) => d.replace(/^0+(?=\d)/, ''));
-
-// A price or figure is kept only when the owner wrote its numbers (§3 and «لا تخترع أرقاماً»).
-const ownersNumbers = (profile: Record<string, string>) => {
-  const text = Object.values(profile).join(' ').replace(/[,،.]/g, '');
-  return new Set(digitsIn(text));
-};
-const numbersAreOwners = (value: string, owners: Set<string>) => {
-  const found = digitsIn(value.replace(/[,،.]/g, ''));
-  return found.length > 0 && found.every((d) => owners.has(d));
-};
 
 const LINKS = /^(whatsapp|phone|page:(menu|products|cars|cart|contact)|slide:\d{1,2})$/;
 const IMAGE_QUERY = /^[a-z0-9][a-z0-9 ,\-]{1,78}$/i;
@@ -542,7 +521,7 @@ const sumUsage = (calls: Usage[]) => ({
   output: calls.reduce((n, u) => n + (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0), 0),
 });
 
-const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number, usage: Usage[]) => {
+const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number, usage: Usage[], schema: object = RESPONSE_SCHEMA, system: string = SYSTEM) => {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), ms);
   let text: string;
@@ -550,7 +529,7 @@ const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number, usage: Usa
     const result = await ai.models.generateContent({
       model: MODEL,
       contents: prompt,
-      config: { systemInstruction: SYSTEM, temperature: 0.9, thinkingConfig: { thinkingLevel: THINKING }, responseMimeType: 'application/json', responseJsonSchema: RESPONSE_SCHEMA, abortSignal: abort.signal },
+      config: { systemInstruction: system, temperature: 0.9, thinkingConfig: { thinkingLevel: THINKING }, responseMimeType: 'application/json', responseJsonSchema: schema, abortSignal: abort.signal },
     });
     text = result.text || '';
     usage.push(result.usageMetadata || {});
@@ -634,6 +613,17 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
   }
 };
 
+const formEnv = (ask: (prompt: string, schema: object, system: string) => Promise<any>) => ({
+  ask,
+  looks: LOOKS,
+  defaultLook: DEFAULT_LOOKS.free,
+  icons: [...ICONS],
+  tones: TONES,
+  entrances: ENTRANCES,
+  navLayouts: NAV_LAYOUTS,
+  navTones: NAV_TONES,
+});
+
 export default {
   async fetch(request: Request): Promise<Response> {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -666,23 +656,34 @@ export default {
     const flavor = typeof body?.flavor === 'string' ? body.flavor : '';
     const ticked = Array.isArray(body?.ticked) ? body.ticked.filter((t: unknown): t is string => typeof t === 'string' && /^[a-z_]+(:[a-zA-Z]+)?$/.test(t)).slice(0, 30) : undefined;
     const over = await modelPick(meterDb(), { uid, project, kind, flavor, ticked, profile, assets });
-    const prompt = buildPrompt(kind, profile, assets, over || undefined);
+    // Every section of the model has a ready slide with its elements: the form way. Otherwise the AI plans the page as before.
+    const formSections: FormSection[] | null = over && over.pool.length && over.pool.every((p) => over.extra[p.templates[0]])
+      ? over.pool.map((p) => ({ id: p.id, name: p.name, template: p.templates[0], slide: over.extra[p.templates[0]].slide, elements: over.extra[p.templates[0]].elements }))
+      : null;
+    const prompt = formSections ? '' : buildPrompt(kind, profile, assets, over || undefined);
     const started = Date.now();
     const usage: Usage[] = [];
     try {
       const ai = new GoogleGenAI({ apiKey });
-      let raw: any;
-      try {
-        raw = await askGemini(ai, prompt, BUDGET_MS, usage);
-      } catch (err) {
-        // One more try after a broken answer, when there is time left for it.
-        const left = BUDGET_MS - (Date.now() - started);
-        if (!(err instanceof BuildFailure) || !['bad_json', 'empty', 'network', 'gemini_500', 'gemini_503'].includes(err.reason) || left < 20_000) throw err;
-        raw = await askGemini(ai, prompt, left, usage);
+      // One more try after a broken answer, when there is time left for it.
+      const ask = async (text: string, schema: object, system: string) => {
+        try {
+          return await askGemini(ai, text, Math.max(8_000, BUDGET_MS - (Date.now() - started)), usage, schema, system);
+        } catch (err) {
+          const left = BUDGET_MS - (Date.now() - started);
+          if (!(err instanceof BuildFailure) || !['bad_json', 'empty', 'network', 'gemini_500', 'gemini_503'].includes(err.reason) || left < 15_000) throw err;
+          return askGemini(ai, text, left, usage, schema, system);
+        }
+      };
+      let plan: Plan;
+      if (formSections) {
+        // The form way: the slides are fixed, the AI fills every part of each (server/formBuild.ts).
+        plan = (await buildFormPlan({ env: formEnv(ask), kind, profile, assets, sections: formSections, accent: /^#[0-9a-f]{6}$/i.test(profile['اللون_المفضل_رمز'] || '') ? profile['اللون_المفضل_رمز'] : undefined, motion: /حرك/.test(profile['الحركة'] || '') && !/هادئ/.test(profile['الحركة'] || '') })) as Plan;
+      } else {
+        plan = checkPlan(await ask(prompt, RESPONSE_SCHEMA, SYSTEM), kind, profile, assets, over || undefined);
       }
       const tokens = sumUsage(usage);
-      console.log(`build-page: ${kind} planned in ${Date.now() - started} ms, tokens ${JSON.stringify(tokens)}`);
-      const plan = checkPlan(raw, kind, profile, assets, over || undefined);
+      console.log(`build-page: ${kind} planned in ${Date.now() - started} ms${formSections ? ' (forms)' : ''}, tokens ${JSON.stringify(tokens)}`);
       await meterClose(meter, 'build-page', MODEL, tokens, true, '', Date.now() - started);
       await countBuild(allowance);
       // The gallery slides the plan uses go with it, for the browser to build from; the templates are remembered to vary the next build.

@@ -10,7 +10,7 @@ export const IMAGE_SLOTS = /^(image|avatar|photos\.\d+)$/;
 // limits only keep texts to a sensible length for their part of the design.
 const LIMITS: Record<string, number> = {
   title: 60, eyebrow: 40, sub: 240, text: 520, note: 120, quote: 220, owner: 40, role: 50, ticker: 160,
-  name: 40, desc: 100, price: 20, unit: 20, number: 8, label: 40, features: 50, caption: 40, chips: 32,
+  name: 40, extra: 160, desc: 100, price: 20, unit: 20, number: 8, label: 40, features: 50, caption: 40, chips: 32,
 };
 // A list item's parts are shorter than the section's own.
 const LIST_LIMITS: Record<string, number> = { title: 40, text: 180, name: 40, desc: 100, price: 20, unit: 20, number: 8, label: 40, '': 32 };
@@ -74,7 +74,7 @@ export const describe = (slide: { name: string; elements: any[]; backgroundImage
 const SINGLE_TEXT = ['eyebrow', 'title', 'sub', 'text', 'note', 'quote', 'owner', 'role', 'ticker'];
 const SINGLE_BUTTON = ['cta', 'whatsapp', 'phone', 'send'];
 const SINGLE_IMAGE = ['image', 'avatar'];
-const INDEXED = /^(?:(?:chips|facts|points|items|packages)\.\d+(?:\.[a-z]+)?|packages\.\d+\.features\.\d+|groups\.\d+\.name|groups\.\d+\.rows\.\d+\.(?:name|price)|photos\.\d+|caption\.\d+)$/;
+const INDEXED = /^(?:(?:chips|facts|points|items|packages)\.\d+(?:\.[a-z]+)?|packages\.\d+\.features\.\d+|groups\.\d+\.name|groups\.\d+\.rows\.\d+\.(?:name|price)|photos\.\d+|caption\.\d+|extra\.\d+)$/;
 /** Is this a slot name the builder knows? */
 export const isSlotName = (name: string) => [...SINGLE_TEXT, ...SINGLE_BUTTON, ...SINGLE_IMAGE].includes(name) || INDEXED.test(name) || SYSTEM_SLOTS.test(name);
 

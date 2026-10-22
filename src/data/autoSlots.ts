@@ -209,6 +209,12 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
     const big = [...pics].sort((a, b) => b.width * b.height - a.width * a.height)[0];
     for (const e of pics) if (e !== big) strip.add(e);
   }
+  // Whatever text is still unmarked would keep the example business's wording (a price, a countdown, a note):
+  // it gets a plain slot, and the AI leaves it empty when it has nothing true to put there. Bare digits stay (step numbers).
+  els
+    .filter((e) => free(e) && !e.isGroupContainer && ['heading', 'paragraph', 'badge', 'button'].includes(e.type) && plain(e.content) && !/^[\d٠-٩]+$/.test(plain(e.content)))
+    .sort(reading)
+    .forEach((e, n) => take(e, `extra.${n}`));
   return els.map((e) => {
     if (marks.has(e)) return { ...e, aiSlot: marks.get(e), aiSlotAuto: true };
     if (strip.has(e)) {

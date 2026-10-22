@@ -28,6 +28,7 @@ import { GALLERY_MAX, limitsOf } from '../src/utils/planLimits.js';
 import { modelOf } from '../src/data/pageModels.js';
 import { readModels } from '../server/pageModels.js';
 import { ON_REQUEST, clip, cleanText, numbersAreOwners, ownersNumbers } from '../server/aiText.js';
+import { autoSlots } from '../src/data/autoSlots.js';
 import { buildFormPlan, mergePlans, type FormSection } from '../server/formBuild.js';
 import { galleryPool, pickSections, sectionsFor, type GallerySlideData, type Picked } from '../server/pagePicker.js';
 
@@ -658,7 +659,7 @@ export default {
     const over = await modelPick(meterDb(), { uid, project, kind, flavor, ticked, profile, assets });
     // A section with a ready slide and its elements is filled the form way; a section whose slide is the code's (the menu, the products, the
     // showroom read live data) keeps the old way, the AI writing its slots. Without any form section the AI plans the page as before.
-    const asForm = (p: Picked['pool'][number]): FormSection => ({ id: p.id, name: p.name, template: p.templates[0], slide: over!.extra[p.templates[0]].slide, elements: over!.extra[p.templates[0]].elements });
+    const asForm = (p: Picked['pool'][number]): FormSection => ({ id: p.id, name: p.name, template: p.templates[0], slide: over!.extra[p.templates[0]].slide, elements: autoSlots(over!.extra[p.templates[0]].elements) });
     const formSections: FormSection[] | null = over && over.pool.some((p) => over.extra[p.templates[0]]) ? over.pool.filter((p) => over.extra[p.templates[0]]).map(asForm) : null;
     const codePool = over && formSections ? over.pool.filter((p) => !over.extra[p.templates[0]]) : [];
     const prompt = !formSections ? buildPrompt(kind, profile, assets, over || undefined) : codePool.length ? buildPrompt(kind, profile, assets, { pool: codePool, templates: over!.templates }) : '';

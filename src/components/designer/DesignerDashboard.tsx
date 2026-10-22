@@ -15,7 +15,7 @@ import { formatPounds } from '../../data/plans';
 
 interface MySlide { id: string; name: string; kind: string; category: string; status: string; reason: string; likes: number; dislikes: number; uses: number }
 
-const SLIDE_STATUS: Record<string, string> = { pending: 'بانتظار المراجعة', approved: 'ظاهر في المعرض', rejected: 'مرفوض' };
+const SLIDE_STATUS: Record<string, string> = { pending: 'بانتظار المراجعة', approved: 'ظاهر في المعرض', rejected: 'مرفوض', ready: 'معتمدة للذكاء الاصطناعي' };
 
 const Stat: React.FC<{ label: string; value: React.ReactNode; hint?: string }> = ({ label, value, hint }) => (
   <div className="rounded-card border border-line bg-surface p-3">
@@ -110,7 +110,7 @@ export const DesignerDashboard: React.FC<{ user: User; onClose: () => void }> = 
                         <div className="font-bold text-sm truncate">{s.name || 'بلا اسم'} <span className="text-xs text-faint font-normal">· {s.kind === 'page' ? 'صفحة' : 'شريحة'} · {categoryLabel(s.category)}</span></div>
                         {s.status === 'rejected' && s.reason && <div className="text-xs text-danger mt-0.5">سبب الرفض: {s.reason}</div>}
                       </div>
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${s.status === 'approved' ? 'bg-success/10 text-success' : s.status === 'rejected' ? 'bg-danger/10 text-danger' : 'bg-warn/10 text-warn'}`}>{SLIDE_STATUS[s.status] || s.status}</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${s.status === 'approved' || s.status === 'ready' ? 'bg-success/10 text-success' : s.status === 'rejected' ? 'bg-danger/10 text-danger' : 'bg-warn/10 text-warn'}`}>{SLIDE_STATUS[s.status] || s.status}</span>
                       {s.status === 'approved' && <span className="text-xs text-muted tabular-nums">👍 {s.likes} · 👎 {s.dislikes} · أُضيفت {s.uses} مرة</span>}
                     </li>
                   ))}

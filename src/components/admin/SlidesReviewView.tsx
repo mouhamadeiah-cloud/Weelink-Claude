@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Eye, FileText, LayoutGrid, Loader2, Pencil, ShieldCheck, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react';
 import { ToolBar, ToolButton, ToolMenu, ToolSpacer, type MenuItem } from '../ui/FloatingTools';
-import { AdminError, GallerySlideRow, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminReadyFromGallery, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
+import { AdminError, GallerySlideRow, SlideDestination, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminReadyFromGallery, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
 import { DesignViewer } from '../gallery/DesignViewer';
 import { categoriesFor, categoryLabel, slidesWord } from '../../data/slideCategories';
 import { GALLERY_READY_CATEGORIES } from '../../data/readyCategories';
@@ -26,6 +26,10 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
   // «الشرائح الجاهزة»: an approved slide is added to one of the editor's ready-slide categories.
   const [readying, setReadying] = useState(false);
   const [readyCat, setReadyCat] = useState(row.ready || GALLERY_READY_CATEGORIES[0].id);
+  // Approving a new slide: to the gallery, to the gallery and the ready slides, or to the ready slides only.
+  const [approving, setApproving] = useState(false);
+  const [dest, setDest] = useState<SlideDestination>('gallery');
+  const choosesDestination = row.status === 'pending' && row.kind === 'slide' && !row.isEdit;
   const [info, setInfo] = useState({ name: row.name, category: row.category, designerName: row.designerName });
   // A second look at the texts, the same check the designer's export runs.
   const elements = useMemo(() => deserializeElements(row.elements), [row.elements]);
@@ -36,12 +40,12 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
     setError('');
     try {
       if (row.isEdit) await adminEditReview(row.id, decision, reason);
-      else await adminSlideReview(row.id, decision, reason);
+      else await adminSlideReview(row.id, decision, reason, decision === 'approve' && choosesDestination ? { destination: dest, readyCategory: readyCat } : undefined);
       onChanged();
     } catch (e) {
       const code = (e as AdminError)?.code;
       if (code === 'session') return onSessionEnd();
-      setError(code === 'reason' ? 'اكتب سبب الرفض (3 أحرف على الأقل).' : code === 'bad-category' ? 'تصنيف الشريحة غير معروف.' : 'تعذّر الحفظ. جرّب مرة ثانية.');
+      setError(code === 'not-eligible' ? `خانات الشريحة ناقصة: ${((e as AdminError).extra.problems as string[] | undefined)?.join('، ') || ''}. عدّلها أولاً أو اقبلها للمعرض فقط.` : code === 'reason' ? 'اكتب سبب الرفض (3 أحرف على الأقل).' : code === 'bad-category' ? 'تصنيف الشريحة غير معروف.' : 'تعذّر الحفظ. جرّب مرة ثانية.');
     }
     setBusy(false);
   };
@@ -91,11 +95,11 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
     if (!openGalleryEditor(row.id)) setError('تعذّر فتح لوحة المصمم. اسمح للنوافذ المنبثقة وجرّب مرة ثانية.');
   };
 
-  const panelOpen = details || editingInfo || rejecting || readying || !!error;
+  const panelOpen = details || editingInfo || rejecting || readying || approving || !!error;
   const items: MenuItem[] = [
     { id: 'details', label: 'التفاصيل', icon: <FileText size={14} />, onClick: () => setDetails((v) => !v) },
     ...(row.isEdit ? [] : [{ id: 'info', label: 'الاسم والتصنيف والمصمم', icon: <SlidersHorizontal size={14} />, onClick: () => setEditingInfo((v) => !v) }]),
-    ...(row.kind === 'slide' && !row.isEdit ? [{ id: 'ready', label: row.ready ? 'نُسخت إلى الجاهزة' : 'نسخ إلى الشرائح الجاهزة', icon: <LayoutGrid size={14} />, onClick: () => setReadying((v) => !v) }] : []),
+    ...(row.kind === 'slide' && !row.isEdit && row.status !== 'pending' ? [{ id: 'ready', label: row.ready ? 'نُسخت إلى الجاهزة' : 'نسخ إلى الشرائح الجاهزة', icon: <LayoutGrid size={14} />, onClick: () => setReadying((v) => !v) }] : []),
     ...(row.status === 'pending' ? [{ id: 'reject', label: 'رفض', icon: <X size={14} />, onClick: () => setRejecting(true), danger: true }] : []),
     ...(row.status === 'approved' ? [{ id: 'withdraw', label: 'سحبها من المعرض', icon: <Undo2 size={14} />, onClick: () => setRejecting(true), danger: true }] : []),
     ...(row.isEdit ? [] : [{ id: 'del', label: 'حذف نهائي', icon: <Trash2 size={14} />, onClick: remove, danger: true }]),
@@ -113,7 +117,7 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
         <div dir="rtl" className="absolute inset-x-2 bottom-11 z-20 flex max-h-[min(60vh,80%)] flex-col gap-2 overflow-y-auto rounded-xl border border-line bg-surface p-3 text-small text-ink shadow-xl" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between">
             <p className="truncate font-semibold">{row.name}</p>
-            <button type="button" aria-label="إغلاق" onClick={() => { setDetails(false); setEditingInfo(false); setRejecting(false); setReadying(false); setReason(''); setError(''); }} className="rounded-full p-1 text-muted hover:bg-bg"><X className="h-4 w-4" /></button>
+            <button type="button" aria-label="إغلاق" onClick={() => { setDetails(false); setEditingInfo(false); setRejecting(false); setReadying(false); setApproving(false); setReason(''); setError(''); }} className="rounded-full p-1 text-muted hover:bg-bg"><X className="h-4 w-4" /></button>
           </div>
           {error && <p role="alert" className="text-danger">{error}</p>}
           {details && (
@@ -152,6 +156,25 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
               <button type="button" disabled={busy} onClick={copyToReady} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-4 py-1.5 font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} نسخ</button>
             </div>
           )}
+          {approving && (
+            <div className="flex flex-col gap-2">
+              <p className="text-muted">{row.slots ? (row.slots.eligible ? `خانات الذكاء الاصطناعي: ${row.slots.slots} خانة، الشريحة جاهزة له.` : `خانات ناقصة: ${row.slots.problems.join('، ')}`) : ''}</p>
+              {([['gallery', 'المعرض فقط'], ['both', 'المعرض والشرائح الجاهزة'], ['ready', 'الشرائح الجاهزة فقط']] as [SlideDestination, string][]).map(([id, label]) => (
+                <label key={id} className={`flex items-center gap-2 ${id !== 'gallery' && row.slots && !row.slots.eligible ? 'opacity-50' : ''}`}>
+                  <input type="radio" name={`dest-${row.id}`} checked={dest === id} disabled={id !== 'gallery' && !!row.slots && !row.slots.eligible} onChange={() => setDest(id)} /> {label}
+                </label>
+              ))}
+              {dest !== 'gallery' && (
+                <select value={readyCat} onChange={(e) => setReadyCat(e.target.value)} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand">
+                  {GALLERY_READY_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
+              <div className="flex gap-2">
+                <button type="button" disabled={busy} onClick={() => review('approve')} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-4 py-1.5 font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} قبول</button>
+                <button type="button" disabled={busy} onClick={() => setApproving(false)} className="rounded-ctl px-4 py-1.5 text-muted hover:bg-bg">إلغاء</button>
+              </div>
+            </div>
+          )}
           {rejecting && (
             <div className="flex flex-col gap-2">
               <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={500} placeholder={row.status === 'approved' ? 'سبب سحبها (يُحفظ مع التصميم)' : 'سبب الرفض (يُحفظ مع التصميم)'} className="w-full rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand" />
@@ -168,7 +191,7 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
         {onOpen && <ToolButton label="دخول الصفحة والتنقل فيها" icon={<Eye size={18} />} onClick={onOpen} />}
         {!row.isEdit && <ToolButton label="تعديل في لوحة المصمم" icon={<Pencil size={18} />} onClick={edit} />}
         <ToolSpacer />
-        {row.status !== 'approved' && <ToolButton label={row.isEdit ? 'قبول التعديل ونشره' : 'قبول ونشر في المعرض'} icon={busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={20} />} onClick={() => review('approve')} disabled={busy} />}
+        {row.status !== 'approved' && <ToolButton label={row.isEdit ? 'قبول التعديل ونشره' : 'قبول ونشر في المعرض'} icon={busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={20} />} onClick={() => (choosesDestination ? setApproving(true) : review('approve'))} disabled={busy} />}
         <ToolMenu items={items} />
       </ToolBar>
     </>

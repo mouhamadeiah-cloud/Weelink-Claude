@@ -2,6 +2,7 @@
 // An exported design is saved as gallerySlides/{id} with status 'pending' and stays hidden until the
 // platform's admin approves it (api/admin.ts, action 'slide-review'); a designer cannot set any
 // other status (firestore.rules). The law the designer agreed to is recorded by its version.
+import { autoSlots } from '../data/autoSlots';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -46,7 +47,8 @@ export const exportSlide = async (e: SlideExport): Promise<string> => {
     kind: e.kind,
     slide: e.slide,
     ...(e.kind === 'page' ? { page: e.page } : {}),
-    elements: e.elements,
+    // The slide leaves with its AI slots, found from its elements.
+    elements: e.kind === 'page' ? e.elements : autoSlots(e.elements),
     status: 'pending',
     lawVersion: e.lawVersion,
     acceptedAt: new Date().toISOString(),

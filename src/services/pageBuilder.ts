@@ -361,6 +361,12 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   for (let i = 0; i < els.length; i++) {
     const el = els[i];
     const key = el.aiSlot;
+    // An example photo nobody gave a slot is still the example business's: it takes a photo of this one.
+    if (!key && el.type === 'image' && /^https?:/.test(String(el.content || '')) && ctx.fallbackQuery) {
+      const url = await ctx.photo(ctx.fallbackQuery);
+      if (url) Object.assign(el, { content: url, imageUrl: url });
+      continue;
+    }
     if (!key) continue;
     const sys = SYSTEM.exec(key);
     if (sys) {

@@ -130,3 +130,13 @@ Today (src/components/WeeAIChat.tsx): 1 owner · 2 address · 3 contact · 4 cat
 - The fixed (code-only) categories are **only shop, showroom and menu** (`FIXED_READY_CATEGORIES`): their slides read live data. Contact, booking and the photo gallery are elements like any other, so their slides can be designed, curated in the admin and marked for the AI. The copy file is 185 slides again; the contact, booking and gallery ones are new to the gallery (`ready-to-gallery`: gallery designs are keyed by their id, `gallery.block1…8`, so rebuilding the list never moves a key). The 13 older gallery slides copied before stay as ordinary designs.
 - The slot marker also takes the map, the contact form and the photo-gallery block (one slot each: `map`, `form`, `gallery`) and offers the contact slides' texts (`phone.value`, `address.value`…). The admin may edit Weelink's own designs although they carry example numbers (`adminSave` allows contact details on `official` designs).
 - One gallery family: eight designs `gallery.block1…8`, each good for 1–15 photos; the package decides how many (5 free, 15 Pro: the editor's gallery panel, the question, the builder and the server already follow it). No «5» and «15» versions.
+
+
+## Step 5 — the admin's own ready slides (Eyad, 22 Oct) — replaces steps 2, 3 and 4b
+The gallery-copy way was too tangled (status, review, marking by hand), so it was removed:
+- **readySlides/{id}** now holds the slide itself (slide + elements), its category, order, and whether the AI can use it. The admin makes, edits, copies from the gallery, moves, reorders and deletes them; no review, no status, no 60-slide limit.
+- **Slots are found by the slide itself** (`src/data/autoSlots.ts`) on every save: title, eyebrow, sub, text, cta, image/photos, points, facts, price items, phone. A slot set by hand in the editor bar stays; the automatic ones carry `aiSlotAuto` and are found again.
+- **The editor** opens a ready slide (or a new one) in the admin's session from «الشرائح الجاهزة» (`?edit-gallery=1&ready=1`); the bar there holds the name, the category and the slot of the selected element. A browser's designer account does not interfere.
+- **Once:** the first time the admin opens «الشرائح الجاهزة», the code's ready slides (`galleryReady/ready.json`) are copied in (`readyConfig/imported`); after that the editor's panel shows the admin's list for those categories. Shop, showroom and menu stay in the code.
+- **Page builder:** a category with eligible slides uses only those (the code's templates are the fallback).
+- Removed: «نسخ الشرائح الجاهزة إلى المعرض», «اعتماد المنسوخة», the «استعمل شرائح المعرض» switch, the slot-marking panel, `readyCopy`, `slotMarks`, `ready-to-gallery`.

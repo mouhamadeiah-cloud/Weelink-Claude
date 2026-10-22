@@ -1,11 +1,11 @@
 // «ابن صفحتي», the new way (docs/READY_SLIDES_PLAN.md step 4c): the server, not the AI, decides which sections a page has and which ready
 // slide each one uses. The sections come from the page's model (src/data/pageModels.ts), narrowed by what the owner gave (services,
 // prices, photos) and ticked; each section takes a slide at random from the slides of its category, the code's own and the gallery's
-// that the admin marked for the AI (server/slotMarks.ts). The AI then only writes the texts of these slides.
+// that the admin keeps as ready slides (server/readySlides.ts). The AI then only writes the texts of these slides.
 import { describe } from '../src/data/aiSlots.js';
 import { MODEL_CATEGORIES, type ModelSection } from '../src/data/pageModels.js';
 import { FIXED_READY_CATEGORIES } from '../src/data/readyCategories.js';
-import { slotStatus } from './slotMarks.js';
+import { readyPool } from './readySlides.js';
 
 export interface TemplateSpec { name: string; slots: Record<string, { kind: 'text' | 'button' | 'image'; max?: number }>; lists: Record<string, { count: number; fields: Record<string, number | 'icon'> }> }
 export interface CodeSection { id: string; name: string; required: boolean; place: 'first' | 'last' | 'any'; templates: string[] }
@@ -94,24 +94,18 @@ export const pickSections = async (o: { sections: ModelSection[]; codeSections: 
   return out;
 };
 
-/** The pool over the database: the ready slides by category, the switches, and a gallery slide read (and checked) when it is picked. */
+/** The pool over the database: the admin's ready slides by category (only those whose slots are complete), read when one is picked. */
 export const galleryPool = async (db: { collection: (n: string) => any }): Promise<GalleryPool> => {
-  const [ready, cfg] = await Promise.all([db.collection('readySlides').get(), db.collection('readyConfig').get()]);
-  const byCategory = new Map<string, string[]>();
-  for (const d of ready.docs) {
-    const c = String(d.data().category || '');
-    byCategory.set(c, [...(byCategory.get(c) || []), d.id]);
-  }
-  const on = new Set<string>(cfg.docs.filter((d: any) => d.data().useGallery === true).map((d: any) => d.id));
+  const byCategory = await readyPool(db);
   return {
-    // The fixed categories (booking, contact, the photo gallery…) have programming in their slides: only the code's are used.
-    ids: (c) => (FIXED_READY_CATEGORIES.includes(c) ? [] : byCategory.get(c) || []),
-    useGallery: (c) => !FIXED_READY_CATEGORIES.includes(c) && on.has(c),
+    // The fixed categories (shop, showroom, menu) read live data: only the code's slides are used.
+    ids: (c) => (FIXED_READY_CATEGORIES.includes(c) ? [] : (byCategory.get(c) || []).sort((a, b) => a.order - b.order).map((r) => r.id)),
+    useGallery: (c) => !FIXED_READY_CATEGORIES.includes(c) && (byCategory.get(c) || []).length > 0,
     load: async (id) => {
-      const snap = await db.collection('gallerySlides').doc(id).get();
+      const snap = await db.collection('readySlides').doc(id).get();
       const g = snap.exists ? snap.data() : null;
-      if (!g || g.status !== 'approved' || g.kind === 'page' || !slotStatus(g.elements).eligible) return null;
-      return { slide: g.slide || {}, elements: g.elements, name: String(g.name || '') };
+      if (!g || !g.slide || g.eligible !== true || !Array.isArray(g.elements)) return null;
+      return { slide: g.slide, elements: g.elements, name: String(g.name || '') };
     },
   };
 };

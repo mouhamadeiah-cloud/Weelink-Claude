@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Eye, FileText, LayoutGrid, Loader2, Pencil, ShieldCheck, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react';
 import { ToolBar, ToolButton, ToolMenu, ToolSpacer, type MenuItem } from '../ui/FloatingTools';
-import { AdminError, GallerySlideRow, ReadyCopyStatus, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminReadyAdd, adminReadyCopy, adminReadyCopyStatus, adminReadyRemove, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
+import { AdminError, GallerySlideRow, SeedResult, SeedStatus, SlideStatus, adminEditReview, adminGalleryDelete, adminGallerySave, adminReadyFromGallery, adminSeed, adminSeedStatus, adminSlideReview, adminSlides, openGalleryEditor } from '../../services/adminApi';
 import { DesignViewer } from '../gallery/DesignViewer';
 import { categoriesFor, categoryLabel, slidesWord } from '../../data/slideCategories';
 import { GALLERY_READY_CATEGORIES } from '../../data/readyCategories';
@@ -73,18 +73,17 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
     }
     setBusy(false);
   };
-  const setReady = async (add: boolean) => {
+  const copyToReady = async () => {
     setBusy(true);
     setError('');
     try {
-      if (add) await adminReadyAdd(row.id, readyCat);
-      else await adminReadyRemove(row.id);
+      await adminReadyFromGallery(row.id, readyCat);
       setReadying(false);
       onChanged();
     } catch (e) {
       const code = (e as AdminError)?.code;
       if (code === 'session') return onSessionEnd();
-      setError('تعذّر الحفظ. جرّب مرة ثانية.');
+      setError('تعذّر النسخ. جرّب مرة ثانية.');
     }
     setBusy(false);
   };
@@ -96,7 +95,7 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
   const items: MenuItem[] = [
     { id: 'details', label: 'التفاصيل', icon: <FileText size={14} />, onClick: () => setDetails((v) => !v) },
     ...(row.isEdit ? [] : [{ id: 'info', label: 'الاسم والتصنيف والمصمم', icon: <SlidersHorizontal size={14} />, onClick: () => setEditingInfo((v) => !v) }]),
-    ...(row.status === 'approved' && row.kind === 'slide' && !row.isEdit ? [{ id: 'ready', label: row.ready ? 'في الشرائح الجاهزة' : 'إضافة إلى الشرائح الجاهزة', icon: <LayoutGrid size={14} />, onClick: () => setReadying((v) => !v) }] : []),
+    ...(row.kind === 'slide' && !row.isEdit ? [{ id: 'ready', label: row.ready ? 'نُسخت إلى الجاهزة' : 'نسخ إلى الشرائح الجاهزة', icon: <LayoutGrid size={14} />, onClick: () => setReadying((v) => !v) }] : []),
     ...(row.status === 'pending' ? [{ id: 'reject', label: 'رفض', icon: <X size={14} />, onClick: () => setRejecting(true), danger: true }] : []),
     ...(row.status === 'approved' ? [{ id: 'withdraw', label: 'سحبها من المعرض', icon: <Undo2 size={14} />, onClick: () => setRejecting(true), danger: true }] : []),
     ...(row.isEdit ? [] : [{ id: 'del', label: 'حذف نهائي', icon: <Trash2 size={14} />, onClick: remove, danger: true }]),
@@ -106,7 +105,7 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
     <>
       <div className="pointer-events-none absolute right-2 top-2 z-10 flex flex-wrap gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         {row.isEdit && <span className="rounded-full bg-warn px-2 py-0.5 text-tiny font-bold text-white shadow">تعديل من المصمم</span>}
-        {row.ready && <span className="rounded-full bg-brand px-2 py-0.5 text-tiny font-bold text-white shadow">في الجاهزة · {GALLERY_READY_CATEGORIES.find((c) => c.id === row.ready)?.name || row.ready}</span>}
+        {row.ready && <span className="rounded-full bg-brand px-2 py-0.5 text-tiny font-bold text-white shadow">نُسخت إلى الجاهزة · {GALLERY_READY_CATEGORIES.find((c) => c.id === row.ready)?.name || row.ready}</span>}
         {contact.length > 0 && <span className="rounded-full bg-danger px-2 py-0.5 text-tiny font-bold text-white shadow">فيها بيانات تواصل</span>}
       </div>
 
@@ -145,18 +144,12 @@ const ReviewTools: React.FC<{ row: GallerySlideRow; onChanged: () => void; onSes
             </div>
           )}
           {readying && (
-            <div className="flex flex-col gap-2">
-              <p className="text-muted">{row.ready ? `هذه الشريحة في «${GALLERY_READY_CATEGORIES.find((c) => c.id === row.ready)?.name || row.ready}» من الشرائح الجاهزة.` : 'تظهر الشريحة في لوحة «شرائح جاهزة» في المحرر ضمن الفئة التي تختارها، ويبقى أصلها في المعرض.'}</p>
-              <label className="flex flex-col gap-1">الفئة
-                <select value={readyCat} onChange={(e) => setReadyCat(e.target.value)} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand">
-                  {GALLERY_READY_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-                </select>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy || readyCat === row.ready} onClick={() => setReady(true)} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-4 py-1.5 font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} {row.ready ? 'نقل إلى هذه الفئة' : 'إضافة'}</button>
-                {row.ready && <button type="button" disabled={busy} onClick={() => setReady(false)} className="rounded-ctl border border-line px-4 py-1.5 text-danger hover:bg-bg">إزالة من الجاهزة</button>}
-                <button type="button" onClick={() => setReadying(false)} className="rounded-ctl px-4 py-1.5 text-muted hover:bg-bg">إغلاق</button>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="w-full text-muted">{row.ready ? `نُسخت هذه الشريحة إلى «${GALLERY_READY_CATEGORIES.find((c) => c.id === row.ready)?.name || row.ready}». نسخة جديدة تُضاف إلى الفئة التي تختارها، ويبقى أصلها في المعرض.` : 'تُنسخ الشريحة إلى الشرائح الجاهزة في الفئة التي تختارها، وتجد خاناتها بنفسها. يبقى أصلها في المعرض.'}</p>
+              <select value={readyCat} onChange={(e) => setReadyCat(e.target.value)} className="rounded-ctl border border-line bg-surface p-2 outline-none focus:border-brand">
+                {GALLERY_READY_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <button type="button" disabled={busy} onClick={copyToReady} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-4 py-1.5 font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} نسخ</button>
             </div>
           )}
           {rejecting && (
@@ -189,59 +182,6 @@ const SlideCard: React.FC<{ row: GallerySlideRow; onOpen: () => void; onChanged:
       <div onClick={onOpen} className="cursor-pointer">{row.kind === 'page' && row.page ? <LivePage page={row.page} elements={elements} maxHeight={420} /> : <LiveSlide slide={row.slide} elements={elements} />}</div>
       <ReviewTools row={row} onOpen={onOpen} onChanged={onChanged} onSessionEnd={onSessionEnd} />
     </article>
-  );
-};
-
-// The ready slides of the code, copied into the gallery as slides of Weelink (docs/READY_SLIDES_PLAN.md, step 2): the gallery becomes the one
-// place designs live. The copy is staged for review, or published at once; the editor's panel does not change until the admin chooses.
-const ReadyCopyBox: React.FC<{ onSessionEnd: () => void; onDone: () => void }> = ({ onSessionEnd, onDone }) => {
-  const [status, setStatus] = useState<ReadyCopyStatus | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState('');
-  const refresh = useCallback(() => adminReadyCopyStatus().then(setStatus).catch((e) => { if ((e as AdminError)?.code === 'session') onSessionEnd(); }), [onSessionEnd]);
-  useEffect(() => { refresh(); }, [refresh]);
-  if (!status || status.total === 0) return null;
-
-  const run = async (opts: { publish?: boolean; overwrite?: boolean }) => {
-    if (opts.overwrite && !window.confirm('إعادة نسخ الشرائح؟ تُستبدل تصاميمها وتبقى إعجاباتها، وما عدّلته بيدك لا يُمس.')) return;
-    if (opts.publish && !window.confirm('نشر كل الشرائح المنسوخة في المعرض مباشرة دون مراجعتها واحدة واحدة؟')) return;
-    setBusy(true);
-    setNote('');
-    try {
-      let from = 0;
-      let written = 0;
-      for (;;) {
-        const r = await adminReadyCopy({ ...opts, from });
-        written += r.written;
-        setNote(`جاري النسخ… ${Math.min(r.next ?? r.total, r.total).toLocaleString('ar-SY')} من ${r.total.toLocaleString('ar-SY')}`);
-        if (r.next === null) break;
-        from = r.next;
-      }
-      setNote(`تم: كُتبت ${written.toLocaleString('ar-SY')} شريحة.`);
-      await refresh();
-      onDone();
-    } catch (e) {
-      if ((e as AdminError)?.code === 'session') return onSessionEnd();
-      const err = e as AdminError;
-      console.warn('ready-copy failed', e);
-      setNote(`تعذّر النسخ (${err?.code || err?.message || 'خطأ غير معروف'}${err?.extra?.status ? ` · HTTP ${err.extra.status}` : ''}). ما نُسخ يبقى ولا يُكرَّر، فأعد المحاولة. إن تكرر الخطأ أرسل لي هذه الجملة.`);
-    }
-    setBusy(false);
-  };
-
-  return (
-    <div className="flex flex-col gap-2 rounded-card border border-line bg-surface p-4">
-      <p className="text-small font-medium">الشرائح الجاهزة في المعرض: {status.copied.toLocaleString('ar-SY')} من {status.total.toLocaleString('ar-SY')} منسوخة ({status.published.toLocaleString('ar-SY')} منشورة)</p>
-      <p className="text-small text-muted leading-relaxed">
-        «نسخ الشرائح الجاهزة» يضع شرائح المحرر الجاهزة (ما عدا المتجر والسيارات والمطعم والحجز والتواصل) في المعرض باسم «Weelink AI»، كل واحدة تتذكر فئتها ومكانها الأصليين، وتنتظر مراجعتك. لوحة «شرائح جاهزة» في المحرر لا تتغير الآن.
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" disabled={busy} onClick={() => run({})} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-4 py-2 text-small font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} نسخ الشرائح الجاهزة إلى المعرض</button>
-        {status.copied > 0 && <button type="button" disabled={busy} onClick={() => run({ overwrite: true })} className="rounded-ctl border border-line px-4 py-2 text-small text-muted hover:bg-bg disabled:opacity-50">إعادة نسخ غير المعدّل</button>}
-        {status.copied > status.published && <button type="button" disabled={busy} onClick={() => run({ publish: true })} className="rounded-ctl border border-line px-4 py-2 text-small text-muted hover:bg-bg disabled:opacity-50">نشر الكل مباشرة</button>}
-      </div>
-      {note && <p role="status" className="text-small text-muted">{note}</p>}
-    </div>
   );
 };
 
@@ -330,7 +270,6 @@ export const SlidesReviewView: React.FC<{ onSessionEnd: () => void }> = ({ onSes
       <h1 className="flex items-center gap-2 text-title font-semibold"><ShieldCheck className="h-6 w-6 text-brand" /> مراجعة الشرائح</h1>
       <p className="text-small text-muted leading-relaxed">الشرائح التي صدّرها المصممون. لا تظهر في المعرض إلا بعد قبولها.</p>
       <SeedBox onSessionEnd={onSessionEnd} onDone={() => load(status)} />
-      <ReadyCopyBox onSessionEnd={onSessionEnd} onDone={() => load(status)} />
       <div className="flex flex-wrap gap-2">
         {TABS.map(([id, label]) => (
           <button key={id} onClick={() => setStatus(id)} className={`rounded-full border px-4 py-1.5 text-small ${status === id ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-muted hover:bg-bg'}`}>

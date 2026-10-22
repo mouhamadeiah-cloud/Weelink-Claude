@@ -75,10 +75,8 @@ import { Resend } from 'resend';
 import { mailOrder } from '../server/orderMail.js';
 import { recountDesigner } from '../server/designerStats.js';
 import { gallerySeed, gallerySeedStatus } from '../server/gallerySeed.js';
-import { addReady, adoptSeeded, dropReadyFor, moveReady, readyMap, readyOverview, removeReady, setUseGallery } from '../server/readySlides.js';
-import { markSlots } from '../server/slotMarks.js';
+import { readyFromGallery, readyGet, readyMap, readyMove, readyImportOnce, readyOverview, readyRemove, readySave, readySetCategory } from '../server/readySlides.js';
 import { readModels, resetModel, saveModel } from '../server/pageModels.js';
-import { readyCopy, readyCopyStatus } from '../server/readyCopy.js';
 import { PAGE_CATEGORY_IDS, SLIDE_CATEGORY_IDS, adminSave, deleteDesign, loadForEdit, pendingEditRows, reviewEdit } from '../server/galleryEdit.js';
 import { createCheckout, handleWebhook, stripeConfig } from '../server/stripe.js';
 import { runCleanup } from '../server/cleanup.js';
@@ -249,7 +247,7 @@ type Admin = { username: string; name: string; role: string; specialty?: string;
 const SPECIALTIES: Record<string, string> = { support: 'دعم المشتركين', finance: 'مالية', domains: 'دومينات', content: 'مراجعة المحتوى' };
 const FINANCE_ONLY = ['design-orders', 'design-order', 'design-order-paid', 'design-order-release', 'design-order-refund', 'designer-recount', 'payment-info-get', 'payment-info-set', 'payments', 'add-payment', 'postpone-freeze', 'invoice-send', 'get-company', 'tokens-overview', 'tokens-adjust', 'dashboard', 'export', 'coupons', 'coupon-save', 'coupon-toggle', 'coupon-apply', 'orders', 'order', 'order-approve', 'order-reject', 'order-extend', 'billing-settings'];
 // The designers' gallery and the rating reports are the content reviewers' work (the owner too).
-const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'ready-add', 'ready-remove', 'ready-overview', 'slots-mark', 'models-get', 'models-save', 'models-reset', 'ready-move', 'ready-adopt', 'ready-use-gallery', 'ready-copy-status', 'ready-copy', 'slide-edit-review', 'reports', 'report-decide'];
+const CONTENT_ONLY = ['page-law-get', 'page-law-set', 'slides-review-list', 'slide-review', 'gallery-seed-status', 'gallery-seed', 'gallery-doc', 'gallery-doc-save', 'gallery-doc-delete', 'ready-doc', 'ready-doc-save', 'ready-from-gallery', 'ready-remove', 'ready-overview', 'ready-move', 'ready-category', 'models-get', 'models-save', 'models-reset', 'slide-edit-review', 'reports', 'report-decide'];
 const OWNER_ONLY = ['set-company', 'set-prices', 'set-status', 'admins-list', 'admin-add', 'admin-update', 'admin-reset-password', 'task-create', 'task-update', 'health', 'announce-preview', 'announce', 'backup', 'billing-enforce', 'test-account', 'subscriber-delete', 'cleanup'];
 // The tasks calls are open, but an admin who is not the owner only sees and touches the tasks given to them.
 const OPEN_TO_ALL = ['subscribers', 'subscriber', 'add-note', 'deleted-list', 'tasks', 'task', 'task-status', 'task-reply', 'chat', 'chat-send'];
@@ -1175,7 +1173,6 @@ export default {
         ...(decision === 'approve' ? { approvedAt: Date.now(), likes: Number(cur?.likes) || 0, dislikes: Number(cur?.dislikes) || 0 } : {}),
       });
       // The slides taken from this page (Weelink's own pages) get the same decision.
-      if (decision === 'reject') await dropReadyFor(db, id); // a withdrawn slide leaves the ready slides too
       const derived = await db.collection('gallerySlides').where('derivedFrom', '==', id).get();
       for (const d of derived.docs) {
         await d.ref.update({
@@ -1203,30 +1200,26 @@ export default {
       const id = String(body.id || '').slice(0, 128);
       const r = await deleteDesign(db, id);
       if ('error' in r) return json({ error: 'not-found' }, 404);
-      await dropReadyFor(db, id);
       await audit(session.u, `gallery-doc-delete:${id}`);
       return json({ ok: true });
     }
-    // An approved gallery slide goes into one of the editor's ready-slide categories, or leaves it (server/readySlides.ts).
-    // The ready slides of the code become gallery slides of Weelink (server/readyCopy.ts): staged for review, or published at once.
-    if (action === 'ready-copy-status') return json(await readyCopyStatus(db));
-    if (action === 'ready-copy') {
-      const result = await readyCopy(db, { publish: body.publish === true, overwrite: body.overwrite === true, from: Number(body.from) || 0, limit: Number(body.limit) || 30 });
-      await audit(session.u, `ready-copy:${body.from || 0}:${result.written}${body.publish === true ? ':published' : ''}`);
-      return json(result);
+    // The editor's ready slides belong to the admin (server/readySlides.ts): made in the editor, copied from the gallery, moved, deleted.
+    if (action === 'ready-doc') {
+      const doc = await readyGet(db, String(body.id || '').slice(0, 128));
+      return doc ? json({ design: doc }) : json({ error: 'not-found' }, 404);
     }
-    if (action === 'ready-add') {
+    if (action === 'ready-doc-save') {
       const id = String(body.id || '').slice(0, 128);
-      const r = await addReady(db, id, String(body.category || ''), session.u);
+      const r = await readySave(db, id || null, { page: body.page as any, elements: body.elements as any, name: body.name, category: body.category }, session.u);
+      if ('error' in r) return json({ error: r.error, kinds: (r as any).kinds }, r.error === 'not_found' ? 404 : 400);
+      await audit(session.u, `ready-doc-save:${r.id}`);
+      return json(r);
+    }
+    if (action === 'ready-from-gallery') {
+      const id = String(body.id || '').slice(0, 128);
+      const r = await readyFromGallery(db, id, String(body.category || ''), session.u);
       if ('error' in r) return json({ error: r.error }, r.error === 'not_found' ? 404 : 400);
-      await audit(session.u, `ready-add:${id}:${r.category}`);
-      return json({ ok: true, category: r.category });
-    }
-    if (action === 'slots-mark') {
-      const id = String(body.id || '').slice(0, 128);
-      const r = await markSlots(db, id, body.marks, session.u);
-      if ('error' in r) return json({ error: r.error, detail: r.detail }, r.error === 'not_found' ? 404 : 400);
-      await audit(session.u, `slots-mark:${id}`);
+      await audit(session.u, `ready-from-gallery:${id}:${r.category}`);
       return json(r);
     }
     if (action === 'models-get') return json({ models: await readModels(db) });
@@ -1244,29 +1237,27 @@ export default {
       await audit(session.u, `models-reset:${id}`);
       return json(r);
     }
-    if (action === 'ready-overview') return json({ categories: await readyOverview(db) });
+    if (action === 'ready-overview') {
+      await readyImportOnce(db, session.u);
+      return json({ categories: await readyOverview(db) });
+    }
     if (action === 'ready-move') {
       const id = String(body.id || '').slice(0, 128);
-      const r = await moveReady(db, id, body.dir === 'up' ? 'up' : 'down');
+      const r = await readyMove(db, id, body.dir === 'up' ? 'up' : 'down');
       if ('error' in r) return json({ error: 'not-found' }, 404);
       await audit(session.u, `ready-move:${id}:${body.dir === 'up' ? 'up' : 'down'}`);
       return json(r);
     }
-    if (action === 'ready-adopt') {
-      const r = await adoptSeeded(db, session.u);
-      await audit(session.u, `ready-adopt:${r.adopted}`);
-      return json(r);
-    }
-    if (action === 'ready-use-gallery') {
-      const category = String(body.category || '');
-      const r = await setUseGallery(db, category, body.on === true, session.u);
-      if ('error' in r) return json({ error: r.error }, 400);
-      await audit(session.u, `ready-use-gallery:${category}:${body.on === true ? 'on' : 'off'}`);
-      return json(r);
+    if (action === 'ready-category') {
+      const id = String(body.id || '').slice(0, 128);
+      const r = await readySetCategory(db, id, String(body.category || ''));
+      if ('error' in r) return json({ error: r.error }, r.error === 'not_found' ? 404 : 400);
+      await audit(session.u, `ready-category:${id}:${body.category}`);
+      return json({ ok: true });
     }
     if (action === 'ready-remove') {
       const id = String(body.id || '').slice(0, 128);
-      const r = await removeReady(db, id);
+      const r = await readyRemove(db, id);
       if ('error' in r) return json({ error: 'not-found' }, 404);
       await audit(session.u, `ready-remove:${id}`);
       return json({ ok: true });

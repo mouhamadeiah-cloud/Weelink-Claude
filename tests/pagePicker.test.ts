@@ -72,21 +72,22 @@ test('the slide of the owner\'s last build is left for last, and a section nothi
   assert.ok(!r.pool.some((p) => p.id === 'ratings')); // no slide for it yet
 });
 
-test('the pool over the database reads the ready slides and the switches, and refuses a slide that is not usable', async () => {
+test('the pool over the database reads the admin\'s ready slides and refuses a slide that is not usable', async () => {
   const db = getFirestore() as any;
   for (const k of [...store.keys()]) if (/^(gallerySlides|readySlides|readyConfig)\//.test(k)) store.delete(k);
-  store.set('gallerySlides/ok', { kind: 'slide', status: 'approved', name: 'جيد', slide: {}, elements: [{ id: 'a', type: 'heading', aiSlot: 'title' }] });
-  store.set('gallerySlides/unmarked', { kind: 'slide', status: 'approved', name: 'x', slide: {}, elements: [{ id: 'a', type: 'heading' }] });
-  store.set('gallerySlides/pending', { kind: 'slide', status: 'pending', name: 'x', slide: {}, elements: [{ id: 'a', type: 'heading', aiSlot: 'title' }] });
-  for (const id of ['ok', 'unmarked', 'pending']) store.set(`readySlides/${id}`, { category: 'intro', order: 1 });
-  store.set('readyConfig/intro', { useGallery: true });
+  const doc = (o: any) => ({ category: 'intro', order: 1, slide: {}, name: 'x', ...o });
+  store.set('readySlides/ok', doc({ name: 'جيد', eligible: true, elements: [{ id: 'a', type: 'heading', aiSlot: 'title' }] }));
+  store.set('readySlides/unmarked', doc({ eligible: false, elements: [{ id: 'a', type: 'heading' }] }));
+  store.set('readySlides/old', { category: 'intro', order: 3, galleryId: 'g' });
+  store.set('readySlides/shop', doc({ category: 'shop', eligible: true, elements: [] }));
   const p = await galleryPool(db);
-  assert.deepEqual(p.ids('intro').sort(), ['ok', 'pending', 'unmarked']);
+  assert.deepEqual(p.ids('intro'), ['ok']);
   assert.equal(p.useGallery('intro'), true);
   assert.equal(p.useGallery('about'), false);
+  assert.deepEqual(p.ids('shop'), []); // fixed categories stay in the code
   assert.equal((await p.load('ok'))?.name, 'جيد');
   assert.equal(await p.load('unmarked'), null);
-  assert.equal(await p.load('pending'), null);
+  assert.equal(await p.load('old'), null);
   assert.equal(await p.load('missing'), null);
 });
 
@@ -114,9 +115,8 @@ test('the gallery section takes only a slide that holds all the owner\'s photos:
 test('the fixed categories (shop, showroom, menu) never take gallery slides, even ones that were added to them', async () => {
   const db = getFirestore() as any;
   for (const k of [...store.keys()]) if (/^(gallerySlides|readySlides|readyConfig)\//.test(k)) store.delete(k);
-  store.set('readySlides/x', { category: 'shop', order: 1 });
-  store.set('readySlides/y', { category: 'intro', order: 1 });
-  store.set('readyConfig/shop', { useGallery: true });
+  store.set('readySlides/x', { category: 'shop', order: 1, slide: {}, elements: [], eligible: true });
+  store.set('readySlides/y', { category: 'intro', order: 1, slide: {}, elements: [], eligible: true });
   const p = await galleryPool(db);
   assert.deepEqual(p.ids('shop'), []);
   assert.equal(p.useGallery('shop'), false);

@@ -42,6 +42,11 @@ export const designerEditSave = async (user: User, id: string, d: { page: any; e
 export const adminEditOpen = async (token: string, id: string) => (await adminCall(token, { action: 'gallery-doc', id })) as { design: EditableDesign; pendingEdit: boolean };
 export const adminEditSave = async (token: string, id: string, d: { page: any; elements: any[] }) => (await adminCall(token, { action: 'gallery-doc-save', id, ...d })) as { ok: true };
 
+// The admin's ready slides (server/readySlides.ts): opened and saved the same way; a new one has no id until its first save.
+export interface ReadySaved { ok: true; id: string; category: string; eligible: boolean; slots: number; problems: string[] }
+export const readyEditOpen = async (token: string, id: string) => (await adminCall(token, { action: 'ready-doc', id })) as { design: { id: string; name: string; category: string; slide: any; elements: any[] } };
+export const readyEditSave = async (token: string, id: string, d: { page: any; elements: any[]; name: string; category: string }) => (await adminCall(token, { action: 'ready-doc-save', id, ...d })) as ReadySaved;
+
 // What the admin site left for this tab (once, and only if it is fresh).
 export const takeAdminHandoff = (): { id: string; token: string } | null => {
   try {

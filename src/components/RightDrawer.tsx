@@ -6270,7 +6270,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                 />
               );
             })}
-            <ReadyFromGallery slides={readyFromGallery} onAdd={(g) => { if (onAddGallerySlide) onAddGallerySlide(g, true); setActiveTemplateCategory(null); }} />
+            <ReadyFromGallery slides={readyFromGallery} replacesCode={readyReplacesCode} onAdd={(g) => { if (onAddGallerySlide) onAddGallerySlide(g, true); setActiveTemplateCategory(null); }} />
           </div>
         </div>
       </aside>

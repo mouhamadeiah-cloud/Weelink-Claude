@@ -16,7 +16,8 @@ export const useReadyFromGallery = (categoryId: string | null): { slides: Galler
     let alive = true;
     Promise.all([readySlidesOf(categoryId), readyListTakenOver().catch(() => false)])
       .then(([slides, taken]) => {
-        if (alive) setState({ slides, replacesCode: taken });
+        // A category that has the admin's slides is the admin's: the code's are hidden even if the flag cannot be read.
+        if (alive) setState({ slides, replacesCode: taken || slides.length > 0 });
       })
       .catch(() => {});
     return () => { alive = false; };

@@ -20,7 +20,7 @@ import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
 import { applyPageLook, lookColours, slideSource } from './applyLook';
 import { TEXT_EFFECTS } from '../utils/textEffects';
 import { lookOf, luminance, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
-import { fitTexts, fitTextsPhone, listItems, reflowList, type FlexEl } from '../utils/flexLayout';
+import { closeGaps, fitTexts, fitTextsPhone, listItems, reflowList, type Box, type FlexEl } from '../utils/flexLayout';
 import { arrangeSlideForMobile } from '../utils/mobileLayout';
 import type { ProjectType } from '../components/shop/shopTypes';
 import { deserializeElements } from '../utils/elementStorage';
@@ -220,7 +220,7 @@ interface Context {
   slideIds: string[];
   pageIds: Set<string>;
   contactIndex: number;
-  photo: (query: string) => Promise<string | null>;
+  photo: (query: string, shape?: PhotoShape) => Promise<string | null>;
   fallbackQuery?: string; // the AI's first photo search, for a photo it left without one
   services: { name: string; price: string }[]; // the owner's own, for the price section
   title: string; // the page's name, or the owner's
@@ -255,14 +255,20 @@ const defaultLink = (el: Draft, slideIndex: number, ctx: Context) => {
   return resolveLink('whatsapp', ctx) || noLink;
 };
 
-const imageFor = async (ref: string | undefined, ctx: Context): Promise<string | null> => {
+const shapeOfEl = (el: { width?: number; height?: number }): PhotoShape => {
+  const w = Number(el.width) || 1;
+  const h = Number(el.height) || 1;
+  return w > h * 1.25 ? 'wide' : h > w * 1.25 ? 'tall' : 'square';
+};
+
+const imageFor = async (ref: string | undefined, ctx: Context, shape?: PhotoShape): Promise<string | null> => {
   if (!ref) return null;
   const a = ctx.answers;
   if (ref === 'user:heroBg') return a.aiAnswers?.heroBgImage || null;
   if (ref === 'user:logo') return a.personalInfo?.logoUrl || null;
   const g = /^user:gallery:(\d{1,2})$/.exec(ref);
   if (g) return galleryOf(a, ctx.maxPhotos)[+g[1] - 1] || null;
-  return ctx.photo(ref);
+  return ctx.photo(ref, shape);
 };
 
 // ---------- The flexible plan as an example slide's slots ----------
@@ -364,7 +370,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
     const key = el.aiSlot;
     // An example photo nobody gave a slot is still the example business's: it takes a photo of this one.
     if (!key && el.type === 'image' && /^https?:/.test(String(el.content || '')) && ctx.fallbackQuery) {
-      const url = await ctx.photo(ctx.fallbackQuery);
+      const url = await ctx.photo(ctx.fallbackQuery, shapeOfEl(el));
       if (url) Object.assign(el, { content: url, imageUrl: url });
       continue;
     }
@@ -393,8 +399,10 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
       continue;
     }
     if (IMAGE.test(key) || el.type === 'image') {
-      const url = (await imageFor(section.images[key], ctx)) || (ctx.fallbackQuery && !key.startsWith('photos.') ? await ctx.photo(ctx.fallbackQuery) : null);
-      if (url) Object.assign(el, { content: url, imageUrl: url });
+      const shape = shapeOfEl(el);
+      const ref = section.images[key];
+      const url = (await imageFor(ref, ctx, shape)) || (ctx.fallbackQuery && !key.startsWith('photos.') ? await ctx.photo(ctx.fallbackQuery, shape) : null);
+      if (url) Object.assign(el, { content: url, imageUrl: url, ...(ref && !ref.startsWith('user:') && !el.alt ? { alt: ref } : {}) });
       // The example photos belong to the example business: a gallery frame with no photo of
       // this one goes with its caption, a main photo keeps the example only when no search worked.
       else if (key.startsWith('photos.')) {
@@ -468,6 +476,16 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   // Nothing left but a title and decoration (its photos or texts all went): an empty slide, not built.
   if (kept.every((e) => e.type === 'heading' || e.type === 'shape' || e.type === 'icon')) return null;
   const grew = new Set(kept.filter((el) => filled.has(els.indexOf(el))));
+  // A whole row that went (a title, a paragraph, a button, a photo) leaves no hole.
+  const goneEls = [...removed].map((i) => els[i]).filter((e) => e.aiSlot && !e.isGroupContainer && ['heading', 'paragraph', 'button', 'image', 'badge'].includes(e.type));
+  if (goneEls.length) {
+    height = closeGaps(kept, height, goneEls);
+    if (mobileHeight !== undefined) {
+      const views = kept.map((e) => ({ ...e, ...(e.mobile as Box) }));
+      mobileHeight = closeGaps(views, mobileHeight, goneEls.map((e) => e.mobile as Box));
+      kept.forEach((e, i) => (e.mobile = { ...(e.mobile as Box), y: views[i].y, height: views[i].height }));
+    }
+  }
   const fitted = fitTexts(kept, height, grew);
   height = fitted.height;
   if (mobileHeight !== undefined) {
@@ -569,35 +587,46 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
 
 // Photos in the page's mood (Eyad: a calm page gets calm photos, a lively one vivid photos): the
 // mood's words are added to a search that lacks them, and the plain search is the fallback.
-const moodPhoto = (photo: (q: string) => Promise<string | null>, motion: boolean) => {
+const moodPhoto = (photo: (q: string, shape?: PhotoShape) => Promise<string | null>, motion: boolean) => {
   const mood = motion ? 'vibrant' : 'soft light';
-  return async (query: string) => {
+  return async (query: string, shape?: PhotoShape) => {
     const q = query.trim();
-    if (/vibrant|vivid|bold|soft|muted|calm|minimal|dynamic/i.test(q)) return photo(q);
-    return (await photo(`${q} ${mood}`)) || photo(q);
+    if (/vibrant|vivid|bold|soft|muted|calm|minimal|dynamic/i.test(q)) return photo(q, shape);
+    return (await photo(`${q} ${mood}`, shape)) || photo(q, shape);
   };
 };
 
 // Unsplash photos for the AI's English searches, a different photo each time a search repeats.
+export type PhotoShape = 'wide' | 'tall' | 'square';
 const photoFinder = () => {
-  const cache = new Map<string, { url: string; id?: string }[]>();
-  const used = new Map<string, number>();
-  return async (query: string) => {
+  const cache = new Map<string, { url: string; id?: string; w: number; h: number }[]>();
+  const taken = new Set<string>();
+  return async (query: string, shape?: PhotoShape) => {
     const q = query.trim().toLowerCase();
     if (!cache.has(q)) {
       try {
         const res = await fetch(`/api/photos?${new URLSearchParams({ q, perPage: '8' })}`);
         const data = await res.json().catch(() => ({}));
-        cache.set(q, res.ok && Array.isArray(data.items) ? data.items.filter((p: any) => p.fullUrl).map((p: any) => ({ url: p.fullUrl, id: p.unsplashId })) : []);
+        cache.set(q, res.ok && Array.isArray(data.items) ? data.items.filter((p: any) => p.fullUrl).map((p: any) => ({ url: p.fullUrl, id: p.unsplashId, w: Number(p.width) || 0, h: Number(p.height) || 0 })) : []);
       } catch {
         cache.set(q, []);
       }
     }
     const list = cache.get(q)!;
     if (!list.length) return null;
-    const n = used.get(q) || 0;
-    used.set(q, n + 1);
-    const pick = list[n % list.length];
+    // The result whose shape fits the place best, never one already used on the page (all used: start over).
+    const fit = (p: { w: number; h: number }) => {
+      if (!shape || !p.w || !p.h) return 1;
+      const r = p.w / p.h;
+      return shape === 'wide' ? (r >= 1.3 ? 0 : 1) : shape === 'tall' ? (r <= 0.85 ? 0 : 1) : r > 0.85 && r < 1.3 ? 0 : 1;
+    };
+    let fresh = list.filter((p) => !taken.has(p.url));
+    if (!fresh.length) {
+      list.forEach((p) => taken.delete(p.url));
+      fresh = list;
+    }
+    const pick = [...fresh].sort((a, b) => fit(a) - fit(b))[0];
+    taken.add(pick.url);
     if (pick.id) trackUnsplashDownload(undefined, pick.id);
     return pick.url;
   };

@@ -247,3 +247,25 @@ export const fitTextsPhone = (els: FlexEl[], mobileHeight: number, only?: Set<Fl
     mobileHeight: fitted.height,
   };
 };
+
+/** What was taken off leaves no hole: a removed box that shared its rows with nothing else lets everything below it
+ * move up (the boxes are moved in place) until the next thing sits where the removed one began. Full-width bands and veils across the hole shrink with it. */
+export const closeGaps = (next: FlexEl[], height: number, gone: Box[]): number => {
+  let h = height;
+  const wide = (e: FlexEl) => isBackdrop(e) && e.width >= CANVAS * 0.7;
+  for (const g of [...gone].sort((a, b) => b.y - a.y)) {
+    const bottom = g.y + g.height;
+    const solid = next.filter((e) => !wide(e) && !isDecoration(e));
+    if (solid.some((e) => e.y < bottom - 2 && e.y + e.height > g.y + 2)) continue;
+    const below = solid.filter((e) => e.y >= bottom - 2);
+    if (!below.length) continue;
+    const shift = Math.min(...below.map((e) => e.y)) - g.y;
+    if (shift < 20) continue;
+    for (const e of next) {
+      if (e.y >= bottom - 2) e.y -= shift;
+      else if (wide(e) && e.y < bottom && e.y + e.height > bottom) e.height -= shift;
+    }
+    h -= shift;
+  }
+  return Math.max(240, h);
+};

@@ -28,7 +28,7 @@ import { GALLERY_MAX, limitsOf } from '../src/utils/planLimits.js';
 import { modelOf } from '../src/data/pageModels.js';
 import { readModels } from '../server/pageModels.js';
 import { ON_REQUEST, clip, cleanText, numbersAreOwners, ownersNumbers } from '../server/aiText.js';
-import { buildFormPlan, type FormSection } from '../server/formBuild.js';
+import { buildFormPlan, mergePlans, type FormSection } from '../server/formBuild.js';
 import { galleryPool, pickSections, sectionsFor, type GallerySlideData, type Picked } from '../server/pagePicker.js';
 
 // A fixed model, not «latest», so a newer and dearer Flash never comes in on its own (Eyad, 12 Oct).
@@ -592,7 +592,7 @@ const hasPricedServices = (profile: Record<string, string>) => (profile['الخ�
  * Only the page projects use it for now: a restaurant, shop or showroom still plans its home page with the AI.
  */
 const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: string; project: string; kind: Kind; flavor: string; ticked: string[] | undefined; profile: Record<string, string>; assets: Assets }) => {
-  if (!db || o.kind !== 'free') return null;
+  if (!db) return null;
   try {
     const planId = await planFor(db, o.uid, o.project, o.flavor);
     const model = (await readModels(db)).find((m) => m.id === modelOf(planId));
@@ -656,11 +656,12 @@ export default {
     const flavor = typeof body?.flavor === 'string' ? body.flavor : '';
     const ticked = Array.isArray(body?.ticked) ? body.ticked.filter((t: unknown): t is string => typeof t === 'string' && /^[a-z_]+(:[a-zA-Z]+)?$/.test(t)).slice(0, 30) : undefined;
     const over = await modelPick(meterDb(), { uid, project, kind, flavor, ticked, profile, assets });
-    // Every section of the model has a ready slide with its elements: the form way. Otherwise the AI plans the page as before.
-    const formSections: FormSection[] | null = over && over.pool.length && over.pool.every((p) => over.extra[p.templates[0]])
-      ? over.pool.map((p) => ({ id: p.id, name: p.name, template: p.templates[0], slide: over.extra[p.templates[0]].slide, elements: over.extra[p.templates[0]].elements }))
-      : null;
-    const prompt = formSections ? '' : buildPrompt(kind, profile, assets, over || undefined);
+    // A section with a ready slide and its elements is filled the form way; a section whose slide is the code's (the menu, the products, the
+    // showroom read live data) keeps the old way, the AI writing its slots. Without any form section the AI plans the page as before.
+    const asForm = (p: Picked['pool'][number]): FormSection => ({ id: p.id, name: p.name, template: p.templates[0], slide: over!.extra[p.templates[0]].slide, elements: over!.extra[p.templates[0]].elements });
+    const formSections: FormSection[] | null = over && over.pool.some((p) => over.extra[p.templates[0]]) ? over.pool.filter((p) => over.extra[p.templates[0]]).map(asForm) : null;
+    const codePool = over && formSections ? over.pool.filter((p) => !over.extra[p.templates[0]]) : [];
+    const prompt = !formSections ? buildPrompt(kind, profile, assets, over || undefined) : codePool.length ? buildPrompt(kind, profile, assets, { pool: codePool, templates: over!.templates }) : '';
     const started = Date.now();
     const usage: Usage[] = [];
     try {
@@ -678,7 +679,13 @@ export default {
       let plan: Plan;
       if (formSections) {
         // The form way: the slides are fixed, the AI fills every part of each (server/formBuild.ts).
-        plan = (await buildFormPlan({ env: formEnv(ask), kind, profile, assets, sections: formSections, accent: /^#[0-9a-f]{6}$/i.test(profile['اللون_المفضل_رمز'] || '') ? profile['اللون_المفضل_رمز'] : undefined, motion: /حرك/.test(profile['الحركة'] || '') && !/هادئ/.test(profile['الحركة'] || '') })) as Plan;
+        const formAsk = buildFormPlan({ env: formEnv(ask), kind, profile, assets, sections: formSections, accent: /^#[0-9a-f]{6}$/i.test(profile['اللون_المفضل_رمز'] || '') ? profile['اللون_المفضل_رمز'] : undefined, motion: /حرك/.test(profile['الحركة'] || '') && !/هادئ/.test(profile['الحركة'] || '') });
+        if (!codePool.length) plan = (await formAsk) as Plan;
+        else {
+          const [formPlan, codeRaw] = await Promise.all([formAsk, ask(prompt, RESPONSE_SCHEMA, SYSTEM)]);
+          const codePlan = checkPlan(codeRaw, kind, profile, assets, { pool: codePool, templates: over!.templates });
+          plan = mergePlans(formPlan, codePlan.sections as any[], over!.pool.map((p) => p.id)) as Plan;
+        }
       } else {
         plan = checkPlan(await ask(prompt, RESPONSE_SCHEMA, SYSTEM), kind, profile, assets, over || undefined);
       }

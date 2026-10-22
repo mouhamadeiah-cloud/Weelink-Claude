@@ -166,3 +166,16 @@ test('the example\'s stock photo is a photo slot (about-12), a plain library pic
   const { elements } = slideOf('about-12');
   assert.ok(elements.some((e: any) => e.type === 'image' && e.aiSlot === 'image'));
 });
+
+test('the navbar is drawn by the server, so it differs from page to page', async () => {
+  const { elements } = slideOf('about-12');
+  const mk = (rng: () => number): FormEnv => ({
+    ask: async (prompt: string) => (/ملخص الصفحة:/.test(prompt) ? { values: {} } : { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, voice: 'دافئة', imageSubject: 'shop', sections: [{ section: 'about', angle: 'x', tone: 'light', entrance: 'none' }] }),
+    looks: { clear: { name: 'x', forWho: 'x', bg: '#fff', ink: '#000', accent: '#f00', head: 'a', body: 'b' } }, defaultLook: 'clear', icons: ['mdi:star'], tones: ['light', 'tint', 'dark'], entrances: ['none', 'fade'],
+    navLayouts: ['horizontal', 'hamburger', 'vertical'], navTones: ['light', 'tint', 'accent', 'dark'], rng,
+  });
+  const run = (rng: () => number) => buildFormPlan({ env: mk(rng), kind: 'free', profile: { 'الوصف': 'x' }, assets: { heroBg: false, gallery: 0, logo: false }, sections: [{ id: 'about', name: 'من نحن', template: 'g:a', slide: undefined, elements }], motion: false });
+  const a = await run(() => 0.01);
+  const b = await run(() => 0.99);
+  assert.notDeepEqual(a.navbar, b.navbar);
+});

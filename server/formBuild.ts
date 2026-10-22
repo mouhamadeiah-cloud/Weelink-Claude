@@ -29,6 +29,7 @@ export interface FormEnv {
   entrances: string[];
   navLayouts: readonly string[];
   navTones: readonly string[];
+  rng?: () => number; // the dice for the navbar's variety (tests set it)
 }
 
 export interface FormPlannedSection {
@@ -344,14 +345,22 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
     if (i > 0 && s.tone === 'dark' && planned[i - 1].tone === 'dark') s.tone = 'tint';
   });
 
+  // The AI always picks the same navbar (Eyad, 22 Oct): the server draws it, the AI's own pick counts only when it is not the usual one.
   const nav = safeBrief.navbar || {};
+  const rng = env.rng || Math.random;
+  const draw = <T extends string>(list: readonly T[], weights: number[]): T => {
+    let r = rng() * weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < list.length; i++) if ((r -= weights[i]) < 0) return list[i];
+    return list[0];
+  };
+  const layouts = env.navLayouts.filter((l) => ['horizontal', 'hamburger', 'vertical'].includes(l));
+  const pickedLayout = env.navLayouts.includes(nav.layout) ? nav.layout : 'horizontal';
+  const layout = pickedLayout !== 'horizontal' ? pickedLayout : draw(layouts, layouts.map((l) => (l === 'horizontal' ? 5 : l === 'hamburger' ? 2 : 1)));
+  const pickedTone = env.navTones.includes(nav.tone) ? nav.tone : 'light';
+  const tone = pickedTone !== 'light' ? pickedTone : draw(env.navTones, env.navTones.map((t) => (t === 'light' ? 3 : t === 'tint' ? 2 : t === 'dark' ? 2 : 1)));
   return {
     look: typeof brief?.look === 'string' && env.looks[brief.look] ? brief.look : env.defaultLook,
-    navbar: {
-      layout: env.navLayouts.includes(nav.layout) ? nav.layout : 'horizontal',
-      sticky: typeof nav.sticky === 'boolean' ? nav.sticky : true,
-      tone: env.navTones.includes(nav.tone) ? nav.tone : 'light',
-    },
+    navbar: { layout, sticky: typeof nav.sticky === 'boolean' ? nav.sticky : true, tone },
     ...(inp.accent ? { accentColor: inp.accent } : {}),
     motion: inp.motion,
     sections: planned,

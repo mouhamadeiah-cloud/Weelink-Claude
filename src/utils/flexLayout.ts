@@ -269,3 +269,24 @@ export const closeGaps = (next: FlexEl[], height: number, gone: Box[]): number =
   }
   return Math.max(240, h);
 };
+
+const wordsOf = (html: string) => plain(html).split(/\s+/).filter(Boolean);
+
+/** The font size a new text needs in the example's box (Eyad, 22 Oct: a longer text shrinks, it never overflows or breaks a word):
+ * as many lines as the example's text had at the example's size, and its longest word within the width. Never below 55%. */
+export const fittedFontSize = (el: FlexEl, example: string): number | null => {
+  const size0 = Number(el.styles.fontSize);
+  if (!size0 || !['heading', 'paragraph', 'badge', 'button'].includes(el.type)) return null;
+  const bold = el.styles.fontWeight === 'bold' || el.type === 'heading' || el.type === 'button' || el.type === 'badge';
+  const inner = Math.max(40, el.width - (el.type === 'button' || el.type === 'badge' ? 24 : 0));
+  const lines = (text: string, size: number) => {
+    const perLine = Math.max(1, Math.floor(inner / (size * (bold ? 0.56 : 0.5))));
+    return plain(text).split('\n').reduce((n, part) => n + Math.max(1, Math.ceil(part.trim().length / perLine)), 0);
+  };
+  const widest = (text: string, size: number) => Math.max(0, ...wordsOf(text).map((w) => [...w].length)) * size * (bold ? 0.64 : 0.56);
+  const allowed = Math.max(1, lines(example, size0));
+  const floor = Math.max(11, Math.round(size0 * 0.55));
+  let size = size0;
+  while (size > floor && (lines(el.content, size) > allowed || widest(el.content, size) > inner)) size -= 1;
+  return size < size0 ? size : null;
+};

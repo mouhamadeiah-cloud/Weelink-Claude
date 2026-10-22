@@ -20,7 +20,7 @@ import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
 import { applyPageLook, lookColours, slideSource } from './applyLook';
 import { TEXT_EFFECTS } from '../utils/textEffects';
 import { lookOf, luminance, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
-import { closeGaps, fitTexts, fitTextsPhone, listItems, reflowList, type Box, type FlexEl } from '../utils/flexLayout';
+import { closeGaps, fittedFontSize, fitTexts, fitTextsPhone, listItems, reflowList, type Box, type FlexEl } from '../utils/flexLayout';
 import { arrangeSlideForMobile } from '../utils/mobileLayout';
 import type { ProjectType } from '../components/shop/shopTypes';
 import { deserializeElements } from '../utils/elementStorage';
@@ -361,6 +361,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   const look = lookOf(aiTemplate, ctx.kind, els);
   const removed = new Set<number>();
   const filled = new Set<number>();
+  const examples = new Map<number, string>(); // each filled text's example wording, to fit the new text's size to it
   const value = (k: string) => (slots[k] || '').trim();
   const facts = ctx.facts;
   const systemValue: Record<string, string> = { phone: facts['هاتف'] || '', whatsapp: facts['واتساب'] || '', address: facts['العنوان'] || '', hours: '' };
@@ -380,6 +381,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
       const v = systemValue[sys[1]];
       if (!v) removed.add(i);
       else if (sys[2] === 'value') {
+        examples.set(i, String(el.content || ''));
         el.content = escapeHtml(v);
         filled.add(i);
       }
@@ -427,6 +429,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
       continue;
     }
     if (text) {
+      examples.set(i, String(el.content || ''));
       el.content = escapeHtml(text);
       filled.add(i);
     }
@@ -476,6 +479,12 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   // Nothing left but a title and decoration (its photos or texts all went): an empty slide, not built.
   if (kept.every((e) => e.type === 'heading' || e.type === 'shape' || e.type === 'icon')) return null;
   const grew = new Set(kept.filter((el) => filled.has(els.indexOf(el))));
+  // A longer text than the example's goes smaller in its box instead of overflowing or breaking a word.
+  examples.forEach((example, i) => {
+    if (removed.has(i)) return;
+    const size = fittedFontSize(els[i], example);
+    if (size) els[i].styles = { ...els[i].styles, fontSize: size };
+  });
   // A whole row that went (a title, a paragraph, a button, a photo) leaves no hole.
   const goneEls = [...removed].map((i) => els[i]).filter((e) => e.aiSlot && !e.isGroupContainer && ['heading', 'paragraph', 'button', 'image', 'badge'].includes(e.type));
   if (goneEls.length) {

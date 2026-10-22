@@ -7,7 +7,8 @@ import {
 } from '../server/billing.ts';
 
 const db = getFirestore();
-const auth = { getUser: async (uid: string) => ({ email: `${uid}@x.de`, displayName: 'إياد', metadata: { creationTime: '2026-10-01T00:00:00Z' } }) };
+const authDeleted: string[] = [];
+const auth = { deleteUser: async (uid: string) => { authDeleted.push(uid); }, getUser: async (uid: string) => ({ email: `${uid}@x.de`, displayName: 'إياد', metadata: { creationTime: '2026-10-01T00:00:00Z' } }) };
 const user = { uid: 'u1', email: 'u1@x.de', name: 'إياد' };
 const link = (id: string, key: string) => `https://x/inv/${id}/${key}`;
 
@@ -117,7 +118,7 @@ test('a receipt waiting for the team stops the deletion', async () => {
   assert.ok(store.has('designs/u3'));
 });
 
-test('deleting a customer keeps their sign-in, payments and a card', async () => {
+test('deleting a customer removes their pages and sign-in, keeps payments and a card', async () => {
   store.set('designs/u4', { restaurantPages: [], pages: [], profile: { phone: '0999' } });
   store.set('designs/u4/projects/shop-ab12cd', { kind: 'shop' });
   store.set('restaurants/u4', { name: 'مطعم' });
@@ -139,6 +140,7 @@ test('deleting a customer keeps their sign-in, payments and a card', async () =>
   for (const k of ['designs/u4', 'designs/u4/projects/shop-ab12cd', 'restaurants/u4', 'restaurants/u4/orders/o1', 'giftCardNumbers/1234567812345678', 'publishedSites/u4__page', 'siteNames/u4page', 'bookings/u4/items/b1', 'platform_directory/u4', `projectAccess/u4__restaurant`]) {
     assert.equal(store.has(k), false, k);
   }
+  assert.deepEqual(authDeleted, ['u4'], 'the sign-in goes too');
   assert.ok(store.has('platform_payments/p4'), 'payments stay');
   assert.equal(store.get('platform_deleted/u4').email, 'u4@x.de');
   assert.deepEqual(storageDeletes, ['weelink-cd35d.firebasestorage.app/users/u4/'], 'their photos');

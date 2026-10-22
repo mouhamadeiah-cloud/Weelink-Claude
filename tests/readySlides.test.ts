@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readyFromGallery, readyGet, readyImportOnce, readyMap, readyMove, readyOverview, readyPool, readyRemove, readySave, readySetCategory } from '../server/readySlides.ts';
 import { autoSlots } from '../src/data/autoSlots.ts';
-import { slideEligibility } from '../src/data/aiSlots.ts';
+import { isSlotName, slideEligibility } from '../src/data/aiSlots.ts';
 import { FIXED_READY_CATEGORIES, GALLERY_READY_CATEGORIES, READY_SLIDE_CATEGORIES } from '../src/data/readyCategories.ts';
 import { getFirestore, store } from './fakeAdmin.ts';
 
@@ -148,4 +148,30 @@ test('the code\'s ready slides become the admin\'s once, and only once', async (
   assert.ok(docs.some(([, v]) => v.eligible === true));
   assert.deepEqual(await readyImportOnce(db, 'admin:eyad'), { imported: 0 });
   assert.equal([...store.keys()].filter((k) => k.startsWith('readySlides/code-')).length, first.imported);
+});
+
+// Cards: a set of same-size group boxes is one list, each card named as a whole (Eyad, 22 Oct).
+const card = (x: number, name: string, role: string, bio: string, extra: any[] = []) => [
+  { ...el(`c${x}`, 'shape'), isGroupContainer: true, x, y: 250, width: 248, height: 320 },
+  { ...el(`im${x}`, 'image'), x: x + 60, y: 270, width: 112, height: 112, content: 'https://images.unsplash.com/a', aiSlot: 'image' },
+  { ...el(`n${x}`, 'heading'), x: x + 16, y: 404, width: 216, height: 32, content: name, styles: { fontSize: 22 } },
+  { ...el(`r${x}`, 'paragraph'), x: x + 16, y: 438, width: 216, height: 24, content: role, styles: { fontSize: 15 } },
+  { ...el(`b${x}`, 'paragraph'), x: x + 24, y: 468, width: 200, height: 50, content: bio, styles: { fontSize: 15 } },
+  ...extra,
+];
+
+test('team cards become points with a title, role and text, and no shared photo slot', () => {
+  const out = autoSlots([
+    ...card(900, 'سامر', 'مدير', 'يتابع كل مشروع من أول فكرة حتى التسليم'),
+    ...card(600, 'ليلى', 'تصميم', 'تحوّل الأفكار إلى شكل يُحَس به ويُفهم'),
+    ...card(300, 'أحمد', 'جودة', 'لا يسلّم شيئاً قبل أن يجربه بنفسه مرتين'),
+  ] as any[]);
+  const slots = out.map((e: any) => e.aiSlot).filter(Boolean).sort();
+  assert.deepEqual(slots, ['points.0.role', 'points.0.text', 'points.0.title', 'points.1.role', 'points.1.text', 'points.1.title', 'points.2.role', 'points.2.text', 'points.2.title']);
+  assert.equal(out.find((e: any) => e.id === 'n900')?.aiSlot, 'points.0.title');
+});
+
+test('the builder\'s own names for price cards and the send button are accepted', () => {
+  for (const n of ['packages.0.features.2', 'groups.1.name', 'groups.0.rows.3.price', 'send']) assert.ok(isSlotName(n), n);
+  assert.equal(isSlotName('groups.0.rows.x'), false);
 });

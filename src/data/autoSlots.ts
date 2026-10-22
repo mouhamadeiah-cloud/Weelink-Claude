@@ -18,12 +18,14 @@ export interface SlotEl {
   aiSlotAuto?: boolean;
 }
 
+const LIST_CAP = 8;
 const TEXT_TYPES = ['heading', 'paragraph', 'badge'];
 const plain = (html: unknown) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 const fontOf = (e: SlotEl) => Number(e.styles?.fontSize) || 16;
 const PRICE = /[\d٠-٩].*(\$|€|£|ل\.?\s?س|ر\.?\s?س|د\.?\s?إ|دينار|ريال|درهم|ليرة|SYP|USD|EUR)|(\$|€|£)\s?[\d٠-٩]/;
 const PHONE = /^\+?[\d٠-٩][\d٠-٩\s\-()]{6,}$/;
-const NUMBER = /^[+\-~]?[\d٠-٩][\d٠-٩.,٫٬]*\s*[%+kKmMxX×]?\+?$/;
+const NUMBER = /^[+\-~]?[\d٠-٩][\d٠-٩.,٫٬]*\s*[%٪+kKmMxX×]?\+?$/;
+const BARE_PRICE = /^[\d٠-٩][\d٠-٩.,٫٬\s]*$/;
 // Reading order of a right-to-left page: top to bottom, and in a row from the right.
 const reading = (a: SlotEl, b: SlotEl) => (Math.abs(a.y - b.y) > 40 ? a.y - b.y : b.x - a.x);
 const overlapX = (a: SlotEl, b: SlotEl) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) / Math.max(1, Math.min(a.width, b.width));
@@ -47,6 +49,7 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
     return true;
   };
   const free = (e: T) => !e.aiSlot && !marks.has(e);
+  const strip = new Set<T>();
   const bottom = Math.max(720, ...els.map((e) => e.y + e.height));
 
   // What Weelink fills from the owner's card.
@@ -66,6 +69,56 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
   }
 
   const texts = els.filter((e) => TEXT_TYPES.includes(e.type) && !e.isGroupContainer && plain(e.content).length > 0 && free(e));
+
+  // Cards (a group box with its texts inside): a set of the same size is one list, each card one item, all its parts named together.
+  const inside = (c: SlotEl, e: SlotEl) => e !== c && e.x >= c.x - 2 && e.y >= c.y - 2 && e.x + e.width <= c.x + c.width + 2 && e.y + e.height <= c.y + c.height + 2;
+  const boxes = els.filter((e) => e.isGroupContainer && e.width >= 120 && e.height >= 80 && texts.some((t) => inside(e, t)));
+  const boxSets: T[][] = [];
+  for (const b of boxes) {
+    const set = boxSets.find((m) => Math.abs(m[0].width - b.width) <= 0.12 * b.width && Math.abs(m[0].height - b.height) <= 0.12 * b.height);
+    if (set) set.push(b);
+    else boxSets.push([b]);
+  }
+  // Each set of cards is one list, by what its cards hold: figures (facts), a price and its features (packages) or a title with its words (points).
+  const next: Record<string, number> = { facts: 0, packages: 0, points: 0 };
+  for (const cardSet of boxSets.filter((m) => m.length >= 2 && m.length <= LIST_CAP).sort((a, b) => b.length - a.length)) {
+    const cardTexts = (c: T) => texts.filter((t) => free(t) && inside(c, t) && t.type !== 'badge').sort((a, b) => a.y - b.y || b.x - a.x);
+    const all = cardSet.map(cardTexts);
+    if (all.some((ts) => !ts.length)) continue;
+    const figure = (t: T) => NUMBER.test(plain(t.content)) && plain(t.content).length <= 8;
+    const priceOf = (ts: T[]) => ts.find((t) => plain(t.content).length <= 24 && (BARE_PRICE.test(plain(t.content)) || PRICE.test(plain(t.content))));
+    const kind = all.every((ts) => ts.length <= 2 && figure(ts[0])) ? 'facts' : all.every((ts) => ts.length >= 3 && priceOf(ts)) ? 'packages' : 'points';
+    [...cardSet.keys()].sort((x, y) => reading(cardSet[x], cardSet[y])).forEach((ci) => {
+      const c = cardSet[ci];
+      const ts = all[ci];
+      const i = next[kind]++;
+      if (kind === 'facts') {
+        take(ts[0], `facts.${i}.number`);
+        if (ts[1]) take(ts[1], `facts.${i}.label`);
+      } else if (kind === 'packages') {
+        const price = priceOf(ts)!;
+        const name = ts.find((t) => t !== price && t.y < price.y);
+        if (name) take(name, `packages.${i}.name`);
+        take(price, `packages.${i}.price`);
+        let rest = ts.filter((t) => t.y > price.y);
+        if (rest[0] && fontOf(rest[0]) < fontOf(price) && plain(rest[0].content).length <= 30) {
+          take(rest[0], `packages.${i}.unit`);
+          rest = rest.slice(1);
+        }
+        rest.slice(0, 6).forEach((t, k) => take(t, `packages.${i}.features.${k}`));
+      } else {
+        const title = ts.find((t) => t.type === 'heading') || ts[0];
+        take(title, `points.${i}.title`);
+        const paras = ts.filter((t) => t !== title && t.y > title.y);
+        const bio = [...paras].sort((a, b) => plain(b.content).length - plain(a.content).length)[0];
+        const role = paras.find((t) => t !== bio && plain(t.content).length <= 40);
+        if (bio) take(bio, `points.${i}.text`);
+        if (role && bio) take(role, `points.${i}.role`);
+        // Each card keeps its own picture; one `image` slot on several cards would paint them all the same.
+        for (const im of els.filter((x) => x.type === 'image' && x.aiSlot === 'image' && inside(c, x))) strip.add(im);
+      }
+    });
+  }
 
   // A price list: each price with its name beside it (and a line of description under the name).
   const prices = texts.filter((e) => free(e) && plain(e.content).length <= 24 && PRICE.test(plain(e.content))).sort(reading);
@@ -111,7 +164,7 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
   if (cards) {
     cards.sort(reading).forEach((t, i) => {
       if (!take(t, `points.${i}.title`)) return;
-      const body = texts.find((p) => free(p) && p.type === 'paragraph' && p.y >= t.y + t.height - 10 && p.y - (t.y + t.height) < 160 && overlapX(t, p) > 0.4 && fontOf(p) <= fontOf(t));
+      const body = texts.find((p) => free(p) && !cards.includes(p) && !cards.some((o) => o !== t && o.y > t.y && o.y < p.y) && p.type === 'paragraph' && p.y >= t.y + t.height - 10 && p.y - (t.y + t.height) < 60 && overlapX(t, p) > 0.4 && fontOf(p) <= fontOf(t));
       if (body) take(body, `points.${i}.text`);
     });
   }
@@ -119,7 +172,7 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
   // The slide's own words.
   const left = texts.filter(free);
   const byBig = [...left].sort((a, b) => fontOf(b) - fontOf(a) || (a.type === 'heading' ? -1 : 1) - (b.type === 'heading' ? -1 : 1) || a.y - b.y);
-  const title = byBig.find((e) => plain(e.content).length >= 2 && (e.type === 'heading' || fontOf(e) >= 28));
+  const title = byBig.find((e) => plain(e.content).length >= 2 && !NUMBER.test(plain(e.content)) && (e.type === 'heading' || fontOf(e) >= 28));
   if (title) take(title, 'title');
   const above = title && left.filter((e) => free(e) && e !== title && e.y + e.height <= title.y + 12 && fontOf(e) < fontOf(title) && plain(e.content).length <= 50).sort((a, b) => b.y - a.y)[0];
   if (above) take(above, 'eyebrow');
@@ -147,5 +200,18 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
     if (main) take(main, 'image');
   }
 
-  return els.map((e) => (marks.has(e) ? { ...e, aiSlot: marks.get(e), aiSlotAuto: true } : e));
+  // One picture slot only: when several pictures were marked by hand, the biggest keeps it.
+  const pics = els.filter((e) => e.aiSlot === 'image' && !strip.has(e));
+  if (pics.length > 1) {
+    const big = [...pics].sort((a, b) => b.width * b.height - a.width * a.height)[0];
+    for (const e of pics) if (e !== big) strip.add(e);
+  }
+  return els.map((e) => {
+    if (marks.has(e)) return { ...e, aiSlot: marks.get(e), aiSlotAuto: true };
+    if (strip.has(e)) {
+      const { aiSlot: _a, ...rest } = e;
+      return rest as T;
+    }
+    return e;
+  });
 };

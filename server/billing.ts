@@ -33,7 +33,7 @@ import { isFirstOfKind, isProjectKey, kindOf, restaurantIdOf } from '../src/util
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Db = any;
-type Auth = { getUser: (uid: string) => Promise<{ email?: string; displayName?: string; metadata?: { creationTime?: string } }> };
+type Auth = { getUser: (uid: string) => Promise<{ email?: string; displayName?: string; metadata?: { creationTime?: string } }>; deleteUser: (uid: string) => Promise<void> };
 
 export const DAY = 86400000;
 export const UNPAID_KEEP_DAYS = 60;
@@ -454,8 +454,8 @@ export const wipeAccount = async (db: Db, uid: string, keysIn?: string[]) => {
 };
 
 /**
- * The team deletes a customer (Eyad, 17 Oct): all their pages and everything about them go, but the Firebase
- * sign-in stays, since they may still be a customer of other pages. Their payments stay for the books, and a
+ * The team deletes a customer (Eyad, 17 Oct; 22 Oct: the sign-in goes too): all their pages and everything about
+ * them go, and so does the Firebase user. Their payments stay for the books, and a
  * card (name, phone, email, sign-up and end dates) is kept in platform_deleted for «الزبائن المحذوفين».
  */
 export const deleteCustomer = async (db: Db, auth: Auth, uid: string, by: string, reasonIn: unknown) => {
@@ -486,6 +486,7 @@ export const deleteCustomer = async (db: Db, auth: Auth, uid: string, by: string
   const sub = db.collection('platform_subscribers').doc(uid);
   await sub.set({ deletedAt: now, subscription: FieldValue.delete() }, { merge: true });
   await sub.collection('events').doc().set({ at: now, admin: by, type: 'deleted', text: `حُذف الزبون وصفحاته · ${reason}` });
+  await auth.deleteUser(uid);
   return { card };
 };
 

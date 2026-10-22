@@ -684,6 +684,9 @@ export class Auth {
     const signature = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', await serviceKey(this.app), new TextEncoder().encode(unsigned)));
     return `${unsigned}.${b64url(signature)}`;
   }
+  async deleteUser(uid: string) {
+    await call(this.app, `${this.base}/accounts:delete`, { body: { localId: uid } });
+  }
   async revokeRefreshTokens(uid: string) {
     await call(this.app, `${this.base}/accounts:update`, { body: { localId: uid, validSince: String(Math.floor(Date.now() / 1000)) } });
   }

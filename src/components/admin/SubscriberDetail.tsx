@@ -388,7 +388,7 @@ export const SubscriberDetail: React.FC<{ uid: string; can: string[]; onClose: (
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 rounded-ctl border border-danger/40 bg-bg p-3">
-                  <p>بتنحذف كل مشاريعه وصفحاته وبياناته من Firebase وما بترجع. حساب الدخول بيضل لأنه ممكن يكون زبون لصفحات تانية، ودفعاته بتضل للحسابات، وبتنحفظ بطاقته بـ«الزبائن المحذوفين».</p>
+                  <p>بتنحذف كل مشاريعه وصفحاته وبياناته وحساب دخوله من Firebase وما بترجع. دفعاته بتضل للحسابات، وبتنحفظ بطاقته بـ«الزبائن المحذوفين».</p>
                   <input value={del.reason} onChange={(e) => setDel({ ...del, reason: e.target.value })} placeholder="السبب (مطلوب)" className={inputCls} />
                   <input value={del.word} onChange={(e) => setDel({ ...del, word: e.target.value })} placeholder="للتأكيد اكتب: احذف" className={inputCls} />
                   <div className="flex gap-2">

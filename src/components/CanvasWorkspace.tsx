@@ -2924,6 +2924,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               onAddSlideBelow && { label: 'إضافة شريحة تحت هذه الشريحة', icon: <Plus size={14} />, run: () => onAddSlideBelow(slide.id) },
               onDeleteSlide && { label: 'حذف الشريحة', icon: <Trash2 size={13} />, run: () => setConfirmDeleteId(slide.id), off: slides.length <= 1 },
             ].filter(Boolean) as { label: string; icon: React.ReactNode; run: () => void; off?: boolean }[];
+            // A spacer is only a gap: just the delete button, no arrows, settings or add.
+            if (slide.spacer) quick.splice(0, quick.length, ...quick.filter((b) => b.label === 'حذف الشريحة'));
 
             return (
               <div key={slide.id} className="relative" style={cardInset ? { paddingInline: cardInset } : undefined}>

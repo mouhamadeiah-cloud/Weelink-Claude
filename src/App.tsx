@@ -3224,6 +3224,13 @@ export default function App() {
     insertAfterRef.current = { afterId: slideId, known: new Set(currentPage.slides.map((s) => s.id)) };
     openAdd('slide');
   };
+  // A narrow empty strip right under a slide (its height is dragged like a slide's).
+  const handleAddSpacerBelow = (slideId: string) => {
+    const spacer: Slide = { id: `slide-${Date.now()}`, name: 'فراغ', height: 40, spacer: true };
+    const slides = currentPage.slides.flatMap((s) => (s.id === slideId ? [s, spacer] : [s]));
+    setPages(pages.map((p) => (p.id === currentPage.id ? { ...p, slides } : p)));
+    setActiveSlideId(spacer.id);
+  };
   const handleSlideSettings = (slideId: string) => {
     handleSelectSlide(slideId);
     setSelectedElementId(null);
@@ -4859,6 +4866,10 @@ export default function App() {
           onMoveSlide={handleMoveSlide}
           onSlideSettings={handleSlideSettings}
           onAddSlideBelow={handleAddSlideBelow}
+          onAddSpacerBelow={handleAddSpacerBelow}
+          onDeleteSlide={handleDeleteSlide}
+          cardMode={currentPage.cardMode}
+          pageBackground={currentPage.pageBackground}
           activeTableCell={activeTableCell}
           onSelectTableCell={setActiveTableCell}
           navbar={currentPage.navbar}

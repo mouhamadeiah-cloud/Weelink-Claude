@@ -198,6 +198,9 @@ const BUILD_KIND_PROJECT: Record<string, string> = { free: 'page', restaurant: '
 const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/.test(p);
 const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
+// The number of builds per package is not held to for now (Eyad, 23 Oct): builds are still counted, set true to enforce it again.
+const BUILD_LIMIT_ENFORCED = false;
+
 type Allowance = { ref: any; day: string; limit: number; perDay: boolean; over: boolean; gallery: number } | null;
 
 // null = no limit (no database, paying off, a test account); else whether it is used up, and what to count after a build.
@@ -648,7 +651,7 @@ export default {
 
     const project = isProjectKey(body?.project) ? body.project : BUILD_KIND_PROJECT[kind] || 'page';
     const allowance = await buildAllowance(meterDb(), uid, project);
-    if (allowance?.over) return json({ error: 'build_limit', limit: allowance.limit, perDay: allowance.perDay }, 429);
+    if (BUILD_LIMIT_ENFORCED && allowance?.over) return json({ error: 'build_limit', limit: allowance.limit, perDay: allowance.perDay }, 429);
     // The package's gallery is the most photos the plan may use (only once paying is switched on).
     if (allowance) assets.gallery = Math.min(assets.gallery, allowance.gallery);
     const meter = await meterOpen(uid);

@@ -1750,7 +1750,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                           />
                           <span className="text-xs text-neutral-600">لون خلفية الصفحة</span>
                         </div>
-                        <p className="text-[11px] text-neutral-500 leading-relaxed">الحواف تتدور والإطار يظهر بين الشرائح، وإذا لون الشريحة نفس لون الخلفية بتبدو متصلة.</p>
+                        <p className="text-[11px] text-neutral-500 leading-relaxed">الشرائح بتنزل بهوامش من الجانبين وبحواف مدورة، وإذا لون الشريحة نفس لون الخلفية بتبدو متصلة.</p>
                       </>
                     )}
                   </div>

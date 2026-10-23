@@ -1176,6 +1176,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   const baseWidth = previewMode === 'mobile' ? (isPublicSite ? MOBILE_CANVAS_WIDTH : 380) : (previewMode === 'tablet' ? 768 : 1280);
   const pageWidth = previewMode === 'mobile' ? MOBILE_CANVAS_WIDTH : baseWidth;
+  // Card mode: the page background shows on both sides of the slides. The whole canvas is scaled to
+  // the slide width plus these margins, so the slides and everything in them stay as designed.
+  const cardInset = cardMode ? (previewMode === 'mobile' ? 12 : 20) : 0;
+  const scaleBase = baseWidth + cardInset * 2;
 
   // Calculate dynamic scaling factor to fit workspace
   // The full preview and the published site (desktop) fill the window's width exactly as the page
@@ -1185,30 +1189,30 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   if (isFluidDesktop) {
     // Never enlarged: on a wide screen the 1280 page keeps its real size (like the Weelink site) and
     // the sides are filled by the bleed below.
-    scaleFactor = Math.min(1, workspaceWidth / baseWidth);
+    scaleFactor = Math.min(1, workspaceWidth / scaleBase);
   } else if (isPublicSite) {
-    scaleFactor = workspaceWidth / baseWidth;
+    scaleFactor = workspaceWidth / scaleBase;
   } else if (previewMode === 'mobile') {
     if (workspaceWidth < 420) {
-      scaleFactor = (workspaceWidth - 32) / 380;
+      scaleFactor = (workspaceWidth - 32) / (380 + cardInset * 2);
     }
   } else if (previewMode === 'tablet') {
     if (workspaceWidth < 810) {
-      scaleFactor = (workspaceWidth - 32) / 768;
+      scaleFactor = (workspaceWidth - 32) / (768 + cardInset * 2);
     }
   } else {
     // Desktop mode
     if (isPreviewActive) {
-      scaleFactor = Math.min(1, workspaceWidth / 1280);
+      scaleFactor = Math.min(1, workspaceWidth / scaleBase);
     } else {
-      scaleFactor = Math.min(1, (workspaceWidth - 48) / 1280);
+      scaleFactor = Math.min(1, (workspaceWidth - 48) / scaleBase);
     }
   }
   scaleFactor = Math.max(0.1, scaleFactor);
   localScaleRef.current = scaleFactor;
   // Extra unscaled width on each side of the 1280px page when the window is wider than it.
-  const bleed = isFluidDesktop ? Math.max(0, Math.floor((workspaceWidth / scaleFactor - baseWidth) / 2)) : 0;
-  const frameWidth = baseWidth + bleed * 2;
+  const bleed = isFluidDesktop ? Math.max(0, Math.floor((workspaceWidth / scaleFactor - scaleBase) / 2)) : 0;
+  const frameWidth = scaleBase + bleed * 2;
 
   // Dragging state
   const [isDragging, setIsDragging] = useState(false);
@@ -2515,7 +2519,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         ref={scalingWrapperRef}
         className="flex flex-col items-center justify-start relative transition-all duration-300 origin-top font-page"
         style={{
-          width: isPublicSite || (isPreviewActive && previewMode === 'desktop') ? '100%' : `${baseWidth * scaleFactor}px`,
+          width: isPublicSite || (isPreviewActive && previewMode === 'desktop') ? '100%' : `${scaleBase * scaleFactor}px`,
           height: `${totalScaledHeight}px`,
         }}
       >
@@ -2922,7 +2926,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             ].filter(Boolean) as { label: string; icon: React.ReactNode; run: () => void; off?: boolean }[];
 
             return (
-              <div key={slide.id} className="relative">
+              <div key={slide.id} className="relative" style={cardInset ? { paddingInline: cardInset } : undefined}>
               <div
                 id={`slide-container-${slide.id}`}
                 onClick={(e) => {

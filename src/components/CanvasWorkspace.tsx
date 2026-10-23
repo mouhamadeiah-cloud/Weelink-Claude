@@ -2301,13 +2301,26 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const navLeftPct = Math.min(Math.max(0, 100 - navBoxWidthPct), Math.max(0, navbar.posX ?? (isNavVertical || isNavIconOnly ? 100 - navBoxWidthPct : (100 - navBoxWidthPct) / 2)));
   // Zero-height holder: the navbar box sits in it at its position and floats over the slides; a strip
   // at the top of the screen is followed by a spacer as tall as itself, so the slides start below it.
+  // The editor's workspace pads the page (workspacePad): a pinned navbar sticks at the very top of the scrolling
+  // area, so its `top` includes that padding, otherwise it slid up by the padding when it pinned and the slides showed above it.
+  const navPadTop = workspacePad / 2;
+  const navPinned = !(navFlowHeight && !navbar.isSticky);
+  // Whatever is above a pinned top strip (the padding, the phone's notch) is covered, so no slide scrolls into view over it.
+  const navCoverHeight = navPinned && navFlowHeight > 0 ? navFloatTop + navPadTop : 0;
   const wrapNav = (nav: React.ReactNode) => (
     <>
+      {navCoverHeight > 0 && (
+        <div
+          className="shrink-0 self-stretch pointer-events-none"
+          style={{ position: 'sticky', top: 0, height: `${navCoverHeight}px`, marginTop: `${-navPadTop}px`, marginBottom: `${navPadTop - navCoverHeight}px`, background: '#ececf0', zIndex: 99990 }}
+          aria-hidden
+        />
+      )}
       <div
         className="shrink-0 self-stretch"
         style={{
-          position: navFlowHeight && !navbar.isSticky ? 'relative' : 'sticky',
-          top: `${navFloatTop}px`,
+          position: navPinned ? 'sticky' : 'relative',
+          top: `${navFloatTop + navPadTop}px`,
           height: 0,
           zIndex: 100000,
         }}
@@ -2507,7 +2520,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         {previewMode === 'mobile' && !isPublicSite && (
           <div
             className="w-full bg-[#1d1d1f] h-6 flex items-center justify-center relative shrink-0"
-            style={{ width: `${baseWidth}px`, transformOrigin: 'top center', transform: `scale(${scaleFactor})` }}
+            style={{ width: `${baseWidth}px`, transformOrigin: 'top center', transform: `scale(${scaleFactor})`, zIndex: 99995 }}
           >
             <div className="w-20 h-3.5 bg-black rounded-b-xl flex items-center justify-center">
               <div className="w-3 h-3 rounded-full bg-[#111] mr-1.5" />
@@ -2878,7 +2891,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           }}
         >
           {/* 2. Webpage Slides Container (الشرائح مساحات عمل حرة freegrid) */}
-          <div className="flex flex-col w-full divide-y divide-black/[0.06]">
+          <div className="flex flex-col w-full">
           {slides.map((slide, slideIndex) => {
             const slideElements = elements.filter(el => el.slideId === slide.id);
             const isSlideActive = slide.id === activeSlideId;

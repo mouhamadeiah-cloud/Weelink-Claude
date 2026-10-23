@@ -3803,13 +3803,16 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                               const view = lightboxFor(layoutElements, elem);
                               setLightboxState({ isOpen: true, items: view.items, activeIndex: view.activeIndex, title: '' });
                             } : undefined}
-                            className={`w-full h-full flex items-center justify-center overflow-hidden rounded-xl select-none relative ${
+                            className={`w-full h-full flex items-center justify-center overflow-hidden select-none relative ${
                               elem.lightboxGroup && (isPublicSite || isPreviewActive) ? 'cursor-zoom-in ' : ''
                             }${
-                              elem.styles.objectFit === 'contain' ? 'bg-transparent border-0' : 'bg-neutral-100 border border-black/[0.04]'
+                              // A picture fills the whole box: no frame line and no grey behind it (they showed as a thin white edge).
+                              elem.styles.objectFit === 'contain' || elem.imageUrl ? 'bg-transparent' : 'bg-neutral-100 border border-black/[0.04]'
                             }`}
                             style={{
-                              backgroundColor: elem.styles.backgroundColor || (elem.styles.objectFit === 'contain' ? 'transparent' : undefined)
+                              backgroundColor: elem.styles.backgroundColor || (elem.styles.objectFit === 'contain' ? 'transparent' : undefined),
+                              // The corners are the element's own (the frame around already clips to them); 12px only when none is set.
+                              borderRadius: elem.clipPath ? undefined : (elem.styles.borderRadius === undefined || elem.styles.borderRadius === 0 ? 12 : typeof elem.styles.borderRadius === 'string' ? elem.styles.borderRadius : `${elem.styles.borderRadius}px`),
                             }}
                           >
                             {elem.imageUrl ? (

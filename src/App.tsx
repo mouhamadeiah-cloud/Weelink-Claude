@@ -71,6 +71,7 @@ import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRe
 import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, restaurantSiteUrl, saveStaff, withoutStaff } from './components/restaurant/restaurantCloud';
 import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
+import type { FreeDesign } from './utils/freeDesign';
 import { Eye, FileText, FolderTree, LayoutTemplate, Loader2, MousePointer2, Plus, Redo2, Settings, SlidersHorizontal, Store, Undo2 } from 'lucide-react';
 import type { WeeAnswers } from './services/weeWriter';
 import { applyPageLook, inStartingLook } from './services/applyLook';
@@ -78,7 +79,7 @@ import { formatMoney } from './components/shop/adminUi';
 import { PageLookPicker, type LookSample } from './components/rightDrawer/PageLookPicker';
 import type { PageLook } from './data/pageLooks';
 import { tickedSections } from './data/optionalSections';
-import { KIND_OF_PROJECT, buildPageFromPlan, emptyMainPage, buildProfile, pageAssets, requestPagePlan } from './services/pageBuilder';
+import { KIND_OF_PROJECT, buildPageFromPlan, emptyMainPage, buildProfile, pageAssets, requestPagePlan, requestFreeTurn, applyFreeDesign } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
 import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
@@ -2233,6 +2234,40 @@ export default function App() {
     setSelectedElementId(null);
     return { ok: true, message: `بنى Wee AI ${built.sections} أقسام لصفحتك. عدّل أي شي بدك ياه، أو اكبس «رجّع صفحتي متل ما كانت».` };
   };
+  // «تصميم حر»: a chat in which Wee AI designs the page's slides itself. Every answer is laid on the page at once; the first one
+  // keeps the page as it was (the same «رجّع صفحتي» brings it back). The design and the talk are kept here for the next message.
+  const freeRef = useRef<{ design: FreeDesign | null; kept?: boolean; history: { role: 'user' | 'ai'; text: string }[]; uid: string; project: ProjectType } | null>(null);
+  const handleFreeTurn = async (given: WeeAnswers, message: string, reset = false) => {
+    if (designerModeRef.current) return { ok: false, message: DESIGNER_AI_NOTE };
+    const kind = KIND_OF_PROJECT[project];
+    const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
+    const siteName = page.navbar.brandName || PROJECT_KIND_LABEL[project];
+    if (!freeRef.current || reset || freeRef.current.uid !== activeUserUid || freeRef.current.project !== project) freeRef.current = { design: null, kept: reset ? freeRef.current?.kept : false, history: [], uid: activeUserUid, project };
+    const state = freeRef.current;
+    const answers = await hostAnswerImages(given);
+    const structure = pagesRef.current.find((p) => p.id === activePageId)?.slides.map((s) => s.name).filter(Boolean).slice(0, 12);
+    const result = await requestFreeTurn(kind, buildProfile(answers, siteName), { message, current: state.design, history: state.history, structure: state.design ? undefined : structure, project: projectKey });
+    if (!result.ok) return { ok: false, message: result.message };
+    const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
+    const built = await applyFreeDesign(result.design, { kind, answers, siteName, ...before });
+    if (!built.ok) return { ok: false, message: built.message };
+    // The page as it was before the first design is the one «رجّع صفحتي» brings back (a restart keeps that copy).
+    if (!state.kept) {
+      builtBackupRef.current = { ...before, uid: activeUserUid, project };
+      setHasBuildBackup(true);
+      state.kept = true;
+    }
+    state.design = result.design;
+    state.history = [...state.history, { role: 'user' as const, text: message }, { role: 'ai' as const, text: result.reply }].slice(-8);
+    setPages(built.pages);
+    setElements(built.elements);
+    setHistory([built.elements]);
+    setHistoryIndex(0);
+    setActivePageId(built.pageId);
+    setActiveSlideId(built.firstSlideId);
+    setSelectedElementId(null);
+    return { ok: true, message: result.reply || `صمم Wee AI ${built.sections} أقسام.` };
+  };
   // «ستايل الصفحة»: a look restyles every page of the site at once. Undo works on elements only,
   // so the site as it was before the last pick is kept for «رجّع الستايل اللي قبل».
   const lookBackupRef = useRef<{ pages: Page[]; elements: CanvasElement[]; uid: string; project: ProjectType } | null>(null);
@@ -2260,6 +2295,7 @@ export default function App() {
     loadSeqRef.current++;
     projectReadyRef.current = false;
     builtBackupRef.current = null;
+    freeRef.current = null;
     setHasBuildBackup(false);
     lookBackupRef.current = null;
     setHasLookBackup(false);
@@ -5035,6 +5071,7 @@ export default function App() {
         onCompleteChat={handleCompleteChat}
         onStepChange={handleStepChange}
         onBuildPage={handleBuildPage}
+        onFreeTurn={handleFreeTurn}
         galleryLimit={limits.gallery}
         onRestorePage={handleRestoreBuiltPage}
         onEditAnswers={openQuestions}

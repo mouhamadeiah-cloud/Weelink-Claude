@@ -29,6 +29,7 @@ import { modelOf } from '../src/data/pageModels.js';
 import { readModels } from '../server/pageModels.js';
 import { ON_REQUEST, clip, cleanText, numbersAreOwners, ownersNumbers } from '../server/aiText.js';
 import { autoSlots } from '../src/data/autoSlots.js';
+import { FREE_RULES, freeTurn, type FreeTurn } from '../server/freeDesign.js';
 import { buildFormPlan, mergePlans, type FormSection } from '../server/formBuild.js';
 import { galleryPool, pickSections, sectionsFor, type GallerySlideData, type Picked } from '../server/pagePicker.js';
 
@@ -648,6 +649,36 @@ export default {
     const profile = cleanProfile(body?.profile);
     const assets = cleanAssets(body?.assets);
     if (!profile['الوصف'] && !profile['التصنيف'] && !profile['الاختصاص']) return json({ error: 'no_profile' }, 400);
+
+    // «تصميم حر»: a chat in which the AI designs the slides itself. Open for the trial (no build count, no token ceiling), still metered.
+    if (body?.mode === 'free') {
+      const message = typeof body?.message === 'string' ? body.message.trim().slice(0, 800) : '';
+      if (!message) return json({ error: 'bad_request' }, 400);
+      const owners = ownersNumbers(profile);
+      const history: FreeTurn[] = (Array.isArray(body?.history) ? body.history : []).slice(-6).map((t: any) => ({ role: t?.role === 'ai' ? 'ai' : 'user', text: String(t?.text || '').slice(0, 400) }));
+      const started = Date.now();
+      const usage: Usage[] = [];
+      const meter = await meterOpen(uid);
+      try {
+        const ai = new GoogleGenAI({ apiKey });
+        const ask = (text: string, schema: object, system: string) => askGemini(ai, text, BUDGET_MS, usage, schema, system);
+        const result = await freeTurn({
+          ask, system: `${designer.constitution}\n\n${designer.appendix}\n\n${FREE_RULES}`, profile, icons: [...ICONS], message, history,
+          structure: Array.isArray(body?.structure) ? body.structure.filter((s: unknown): s is string => typeof s === 'string').slice(0, 14).map((s: string) => s.slice(0, 40)) : undefined,
+          current: body?.current && typeof body.current === 'object' ? (body.current as any) : null,
+          ctx: { icons: ICONS, figuresOk: (t) => !/[0-9٠-٩]/.test(t) || numbersAreOwners(t, owners) },
+        });
+        const tokens = sumUsage(usage);
+        console.log(`build-page: free turn in ${Date.now() - started} ms, tokens ${JSON.stringify(tokens)}`);
+        await meterClose(meter === 'empty' ? null : meter, 'build-page-free', MODEL, tokens, true, '', Date.now() - started);
+        return json({ ...result, usage: tokens });
+      } catch (err) {
+        const failure = err instanceof BuildFailure ? err : new BuildFailure('check', String((err as Error)?.message || '').slice(0, 200));
+        await meterClose(meter === 'empty' ? null : meter, 'build-page-free', MODEL, sumUsage(usage), false, failure.reason, Date.now() - started);
+        console.error('build-page free failed:', failure.reason, failure.detail);
+        return json({ error: 'ai_failed', reason: failure.reason, detail: failure.detail }, 502);
+      }
+    }
 
     const project = isProjectKey(body?.project) ? body.project : BUILD_KIND_PROJECT[kind] || 'page';
     const allowance = await buildAllowance(meterDb(), uid, project);

@@ -3,6 +3,7 @@
 // drawing of the slide at its real proportions on the 1280-wide canvas. Shop, showroom and menu
 // elements are the real store views filled with example data and stock photos, so the user sees
 // how the slide will look on the page before adding it.
+import { buildElementAnimation } from '../../utils/elementAnimation';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { getGlowShadowStyle } from '../../types';
@@ -85,6 +86,10 @@ const ANIM_DEFAULT = (anim: string) =>
 // The element's own animation, as the canvas plays it (hover animations are left out).
 const animationOf = (el: any): React.CSSProperties => {
   const anim = el.styles?.animation;
+  // A custom motion or several animations on one element are built the way the canvas builds them (its keyframes are made per element).
+  if (anim === 'custom' || el.styles?.animationLayers?.length) {
+    return buildElementAnimation(el.styles, { rotation: el.rotation, x: el.x, width: el.width, pageWidth: 1280, bleed: 0, phone: false, waits: false, scrub: false }).style as React.CSSProperties;
+  }
   if (!anim || anim === 'none' || el.styles?.animationTrigger === 'hover') return {};
   const loop = el.styles?.animationTrigger === 'loop';
   return {

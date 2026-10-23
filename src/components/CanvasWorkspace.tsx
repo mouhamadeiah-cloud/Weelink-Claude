@@ -39,6 +39,7 @@ import { NavbarStars, RatingsWidget } from './ratings/RatingsUI';
 import { ContactFormWidget } from './contact/ContactFormWidget';
 import { 
   Trash2, 
+  SeparatorHorizontal,
   Copy, 
   ExternalLink,
   Plus,
@@ -91,6 +92,11 @@ interface CanvasWorkspaceProps {
   onMoveSlide?: (slideId: string, direction: 'up' | 'down') => void;
   onSlideSettings?: (slideId: string) => void;
   onAddSlideBelow?: (slideId: string) => void;
+  onAddSpacerBelow?: (slideId: string) => void;
+  onDeleteSlide?: (slideId: string) => void;
+  // Slides as rounded cards on the page's own background colour.
+  cardMode?: boolean;
+  pageBackground?: string;
   activeTableCell?: { elementId: string; row: number; col: number } | null;
   onSelectTableCell?: (cell: { elementId: string; row: number; col: number } | null) => void;
   isNavbarSelected?: boolean;
@@ -853,6 +859,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onMoveSlide,
   onSlideSettings,
   onAddSlideBelow,
+  onAddSpacerBelow,
+  onDeleteSlide,
+  cardMode = false,
+  pageBackground,
   onUpdateSlideHeight,
   activeTableCell,
   onSelectTableCell,
@@ -1250,6 +1260,8 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   // Slide height resizing states
   const [resizingSlideId, setResizingSlideId] = useState<string | null>(null);
+  // The slide whose delete button was pressed; it goes only after the second, confirming press.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [slideResizeStartY, setSlideResizeStartY] = useState<number>(0);
   const [slideResizeStartHeight, setSlideResizeStartHeight] = useState<number>(0);
 
@@ -1259,7 +1271,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
     const handleMouseMove = (e: MouseEvent) => {
       const dy = (e.clientY - slideResizeStartY) / scaleFactor;
-      const newHeight = Math.max(200, Math.min(2000, Math.round(slideResizeStartHeight + dy)));
+      const newHeight = Math.max(slides.find((s) => s.id === resizingSlideId)?.spacer ? 8 : 200, Math.min(2000, Math.round(slideResizeStartHeight + dy)));
       if (onUpdateSlideHeight) {
         onUpdateSlideHeight(resizingSlideId, newHeight);
       }
@@ -1269,7 +1281,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       if (e.touches.length !== 1) return;
       const touch = e.touches[0];
       const dy = (touch.clientY - slideResizeStartY) / scaleFactor;
-      const newHeight = Math.max(200, Math.min(2000, Math.round(slideResizeStartHeight + dy)));
+      const newHeight = Math.max(slides.find((s) => s.id === resizingSlideId)?.spacer ? 8 : 200, Math.min(2000, Math.round(slideResizeStartHeight + dy)));
       if (onUpdateSlideHeight) {
         onUpdateSlideHeight(resizingSlideId, newHeight);
       }
@@ -2891,8 +2903,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           }}
         >
           {/* 2. Webpage Slides Container (الشرائح مساحات عمل حرة freegrid) */}
-          <div className="flex flex-col w-full">
-          {slides.map((slide, slideIndex) => {
+          <div className="flex flex-col w-full" style={cardMode ? { background: pageBackground || '#ececf0', gap: 14, paddingBlock: 14 } : undefined}>
+          {slides.map((rawSlide, slideIndex) => {
+            // Card mode: rounded corners by default (the curved dividers stay); a spacer is flat and takes the page colour.
+            const slide: Slide = cardMode
+              ? { ...rawSlide, borderRadius: rawSlide.borderRadius ?? (rawSlide.spacer ? 0 : 24) }
+              : rawSlide;
             const slideElements = elements.filter(el => el.slideId === slide.id);
             const isSlideActive = slide.id === activeSlideId;
 
@@ -2902,6 +2918,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
               onMoveSlide && { label: 'تنزيل الشريحة درجة', icon: <ChevronDown size={14} />, run: () => onMoveSlide(slide.id, 'down'), off: slideIndex === slides.length - 1 },
               onSlideSettings && { label: 'إعدادات الشريحة', icon: <Settings size={13} />, run: () => onSlideSettings(slide.id) },
               onAddSlideBelow && { label: 'إضافة شريحة تحت هذه الشريحة', icon: <Plus size={14} />, run: () => onAddSlideBelow(slide.id) },
+              onDeleteSlide && { label: 'حذف الشريحة', icon: <Trash2 size={13} />, run: () => setConfirmDeleteId(slide.id), off: slides.length <= 1 },
             ].filter(Boolean) as { label: string; icon: React.ReactNode; run: () => void; off?: boolean }[];
 
             return (
@@ -3016,10 +3033,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                   }
                 }}
                 className={`relative w-full bg-white transition-all overflow-hidden ${
-                  isPreviewActive ? '' : 'bg-freegrid-subtle'
+                  isPreviewActive || slide.spacer ? '' : 'bg-freegrid-subtle'
                 }`}
                 style={{
                   height: `${slide.height}px`,
+                  ...(slide.spacer ? { backgroundColor: pageBackground || '#ffffff' } : {}),
                   borderColor: slide.borderColor || 'transparent',
                   borderWidth: slide.borderWidth ? `${slide.borderWidth}px` : undefined,
                   borderRadius: slide.borderRadius ? `${slide.borderRadius}px` : undefined,
@@ -5096,6 +5114,32 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                       {b.icon}
                     </button>
                   ))}
+                  {confirmDeleteId === slide.id && (
+                    <div className="absolute top-0 left-full ml-1 w-40 rounded-xl bg-white border border-black/10 shadow-lg p-2.5 text-right z-[60]" dir="rtl">
+                      <div className="text-[11px] font-bold text-neutral-800 mb-2">حذف «{slide.name}» نهائياً؟</div>
+                      <div className="flex gap-1.5">
+                        <button type="button" onClick={() => { setConfirmDeleteId(null); onDeleteSlide?.(slide.id); }} className="flex-1 text-[11px] font-bold py-1 rounded-lg bg-red-500 text-white cursor-pointer">حذف</button>
+                        <button type="button" onClick={() => setConfirmDeleteId(null)} className="flex-1 text-[11px] font-bold py-1 rounded-lg bg-neutral-100 text-neutral-700 cursor-pointer">إلغاء</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {!isPreviewActive && onAddSpacerBelow && (
+                <div
+                  className="absolute bottom-0 left-full ml-1 flex flex-col"
+                  style={{ transform: `scale(${1 / (scaleFactor || 1)}) translateY(50%)`, transformOrigin: 'bottom left' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    title="إضافة فراغ بعد هذه الشريحة"
+                    aria-label="إضافة فراغ بعد هذه الشريحة"
+                    onClick={() => onAddSpacerBelow(slide.id)}
+                    className="w-6 h-6 flex items-center justify-center rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/70 transition-colors cursor-pointer"
+                  >
+                    <SeparatorHorizontal size={14} />
+                  </button>
                 </div>
               )}
               </div>

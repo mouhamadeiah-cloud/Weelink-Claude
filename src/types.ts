@@ -301,6 +301,8 @@ export interface Slide {
   dividerShape?: SlideDividerShape;
   // The ready design the slide came from (weeSlideTemplates, e.g. 'hero.cover'), for the AI page build.
   aiTemplate?: string;
+  // A narrow empty strip between slides (takes the page background colour); not part of an AI build.
+  spacer?: boolean;
   borderColor?: string;
   borderWidth?: number;
   borderRadius?: number;
@@ -406,6 +408,9 @@ export interface Page {
   aiLook?: string; // the look Wee AI chose when it built the page («اختاره Wee AI» in the picker)
   // A paid page got its «التقييمات» slide suggested once; removing it then keeps it removed.
   ratingsSuggested?: boolean;
+  // Slides sit as rounded cards on this background colour (cardMode); curved dividers are off then.
+  pageBackground?: string;
+  cardMode?: boolean;
 }
 
 export const getGlowShadowStyle = (

@@ -51,6 +51,8 @@ export const SiteView: React.FC<{
               allPages={view.pages}
               activePageId={page.id}
               navbar={page.navbar}
+              cardMode={page.cardMode}
+              pageBackground={page.pageBackground}
               onUpdateElementPosition={noop}
               onUpdateElementSize={noop}
               onUpdateElementContent={noop}

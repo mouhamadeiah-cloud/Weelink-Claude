@@ -1728,7 +1728,34 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                     )}
                   </div>
 
-                  {/* 3. How this slide meets the next one. The docked panel shows it in the slide's own card. */}
+                  {/* 3. Slides as rounded cards on a page background colour */}
+                  <div className="space-y-2 pt-2 border-t border-neutral-200">
+                    <label className="flex items-center justify-between gap-2 cursor-pointer">
+                      <span className="text-sm font-bold text-ink">الشرائح كبطاقات على خلفية الصفحة</span>
+                      <input
+                        type="checkbox"
+                        checked={!!currentPage.cardMode}
+                        onChange={(e) => onUpdatePage({ cardMode: e.target.checked, pageBackground: currentPage.pageBackground || '#ececf0' })}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                    </label>
+                    {currentPage.cardMode && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={currentPage.pageBackground || '#ececf0'}
+                            onChange={(e) => onUpdatePage({ pageBackground: e.target.value })}
+                            className="w-9 h-9 rounded-xl cursor-pointer border-0 bg-transparent shrink-0"
+                          />
+                          <span className="text-xs text-neutral-600">لون خلفية الصفحة</span>
+                        </div>
+                        <p className="text-[11px] text-neutral-500 leading-relaxed">الحواف تتدور والإطار يظهر بين الشرائح، وإذا لون الشريحة نفس لون الخلفية بتبدو متصلة.</p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* 4. How this slide meets the next one. The docked panel shows it in the slide's own card. */}
                   {!isDocked && renderSlideOverlap()}
 
                 </div>

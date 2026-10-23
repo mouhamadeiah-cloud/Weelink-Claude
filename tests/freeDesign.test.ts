@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanFreeDesign, freeToBuilt, patchFreeDesign, FREE_FONTS } from '../src/utils/freeDesign.ts';
 import { freeTurn, freePrompt, FREE_SCHEMA } from '../server/freeDesign.ts';
@@ -82,4 +82,27 @@ test('the same chat works for every kind of page and the schema/prompt carry the
   assert.ok((FREE_SCHEMA.properties.sections.items.properties.elements.items.properties.motion.enum as string[]).includes('slide-up'));
   const merged = patchFreeDesign({ look: { head: 'A', body: 'B' }, sections: [] }, { look: { head: 'C', body: 'D' }, sections: [] });
   assert.equal(merged.look.head, 'C');
+});
+
+test('the free design replaces the page slides, finds its photos once and links a button to the owner WhatsApp', async () => {
+  const { applyFreeDesign } = await import('../src/services/pageBuilder.ts');
+  const d = cleanFreeDesign(answer([hero()]), ctx);
+  const page: any = { id: 'p1', name: 'الرئيسية', slug: '/', slides: [{ id: 'old', name: 'x', height: 500, backgroundColor: '#fff' }], navbar: { brandName: 'x' } };
+  const old: any = { id: 'o1', slideId: 'old', type: 'heading', x: 0, y: 0, width: 10, height: 10, content: 'قديم', styles: {} };
+  const asked: string[] = [];
+  const answers: any = { contactInfo: { whatsapp: '0933123456' }, personalInfo: {} };
+  const r: any = await applyFreeDesign(d, { kind: 'free', answers, siteName: 'تجربة', pages: [page], elements: [old], activePageId: 'p1' }, async (q) => { asked.push(q); return '/p.jpg'; });
+  assert.ok(r.ok);
+  assert.deepEqual(asked, ['modern restaurant interior']);
+  assert.equal(r.pages[0].slides.length, 1);
+  assert.equal(r.pages[0].slides[0].backgroundImage, '/p.jpg');
+  assert.ok(!r.elements.some((e: any) => e.id === 'o1'));
+  const btn = r.elements.find((e: any) => e.type === 'button');
+  assert.equal(btn.contactType, 'whatsapp');
+});
+
+// Importing the builder starts Firebase's browser client, which keeps the process alive.
+after(async () => {
+  const { getApps, deleteApp } = await import('firebase/app');
+  await Promise.all(getApps().map((a) => deleteApp(a)));
 });

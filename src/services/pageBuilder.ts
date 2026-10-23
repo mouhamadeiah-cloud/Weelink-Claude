@@ -26,6 +26,7 @@ import type { ProjectType } from '../components/shop/shopTypes';
 import { deserializeElements } from '../utils/elementStorage';
 import { tickedSections } from '../data/optionalSections';
 import { GALLERY_MAX } from '../utils/planLimits';
+import { freeToBuilt, type FreeDesign } from '../utils/freeDesign';
 
 export type BuildKind = 'free' | 'restaurant' | 'shop' | 'cars';
 export const KIND_OF_PROJECT: Record<ProjectType, BuildKind> = { page: 'free', restaurant: 'restaurant', shop: 'shop', cars: 'cars' };
@@ -800,5 +801,65 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
     pageId: page.id,
     firstSlideId: built[0].slide.id,
     sections: built.length,
+  };
+};
+
+// ---------- «تصميم حر» ----------
+
+export type FreeTurnResult = { ok: true; reply: string; design: FreeDesign; changed: string[] } | { ok: false; message: string };
+
+/** One chat turn of the free design: the message (with the page so far) goes to the server, which answers with the whole design. */
+export const requestFreeTurn = async (
+  kind: BuildKind,
+  profile: Record<string, string>,
+  o: { message: string; current: FreeDesign | null; history: { role: 'user' | 'ai'; text: string }[]; structure?: string[]; project?: string },
+): Promise<FreeTurnResult> => {
+  const user = auth.currentUser;
+  if (!user) return { ok: false, message: 'سجّل الدخول أولاً حتى يصمم Wee AI صفحتك.' };
+  try {
+    const res = await fetch('/api/build-page', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify({ mode: 'free', kind, profile, project: o.project, message: o.message, current: o.current, history: o.history, structure: o.structure }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && Array.isArray(data.design?.sections)) {
+      if (data.usage) console.info('Wee AI free design tokens:', data.usage);
+      return { ok: true, reply: String(data.reply || ''), design: data.design, changed: Array.isArray(data.changed) ? data.changed : [] };
+    }
+    if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
+    if (data.error === 'no_profile') return { ok: false, message: 'اكتب وصف عملك أو اختر تصنيفه بالأسئلة أولاً.' };
+    if (res.status === 401) return { ok: false, message: 'انتهت جلسة الدخول. سجّل الدخول من جديد وجرّب مرة ثانية.' };
+    return { ok: false, message: failureMessage(res.status, data) };
+  } catch {
+    return { ok: false, message: 'ما في اتصال بالإنترنت أو الخادم ما رد. جرّب بعد شوي.' };
+  }
+};
+
+/** The free design laid on the page Wee AI builds on (as «ابن صفحتي»): that page's slides are replaced, the rest of the site stays. */
+export const applyFreeDesign = async (design: FreeDesign, input: { kind: BuildKind; answers: WeeAnswers; siteName: string; pages: Page[]; elements: CanvasElement[]; activePageId: string }, photo: (q: string) => Promise<string | null> = photoFinder()) => {
+  const { kind, answers, pages } = input;
+  const home = HOME_PAGE[kind];
+  const page = pages.find((p) => p.id === (home && pages.some((x) => x.id === home) ? home : input.activePageId)) || pages[0];
+  const stamp = Date.now().toString(36);
+  const ids = design.sections.map((sec) => `slide-ai-${stamp}-${sec.key}`);
+  const ctx = { facts: buildProfile(answers, input.siteName), slideIds: ids, pageIds: new Set(pages.map((p) => p.id)) } as unknown as Context;
+  const searches = new Map<string, string | null>();
+  const wanted = new Set<string>();
+  design.sections.forEach((sec) => {
+    if (sec.photo) wanted.add(sec.photo);
+    sec.elements.forEach((e) => e.photo && wanted.add(e.photo));
+  });
+  for (const q of wanted) searches.set(q, await photo(q));
+  const built = freeToBuilt(design, { idPrefix: `slide-ai-${stamp}`, photoUrl: (q) => searches.get(q) || undefined, linkFor: (l) => resolveLink(l, ctx) as any });
+  if (!built.slides.length) return { ok: false as const, message: 'ما قدر Wee AI يصمم الصفحة هالمرة. جرّب مرة ثانية.' };
+  const old = new Set(page.slides.map((sl) => sl.id));
+  return {
+    ok: true as const,
+    pages: pages.map((p) => (p.id === page.id ? { ...p, slides: built.slides } : p)),
+    elements: [...input.elements.filter((e) => !old.has(e.slideId)), ...built.elements],
+    pageId: page.id,
+    firstSlideId: built.slides[0].id,
+    sections: built.slides.length,
   };
 };

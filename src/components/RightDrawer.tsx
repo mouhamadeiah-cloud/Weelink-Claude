@@ -186,6 +186,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onCompleteChat,
   onStepChange,
   onBuildPage,
+  onFreeTurn,
   galleryLimit = Number.POSITIVE_INFINITY,
   onRestorePage,
   onEditAnswers,
@@ -6202,6 +6203,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           onToggleCollapse={toggleWeeAiChat}
           onStepChange={onStepChange}
           onBuildPage={onBuildPage}
+          onFreeTurn={onFreeTurn}
           onRestorePage={onRestorePage}
           onEditAnswers={onEditAnswers}
           restoreAvailable={restoreAvailable}

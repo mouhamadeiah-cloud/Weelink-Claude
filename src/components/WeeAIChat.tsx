@@ -32,6 +32,8 @@ interface WeeAIChatProps {
   onStepChange?: (stepNum: number) => void;
   // «ابن صفحتي»: Wee AI builds the page's slides from the answers; the old page can be brought back.
   onBuildPage?: (answers: any) => Promise<{ ok: boolean; message: string }>;
+  // «تصميم حر»: a chat in which Wee AI designs the slides itself; each answer is laid on the page.
+  onFreeTurn?: (answers: any, message: string, reset?: boolean) => Promise<{ ok: boolean; message: string }>;
   onRestorePage?: () => { ok: boolean; message: string };
   // The kind of page being built: its work step offers the store or restaurant categories instead
   // of the occupations. Saved with the answers.
@@ -182,6 +184,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   onToggleCollapse: externalOnToggleCollapse,
   onStepChange,
   onBuildPage,
+  onFreeTurn,
   onRestorePage,
   pageKind,
   flavor,
@@ -195,6 +198,11 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 }) => {
   // Answers finished once stay finished while the owner walks through them again.
   const finishedRef = useRef(false);
+  const [freeOpen, setFreeOpen] = useState(false);
+  const [freeText, setFreeText] = useState('');
+  const [freeBusy, setFreeBusy] = useState(false);
+  const [freeLog, setFreeLog] = useState<{ role: 'user' | 'ai'; text: string; ok?: boolean }[]>([]);
+  const freeFresh = useRef(false);
   const isGuest = userId === WEE_GUEST_ID;
   // The words of the questions: the flavour's when there is one.
   // The flavour of the answers: the one asked for on the start page, else (in the editor) the one saved with them.
@@ -1619,6 +1627,60 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           </span>
           <span>{isBuilding ? 'Wee AI عم يبني صفحتك…' : 'ابن صفحتي'}</span>
         </button>
+        {onFreeTurn && step >= 13 && (
+          <div className="rounded-xl border border-violet-200 bg-white overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setFreeOpen((v) => !v)}
+              className="w-full py-2.5 px-3 text-xs font-bold text-violet-700 flex items-center justify-between cursor-pointer"
+            >
+              <span>تصميم حر (محادثة مع Wee AI)</span>
+              <span aria-hidden>{freeOpen ? '▾' : '◂'}</span>
+            </button>
+            {freeOpen && (
+              <div className="border-t border-violet-100 p-2 space-y-2">
+                <div className="max-h-48 overflow-y-auto space-y-1.5 text-xs leading-relaxed">
+                  {freeLog.length === 0 && <p className="text-neutral-400">اكتب شو بدك تكون صفحتك (الجو، الألوان، الأقسام، الحركات) وWee AI بيصممها بشرائح وعناصر المنصة. بعدها عدّل بالمحادثة: «خلي القسم الأول أغمق»، «زيد قسم آراء».</p>}
+                  {freeLog.map((m, i) => (
+                    <p key={i} className={`rounded-lg px-2 py-1 font-semibold ${m.role === 'user' ? 'bg-violet-50 text-violet-900' : m.ok === false ? 'bg-rose-50 text-rose-700' : 'bg-neutral-100 text-neutral-700'}`}>{m.text}</p>
+                  ))}
+                  {freeBusy && <p className="text-violet-600 font-semibold">Wee AI عم يصمم…</p>}
+                </div>
+                <form
+                  className="flex gap-1.5"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const text = freeText.trim();
+                    if (!text || freeBusy) return;
+                    setFreeText('');
+                    setFreeLog((l) => [...l, { role: 'user', text }]);
+                    setFreeBusy(true);
+                    try {
+                      const note = await onFreeTurn({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(ownFlavor ? { flavor: ownFlavor } : {}) }, text, freeFresh.current);
+                      freeFresh.current = false;
+                      setFreeLog((l) => [...l, { role: 'ai', text: note.message, ok: note.ok }]);
+                      if (note.ok) setCanRestore(true);
+                    } finally {
+                      setFreeBusy(false);
+                    }
+                  }}
+                >
+                  <input
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value)}
+                    disabled={freeBusy}
+                    placeholder="اكتب طلبك لـ Wee AI…"
+                    className="flex-1 min-w-0 rounded-lg border border-neutral-200 px-2 py-1.5 text-xs"
+                  />
+                  <button type="submit" disabled={freeBusy || !freeText.trim()} className="px-3 rounded-lg bg-violet-600 text-white text-xs font-bold disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed">أرسل</button>
+                </form>
+                {freeLog.length > 0 && !freeBusy && (
+                  <button type="button" onClick={() => { freeFresh.current = true; setFreeLog([]); }} className="text-xs font-semibold text-neutral-500 underline underline-offset-2 cursor-pointer">ابدأ تصميم جديد من الصفر</button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {(canRestore || restoreAvailable) && onRestorePage && !isBuilding && (
           <button
             type="button"

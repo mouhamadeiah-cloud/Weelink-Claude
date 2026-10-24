@@ -2812,16 +2812,6 @@ export default function App() {
     pushToHistory(updated);
   };
 
-  // The owner finished with a custom motion: the element is locked, so it stays where its first state is. Unlocked by
-  // hand it stays unlocked until the motion is finished again (Eyad, 21 Oct).
-  const lockAfterMotion = (id: string) => {
-    const els = elementsRef.current;
-    if (els.some((el) => el.id === id && el.styles.animation === 'custom' && !el.isLocked)) pushToHistory(els.map((el) => (el.id === id ? { ...el, isLocked: true } : el)));
-  };
-  // The panel calls it from an effect that may be a render old: the latest one does it.
-  const lockAfterMotionRef = useRef(lockAfterMotion);
-  lockAfterMotionRef.current = lockAfterMotion;
-
   const handleUpdateElementPosition = (id: string, x: number, y: number) => {
     const target = elements.find(el => el.id === id);
     if (!target) return;
@@ -5012,7 +5002,6 @@ export default function App() {
       <RightDrawer
         key={activeUserUid}
         onMotionPreview={(id, which) => setMotionPreview((m) => (which ? { id, which } : m && m.id === id ? null : m))}
-        onMotionFinish={(id) => lockAfterMotionRef.current(id)}
         previewMode={previewMode}
         isShopProject={project === 'shop'}
         isCarProject={project === 'cars'}

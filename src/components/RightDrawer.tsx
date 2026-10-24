@@ -163,7 +163,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onUpdateElement,
   previewMode,
   onMotionPreview,
-  onMotionFinish,
   onDuplicateElement,
   onDeleteElement,
   onToggleLock,
@@ -3833,7 +3832,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               {activeSection === 'animation' && !isDocked && selectedElement && (selectedElement.type === 'menuList' || selectedElement.type === 'menuCart') && (
                 <RestaurantElementSettings element={selectedElement} onUpdateElement={onUpdateElement} />
               )}
-              {activeSection === 'animation' && <AnimationSection styles={styles} onUpdateElementStyles={onUpdateElementStyles} element={selectedElement ? { id: selectedElement.id, x: previewMode === 'mobile' && selectedElement.mobile ? selectedElement.mobile.x : selectedElement.x, y: previewMode === 'mobile' && selectedElement.mobile ? selectedElement.mobile.y : selectedElement.y } : undefined} onPlace={(x, y) => onUpdateElement(previewMode === 'mobile' && selectedElement?.mobile ? { mobile: { ...selectedElement.mobile, x, y } } : { x, y })} phone={previewMode === 'mobile'} rotation={selectedElement?.rotation} locked={selectedElement?.isLocked} onPreview={onMotionPreview} onFinish={onMotionFinish} onLock={(locked) => onUpdateElement({ isLocked: locked })} />}
+              {activeSection === 'animation' && <AnimationSection styles={styles} onUpdateElementStyles={onUpdateElementStyles} element={selectedElement ? (() => { const m = previewMode === 'mobile' && selectedElement.mobile ? selectedElement.mobile : selectedElement; return { id: selectedElement.id, x: m.x, y: m.y, width: m.width, height: m.height }; })() : undefined} phone={previewMode === 'mobile'} rotation={selectedElement?.rotation} locked={selectedElement?.isLocked} onPreview={onMotionPreview} />}
 
               {/* TOOL: Add Elements (+) - Step 1: Squares Grid (الصورة رقم ١) | Step 2: Detail with Subcategories Bar (الصورة رقم ٢) */}
               {addPanelOpen && introVideo?.id === 'add' && (

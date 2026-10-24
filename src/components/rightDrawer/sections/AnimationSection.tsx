@@ -1,69 +1,107 @@
 // Moved verbatim from RightDrawer.tsx (was an inline IIFE in the drawer body).
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Lock, Unlock } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { CanvasElement } from '../../../types';
 import { RightDrawerProps } from '../types';
-import { MotionState, realMotionState, RELATIVE_MOTION_STATE, resolveMotion, shiftBetween } from '../../../utils/customMotion';
+import { MotionState, realMotionState, RELATIVE_MOTION_STATE, resolveMotion } from '../../../utils/customMotion';
 
 interface AnimationSectionProps {
   styles: CanvasElement['styles'];
   onUpdateElementStyles: RightDrawerProps['onUpdateElementStyles'];
-  // For «set by dragging» of a custom motion: the element as it stands now and the way to move it.
-  element?: { id: string; x: number; y: number };
-  onPlace?: (x: number, y: number) => void;
-  // The phone view: a phone plays a motion's shift at half size, so a shift dragged there is stored doubled.
+  // The element as it stands (phone layout in the phone view): a custom motion's start is taken from it, and its end is
+  // the element as the owner leaves it on the page.
+  element?: { id: string; x: number; y: number; width: number; height: number };
+  // The phone view: a phone plays a motion's shift at half size, so a shift is stored doubled.
   phone?: boolean;
   // An extra animation of the element: no intro, and no tickers.
   extra?: boolean;
-  // The element's own turn and lock: a custom motion's first state is the element as it is (utils/customMotion).
+  // The element's own turn and lock: a custom motion's end is the element as it is (utils/customMotion).
   rotation?: number;
   locked?: boolean;
-  // The editor shows the state being edited («البداية» / «النهاية») on the element; null when the panel lets go of it.
+  // The editor shows the state being edited on the element; null when the panel lets go of it.
   onPreview?: (id: string, which: 'from' | 'to' | null) => void;
-  // The owner finished with the custom motion (left the panel or chose another element): the element is locked.
-  onFinish?: (id: string) => void;
-  // «تثبيت وقفل» / «فك القفل» of the element, from the panel.
-  onLock?: (locked: boolean) => void;
 }
+
+// Where a custom motion starts, as the owner sees it on the page: the centre, the width, the opacity and the turn.
+interface MotionStart { id: string; cx: number; cy: number; w: number; opacity: number; rotate: number }
 
 const AnimationEditor = ({
   styles,
   onUpdateElementStyles,
   element,
-  onPlace,
   phone = false,
   extra = false,
   rotation = 0,
   locked = false,
   onPreview,
-  onFinish,
-  onLock,
 }: AnimationSectionProps) => {
-  // The state being set by dragging: the element is dragged on the canvas, then dropped here, and goes back to its place.
-  const [dragging, setDragging] = useState<{ id: string; x: number; y: number } | null>(null);
-  useEffect(() => {
-    if (dragging && dragging.id !== element?.id) setDragging(null);
-  }, [dragging, element?.id]);
   const currentAnimation = styles.animation || 'none';
   const isCustom = currentAnimation === 'custom';
-  // One set of sliders for the state picked on top; the element on the page shows that state (Eyad, 21 Oct).
+  // Only the extra animations still set their states with sliders (they lie on top of the first one, so they stay relative).
   const [tab, setTab] = useState<'from' | 'to'>('from');
-  const [collapsed, setCollapsed] = useState(false);
   const real = extra ? RELATIVE_MOTION_STATE : realMotionState(styles, rotation);
   const resolved = resolveMotion(styles, real);
   const elementId = element?.id;
+  const shrink = phone ? 2 : 1;
+
+  // The owner sets the end of the first custom motion on the page itself (Eyad, 24 Oct): the start is taken from the
+  // element when the editing begins and stays; the owner moves, resizes, fades or turns the element; «تثبيت وإغلاق» keeps
+  // the element as it is (the end) and stores the start as the way back from it.
+  const [editing, setEditing] = useState(false);
+  const startRef = useRef<MotionStart | null>(null);
+  const live = useRef({ element, styles, rotation, shrink, onUpdateElementStyles });
+  const beginEditing = () => {
+    if (!element) return;
+    // From the stored start when the motion was pinned before, else from the element as it is.
+    const from = resolveMotion(styles, real).from;
+    const had = styles.animationFrom !== undefined;
+    startRef.current = {
+      id: element.id,
+      cx: element.x + element.width / 2 + (had ? (from.x || 0) / shrink : 0),
+      cy: element.y + element.height / 2 + (had ? (from.y || 0) / shrink : 0),
+      w: element.width * (had ? from.scale || 1 : 1),
+      opacity: had ? from.opacity : real.opacity,
+      rotate: had ? from.rotate : real.rotate,
+    };
+    // Both states follow the element while it is edited, so the page shows exactly what the owner does.
+    onUpdateElementStyles({ animationFrom: undefined, animationTo: undefined });
+    setEditing(true);
+  };
+  const pin = (now = live.current) => {
+    const start = startRef.current;
+    startRef.current = null;
+    setEditing(false);
+    if (!start || !now.element || now.element.id !== start.id) return;
+    const el = now.element;
+    const end = realMotionState(now.styles, now.rotation);
+    now.onUpdateElementStyles({
+      animationFrom: {
+        x: Math.round((start.cx - (el.x + el.width / 2)) * now.shrink),
+        y: Math.round((start.cy - (el.y + el.height / 2)) * now.shrink),
+        scale: Math.round((start.w / Math.max(1, el.width)) * 100) / 100,
+        opacity: start.opacity,
+        rotate: start.rotate,
+      },
+      animationTo: end,
+      animationShow: 'to',
+    });
+  };
+  // The latest values for the cleanup below (it runs before this effect of the next render, so it sees the previous element).
+  useEffect(() => { live.current = { element, styles, rotation, shrink, onUpdateElementStyles }; });
   useEffect(() => {
-    if (!extra && isCustom && elementId) onPreview?.(elementId, tab);
-  }, [extra, isCustom, elementId, tab]);
-  // Leaving the custom motion (another animation, another element, the panel closed): the element lets go of the preview and is
-  // locked. The lock waits a tick, so a remount of the same element (strict mode) does not lock it.
-  const lockTimer = useRef<number | undefined>(undefined);
+    if (!extra && isCustom && elementId) onPreview?.(elementId, 'to');
+  }, [extra, isCustom, elementId]);
+  // Choosing a custom motion starts it at once: the start is taken from the element as it is.
+  useEffect(() => {
+    if (!extra && isCustom && elementId && !editing && styles.animationFrom === undefined) beginEditing();
+  }, [extra, isCustom, elementId, editing, styles.animationFrom]);
+  // Leaving the custom motion (another animation, another element, the panel closed): the element lets go of the preview
+  // and a motion still being edited is pinned as it stands.
   useEffect(() => {
     if (extra || !isCustom || !elementId) return;
-    window.clearTimeout(lockTimer.current);
     return () => {
       onPreview?.(elementId, null);
-      lockTimer.current = window.setTimeout(() => onFinish?.(elementId), 0);
+      pin();
     };
   }, [extra, isCustom, elementId]);
 
@@ -114,9 +152,14 @@ const AnimationEditor = ({
     if (tab === 'from') onUpdateElementStyles({ animationFrom: { ...(styles.animationFrom || {}), ...patch }, animationTo: styles.animationTo ?? resolved.to });
     else onUpdateElementStyles({ animationTo: { ...resolved.to, ...patch } });
   };
-  const customPanel = (
+  const alternate = (
+    <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
+      <input type="checkbox" checked={Boolean(styles.animationAlternate)} onChange={(e) => onUpdateElementStyles({ animationAlternate: e.target.checked })} />
+      ذهاب وإياب (المستمر ومرور الماوس يعملان هكذا دائماً)
+    </label>
+  );
+  const customPanel = extra ? (
     <div key="custom-panel" className="col-span-2 space-y-2 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
-      {!collapsed && (<>
       <div className="grid grid-cols-2 gap-1 p-1 bg-neutral-100 rounded-lg" role="tablist" aria-label="حالة الحركة">
         {([['from', 'البداية'], ['to', 'النهاية']] as const).map(([id, label]) => (
           <button
@@ -129,38 +172,6 @@ const AnimationEditor = ({
           >{label}</button>
         ))}
       </div>
-      {element && onPlace && (
-        dragging ? (
-          <div className="space-y-1.5 p-2 rounded-lg bg-brand/5 border border-brand/20">
-            <p className="text-xs text-neutral-600 leading-relaxed">اسحب العنصر على الصفحة إلى المكان المطلوب ثم اضغط «تثبيت»؛ يرجع العنصر إلى مكانه بعدها.</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const shift = shiftBetween(dragging, element, phone ? 2 : 1);
-                  write({ x: Math.round((state.x || 0) + shift.x), y: Math.round((state.y || 0) + shift.y) });
-                  onPlace(dragging.x, dragging.y);
-                  setDragging(null);
-                }}
-                className="flex-1 py-1.5 rounded-lg bg-brand text-white text-xs font-bold cursor-pointer"
-              >تثبيت هنا</button>
-              <button
-                type="button"
-                onClick={() => { onPlace(dragging.x, dragging.y); setDragging(null); }}
-                className="flex-1 py-1.5 rounded-lg bg-white border border-neutral-200 text-xs font-bold text-neutral-700 cursor-pointer"
-              >إلغاء</button>
-            </div>
-          </div>
-        ) : locked ? (
-          <p className="text-xs text-amber-700 leading-relaxed">العنصر مقفل بعد ضبط الحركة. فكّ قفله (أيقونة القفل في شريط التحديد) لتسحبه، والمنزلقات تعمل دائماً.</p>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setDragging({ id: element.id, x: element.x, y: element.y })}
-            className="w-full py-1.5 rounded-lg bg-white border border-neutral-200 text-xs font-bold text-neutral-700 hover:border-brand cursor-pointer"
-          >✋ حدّد المكان بالسحب</button>
-        )
-      )}
       {rows.map((r) => {
         const shown = Math.round((state[r.field] as number) * (r.scale || 1));
         return (
@@ -177,51 +188,35 @@ const AnimationEditor = ({
           </label>
         );
       })}
-      <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer">
-        <input type="checkbox" checked={Boolean(styles.animationAlternate)} onChange={(e) => onUpdateElementStyles({ animationAlternate: e.target.checked })} />
-        ذهاب وإياب (المستمر ومرور الماوس يعملان هكذا دائماً)
-      </label>
-      {/* What the editor shows on the element while this panel is closed: a tick on the first or on the last state */}
-      <div className="space-y-1" role="group" aria-label="ما يظهر في المحرر">
-        <span className="text-xs font-bold text-neutral-800 block">يظهر في المحرر:</span>
-        {([['from', 'حالة البداية'], ['to', 'حالة النهاية']] as const).map(([id, label]) => {
-          const on = (styles.animationShow || 'from') === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              role="checkbox"
-              aria-checked={on}
-              onClick={() => onUpdateElementStyles({ animationShow: id })}
-              className="flex w-full items-center gap-2 text-xs text-neutral-700 cursor-pointer"
-            >
-              <span className={`flex h-4 w-4 items-center justify-center rounded border ${on ? 'border-brand bg-brand text-white' : 'border-neutral-300 bg-white'}`}>{on && <Check size={11} strokeWidth={3} />}</span>
-              {label}
-            </button>
-          );
-        })}
-      </div>
-      <p className="text-xs text-neutral-500 leading-relaxed">
-        بعد ما تخلّص بينقفل العنصر تلقائياً ليبقى بمكانه وحالته بالمحرر. لو فكيت القفل وحرّكته أو عدّلت عليه بيصير هذا تعديل لحالة البداية، وبيضل مفكوك لحد ما تضغط «تثبيت وقفل» أو تنهي الحركة من جديد.
-      </p>
-      {onLock && (
-        <button
-          type="button"
-          onClick={() => onLock(!locked)}
-          className={`w-full h-9 rounded-lg text-xs font-extrabold inline-flex items-center justify-center gap-1.5 cursor-pointer ${locked ? 'bg-white border border-neutral-300 text-neutral-700 hover:border-brand' : 'bg-brand text-white hover:bg-brand-hover'}`}
-        >
-          {locked ? <><Unlock size={14} /> العنصر مقفل · فك القفل</> : <><Lock size={14} /> تثبيت وقفل</>}
-        </button>
+      {alternate}
+    </div>
+  ) : (
+    <div key="custom-panel" className="col-span-2 space-y-2 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
+      {editing ? (
+        <>
+          <p className="text-xs text-neutral-700 leading-relaxed">
+            انحفظت حالة البداية من العنصر. هلأ حرّك العنصر أو كبّره أو دوّره أو غيّر شفافيته على الصفحة مباشرة؛ هاد بيكون وضعه بالنهاية.
+          </p>
+          {locked && <p className="text-xs text-amber-700 leading-relaxed">العنصر مقفل، فكّ قفله من شريط التحديد لتقدر تحرّكه.</p>}
+          <button
+            type="button"
+            onClick={() => pin()}
+            className="w-full h-9 rounded-lg text-xs font-extrabold bg-brand text-white hover:bg-brand-hover cursor-pointer"
+          >تثبيت وإغلاق</button>
+        </>
+      ) : (
+        <>
+          <p className="text-xs text-neutral-600 leading-relaxed">
+            {styles.animationFrom ? 'العنصر على وضع النهاية، والبداية محفوظة منه.' : 'ما تحددت الحركة بعد: العنصر ثابت.'}
+          </p>
+          <button
+            type="button"
+            onClick={beginEditing}
+            className="w-full h-9 rounded-lg text-xs font-extrabold bg-white border border-neutral-300 text-neutral-700 hover:border-brand cursor-pointer"
+          >{styles.animationFrom ? 'تعديل الحركة' : 'ابدأ تحديد الحركة'}</button>
+        </>
       )}
-      </>)}
-      <button
-        type="button"
-        onClick={() => setCollapsed((c) => !c)}
-        aria-expanded={!collapsed}
-        className="w-full h-7 rounded-md text-xs font-bold text-neutral-500 hover:text-brand inline-flex items-center justify-center gap-1 cursor-pointer"
-      >
-        {collapsed ? <><ChevronDown size={15} /> إظهار إعدادات الحركة المخصصة</> : <><ChevronUp size={15} /> طي إعدادات الحركة المخصصة</>}
-      </button>
+      {alternate}
     </div>
   );
 
@@ -333,12 +328,12 @@ const AnimationEditor = ({
                 key={animItem.id}
                 type="button"
                 onClick={() => {
-                  // A custom motion starts as the element is (no motion) with its last state saved as it is now.
+                  // A custom motion starts as the element is (no motion); the owner then sets its end on the page.
                   if (animItem.id === 'custom' && !isCustom) setTab('from');
                   onUpdateElementStyles({ 
                     animation: animItem.id,
                     animationDuration: animItem.id === 'none' ? undefined : animItem.delay,
-                    ...(animItem.id === 'custom' && !isCustom ? { animationFrom: undefined, animationTo: { ...real } } : {}),
+                    ...(animItem.id === 'custom' && !isCustom ? { animationFrom: undefined, animationTo: extra ? { ...real } : undefined } : {}),
                     // A ticker runs for ever; the other trigger choices make it play once or wait for the mouse.
                     ...(animItem.id.startsWith('marquee') ? { animationTrigger: 'loop' as const } : {}),
                   });

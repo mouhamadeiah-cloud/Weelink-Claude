@@ -4848,6 +4848,16 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                         </div>
                       </div>
 
+                      {/* A custom motion whose end is still being set (until «تثبيت وإغلاق»): a glow and a badge, in the editor only */}
+                      {elem.styles.animationEditing && !isPreviewActive && !isPublicSite && (
+                        <div className="absolute pointer-events-none z-40" style={{ inset: -6, borderRadius: 'inherit' }}>
+                          <div className="absolute inset-0 rounded-[inherit] border-2 border-amber-400 animate-pulse" style={{ boxShadow: '0 0 0 3px rgba(251,191,36,0.35), 0 0 22px rgba(251,191,36,0.75)' }} />
+                          <span className="absolute -top-6 right-0 flex items-center gap-1 bg-amber-400 text-neutral-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow whitespace-nowrap">
+                            <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 animate-pulse" /> حركة مفعّلة · ثبّتها من لوحة الحركة
+                          </span>
+                        </div>
+                      )}
+
                       {/* Selection Bounding Box & Resizing Handles */}
                       {isSelected && (
                         <>

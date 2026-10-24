@@ -5124,7 +5124,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     </button>
                   ))}
                   {confirmDeleteId === slide.id && (
-                    <div className="absolute top-0 left-full ml-1 w-40 rounded-xl bg-white border border-black/10 shadow-lg p-2.5 text-right z-[60]" dir="rtl">
+                    <div className="absolute top-0 right-full mr-1 w-40 rounded-xl bg-white border border-black/10 shadow-lg p-2.5 text-right z-[60]" dir="rtl">
                       <div className="text-[11px] font-bold text-neutral-800 mb-2">حذف «{slide.name}» نهائياً؟</div>
                       <div className="flex gap-1.5">
                         <button type="button" onClick={() => { setConfirmDeleteId(null); onDeleteSlide?.(slide.id); }} className="flex-1 text-[11px] font-bold py-1 rounded-lg bg-red-500 text-white cursor-pointer">حذف</button>

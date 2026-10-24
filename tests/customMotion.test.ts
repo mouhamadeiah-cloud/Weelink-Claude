@@ -55,42 +55,19 @@ test('a loop or a hover goes there and back; a single play goes there once unles
   assert.equal(customMotionDirection('scroll', true), 'alternate');
 });
 
-test('the custom keyframe exists and the animation card offers the two states', () => {
+test('the custom keyframe exists and the animation card offers the end set on the page', () => {
   const css = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
   assert.match(css, /@keyframes custom-move\s*\{[\s\S]*var\(--mv-fx[\s\S]*var\(--mv-tx/);
   const html = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {} }));
-  assert.match(html, /البداية/);
-  assert.match(html, /النهاية/);
-  assert.match(html, /الشفافية/);
+  assert.match(html, /ابدأ تحديد الحركة/);
+  assert.doesNotMatch(html, /حدّد المكان بالسحب|تثبيت وقفل|الإزاحة أفقياً/); // the drag button, the old pin and the sliders are gone
 });
 
-test('set by dragging: the shift is from the resting place to the drop, doubled when set on a phone', async () => {
-  const { shiftBetween } = await import('../src/utils/customMotion');
-  assert.deepEqual(shiftBetween({ x: 100, y: 50 }, { x: 40, y: 80 }), { x: -60, y: 30 });
-  assert.deepEqual(shiftBetween({ x: 100, y: 50 }, { x: 40, y: 80 }, 2), { x: -120, y: 60 });
-});
-
-test('the animation card offers «set by dragging» once it knows the element', () => {
-  const html = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, element: { id: 'a', x: 1, y: 2 }, onPlace: () => {} }));
-  assert.match(html, /حدّد المكان بالسحب/);
-});
-
-test('the custom panel offers «تثبيت وقفل» and a tick for the state the editor shows', () => {
-  const html = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, onLock: () => {} }));
-  assert.match(html, /تثبيت وقفل/);
-  assert.match(html, /يظهر في المحرر/);
-  assert.match(html, /حالة البداية/);
-  assert.match(html, /حالة النهاية/);
-  assert.match(html, /role="checkbox"/);
-  const locked = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, onLock: () => {}, locked: true }));
-  assert.match(locked, /فك القفل/);
-});
-
-test('the custom panel ends with the tick options, the note on the lock and the lock button, then a fold arrow', () => {
-  const html = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom' } as any, onUpdateElementStyles: () => {}, onLock: () => {} }));
-  const at = (t: string) => html.indexOf(t);
-  const order = ['ذهاب وإياب', 'يظهر في المحرر', 'بيصير هذا تعديل لحالة البداية', 'تثبيت وقفل', 'طي إعدادات الحركة المخصصة'].map(at);
-  assert.ok(order.every((i) => i > 0), JSON.stringify(order));
-  assert.deepEqual([...order].sort((a, b) => a - b), order); // in that order
-  assert.doesNotMatch(html, /البداية = العنصر كما هو/); // the old line above the options is gone
+test('a pinned custom motion offers to change it; the extra animations keep their two-state sliders', () => {
+  const pinned = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'custom', animationFrom: { x: 50 } } as any, onUpdateElementStyles: () => {} }));
+  assert.match(pinned, /تعديل الحركة/);
+  const extra = renderToStaticMarkup(React.createElement(AnimationSection, { styles: { animation: 'pulse', animationLayers: [{ animation: 'custom' }] } as any, onUpdateElementStyles: () => {} }));
+  assert.match(extra, /البداية/);
+  assert.match(extra, /النهاية/);
+  assert.match(extra, /الشفافية/);
 });

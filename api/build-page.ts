@@ -145,7 +145,9 @@ const FREE_TOKENS = 30_000;
 const PAID_TOKENS = 150_000;
 const DEFAULT_PRICE = { in: 0.3, out: 2.5 }; // US dollars per million tokens
 
-type Meter = { uid: string; db: ReturnType<typeof getFirestore> };
+// The platform admin's own Firebase account (api/admin.ts «editor-token») has no token limit: its calls are logged, not charged.
+const isPlatformAdminUid = (uid: string) => uid.startsWith('platform-admin_');
+type Meter = { uid: string; db: ReturnType<typeof getFirestore>; unlimited?: boolean };
 
 const meterDb = () => {
   try {
@@ -162,6 +164,7 @@ const meterDb = () => {
 const meterOpen = async (uid: string): Promise<Meter | 'empty' | null> => {
   const db = meterDb();
   if (!db || !uid) return null;
+  if (isPlatformAdminUid(uid)) return { uid, db, unlimited: true };
   try {
     const ref = db.collection('platform_subscribers').doc(uid);
     const cur = (await ref.get()).data() as { tokens?: { balance?: number }; subscription?: { endsAt?: number } } | undefined;
@@ -184,10 +187,12 @@ const meterClose = async (m: Meter | null, kind: string, model: string, u: { inp
     const tokens = u.input + u.output;
     const costUsd = (u.input * price.in + u.output * price.out) / 1e6;
     const ref = m.db.collection('platform_subscribers').doc(m.uid);
-    await m.db.runTransaction(async (t) => {
-      const t0 = ((await t.get(ref)).data() as { tokens?: { balance?: number; used?: number } } | undefined)?.tokens || {};
-      t.set(ref, { tokens: { balance: Math.max(0, (t0.balance || 0) - tokens), used: (t0.used || 0) + tokens } }, { merge: true });
-    });
+    if (!m.unlimited) {
+      await m.db.runTransaction(async (t) => {
+        const t0 = ((await t.get(ref)).data() as { tokens?: { balance?: number; used?: number } } | undefined)?.tokens || {};
+        t.set(ref, { tokens: { balance: Math.max(0, (t0.balance || 0) - tokens), used: (t0.used || 0) + tokens } }, { merge: true });
+      });
+    }
     await m.db.collection('platform_ai_calls').add({ uid: m.uid, kind, model, input: u.input, cached: u.cached, output: u.output, tokens, costUsd, ok, reason: reason.slice(0, 60), ms, at: Date.now() });
   } catch (err) {
     console.error('meter failed:', (err as Error)?.message);
@@ -206,7 +211,7 @@ type Allowance = { ref: any; day: string; limit: number; perDay: boolean; over: 
 
 // null = no limit (no database, paying off, a test account); else whether it is used up, and what to count after a build.
 export const buildAllowance = async (db: ReturnType<typeof getFirestore> | null, uid: string, project: string, now = Date.now()): Promise<Allowance> => {
-  if (!db) return null;
+  if (!db || isPlatformAdminUid(uid)) return null;
   try {
     const [settings, test, access] = await Promise.all([
       db.collection('platformSettings').doc('billing').get(),

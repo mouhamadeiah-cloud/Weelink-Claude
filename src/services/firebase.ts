@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, initializeAuth, inMemoryPersistence, GoogleAuthProvider, signInWithPopup, signOut, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -8,7 +8,10 @@ const app = initializeApp(firebaseConfig);
 export const db = (firebaseConfig as any).firestoreDatabaseId
   ? getFirestore(app, (firebaseConfig as any).firestoreDatabaseId)
   : getFirestore(app);
-export const auth = getAuth(app);
+// The admin's editor tab (?edit-gallery) keeps its sign-in in memory only: the browser's own login (a customer tried in the
+// same browser) is neither read nor changed by it, and the admin signs in as himself (services/galleryEdit.adminEditorReady).
+const adminEditorTab = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('edit-gallery');
+export const auth = adminEditorTab ? initializeAuth(app, { persistence: inMemoryPersistence }) : getAuth(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 

@@ -27,7 +27,7 @@ import { DesignerBar } from './components/designer/DesignerBar';
 import { openClientPage, saveClientPage, accessErrorText, activeAccess, revokeAccessCode } from './services/designAccess';
 import { useOrderAttention } from './services/orderAttention';
 import { GalleryEditBar } from './components/designer/GalleryEditBar';
-import { adminEditOpen, adminEditSave, designerEditOpen, designerEditSave, editErrorText, readyEditOpen, readyEditSave, takeAdminHandoff, type EditableDesign } from './services/galleryEdit';
+import { adminEditOpen, adminEditSave, designerEditOpen, designerEditSave, editErrorText, readyEditOpen, readyEditSave, takeAdminHandoff, adminEditorReady, type EditableDesign } from './services/galleryEdit';
 import { GALLERY_READY_CATEGORIES } from './data/readyCategories';
 import { autoSlots } from './data/autoSlots';
 import { DesignerDashboard } from './components/designer/DesignerDashboard';
@@ -225,6 +225,21 @@ export default function App() {
   const isWide = windowWidth >= 1024;
   const isSheet = !isWide && !isPreviewActive;
   const isDocked = !isPreviewActive;
+  // The height of the bars at the top (control bar, plus the designer / gallery-edit bar when one is open): the docked panel and
+  // its icon column start under them, so a taller top never leaves them over it.
+  const topBarsObserver = useRef<ResizeObserver | null>(null);
+  const [topBarsHeight, setTopBarsHeight] = useState(56);
+  // A callback ref: the bars exist only once the editor itself is on screen (not on the start or sign-in pages).
+  const topBarsRef = useCallback((el: HTMLDivElement | null) => {
+    topBarsObserver.current?.disconnect();
+    topBarsObserver.current = null;
+    if (!el) return;
+    const measure = () => setTopBarsHeight(Math.round(el.getBoundingClientRect().height) || 56);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    topBarsObserver.current = new ResizeObserver(measure);
+    topBarsObserver.current.observe(el);
+  }, []);
   const dockedPanelWidth = Math.round(Math.min(400, Math.max(320, windowWidth * 0.24)));
   const EDIT_RAIL_WIDTH = EDITOR_COLUMN_WIDTH;
   const [isWorkspaceHubOpen, setIsWorkspaceHubOpen] = useState(false);
@@ -974,7 +989,12 @@ export default function App() {
 
   // 1. Listen for Auth changes & Load workspace from LocalStorage
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (signedIn: User | null) => {
+    let stopped = false;
+    let unsubscribe = () => {};
+    // The admin's editor tab first signs in as the admin, so the browser's own accounts never reach it.
+    (adminEditTab.current ? adminEditorReady : Promise.resolve()).then(() => {
+      if (stopped) return;
+      unsubscribe = onAuthStateChanged(auth, async (signedIn: User | null) => {
       // An anonymous user is a restaurant device in another tab, not an owner.
       const user = signedIn && !signedIn.isAnonymous ? signedIn : null;
       setCurrentUser(user);
@@ -998,8 +1018,12 @@ export default function App() {
       if ((first || !user) && !galleryEditRef.current && !adminEditTab.current) setIsAuthActive(true);
       setIsFirebaseLoading(false);
       isInitialLoadComplete.current = true;
+      });
     });
-    return () => unsubscribe();
+    return () => {
+      stopped = true;
+      unsubscribe();
+    };
   }, []);
 
   // 2. Debounced auto-save to LocalStorage whenever pages or elements change
@@ -2796,16 +2820,6 @@ export default function App() {
     });
     pushToHistory(updated);
   };
-
-  // The owner finished with a custom motion: the element is locked, so it stays where its first state is. Unlocked by
-  // hand it stays unlocked until the motion is finished again (Eyad, 21 Oct).
-  const lockAfterMotion = (id: string) => {
-    const els = elementsRef.current;
-    if (els.some((el) => el.id === id && el.styles.animation === 'custom' && !el.isLocked)) pushToHistory(els.map((el) => (el.id === id ? { ...el, isLocked: true } : el)));
-  };
-  // The panel calls it from an effect that may be a render old: the latest one does it.
-  const lockAfterMotionRef = useRef(lockAfterMotion);
-  lockAfterMotionRef.current = lockAfterMotion;
 
   const handleUpdateElementPosition = (id: string, x: number, y: number) => {
     const target = elements.find(el => el.id === id);
@@ -4782,7 +4796,7 @@ export default function App() {
       */}
       {/* z-index kept above the page's own navbar (which can be set sticky with z-index 100000 by
           the user inside the canvas) so the app's own control bar/edit bar always stays on top of it. */}
-      <div className="sticky top-0 z-[999999] w-full shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+      <div ref={topBarsRef} className="sticky top-0 z-[999999] w-full shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
         {/* 1. Primary Control Bar */}
         <ControlBar
           currentPage={currentPage}
@@ -4938,7 +4952,7 @@ export default function App() {
           style={
             isSheet
               ? { left: 0, right: 0, bottom: 0, height: EDITOR_BAR_HEIGHT }
-              : { top: 56, bottom: 0, width: EDIT_RAIL_WIDTH, right: isRightDrawerOpen ? dockedPanelWidth : 0, transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }
+              : { top: topBarsHeight, bottom: 0, width: EDIT_RAIL_WIDTH, right: isRightDrawerOpen ? dockedPanelWidth : 0, transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }
           }
         >
           <EditorColumn
@@ -4997,7 +5011,6 @@ export default function App() {
       <RightDrawer
         key={activeUserUid}
         onMotionPreview={(id, which) => setMotionPreview((m) => (which ? { id, which } : m && m.id === id ? null : m))}
-        onMotionFinish={(id) => lockAfterMotionRef.current(id)}
         previewMode={previewMode}
         isShopProject={project === 'shop'}
         isCarProject={project === 'cars'}
@@ -5079,6 +5092,7 @@ export default function App() {
         isWeeAiChatCollapsed={!isChatActive}
         onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
         dockedWidth={isDocked && !isSheet ? dockedPanelWidth : 0}
+        dockedTop={topBarsHeight}
         sheet={isSheet}
         headerSlot={
           <SelectionNameInput

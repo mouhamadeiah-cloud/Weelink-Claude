@@ -2,7 +2,9 @@
 // edits a design of their own (Firebase sign-in, api/gallery); the admin edits any (the admin's session, handed to the
 // editor tab by services/adminApi.openGalleryEditor, api/admin).
 import type { User } from 'firebase/auth';
+import { signInWithCustomToken } from 'firebase/auth';
 import { HANDOFF_KEY } from './adminApi';
+import { auth } from './firebase';
 
 export interface EditableDesign {
   id: string;
@@ -46,6 +48,35 @@ export const adminEditSave = async (token: string, id: string, d: { page: any; e
 export interface ReadySaved { ok: true; id: string; category: string; eligible: boolean; slots: number; problems: string[] }
 export const readyEditOpen = async (token: string, id: string) => (await adminCall(token, { action: 'ready-doc', id })) as { design: { id: string; name: string; category: string; slide: any; elements: any[] } };
 export const readyEditSave = async (token: string, id: string, d: { page: any; elements: any[]; name: string; category: string }) => (await adminCall(token, { action: 'ready-doc-save', id, ...d })) as ReadySaved;
+
+// Reads what the admin site left for this tab without taking it.
+const peekAdminHandoff = (): string => {
+  try {
+    const frag = /^#h=(.+)$/.exec(window.location.hash)?.[1];
+    const raw = frag ? decodeURIComponent(frag) : localStorage.getItem(HANDOFF_KEY);
+    const v = raw ? JSON.parse(raw) : null;
+    return v && typeof v.token === 'string' && Date.now() - Number(v.at) < 120_000 ? v.token : '';
+  } catch {
+    return '';
+  }
+};
+
+// The admin's editor tab signs in to Firebase as the admin (an account of his own, no email), so nothing of the customers
+// signed in on the same browser is opened, read or saved by it. The tab's login lives in memory (services/firebase).
+// The editor waits for this before it listens to the sign-in state.
+export const adminEditorReady: Promise<void> =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('edit-gallery')
+    ? (async () => {
+        try {
+          const token = peekAdminHandoff();
+          if (!token) return;
+          const { customToken } = (await adminCall(token, { action: 'editor-token' })) as { customToken?: string };
+          if (customToken) await signInWithCustomToken(auth, customToken);
+        } catch {
+          /* the editor then opens without an account and says what is missing */
+        }
+      })()
+    : Promise.resolve();
 
 // What the admin site left for this tab (once, and only if it is fresh).
 export const takeAdminHandoff = (): { id: string; token: string } | null => {

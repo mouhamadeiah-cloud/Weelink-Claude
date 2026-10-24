@@ -48,6 +48,8 @@ export interface AnimationContext {
   // The editor shows the first animation of an element in a custom motion as a still state instead of playing it:
   // 'from' / 'to' while the owner edits that state, 'idle' otherwise (the first state, never quite invisible).
   still?: 'from' | 'to' | 'idle';
+  // The state was asked for from the motion icon's menu (not the panel): a state that is fully faded still shows faintly, so the owner sees the element.
+  ghost?: boolean;
 }
 
 export interface BuiltAnimation {
@@ -77,7 +79,8 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
     // browser without scroll-driven animations plays it as «عند التمرير».
     const scrubbed = trigger === 'scrub' && ctx.waits && canScrub;
     if (trigger === 'scrub') {
-      if (!ctx.waits) return;
+      // The editor keeps a scrubbed motion still, but still shows its start or its end when the owner asks for it.
+      if (!ctx.waits && !(index === 0 && anim === CUSTOM_MOTION && (ctx.still === 'from' || ctx.still === 'to'))) return;
       if (!scrubbed) trigger = 'scroll';
     }
     const isMarquee = MARQUEES.includes(anim);
@@ -93,7 +96,7 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
     if (custom) {
       const real = index === 0 ? realMotionState(styles, ctx.rotation) : RELATIVE_MOTION_STATE;
       const { from, to } = resolveMotion(layer, real);
-      Object.assign(vars, customMotionVars(from, to, ctx.phone ? 0.5 : 1, index, styles.opacity ?? 1, stillPose && ctx.still === 'idle' ? 0.25 : 0));
+      Object.assign(vars, customMotionVars(from, to, ctx.phone ? 0.5 : 1, index, styles.opacity ?? 1, stillPose && (ctx.still === 'idle' || ctx.ghost) ? 0.25 : 0));
     }
     if (isMarquee) {
       // The ticker crosses the whole page: from past the right edge to past the left one.
@@ -115,7 +118,8 @@ export const buildElementAnimation = (styles: Styles, ctx: AnimationContext): Bu
     };
     if (stillPose) Object.assign(one, { duration: '1s', count: '1', timing: 'linear', fill: 'both', direction: 'normal', play: 'paused', delay: stillPose === 'to' ? '-1s' : '0s' });
     if (scrubbed) Object.assign(one, { duration: 'auto', count: '1', timing: 'linear', fill: 'both', direction: 'normal', timeline: 'view()', range: SCRUB_RANGES[layer.animationScrub || 'enter'] || SCRUB_RANGE });
-    if (!hover) idle.push(one);
+    // A hover motion plays only on hover, but the state the owner asked to see is shown at once.
+    if (!hover || stillPose) idle.push(one);
     hovered.push(one);
   });
 

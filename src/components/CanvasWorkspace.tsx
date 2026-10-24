@@ -105,9 +105,9 @@ interface CanvasWorkspaceProps {
   // edge to edge, with no device frame, in desktop or phone layout.
   isPublicSite?: boolean;
   // The editor shows this element's custom motion as the state being edited in the animation panel (the others at their first state).
-  motionPreview?: { id: string; which: 'from' | 'to' } | null;
+  motionPreview?: { id: string; which: 'from' | 'to'; ghost?: boolean } | null;
   // The motion icon on the corner of an element with a custom motion: its small menu asks the editor to do this (edit or pin it, show its start or its end).
-  onMotionAction?: (id: string, action: 'edit' | 'pin' | 'from' | 'to') => void;
+  onMotionAction?: (id: string, action: 'edit' | 'pin' | 'from' | 'to' | 'cancel') => void;
   // A design shown inside a card (the designers' gallery): the real renderer, so its videos, text
   // motion and effects play, but no scrolling of its own and only as tall as its content.
   embedded?: boolean;
@@ -1249,7 +1249,22 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   // Touch & Direct Edit Focus States for Mobile & Touch Screens
   const [focusedElementId, setFocusedElementId] = useState<string | null>(null);
-  const [motionMenuId, setMotionMenuId] = useState<string | null>(null);
+  // The motion menu floats above everything (a portal at the window), placed at the icon that opened it.
+  const [motionMenu, setMotionMenu] = useState<{ id: string; left: number; top: number } | null>(null);
+  useEffect(() => {
+    if (!motionMenu) return;
+    const close = (e: Event) => { if (!(e.target as HTMLElement | null)?.closest?.('[data-motion-menu]')) setMotionMenu(null); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('touchstart', close);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [motionMenu]);
   const [isTouchDragging, setIsTouchDragging] = useState(false);
   const [isPinching, setIsPinching] = useState(false);
 
@@ -3233,6 +3248,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                     phone: previewMode === 'mobile',
                     waits: isPreviewActive || isPublicSite,
                     still: motionPreview && motionPreview.id === elem.id ? motionPreview.which : 'idle',
+                    ghost: motionPreview?.id === elem.id && !!motionPreview.ghost,
                   });
                   const animationStyle = built.style;
 
@@ -4868,27 +4884,44 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           <button
                             type="button"
                             title="الحركة المخصصة"
-                            onClick={() => setMotionMenuId((id) => (id === elem.id ? null : elem.id))}
+                            data-motion-menu
+                            onClick={(e) => {
+                              const r = e.currentTarget.getBoundingClientRect();
+                              setMotionMenu((m) => (m && m.id === elem.id ? null : { id: elem.id, left: Math.max(8, Math.min(r.left, window.innerWidth - 178)), top: Math.min(r.bottom + 6, window.innerHeight - 180) }));
+                            }}
                             className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] shadow-md border cursor-pointer ${elem.styles.animationEditing ? 'bg-amber-400 border-amber-500 text-neutral-900' : 'bg-white border-neutral-300 text-brand hover:border-brand'}`}
                           >▶</button>
-                          {motionMenuId === elem.id && (
-                            <div className="absolute top-7 left-0 min-w-[150px] bg-white rounded-xl shadow-xl border border-neutral-200 p-1 flex flex-col text-right text-[11px] font-bold text-neutral-700">
+                          {motionMenu?.id === elem.id && createPortal(
+                            <div
+                              data-motion-menu
+                              dir="rtl"
+                              className="fixed min-w-[160px] bg-white rounded-xl shadow-2xl border border-neutral-200 p-1 flex flex-col text-right text-[12px] font-bold text-neutral-700"
+                              style={{ left: motionMenu.left, top: motionMenu.top, zIndex: 100000 }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onTouchStart={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               {elem.styles.animationEditing ? (
-                                <button type="button" className="px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 text-right cursor-pointer" onClick={() => { onMotionAction(elem.id, 'pin'); setMotionMenuId(null); }}>تثبيت وإغلاق</button>
+                                <button type="button" className="px-2.5 py-2 rounded-lg hover:bg-neutral-100 text-right cursor-pointer" onClick={() => { onMotionAction(elem.id, 'pin'); setMotionMenu(null); }}>تثبيت وإغلاق</button>
                               ) : (
                                 <>
-                                  <button type="button" className="px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 text-right cursor-pointer" onClick={() => { onMotionAction(elem.id, 'edit'); setMotionMenuId(null); }}>تعديل الحركة</button>
-                                  {(['from', 'to'] as const).map((which) => (
-                                    <button
-                                      key={which}
-                                      type="button"
-                                      className={`px-2.5 py-1.5 rounded-lg text-right cursor-pointer ${motionPreview?.id === elem.id && motionPreview.which === which ? 'bg-brand/10 text-brand' : 'hover:bg-neutral-100'}`}
-                                      onClick={() => { onMotionAction(elem.id, which); setMotionMenuId(null); }}
-                                    >{which === 'from' ? 'معاينة البداية' : 'معاينة النهاية'}{motionPreview?.id === elem.id && motionPreview.which === which ? ' ✓' : ''}</button>
-                                  ))}
+                                  <button type="button" className="px-2.5 py-2 rounded-lg hover:bg-neutral-100 text-right cursor-pointer" onClick={() => { onMotionAction(elem.id, 'edit'); setMotionMenu(null); }}>تعديل الحركة</button>
+                                  {(['from', 'to'] as const).map((which) => {
+                                    const on = motionPreview?.id === elem.id && motionPreview.which === which;
+                                    return (
+                                      <button
+                                        key={which}
+                                        type="button"
+                                        className={`px-2.5 py-2 rounded-lg text-right cursor-pointer ${on ? 'bg-brand/10 text-brand' : 'hover:bg-neutral-100'}`}
+                                        onClick={() => { onMotionAction(elem.id, which); setMotionMenu(null); }}
+                                      >{which === 'from' ? 'معاينة البداية' : 'معاينة النهاية'}{on ? ' ✓' : ''}</button>
+                                    );
+                                  })}
                                 </>
                               )}
-                            </div>
+                              <button type="button" className="px-2.5 py-2 rounded-lg text-right cursor-pointer text-red-600 hover:bg-red-50 border-t border-neutral-100 mt-1" onClick={() => { onMotionAction(elem.id, 'cancel'); setMotionMenu(null); }}>إلغاء الحركة</button>
+                            </div>,
+                            document.body,
                           )}
                         </div>
                       )}

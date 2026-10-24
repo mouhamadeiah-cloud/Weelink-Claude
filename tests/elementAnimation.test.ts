@@ -152,3 +152,19 @@ test('the editor shows the last state when the owner ticked it, the first otherw
   // an invisible state is held at a quarter in the editor, so it can still be picked
   assert.equal(buildElementAnimation({ ...base, animationFrom: { opacity: 0 }, animationShow: 'from' }, edit).style['--mv-fo'], '0.25');
 });
+
+test('the motion icon\'s menu shows the start or the end of any trigger, faintly when the start is fully faded', () => {
+  const base = { animation: 'custom', animationFrom: { opacity: 0, x: -80 }, animationTo: { x: 0, y: 0, opacity: 1, scale: 1, rotate: 0 } } as any;
+  const edit = { ...ctx, waits: false };
+  for (const animationTrigger of ['once', 'hover', 'scrub']) {
+    const start = buildElementAnimation({ ...base, animationTrigger }, { ...edit, still: 'from', ghost: true });
+    assert.equal(start.style.animationName, 'custom-move', animationTrigger);
+    assert.equal(start.style.animationPlayState, 'paused', animationTrigger);
+    assert.equal(start.style.animationDelay, '0s', animationTrigger);
+    assert.equal(start.style['--mv-fo'], '0.25', animationTrigger); // never quite invisible
+    const end = buildElementAnimation({ ...base, animationTrigger }, { ...edit, still: 'to', ghost: true });
+    assert.equal(end.style.animationDelay, '-1s', animationTrigger);
+  }
+  // a scrubbed motion is still ignored by the editor when nothing is asked for
+  assert.equal(buildElementAnimation({ ...base, animationTrigger: 'scrub' }, { ...edit, still: 'idle' }).style.animationName, undefined);
+});

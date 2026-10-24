@@ -288,7 +288,7 @@ export default function App() {
   // The designer's studio screen (components/designer/StudioPage): shown over the editor, which holds the open draft.
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   // The custom motion being edited in the animation panel: the element shows that state on the page (services: utils/customMotion).
-  const [motionPreview, setMotionPreview] = useState<{ id: string; which: 'from' | 'to' } | null>(null);
+  const [motionPreview, setMotionPreview] = useState<{ id: string; which: 'from' | 'to'; ghost?: boolean } | null>(null);
   const orderAttention = useOrderAttention(currentUser && !currentUser.isAnonymous && designerMode ? currentUser.uid : '');
   // The hired designer inside a customer's page with the 3-day code: the editor holds that page, saves go
   // to /api/design-access, and nothing can be exported from it.
@@ -2823,11 +2823,16 @@ export default function App() {
   };
 
   // The motion icon on an element's corner (CanvasWorkspace): edit its motion on the page, pin it, or show its start or its end.
-  const handleMotionAction = (id: string, action: 'edit' | 'pin' | 'from' | 'to') => {
+  const handleMotionAction = (id: string, action: 'edit' | 'pin' | 'from' | 'to' | 'cancel') => {
     const target = elements.find((el) => el.id === id);
     if (!target) return;
     if (action === 'from' || action === 'to') {
-      setMotionPreview((m) => (m && m.id === id && m.which === action ? null : { id, which: action }));
+      setMotionPreview((m) => (m && m.id === id && m.which === action ? null : { id, which: action, ghost: true }));
+      return;
+    }
+    if (action === 'cancel') {
+      setMotionPreview((m) => (m && m.id === id ? null : m));
+      handleUpdateElementById(id, { styles: { ...target.styles, animation: 'none', animationFrom: undefined, animationTo: undefined, animationShow: undefined, animationEditing: undefined } });
       return;
     }
     const phone = previewMode === 'mobile';

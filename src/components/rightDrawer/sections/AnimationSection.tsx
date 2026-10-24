@@ -1,5 +1,5 @@
 // Moved verbatim from RightDrawer.tsx (was an inline IIFE in the drawer body).
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { CanvasElement } from '../../../types';
 import { RightDrawerProps } from '../types';
@@ -22,9 +22,6 @@ interface AnimationSectionProps {
   onPreview?: (id: string, which: 'from' | 'to' | null) => void;
 }
 
-// Where a custom motion starts, as the owner sees it on the page: the centre, the width, the opacity and the turn.
-interface MotionStart { id: string; cx: number; cy: number; w: number; opacity: number; rotate: number }
-
 const AnimationEditor = ({
   styles,
   onUpdateElementStyles,
@@ -46,63 +43,61 @@ const AnimationEditor = ({
 
   // The owner sets the end of the first custom motion on the page itself (Eyad, 24 Oct): the start is taken from the
   // element when the editing begins and stays; the owner moves, resizes, fades or turns the element; «تثبيت وإغلاق» keeps
-  // the element as it is (the end) and stores the start as the way back from it.
-  const [editing, setEditing] = useState(false);
-  const startRef = useRef<MotionStart | null>(null);
-  const live = useRef({ element, styles, rotation, shrink, onUpdateElementStyles });
+  // the element as it is (the end) and stores the start as the way back from it. The editing is kept on the element
+  // (styles.animationEditing, which the editor marks with a glow) and ends only when «تثبيت وإغلاق» is pressed, not when
+  // the panel closes or another element is selected (Eyad, 24 Oct).
+  const startMark = styles.animationEditing;
+  const editing = !!startMark;
   const beginEditing = () => {
     if (!element) return;
     // From the stored start when the motion was pinned before, else from the element as it is.
     const from = resolveMotion(styles, real).from;
     const had = styles.animationFrom !== undefined;
-    startRef.current = {
-      id: element.id,
-      cx: element.x + element.width / 2 + (had ? (from.x || 0) / shrink : 0),
-      cy: element.y + element.height / 2 + (had ? (from.y || 0) / shrink : 0),
-      w: element.width * (had ? from.scale || 1 : 1),
-      opacity: had ? from.opacity : real.opacity,
-      rotate: had ? from.rotate : real.rotate,
-    };
     // Both states follow the element while it is edited, so the page shows exactly what the owner does.
-    onUpdateElementStyles({ animationFrom: undefined, animationTo: undefined });
-    setEditing(true);
+    onUpdateElementStyles({
+      animationFrom: undefined,
+      animationTo: undefined,
+      animationEditing: {
+        cx: element.x + element.width / 2 + (had ? (from.x || 0) / shrink : 0),
+        cy: element.y + element.height / 2 + (had ? (from.y || 0) / shrink : 0),
+        w: element.width * (had ? from.scale || 1 : 1),
+        opacity: had ? from.opacity : real.opacity,
+        rotate: had ? from.rotate : real.rotate,
+      },
+    });
   };
-  const pin = (now = live.current) => {
-    const start = startRef.current;
-    startRef.current = null;
-    setEditing(false);
-    if (!start || !now.element || now.element.id !== start.id) return;
-    const el = now.element;
-    const end = realMotionState(now.styles, now.rotation);
-    now.onUpdateElementStyles({
+  const pin = () => {
+    if (!startMark || !element) return;
+    const end = realMotionState(styles, rotation);
+    onUpdateElementStyles({
       animationFrom: {
-        x: Math.round((start.cx - (el.x + el.width / 2)) * now.shrink),
-        y: Math.round((start.cy - (el.y + el.height / 2)) * now.shrink),
-        scale: Math.round((start.w / Math.max(1, el.width)) * 100) / 100,
-        opacity: start.opacity,
-        rotate: start.rotate,
+        x: Math.round((startMark.cx - (element.x + element.width / 2)) * shrink),
+        y: Math.round((startMark.cy - (element.y + element.height / 2)) * shrink),
+        scale: Math.round((startMark.w / Math.max(1, element.width)) * 100) / 100,
+        opacity: startMark.opacity,
+        rotate: startMark.rotate,
       },
       animationTo: end,
       animationShow: 'to',
+      animationEditing: undefined,
     });
   };
-  // The latest values for the cleanup below (it runs before this effect of the next render, so it sees the previous element).
-  useEffect(() => { live.current = { element, styles, rotation, shrink, onUpdateElementStyles }; });
   useEffect(() => {
     if (!extra && isCustom && elementId) onPreview?.(elementId, 'to');
   }, [extra, isCustom, elementId]);
+  // Another animation chosen while the end was being set: nothing is left to edit.
+  useEffect(() => {
+    if (!extra && !isCustom && styles.animationEditing) onUpdateElementStyles({ animationEditing: undefined });
+  }, [extra, isCustom, styles.animationEditing]);
   // Choosing a custom motion starts it at once: the start is taken from the element as it is.
   useEffect(() => {
     if (!extra && isCustom && elementId && !editing && styles.animationFrom === undefined) beginEditing();
   }, [extra, isCustom, elementId, editing, styles.animationFrom]);
-  // Leaving the custom motion (another animation, another element, the panel closed): the element lets go of the preview
-  // and a motion still being edited is pinned as it stands.
+  // Leaving the custom motion (another animation, another element, the panel closed): the element lets go of the preview;
+  // a motion still being edited stays marked on the page until it is pinned.
   useEffect(() => {
     if (extra || !isCustom || !elementId) return;
-    return () => {
-      onPreview?.(elementId, null);
-      pin();
-    };
+    return () => onPreview?.(elementId, null);
   }, [extra, isCustom, elementId]);
 
   const currentTrigger = styles.animationTrigger || 'once';
@@ -195,7 +190,7 @@ const AnimationEditor = ({
       {editing ? (
         <>
           <p className="text-xs text-neutral-700 leading-relaxed">
-            انحفظت حالة البداية من العنصر. هلأ حرّك العنصر أو كبّره أو دوّره أو غيّر شفافيته على الصفحة مباشرة؛ هاد بيكون وضعه بالنهاية.
+            وضع الحركة مفعّل: العنصر عليه علامة على الصفحة. حرّكه أو كبّره أو دوّره أو غيّر شفافيته مباشرة؛ هاد بيكون وضعه بالنهاية. بيضل مفعّل حتى لو سكّرت اللوحة، وما بينتهي إلا لما تضغط «تثبيت وإغلاق».
           </p>
           {locked && <p className="text-xs text-amber-700 leading-relaxed">العنصر مقفل، فكّ قفله من شريط التحديد لتقدر تحرّكه.</p>}
           <button

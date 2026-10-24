@@ -42,6 +42,8 @@ export interface Member {
   name: string;
   perms: Perms;
   at: string;
+  // The code of the invitation the member joined with (a «فريق العمل» person keeps the same code).
+  invite?: string;
 }
 
 export interface Invite {
@@ -185,7 +187,7 @@ const useList = <T,>(make: () => ReturnType<typeof collection> | null, map: (id:
 };
 
 export const useMembers = (accountId: string | null) =>
-  useList(() => (accountId ? membersCol(accountId) : null), (uid, d): Member => ({ uid, email: String(d.email || ''), name: String(d.name || ''), perms: normalizePerms(d.perms), at: String(d.at || '') }), [accountId]);
+  useList(() => (accountId ? membersCol(accountId) : null), (uid, d): Member => ({ uid, email: String(d.email || ''), name: String(d.name || ''), perms: normalizePerms(d.perms), at: String(d.at || ''), invite: String(d.invite || '') }), [accountId]);
 
 export const useInvites = (accountId: string | null) =>
   useList(() => (accountId ? invitesCol(accountId) : null), (code, d): Invite => ({ code, email: String(d.email || ''), name: String(d.name || ''), perms: normalizePerms(d.perms), at: String(d.at || '') }), [accountId]);

@@ -464,6 +464,28 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    // «فريق العمل» (src/services/team.ts): the owner adds and changes the people, the owner and the
+    // members read them. teamPublic is what visitors see of those who take bookings (no email or phone).
+    match /team/{ownerId}/people/{personId} {
+      allow read: if canManage(ownerId);
+      allow delete: if isOwner(ownerId);
+      allow create, update: if isOwner(ownerId) && isValidId(personId)
+        && incoming().keys().hasOnly(['name', 'role', 'photo', 'email', 'phone', 'takesBookings', 'invite', 'at'])
+        && incoming().name is string && incoming().name.size() <= 80
+        && incoming().get('role', '') is string && incoming().get('role', '').size() <= 80
+        && incoming().get('photo', '') is string && incoming().get('photo', '').size() <= 1000
+        && incoming().get('email', '') is string && incoming().get('email', '').size() <= 200
+        && incoming().get('phone', '') is string && incoming().get('phone', '').size() <= 40
+        && incoming().get('invite', '') is string && incoming().get('invite', '').size() <= 60
+        && incoming().get('takesBookings', false) is bool;
+    }
+    match /teamPublic/{ownerId} {
+      allow get: if true;
+      allow create, update: if isOwner(ownerId)
+        && incoming().keys().hasOnly(['people'])
+        && incoming().people is list && incoming().people.size() <= 50;
+    }
+
     // Messages from a page's «نموذج تواصل» (api/contact.ts creates them): the owner and the members read them,
     // mark them read and delete them. contactLimits (the per-hour counters) are the function's alone.
     match /inquiries/{ownerId}/items/{inquiryId} {

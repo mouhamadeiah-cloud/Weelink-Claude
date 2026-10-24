@@ -17,7 +17,7 @@ import { CategoriesTab } from './tabs/CategoriesTab';
 import { SubCatalogsTab } from './tabs/SubCatalogsTab';
 import { OrdersTab } from './tabs/OrdersTab';
 import { RestaurantSettingsTab } from './tabs/RestaurantSettingsTab';
-import { MembersTab } from './tabs/MembersTab';
+import { TeamAndMembersTab } from './tabs/MembersTab';
 import { CustomersTab } from './tabs/CustomersTab';
 import { Access, OWNER_ACCESS, PermId } from '../../services/members';
 import { BookingsTab } from '../pageAdmin/BookingsTab';
@@ -44,7 +44,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'accounts', label: 'الحسابات', icon: Wallet, Component: AccountsTab, perm: 'accounts' },
   { id: 'reports', label: 'تقارير الكاشير', icon: FileBarChart, Component: SalesReportsTab, perm: 'accounts' },
   { id: 'settings', label: 'الإعدادات', icon: SlidersHorizontal, Component: RestaurantSettingsTab, perm: 'settings' },
-  { id: 'members', label: 'أعضاء الإدارة', icon: UserCog, Component: MembersTab, perm: 'owner' },
+  { id: 'members', label: 'فريق العمل', icon: UserCog, Component: TeamAndMembersTab, perm: 'owner' },
 ];
 
 interface RestaurantAdminPanelProps {

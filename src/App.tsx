@@ -27,7 +27,7 @@ import { DesignerBar } from './components/designer/DesignerBar';
 import { openClientPage, saveClientPage, accessErrorText, activeAccess, revokeAccessCode } from './services/designAccess';
 import { useOrderAttention } from './services/orderAttention';
 import { GalleryEditBar } from './components/designer/GalleryEditBar';
-import { adminEditOpen, adminEditSave, designerEditOpen, designerEditSave, editErrorText, readyEditOpen, readyEditSave, takeAdminHandoff, type EditableDesign } from './services/galleryEdit';
+import { adminEditOpen, adminEditSave, designerEditOpen, designerEditSave, editErrorText, readyEditOpen, readyEditSave, takeAdminHandoff, adminEditorReady, type EditableDesign } from './services/galleryEdit';
 import { GALLERY_READY_CATEGORIES } from './data/readyCategories';
 import { autoSlots } from './data/autoSlots';
 import { DesignerDashboard } from './components/designer/DesignerDashboard';
@@ -989,7 +989,12 @@ export default function App() {
 
   // 1. Listen for Auth changes & Load workspace from LocalStorage
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (signedIn: User | null) => {
+    let stopped = false;
+    let unsubscribe = () => {};
+    // The admin's editor tab first signs in as the admin, so the browser's own accounts never reach it.
+    (adminEditTab.current ? adminEditorReady : Promise.resolve()).then(() => {
+      if (stopped) return;
+      unsubscribe = onAuthStateChanged(auth, async (signedIn: User | null) => {
       // An anonymous user is a restaurant device in another tab, not an owner.
       const user = signedIn && !signedIn.isAnonymous ? signedIn : null;
       setCurrentUser(user);
@@ -1013,8 +1018,12 @@ export default function App() {
       if ((first || !user) && !galleryEditRef.current && !adminEditTab.current) setIsAuthActive(true);
       setIsFirebaseLoading(false);
       isInitialLoadComplete.current = true;
+      });
     });
-    return () => unsubscribe();
+    return () => {
+      stopped = true;
+      unsubscribe();
+    };
   }, []);
 
   // 2. Debounced auto-save to LocalStorage whenever pages or elements change

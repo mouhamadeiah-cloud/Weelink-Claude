@@ -580,6 +580,15 @@ export default {
 
     if (action === 'me') return json({ admin: publicAdmin(admin) });
 
+    // The admin's editor tab signs in to Firebase as the admin himself: an account of its own (no email) that never
+    // meets the accounts of the customers signed in on the same browser. Its uid starts with ADMIN_UID_PREFIX, which
+    // the Wee AI meter reads as «no limit» (api/build-page.ts).
+    if (action === 'editor-token') {
+      const fb = firebaseAdmin();
+      if (!fb) return json({ error: 'not_configured' }, 503);
+      return json({ customToken: await fb.auth.createCustomToken(`platform-admin_${admin.username}`) });
+    }
+
     if (action === 'change-password') {
       const current = String(body.current || '');
       const next = String(body.next || '');

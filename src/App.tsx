@@ -225,6 +225,21 @@ export default function App() {
   const isWide = windowWidth >= 1024;
   const isSheet = !isWide && !isPreviewActive;
   const isDocked = !isPreviewActive;
+  // The height of the bars at the top (control bar, plus the designer / gallery-edit bar when one is open): the docked panel and
+  // its icon column start under them, so a taller top never leaves them over it.
+  const topBarsObserver = useRef<ResizeObserver | null>(null);
+  const [topBarsHeight, setTopBarsHeight] = useState(56);
+  // A callback ref: the bars exist only once the editor itself is on screen (not on the start or sign-in pages).
+  const topBarsRef = useCallback((el: HTMLDivElement | null) => {
+    topBarsObserver.current?.disconnect();
+    topBarsObserver.current = null;
+    if (!el) return;
+    const measure = () => setTopBarsHeight(Math.round(el.getBoundingClientRect().height) || 56);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    topBarsObserver.current = new ResizeObserver(measure);
+    topBarsObserver.current.observe(el);
+  }, []);
   const dockedPanelWidth = Math.round(Math.min(400, Math.max(320, windowWidth * 0.24)));
   const EDIT_RAIL_WIDTH = EDITOR_COLUMN_WIDTH;
   const [isWorkspaceHubOpen, setIsWorkspaceHubOpen] = useState(false);
@@ -4782,7 +4797,7 @@ export default function App() {
       */}
       {/* z-index kept above the page's own navbar (which can be set sticky with z-index 100000 by
           the user inside the canvas) so the app's own control bar/edit bar always stays on top of it. */}
-      <div className="sticky top-0 z-[999999] w-full shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+      <div ref={topBarsRef} className="sticky top-0 z-[999999] w-full shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
         {/* 1. Primary Control Bar */}
         <ControlBar
           currentPage={currentPage}
@@ -4938,7 +4953,7 @@ export default function App() {
           style={
             isSheet
               ? { left: 0, right: 0, bottom: 0, height: EDITOR_BAR_HEIGHT }
-              : { top: 56, bottom: 0, width: EDIT_RAIL_WIDTH, right: isRightDrawerOpen ? dockedPanelWidth : 0, transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }
+              : { top: topBarsHeight, bottom: 0, width: EDIT_RAIL_WIDTH, right: isRightDrawerOpen ? dockedPanelWidth : 0, transition: 'right 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }
           }
         >
           <EditorColumn
@@ -5079,6 +5094,7 @@ export default function App() {
         isWeeAiChatCollapsed={!isChatActive}
         onToggleWeeAiChat={() => setIsChatActive(prev => !prev)}
         dockedWidth={isDocked && !isSheet ? dockedPanelWidth : 0}
+        dockedTop={topBarsHeight}
         sheet={isSheet}
         headerSlot={
           <SelectionNameInput

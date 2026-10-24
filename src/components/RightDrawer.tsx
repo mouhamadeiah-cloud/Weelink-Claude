@@ -199,6 +199,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onStartLinkCopy,
   isNavbarSelected = false,
   dockedWidth = 0,
+  dockedTop = 56,
   sheet = false,
   headerSlot,
   sectionRequest = 0,
@@ -473,11 +474,11 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
     ? {
         transform: isOpen ? 'none' : 'translate3d(100%, 0, 0)',
         transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-        top: 56,
+        top: dockedTop,
         width: dockedWidth,
         minWidth: 0,
         maxWidth: 'none',
-        height: 'calc(100vh - 56px)',
+        height: `calc(100vh - ${dockedTop}px)`,
         bottom: 'auto',
       }
     : {

@@ -1,3 +1,5 @@
+// «فريق العمل» of the restaurant (Eyad, 24 Oct): the team (pageAdmin/TeamSection.tsx, where a person
+// is invited into the admin), then each member's permissions below.
 // أعضاء الإدارة: the owner invites a partner or a manager with a link. Each member signs in with
 // their own email and password and sees only what the owner allowed; the owner can change that or
 // remove the member at any time. See services/members.ts.
@@ -8,6 +10,7 @@ import { ALL_PERMS, PERMS, Perms, createInvite, deleteInvite, inviteUrl, removeM
 import { Card, Field, inputClass, PrimaryButton, GhostButton, EmptyState, Toggle } from '../../shop/adminUi';
 import { CloudNotice, RestaurantTabProps } from './shared';
 import { CopyLink } from './DevicesTab';
+import { TeamSection } from '../../pageAdmin/TeamSection';
 
 const PermToggles: React.FC<{ perms: Perms; onChange: (p: Perms) => void }> = ({ perms, onChange }) => (
   <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
@@ -28,7 +31,7 @@ const permSummary = (p: Perms) => {
 const whatsappLink = (url: string, name: string) =>
   `https://wa.me/?text=${encodeURIComponent(`${name ? name + '، ' : ''}أدعوك لإدارة المطعم معي على Weelink. افتح الرابط وسجّل الدخول أو أنشئ حساباً بنفس بريدك الإلكتروني:\n${url}`)}`;
 
-export const MembersTab: React.FC<RestaurantTabProps> = ({ ownerUid }) => {
+export const MembersTab: React.FC<RestaurantTabProps & { inTeam?: boolean }> = ({ ownerUid, inTeam = false }) => {
   const members = useMembers(ownerUid);
   const invites = useInvites(ownerUid);
   const [draft, setDraft] = useState({ name: '', email: '', perms: { ...ALL_PERMS, accounts: false } as Perms });
@@ -61,12 +64,12 @@ export const MembersTab: React.FC<RestaurantTabProps> = ({ ownerUid }) => {
 
   return (
     <div className="space-y-4">
-      <div className="p-3 rounded-2xl bg-white border border-neutral-200 text-xs text-neutral-600 font-bold leading-relaxed">
+      {!inTeam && <div className="p-3 rounded-2xl bg-white border border-neutral-200 text-xs text-neutral-600 font-bold leading-relaxed">
         أضف شريكاً أو مديراً يدير المطعم معك. كل عضو يدخل ببريده وكلمة سره هو، ويرى فقط الأقسام التي تسمح له بها. العمال لا يحتاجون هذا: يدخلون من الأجهزة برقمهم السري.
-      </div>
+      </div>}
       <CloudNotice error={members.error || invites.error} />
 
-      <Card title="دعوة عضو جديد">
+      {!inTeam && <Card title="دعوة عضو جديد">
         <div className="space-y-3">
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label="الاسم">
@@ -92,7 +95,7 @@ export const MembersTab: React.FC<RestaurantTabProps> = ({ ownerUid }) => {
             </div>
           )}
         </div>
-      </Card>
+      </Card>}
 
       {invites.items.length > 0 && (
         <Card title="دعوات لم تُقبل بعد">
@@ -114,7 +117,7 @@ export const MembersTab: React.FC<RestaurantTabProps> = ({ ownerUid }) => {
         </Card>
       )}
 
-      <Card title="الأعضاء">
+      <Card title={inTeam ? 'دخول الإدارة والصلاحيات' : 'الأعضاء'}>
         {members.items.length === 0 ? (
           <EmptyState text="لا يوجد أعضاء بعد" />
         ) : (
@@ -143,3 +146,12 @@ export const MembersTab: React.FC<RestaurantTabProps> = ({ ownerUid }) => {
     </div>
   );
 };
+
+// The restaurant's «فريق العمل»: its people first (an invited person gets what the restaurant's members
+// get by default, all but «الحسابات»), then who signed in to the admin and what each may see.
+export const TeamAndMembersTab: React.FC<RestaurantTabProps> = (props) => (
+  <div className="space-y-4">
+    <TeamSection owner={props.ownerUid} />
+    <MembersTab {...props} inTeam />
+  </div>
+);

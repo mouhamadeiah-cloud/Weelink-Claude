@@ -1,6 +1,6 @@
 // The free page's admin (Eyad, 13 Oct): every page has one now, opened from «الإدارة» in the page's
 // navbar while its owner looks at it, or from «إدارة» in the editor's column. It lists the page's
-// appointments. It shows how many people opened the published page and how
+// appointments and its team («فريق العمل»). It shows how many people opened the published page and how
 // many tapped its WhatsApp, call or email links, the services that can be added, and the way back
 // to the editor («تعديل الصفحة»).
 import React, { useEffect, useState } from 'react';
@@ -13,6 +13,7 @@ import { InquiriesSection } from './InquiriesSection';
 import { RatingsSection } from './RatingsSection';
 import { watchBookings } from '../../services/bookings';
 import { ServicesSection } from './ServicesSection';
+import { TeamSection } from './TeamSection';
 import type { PageAdminData } from './pageServices';
 import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
@@ -97,6 +98,8 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
           {pageAdmin && onPageAdmin && <ServicesSection data={pageAdmin} onChange={onPageAdmin} />}
 
           <BookingsSection owner={owner} project={project} watch={watch} />
+
+          <TeamSection owner={owner} asSection />
 
           <InquiriesSection owner={owner} project={project} />
 

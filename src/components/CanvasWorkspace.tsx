@@ -35,6 +35,7 @@ import { Icon } from '@iconify/react';
 import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
 import { useCustomerPrefill } from './customers/customerSession';
 import { BookingPageContext, createBooking, dayKey, readTaken } from '../services/bookings';
+import { BookingSettingsOpenContext, WEEK_DAYS, scheduleFor, scheduleFromElement, useBookingSettings } from '../services/bookingSettings';
 import { NavbarStars, RatingsWidget } from './ratings/RatingsUI';
 import { ContactFormWidget } from './contact/ContactFormWidget';
 import { 
@@ -156,6 +157,14 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const [taken, setTaken] = useState<number[]>([]);
   const [takenTick, setTakenTick] = useState(0);
   const [savedStatus, setSavedStatus] = useState<'new' | 'confirmed' | null>(null);
+  // How the business takes bookings comes from its admin («إعدادات الحجز»); a page made before that
+  // still books with the settings its element carries until the admin copies them in.
+  const bookingSettings = useBookingSettings(bookingPage?.owner, bookingPage?.project);
+  const schedule = useMemo(
+    () => scheduleFor(bookingSettings ?? null, elem.calendarScheduleId) || scheduleFromElement(elem, elem.calendarScheduleId || 'main'),
+    [bookingSettings, elem]
+  );
+  const openSettings = useContext(BookingSettingsOpenContext);
 
   // Calendar & Form configurations
   const title = elem.calendarTitle || elem.content || 'حجز موعد جديد';
@@ -165,21 +174,22 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const emailLabel = elem.calendarEmailLabel || 'البريد الإلكتروني للعميل';
   const descLabel = elem.calendarDescLabel || 'تفاصيل ووصف الطلب';
 
-  const workingDays = elem.calendarWorkingDays || ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
-  const holidays = elem.calendarHolidays || ['friday', 'saturday'];
-  const workStart = elem.calendarWorkStart || '09:00';
-  const workEnd = elem.calendarWorkEnd || '17:00';
-  const breakStart = elem.calendarBreakStart || '12:00';
-  const breakEnd = elem.calendarBreakEnd || '13:00';
-  const interval = elem.calendarInterval || '30';
-  const intervalMins = elem.calendarIntervalMinutes || 30;
-  const needsConfirmation = elem.calendarNeedsConfirmation ?? true;
+  const workingDays = schedule.workingDays;
+  const holidays = WEEK_DAYS.filter((d) => !workingDays.includes(d)) as string[];
+  const workStart = schedule.workStart;
+  const workEnd = schedule.workEnd;
+  const breakStart = schedule.breakStart;
+  const breakEnd = schedule.breakEnd;
+  const hasBreak = !!breakStart && !!breakEnd && breakStart < breakEnd;
+  const interval = schedule.interval;
+  const intervalMins = schedule.intervalMinutes;
+  const needsConfirmation = schedule.needsConfirmation;
   const accentColor = elem.calendarAccentColor || '#0071e3';
 
   const slots = elem.calendarSlots || ['09:00 ص', '11:30 ص', '02:00 م', '04:30 م'];
 
   // Allowed meeting types
-  const allowedMeetingTypes = elem.calendarMeetingTypes || [elem.calendarMeetingType || 'phone'];
+  const allowedMeetingTypes = schedule.meetingTypes;
   const [selectedMeetingType, setSelectedMeetingType] = useState<string>(allowedMeetingTypes[0] || 'phone');
 
   // Sync selected meeting type if configurations change
@@ -187,7 +197,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
     if (allowedMeetingTypes.length > 0 && !allowedMeetingTypes.includes(selectedMeetingType)) {
       setSelectedMeetingType(allowedMeetingTypes[0]);
     }
-  }, [elem.calendarMeetingTypes, elem.calendarMeetingType]);
+  }, [allowedMeetingTypes.join()]);
 
   // Calendar month: this month, and no earlier
   const today = new Date();
@@ -195,6 +205,10 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-indexed
   const isThisMonth = currentYear === today.getFullYear() && currentMonth === today.getMonth();
   const nowMins = today.getHours() * 60 + today.getMinutes();
+  // The last day a visitor may book, and how soon before a time it can still be booked.
+  const lastDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + schedule.daysAhead);
+  const noticeUntil = today.getTime() + schedule.minNoticeHours * 3600000;
+  const isLastMonth = currentYear > lastDay.getFullYear() || (currentYear === lastDay.getFullYear() && currentMonth >= lastDay.getMonth());
 
   const monthNamesArabic = [
     'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
@@ -235,6 +249,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       startMin: chosen.startMin,
       slot: chosen.label,
       meetingType: selectedMeetingType,
+      schedule: schedule.id,
       name, phone, email, address, desc,
       needsConfirmation,
     });
@@ -262,8 +277,9 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const isDateHoliday = (dayNum: number) => {
     const dayName = getDayOfWeekNameOfDate(dayNum);
     return holidays.includes(dayName) || !workingDays.includes(dayName) || (isThisMonth && dayNum < today.getDate())
-      // today, once its last time has passed
-      || (isThisMonth && dayNum === today.getDate() && interval !== 'day' && slotItems.every((s) => s.startMin <= nowMins));
+      || new Date(currentYear, currentMonth, dayNum) > lastDay
+      // a day whose last time has passed, or is too soon to book
+      || slotItems.every((s) => isPastOn(dayNum, s.startMin));
   };
 
   const intervalTexts: Record<string, string> = {
@@ -324,7 +340,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       const end = current + duration;
 
       // Check break overlap
-      const overlapsBreak = start < breakEndMins && end > breakStartMins;
+      const overlapsBreak = hasBreak && start < breakEndMins && end > breakStartMins;
 
       if (!overlapsBreak) {
         list.push({ label: `${formatTime(start)} - ${formatTime(end)}`, startMin: start });
@@ -333,10 +349,15 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
     }
 
     return list.length > 0 ? list : slots.map((label, i) => ({ label, startMin: i }));
-  }, [interval, intervalMins, workStart, workEnd, breakStart, breakEnd, slots]);
+  }, [interval, intervalMins, workStart, workEnd, breakStart, breakEnd, hasBreak, slots]);
   const computedSlots = useMemo(() => slotItems.map((s) => s.label), [slotItems]);
-  const isToday = isThisMonth && selectedDay === today.getDate();
-  const isPastSlot = (startMin: number) => isToday && interval !== 'day' && startMin <= nowMins;
+  // A time that has passed, or is closer than the notice the business asks for.
+  function isPastOn(dayNum: number, startMin: number) {
+    const d = new Date(currentYear, currentMonth, dayNum);
+    if (interval === 'day') return d.getTime() + 86400000 <= noticeUntil;
+    return d.getTime() + startMin * 60000 <= Math.max(noticeUntil, today.getTime());
+  }
+  const isPastSlot = (startMin: number) => isPastOn(selectedDay, startMin);
   const isOpenSlot = (label: string) => {
     const item = slotItems.find((s) => s.label === label);
     return !!item && !taken.includes(item.startMin) && !isPastSlot(item.startMin);
@@ -346,11 +367,11 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   useEffect(() => {
     if (!live || !bookingPage) return setTaken([]);
     let alive = true;
-    readTaken(bookingPage.owner, bookingPage.project, dayKey(new Date(currentYear, currentMonth, selectedDay)))
+    readTaken(bookingPage.owner, bookingPage.project, dayKey(new Date(currentYear, currentMonth, selectedDay)), schedule.id)
       .then((t) => alive && setTaken(t))
       .catch(() => alive && setTaken([]));
     return () => { alive = false; };
-  }, [live, bookingPage?.owner, bookingPage?.project, currentYear, currentMonth, selectedDay, takenTick]);
+  }, [live, bookingPage?.owner, bookingPage?.project, schedule.id, currentYear, currentMonth, selectedDay, takenTick]);
 
   // Keep selectedSlot on a free time
   useEffect(() => {
@@ -373,6 +394,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   };
 
   const handleNextMonth = () => {
+    if (isLastMonth) return;
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear(prev => prev + 1);
@@ -398,7 +420,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
     } else {
       setSelectedDay(1);
     }
-  }, [currentMonth, currentYear, workingDays, holidays]);
+  }, [currentMonth, currentYear, workingDays.join(), schedule.daysAhead, schedule.minNoticeHours, slotItems]);
 
   // Detect card text contrast based on background color
   const cardBg = elem.styles.backgroundColor || '#ffffff';
@@ -480,6 +502,19 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
         boxShadow: isDarkBg ? '0 20px 40px -15px rgba(0,0,0,0.7)' : '0 20px 35px -10px rgba(0,0,0,0.07)'
       }}
     >
+      {/* The owner's gear: the schedule's settings in the admin («إعدادات الحجز») */}
+      {openSettings && (
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); openSettings(schedule.id); }}
+          className="absolute top-3 left-3 z-10 h-7 px-2 rounded-lg bg-ink/85 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm hover:bg-ink cursor-pointer"
+          title="إعدادات الحجز بالإدارة: الأيام والساعات والمدة والتأكيد"
+        >
+          <span aria-hidden>⚙</span> إعدادات الحجز
+        </button>
+      )}
+
       {/* Top Accent Stripe for High-End Apple/Visual Distinction */}
       <div 
         className="w-full h-1.5 shrink-0 rounded-t-xl mb-3 shadow-xs" 
@@ -621,9 +656,11 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
                 <span>⏰</span>
                 <span>الأوقات المتاحة لهذا اليوم ({computedSlots.length} فترات):</span>
               </span>
-              <span className="text-[9px] text-neutral-400 font-normal">
-                استراحة: {breakStart} - {breakEnd}
-              </span>
+              {hasBreak && (
+                <span className="text-[9px] text-neutral-400 font-normal">
+                  استراحة: {breakStart} - {breakEnd}
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-1.5 max-h-[110px] overflow-y-auto pr-0.5">

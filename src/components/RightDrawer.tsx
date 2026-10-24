@@ -68,6 +68,7 @@ import {
   Link as LinkIcon,
   PanelTop,
 } from 'lucide-react';
+import { BookingSettingsLink } from './pageAdmin/BookingSettingsLink';
 import { WeeDots } from './ui/WeeDots';
 import { Slide, ElementType, CanvasElement, NavbarConfig, Page, SlideDividerShape, getGlowShadowStyle, getLightGradientStyle, ContactType } from '../types';
 import { MASK_SHAPES } from '../utils/maskShapes';
@@ -2662,7 +2663,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               </div>
                               <div>
                                 <h3 className="text-xs font-bold text-neutral-900">ضبط إعدادات حجز المواعيد</h3>
-                                <p className="text-xs text-neutral-500">قم بضبط أوقات العمل واللون والتحقق والمدد</p>
+                                <p className="text-xs text-neutral-500">شكل العنصر وألوانه وتسميات حقوله</p>
                               </div>
                             </div>
 
@@ -2712,168 +2713,8 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               </div>
                             </div>
 
-                            {/* 3. أيام العمل والعطل الأسبوعية */}
-                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-xs font-bold text-neutral-800 block">أيام العمل والعطل الأسبوعية:</span>
-                              <p className="text-xs text-neutral-400">اضغط على اليوم للتبديل بين يوم عمل (لون ملون) أو عطلة (رمادي):</p>
-                              <div className="grid grid-cols-4 gap-1.5">
-                                {daysList.map((day) => {
-                                  const isWork = workingDays.includes(day.id);
-                                  return (
-                                    <button
-                                      key={day.id}
-                                      type="button"
-                                      onClick={() => handleToggleDay(day.id)}
-                                      className={`py-1 px-1 rounded-lg text-xs font-bold border transition-all text-center cursor-pointer ${
-                                        isWork
-                                          ? 'text-white border-transparent'
-                                          : 'bg-neutral-100 text-neutral-400 border-neutral-200 hover:bg-neutral-200'
-                                      }`}
-                                      style={{ backgroundColor: isWork ? accentColor : undefined }}
-                                    >
-                                      {day.name}
-                                      <div className="text-xs font-normal opacity-85 mt-0.5">
-                                        {isWork ? 'عمل' : 'عطلة'}
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-
-                            {/* 4. أوقات الدوام الرسمي اليومي */}
-                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-xs font-bold text-neutral-800 block">ساعات الدوام اليومي الرسمي:</span>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <span className="text-xs text-neutral-500 block mb-0.5">بداية العمل:</span>
-                                  <input
-                                    type="time"
-                                    value={workStart}
-                                    onChange={(e) => onUpdateElement({ calendarWorkStart: e.target.value })}
-                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <span className="text-xs text-neutral-500 block mb-0.5">نهاية العمل:</span>
-                                  <input
-                                    type="time"
-                                    value={workEnd}
-                                    onChange={(e) => onUpdateElement({ calendarWorkEnd: e.target.value })}
-                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* 5. أوقات الاستراحة اليومية */}
-                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-xs font-bold text-neutral-800 block">أوقات الاستراحة (تُستثنى من الحجوزات):</span>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <span className="text-xs text-neutral-500 block mb-0.5">بداية الاستراحة:</span>
-                                  <input
-                                    type="time"
-                                    value={breakStart}
-                                    onChange={(e) => onUpdateElement({ calendarBreakStart: e.target.value })}
-                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <span className="text-xs text-neutral-500 block mb-0.5">نهاية الاستراحة:</span>
-                                  <input
-                                    type="time"
-                                    value={breakEnd}
-                                    onChange={(e) => onUpdateElement({ calendarBreakEnd: e.target.value })}
-                                    className="w-full p-2 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* 6. وتيرة تكرار المواعيد (Interval) */}
-                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-xs font-bold text-neutral-800 block">مدة الفترة المتاحة لكل موعد:</span>
-                              <select
-                                value={interval}
-                                onChange={(e) => onUpdateElement({ calendarInterval: e.target.value as any })}
-                                className="w-full text-xs font-semibold p-2 bg-white rounded-xl border border-neutral-300 focus:outline-none cursor-pointer"
-                              >
-                                <option value="10">موعد كل ١٠ دقائق</option>
-                                <option value="15">موعد كل ١٥ دقيقة</option>
-                                <option value="30">موعد كل ٣٠ دقيقة (نصف ساعة)</option>
-                                <option value="60">موعد كل ساعة كاملة</option>
-                                <option value="day">موعد واحد فقط طوال اليوم</option>
-                                <option value="manual">تخصيص يدوي بالدقائق...</option>
-                              </select>
-
-                              {interval === 'manual' && (
-                                <div className="space-y-1 mt-1.5 animate-fadeIn">
-                                  <label className="text-xs text-neutral-500 block">أدخل الوقت بالدقائق يدوياً:</label>
-                                  <div className="flex items-center gap-2">
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={480}
-                                      value={intervalMins}
-                                      onChange={(e) => onUpdateElement({ calendarIntervalMinutes: Math.max(1, Number(e.target.value)) })}
-                                      className="w-24 p-1.5 bg-white rounded-lg border border-neutral-300 font-mono text-center focus:outline-none"
-                                    />
-                                    <span className="text-xs text-neutral-500 font-semibold">دقيقة</span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* 7. هل يتطلب تأكيد مسبق */}
-                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-xs font-bold text-neutral-800 block">آلية الموافقة وتأكيد الموعد:</span>
-                              <label className="flex items-center gap-2 cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  checked={needsConfirmation}
-                                  onChange={(e) => onUpdateElement({ calendarNeedsConfirmation: e.target.checked })}
-                                  className="w-4 h-4 cursor-pointer"
-                                  style={{ accentColor: accentColor }}
-                                />
-                                <span className="text-xs font-medium text-neutral-700">يتطلب موافقة وتأكيد الإدارة أولاً (⏳ معلّق)</span>
-                              </label>
-                              <p className="text-xs text-neutral-400 mr-6">
-                                في حال عدم التفعيل، سيتم تأكيد الموعد للمستخدم مباشرة (✅ فوري).
-                              </p>
-                            </div>
-
-                            {/* 8. نوع الموعد (حضور شخصي، هاتفي، اتصال فيديو واتساب) - متعدد الخيارات! */}
-                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-xs font-bold text-neutral-800 block">طريقة ومكان إجراء المقابلة (اختر خياراً أو أكثر):</span>
-                              <p className="text-xs text-neutral-400">ستتاح للمتصفح إمكانية الاختيار بين الخيارات المحددة فقط:</p>
-                              <div className="grid grid-cols-3 gap-1">
-                                {[
-                                  { id: 'personal', name: '👤 شخصي', title: 'حضور شخصي بالمقر' },
-                                  { id: 'phone', name: '📞 هاتفي', title: 'مكالمة هاتفية صوتية' },
-                                  { id: 'whatsapp', name: '📹 فيديو', title: 'اتصال فيديو واتساب' },
-                                ].map((type) => {
-                                  const isSel = meetingTypes.includes(type.id);
-                                  return (
-                                    <button
-                                      key={type.id}
-                                      type="button"
-                                      onClick={() => handleToggleMeetingType(type.id)}
-                                      className={`py-1.5 rounded-lg text-xs font-bold border transition-all text-center cursor-pointer ${
-                                        isSel
-                                          ? 'text-white border-transparent font-black'
-                                          : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50'
-                                      }`}
-                                      style={{ backgroundColor: isSel ? accentColor : undefined }}
-                                      title={type.title}
-                                    >
-                                      {type.name}
-                                      {isSel && <span className="mr-0.5 text-xs">✓</span>}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
+                            {/* الأيام والساعات والمدة والتأكيد: من الإدارة (إعدادات الحجز) */}
+                            <BookingSettingsLink elementScheduleId={selectedElement.calendarScheduleId} onPick={(id) => onUpdateElement({ calendarScheduleId: id })} />
 
                             {/* 9. تخصيص عناوين حقول الإدخال */}
                             <div className="space-y-2 border-t border-blue-100/50 pt-2">
@@ -2933,24 +2774,6 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               </div>
                             </div>
 
-                            {/* 10. قائمة فترات الموعد المتاحة (كخيار احتياطي يدوي) */}
-                            <div className="space-y-2 border-t border-blue-100/50 pt-2">
-                              <span className="text-xs font-bold text-neutral-800 block">الفترات الزمنية الاحتياطية (في حال عدم جيلها تلقائياً):</span>
-                              <textarea
-                                value={slots.join(', ')}
-                                onChange={(e) => {
-                                  const newSlots = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                                  onUpdateElement({ calendarSlots: newSlots });
-                                }}
-                                rows={2}
-                                placeholder="مثال: 09:00 ص, 11:30 ص, 02:00 م, 04:30 م"
-                                className="w-full px-2.5 py-1.5 bg-white rounded-xl border border-neutral-300 text-xs focus:outline-none font-mono text-left font-semibold"
-                                dir="ltr"
-                              />
-                              <p className="text-xs text-neutral-400 leading-relaxed text-right" dir="rtl">
-                                تُستخدم هذه الفترات في حال رغبت بتجاوز الحساب التلقائي، اكتب الساعات مفصولة بفواصل.
-                              </p>
-                            </div>
                           </div>
                         );
                       })()}

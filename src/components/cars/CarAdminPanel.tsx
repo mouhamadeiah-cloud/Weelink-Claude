@@ -2,7 +2,7 @@
 // as in the Online Shop. All entries and management live here; the showroom's pages are edited in
 // the editor like any other page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, PencilLine, CarFront, Warehouse, SlidersHorizontal, Users, Wallet, FileText, Inbox, CalendarDays, Star, MessageSquare, UserCog } from 'lucide-react';
+import { Settings, X, PencilLine, CarFront, Warehouse, SlidersHorizontal, Users, Wallet, FileText, Inbox, CalendarDays, Star, MessageSquare, UserCog, CalendarCog } from 'lucide-react';
 import { CarAdminData } from './carTypes';
 import { CarEditor, CarTabProps } from './tabs/CarEditor';
 import { InventoryTab } from './tabs/InventoryTab';
@@ -17,15 +17,17 @@ import { InquiriesTab } from '../pageAdmin/InquiriesTab';
 import { PageCustomersTab } from '../pageAdmin/PageCustomersTab';
 import { RatingsTab } from '../pageAdmin/RatingsTab';
 import { TeamTab } from '../pageAdmin/TeamTab';
+import { BookingSettingsTab } from '../pageAdmin/BookingSettingsSection';
 import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
-type TabId = 'add' | 'inventory' | 'requests' | 'bookings' | 'inquiries' | 'signups' | 'ratings' | 'team' | 'customers' | 'documents' | 'accounts' | 'settings';
+type TabId = 'add' | 'inventory' | 'requests' | 'bookings' | 'booking-settings' | 'inquiries' | 'signups' | 'ratings' | 'team' | 'customers' | 'documents' | 'accounts' | 'settings';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<CarTabProps> }[] = [
   { id: 'add', label: 'إضافة سيارة', icon: CarFront, Component: CarEditor },
   { id: 'inventory', label: 'المخزون', icon: Warehouse, Component: InventoryTab },
   { id: 'requests', label: 'طلبات الزوار', icon: Inbox, Component: CarRequestsTab },
   { id: 'bookings', label: 'المواعيد', icon: CalendarDays, Component: BookingsTab },
+  { id: 'booking-settings', label: 'إعدادات الحجز', icon: CalendarCog, Component: BookingSettingsTab },
   { id: 'signups', label: 'مشتركو الصفحة', icon: Users, Component: PageCustomersTab },
   { id: 'inquiries', label: 'الرسائل', icon: MessageSquare, Component: InquiriesTab },
   { id: 'ratings', label: 'التقييمات', icon: Star, Component: RatingsTab },
@@ -45,14 +47,21 @@ interface CarAdminPanelProps {
   hideGear?: boolean;
   // «تعديل الصفحة»: shown when the admin was opened from the page's navbar, back to the editor.
   onEditPage?: () => void;
+  // Opens the admin on a tab (counted): «إعدادات الحجز» from the gear of a booking element.
+  tabRequest?: { tab: string; n: number } | null;
 }
 
-export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange, openRequest = 0, hideGear = false, onEditPage }) => {
+export const CarAdminPanel: React.FC<CarAdminPanelProps> = ({ data, onChange, openRequest = 0, hideGear = false, onEditPage, tabRequest }) => {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (openRequest > 0) setOpen(true);
   }, [openRequest]);
   const [tab, setTab] = useState<TabId>('inventory');
+  useEffect(() => {
+    if (!tabRequest?.n || !TABS.some((t) => t.id === tabRequest.tab)) return;
+    setTab(tabRequest.tab as TabId);
+    setOpen(true);
+  }, [tabRequest?.n]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [docTarget, setDocTarget] = useState<DocEditorTarget | null>(null);
   const newRequests = data.requests.filter((r) => r.status === 'new').length;

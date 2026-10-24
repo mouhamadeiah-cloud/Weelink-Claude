@@ -3,7 +3,7 @@
 // appointments and its team («فريق العمل»). It shows how many people opened the published page and how
 // many tapped its WhatsApp, call or email links, the services that can be added, and the way back
 // to the editor («تعديل الصفحة»).
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { BarChart3, CalendarDays, Globe2, Loader2, MessageCircle, PencilLine, Sparkles, Star, Users, X } from 'lucide-react';
 import { DayStats, readStats } from '../../services/siteStats';
 import type { ProjectKey } from '../../utils/projectKeys';
@@ -14,6 +14,8 @@ import { RatingsSection } from './RatingsSection';
 import { watchBookings } from '../../services/bookings';
 import { ServicesSection } from './ServicesSection';
 import { TeamSection } from './TeamSection';
+import { BookingSettingsSection } from './BookingSettingsSection';
+import { BookingSettingsFocusContext } from '../../services/bookingSettings';
 import type { PageAdminData } from './pageServices';
 import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
@@ -47,6 +49,7 @@ const SERVICES = [
 
 export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, owner, project, pageName, published, pageAdmin, onPageAdmin, onEditPage, onPublish, loadStats = readStats, watchBookings: watch }) => {
   const [stats, setStats] = useState<DayStats[] | null | 'error'>(null);
+  const bookingFocus = useContext(BookingSettingsFocusContext);
 
   useEffect(() => {
     if (!open) return;
@@ -98,6 +101,8 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
           {pageAdmin && onPageAdmin && <ServicesSection data={pageAdmin} onChange={onPageAdmin} />}
 
           <BookingsSection owner={owner} project={project} watch={watch} />
+
+          <BookingSettingsSection owner={owner} project={project} focus={bookingFocus} />
 
           <TeamSection owner={owner} asSection />
 

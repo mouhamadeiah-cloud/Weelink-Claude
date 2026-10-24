@@ -2,7 +2,7 @@
 // shop and the showroom. The menu (main catalogs, sub-catalogs, dishes), the website's orders and
 // the settings are managed here; the restaurant's pages are edited in the editor like any page.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, PencilLine, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users, UserCog, FileBarChart, Contact, CalendarDays, Star, MessageSquare } from 'lucide-react';
+import { Settings, X, PencilLine, UtensilsCrossed, LayoutList, Layers, Inbox, SlidersHorizontal, QrCode, Wallet, Armchair, MonitorSmartphone, Users, UserCog, FileBarChart, Contact, CalendarDays, Star, MessageSquare, CalendarCog } from 'lucide-react';
 import { RestaurantAdminData, setDayStartHour } from './restaurantTypes';
 import { RestaurantTabProps, RestaurantTabId } from './tabs/shared';
 import { TablesTab } from './tabs/TablesTab';
@@ -18,6 +18,7 @@ import { SubCatalogsTab } from './tabs/SubCatalogsTab';
 import { OrdersTab } from './tabs/OrdersTab';
 import { RestaurantSettingsTab } from './tabs/RestaurantSettingsTab';
 import { TeamAndMembersTab } from './tabs/MembersTab';
+import { BookingSettingsTab } from '../pageAdmin/BookingSettingsSection';
 import { CustomersTab } from './tabs/CustomersTab';
 import { Access, OWNER_ACCESS, PermId } from '../../services/members';
 import { BookingsTab } from '../pageAdmin/BookingsTab';
@@ -32,6 +33,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'orders', label: 'الطلبات', icon: Inbox, Component: OrdersTab, perm: 'orders' },
   { id: 'customers', label: 'زبائن الموقع', icon: Contact, Component: CustomersTab, perm: 'orders' },
   { id: 'bookings', label: 'المواعيد', icon: CalendarDays, Component: BookingsTab, perm: 'orders' },
+  { id: 'booking-settings', label: 'إعدادات الحجز', icon: CalendarCog, Component: BookingSettingsTab, perm: 'settings' },
   { id: 'inquiries', label: 'الرسائل', icon: MessageSquare, Component: InquiriesTab, perm: 'orders' },
   { id: 'ratings', label: 'التقييمات', icon: Star, Component: RatingsTab, perm: 'orders' },
   { id: 'dishes', label: 'الأطباق', icon: UtensilsCrossed, Component: DishesTab, perm: 'menu' },
@@ -60,9 +62,11 @@ interface RestaurantAdminPanelProps {
   hideGear?: boolean;
   // «تعديل الصفحة»: shown when the admin was opened from the page's navbar, back to the editor.
   onEditPage?: () => void;
+  // Opens the admin on a tab (counted): «إعدادات الحجز» from the gear of a booking element.
+  tabRequest?: { tab: string; n: number } | null;
 }
 
-export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid, restaurantId, access = OWNER_ACCESS, openRequest = 0, hideGear = false, onEditPage }) => {
+export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data, onChange, ownerUid, restaurantId, access = OWNER_ACCESS, openRequest = 0, hideGear = false, onEditPage, tabRequest }) => {
   // Before anything below reads «today»: the owner's business day.
   setDayStartHour(data.settings.dayStartHour);
   const [open, setOpen] = useState(false);
@@ -71,6 +75,11 @@ export const RestaurantAdminPanel: React.FC<RestaurantAdminPanelProps> = ({ data
   }, [openRequest]);
   const tabs = TABS.filter((t) => (t.perm === 'owner' ? access.owner : access.owner || access.perms[t.perm]));
   const [chosen, setTab] = useState<TabId>('dishes');
+  useEffect(() => {
+    if (!tabRequest?.n || !TABS.some((t) => t.id === tabRequest.tab)) return;
+    setTab(tabRequest.tab as TabId);
+    setOpen(true);
+  }, [tabRequest?.n]);
   const tab = tabs.some((t) => t.id === chosen) ? chosen : tabs[0]?.id;
   const liveOrders = useLiveOrders(access.owner || access.perms.orders ? restaurantId : null);
   const liveIds = new Set(liveOrders.items.map((o) => o.id));

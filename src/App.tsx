@@ -66,6 +66,7 @@ import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { PageAdminPanel } from './components/pageAdmin/PageAdminPanel';
 import { BookingPage, BookingPageContext } from './services/bookings';
+import { BookingLegacyContext, BookingSettingsFocus, BookingSettingsFocusContext, BookingSettingsOpenContext, scheduleFromElement } from './services/bookingSettings';
 import { RatingsSlideContext } from './services/ratings';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
@@ -212,6 +213,9 @@ export default function App() {
   const [adminOpenRequest, setAdminOpenRequest] = useState(0);
   // The free page's admin window (the store kinds have their own, opened by adminOpenRequest).
   const [isPageAdminOpen, setIsPageAdminOpen] = useState(false);
+  // The gear of a booking element: the store kinds' admin opens on «إعدادات الحجز», showing that schedule.
+  const [adminTabRequest, setAdminTabRequest] = useState<{ tab: string; n: number } | null>(null);
+  const [bookingFocus, setBookingFocus] = useState<BookingSettingsFocus | null>(null);
 
   // On a wide screen the control panel is docked on the right with the icons beside it, and the
   // workspace takes the rest of the width, so the panel never covers the canvas.
@@ -1769,6 +1773,16 @@ export default function App() {
   };
 
   openAdminRef.current = openAdmin;
+
+  // The gear on a booking element: the admin's «إعدادات الحجز», on the element's schedule.
+  const openBookingSettings = useCallback((schedule = 'main') => {
+    setBookingFocus((f) => ({ schedule, n: (f?.n || 0) + 1 }));
+    if (project === 'page') setIsPageAdminOpen(true);
+    else setAdminTabRequest((r) => ({ tab: 'booking-settings', n: (r?.n || 0) + 1 }));
+  }, [project]);
+  // A page made before the settings moved to the admin: what its first booking element carries.
+  const firstCalendar = elements.find((e) => e.type === 'calendar');
+  const bookingLegacy = useMemo(() => (firstCalendar ? scheduleFromElement(firstCalendar) : null), [firstCalendar]);
 
   // «تعديل الصفحة» in the admin: from the owner's view of the page back to the editor.
   const editPageFromAdmin = () => {
@@ -4725,6 +4739,9 @@ export default function App() {
   };
   return (
     <BookingPageContext.Provider value={bookingPage}>
+    <BookingSettingsOpenContext.Provider value={ownerUid ? openBookingSettings : null}>
+    <BookingLegacyContext.Provider value={bookingLegacy}>
+    <BookingSettingsFocusContext.Provider value={bookingFocus}>
     <RatingsSlideContext.Provider value={ratingsSlide}>
     <div className="min-h-screen bg-bg text-ink flex flex-col antialiased selection:bg-brand/15 selection:text-brand">
       {/* The build after the questions: working, then what came of it */}
@@ -5170,13 +5187,13 @@ export default function App() {
 
       {/* Online Shop admin: floating gear + admin window */}
       {project === 'shop' && (
-        <ShopAdminPanel data={shopAdmin} onChange={updateShopAdmin} openRequest={adminOpenRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
+        <ShopAdminPanel data={shopAdmin} onChange={updateShopAdmin} openRequest={adminOpenRequest} tabRequest={adminTabRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
       )}
       {project === 'cars' && (
-        <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} openRequest={adminOpenRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
+        <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} openRequest={adminOpenRequest} tabRequest={adminTabRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
       )}
       {project === 'restaurant' && (
-        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} restaurantId={restaurantId} access={access} openRequest={adminOpenRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
+        <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} restaurantId={restaurantId} access={access} openRequest={adminOpenRequest} tabRequest={adminTabRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
       )}
       {project === 'page' && (
         <PageAdminPanel
@@ -5246,6 +5263,9 @@ export default function App() {
       />
     </div>
     </RatingsSlideContext.Provider>
+    </BookingSettingsFocusContext.Provider>
+    </BookingLegacyContext.Provider>
+    </BookingSettingsOpenContext.Provider>
     </BookingPageContext.Provider>
   );
 }

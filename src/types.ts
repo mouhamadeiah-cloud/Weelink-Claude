@@ -214,6 +214,8 @@ export interface CanvasElement {
   pricingPeriod?: string;
   pricingFeatures?: string[];
   calendarTitle?: string;
+  // The admin's schedule («إعدادات الحجز») this element books with; the page's first when unset.
+  calendarScheduleId?: string;
   calendarSlots?: string[];
   calendarWorkingDays?: string[]; // e.g. ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday']
   calendarHolidays?: string[]; // e.g. ['friday', 'saturday']

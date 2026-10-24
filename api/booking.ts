@@ -11,6 +11,8 @@
 //
 // bookings/{owner}/items/{id} holds the booking (only the owner and members read it, firestore.rules).
 // bookingDays/{owner}_{project}_{date} { owner, project, date, taken: [startMin] } holds the day's
+// taken times of the page's first schedule; another schedule of the page («إعدادات الحجز») has its
+// own, bookingDays/{owner}_{project}_{date}_{schedule}. Like before, it holds the day's
 // taken times, so two visitors can't book the same time; anyone may read it, only this function
 // writes it. The cron finds tomorrow's and the old bookings through it.
 // Needs FIREBASE_SERVICE_ACCOUNT, EMAIL_FROM, RESEND_API_KEY, and CRON_SECRET for the cron.
@@ -45,6 +47,8 @@ const esc = (v: unknown) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 // A project key: the kind, or the kind and the project's own id (src/utils/projectKeys.ts).
+// A schedule of the page's «إعدادات الحجز» (src/services/bookingSettings.ts); 'main' is the first.
+const scheduleOf = (v: unknown) => (typeof v === 'string' && /^[a-z0-9]{1,20}$/.test(v) ? v : 'main');
 const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/.test(p);
 const MEETING: Record<string, string> = { personal: 'حضور شخصي بالمقر', phone: 'مكالمة هاتفية', whatsapp: 'اتصال فيديو واتساب' };
 const STATUS: Record<string, string> = { new: 'بانتظار التأكيد', confirmed: 'مؤكد', done: 'منجز', cancelled: 'ملغى' };
@@ -126,8 +130,8 @@ const sendAll = async (mails: Mail[]) => {
   );
 };
 
-const dayDoc = (admin: Admin, b: { owner: string; project: string; date: string }) =>
-  admin.db.collection('bookingDays').doc(`${b.owner}_${b.project}_${b.date}`);
+const dayDoc = (admin: Admin, b: { owner: string; project: string; date: string; schedule?: string }) =>
+  admin.db.collection('bookingDays').doc(`${b.owner}_${b.project}_${b.date}${scheduleOf(b.schedule) === 'main' ? '' : `_${b.schedule}`}`);
 const items = (admin: Admin, owner: string) => admin.db.collection('bookings').doc(owner).collection('items');
 // The bookings of the days a bookingDays query found.
 const bookingsOf = async (admin: Admin, days: QuerySnapshot) => {
@@ -137,7 +141,9 @@ const bookingsOf = async (admin: Admin, days: QuerySnapshot) => {
       return validId(owner) ? items(admin, owner).where('date', '==', date).where('project', '==', project).get() : null;
     })
   );
-  return lists.flatMap((l) => l?.docs || []);
+  // Two schedules of a page have a day each, and both find the page's bookings of that date.
+  const seen = new Set<string>();
+  return lists.flatMap((l) => l?.docs || []).filter((d) => !seen.has(d.ref.path) && !!seen.add(d.ref.path));
 };
 
 const create = async (admin: Admin, body: any) => {
@@ -153,6 +159,7 @@ const create = async (admin: Admin, body: any) => {
   const booking = {
     owner,
     project,
+    schedule: scheduleOf(body.schedule),
     pageName: text(body.pageName, 80),
     date,
     startMin,

@@ -464,6 +464,15 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    // «إعدادات الحجز» (src/services/bookingSettings.ts): how a page takes bookings. The page reads it to
+    // work out the free times; the owner and the members write it.
+    match /bookingSettings/{ownerId}/pages/{projectKey} {
+      allow get: if true;
+      allow create, update: if canManage(ownerId) && isValidId(projectKey)
+        && incoming().keys().hasOnly(['schedules'])
+        && incoming().schedules is list && incoming().schedules.size() >= 1 && incoming().schedules.size() <= 10;
+    }
+
     // «فريق العمل» (src/services/team.ts): the owner adds and changes the people, the owner and the
     // members read them. teamPublic is what visitors see of those who take bookings (no email or phone).
     match /team/{ownerId}/people/{personId} {

@@ -1,6 +1,6 @@
 // Online Shop admin: a large floating gear (bottom-left) that opens a floating admin window.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, PencilLine, FolderTree, PackagePlus, Warehouse, Users, ClipboardList, BarChart3, SlidersHorizontal, CalendarDays, Star, MessageSquare, UserCog } from 'lucide-react';
+import { Settings, X, PencilLine, FolderTree, PackagePlus, Warehouse, Users, ClipboardList, BarChart3, SlidersHorizontal, CalendarDays, Star, MessageSquare, UserCog, CalendarCog } from 'lucide-react';
 import { ShopAdminData } from './shopTypes';
 import { CatalogsTab } from './tabs/CatalogsTab';
 import { AddProductTab } from './tabs/AddProductTab';
@@ -15,9 +15,10 @@ import { InquiriesTab } from '../pageAdmin/InquiriesTab';
 import { PageCustomersTab } from '../pageAdmin/PageCustomersTab';
 import { RatingsTab } from '../pageAdmin/RatingsTab';
 import { TeamTab } from '../pageAdmin/TeamTab';
+import { BookingSettingsTab } from '../pageAdmin/BookingSettingsSection';
 import { AdminIntroButton } from '../introVideos/AdminIntroButton';
 
-type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' | 'bookings' | 'inquiries' | 'signups' | 'ratings' | 'team' | 'accounts' | 'settings';
+type TabId = 'catalogs' | 'add-product' | 'warehouse' | 'customers' | 'orders' | 'bookings' | 'booking-settings' | 'inquiries' | 'signups' | 'ratings' | 'team' | 'accounts' | 'settings';
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; Component: React.FC<AdminTabProps> }[] = [
   { id: 'add-product', label: 'إضافة منتج', icon: PackagePlus, Component: AddProductTab },
@@ -26,6 +27,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; Component: Reac
   { id: 'customers', label: 'الزبائن', icon: Users, Component: CustomersTab },
   { id: 'orders', label: 'الطلبات', icon: ClipboardList, Component: OrdersTab },
   { id: 'bookings', label: 'المواعيد', icon: CalendarDays, Component: BookingsTab },
+  { id: 'booking-settings', label: 'إعدادات الحجز', icon: CalendarCog, Component: BookingSettingsTab },
   { id: 'signups', label: 'مشتركو الصفحة', icon: Users, Component: PageCustomersTab },
   { id: 'inquiries', label: 'الرسائل', icon: MessageSquare, Component: InquiriesTab },
   { id: 'ratings', label: 'التقييمات', icon: Star, Component: RatingsTab },
@@ -43,14 +45,21 @@ interface ShopAdminPanelProps {
   hideGear?: boolean;
   // «تعديل الصفحة»: shown when the admin was opened from the page's navbar, back to the editor.
   onEditPage?: () => void;
+  // Opens the admin on a tab (counted): «إعدادات الحجز» from the gear of a booking element.
+  tabRequest?: { tab: string; n: number } | null;
 }
 
-export const ShopAdminPanel: React.FC<ShopAdminPanelProps> = ({ data, onChange, openRequest = 0, hideGear = false, onEditPage }) => {
+export const ShopAdminPanel: React.FC<ShopAdminPanelProps> = ({ data, onChange, openRequest = 0, hideGear = false, onEditPage, tabRequest }) => {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (openRequest > 0) setOpen(true);
   }, [openRequest]);
   const [tab, setTab] = useState<TabId>('add-product');
+  useEffect(() => {
+    if (!tabRequest?.n || !TABS.some((t) => t.id === tabRequest.tab)) return;
+    setTab(tabRequest.tab as TabId);
+    setOpen(true);
+  }, [tabRequest?.n]);
 
   useEffect(() => {
     if (!open) return;

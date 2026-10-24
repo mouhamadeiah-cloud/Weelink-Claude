@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync } from 'node:fs';
-import { customMotionDirection, customMotionVars, realMotionState, resolveMotion } from '../src/utils/customMotion';
+import { customMotionDirection, customMotionVars, pinMotionEdit, realMotionState, resolveMotion, startMotionEdit } from '../src/utils/customMotion';
 import { AnimationSection } from '../src/components/rightDrawer/sections/AnimationSection';
 
 const real = { x: 0, y: 0, opacity: 1, scale: 1, rotate: 0 };
@@ -70,4 +70,21 @@ test('a pinned custom motion offers to change it; the extra animations keep thei
   assert.match(extra, /البداية/);
   assert.match(extra, /النهاية/);
   assert.match(extra, /الشفافية/);
+});
+
+test('setting a motion on the page: the start is kept while editing, pinning stores the way back from the end', () => {
+  const box = { x: 100, y: 200, width: 200, height: 100 };
+  const started = startMotionEdit(box, { opacity: 1 }, 0, 1);
+  assert.equal(started.animationFrom, undefined);
+  assert.deepEqual(started.animationEditing, { cx: 200, cy: 250, w: 200, opacity: 1, rotate: 0 });
+  // the owner moves it 80 right and 40 down, and makes it twice as wide
+  const moved = { x: 180, y: 240, width: 400, height: 100 };
+  const pinned = pinMotionEdit(moved, { opacity: 1, animationEditing: started.animationEditing }, 0, 1)!;
+  assert.deepEqual(pinned.animationFrom, { x: -180, y: -40, scale: 0.5, opacity: 1, rotate: 0 });
+  assert.equal(pinned.animationEditing, undefined);
+  // nothing being edited: nothing to pin
+  assert.equal(pinMotionEdit(moved, { opacity: 1 }, 0, 1), null);
+  // begun again from a pinned motion, the start is where the motion began
+  const again = startMotionEdit(moved, { opacity: 1, animationFrom: pinned.animationFrom, animationTo: pinned.animationTo }, 0, 1);
+  assert.deepEqual(again.animationEditing, { cx: 200, cy: 250, w: 200, opacity: 1, rotate: 0 });
 });

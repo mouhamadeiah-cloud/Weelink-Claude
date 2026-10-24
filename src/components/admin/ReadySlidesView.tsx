@@ -3,8 +3,8 @@
 // deleted. Saving finds the slide's AI slots by itself, so a card says whether the page builder can use it.
 // A gallery slide is copied here from «مراجعة الشرائح».
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
-import { AdminError, ReadyCategory, adminReadyCategory, adminReadyDoc, adminReadyMove, adminReadyOverview, adminReadyRemove, openGalleryEditor } from '../../services/adminApi';
+import { ArrowDown, ArrowUp, FileUp, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AdminError, ReadyCategory, adminReadyCategory, adminReadyDoc, adminReadyImport, adminReadyMove, adminReadyOverview, adminReadyRemove, openGalleryEditor } from '../../services/adminApi';
 import { GALLERY_READY_CATEGORIES } from '../../data/readyCategories';
 import { LiveSlide } from '../gallery/LiveSlide';
 import { deserializeElements } from '../../utils/elementStorage';
@@ -12,6 +12,7 @@ import { deserializeElements } from '../../utils/elementStorage';
 const REASONS: Record<string, string> = {
   'not-found': 'لم تعد الشريحة موجودة.',
   bad_category: 'فئة غير معروفة.',
+  bad_file: 'الملف غير صالح: لازم يكون قائمة شرائح فيها الاسم والفئة والشريحة والعناصر.',
 };
 
 // The slide itself, loaded when its card comes on screen.
@@ -50,6 +51,19 @@ export const ReadySlidesView: React.FC<{ onSessionEnd: () => void }> = ({ onSess
     if (!openGalleryEditor(id, { category })) setNote('تعذّر فتح المحرر. اسمح للنوافذ المنبثقة وجرّب مرة ثانية.');
   };
 
+  // A file of slides made outside the editor: {name, category, slide, elements} for each; they join their categories as new slides.
+  const importFile = (file: File | undefined) => {
+    if (!file) return;
+    run('import', async () => {
+      let items: unknown;
+      try { items = JSON.parse(await file.text()); } catch { throw new AdminError('bad_file'); }
+      const list = (Array.isArray(items) ? items : []).filter((x) => x && typeof x.name === 'string' && typeof x.category === 'string' && x.slide && Array.isArray(x.elements));
+      if (!list.length) throw new AdminError('bad_file');
+      const n = await adminReadyImport(list);
+      setNote(`تمت إضافة ${n} شريحة.`);
+    });
+  };
+
   if (!cats) return <div className="flex justify-center p-10 text-faint"><Loader2 className="h-5 w-5 animate-spin" /></div>;
   const cat = cats.find((c) => c.id === open) || cats[0];
   const total = cats.reduce((n, c) => n + c.items.length, 0);
@@ -76,6 +90,10 @@ export const ReadySlidesView: React.FC<{ onSessionEnd: () => void }> = ({ onSess
           <button type="button" disabled={!!busy} onClick={() => openEditor('', cat.id)} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
             <Plus size={14} /> شريحة جديدة
           </button>
+          <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-ctl border border-line px-3 py-1.5 text-sm font-medium hover:bg-bg ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+            <FileUp size={14} /> استيراد من ملف
+            <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => { importFile(e.target.files?.[0]); e.target.value = ''; }} />
+          </label>
         </div>
 
         {cat.items.length === 0 && <p className="text-sm text-muted">لا توجد شرائح هنا بعد.</p>}

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { CanvasElement } from '../../../types';
 import { RightDrawerProps } from '../types';
-import { MotionState, realMotionState, RELATIVE_MOTION_STATE, resolveMotion } from '../../../utils/customMotion';
+import { MotionState, pinMotionEdit, realMotionState, RELATIVE_MOTION_STATE, resolveMotion, startMotionEdit } from '../../../utils/customMotion';
 
 interface AnimationSectionProps {
   styles: CanvasElement['styles'];
@@ -49,38 +49,11 @@ const AnimationEditor = ({
   const startMark = styles.animationEditing;
   const editing = !!startMark;
   const beginEditing = () => {
-    if (!element) return;
-    // From the stored start when the motion was pinned before, else from the element as it is.
-    const from = resolveMotion(styles, real).from;
-    const had = styles.animationFrom !== undefined;
-    // Both states follow the element while it is edited, so the page shows exactly what the owner does.
-    onUpdateElementStyles({
-      animationFrom: undefined,
-      animationTo: undefined,
-      animationEditing: {
-        cx: element.x + element.width / 2 + (had ? (from.x || 0) / shrink : 0),
-        cy: element.y + element.height / 2 + (had ? (from.y || 0) / shrink : 0),
-        w: element.width * (had ? from.scale || 1 : 1),
-        opacity: had ? from.opacity : real.opacity,
-        rotate: had ? from.rotate : real.rotate,
-      },
-    });
+    if (element) onUpdateElementStyles(startMotionEdit(element, styles, rotation, shrink));
   };
   const pin = () => {
-    if (!startMark || !element) return;
-    const end = realMotionState(styles, rotation);
-    onUpdateElementStyles({
-      animationFrom: {
-        x: Math.round((startMark.cx - (element.x + element.width / 2)) * shrink),
-        y: Math.round((startMark.cy - (element.y + element.height / 2)) * shrink),
-        scale: Math.round((startMark.w / Math.max(1, element.width)) * 100) / 100,
-        opacity: startMark.opacity,
-        rotate: startMark.rotate,
-      },
-      animationTo: end,
-      animationShow: 'to',
-      animationEditing: undefined,
-    });
+    const patch = element ? pinMotionEdit(element, styles, rotation, shrink) : null;
+    if (patch) onUpdateElementStyles(patch);
   };
   useEffect(() => {
     if (!extra && isCustom && elementId) onPreview?.(elementId, 'to');

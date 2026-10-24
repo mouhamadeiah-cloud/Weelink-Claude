@@ -54,6 +54,7 @@ import { ProjectType, ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } 
 import { laterProjectFields, listProjects, projectDoc } from './services/projects';
 import { isFirstOfKind, isProjectKey, kindOf, localPrefixOf, newProjectKey, restaurantIdOf } from './utils/projectKeys';
 import { GALLERY_MAX, ITEM_WORD, UNLIMITED, overLimit, type PlanLimits } from './utils/planLimits';
+import { pinMotionEdit, startMotionEdit } from './utils/customMotion';
 import { projectLimits, readGate } from './services/billing';
 import { deleteProjectData } from './services/myAccount';
 import { AccountPage } from './components/platform/AccountPage';
@@ -2821,6 +2822,26 @@ export default function App() {
     pushToHistory(updated);
   };
 
+  // The motion icon on an element's corner (CanvasWorkspace): edit its motion on the page, pin it, or show its start or its end.
+  const handleMotionAction = (id: string, action: 'edit' | 'pin' | 'from' | 'to') => {
+    const target = elements.find((el) => el.id === id);
+    if (!target) return;
+    if (action === 'from' || action === 'to') {
+      setMotionPreview((m) => (m && m.id === id && m.which === action ? null : { id, which: action }));
+      return;
+    }
+    const phone = previewMode === 'mobile';
+    const box = phone && target.mobile ? target.mobile : target;
+    const patch = action === 'edit' ? startMotionEdit(box, target.styles, target.rotation, phone ? 2 : 1) : pinMotionEdit(box, target.styles, target.rotation, phone ? 2 : 1);
+    if (!patch) return;
+    if (action === 'edit') {
+      setMotionPreview(null);
+      setSelectedElementId(id);
+      handleSelectTool('animation');
+    }
+    handleUpdateElementById(id, { styles: { ...target.styles, ...patch } });
+  };
+
   const handleUpdateElementPosition = (id: string, x: number, y: number) => {
     const target = elements.find(el => el.id === id);
     if (!target) return;
@@ -4883,6 +4904,7 @@ export default function App() {
         <ShopUpdateContext.Provider value={project === 'shop' ? updateShopAdmin : null}>
         <CanvasWorkspace
           motionPreview={motionPreview}
+          onMotionAction={handleMotionAction}
           previewMode={previewMode}
           slides={currentPage.slides}
           activeSlideId={activeSlideId}

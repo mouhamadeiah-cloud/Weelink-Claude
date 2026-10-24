@@ -106,6 +106,8 @@ interface CanvasWorkspaceProps {
   isPublicSite?: boolean;
   // The editor shows this element's custom motion as the state being edited in the animation panel (the others at their first state).
   motionPreview?: { id: string; which: 'from' | 'to' } | null;
+  // The motion icon on the corner of an element with a custom motion: its small menu asks the editor to do this (edit or pin it, show its start or its end).
+  onMotionAction?: (id: string, action: 'edit' | 'pin' | 'from' | 'to') => void;
   // A design shown inside a card (the designers' gallery): the real renderer, so its videos, text
   // motion and effects play, but no scrolling of its own and only as tall as its content.
   embedded?: boolean;
@@ -870,6 +872,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   onSelectNavbar,
   isPublicSite = false,
   motionPreview = null,
+  onMotionAction,
   embedded = false,
   hideNavbar = false,
   chromeHeight = 104,
@@ -1246,6 +1249,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
 
   // Touch & Direct Edit Focus States for Mobile & Touch Screens
   const [focusedElementId, setFocusedElementId] = useState<string | null>(null);
+  const [motionMenuId, setMotionMenuId] = useState<string | null>(null);
   const [isTouchDragging, setIsTouchDragging] = useState(false);
   const [isPinching, setIsPinching] = useState(false);
 
@@ -4855,6 +4859,37 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                           <span className="absolute -top-6 right-0 flex items-center gap-1 bg-amber-400 text-neutral-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow whitespace-nowrap">
                             <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 animate-pulse" /> حركة مفعّلة · ثبّتها من لوحة الحركة
                           </span>
+                        </div>
+                      )}
+
+                      {/* The motion icon of an element with a custom motion, in the editor only: its small menu edits the motion or shows its start and its end */}
+                      {elem.styles.animation === 'custom' && onMotionAction && !isPreviewActive && !isPublicSite && !embedded && (
+                        <div className="absolute z-50 pointer-events-auto" style={{ top: -12, left: -12 }} dir="rtl" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            title="الحركة المخصصة"
+                            onClick={() => setMotionMenuId((id) => (id === elem.id ? null : elem.id))}
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[12px] shadow-md border cursor-pointer ${elem.styles.animationEditing ? 'bg-amber-400 border-amber-500 text-neutral-900' : 'bg-white border-neutral-300 text-brand hover:border-brand'}`}
+                          >▶</button>
+                          {motionMenuId === elem.id && (
+                            <div className="absolute top-7 left-0 min-w-[150px] bg-white rounded-xl shadow-xl border border-neutral-200 p-1 flex flex-col text-right text-[11px] font-bold text-neutral-700">
+                              {elem.styles.animationEditing ? (
+                                <button type="button" className="px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 text-right cursor-pointer" onClick={() => { onMotionAction(elem.id, 'pin'); setMotionMenuId(null); }}>تثبيت وإغلاق</button>
+                              ) : (
+                                <>
+                                  <button type="button" className="px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 text-right cursor-pointer" onClick={() => { onMotionAction(elem.id, 'edit'); setMotionMenuId(null); }}>تعديل الحركة</button>
+                                  {(['from', 'to'] as const).map((which) => (
+                                    <button
+                                      key={which}
+                                      type="button"
+                                      className={`px-2.5 py-1.5 rounded-lg text-right cursor-pointer ${motionPreview?.id === elem.id && motionPreview.which === which ? 'bg-brand/10 text-brand' : 'hover:bg-neutral-100'}`}
+                                      onClick={() => { onMotionAction(elem.id, which); setMotionMenuId(null); }}
+                                    >{which === 'from' ? 'معاينة البداية' : 'معاينة النهاية'}{motionPreview?.id === elem.id && motionPreview.which === which ? ' ✓' : ''}</button>
+                                  ))}
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
 

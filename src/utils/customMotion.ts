@@ -32,6 +32,48 @@ export const resolveMotion = (layer: { animationFrom?: MotionState; animationTo?
   return { from, to: { ...from, ...layer.animationTo } };
 };
 
+// Setting the end of a custom motion on the page (Eyad, 24 Oct). Beginning takes the start from the element (from the stored
+// start when the motion was pinned before) and keeps it in `animationEditing` while the owner moves, resizes, fades or turns the
+// element; pinning keeps the element as it is as the end and stores the start as the way back from it. `shrink` is 2 on a phone
+// (a shift is stored doubled there).
+export interface MotionBox { x: number; y: number; width: number; height: number }
+type MotionStyles = { opacity?: number; animationFrom?: MotionState; animationTo?: MotionState; animationEditing?: { cx: number; cy: number; w: number; opacity: number; rotate: number } };
+
+export const startMotionEdit = (box: MotionBox, styles: MotionStyles, rotation = 0, shrink = 1) => {
+  const real = realMotionState(styles, rotation);
+  const from = resolveMotion(styles, real).from;
+  const had = styles.animationFrom !== undefined;
+  return {
+    // Both states follow the element while it is edited, so the page shows exactly what the owner does.
+    animationFrom: undefined,
+    animationTo: undefined,
+    animationEditing: {
+      cx: box.x + box.width / 2 + (had ? (from.x || 0) / shrink : 0),
+      cy: box.y + box.height / 2 + (had ? (from.y || 0) / shrink : 0),
+      w: box.width * (had ? from.scale || 1 : 1),
+      opacity: had ? from.opacity : real.opacity,
+      rotate: had ? from.rotate : real.rotate,
+    },
+  };
+};
+
+export const pinMotionEdit = (box: MotionBox, styles: MotionStyles, rotation = 0, shrink = 1) => {
+  const start = styles.animationEditing;
+  if (!start) return null;
+  return {
+    animationFrom: {
+      x: Math.round((start.cx - (box.x + box.width / 2)) * shrink),
+      y: Math.round((start.cy - (box.y + box.height / 2)) * shrink),
+      scale: Math.round((start.w / Math.max(1, box.width)) * 100) / 100,
+      opacity: start.opacity,
+      rotate: start.rotate,
+    },
+    animationTo: realMotionState(styles, rotation),
+    animationShow: 'to' as const,
+    animationEditing: undefined,
+  };
+};
+
 const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 
 // `shrink` is 0.5 on a phone, so a shift never throws an element off the narrow screen. `realOpacity` is the

@@ -5,6 +5,7 @@
 //                                                                   → { id, status } | { error }
 //   POST /api/booking  { action: 'owner-create', owner, project, ... }  with  Authorization: Bearer <ID token>
 //        → the owner (or a member) books on the admin's grid: confirmed, the table/person pinned, no emails
+//   POST /api/booking  { action: 'worker-…' }  → the worker's page (server/worker.ts)
 //   POST /api/booking  { action: 'status', id, status }  with  Authorization: Bearer <ID token>
 //        → the page's owner (or a member) confirms, finishes or cancels a booking; the customer
 //          gets an email when it is confirmed or cancelled                    → { ok: true }
@@ -22,6 +23,7 @@
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
 import { chooseRoom, nightsBetween, normalizeRooms, type RoomNights, type StayRoom } from '../src/services/stayBooking.js';
+import { workerAction } from '../server/worker.js';
 import { personWorks } from '../src/services/teamHours.js';
 import { chooseTable, coveredSlots, tablesOfHalls, type BookableTable } from '../src/services/tableBooking.js';
 import { restaurantIdOf } from '../src/utils/projectKeys.js';
@@ -466,6 +468,7 @@ export default {
     const body = (await request.json().catch(() => ({}))) as any;
     if (body?.action === 'create') return create(admin, body);
     if (body?.action === 'status') return changeStatus(admin, request, body);
+    if (typeof body?.action === 'string' && body.action.startsWith('worker-')) return workerAction(admin, request, { ...body, action: body.action.slice(7) });
     if (body?.action === 'owner-create') {
       const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
       const user = token ? await admin.auth.verifyIdToken(token).catch(() => null) : null;

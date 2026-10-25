@@ -2,10 +2,11 @@
 // «يستقبل حجوزات» shows to visitors as a specialist to book with, and gets the emails of their own
 // bookings. «ادعُه للإدارة» sends the existing invitation link to the person's email, so they can sign
 // in to the admin. See services/team.ts and services/members.ts.
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarCheck2, Check, Mail, MessageCircle, Pencil, Phone, Trash2, UserPlus, Users } from 'lucide-react';
 import { auth } from '../../services/firebase';
 import { ALL_PERMS, Perms, createInvite, deleteInvite, inviteUrl, removeMember, useInvites, useMembers } from '../../services/members';
+import { setWorkerPin, workerPinIds, workerUrl } from '../../services/workerApi';
 import { MAX_TEAM, TeamPerson, deletePerson, newPersonId, savePerson, useTeam } from '../../services/team';
 import { Card, EmptyState, Field, GhostButton, inputClass, PrimaryButton, Toggle } from '../shop/adminUi';
 import { CloudNotice, ImagePicker } from '../restaurant/tabs/shared';
@@ -36,6 +37,20 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ owner, invitePerms = {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [fresh, setFresh] = useState<{ id: string; url: string } | null>(null);
+  // The worker's secret code («رابط العامل»): who has one, and the code being typed for one person.
+  const [pinIds, setPinIds] = useState<string[]>([]);
+  const [pinFor, setPinFor] = useState<{ id: string; pin: string; error: string } | null>(null);
+  useEffect(() => { workerPinIds(owner).then(setPinIds); }, [owner]);
+  const savePin = async () => {
+    if (!pinFor) return;
+    if (!/^\d{6}$/.test(pinFor.pin)) return setPinFor({ ...pinFor, error: 'الرمز 6 أرقام.' });
+    setBusy(pinFor.id);
+    const err = await setWorkerPin(owner, pinFor.id, pinFor.pin);
+    setBusy('');
+    if (err) return setPinFor({ ...pinFor, error: err === 'pin_used' ? 'هذا الرمز لشخص آخر، اختر غيره.' : 'ما قدرنا نحفظ الرمز. جرّب مرة ثانية.' });
+    setPinIds((ids) => [...new Set([...ids, pinFor.id])]);
+    setPinFor(null);
+  };
 
   const memberOf = useMemo(() => {
     const m = new Map<string, { uid: string }>();
@@ -205,6 +220,25 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ owner, invitePerms = {
               )}
               {p.invite && memberOf.has(p.invite) && <span className="mr-auto inline-flex items-center gap-1 text-[#2B8A3E]"><Check size={13} /> دخل بحسابه</span>}
             </div>
+            {p.takesBookings && (
+              <div className="rounded-xl bg-neutral-50 p-2 text-xs font-bold text-neutral-600 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>رابط {p.name} لمواعيده (قراءة فقط + «تم»):</span>
+                  <span className={pinIds.includes(p.id) ? 'text-[#2B8A3E]' : 'text-[#A34A00]'}>{pinIds.includes(p.id) ? 'له رمز سري' : 'بلا رمز بعد'}</span>
+                  {pinFor?.id !== p.id && <button type="button" className="mr-auto text-brand cursor-pointer" onClick={() => setPinFor({ id: p.id, pin: String(Math.floor(100000 + Math.random() * 900000)), error: '' })}>{pinIds.includes(p.id) ? 'غيّر الرمز' : 'أنشئ رمزًا'}</button>}
+                </div>
+                {pinFor?.id === p.id && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input className={`${inputClass} w-32 text-center tracking-widest`} dir="ltr" inputMode="numeric" maxLength={6} value={pinFor.pin} onChange={(e) => setPinFor({ ...pinFor, pin: e.target.value.replace(/\D/g, ''), error: '' })} />
+                    <PrimaryButton onClick={savePin} disabled={busy === p.id}>احفظ الرمز</PrimaryButton>
+                    <GhostButton onClick={() => setPinFor(null)}>إلغاء</GhostButton>
+                    <span className="text-neutral-400">سلّمه لـ{p.name} مع الرابط.</span>
+                    {pinFor.error && <span className="text-[#E03131]">{pinFor.error}</span>}
+                  </div>
+                )}
+                {pinIds.includes(p.id) && <CopyLink url={workerUrl(owner)} />}
+              </div>
+            )}
             {fresh?.id === p.id && (
               <div className="p-3 rounded-2xl bg-[#EBFBEE] border border-[#B2F2BB] space-y-2">
                 <div className="text-xs font-black text-[#2B8A3E]">أرسل هالرابط لـ{p.name}. بيشتغل مرة وحدة وبنفس الإيميل بس.</div>

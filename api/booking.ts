@@ -130,8 +130,9 @@ const sendAll = async (mails: Mail[]) => {
   );
 };
 
-const dayDoc = (admin: Admin, b: { owner: string; project: string; date: string; schedule?: string }) =>
-  admin.db.collection('bookingDays').doc(`${b.owner}_${b.project}_${b.date}${scheduleOf(b.schedule) === 'main' ? '' : `_${b.schedule}`}`);
+// A team person (a specialist of the schedule) has their own day: ..._p{personId}.
+const dayDoc = (admin: Admin, b: { owner: string; project: string; date: string; schedule?: string; person?: string }) =>
+  admin.db.collection('bookingDays').doc(`${b.owner}_${b.project}_${b.date}${scheduleOf(b.schedule) === 'main' ? '' : `_${b.schedule}`}${b.person ? `_p${b.person}` : ''}`);
 const items = (admin: Admin, owner: string) => admin.db.collection('bookings').doc(owner).collection('items');
 // The bookings of the days a bookingDays query found.
 const bookingsOf = async (admin: Admin, days: QuerySnapshot) => {
@@ -145,6 +146,10 @@ const bookingsOf = async (admin: Admin, days: QuerySnapshot) => {
   const seen = new Set<string>();
   return lists.flatMap((l) => l?.docs || []).filter((d) => !seen.has(d.ref.path) && !!seen.add(d.ref.path));
 };
+
+// The team person's own mail for a booking made with them (not twice when they are the owner).
+const personMails = (b: any, ownerMail: string, subject: string, title: string, lead: string): Mail[] =>
+  b.personEmail && b.personEmail !== ownerMail ? [{ to: b.personEmail, fromName: 'Weelink', subject, html: mailHtml(title, lead, b, customerRows(b)) }] : [];
 
 const create = async (admin: Admin, body: any) => {
   const owner = body.owner;
@@ -176,6 +181,16 @@ const create = async (admin: Admin, body: any) => {
   };
   if (!booking.slot || booking.name.length < 2 || booking.phone.replace(/\D/g, '').length < 6) return json({ error: 'missing_fields' }, 400);
   if (booking.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email)) return json({ error: 'bad_email' }, 400);
+
+  // A booking with a team person: they must take bookings; they get the emails of their bookings too.
+  if (body.person) {
+    const personId = validId(body.person) ? body.person : '';
+    const person = personId ? (await admin.db.collection('team').doc(owner).collection('people').doc(personId).get()).data() : null;
+    if (!person || person.takesBookings !== true) return json({ error: 'bad_person' }, 400);
+    (booking as any).person = personId;
+    (booking as any).personName = text(person.name, 80);
+    (booking as any).personEmail = text(person.email, 120).toLowerCase();
+  }
 
   const toOwner = await ownerEmail(admin, owner);
   if (!toOwner) {
@@ -222,6 +237,7 @@ const create = async (admin: Admin, body: any) => {
         booking
       ),
     },
+    ...personMails(booking as any, toOwner, `موعد جديد معك: ${booking.name} · ${dateLabel(date)} ${booking.slot}`, 'موعد جديد معك', `حجز ${esc(booking.name)} موعداً معك على ${esc(pageName)}.`),
     {
       to: toOwner,
       fromName: 'Weelink',
@@ -304,6 +320,7 @@ const daily = async (admin: Admin) => {
         ),
       },
     ]);
+    await sendAll(personMails(b, await ownerEmail(admin, b.owner), `تذكير: موعد بكرا مع ${b.name} ${b.slot}`, 'عندك موعد بكرا', `تذكير بموعد ${esc(b.name)} معك على ${esc(pageName)}.`));
     await d.ref.update({ reminded: true });
     reminded++;
   }

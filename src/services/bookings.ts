@@ -16,6 +16,9 @@ export interface Booking {
   project: ProjectKey;
   // The page's schedule («إعدادات الحجز») it was booked on; 'main' (or unset, before 24 Oct) is the first.
   schedule?: string;
+  // The team person it was booked with («فريق العمل»), when the schedule has specialists.
+  person?: string;
+  personName?: string;
   pageName: string;
   date: string; // yyyy-mm-dd, the business's own day
   startMin: number; // minutes from midnight
@@ -44,8 +47,9 @@ export const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1
 
 // The times already booked on a day.
 // A schedule other than the page's first ('main') keeps its own (api/booking.ts).
-export const readTaken = async (owner: string, project: ProjectKey, date: string, schedule = 'main'): Promise<number[]> => {
-  const snap = await getDoc(doc(db, 'bookingDays', `${owner}_${project}_${date}${schedule === 'main' ? '' : `_${schedule}`}`));
+// A person of «فريق العمل» has their own times on the schedule.
+export const readTaken = async (owner: string, project: ProjectKey, date: string, schedule = 'main', person = ''): Promise<number[]> => {
+  const snap = await getDoc(doc(db, 'bookingDays', `${owner}_${project}_${date}${schedule === 'main' ? '' : `_${schedule}`}${person ? `_p${person}` : ''}`));
   const taken = snap.data()?.taken;
   return Array.isArray(taken) ? taken.filter((n) => typeof n === 'number') : [];
 };

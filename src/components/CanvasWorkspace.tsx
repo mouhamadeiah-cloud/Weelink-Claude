@@ -35,6 +35,7 @@ import { Icon } from '@iconify/react';
 import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
 import { useCustomerPrefill } from './customers/customerSession';
 import { BookingPageContext, createBooking, dayKey, readTaken } from '../services/bookings';
+import { usePublicTeam } from '../services/team';
 import { BookingSettingsOpenContext, WEEK_DAYS, scheduleFor, scheduleFromElement, useBookingSettings } from '../services/bookingSettings';
 import { NavbarStars, RatingsWidget } from './ratings/RatingsUI';
 import { ContactFormWidget } from './contact/ContactFormWidget';
@@ -154,7 +155,10 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const live = !!bookingPage?.live;
   const [saving, setSaving] = useState(false);
   const [bookError, setBookError] = useState('');
-  const [taken, setTaken] = useState<number[]>([]);
+  // The booked times by team person ('' when the schedule has no specialists).
+  const [takenBy, setTakenBy] = useState<Record<string, number[]>>({});
+  const [personChoice, setPersonChoice] = useState('any');
+  const [savedPerson, setSavedPerson] = useState('');
   const [takenTick, setTakenTick] = useState(0);
   const [savedStatus, setSavedStatus] = useState<'new' | 'confirmed' | null>(null);
   // How the business takes bookings comes from its admin («إعدادات الحجز»); a page made before that
@@ -165,6 +169,17 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
     [bookingSettings, elem]
   );
   const openSettings = useContext(BookingSettingsOpenContext);
+  // Specialists: the team people who take bookings («فريق العمل»). The visitor picks one (or any free
+  // one), or the first free one is taken; a time is open when someone who may take it is free.
+  const team = usePublicTeam(schedule.specialists !== 'none' ? bookingPage?.owner : null);
+  const hasSpecialists = schedule.specialists !== 'none' && team.length > 0;
+  const pickedPerson = hasSpecialists && schedule.specialists === 'choose' && team.some((p) => p.id === personChoice) ? personChoice : '';
+  const candidates = hasSpecialists ? (pickedPerson ? [pickedPerson] : team.map((p) => p.id)) : [''];
+  const candidatesKey = candidates.join();
+  const taken = useMemo(() => {
+    const lists = candidates.map((c) => takenBy[c] || []);
+    return lists[0].filter((t) => lists.every((l) => l.includes(t)));
+  }, [takenBy, candidatesKey]);
 
   // Calendar & Form configurations
   const title = elem.calendarTitle || elem.content || 'حجز موعد جديد';
@@ -236,6 +251,13 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       setBookError('اختر وقتاً متاحاً.');
       return;
     }
+    // With specialists: the picked one, or the first (in the team's order) who is free at that time.
+    const person = hasSpecialists ? candidates.find((c) => !(takenBy[c] || []).includes(chosen.startMin)) || '' : '';
+    if (hasSpecialists && !person) {
+      setBookError('اختر وقتاً متاحاً.');
+      return;
+    }
+    setSavedPerson(team.find((p) => p.id === person)?.name || '');
     if (!live || !bookingPage) {
       setSubmitted(true);
       return;
@@ -250,6 +272,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       slot: chosen.label,
       meetingType: selectedMeetingType,
       schedule: schedule.id,
+      person: person || undefined,
       name, phone, email, address, desc,
       needsConfirmation,
     });
@@ -365,13 +388,14 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
 
   // The times already booked on the chosen day (on the published page).
   useEffect(() => {
-    if (!live || !bookingPage) return setTaken([]);
+    if (!live || !bookingPage) return setTakenBy({});
     let alive = true;
-    readTaken(bookingPage.owner, bookingPage.project, dayKey(new Date(currentYear, currentMonth, selectedDay)), schedule.id)
-      .then((t) => alive && setTaken(t))
-      .catch(() => alive && setTaken([]));
+    const date = dayKey(new Date(currentYear, currentMonth, selectedDay));
+    Promise.all(candidates.map((c) => readTaken(bookingPage.owner, bookingPage.project, date, schedule.id, c).then((t) => [c, t] as const)))
+      .then((rows) => alive && setTakenBy(Object.fromEntries(rows)))
+      .catch(() => alive && setTakenBy({}));
     return () => { alive = false; };
-  }, [live, bookingPage?.owner, bookingPage?.project, schedule.id, currentYear, currentMonth, selectedDay, takenTick]);
+  }, [live, bookingPage?.owner, bookingPage?.project, schedule.id, candidatesKey, currentYear, currentMonth, selectedDay, takenTick]);
 
   // Keep selectedSlot on a free time
   useEffect(() => {
@@ -466,6 +490,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
           <div>• <b>طريقة المقابلة:</b> {meetingTypeTexts[selectedMeetingType] || meetingTypeTexts['phone']}</div>
           {address && <div>• <b>العنوان:</b> {address}</div>}
           <div>• <b>حالة التأكيد:</b> {needsConfirmation ? '⏳ يتطلب تأكيد الإدارة أولاً' : '⚡ تأكيد فوري ومباشر'}</div>
+          {savedPerson && <div>• <b>مع:</b> {savedPerson}</div>}
           {savedStatus && email && <div>• <b>الإيميل:</b> وصلك إيميل على {email}، ورح يوصلك تذكير قبل الموعد بيوم.</div>}
         </div>
 
@@ -723,6 +748,30 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
         {/* COLUMN 2: BOOKING FORM & CLIENT DETAILS */}
         {/* ============================================================== */}
         <div className="flex flex-col justify-between space-y-2.5">
+          {/* Who to book with: «فريق العمل» people who take bookings */}
+          {hasSpecialists && schedule.specialists === 'choose' && (
+            <div className="space-y-1">
+              <label className={`text-[10px] block ${labelStyleClasses}`}>مع مين بدك تحجز؟</label>
+              <div className="flex flex-wrap gap-1.5">
+                {[{ id: 'any', name: 'أي مختص متاح', role: '', photo: '' }, ...team].map((p) => {
+                  const on = (pickedPerson || 'any') === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { setPersonChoice(p.id); setSelectedSlot(null); }}
+                      className={`flex items-center gap-1.5 text-[9.5px] py-1 px-2 rounded-lg border font-bold cursor-pointer transition-all ${on ? 'bg-white border-2' : isDarkBg ? 'bg-white/10 border-white/10 text-white' : 'bg-white border-neutral-200 text-neutral-700'}`}
+                      style={{ borderColor: on ? accentColor : undefined, color: on ? accentColor : undefined }}
+                    >
+                      {p.photo && <img src={p.photo} alt="" className="w-5 h-5 rounded-full object-cover" />}
+                      <span>{p.name}{p.role ? <span className="font-normal opacity-70"> · {p.role}</span> : null}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Meeting Type Selection */}
           <div className="space-y-1">
             <label className={`text-[10px] block ${labelStyleClasses}`}>

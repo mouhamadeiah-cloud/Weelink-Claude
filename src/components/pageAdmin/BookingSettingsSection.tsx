@@ -6,9 +6,10 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { CalendarCog, Check, Plus, Trash2 } from 'lucide-react';
 import {
   BookingLegacyContext, BookingSchedule, BookingSettingsFocusContext, BookingSettings, MAX_SCHEDULES, MEETING_TYPES, SlotInterval, WEEK_DAYS,
-  newSchedule, newScheduleId, normalizeSchedule, saveBookingSettings, useBookingSettings,
+  SpecialistMode, newSchedule, newScheduleId, normalizeSchedule, saveBookingSettings, useBookingSettings,
 } from '../../services/bookingSettings';
 import { BookingPageContext } from '../../services/bookings';
+import { useTeam } from '../../services/team';
 import type { ProjectKey } from '../../utils/projectKeys';
 import { Field, GhostButton, inputClass, inputFitClass, PrimaryButton, Toggle } from '../shop/adminUi';
 
@@ -37,6 +38,8 @@ const same = (a: BookingSchedule, b: BookingSchedule) => JSON.stringify(a) === J
 
 export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ owner, project, focus }) => {
   const settings = useBookingSettings(owner, project);
+  const team = useTeam(owner);
+  const bookable = team.people.filter((p) => p.takesBookings && p.name);
   const legacy = useContext(BookingLegacyContext);
   const [activeId, setActiveId] = useState('main');
   const [draft, setDraft] = useState<BookingSchedule | null>(null);
@@ -183,6 +186,17 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
               <input type="number" min={5} max={480} className={`${inputFitClass} w-20`} value={current.intervalMinutes} onChange={(e) => change({ intervalMinutes: Number(e.target.value) || 30 })} /> دقيقة
             </span>
           )}
+        </div>
+      </Field>
+
+      <Field
+        label="الحجز مع مختص"
+        hint={bookable.length ? `المختصين: ${bookable.map((p) => p.name).join('، ')}. كل واحد إلو أوقاته ولما يحجزه زبون بيوصله إيميل.` : 'أضف أشخاص من «فريق العمل» وفعّل «يستقبل حجوزات» عندهم، وبيظهروا هون.'}
+      >
+        <div className="flex flex-wrap gap-1.5">
+          {([['none', 'بدون مختصين'], ['choose', 'الزبون بيختار'], ['first', 'أول مختص فاضي']] as [SpecialistMode, string][]).map(([id, label]) => (
+            <button key={id} type="button" onClick={() => change({ specialists: id })} className={chip(current.specialists === id)}>{label}</button>
+          ))}
         </div>
       </Field>
 

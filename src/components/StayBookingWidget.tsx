@@ -8,7 +8,9 @@ import { newStaySchedule, scheduleFor, useBookingSettings } from '../services/bo
 import { addDays, chooseRoom, isRoomFree, maxGuests, nightsBetween, type RoomNights } from '../services/stayBooking';
 import { depositAmount, normalizeRule, priceNumber } from '../services/bookingDeposit';
 import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from './DepositPay';
-import { useCustomerPrefill } from './customers/customerSession';
+import { useCustomerSession } from './customers/customerSession';
+import { AccountSignup, CustomerFields, EMPTY_CUSTOMER, customerProblem, type CustomerDraft } from './BookingCustomerForm';
+import { BookingGear } from './BookingGear';
 
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
@@ -34,7 +36,6 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const dark = isDark(bg);
   const text = dark ? 'text-white' : 'text-neutral-800';
   const sub = dark ? 'text-white/80' : 'text-neutral-600';
-  const field = `w-full rounded-lg border px-2.5 py-1.5 text-[11px] outline-none ${dark ? 'bg-white/10 border-white/25 text-white placeholder:text-white/50' : 'bg-white border-neutral-200 text-neutral-800'}`;
 
   const todayKey = dayKey(new Date());
   const lastKey = addDays(todayKey, schedule.daysAhead);
@@ -45,15 +46,9 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const [roomPick, setRoomPick] = useState('');
   const [occupancy, setOccupancy] = useState<RoomNights>({});
   const [tick, setTick] = useState(0);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [desc, setDesc] = useState('');
-  useCustomerPrefill((c) => {
-    setName((v) => v || c.name);
-    setPhone((v) => v || c.phone);
-    setEmail((v) => v || c.email);
-  });
+  const [customer, setCustomer] = useState<CustomerDraft>(EMPTY_CUSTOMER);
+  const signedIn = !!useCustomerSession();
+  const [signup, setSignup] = useState<CustomerDraft | null>(null); // the details of a visitor who asked for an account
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deposit, setDeposit] = useState<DepositDraft>(EMPTY_DEPOSIT);
@@ -106,8 +101,8 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
     e.preventDefault();
     setError('');
     if (!checkIn || !checkOut || !chosen) return setError('اختر تاريخ الوصول والمغادرة.');
-    if (name.trim().length < 2 || phone.replace(/\D/g, '').length < 6) return setError('اكتب اسمك ورقم هاتفك (6 أرقام على الأقل).');
-    if (live && !email.trim()) return setError('اكتب إيميلك ليوصلك تأكيد الحجز والتذكير.');
+    const personal = customerProblem(customer, live, signedIn);
+    if (personal) return setError(personal);
     if (live && amount > 0) {
       const problem = depositProblem(deposit, settings?.payments);
       if (problem) return setError(problem);
@@ -117,7 +112,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
     const out = await createBooking({
       owner: bookingPage.owner, project: bookingPage.project, schedule: schedule.id, pageName: bookingPage.pageName,
       date: checkIn, startMin: 0, slot: `${nights.length}`, meetingType: '', checkOut, partySize: guestCount, room: wishRoom || undefined,
-      name, phone, email, address: '', desc, needsConfirmation: schedule.needsConfirmation, deposit: depositPayload(deposit, amount),
+      name: customer.name, phone: customer.phone, email: customer.email, address: customer.address, desc: customer.desc, needsConfirmation: schedule.needsConfirmation, deposit: depositPayload(deposit, amount),
     } as any);
     setSaving(false);
     if ('error' in out) {
@@ -128,29 +123,33 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
       else setError(`ما قدرنا نحفظ الحجز. جرّب مرة ثانية. (رمز: ${out.error})`);
       return;
     }
+    setSignup(customer.register && !signedIn ? customer : null);
     setDone({ room: out.roomName || chosen.name, status: out.deposit ? 'deposit' : out.status });
     setTick((n) => n + 1);
   };
 
-  const shell = 'w-full h-full rounded-2xl border p-4 flex flex-col text-right select-none overflow-y-auto';
+  const shell = 'relative w-full h-full rounded-2xl border p-4 flex flex-col text-right select-none overflow-y-auto';
   const shellStyle = { backgroundColor: bg, borderColor: dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.09)' };
 
   if (done) {
     return (
       <div className={`${shell} items-center justify-center text-center`} dir="rtl" style={shellStyle}>
+        <BookingGear scheduleId={schedule.id} />
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold mb-2" style={{ backgroundColor: accent }}>✓</div>
         <h4 className={`text-xs font-bold mb-1 ${text}`}>{done.status === 'confirmed' ? 'تم حجز غرفتك!' : done.status === 'deposit' ? 'بانتظار تأكيد العربون' : 'وصل طلب الحجز!'}</h4>
         <p className={`text-[10px] max-w-xs leading-relaxed mb-3 ${sub}`}>
-          شكراً <b>{name}</b>. {done.room} من <b>{label(checkIn)}</b> إلى <b>{label(checkOut)}</b> ({nights.length} {nights.length === 1 ? 'ليلة' : 'ليالٍ'}).
+          شكراً <b>{customer.name}</b>. {done.room} من <b>{label(checkIn)}</b> إلى <b>{label(checkOut)}</b> ({nights.length} {nights.length === 1 ? 'ليلة' : 'ليالٍ'}).
           {done.status === 'deposit' ? ' رح نراجع التحويل ويوصلك إيميل لما يتأكد العربون. إذا ما انتأكد خلال 24 ساعة بيتحرر الحجز.' : done.status !== 'confirmed' ? ' رح يوصلك إيميل لما يتأكد الحجز.' : ''}
         </p>
-        <button type="button" onClick={() => { setDone(null); setCheckIn(''); setCheckOut(''); setName(''); setPhone(''); setEmail(''); setDesc(''); setDeposit(EMPTY_DEPOSIT); }} className="px-3.5 py-1.5 text-white rounded-lg text-[10px] font-bold cursor-pointer" style={{ backgroundColor: accent }}>حجز جديد</button>
+        {signup && live && bookingPage && <div className="w-full mb-3"><AccountSignup draft={signup} owner={bookingPage.owner} project={bookingPage.project} pageName={bookingPage.pageName} accent={accent} dark={dark} /></div>}
+        <button type="button" onClick={() => { setDone(null); setCheckIn(''); setCheckOut(''); setCustomer(EMPTY_CUSTOMER); setSignup(null); setDeposit(EMPTY_DEPOSIT); }} className="px-3.5 py-1.5 text-white rounded-lg text-[10px] font-bold cursor-pointer" style={{ backgroundColor: accent }}>حجز جديد</button>
       </div>
     );
   }
 
   return (
     <div className={shell} dir="rtl" style={shellStyle}>
+      <BookingGear scheduleId={schedule.id} />
       <div className="w-full h-1.5 shrink-0 rounded-t-xl mb-3" style={{ backgroundColor: accent }} />
       <div className="flex items-center gap-2.5 border-b pb-2.5 mb-3 shrink-0" style={{ borderColor: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)' }}>
         <div className="w-9 h-9 rounded-xl text-white flex items-center justify-center text-sm shrink-0" style={{ backgroundColor: accent }}>🛏️</div>
@@ -223,10 +222,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
               </div>
             )}
             {amount > 0 && <DepositPay payments={settings?.payments} amount={amount} accent={accent} dark={dark} value={deposit} onChange={setDeposit} />}
-            <input className={field} placeholder="الاسم الكامل" value={name} onChange={(e) => setName(e.target.value)} />
-            <input className={field} dir="ltr" placeholder="05xxxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <input className={field} dir="ltr" type="email" placeholder="name@domain.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <textarea className={`${field} h-14 resize-none`} placeholder="ملاحظات (اختياري)" value={desc} onChange={(e) => setDesc(e.target.value)} />
+            <CustomerFields draft={customer} onChange={setCustomer} dark={dark} accent={accent} />
             {error && <div className="text-[10px] font-bold text-red-600">{error}</div>}
             <button type="submit" disabled={saving} className="w-full py-2 rounded-xl text-white text-[11px] font-bold cursor-pointer disabled:opacity-60" style={{ backgroundColor: accent }}>
               {saving ? 'جاري الحجز…' : 'تأكيد حجز الغرفة'}

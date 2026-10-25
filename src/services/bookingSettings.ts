@@ -14,6 +14,9 @@ import type { CanvasElement } from '../types';
 import type { ProjectKey } from '../utils/projectKeys';
 
 export type BookingType = 'appointment' | 'table';
+// Who a visitor books with: nobody in particular, a team person of their choice (or any free one), or
+// always the first free person. The people are those of «فريق العمل» who take bookings.
+export type SpecialistMode = 'none' | 'choose' | 'first';
 export type SlotInterval = '10' | '15' | '30' | '60' | 'day' | 'manual';
 export const WEEK_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 export const MEETING_TYPES = ['personal', 'phone', 'whatsapp'] as const;
@@ -30,6 +33,7 @@ export interface BookingSchedule {
   interval: SlotInterval;
   intervalMinutes: number; // with interval 'manual'
   needsConfirmation: boolean;
+  specialists: SpecialistMode;
   meetingTypes: string[];
   daysAhead: number; // how far ahead a visitor may book
   minNoticeHours: number; // how soon before a time it can still be booked
@@ -51,6 +55,7 @@ const DEFAULT: Omit<BookingSchedule, 'id' | 'name'> = {
   interval: '30',
   intervalMinutes: 30,
   needsConfirmation: true,
+  specialists: 'none',
   meetingTypes: ['phone'],
   daysAhead: 60,
   minNoticeHours: 0,
@@ -83,6 +88,7 @@ export const normalizeSchedule = (raw: any, fallbackId = 'main'): BookingSchedul
     interval: INTERVALS.includes(raw?.interval) ? raw.interval : DEFAULT.interval,
     intervalMinutes: clampInt(raw?.intervalMinutes, 5, 480, 30),
     needsConfirmation: raw?.needsConfirmation !== false,
+    specialists: raw?.specialists === 'choose' || raw?.specialists === 'first' ? raw.specialists : 'none',
     meetingTypes: meetings.length ? [...meetings] : ['phone'],
     daysAhead: clampInt(raw?.daysAhead, 1, 365, DEFAULT.daysAhead),
     minNoticeHours: clampInt(raw?.minNoticeHours, 0, 168, 0),

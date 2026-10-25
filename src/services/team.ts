@@ -46,6 +46,23 @@ export const normalizePerson = (id: string, d: any): TeamPerson => ({
 export const publicPeople = (people: TeamPerson[]): PublicPerson[] =>
   people.filter((p) => p.takesBookings && p.name).map(({ id, name, role, photo }) => ({ id, name, role, photo }));
 
+// What visitors see: the people who take bookings (teamPublic/{owner}); empty until it loads.
+export const usePublicTeam = (owner: string | null | undefined) => {
+  const [state, setState] = useState<{ owner: string; people: PublicPerson[] }>({ owner: '', people: [] });
+  useEffect(() => {
+    if (!owner) return;
+    return onSnapshot(
+      doc(db, 'teamPublic', owner),
+      (snap) => {
+        const list = snap.data()?.people;
+        setState({ owner, people: Array.isArray(list) ? list.filter((p: any) => p && typeof p.id === 'string' && typeof p.name === 'string').map((p: any) => ({ id: p.id, name: p.name, role: String(p.role || ''), photo: String(p.photo || '') })) : [] });
+      },
+      () => setState({ owner, people: [] })
+    );
+  }, [owner]);
+  return state.owner === owner ? state.people : [];
+};
+
 export const newPersonId = () => `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const writePublic = (owner: string, people: TeamPerson[]) => setDoc(doc(db, 'teamPublic', owner), { people: publicPeople(people) });

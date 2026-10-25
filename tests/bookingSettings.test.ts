@@ -37,3 +37,10 @@ test('an element books with its own schedule, or the first one', () => {
   assert.equal(scheduleFor(null, 's1'), null);
   assert.equal(normalizeSettings({ schedules: [] }), null);
 });
+
+test('a schedule books with specialists only when told to', () => {
+  assert.equal(normalizeSchedule({}, 'main').specialists, 'none');
+  assert.equal(normalizeSchedule({ specialists: 'choose' }, 'main').specialists, 'choose');
+  assert.equal(normalizeSchedule({ specialists: 'first' }, 'main').specialists, 'first');
+  assert.equal(normalizeSchedule({ specialists: 'anyone' }, 'main').specialists, 'none');
+});

@@ -126,3 +126,29 @@ test('a cancelled stay frees its nights', async () => {
   assert.deepEqual(store.get('bookingRooms/own1_page_stay_r2').nights, []);
   assert.equal((await sbook({ date: inD(11), checkOut: inD(13), partySize: 3 })).roomName, '102');
 });
+
+// ---- the owner books on the admin's grid ----
+const oday = inD(12);
+const obook = async (extra: any = {}, token = 'tk') => {
+  tokens['tk'] = { uid: 'own1' };
+  tokens['other'] = { uid: 'stranger' };
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ ...tbase, action: 'owner-create', date: oday, phone: '', email: '', ...extra }) }));
+  return { s: r.status, ...(await r.json()) };
+};
+
+test('the owner books a pinned table at once, without a phone or any email', async () => {
+  const a = await obook({ tableId: 't4', partySize: 5, name: 'زبون هاتف' });
+  assert.equal(a.s, 200);
+  assert.equal(a.status, 'confirmed');
+  assert.equal(a.tableName, 'ح1');
+  assert.equal((await obook({ tableId: 't4', partySize: 2 })).error, 'taken');
+  assert.equal((await obook({ tableId: 't1', partySize: 4, startMin: 1000 })).error, 'taken');
+});
+
+test('only the owner or a member may book on the grid, and the owner can pin a person outside their hours', async () => {
+  assert.equal((await obook({}, 'other')).s, 404);
+  assert.equal((await handler.fetch(new Request('http://x/api/booking', { method: 'POST', body: JSON.stringify({ ...base, action: 'owner-create' }) }))).status, 401);
+  const p = await obook({ project: 'page', schedule: 'main', tableId: undefined, partySize: undefined, person: 'pc3', startMin: 600, slot: '10:00 ص - 10:30 ص', name: 'علي' });
+  assert.equal(p.s, 200);
+  assert.equal((await obook({ project: 'page', schedule: 'main', partySize: undefined, person: 'pc3', startMin: 600, name: 'غيره' })).error, 'taken');
+});

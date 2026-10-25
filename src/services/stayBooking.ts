@@ -10,6 +10,7 @@ export interface StayRoom {
   name: string;
   capacity: number; // guests
   price: string; // free text shown to the visitor, e.g. «50$ / ليلة»
+  photo: string; // the room's or unit's picture ('' = none)
 }
 
 export type RoomNights = Record<string, string[]>;
@@ -38,6 +39,7 @@ export const normalizeRooms = (raw: unknown): StayRoom[] => {
       name: String(r?.name ?? '').trim().slice(0, 60),
       capacity: Math.min(20, Math.max(1, Math.round(Number(r?.capacity)) || 2)),
       price: String(r?.price ?? '').trim().slice(0, 40),
+      photo: typeof r?.photo === 'string' && /^https?:\/\//.test(r.photo) ? r.photo.slice(0, 1000) : '',
     }))
     .filter((r: StayRoom) => r.id && r.name && !seen.has(r.id) && !!seen.add(r.id));
 };

@@ -44,3 +44,12 @@ test('a schedule books with specialists only when told to', () => {
   assert.equal(normalizeSchedule({ specialists: 'first' }, 'main').specialists, 'first');
   assert.equal(normalizeSchedule({ specialists: 'anyone' }, 'main').specialists, 'none');
 });
+
+test('a table element never falls back to an appointment schedule', async () => {
+  const { scheduleFor, normalizeSettings } = await import('../src/services/bookingSettings.ts');
+  const only = normalizeSettings({ schedules: [{ id: 'main', type: 'appointment' }] });
+  assert.equal(scheduleFor(only, 'table', 'table'), null);
+  assert.equal(scheduleFor(only, 'table')?.id, 'main');
+  const both = normalizeSettings({ schedules: [{ id: 'main', type: 'appointment' }, { id: 'tb', type: 'table' }] });
+  assert.equal(scheduleFor(both, 'table', 'table')?.id, 'tb');
+});

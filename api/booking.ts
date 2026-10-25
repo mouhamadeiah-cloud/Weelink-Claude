@@ -4,6 +4,8 @@
 //        → a visitor books a free time; the booking is saved and both sides get an email
 //                                                                   → { id, status } | { error }
 //        a «مقاعد» schedule: { session, partySize } books that many seats of one session (bookingSessions/…, counted in a transaction)
+//        a schedule with a deposit («العربون»): { deposit: { wallet, txn, screenshot } } too; the booking then waits as
+//        status 'new' with booking.deposit.state 'pending' until the owner confirms it (or 24 h pass: the cron releases it)
 //   POST /api/booking  { action: 'owner-create', owner, project, ... }  with  Authorization: Bearer <ID token>
 //        → the owner (or a member) books on the admin's grid: confirmed, the table/person pinned, no emails
 //   POST /api/booking  { action: 'worker-…' }  → the worker's page (server/worker.ts)
@@ -27,6 +29,7 @@ import { chooseRoom, nightsBetween, normalizeRooms, type RoomNights, type StayRo
 import { workerAction } from '../server/worker.js';
 import { canTake, normalizeSessions, type SeatSession } from '../src/services/seatBooking.js';
 import { timeLabel } from '../src/services/bookingGrid.js';
+import { DEPOSIT_WALLETS, depositAmount, HOLD_HOURS, normalizePayments, normalizeRule, parseProof, priceNumber, type BookingPayments, type DepositProof } from '../src/services/bookingDeposit.js';
 import { personWorks } from '../src/services/teamHours.js';
 import { chooseTable, coveredSlots, tablesOfHalls, type BookableTable } from '../src/services/tableBooking.js';
 import { restaurantIdOf } from '../src/utils/projectKeys.js';
@@ -112,7 +115,8 @@ const mailHtml = (title: string, lead: string, b: any, extra = '') => `<!doctype
       <div style="font-size:15px;font-weight:700;margin-top:4px">${esc(b.slot)}</div>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:14px">
-      ${row('الحالة', STATUS[b.status])}
+      ${row('الحالة', b.deposit?.state === 'pending' ? 'بانتظار تأكيد العربون' : STATUS[b.status])}
+      ${row('العربون', b.deposit ? `${b.deposit.amount} ${b.deposit.currency || ''}` : '')}
       ${row('طريقة اللقاء', MEETING[b.meetingType])}
       ${row('عدد الأشخاص', b.partySize)}
       ${row('الفعالية', b.sessionName)}
@@ -127,6 +131,7 @@ const mailHtml = (title: string, lead: string, b: any, extra = '') => `<!doctype
 </body></html>`;
 
 const customerRows = (b: any) =>
+  row('رقم عملية العربون', b.deposit?.txn) + row('محفظة العربون', b.deposit?.walletLabel) + row('صورة التحويل', b.deposit?.screenshot) +
   row('الاسم', b.name) + row('الهاتف', b.phone) + row('الإيميل', b.email) + row('العنوان', b.address) + row('التفاصيل', b.desc);
 
 type Mail = { to: string; subject: string; html: string; fromName: string };
@@ -286,6 +291,31 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
     });
   }
 
+  // A deposit («العربون»): the schedule asks for it, the visitor sends the proof of the transfer, and the booking
+  // waits for the owner as status 'new' with booking.deposit.state 'pending'. The amount is worked out here.
+  let depositRule: ReturnType<typeof normalizeRule> | null = null;
+  let payments: BookingPayments | null = null;
+  let proof: DepositProof | null = null;
+  if (!byOwner) {
+    const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
+    const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule);
+    if (schedule?.depositOn === true) {
+      depositRule = normalizeRule(schedule, schedule.type === 'seats' || schedule.type === 'stay');
+      payments = normalizePayments(saved?.payments);
+      proof = parseProof(body.deposit, payments);
+    }
+  }
+  const applyDeposit = (base: number | null) => {
+    const amount = depositAmount(depositRule, base);
+    if (amount <= 0 || !payments) return '';
+    if (!proof) return 'deposit_required';
+    Object.assign(booking, {
+      status: 'new',
+      deposit: { amount, currency: payments.currency, wallet: proof.wallet, walletLabel: DEPOSIT_WALLETS.find((w) => w.id === proof!.wallet)?.label || proof.wallet, txn: proof.txn, screenshot: proof.screenshot, state: 'pending', at: new Date().toISOString() },
+    });
+    return '';
+  };
+
   const toOwner = byOwner ? '' : await ownerEmail(admin, owner);
   if (!toOwner && !byOwner) {
     // A missing owner is 404; anything else (Google refusing the service account, say) is 500 with its reason.
@@ -303,6 +333,8 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
   const result = await admin.db
     .runTransaction(async (tx) => {
       if (seatSession) {
+        const need = applyDeposit((priceNumber(seatSession.price) || 0) * (booking as any).partySize || null);
+        if (need) return need;
         const seatsRef = sessionDoc(admin, booking, seatSession.id);
         const taken = Number((await tx.get(seatsRef)).data()?.taken) || 0;
         if (!canTake(seatSession, taken, (booking as any).partySize)) return 'taken';
@@ -320,6 +352,8 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
         const occupancy: RoomNights = Object.fromEntries(candidates.map((r, i) => [r.id, docs[i].data()?.nights || []]));
         const room = chooseRoom(candidates, occupancy, { guests: stayRule.guests, nights: stayRule.nights, roomId: validId(body.room) ? body.room : undefined });
         if (!room) return 'taken';
+        const need = applyDeposit((priceNumber(room.price) || 0) * stayRule.nights.length || null);
+        if (need) return need;
         const at = candidates.findIndex((r) => r.id === room.id);
         const keep = (occupancy[room.id] as string[]).filter((n) => n >= dayIn(-1));
         tx.set(refs[at], { owner, project, schedule: booking.schedule, nights: [...keep, ...stayRule.nights] });
@@ -338,6 +372,8 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
           hallId: validId(body.hall) ? body.hall : undefined, tableId: validId(body.tableId) ? body.tableId : undefined,
         });
         if (!table) return 'taken';
+        const need = applyDeposit(null);
+        if (need) return need;
         const covers = coveredSlots(startMin, tableRule.duration, tableRule.step);
         tx.set(day, { owner, project, date, tables: { ...occupancy, [table.id]: [...(occupancy[table.id] || []), ...covers] } }, { merge: true });
         tx.set(ref, { ...booking, tableId: table.id, tableName: table.name, hallName: table.hallName, covers });
@@ -347,6 +383,8 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       const taken: number[] = (await tx.get(day)).data()?.taken || [];
       if (taken.includes(startMin)) return 'taken';
       if (taken.length >= 300) return 'full';
+      const need = applyDeposit(null);
+      if (need) return need;
       tx.set(day, { owner, project, date, taken: FieldValue.arrayUnion(startMin) }, { merge: true });
       tx.set(ref, booking);
       return 'ok';
@@ -357,9 +395,13 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       return 'error';
     });
   if (result === 'taken') return json({ error: 'taken' }, 409);
-  if (result !== 'ok') return json({ error: result, ...(failure ? { reason: failure } : {}) }, result === 'full' ? 409 : 500);
+  if (result !== 'ok') return json({ error: result, ...(failure ? { reason: failure } : {}) }, result === 'full' ? 409 : result === 'deposit_required' ? 400 : 500);
+  // A booking waiting for its deposit is released after HOLD_HOURS (the daily cron looks at depositHolds).
+  if ((booking as any).deposit) await admin.db.collection('depositHolds').doc(`${owner}_${ref.id}`).set({ owner, id: ref.id, createdAt: Date.now() }).catch(() => {});
 
   const pageName = booking.pageName || 'صفحتك على Weelink';
+  const waiting = (booking as any).deposit?.state === 'pending';
+  const dep = (booking as any).deposit;
   await sendAll([
     {
       to: booking.email,
@@ -367,7 +409,9 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       subject: `${booking.status === 'new' ? 'وصل طلب موعدك' : 'تم تأكيد موعدك'} · ${dateLabel(booking.date)}`,
       html: mailHtml(
         booking.status === 'new' ? 'وصل طلب موعدك' : 'تم تأكيد موعدك',
-        booking.status === 'new'
+        waiting
+          ? `شكراً ${esc(booking.name)}، وصل طلبك إلى ${esc(pageName)}. حجزك بانتظار تأكيد العربون (${esc(dep.amount)} ${esc(dep.currency)})، ورح يوصلك إيميل لما يتأكد. إذا ما انتأكد خلال ${HOLD_HOURS} ساعة بيتحرر الحجز.`
+          : booking.status === 'new'
           ? `شكراً ${esc(booking.name)}، وصل طلبك إلى ${esc(pageName)}. رح يوصلك إيميل لما يتأكد الموعد، وتذكير قبله بيوم.`
           : `شكراً ${esc(booking.name)}، موعدك مع ${esc(pageName)} محجوز. رح يوصلك تذكير قبله بيوم.`,
         booking
@@ -380,7 +424,9 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       subject: `موعد جديد: ${booking.name} · ${dateLabel(booking.date)} ${booking.slot}`,
       html: mailHtml(
         'موعد جديد على صفحتك',
-        booking.status === 'new'
+        waiting
+          ? `حجز ${esc(booking.name)} موعداً على ${esc(pageName)} ودفع عربوناً (${esc(dep.amount)} ${esc(dep.currency)} عبر ${esc(dep.walletLabel)}، رقم العملية ${esc(dep.txn)}). راجع التحويل وأكّد العربون من «الإدارة ← المواعيد»، وإلا بيتحرر الحجز بعد ${HOLD_HOURS} ساعة.`
+          : booking.status === 'new'
           ? `حجز ${esc(booking.name)} موعداً على ${esc(pageName)}. افتح «الإدارة» على صفحتك لتأكيده أو إلغائه.`
           : `حجز ${esc(booking.name)} موعداً على ${esc(pageName)}. الموعد مؤكد تلقائياً.`,
         booking,
@@ -388,7 +434,31 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       ),
     },
   ]);
-  return json({ id: ref.id, status: booking.status, ...((booking as any).tableName ? { tableName: (booking as any).tableName, hallName: (booking as any).hallName } : {}), ...((booking as any).roomName ? { roomName: (booking as any).roomName } : {}) });
+  return json({ id: ref.id, status: booking.status, ...(waiting ? { deposit: true } : {}), ...((booking as any).tableName ? { tableName: (booking as any).tableName, hallName: (booking as any).hallName } : {}), ...((booking as any).roomName ? { roomName: (booking as any).roomName } : {}) });
+};
+
+// A cancelled (or expired) booking gives its time, seats, room or table back.
+const release = async (admin: Admin, b: any) => {
+  if (b.sessionId) {
+    const seatsRef = sessionDoc(admin, b, b.sessionId);
+    await admin.db.runTransaction(async (tx) => {
+      const taken = Number((await tx.get(seatsRef)).data()?.taken) || 0;
+      tx.set(seatsRef, { taken: Math.max(0, taken - (Number(b.partySize) || 0)) }, { merge: true });
+    }).catch(() => {});
+  } else if (b.roomId && b.checkOut) {
+    const room = roomDoc(admin, b, b.roomId);
+    const gone = nightsBetween(b.date, b.checkOut);
+    await admin.db.runTransaction(async (tx) => {
+      const nights: string[] = (await tx.get(room)).data()?.nights || [];
+      tx.set(room, { nights: nights.filter((n) => !gone.includes(n)) }, { merge: true });
+    }).catch(() => {});
+  } else if (b.tableId && Array.isArray(b.covers)) {
+    const day = dayDoc(admin, b);
+    await admin.db.runTransaction(async (tx) => {
+      const tables: Record<string, number[]> = (await tx.get(day)).data()?.tables || {};
+      if (tables[b.tableId]) tx.set(day, { tables: { ...tables, [b.tableId]: tables[b.tableId].filter((n) => !b.covers.includes(n)) } }, { merge: true });
+    }).catch(() => {});
+  } else await dayDoc(admin, b).update({ taken: FieldValue.arrayRemove(b.startMin) }).catch(() => {});
 };
 
 const changeStatus = async (admin: Admin, request: Request, body: any) => {
@@ -404,32 +474,13 @@ const changeStatus = async (admin: Admin, request: Request, body: any) => {
   if (!snap.exists) return json({ error: 'not_found' }, 404);
   if (b.status === body.status) return json({ ok: true });
 
-  await ref.update({ status: body.status, updatedAt: new Date().toISOString() });
+  const waitingDeposit = b.deposit?.state === 'pending';
+  await ref.update({ status: body.status, updatedAt: new Date().toISOString(), ...(waitingDeposit ? { 'deposit.state': body.status === 'cancelled' ? 'rejected' : 'paid' } : {}) });
+  if (waitingDeposit) await admin.db.collection('depositHolds').doc(`${body.owner}_${body.id}`).delete().catch(() => {});
   // A cancelled time is free again.
-  if (body.status === 'cancelled') {
-    if (b.sessionId) {
-      const seatsRef = sessionDoc(admin, b, b.sessionId);
-      await admin.db.runTransaction(async (tx) => {
-        const taken = Number((await tx.get(seatsRef)).data()?.taken) || 0;
-        tx.set(seatsRef, { taken: Math.max(0, taken - (Number(b.partySize) || 0)) }, { merge: true });
-      }).catch(() => {});
-    } else if (b.roomId && b.checkOut) {
-      const room = roomDoc(admin, b, b.roomId);
-      const gone = nightsBetween(b.date, b.checkOut);
-      await admin.db.runTransaction(async (tx) => {
-        const nights: string[] = (await tx.get(room)).data()?.nights || [];
-        tx.set(room, { nights: nights.filter((n) => !gone.includes(n)) }, { merge: true });
-      }).catch(() => {});
-    } else if (b.tableId && Array.isArray(b.covers)) {
-      const day = dayDoc(admin, b);
-      await admin.db.runTransaction(async (tx) => {
-        const tables: Record<string, number[]> = (await tx.get(day)).data()?.tables || {};
-        if (tables[b.tableId]) tx.set(day, { tables: { ...tables, [b.tableId]: tables[b.tableId].filter((n) => !b.covers.includes(n)) } }, { merge: true });
-      }).catch(() => {});
-    } else await dayDoc(admin, b).update({ taken: FieldValue.arrayRemove(b.startMin) }).catch(() => {});
-  }
+  if (body.status === 'cancelled') await release(admin, b);
 
-  const updated = { ...b, status: body.status };
+  const updated = { ...b, status: body.status, ...(waitingDeposit ? { deposit: { ...b.deposit, state: body.status === 'cancelled' ? 'rejected' : 'paid' } } : {}) };
   const pageName = b.pageName || 'صفحة على Weelink';
   if (body.status === 'confirmed' || body.status === 'cancelled') {
     await sendAll([
@@ -441,7 +492,9 @@ const changeStatus = async (admin: Admin, request: Request, body: any) => {
           body.status === 'confirmed' ? 'تم تأكيد موعدك' : 'تم إلغاء موعدك',
           body.status === 'confirmed'
             ? `أهلاً ${esc(b.name)}، أكّد ${esc(pageName)} موعدك. رح يوصلك تذكير قبله بيوم.`
-            : `أهلاً ${esc(b.name)}، ألغى ${esc(pageName)} هذا الموعد. فيك تحجز موعداً غيره من الصفحة.`,
+            : waitingDeposit
+              ? `أهلاً ${esc(b.name)}، ما قدر ${esc(pageName)} يتأكد من العربون فانلغى حجزك. تواصل معهم أو احجز من جديد من الصفحة.`
+              : `أهلاً ${esc(b.name)}، ألغى ${esc(pageName)} هذا الموعد. فيك تحجز موعداً غيره من الصفحة.`,
           updated
         ),
       },
@@ -451,12 +504,37 @@ const changeStatus = async (admin: Admin, request: Request, body: any) => {
 };
 
 // The daily cron: tomorrow's reminders, then the cleanup of bookings older than 3 months.
+// A booking whose deposit nobody confirmed within HOLD_HOURS is cancelled and its time is free again.
+const expireDeposits = async (admin: Admin) => {
+  const holds = await admin.db.collection('depositHolds').where('createdAt', '<', Date.now() - HOLD_HOURS * 3600000).limit(100).get();
+  let expired = 0;
+  for (const h of holds.docs) {
+    const { owner, id } = h.data();
+    await h.ref.delete();
+    if (!validId(owner) || !validId(id)) continue;
+    const ref = items(admin, owner).doc(id);
+    const b: any = (await ref.get()).data();
+    if (!b || b.status !== 'new' || b.deposit?.state !== 'pending') continue;
+    await ref.update({ status: 'cancelled', 'deposit.state': 'expired', updatedAt: new Date().toISOString() });
+    await release(admin, b);
+    expired++;
+    await sendAll([{
+      to: b.email,
+      fromName: b.pageName,
+      subject: `انلغى حجزك لأن العربون ما انتأكد · ${dateLabel(b.date)}`,
+      html: mailHtml('انلغى حجزك', `أهلاً ${esc(b.name)}، ما انتأكد عربون حجزك مع ${esc(b.pageName || 'الصفحة')} خلال ${HOLD_HOURS} ساعة فتحرر الحجز. إذا كنت دفعت تواصل معهم، أو احجز من جديد من الصفحة.`, { ...b, deposit: { ...b.deposit, state: 'expired' } }),
+    }]);
+  }
+  return expired;
+};
+
 const daily = async (admin: Admin) => {
+  const expired = await expireDeposits(admin);
   const due = await bookingsOf(admin, await admin.db.collection('bookingDays').where('date', '==', dayIn(1)).get());
   let reminded = 0;
   for (const d of due) {
     const b: any = d.data();
-    if (b.reminded || (b.status !== 'new' && b.status !== 'confirmed')) continue;
+    if (b.reminded || (b.status !== 'new' && b.status !== 'confirmed') || b.deposit?.state === 'pending') continue;
     const pageName = b.pageName || 'صفحة على Weelink';
     await sendAll([
       {
@@ -491,7 +569,7 @@ const daily = async (admin: Admin) => {
     refs.slice(i, i + 400).forEach((r) => batch.delete(r));
     await batch.commit();
   }
-  return json({ reminded, deleted: old.length });
+  return json({ reminded, deleted: old.length, expired });
 };
 
 export default {

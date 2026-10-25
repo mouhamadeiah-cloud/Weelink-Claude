@@ -38,6 +38,8 @@ import { BookingPageContext, createBooking, dayKey, readTaken, readTakenTables }
 import { usePublicTeam } from '../services/team';
 import { StayBookingWidget } from './StayBookingWidget';
 import { SeatBookingWidget } from './SeatBookingWidget';
+import { depositAmount, normalizeRule } from '../services/bookingDeposit';
+import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from './DepositPay';
 import { personWorks } from '../services/teamHours';
 import { coveredSlots, hallsFor, hasTable, isFree, stepOf, tablesFor, type Occupancy } from '../services/tableBooking';
 import { TableMapPicker } from './TableMapPicker';
@@ -169,7 +171,8 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const [personChoice, setPersonChoice] = useState('any');
   const [savedPerson, setSavedPerson] = useState('');
   const [takenTick, setTakenTick] = useState(0);
-  const [savedStatus, setSavedStatus] = useState<'new' | 'confirmed' | null>(null);
+  const [savedStatus, setSavedStatus] = useState<'new' | 'confirmed' | 'deposit' | null>(null);
+  const [deposit, setDeposit] = useState<DepositDraft>(EMPTY_DEPOSIT);
   // How the business takes bookings comes from its admin («إعدادات الحجز»); a page made before that
   // still books with the settings its element carries until the admin copies them in.
   const bookingSettings = useBookingSettings(bookingPage?.owner, bookingPage?.project);
@@ -226,6 +229,8 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const interval = schedule.interval;
   const intervalMins = schedule.intervalMinutes;
   const needsConfirmation = schedule.needsConfirmation;
+  // A fixed deposit (a percent needs a price, which appointments and tables do not have).
+  const depositDue = depositAmount(normalizeRule(schedule, false), null);
   const accentColor = elem.calendarAccentColor || '#0071e3';
 
   const slots = elem.calendarSlots || ['09:00 ص', '11:30 ص', '02:00 م', '04:30 م'];
@@ -285,6 +290,13 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       return;
     }
     setSavedPerson(team.find((p) => p.id === person)?.name || '');
+    if (live && depositDue > 0) {
+      const problem = depositProblem(deposit, bookingSettings?.payments);
+      if (problem) {
+        setBookError(problem);
+        return;
+      }
+    }
     if (!live || !bookingPage) {
       setSubmitted(true);
       return;
@@ -303,19 +315,21 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       ...(isTable ? { partySize: party, hall: hallWish || undefined, tableId: tableWish || undefined } : {}),
       name, phone, email, address, desc,
       needsConfirmation,
+      deposit: depositPayload(deposit, depositDue),
     });
     setSaving(false);
     if ('error' in out) {
       if (out.error === 'taken' || out.error === 'full') {
         setBookError('انحجز هذا الوقت قبل لحظات. اختر وقتاً غيره.');
         setTakenTick((n) => n + 1);
-      } else if (out.error === 'bad_email') setBookError('تأكد من الإيميل.');
+      } else if (out.error === 'deposit_required') setBookError('لازم تدفع العربون وتكتب رقم العملية.');
+      else if (out.error === 'bad_email') setBookError('تأكد من الإيميل.');
       else if (out.error === 'missing_fields') setBookError('تأكد من الاسم ورقم الهاتف.');
       else setBookError(`ما قدرنا نحفظ الحجز. تأكد من الإنترنت وجرّب مرة ثانية. (رمز: ${out.error === 'offline' ? 'offline' : `${out.error}/${'reason' in out ? out.reason : ''}`})`);
       return;
     }
     setSavedTable('tableName' in out && typeof (out as any).tableName === 'string' ? (out as any).tableName : '');
-    setSavedStatus(out.status === 'confirmed' ? 'confirmed' : 'new');
+    setSavedStatus(out.deposit ? 'deposit' : out.status === 'confirmed' ? 'confirmed' : 'new');
     setTakenTick((n) => n + 1);
     setSubmitted(true);
   };
@@ -530,7 +544,7 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
         >
           ✓
         </div>
-        <h4 className={`text-xs font-bold mb-1 ${textStyleClasses}`}>{savedStatus === 'confirmed' ? 'تم حجز موعدك!' : 'تم تسجيل طلب الموعد بنجاح!'}</h4>
+        <h4 className={`text-xs font-bold mb-1 ${textStyleClasses}`}>{savedStatus === 'confirmed' ? 'تم حجز موعدك!' : savedStatus === 'deposit' ? 'بانتظار تأكيد العربون' : 'تم تسجيل طلب الموعد بنجاح!'}</h4>
         <p className={`text-[10px] max-w-xs leading-relaxed mb-3 ${subTextStyleClasses}`}>
           شكرًا لك <b>{name}</b>. تم حجز الموعد المبدئي يوم <b>{selectedDay} {monthNamesArabic[currentMonth]} {currentYear}</b> في تمام الساعة <b>{selectedSlot || computedSlots[0]}</b>.
         </p>
@@ -538,7 +552,7 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
         <div className={`w-full rounded-xl border p-2.5 text-right space-y-1 text-[9.5px] mb-3 ${isDarkBg ? 'bg-white/10 border-white/25 text-white/90' : 'bg-neutral-50 border-neutral-100 text-neutral-600'}`}>
           {isTable ? <div>• <b>عدد الأشخاص:</b> {Math.min(party, partyMax)}{savedTable ? ` · طاولة ${savedTable}` : ''}</div> : <div>• <b>طريقة المقابلة:</b> {meetingTypeTexts[selectedMeetingType] || meetingTypeTexts['phone']}</div>}
           {address && <div>• <b>العنوان:</b> {address}</div>}
-          <div>• <b>حالة التأكيد:</b> {needsConfirmation ? '⏳ يتطلب تأكيد الإدارة أولاً' : '⚡ تأكيد فوري ومباشر'}</div>
+          <div>• <b>حالة التأكيد:</b> {savedStatus === 'deposit' ? '⏳ بانتظار تأكيد العربون، وإذا ما انتأكد خلال 24 ساعة بيتحرر الحجز' : needsConfirmation ? '⏳ يتطلب تأكيد الإدارة أولاً' : '⚡ تأكيد فوري ومباشر'}</div>
           {savedPerson && <div>• <b>مع:</b> {savedPerson}</div>}
           {savedStatus && email && <div>• <b>الإيميل:</b> وصلك إيميل على {email}، ورح يوصلك تذكير قبل الموعد بيوم.</div>}
         </div>
@@ -548,6 +562,7 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
           onClick={() => {
             setSubmitted(false);
             setSavedStatus(null);
+            setDeposit(EMPTY_DEPOSIT);
             setName('');
             setAddress('');
             setPhone('');
@@ -975,6 +990,8 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
               />
             </div>
           </div>
+
+          {depositDue > 0 && <DepositPay payments={bookingSettings?.payments} amount={depositDue} accent={accentColor} dark={isDarkBg} value={deposit} onChange={setDeposit} />}
 
           {bookError && <div className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5">{bookError}</div>}
 

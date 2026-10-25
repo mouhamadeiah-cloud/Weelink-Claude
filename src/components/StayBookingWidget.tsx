@@ -6,6 +6,8 @@ import type { CanvasElement } from '../types';
 import { BookingPageContext, createBooking, dayKey, readRoomNights } from '../services/bookings';
 import { newStaySchedule, scheduleFor, useBookingSettings } from '../services/bookingSettings';
 import { addDays, chooseRoom, isRoomFree, maxGuests, nightsBetween, type RoomNights } from '../services/stayBooking';
+import { depositAmount, normalizeRule, priceNumber } from '../services/bookingDeposit';
+import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from './DepositPay';
 import { useCustomerPrefill } from './customers/customerSession';
 
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -54,6 +56,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [deposit, setDeposit] = useState<DepositDraft>(EMPTY_DEPOSIT);
   const [done, setDone] = useState<{ room: string; status: string } | null>(null);
 
   const cap = Math.max(1, maxGuests(rooms));
@@ -74,6 +77,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const roomFor = (nights: string[]) => (nights.length ? chooseRoom(rooms, occupancy, { guests: guestCount, nights, roomId: wishRoom || undefined }) : null);
   const nights = checkIn && checkOut ? nightsBetween(checkIn, checkOut) : [];
   const chosen = nights.length ? roomFor(nights) : null;
+  const amount = chosen ? depositAmount(normalizeRule(schedule, true), (priceNumber(chosen.price) || 0) * nights.length || null) : 0;
   const freeRooms = nights.length ? rooms.filter((r) => r.capacity >= guestCount && isRoomFree(occupancy[r.id], nights)) : [];
 
   // A date can start a stay when the first night has a room; end one when the stay is allowed and has a room.
@@ -104,22 +108,27 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
     if (!checkIn || !checkOut || !chosen) return setError('اختر تاريخ الوصول والمغادرة.');
     if (name.trim().length < 2 || phone.replace(/\D/g, '').length < 6) return setError('اكتب اسمك ورقم هاتفك (6 أرقام على الأقل).');
     if (live && !email.trim()) return setError('اكتب إيميلك ليوصلك تأكيد الحجز والتذكير.');
+    if (live && amount > 0) {
+      const problem = depositProblem(deposit, settings?.payments);
+      if (problem) return setError(problem);
+    }
     if (!live || !bookingPage) return setDone({ room: chosen.name, status: 'new' });
     setSaving(true);
     const out = await createBooking({
       owner: bookingPage.owner, project: bookingPage.project, schedule: schedule.id, pageName: bookingPage.pageName,
       date: checkIn, startMin: 0, slot: `${nights.length}`, meetingType: '', checkOut, partySize: guestCount, room: wishRoom || undefined,
-      name, phone, email, address: '', desc, needsConfirmation: schedule.needsConfirmation,
+      name, phone, email, address: '', desc, needsConfirmation: schedule.needsConfirmation, deposit: depositPayload(deposit, amount),
     } as any);
     setSaving(false);
     if ('error' in out) {
       if (out.error === 'taken') { setError('انحجزت الغرفة قبل لحظات. اختر تواريخ أو غرفة غيرها.'); setTick((n) => n + 1); setCheckOut(''); }
+      else if (out.error === 'deposit_required') setError('لازم تدفع العربون وتكتب رقم العملية.');
       else if (out.error === 'bad_email') setError('تأكد من الإيميل.');
       else if (out.error === 'no_rooms' || out.error === 'bad_schedule') setError('الحجز غير جاهز بعد: المالك لازم يضيف الغرف من «إعدادات الحجز».');
       else setError(`ما قدرنا نحفظ الحجز. جرّب مرة ثانية. (رمز: ${out.error})`);
       return;
     }
-    setDone({ room: out.roomName || chosen.name, status: out.status });
+    setDone({ room: out.roomName || chosen.name, status: out.deposit ? 'deposit' : out.status });
     setTick((n) => n + 1);
   };
 
@@ -130,12 +139,12 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
     return (
       <div className={`${shell} items-center justify-center text-center`} dir="rtl" style={shellStyle}>
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold mb-2" style={{ backgroundColor: accent }}>✓</div>
-        <h4 className={`text-xs font-bold mb-1 ${text}`}>{done.status === 'confirmed' ? 'تم حجز غرفتك!' : 'وصل طلب الحجز!'}</h4>
+        <h4 className={`text-xs font-bold mb-1 ${text}`}>{done.status === 'confirmed' ? 'تم حجز غرفتك!' : done.status === 'deposit' ? 'بانتظار تأكيد العربون' : 'وصل طلب الحجز!'}</h4>
         <p className={`text-[10px] max-w-xs leading-relaxed mb-3 ${sub}`}>
           شكراً <b>{name}</b>. {done.room} من <b>{label(checkIn)}</b> إلى <b>{label(checkOut)}</b> ({nights.length} {nights.length === 1 ? 'ليلة' : 'ليالٍ'}).
-          {done.status !== 'confirmed' ? ' رح يوصلك إيميل لما يتأكد الحجز.' : ''}
+          {done.status === 'deposit' ? ' رح نراجع التحويل ويوصلك إيميل لما يتأكد العربون. إذا ما انتأكد خلال 24 ساعة بيتحرر الحجز.' : done.status !== 'confirmed' ? ' رح يوصلك إيميل لما يتأكد الحجز.' : ''}
         </p>
-        <button type="button" onClick={() => { setDone(null); setCheckIn(''); setCheckOut(''); setName(''); setPhone(''); setEmail(''); setDesc(''); }} className="px-3.5 py-1.5 text-white rounded-lg text-[10px] font-bold cursor-pointer" style={{ backgroundColor: accent }}>حجز جديد</button>
+        <button type="button" onClick={() => { setDone(null); setCheckIn(''); setCheckOut(''); setName(''); setPhone(''); setEmail(''); setDesc(''); setDeposit(EMPTY_DEPOSIT); }} className="px-3.5 py-1.5 text-white rounded-lg text-[10px] font-bold cursor-pointer" style={{ backgroundColor: accent }}>حجز جديد</button>
       </div>
     );
   }
@@ -213,6 +222,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
                 🛏️ {chosen.name} · تتسع {chosen.capacity}{chosen.price ? ` · ${chosen.price}` : ''}
               </div>
             )}
+            {amount > 0 && <DepositPay payments={settings?.payments} amount={amount} accent={accent} dark={dark} value={deposit} onChange={setDeposit} />}
             <input className={field} placeholder="الاسم الكامل" value={name} onChange={(e) => setName(e.target.value)} />
             <input className={field} dir="ltr" placeholder="05xxxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
             <input className={field} dir="ltr" type="email" placeholder="name@domain.com" value={email} onChange={(e) => setEmail(e.target.value)} />

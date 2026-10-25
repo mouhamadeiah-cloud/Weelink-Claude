@@ -137,7 +137,7 @@ export const BookingGrid: React.FC<Props> = ({ owner, project, rows, busy, onAct
                         className="m-0.5 rounded-lg text-white text-[11px] font-black px-1.5 py-1 text-right overflow-hidden cursor-pointer border-2 border-transparent hover:border-ink">
                         <div className="truncate">{b.name}</div>
                         {b.partySize ? <div className="font-bold opacity-90">{b.partySize} أشخاص</div> : null}
-                        {b.status === 'new' && <div className="font-bold opacity-90">بانتظار</div>}
+                        {b.status === 'new' && <div className="font-bold opacity-90">{b.deposit?.state === 'pending' ? 'بانتظار العربون' : 'بانتظار'}</div>}
                       </button>
                     );
                   })}

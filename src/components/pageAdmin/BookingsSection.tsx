@@ -124,7 +124,11 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
                 <div className="flex-1 min-w-[180px] space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-black text-ink">{b.name}</span>
-                    <span className={`text-xs font-bold border rounded-full px-2 py-0.5 ${STATUS[b.status]?.cls || ''}`}>{STATUS[b.status]?.label || b.status}</span>
+                    {b.deposit?.state === 'pending' ? (
+                      <span className="text-xs font-bold border rounded-full px-2 py-0.5 bg-violet-50 text-violet-700 border-violet-200">بانتظار العربون</span>
+                    ) : (
+                      <span className={`text-xs font-bold border rounded-full px-2 py-0.5 ${STATUS[b.status]?.cls || ''}`}>{STATUS[b.status]?.label || b.status}</span>
+                    )}
                     <span className="text-xs font-bold text-neutral-500">{MEETING[b.meetingType] || ''}</span>
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-bold">
@@ -132,6 +136,13 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
                     {b.phone && <a href={`https://wa.me/${phoneDigits.replace(/^\+/, '')}`} target="_blank" rel="noreferrer" className="text-emerald-700 flex items-center gap-1"><MessageCircle size={12} />واتساب</a>}
                     {b.email && <a href={`mailto:${b.email}`} className="text-neutral-600 flex items-center gap-1" dir="ltr"><Mail size={12} />{b.email}</a>}
                   </div>
+                  {b.deposit && (
+                    <div className="text-xs font-bold text-neutral-600 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span>💰 عربون {b.deposit.amount} {b.deposit.currency}{b.deposit.state === 'paid' ? ' · تأكد' : b.deposit.state === 'rejected' ? ' · مرفوض' : b.deposit.state === 'expired' ? ' · انتهت المهلة' : ''}</span>
+                      <span dir="ltr">{b.deposit.walletLabel} · {b.deposit.txn}</span>
+                      {b.deposit.screenshot && <a href={b.deposit.screenshot} target="_blank" rel="noreferrer" className="text-brand">صورة التحويل</a>}
+                    </div>
+                  )}
                   {b.address && <div className="text-xs text-neutral-500">{b.address}</div>}
                   {b.desc && <div className="text-xs text-neutral-600 leading-relaxed">{b.desc}</div>}
                   {failed === b.id && <div className="text-xs font-bold text-red-600">ما زبط. تأكد من الإنترنت وجرّب مرة ثانية.</div>}
@@ -144,7 +155,7 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
                       <>
                         {b.status === 'new' && (
                           <button type="button" onClick={() => act(b, 'confirmed')} className="h-8 px-3 rounded-lg bg-brand text-white text-xs font-bold flex items-center gap-1 cursor-pointer">
-                            <CalendarCheck2 size={14} /> تأكيد
+                            <CalendarCheck2 size={14} /> {b.deposit?.state === 'pending' ? 'تأكيد العربون' : 'تأكيد'}
                           </button>
                         )}
                         {b.status === 'confirmed' && (
@@ -153,7 +164,7 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
                           </button>
                         )}
                         <button type="button" onClick={() => act(b, 'cancelled')} className="h-8 px-3 rounded-lg bg-red-50 text-red-600 text-xs font-bold flex items-center gap-1 cursor-pointer">
-                          <CalendarX2 size={14} /> إلغاء
+                          <CalendarX2 size={14} /> {b.deposit?.state === 'pending' ? 'رفض' : 'إلغاء'}
                         </button>
                       </>
                     )}

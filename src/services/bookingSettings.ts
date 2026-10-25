@@ -14,6 +14,7 @@ import type { CanvasElement } from '../types';
 import type { ProjectKey } from '../utils/projectKeys';
 import { normalizeRooms, type StayRoom } from './stayBooking';
 import { normalizeSessions, type SeatSession } from './seatBooking';
+import { normalizePayments, type BookingPayments, type DepositType } from './bookingDeposit';
 
 export type BookingType = 'appointment' | 'table' | 'stay' | 'seats';
 // A «إقامة» schedule: 'auto' = the smallest free room that fits the guests; 'room' = the visitor picks the room.
@@ -51,12 +52,17 @@ export interface BookingSchedule {
   roomChoice: RoomChoice;
   sessions: SeatSession[]; // type 'seats': the sessions with seats to book
   maxSeatsPerBooking: number; // type 'seats': most seats one booking takes
+  depositOn: boolean; // a deposit is asked before the booking counts (bookingDeposit.ts)
+  depositType: DepositType; // 'percent' needs a price: seats and stays only
+  depositValue: number;
   daysAhead: number; // how far ahead a visitor may book
   minNoticeHours: number; // how soon before a time it can still be booked
 }
 
 export interface BookingSettings {
   schedules: BookingSchedule[];
+  // The e-wallet accounts a deposit is paid to; one set for the whole page.
+  payments?: BookingPayments;
 }
 
 export const MAX_SCHEDULES = 10;
@@ -82,6 +88,9 @@ const DEFAULT: Omit<BookingSchedule, 'id' | 'name'> = {
   roomChoice: 'auto',
   sessions: [],
   maxSeatsPerBooking: 6,
+  depositOn: false,
+  depositType: 'fixed',
+  depositValue: 0,
   daysAhead: 60,
   minNoticeHours: 0,
 };
@@ -127,6 +136,9 @@ export const normalizeSchedule = (raw: any, fallbackId = 'main'): BookingSchedul
     roomChoice: raw?.roomChoice === 'room' ? 'room' : 'auto',
     sessions: normalizeSessions(raw?.sessions),
     maxSeatsPerBooking: clampInt(raw?.maxSeatsPerBooking, 1, 50, DEFAULT.maxSeatsPerBooking),
+    depositOn: raw?.depositOn === true,
+    depositType: raw?.depositType === 'percent' && (type === 'seats' || type === 'stay') ? 'percent' : 'fixed',
+    depositValue: Math.min(raw?.depositType === 'percent' ? 100 : 100000000, Math.max(0, Math.round((Number(raw?.depositValue) || 0) * 100) / 100)),
     daysAhead: clampInt(raw?.daysAhead, 1, 365, DEFAULT.daysAhead),
     minNoticeHours: clampInt(raw?.minNoticeHours, 0, 168, 0),
   };
@@ -139,7 +151,7 @@ export const normalizeSettings = (raw: any): BookingSettings | null => {
     .slice(0, MAX_SCHEDULES)
     .map((s: any, i: number) => normalizeSchedule(s, i === 0 ? 'main' : `s${i}`))
     .filter((s: BookingSchedule) => !seen.has(s.id) && seen.add(s.id));
-  return { schedules };
+  return { schedules, ...(raw.payments ? { payments: normalizePayments(raw.payments) } : {}) };
 };
 
 // The settings a booking element made before 24 Oct carries itself.
@@ -184,7 +196,7 @@ export const newTableSchedule = (): BookingSchedule => ({ ...newSchedule('table'
 const settingsDoc = (owner: string, project: ProjectKey) => doc(db, 'bookingSettings', owner, 'pages', project);
 
 export const saveBookingSettings = (owner: string, project: ProjectKey, settings: BookingSettings) =>
-  setDoc(settingsDoc(owner, project), { schedules: settings.schedules.slice(0, MAX_SCHEDULES).map((s) => normalizeSchedule(s, s.id)) });
+  setDoc(settingsDoc(owner, project), { schedules: settings.schedules.slice(0, MAX_SCHEDULES).map((s) => normalizeSchedule(s, s.id)), ...(settings.payments ? { payments: normalizePayments(settings.payments) } : {}) }, { merge: true });
 
 // undefined while loading, null when the page has none yet.
 export const useBookingSettings = (owner: string | null | undefined, project: ProjectKey | null | undefined) => {

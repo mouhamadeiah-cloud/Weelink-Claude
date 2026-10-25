@@ -33,6 +33,8 @@ export interface Booking {
   sessionId?: string;
   sessionName?: string;
   endDate?: string; // a course's last day
+  // The deposit the visitor paid; the booking waits (status 'new') while state is 'pending'.
+  deposit?: { amount: number; currency: string; wallet: string; walletLabel: string; txn: string; screenshot: string; state: 'pending' | 'paid' | 'rejected' | 'expired'; at: string };
   // The team person it was booked with («فريق العمل»), when the schedule has specialists.
   person?: string;
   personName?: string;
@@ -93,10 +95,10 @@ export const readTaken = async (owner: string, project: ProjectKey, date: string
   return Array.isArray(taken) ? taken.filter((n) => typeof n === 'number') : [];
 };
 
-export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tableName' | 'hallName' | 'durationMin' | 'roomName' | 'nights'> & { needsConfirmation: boolean; hall?: string; room?: string; session?: string };
+export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt' | 'deposit' | 'tableName' | 'hallName' | 'durationMin' | 'roomName' | 'nights'> & { needsConfirmation: boolean; hall?: string; room?: string; session?: string; deposit?: { wallet: string; txn: string; screenshot: string } };
 
 // 'taken': somebody booked that time a moment before.
-export const createBooking = async (b: NewBooking): Promise<{ id: string; status: BookingStatus; tableName?: string; hallName?: string; roomName?: string } | { error: string; reason?: string }> => {
+export const createBooking = async (b: NewBooking): Promise<{ id: string; status: BookingStatus; deposit?: boolean; tableName?: string; hallName?: string; roomName?: string } | { error: string; reason?: string }> => {
   try {
     const res = await fetch('/api/booking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', ...b }) });
     const out = await res.json().catch(() => ({}));

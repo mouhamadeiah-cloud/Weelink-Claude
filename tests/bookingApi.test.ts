@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import handler from '../api/booking.ts';
-import { store, users } from './fakeAdmin.ts';
+import { store, tokens, users } from './fakeAdmin.ts';
 
 process.env.FIREBASE_SERVICE_ACCOUNT = JSON.stringify({ private_key: 'x' });
 users['own1'] = { email: 'owner@example.com' };
@@ -35,4 +35,43 @@ test('only people who take bookings can be booked, and another schedule has its 
   assert.equal((await book({ person: 'ghost' })).error, 'bad_person');
   assert.equal((await book({ person: 'pa1', schedule: 's9' })).s, 200);
   assert.deepEqual(store.get(`bookingDays/own1_page_${day}_s9_ppa1`).taken, [600]);
+});
+
+// ---- tables (restaurants) ----
+const tday = new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10);
+store.set('restaurants/own1', { menu: { halls: [
+  { id: 'h1', name: 'الداخلية', tables: [{ id: 't1', name: '1', seats: 2 }, { id: 't2', name: '2', seats: 4 }] },
+  { id: 'h2', name: 'الحديقة', tables: [{ id: 't4', name: 'ح1', seats: 6 }] },
+] } });
+store.set('bookingSettings/own1/pages/restaurant', { schedules: [{ id: 'table', name: 'حجز الطاولات', type: 'table', durationMinutes: 90, interval: '30', partyMax: 6 }] });
+const tbase = { ...base, project: 'restaurant', schedule: 'table', date: tday, startMin: 720, slot: '12:00 م', meetingType: '', partySize: 3 };
+const tbook = async (extra: any = {}) => {
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', body: JSON.stringify({ ...tbase, ...extra }) }));
+  return { s: r.status, ...(await r.json()) };
+};
+
+test('a party gets the smallest free table and an overlapping party gets another', async () => {
+  const a = await tbook();
+  assert.equal(a.s, 200);
+  assert.equal(a.tableName, '2');
+  const b = await tbook({ startMin: 750, name: 'سمير' });
+  assert.equal(b.tableName, 'ح1');
+  assert.equal((await tbook({ startMin: 780 })).error, 'taken');
+  assert.deepEqual(store.get(`bookingDays/own1_restaurant_${tday}_table`).tables.t2, [720, 750, 780]);
+});
+
+test('a table booking checks the party, the schedule and the wished table', async () => {
+  assert.equal((await tbook({ partySize: 9 })).error, 'bad_party');
+  assert.equal((await tbook({ schedule: 'main' })).error, 'bad_schedule');
+  assert.equal((await tbook({ startMin: 1200, partySize: 2, tableId: 't4' })).tableName, 'ح1');
+  assert.equal((await tbook({ startMin: 1200, partySize: 5, tableId: 't1' })).error, 'taken');
+});
+
+test('a cancelled table booking frees its times', async () => {
+  const [id] = [...store.entries()].find(([k, v]: any) => k.startsWith('bookings/own1/items/') && v.date === tday && v.tableId === 't2') as any;
+  tokens['tk'] = { uid: 'own1' };
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', headers: { authorization: 'Bearer tk' }, body: JSON.stringify({ action: 'status', owner: 'own1', id: id.split('/').pop(), status: 'cancelled' }) }));
+  assert.equal(r.status, 200);
+  assert.deepEqual(store.get(`bookingDays/own1_restaurant_${tday}_table`).tables.t2, []);
+  assert.equal((await tbook({ startMin: 780, partySize: 4 })).tableName, '2');
 });

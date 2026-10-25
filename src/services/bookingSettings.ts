@@ -17,6 +17,9 @@ export type BookingType = 'appointment' | 'table';
 // Who a visitor books with: nobody in particular, a team person of their choice (or any free one), or
 // always the first free person. The people are those of «فريق العمل» who take bookings.
 export type SpecialistMode = 'none' | 'choose' | 'first';
+// A «طاولة» schedule (restaurants): who chooses the table. 'auto' = the smallest free table that seats the
+// party; 'hall' = the visitor picks the hall; 'table' = the visitor picks the table.
+export type TableChoice = 'auto' | 'hall' | 'table';
 export type SlotInterval = '10' | '15' | '30' | '60' | 'day' | 'manual';
 export const WEEK_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 export const MEETING_TYPES = ['personal', 'phone', 'whatsapp'] as const;
@@ -35,6 +38,9 @@ export interface BookingSchedule {
   needsConfirmation: boolean;
   specialists: SpecialistMode;
   meetingTypes: string[];
+  durationMinutes: number; // type 'table': how long a table is kept for a party
+  partyMax: number; // type 'table': the biggest party that books online
+  tableChoice: TableChoice;
   daysAhead: number; // how far ahead a visitor may book
   minNoticeHours: number; // how soon before a time it can still be booked
 }
@@ -57,6 +63,9 @@ const DEFAULT: Omit<BookingSchedule, 'id' | 'name'> = {
   needsConfirmation: true,
   specialists: 'none',
   meetingTypes: ['phone'],
+  durationMinutes: 90,
+  partyMax: 8,
+  tableChoice: 'auto',
   daysAhead: 60,
   minNoticeHours: 0,
 };
@@ -90,6 +99,9 @@ export const normalizeSchedule = (raw: any, fallbackId = 'main'): BookingSchedul
     needsConfirmation: raw?.needsConfirmation !== false,
     specialists: raw?.specialists === 'choose' || raw?.specialists === 'first' ? raw.specialists : 'none',
     meetingTypes: meetings.length ? [...meetings] : ['phone'],
+    durationMinutes: clampInt(raw?.durationMinutes, 15, 480, DEFAULT.durationMinutes),
+    partyMax: clampInt(raw?.partyMax, 1, 50, DEFAULT.partyMax),
+    tableChoice: raw?.tableChoice === 'hall' || raw?.tableChoice === 'table' ? raw.tableChoice : 'auto',
     daysAhead: clampInt(raw?.daysAhead, 1, 365, DEFAULT.daysAhead),
     minNoticeHours: clampInt(raw?.minNoticeHours, 0, 168, 0),
   };
@@ -125,8 +137,14 @@ export const scheduleFromElement = (e: Partial<CanvasElement> | null | undefined
   }, id);
 
 // The schedule an element books with: its own, or the page's first.
-export const scheduleFor = (settings: BookingSettings | null, scheduleId?: string): BookingSchedule | null =>
-  settings ? settings.schedules.find((s) => s.id === scheduleId) || settings.schedules[0] : null;
+// `wantType`: a table element finds the page's table schedule when it has not been told which.
+export const scheduleFor = (settings: BookingSettings | null, scheduleId?: string, wantType?: BookingType): BookingSchedule | null =>
+  settings
+    ? settings.schedules.find((s) => s.id === scheduleId) || (wantType && settings.schedules.find((s) => s.type === wantType)) || settings.schedules[0]
+    : null;
+
+// A restaurant's first table schedule when it has none saved: shown by the element and the admin.
+export const newTableSchedule = (): BookingSchedule => ({ ...newSchedule('table', 'حجز الطاولات'), type: 'table', workStart: '12:00', workEnd: '23:00', breakStart: '', breakEnd: '', interval: '30', meetingTypes: ['personal'] });
 
 const settingsDoc = (owner: string, project: ProjectKey) => doc(db, 'bookingSettings', owner, 'pages', project);
 

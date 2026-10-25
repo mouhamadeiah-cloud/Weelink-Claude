@@ -38,7 +38,8 @@ import { BookingPageContext, createBooking, dayKey, readTaken, readTakenTables }
 import { usePublicTeam } from '../services/team';
 import { StayBookingWidget } from './StayBookingWidget';
 import { personWorks } from '../services/teamHours';
-import { hallsFor, hasTable, stepOf, tablesFor, type Occupancy } from '../services/tableBooking';
+import { coveredSlots, hallsFor, hasTable, isFree, stepOf, tablesFor, type Occupancy } from '../services/tableBooking';
+import { TableMapPicker } from './TableMapPicker';
 import { useRestaurantTables } from '../services/tableBookingData';
 import { BookingSettingsOpenContext, WEEK_DAYS, newTableSchedule, scheduleFor, scheduleFromElement, useBookingSettings } from '../services/bookingSettings';
 import { NavbarStars, RatingsWidget } from './ratings/RatingsUI';
@@ -403,6 +404,12 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
 
     return list.length > 0 || isTable ? list : slots.map((label, i) => ({ label, startMin: i }));
   }, [interval, intervalMins, workStart, workEnd, breakStart, breakEnd, hasBreak, slots, isTable, schedule.durationMinutes]);
+  const busyTableIds = useMemo(() => {
+    const item = slotItems.find((i) => i.label === selectedSlot);
+    if (!isTable || !item) return new Set<string>();
+    const covers = coveredSlots(item.startMin, schedule.durationMinutes, stepOf(interval, intervalMins));
+    return new Set(restaurantTables.filter((t) => !isFree(occupancy[t.id], covers)).map((t) => t.id));
+  }, [isTable, slotItems, selectedSlot, occupancy, restaurantTables, schedule.durationMinutes, interval, intervalMins]);
   const computedSlots = useMemo(() => slotItems.map((s) => s.label), [slotItems]);
   // A time that has passed, or is closer than the notice the business asks for.
   function isPastOn(dayNum: number, startMin: number) {
@@ -842,17 +849,9 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
               )}
               {schedule.tableChoice === 'table' && tableOptions.length > 0 && (
                 <div className="space-y-1">
-                  <label className={`text-[10px] block ${labelStyleClasses}`}>الطاولة:</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[{ id: '', name: 'أي طاولة', seats: 0 }, ...tableOptions].map((t) => {
-                      const on = tableWish === t.id;
-                      return (
-                        <button key={t.id || 'any'} type="button" onClick={() => { setTablePick(t.id); setSelectedSlot(null); }}
-                          className={`text-[9.5px] py-1 px-2.5 rounded-lg border font-bold cursor-pointer ${on ? 'bg-white border-2' : isDarkBg ? 'bg-white/10 border-white/10 text-white' : 'bg-white border-neutral-200 text-neutral-700'}`}
-                          style={{ borderColor: on ? accentColor : undefined, color: on ? accentColor : undefined }}>{t.name}{t.seats ? ` · ${t.seats} مقاعد` : ''}</button>
-                      );
-                    })}
-                  </div>
+                  <label className={`text-[10px] block ${labelStyleClasses}`}>اختر طاولتك من الخريطة (أو اتركها للمطعم):</label>
+                  <TableMapPicker tables={restaurantTables} party={party} pickedId={tableWish} hallId={hallWish || undefined} busyIds={busyTableIds} accent={accentColor} dark={isDarkBg}
+                    onPick={(id) => { setTablePick(id); setSelectedSlot(null); }} />
                 </div>
               )}
               {restaurantTables.length === 0 && live && <p className="text-[9.5px] text-amber-700 font-bold">الحجز غير متاح هلأ: ما في طاولات مضافة.</p>}

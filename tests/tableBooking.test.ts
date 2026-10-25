@@ -36,3 +36,13 @@ test('the visitor may wish for a hall or a table', () => {
   assert.equal(chooseTable(tables, {}, { ...wish, tableId: 't1' }), null);
   assert.equal(chooseTable(tables, {}, { ...wish, party: 2, tableId: 't1' })?.id, 't1');
 });
+
+test('tables carry their place on the floor map, auto-placed when the hall has none', () => {
+  const out = tablesOfHalls([
+    { id: 'a', name: 'A', cols: 3, rows: 2, tables: [{ id: 'x', name: '1', seats: 4, col: 2, row: 1, w: 1, h: 1 }, { id: 'y', name: '2', seats: 2 }] },
+  ]);
+  const x = out.find((t) => t.id === 'x')!;
+  const y = out.find((t) => t.id === 'y')!;
+  assert.deepEqual([x.col, x.row, x.hallCols, x.hallRows], [2, 1, 3, 2]);
+  assert.deepEqual([y.col, y.row], [0, 0]);
+});

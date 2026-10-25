@@ -75,3 +75,8 @@ test('a cancelled table booking frees its times', async () => {
   assert.deepEqual(store.get(`bookingDays/own1_restaurant_${tday}_table`).tables.t2, []);
   assert.equal((await tbook({ startMin: 780, partySize: 4 })).tableName, '2');
 });
+
+test('a restaurant that never saved table settings still books with the defaults', async () => {
+  store.delete('bookingSettings/own1/pages/restaurant');
+  assert.equal((await tbook({ startMin: 900 })).s, 200);
+});

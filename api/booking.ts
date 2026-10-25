@@ -202,7 +202,8 @@ const create = async (admin: Admin, body: any) => {
   if (body.partySize !== undefined) {
     const party = Math.round(Number(body.partySize));
     const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
-    const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule);
+    // A restaurant that never saved its table settings books with the defaults of the «table» schedule.
+    const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule) || (booking.schedule === 'table' ? { type: 'table', interval: '30' } : null);
     if (!schedule || schedule.type !== 'table') return json({ error: 'bad_schedule' }, 400);
     if (!Number.isInteger(party) || party < 1 || party > Math.min(50, Number(schedule.partyMax) || 8)) return json({ error: 'bad_party' }, 400);
     const restaurant = (await admin.db.collection('restaurants').doc(restaurantIdOf(owner, project)).get()).data();

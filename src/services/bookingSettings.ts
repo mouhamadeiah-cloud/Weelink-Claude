@@ -138,10 +138,14 @@ export const scheduleFromElement = (e: Partial<CanvasElement> | null | undefined
 
 // The schedule an element books with: its own, or the page's first.
 // `wantType`: a table element finds the page's table schedule when it has not been told which.
-export const scheduleFor = (settings: BookingSettings | null, scheduleId?: string, wantType?: BookingType): BookingSchedule | null =>
-  settings
-    ? settings.schedules.find((s) => s.id === scheduleId) || (wantType && settings.schedules.find((s) => s.type === wantType)) || settings.schedules[0]
-    : null;
+export const scheduleFor = (settings: BookingSettings | null, scheduleId?: string, wantType?: BookingType): BookingSchedule | null => {
+  if (!settings) return null;
+  const own = settings.schedules.find((s) => s.id === scheduleId && (!wantType || s.type === wantType));
+  if (own) return own;
+  // A table element never falls back to an appointment schedule: it waits for its own (or the defaults).
+  if (wantType === 'table') return settings.schedules.find((s) => s.type === 'table') || null;
+  return settings.schedules.find((s) => s.id === scheduleId) || settings.schedules[0];
+};
 
 // A restaurant's first table schedule when it has none saved: shown by the element and the admin.
 export const newTableSchedule = (): BookingSchedule => ({ ...newSchedule('table', 'حجز الطاولات'), type: 'table', workStart: '12:00', workEnd: '23:00', breakStart: '', breakEnd: '', interval: '30', meetingTypes: ['personal'] });

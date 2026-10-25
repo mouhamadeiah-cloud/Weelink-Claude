@@ -463,6 +463,10 @@ service cloud.firestore {
     match /bookingDays/{dayId} {
       allow get: if true;
     }
+    // The nights of a hotel room that are taken (api/booking.ts writes them).
+    match /bookingRooms/{roomId} {
+      allow get: if true;
+    }
 
     // «إعدادات الحجز» (src/services/bookingSettings.ts): how a page takes bookings. The page reads it to
     // work out the free times; the owner and the members write it.

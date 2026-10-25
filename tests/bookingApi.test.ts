@@ -87,3 +87,42 @@ test('a person is not booked outside their own hours', async () => {
   assert.equal((await book({ person: 'pc3', startMin: 600 })).error, 'taken');
   assert.equal((await book({ person: 'pc3', startMin: 720 })).s, 200);
 });
+
+// ---- hotel stays ----
+const inD = (n: number) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+store.set('bookingSettings/own1/pages/page', { schedules: [
+  { id: 'main', name: 'المواعيد', type: 'appointment' },
+  { id: 'stay', name: 'الغرف', type: 'stay', minNights: 1, maxNights: 5, daysAhead: 60, rooms: [
+    { id: 'r1', name: '101', capacity: 2 }, { id: 'r2', name: '102', capacity: 4 },
+  ] },
+] });
+const sbook = async (extra: any = {}) => {
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', body: JSON.stringify({ ...base, schedule: 'stay', date: inD(10), checkOut: inD(12), partySize: 2, startMin: 0, slot: '2', meetingType: '', ...extra }) }));
+  return { s: r.status, ...(await r.json()) };
+};
+
+test('a stay gets the smallest free room, and overlapping stays get another room, then none', async () => {
+  assert.equal((await sbook()).roomName, '101');
+  assert.equal((await sbook({ date: inD(11), checkOut: inD(13), name: 'سمير' })).roomName, '102');
+  assert.equal((await sbook({ date: inD(11), checkOut: inD(12) })).error, 'taken');
+  // the check-out day is free for the next check-in
+  assert.equal((await sbook({ date: inD(12), checkOut: inD(14) })).roomName, '101');
+  assert.deepEqual(store.get(`bookingRooms/own1_page_stay_r1`).nights.sort(), [inD(10), inD(11), inD(12), inD(13)]);
+});
+
+test('a stay checks the nights, the guests and the schedule', async () => {
+  assert.equal((await sbook({ date: inD(20), checkOut: inD(20) })).error, 'bad_nights');
+  assert.equal((await sbook({ date: inD(20), checkOut: inD(30) })).error, 'bad_nights');
+  assert.equal((await sbook({ date: inD(20), checkOut: inD(21), partySize: 9 })).error, 'bad_party');
+  assert.equal((await sbook({ schedule: 'main', date: inD(20), checkOut: inD(21) })).error, 'bad_schedule');
+  assert.equal((await sbook({ date: inD(70), checkOut: inD(71) })).error, 'bad_date');
+});
+
+test('a cancelled stay frees its nights', async () => {
+  const [path] = [...store.entries()].find(([k, v]: any) => k.startsWith('bookings/own1/items/') && v.roomId === 'r2' && v.date === inD(11)) as any;
+  tokens['tk2'] = { uid: 'own1' };
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', headers: { authorization: 'Bearer tk2' }, body: JSON.stringify({ action: 'status', owner: 'own1', id: path.split('/').pop(), status: 'cancelled' }) }));
+  assert.equal(r.status, 200);
+  assert.deepEqual(store.get('bookingRooms/own1_page_stay_r2').nights, []);
+  assert.equal((await sbook({ date: inD(11), checkOut: inD(13), partySize: 3 })).roomName, '102');
+});

@@ -217,7 +217,7 @@ export interface CanvasElement {
   // The admin's schedule («إعدادات الحجز») this element books with; the page's first when unset.
   calendarScheduleId?: string;
   // 'table': a restaurant's table booking; finds the page's table schedule when calendarScheduleId is unset.
-  calendarBookingType?: 'table';
+  calendarBookingType?: 'table' | 'stay';
   calendarSlots?: string[];
   calendarWorkingDays?: string[]; // e.g. ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday']
   calendarHolidays?: string[]; // e.g. ['friday', 'saturday']

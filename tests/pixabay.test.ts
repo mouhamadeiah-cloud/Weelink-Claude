@@ -65,3 +65,41 @@ test('the client reports an error instead of throwing', async () => {
     globalThis.fetch = realFetch;
   }
 });
+
+test('an Arabic word the list lacks is put into English by Gemini, once, and the search uses it', async () => {
+  process.env.PIXABAY_API_KEY = 'k';
+  process.env.GEMINI_API_KEY = 'g';
+  const calls: string[] = [];
+  stub((u) => {
+    calls.push(u);
+    if (u.includes('generativelanguage')) {
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"زعتر":"thyme"}' }] } }] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ hits: [], totalHits: 0 }), { status: 200 });
+  });
+  try {
+    await photos.fetch(req('type=photo&q=' + encodeURIComponent('زعتر')));
+    await photos.fetch(req('type=photo&q=' + encodeURIComponent('زعتر')));
+  } finally {
+    globalThis.fetch = realFetch;
+    delete process.env.GEMINI_API_KEY;
+  }
+  assert.equal(calls.filter((u) => u.includes('generativelanguage')).length, 1);
+  assert.ok(calls.filter((u) => u.includes('pixabay.com/api')).every((u) => /q=thyme/.test(u)));
+});
+
+test('without Gemini the Arabic word is sent as it is', async () => {
+  process.env.PIXABAY_API_KEY = 'k';
+  delete process.env.GEMINI_API_KEY;
+  const calls: string[] = [];
+  stub((u) => {
+    calls.push(u);
+    return new Response(JSON.stringify({ hits: [], totalHits: 0 }), { status: 200 });
+  });
+  try {
+    await photos.fetch(req('type=photo&q=' + encodeURIComponent('كركديه')));
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.match(calls[0], /q=%D9%83/);
+});

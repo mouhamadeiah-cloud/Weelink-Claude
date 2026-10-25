@@ -19,7 +19,7 @@
 
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
-import { chooseTable, coveredSlots, stepOf, tablesOfHalls, type BookableTable } from '../src/services/tableBooking.js';
+import { chooseTable, coveredSlots, tablesOfHalls, type BookableTable } from '../src/services/tableBooking.js';
 import { restaurantIdOf } from '../src/utils/projectKeys.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
@@ -212,8 +212,9 @@ const create = async (admin: Admin, body: any) => {
     tableRule = {
       party,
       duration: Math.min(480, Math.max(15, Math.round(Number(schedule.durationMinutes)) || 90)),
-      step: stepOf(String(schedule.interval || '30'), Math.round(Number(schedule.intervalMinutes)) || 30),
+      step: 0, // a table's start times follow its length
     };
+    tableRule.step = tableRule.duration;
     (booking as any).partySize = party;
     (booking as any).durationMin = tableRule.duration;
     (booking as any).meetingType = '';

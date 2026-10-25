@@ -85,21 +85,24 @@ export const normalizeSchedule = (raw: any, fallbackId = 'main'): BookingSchedul
   const id = typeof raw?.id === 'string' && /^[a-z0-9]{1,20}$/.test(raw.id) ? raw.id : fallbackId;
   const days = Array.isArray(raw?.workingDays) ? WEEK_DAYS.filter((d) => raw.workingDays.includes(d)) : DEFAULT.workingDays;
   const meetings = Array.isArray(raw?.meetingTypes) ? MEETING_TYPES.filter((m) => raw.meetingTypes.includes(m)) : [];
+  const type: BookingType = raw?.type === 'table' ? 'table' : 'appointment';
+  const durationMinutes = clampInt(raw?.durationMinutes, 15, 480, DEFAULT.durationMinutes);
   return {
     id,
     name: String(raw?.name ?? '').trim().slice(0, 60) || 'المواعيد',
-    type: raw?.type === 'table' ? 'table' : 'appointment',
+    type,
     workingDays: [...days],
     workStart: isTime(raw?.workStart) ? raw.workStart : DEFAULT.workStart,
     workEnd: isTime(raw?.workEnd) ? raw.workEnd : DEFAULT.workEnd,
     breakStart: isTime(raw?.breakStart) ? raw.breakStart : '',
     breakEnd: isTime(raw?.breakEnd) ? raw.breakEnd : '',
-    interval: INTERVALS.includes(raw?.interval) ? raw.interval : DEFAULT.interval,
-    intervalMinutes: clampInt(raw?.intervalMinutes, 5, 480, 30),
+    // A table is kept for its whole length, so the start times follow it: one every `durationMinutes`.
+    interval: type === 'table' ? 'manual' : INTERVALS.includes(raw?.interval) ? raw.interval : DEFAULT.interval,
+    intervalMinutes: type === 'table' ? durationMinutes : clampInt(raw?.intervalMinutes, 5, 480, 30),
     needsConfirmation: raw?.needsConfirmation !== false,
     specialists: raw?.specialists === 'choose' || raw?.specialists === 'first' ? raw.specialists : 'none',
     meetingTypes: meetings.length ? [...meetings] : ['phone'],
-    durationMinutes: clampInt(raw?.durationMinutes, 15, 480, DEFAULT.durationMinutes),
+    durationMinutes,
     partyMax: clampInt(raw?.partyMax, 1, 50, DEFAULT.partyMax),
     tableChoice: raw?.tableChoice === 'hall' || raw?.tableChoice === 'table' ? raw.tableChoice : 'auto',
     daysAhead: clampInt(raw?.daysAhead, 1, 365, DEFAULT.daysAhead),
@@ -148,7 +151,7 @@ export const scheduleFor = (settings: BookingSettings | null, scheduleId?: strin
 };
 
 // A restaurant's first table schedule when it has none saved: shown by the element and the admin.
-export const newTableSchedule = (): BookingSchedule => ({ ...newSchedule('table', 'حجز الطاولات'), type: 'table', workStart: '12:00', workEnd: '23:00', breakStart: '', breakEnd: '', interval: '30', meetingTypes: ['personal'] });
+export const newTableSchedule = (): BookingSchedule => ({ ...newSchedule('table', 'حجز الطاولات'), type: 'table', workStart: '12:00', workEnd: '23:00', breakStart: '', breakEnd: '', interval: 'manual', intervalMinutes: 90, meetingTypes: ['personal'] });
 
 const settingsDoc = (owner: string, project: ProjectKey) => doc(db, 'bookingSettings', owner, 'pages', project);
 

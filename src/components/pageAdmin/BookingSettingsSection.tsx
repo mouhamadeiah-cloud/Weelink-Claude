@@ -189,7 +189,7 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
         <div className="space-y-3 rounded-2xl border border-neutral-200 p-3">
           <div className="text-xs font-bold text-neutral-500">الطاولات من «الصالات والطاولات»: {tableHalls.length} طاولة، {tableHalls.reduce((n, t) => n + t.seats, 0)} مقعد</div>
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="مدة حجز الطاولة" hint="الطاولة بتنحجز للحزب هالمدة، وما حدا غيره بيحجزها بنفس الوقت">
+            <Field label="مدة حجز الطاولة" hint="الطاولة بتنحجز للحزب هالمدة، وأوقات الحجز بتتوزع على هالمدة (مثلاً 90 دقيقة: 12:00، 1:30، 3:00)">
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
                 <input type="number" min={15} max={480} className={`${inputFitClass} w-24`} value={current.durationMinutes} onChange={(e) => change({ durationMinutes: Number(e.target.value) || 90 })} /> دقيقة
               </span>
@@ -211,7 +211,7 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
         </div>
       )}
 
-      <Field label={current.type === 'table' ? 'بداية الحجز كل' : 'مدة الموعد'}>
+      {current.type !== 'table' && <Field label="مدة الموعد">
         <div className="flex flex-wrap items-center gap-1.5">
           {INTERVALS.filter((i) => current.type !== 'table' || i.id !== 'day').map((i) => (
             <button key={i.id} type="button" onClick={() => change({ interval: i.id })} className={chip(current.interval === i.id)}>{i.label}</button>
@@ -222,7 +222,7 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
             </span>
           )}
         </div>
-      </Field>
+      </Field>}
 
       {current.type !== 'table' && <Field
         label="الحجز مع مختص"

@@ -94,6 +94,24 @@ export const createBooking = async (b: NewBooking): Promise<{ id: string; status
   }
 };
 
+// The owner books on the admin's grid for a customer who called or walked in: confirmed at once, no emails.
+// `tableId` / `person` pin the table or the team person the cell belongs to.
+export const createOwnerBooking = async (b: Omit<NewBooking, 'needsConfirmation' | 'email' | 'address' | 'desc' | 'meetingType' | 'pageName'> & { tableId?: string; durationMin?: number }): Promise<{ id: string } | { error: string }> => {
+  const user = auth.currentUser;
+  if (!user) return { error: 'signed_out' };
+  try {
+    const res = await fetch('/api/booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify({ action: 'owner-create', pageName: '', meetingType: 'personal', ...b }),
+    });
+    const out = await res.json().catch(() => ({}));
+    return res.ok ? out : { error: out.error || 'error' };
+  } catch {
+    return { error: 'offline' };
+  }
+};
+
 export const setBookingStatus = async (owner: string, id: string, status: Exclude<BookingStatus, 'new'>) => {
   const user = auth.currentUser;
   if (!user) throw new Error('signed_out');

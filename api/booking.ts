@@ -3,6 +3,8 @@
 //   POST /api/booking  { action: 'create', owner, project, date, startMin, slot, ... }
 //        → a visitor books a free time; the booking is saved and both sides get an email
 //                                                                   → { id, status } | { error }
+//   POST /api/booking  { action: 'owner-create', owner, project, ... }  with  Authorization: Bearer <ID token>
+//        → the owner (or a member) books on the admin's grid: confirmed, the table/person pinned, no emails
 //   POST /api/booking  { action: 'status', id, status }  with  Authorization: Bearer <ID token>
 //        → the page's owner (or a member) confirms, finishes or cancels a booking; the customer
 //          gets an email when it is confirmed or cancelled                    → { ok: true }
@@ -161,7 +163,9 @@ const bookingsOf = async (admin: Admin, days: QuerySnapshot) => {
 const personMails = (b: any, ownerMail: string, subject: string, title: string, lead: string): Mail[] =>
   b.personEmail && b.personEmail !== ownerMail ? [{ to: b.personEmail, fromName: 'Weelink', subject, html: mailHtml(title, lead, b, customerRows(b)) }] : [];
 
-const create = async (admin: Admin, body: any) => {
+// `byOwner`: the owner (or a member) books on the grid in the admin for a customer who called or walked in:
+// confirmed at once, no phone needed, the wished table or person is pinned, and nobody is emailed.
+const create = async (admin: Admin, body: any, byOwner = false) => {
   const owner = body.owner;
   const project = body.project;
   const date = body.date;
@@ -185,11 +189,11 @@ const create = async (admin: Admin, body: any) => {
     email: text(body.email, 120).toLowerCase(),
     address: text(body.address, 160),
     desc: text(body.desc, 600),
-    status: body.needsConfirmation === false ? 'confirmed' : 'new',
+    status: byOwner || body.needsConfirmation === false ? 'confirmed' : 'new',
     reminded: false,
     createdAt: new Date().toISOString(),
   };
-  if (!booking.slot || booking.name.length < 2 || booking.phone.replace(/\D/g, '').length < 6) return json({ error: 'missing_fields' }, 400);
+  if (!booking.slot || booking.name.length < 2 || (!byOwner && booking.phone.replace(/\D/g, '').length < 6)) return json({ error: 'missing_fields' }, 400);
   if (booking.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email)) return json({ error: 'bad_email' }, 400);
 
   // A booking with a team person: they must take bookings; they get the emails of their bookings too.
@@ -197,7 +201,7 @@ const create = async (admin: Admin, body: any) => {
     const personId = validId(body.person) ? body.person : '';
     const person = personId ? (await admin.db.collection('team').doc(owner).collection('people').doc(personId).get()).data() : null;
     if (!person || person.takesBookings !== true) return json({ error: 'bad_person' }, 400);
-    if (!personWorks(person as any, body.date, Number(body.startMin))) return json({ error: 'taken' }, 409);
+    if (!byOwner && !personWorks(person as any, body.date, Number(body.startMin))) return json({ error: 'taken' }, 409);
     (booking as any).person = personId;
     (booking as any).personName = text(person.name, 80);
     (booking as any).personEmail = text(person.email, 120).toLowerCase();
@@ -212,7 +216,7 @@ const create = async (admin: Admin, body: any) => {
     // A restaurant that never saved its table settings books with the defaults of the «table» schedule.
     const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule) || (booking.schedule === 'table' ? { type: 'table', interval: '30' } : null);
     if (!schedule || schedule.type !== 'table') return json({ error: 'bad_schedule' }, 400);
-    if (!Number.isInteger(party) || party < 1 || party > Math.min(50, Number(schedule.partyMax) || 8)) return json({ error: 'bad_party' }, 400);
+    if (!Number.isInteger(party) || party < 1 || party > (byOwner ? 50 : Math.min(50, Number(schedule.partyMax) || 8))) return json({ error: 'bad_party' }, 400);
     const restaurant = (await admin.db.collection('restaurants').doc(restaurantIdOf(owner, project)).get()).data();
     tables = tablesOfHalls(restaurant?.menu?.halls);
     if (tables.length === 0) return json({ error: 'no_tables' }, 409);
@@ -254,8 +258,8 @@ const create = async (admin: Admin, body: any) => {
     });
   }
 
-  const toOwner = await ownerEmail(admin, owner);
-  if (!toOwner) {
+  const toOwner = byOwner ? '' : await ownerEmail(admin, owner);
+  if (!toOwner && !byOwner) {
     // A missing owner is 404; anything else (Google refusing the service account, say) is 500 with its reason.
     const found = await admin.auth.getUser(owner).then(
       () => true,
@@ -462,6 +466,13 @@ export default {
     const body = (await request.json().catch(() => ({}))) as any;
     if (body?.action === 'create') return create(admin, body);
     if (body?.action === 'status') return changeStatus(admin, request, body);
+    if (body?.action === 'owner-create') {
+      const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      const user = token ? await admin.auth.verifyIdToken(token).catch(() => null) : null;
+      if (!user) return json({ error: 'unauthorized' }, 401);
+      if (!validId(body.owner) || !(await canManage(admin, body.owner, user.uid))) return json({ error: 'not_found' }, 404);
+      return create(admin, body, true);
+    }
     return json({ error: 'bad_request' }, 400);
   },
 };

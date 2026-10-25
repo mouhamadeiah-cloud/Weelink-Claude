@@ -4,9 +4,16 @@ import React from 'react';
 import { RestaurantSettings } from '../restaurantTypes';
 import { Card, Field, inputClass, inputFitClass, textareaClass, Toggle } from '../../shop/adminUi';
 import { RestaurantTabProps, parseAmount } from './shared';
+import { BookingPaymentsEditor } from '../../pageAdmin/BookingPaymentsEditor';
+import { savePaymentAccounts, usePaymentAccounts } from '../../../services/bookingSettings';
+import { ownerOfRestaurant, restaurantKeyOf } from '../../../utils/projectKeys';
 
-export const RestaurantSettingsTab: React.FC<RestaurantTabProps> = ({ data, update }) => {
+export const RestaurantSettingsTab: React.FC<RestaurantTabProps> = ({ data, update, restaurantId }) => {
   const s = data.settings;
+  // The same e-wallet accounts serve the website's orders and the bookings' deposits («إعدادات الحجز»).
+  const owner = ownerOfRestaurant(restaurantId);
+  const project = restaurantKeyOf(restaurantId);
+  const accounts = usePaymentAccounts(owner, project);
   const set = (p: Partial<RestaurantSettings>) => update((d) => ({ ...d, settings: { ...d.settings, ...p } }));
   return (
     <div className="space-y-4">
@@ -59,7 +66,12 @@ export const RestaurantSettingsTab: React.FC<RestaurantTabProps> = ({ data, upda
           <Field label={`رسوم التوصيل (${s.currency})`} hint="0 = توصيل مجاني"><input className={`${inputFitClass} w-40`} dir="ltr" inputMode="decimal" value={s.deliveryFee || ''} placeholder="0" onChange={(e) => set({ deliveryFee: parseAmount(e.target.value) })} /></Field>
           <Field label={`الحد الأدنى للطلب (${s.currency})`} hint="0 = بلا حد"><input className={`${inputFitClass} w-40`} dir="ltr" inputMode="decimal" value={s.minOrder || ''} placeholder="0" onChange={(e) => set({ minOrder: parseAmount(e.target.value) })} /></Field>
         </div>
+        <Toggle label="الدفع بمحفظة إلكترونية من الموقع (نفس حسابات عربون الحجز)" checked={s.payWallet} onChange={(payWallet) => set({ payWallet })} />
         <Field label="ملاحظة فوق نموذج الطلب (اختيارية)"><textarea className={textareaClass} placeholder="مثلاً: نوصل داخل المزة والمالكي فقط" value={s.orderNote} onChange={(e) => set({ orderNote: e.target.value })} /></Field>
+      </Card>
+      <Card title="حسابات الدفع بالمحافظ">
+        <p className="text-xs text-neutral-500 leading-relaxed">هذه الحسابات نفسها بتستعمل لعربون الحجز وللدفع من الموقع. الزبون بيحوّل ويكتب رقم العملية، وإنت بتأكد الدفع من «الطلبات» أو «المواعيد».</p>
+        <BookingPaymentsEditor payments={accounts || undefined} canSave onSave={(p) => savePaymentAccounts(owner, project, p).then(() => true).catch(() => false)} />
       </Card>
     </div>
   );

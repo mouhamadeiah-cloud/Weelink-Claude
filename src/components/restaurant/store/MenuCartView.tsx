@@ -4,10 +4,12 @@
 // orders to that table instead (no address, no fee). «أرسل الطلب» sends the order to the live
 // orders (orders list and kitchen screen) and, when the restaurant wants it, opens WhatsApp with
 // the whole order written out.
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Minus, Plus, Trash2, ShoppingBag, CheckCircle2, Bike, Store, Armchair, Loader2, MessageCircle } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
-import { useRestaurantData, useRestaurantOrder } from './RestaurantDataContext';
+import { useRestaurantData, useRestaurantOrder, RestaurantPaymentsContext } from './RestaurantDataContext';
+import { DepositPay, EMPTY_DEPOSIT, depositProblem, type DepositDraft } from '../../DepositPay';
+import { DEPOSIT_WALLETS, usableWallets } from '../../../services/bookingDeposit';
 import { clearMenuCart, describeLine, menuCartSubtotal, setMenuLineQty, useMenuCart } from '../menuCartStore';
 import { OrderType, buildOrder } from '../restaurantTypes';
 import { cleanCardNumber, formatCardNumber, isCardNumber } from '../giftCardLogic';
@@ -40,6 +42,11 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
   const [sent, setSent] = useState<{ number: number; live: boolean; whatsapp: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const customer = useCustomerSession();
+  const accounts = useContext(RestaurantPaymentsContext);
+  // Pay by e-wallet from the website (not at a table): offered when the owner turned it on and added an account.
+  const walletOffered = !!settings?.payWallet && usableWallets(accounts).length > 0 && !table;
+  const [payBy, setPayBy] = useState<'cash' | 'wallet'>('cash');
+  const [proof, setProof] = useState<DepositDraft>(EMPTY_DEPOSIT);
 
   // A signed-in customer of the restaurant does not type their details again.
   useEffect(() => {
@@ -62,6 +69,11 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
     if (minOrder && subtotal < minOrder) return setError(`الحد الأدنى للطلب ${formatMoney(minOrder, currency)}.`);
     if (activeType !== 'table' && (!f.name.trim() || f.phone.replace(/\D/g, '').length < 7)) return setError('اكتب اسمك ورقم هاتف صحيح.');
     if (activeType === 'delivery' && !f.address.trim()) return setError('اكتب عنوان التوصيل.');
+    const payingByWallet = walletOffered && payBy === 'wallet';
+    if (payingByWallet) {
+      const problem = depositProblem(proof, accounts);
+      if (problem) return setError(problem);
+    }
     const giftNumber = cleanCardNumber(giftText);
     if (giftText.trim() && !isCardNumber(giftNumber)) return setError('رقم بطاقة الرصيد يتكون من 16 رقمًا.');
     // The card's number travels in the order's note: the cashier takes the amount from the card when the restaurant confirms the order.
@@ -80,6 +92,9 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
       subtotal,
       deliveryFee: fee,
       total,
+      ...(payingByWallet && accounts
+        ? { payment: { wallet: proof.wallet, walletLabel: DEPOSIT_WALLETS.find((w) => w.id === proof.wallet)?.label || '', txn: proof.txn.trim(), screenshot: proof.screenshot, amount: total, currency: accounts.currency, state: 'pending' as const } }
+        : {}),
     });
     // WhatsApp opens right away, while the click still counts as the guest's own (later it would be
     // blocked); its text follows once the order has its number of the day.
@@ -115,6 +130,8 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
     const p = customer?.profile;
     setF({ name: p?.name || '', phone: p?.phone || '', address: p?.address || '', notes: '' });
     setGiftText('');
+    setProof(EMPTY_DEPOSIT);
+    setPayBy('cash');
     setSent({ number, live: placed !== null, whatsapp });
   };
 
@@ -193,6 +210,18 @@ export const MenuCartView: React.FC<MenuCartViewProps> = ({ elem, isPreviewActiv
           {activeType !== 'table' && <input className={input} placeholder="رقم الهاتف" inputMode="tel" dir="rtl" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />}
           {activeType === 'delivery' && <input className={input} placeholder="عنوان التوصيل" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />}
           {settings?.giftCard?.enabled && <input className={input} placeholder="رقم بطاقة الرصيد للدفع بها (اختياري)" inputMode="numeric" dir="ltr" value={giftText} onChange={(e) => setGiftText(e.target.value)} />}
+          {walletOffered && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                {([['cash', activeType === 'delivery' ? 'الدفع عند التوصيل' : 'الدفع عند الاستلام'], ['wallet', 'الدفع بمحفظة إلكترونية']] as const).map(([id, label]) => (
+                  <button key={id} type="button" onClick={() => setPayBy(id)}
+                    className={`h-11 rounded-2xl border text-xs font-bold cursor-pointer ${payBy === id ? 'text-white border-transparent' : 'bg-white border-black/10'}`}
+                    style={payBy === id ? { backgroundColor: accent } : undefined}>{label}</button>
+                ))}
+              </div>
+              {payBy === 'wallet' && <DepositPay payments={accounts} amount={total} accent={accent} dark={false} value={proof} onChange={setProof} what="المبلغ" />}
+            </div>
+          )}
           <textarea className={`${input} h-20 py-3 resize-none`} placeholder="ملاحظات (اختياري)" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
           <div className="space-y-1.5 text-sm pt-1">
             <div className="flex justify-between"><span className="text-black/55">المجموع الفرعي</span><span className="font-bold">{formatMoney(subtotal, currency)}</span></div>

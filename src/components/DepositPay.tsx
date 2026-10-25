@@ -32,9 +32,11 @@ interface Props {
   dark: boolean;
   value: DepositDraft;
   onChange: (v: DepositDraft) => void;
+  // What is being paid, in the sentences: «عربون» for a booking, «المبلغ» for an order.
+  what?: string;
 }
 
-export const DepositPay: React.FC<Props> = ({ payments, amount, accent, dark, value, onChange }) => {
+export const DepositPay: React.FC<Props> = ({ payments, amount, accent, dark, value, onChange, what = 'العربون' }) => {
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const wallets = usableWallets(payments);
@@ -66,9 +68,9 @@ export const DepositPay: React.FC<Props> = ({ payments, amount, accent, dark, va
 
   return (
     <div className={`rounded-xl border p-2.5 space-y-2 ${dark ? 'bg-white/5 border-white/15' : 'bg-neutral-50 border-neutral-200'}`}>
-      <div className={`text-[11px] font-black ${text}`}>عربون مطلوب: {amount} {payments?.currency}</div>
+      <div className={`text-[11px] font-black ${text}`}>{what} المطلوب: {amount} {payments?.currency}</div>
       {wallets.length === 0 ? (
-        <div className="text-[10px] font-bold text-amber-700">الدفع غير جاهز بعد: المالك لازم يضيف حساب محفظة من «إعدادات الحجز».</div>
+        <div className="text-[10px] font-bold text-amber-700">الدفع غير جاهز بعد: المالك لازم يضيف حساب محفظة.</div>
       ) : (
         <>
           <div className="flex flex-wrap gap-1">
@@ -80,7 +82,7 @@ export const DepositPay: React.FC<Props> = ({ payments, amount, accent, dark, va
           </div>
           {setup && chosen && (
             <div className={`space-y-1.5 text-[10px] ${sub}`}>
-              <div>حوّل العربون إلى {setup.holderName ? <b>{setup.holderName}</b> : 'الحساب'} ({DEPOSIT_WALLETS.find((w) => w.id === chosen.id)?.accountLabel}):</div>
+              <div>حوّل {what} إلى {setup.holderName ? <b>{setup.holderName}</b> : 'الحساب'} ({DEPOSIT_WALLETS.find((w) => w.id === chosen.id)?.accountLabel}):</div>
               <div className="flex items-center gap-2">
                 <b dir="ltr" className={`text-[12px] ${text}`}>{setup.account}</b>
                 <button type="button" onClick={copy} className={`inline-flex items-center gap-1 text-[10px] font-bold cursor-pointer ${text}`}>{copied ? <Check size={12} /> : <Copy size={12} />}{copied ? 'تم النسخ' : 'نسخ'}</button>

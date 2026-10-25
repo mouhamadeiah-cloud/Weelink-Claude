@@ -2,6 +2,7 @@
 // show it, and a way to hand a visitor's order in to the admin window's orders.
 import { createContext, useContext } from 'react';
 import type { MenuOrder, RestaurantAdminData } from '../restaurantTypes';
+import type { BookingPayments } from '../../../services/bookingDeposit';
 
 export const RestaurantDataContext = createContext<RestaurantAdminData | null>(null);
 
@@ -12,3 +13,6 @@ export const useRestaurantData = () => useContext(RestaurantDataContext);
 export const RestaurantOrderContext = createContext<((o: MenuOrder) => Promise<number | null>) | null>(null);
 
 export const useRestaurantOrder = () => useContext(RestaurantOrderContext);
+
+// The e-wallet accounts the restaurant takes payment in (the same as the bookings' deposits); null when none.
+export const RestaurantPaymentsContext = createContext<BookingPayments | null>(null);

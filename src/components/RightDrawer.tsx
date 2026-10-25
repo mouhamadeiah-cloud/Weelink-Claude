@@ -148,6 +148,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   onCopyCurrentSlide,
   onCopyCurrentPage,
   onAddSlideTemplate,
+  allKindsOpen = false,
   isShopProject = false,
   isCarProject = false,
   isRestaurantProject = false,
@@ -3665,7 +3666,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               )}
               {(activeSection === 'elements' || activeSection === 'add-text') && (() => {
                 const { ADD_CATEGORIES, SUBCATEGORIES_MAP, TEMPLATES_MAP } = buildAddMenuData({
-                  isRestaurantProject,
+                  isRestaurantProject: isRestaurantProject || allKindsOpen,
                   onAddElement,
                   onAddGroup,
                   videoAddUrl,
@@ -3800,7 +3801,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               اختر فئة لتصفح الشرائح المصممة مسبقاً:
                             </h4>
                             <div className="grid grid-cols-2 gap-2">
-                              {READY_SLIDE_CATEGORIES.filter((cat) => (cat.id !== 'shop' || isShopProject) && (cat.id !== 'cars' || isCarProject) && (cat.id !== 'restaurant' || isRestaurantProject)).map((cat) => (
+                              {READY_SLIDE_CATEGORIES.filter((cat) => allKindsOpen || ((cat.id !== 'shop' || isShopProject) && (cat.id !== 'cars' || isCarProject) && (cat.id !== 'restaurant' || isRestaurantProject))).map((cat) => (
                                 <button
                                   key={cat.id}
                                   type="button"

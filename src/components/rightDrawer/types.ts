@@ -56,6 +56,7 @@ export interface RightDrawerProps {
   onCopyCurrentSlide?: (slideId: string) => void;
   onCopyCurrentPage?: (pageId: string) => void;
   onAddSlideTemplate?: (template: any) => void;
+  allKindsOpen?: boolean; // the platform admin editing a gallery / ready slide: every kind's slides and elements are offered
   isShopProject?: boolean;
   isCarProject?: boolean;
   isRestaurantProject?: boolean; // restaurant project: the restaurant slide category is offered // Online Shop project: the online-shop slide category is offered

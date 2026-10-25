@@ -340,8 +340,10 @@ export default function App() {
   const [hasShop, setHasShop] = useState<boolean>(false);
   // The open project's package limits (src/utils/planLimits.ts); unlimited until paying is switched on.
   const [limits, setLimits] = useState<PlanLimits>(UNLIMITED);
+  // The platform admin making a gallery / ready slide has no package: nothing is limited or hidden (Eyad, 25 Oct).
+  const adminOpenAll = galleryEdit?.as === 'admin';
   const limitsRef = useRef(limits);
-  limitsRef.current = limits;
+  limitsRef.current = adminOpenAll ? UNLIMITED : limits;
   // A change that would pass the package's limit is dropped, with one notice (the updater may run twice).
   const limitNoticeRef = useRef(0);
   const refuseOverLimit = (what: string) => {
@@ -5060,6 +5062,7 @@ export default function App() {
         key={activeUserUid}
         onMotionPreview={(id, which) => setMotionPreview((m) => (which ? { id, which } : m && m.id === id ? null : m))}
         previewMode={previewMode}
+        allKindsOpen={adminOpenAll}
         isShopProject={project === 'shop'}
         isCarProject={project === 'cars'}
         isRestaurantProject={project === 'restaurant'}
@@ -5133,7 +5136,7 @@ export default function App() {
         onStepChange={handleStepChange}
         onBuildPage={handleBuildPage}
         onFreeTurn={handleFreeTurn}
-        galleryLimit={limits.gallery}
+        galleryLimit={adminOpenAll ? UNLIMITED.gallery : limits.gallery}
         onRestorePage={handleRestoreBuiltPage}
         onEditAnswers={openQuestions}
         restoreAvailable={hasBuildBackup}
@@ -5207,7 +5210,7 @@ export default function App() {
           project={projectKey}
           pageName={currentPage.navbar.brandName || ''}
           published={!!publishedName}
-          bookingsOn={limits.bookings}
+          bookingsOn={adminOpenAll || limits.bookings}
           pageAdmin={pageAdmin}
           onPageAdmin={updatePageAdmin}
           onEditPage={isPreviewActive ? editPageFromAdmin : undefined}

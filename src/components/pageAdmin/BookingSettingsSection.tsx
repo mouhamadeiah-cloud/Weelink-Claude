@@ -6,10 +6,11 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { CalendarCog, Check, Plus, Trash2 } from 'lucide-react';
 import {
   BookingLegacyContext, BookingSchedule, BookingSettingsFocusContext, BookingSettings, MAX_SCHEDULES, MEETING_TYPES, SlotInterval, WEEK_DAYS,
-  SpecialistMode, newSchedule, newScheduleId, normalizeSchedule, saveBookingSettings, useBookingSettings,
+  SpecialistMode, TableChoice, newSchedule, newTableSchedule, newScheduleId, normalizeSchedule, saveBookingSettings, useBookingSettings,
 } from '../../services/bookingSettings';
 import { BookingPageContext } from '../../services/bookings';
 import { useTeam } from '../../services/team';
+import { useRestaurantTables } from '../../services/tableBookingData';
 import type { ProjectKey } from '../../utils/projectKeys';
 import { Field, GhostButton, inputClass, inputFitClass, PrimaryButton, Toggle } from '../shop/adminUi';
 
@@ -64,10 +65,14 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
       .catch(() => { migrated.current = false; });
   }, [settings, legacy, owner, project]);
 
+  const isRestaurant = project === 'restaurant' || project.startsWith('restaurant-');
+  const tableHalls = useRestaurantTables(isRestaurant ? owner : null, project);
   const list: BookingSchedule[] = settings?.schedules || [newSchedule('main', 'المواعيد')];
-  const saved = list.find((s) => s.id === activeId) || list[0];
+  // A table element asks for 'table' before the restaurant has saved such a schedule: shown as a new one.
+  const unsaved = activeId === 'table' && !list.some((s) => s.id === 'table') ? newTableSchedule() : null;
+  const saved = unsaved || list.find((s) => s.id === activeId) || list[0];
   const current = draft && draft.id === saved.id ? draft : saved;
-  const dirty = !settings || !same(current, saved);
+  const dirty = !settings || !!unsaved || !same(current, saved);
 
   useEffect(() => setDraft(null), [saved.id]);
 
@@ -94,7 +99,9 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
     if (current.workStart >= current.workEnd) return setNote({ ok: false, text: 'نهاية الدوام لازم تكون بعد بدايته.' });
     if (current.breakStart && current.breakEnd && current.breakStart >= current.breakEnd) return setNote({ ok: false, text: 'نهاية الاستراحة لازم تكون بعد بدايتها.' });
     if (current.workingDays.length === 0) return setNote({ ok: false, text: 'اختر يوم عمل واحد على الأقل.' });
-    const schedules = settings ? list.map((s) => (s.id === current.id ? current : s)) : [current];
+    if (current.type === 'table' && (current.partyMax < 1 || current.durationMinutes < 15)) return setNote({ ok: false, text: 'تأكد من مدة الحجز وأكبر عدد أشخاص.' });
+    const exists = list.some((s) => s.id === current.id);
+    const schedules = !settings ? [current] : exists ? list.map((s) => (s.id === current.id ? current : s)) : [...list, current];
     write({ schedules }, 'انحفظت الإعدادات، والصفحة صارت تحجز فيها.');
   };
 
@@ -143,7 +150,9 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
         <Field label="نوع الحجز">
           <div className="flex flex-wrap gap-2">
             <button type="button" className={chip(current.type === 'appointment')} onClick={() => change({ type: 'appointment' })}>موعد</button>
-            <button type="button" disabled className={`${chip(false)} opacity-50 cursor-not-allowed`} title="قريباً">طاولة · قريباً</button>
+            {isRestaurant && (
+              <button type="button" className={chip(current.type === 'table')} onClick={() => change({ type: 'table', meetingTypes: ['personal'], specialists: 'none', interval: current.interval === 'day' ? '30' : current.interval })}>طاولة</button>
+            )}
           </div>
         </Field>
       </div>
@@ -176,9 +185,35 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
         </Field>
       </div>
 
-      <Field label="مدة الموعد">
+      {current.type === 'table' && (
+        <div className="space-y-3 rounded-2xl border border-neutral-200 p-3">
+          <div className="text-xs font-bold text-neutral-500">الطاولات من «الصالات والطاولات»: {tableHalls.length} طاولة، {tableHalls.reduce((n, t) => n + t.seats, 0)} مقعد</div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field label="مدة حجز الطاولة" hint="الطاولة بتنحجز للحزب هالمدة، وما حدا غيره بيحجزها بنفس الوقت">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
+                <input type="number" min={15} max={480} className={`${inputFitClass} w-24`} value={current.durationMinutes} onChange={(e) => change({ durationMinutes: Number(e.target.value) || 90 })} /> دقيقة
+              </span>
+            </Field>
+            <Field label="أكبر عدد أشخاص أونلاين" hint="الأكبر بيتواصلوا معك مباشرة">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
+                <input type="number" min={1} max={50} className={`${inputFitClass} w-24`} value={current.partyMax} onChange={(e) => change({ partyMax: Number(e.target.value) || 1 })} /> شخص
+              </span>
+            </Field>
+          </div>
+          <Field label="اختيار الطاولة" hint="بالتلقائي بتنعطى أصغر طاولة فاضية بتكفي عددهم">
+            <div className="flex flex-wrap gap-1.5">
+              {([['auto', 'تلقائي'], ['hall', 'الزبون بيختار الصالة'], ['table', 'الزبون بيختار الطاولة']] as [TableChoice, string][]).map(([id, label]) => (
+                <button key={id} type="button" onClick={() => change({ tableChoice: id })} className={chip(current.tableChoice === id)}>{label}</button>
+              ))}
+            </div>
+          </Field>
+          {tableHalls.length === 0 && <div className="text-xs font-bold text-[#A34A00]">لسا ما في طاولات. أضفها من «الصالات والطاولات» وانشر الموقع، وبعدها بيقدر الزبون يحجز.</div>}
+        </div>
+      )}
+
+      <Field label={current.type === 'table' ? 'بداية الحجز كل' : 'مدة الموعد'}>
         <div className="flex flex-wrap items-center gap-1.5">
-          {INTERVALS.map((i) => (
+          {INTERVALS.filter((i) => current.type !== 'table' || i.id !== 'day').map((i) => (
             <button key={i.id} type="button" onClick={() => change({ interval: i.id })} className={chip(current.interval === i.id)}>{i.label}</button>
           ))}
           {current.interval === 'manual' && (
@@ -189,7 +224,7 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
         </div>
       </Field>
 
-      <Field
+      {current.type !== 'table' && <Field
         label="الحجز مع مختص"
         hint={bookable.length ? `المختصين: ${bookable.map((p) => p.name).join('، ')}. كل واحد إلو أوقاته ولما يحجزه زبون بيوصله إيميل.` : 'أضف أشخاص من «فريق العمل» وفعّل «يستقبل حجوزات» عندهم، وبيظهروا هون.'}
       >
@@ -198,15 +233,15 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
             <button key={id} type="button" onClick={() => change({ specialists: id })} className={chip(current.specialists === id)}>{label}</button>
           ))}
         </div>
-      </Field>
+      </Field>}
 
-      <Field label="طريقة اللقاء" hint="الزبون بيختار وحدة منها وقت الحجز">
+      {current.type !== 'table' && <Field label="طريقة اللقاء" hint="الزبون بيختار وحدة منها وقت الحجز">
         <div className="flex flex-wrap gap-1.5">
           {MEETING_TYPES.map((m) => (
             <button key={m} type="button" onClick={() => toggleMeeting(m)} className={chip(current.meetingTypes.includes(m))}>{MEETING_NAMES[m]}</button>
           ))}
         </div>
-      </Field>
+      </Field>}
 
       <div className="grid sm:grid-cols-2 gap-3">
         <Field label="الحجز لقدّام" hint="لكم يوم لقدّام بيقدر الزبون يحجز">

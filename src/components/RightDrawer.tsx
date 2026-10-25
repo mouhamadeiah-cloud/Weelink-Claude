@@ -3665,6 +3665,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               )}
               {(activeSection === 'elements' || activeSection === 'add-text') && (() => {
                 const { ADD_CATEGORIES, SUBCATEGORIES_MAP, TEMPLATES_MAP } = buildAddMenuData({
+                  isRestaurantProject,
                   onAddElement,
                   onAddGroup,
                   videoAddUrl,

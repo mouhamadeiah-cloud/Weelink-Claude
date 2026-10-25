@@ -19,6 +19,8 @@
 
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
+import { chooseTable, coveredSlots, stepOf, tablesOfHalls, type BookableTable } from '../src/services/tableBooking.js';
+import { restaurantIdOf } from '../src/utils/projectKeys.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 const json = (body: unknown, status = 200) =>
@@ -103,6 +105,8 @@ const mailHtml = (title: string, lead: string, b: any, extra = '') => `<!doctype
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       ${row('الحالة', STATUS[b.status])}
       ${row('طريقة اللقاء', MEETING[b.meetingType])}
+      ${row('عدد الأشخاص', b.partySize)}
+      ${row('الطاولة', b.tableName ? `${b.tableName}${b.hallName ? ` · ${b.hallName}` : ''}` : '')}
       ${extra}
     </table>
     <p style="color:#999;font-size:12px;margin:18px 0 0">رسالة من Weelink بخصوص موعد على ${esc(b.pageName || 'صفحة على Weelink')}.</p>
@@ -192,6 +196,28 @@ const create = async (admin: Admin, body: any) => {
     (booking as any).personEmail = text(person.email, 120).toLowerCase();
   }
 
+  // A table booking (restaurants): the party, the schedule's length and the restaurant's tables decide it.
+  let tables: BookableTable[] = [];
+  let tableRule: { party: number; duration: number; step: number } | null = null;
+  if (body.partySize !== undefined) {
+    const party = Math.round(Number(body.partySize));
+    const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
+    const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule);
+    if (!schedule || schedule.type !== 'table') return json({ error: 'bad_schedule' }, 400);
+    if (!Number.isInteger(party) || party < 1 || party > Math.min(50, Number(schedule.partyMax) || 8)) return json({ error: 'bad_party' }, 400);
+    const restaurant = (await admin.db.collection('restaurants').doc(restaurantIdOf(owner, project)).get()).data();
+    tables = tablesOfHalls(restaurant?.menu?.halls);
+    if (tables.length === 0) return json({ error: 'no_tables' }, 409);
+    tableRule = {
+      party,
+      duration: Math.min(480, Math.max(15, Math.round(Number(schedule.durationMinutes)) || 90)),
+      step: stepOf(String(schedule.interval || '30'), Math.round(Number(schedule.intervalMinutes)) || 30),
+    };
+    (booking as any).partySize = party;
+    (booking as any).durationMin = tableRule.duration;
+    (booking as any).meetingType = '';
+  }
+
   const toOwner = await ownerEmail(admin, owner);
   if (!toOwner) {
     // A missing owner is 404; anything else (Google refusing the service account, say) is 500 with its reason.
@@ -208,6 +234,21 @@ const create = async (admin: Admin, body: any) => {
   let failure = '';
   const result = await admin.db
     .runTransaction(async (tx) => {
+      if (tableRule) {
+        // The smallest free table that seats the party (inside the wished hall or table), decided here
+        // so two parties never get the same table at overlapping times.
+        const occupancy: Record<string, number[]> = (await tx.get(day)).data()?.tables || {};
+        const table = chooseTable(tables, occupancy, {
+          party: tableRule.party, start: startMin, duration: tableRule.duration, step: tableRule.step,
+          hallId: validId(body.hall) ? body.hall : undefined, tableId: validId(body.tableId) ? body.tableId : undefined,
+        });
+        if (!table) return 'taken';
+        const covers = coveredSlots(startMin, tableRule.duration, tableRule.step);
+        tx.set(day, { owner, project, date, tables: { ...occupancy, [table.id]: [...(occupancy[table.id] || []), ...covers] } }, { merge: true });
+        tx.set(ref, { ...booking, tableId: table.id, tableName: table.name, hallName: table.hallName, covers });
+        Object.assign(booking, { tableId: table.id, tableName: table.name, hallName: table.hallName });
+        return 'ok';
+      }
       const taken: number[] = (await tx.get(day)).data()?.taken || [];
       if (taken.includes(startMin)) return 'taken';
       if (taken.length >= 300) return 'full';
@@ -252,7 +293,7 @@ const create = async (admin: Admin, body: any) => {
       ),
     },
   ]);
-  return json({ id: ref.id, status: booking.status });
+  return json({ id: ref.id, status: booking.status, ...((booking as any).tableName ? { tableName: (booking as any).tableName, hallName: (booking as any).hallName } : {}) });
 };
 
 const changeStatus = async (admin: Admin, request: Request, body: any) => {
@@ -270,7 +311,15 @@ const changeStatus = async (admin: Admin, request: Request, body: any) => {
 
   await ref.update({ status: body.status, updatedAt: new Date().toISOString() });
   // A cancelled time is free again.
-  if (body.status === 'cancelled') await dayDoc(admin, b).update({ taken: FieldValue.arrayRemove(b.startMin) }).catch(() => {});
+  if (body.status === 'cancelled') {
+    if (b.tableId && Array.isArray(b.covers)) {
+      const day = dayDoc(admin, b);
+      await admin.db.runTransaction(async (tx) => {
+        const tables: Record<string, number[]> = (await tx.get(day)).data()?.tables || {};
+        if (tables[b.tableId]) tx.set(day, { tables: { ...tables, [b.tableId]: tables[b.tableId].filter((n) => !b.covers.includes(n)) } }, { merge: true });
+      }).catch(() => {});
+    } else await dayDoc(admin, b).update({ taken: FieldValue.arrayRemove(b.startMin) }).catch(() => {});
+  }
 
   const updated = { ...b, status: body.status };
   const pageName = b.pageName || 'صفحة على Weelink';

@@ -16,6 +16,12 @@ export interface Booking {
   project: ProjectKey;
   // The page's schedule («إعدادات الحجز») it was booked on; 'main' (or unset, before 24 Oct) is the first.
   schedule?: string;
+  // A table booking (restaurants): how many people, and the table the server gave them.
+  partySize?: number;
+  tableId?: string;
+  tableName?: string;
+  hallName?: string;
+  durationMin?: number;
   // The team person it was booked with («فريق العمل»), when the schedule has specialists.
   person?: string;
   personName?: string;
@@ -48,16 +54,24 @@ export const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1
 // The times already booked on a day.
 // A schedule other than the page's first ('main') keeps its own (api/booking.ts).
 // A person of «فريق العمل» has their own times on the schedule.
+// A «طاولة» schedule's day: the taken start times of each table.
+export const readTakenTables = async (owner: string, project: ProjectKey, date: string, schedule = 'main'): Promise<Record<string, number[]>> => {
+  const snap = await getDoc(doc(db, 'bookingDays', `${owner}_${project}_${date}${schedule === 'main' ? '' : `_${schedule}`}`));
+  const t = snap.data()?.tables;
+  if (!t || typeof t !== 'object') return {};
+  return Object.fromEntries(Object.entries(t).map(([id, v]) => [id, Array.isArray(v) ? v.filter((n) => typeof n === 'number') : []]));
+};
+
 export const readTaken = async (owner: string, project: ProjectKey, date: string, schedule = 'main', person = ''): Promise<number[]> => {
   const snap = await getDoc(doc(db, 'bookingDays', `${owner}_${project}_${date}${schedule === 'main' ? '' : `_${schedule}`}${person ? `_p${person}` : ''}`));
   const taken = snap.data()?.taken;
   return Array.isArray(taken) ? taken.filter((n) => typeof n === 'number') : [];
 };
 
-export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt'> & { needsConfirmation: boolean };
+export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tableName' | 'hallName' | 'durationMin'> & { needsConfirmation: boolean; hall?: string };
 
 // 'taken': somebody booked that time a moment before.
-export const createBooking = async (b: NewBooking): Promise<{ id: string; status: BookingStatus } | { error: string; reason?: string }> => {
+export const createBooking = async (b: NewBooking): Promise<{ id: string; status: BookingStatus; tableName?: string; hallName?: string } | { error: string; reason?: string }> => {
   try {
     const res = await fetch('/api/booking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', ...b }) });
     const out = await res.json().catch(() => ({}));

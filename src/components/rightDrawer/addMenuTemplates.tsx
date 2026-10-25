@@ -31,9 +31,11 @@ export interface AddMenuDataDeps {
   calAddEmailLabel: string;
   calAddDescLabel: string;
   calAddSlotsText: string;
+  isRestaurantProject?: boolean;
 }
 
 export const buildAddMenuData = ({
+  isRestaurantProject,
   onAddElement,
   onAddGroup,
   videoAddUrl,
@@ -3403,6 +3405,41 @@ export const buildAddMenuData = ({
       },
     ],
     calendar: [
+      ...(isRestaurantProject ? [{
+        id: 'restaurant-table-booking',
+        title: 'حجز طاولة 🍽️',
+        sub: 'الزبون يختار اليوم والوقت وعدد الأشخاص ثم يحجز طاولة؛ الطاولات وأوقات الحجز تُضبط من الإدارة',
+        subCategories: ['confirm', 'month', 'slots', 'all'],
+        type: 'calendar' as const,
+        preview: (
+          <div className="w-full h-22 bg-gradient-to-r from-amber-50/80 via-white to-neutral-50 rounded-xl p-2 flex flex-col justify-between border-2 border-amber-500/40 text-right shadow-2xs">
+            <div className="flex justify-between items-center text-[9.5px] font-bold">
+              <span className="text-amber-700 flex items-center gap-1"><span>🍽️</span><span>احجز طاولتك</span></span>
+              <span className="bg-amber-600 text-white text-[8px] px-1.5 py-0.5 rounded font-bold">للمطاعم</span>
+            </div>
+            <div className="bg-white/80 border border-neutral-200 rounded p-1 text-[7.5px] text-neutral-600 space-y-0.5">
+              <div>• عدد الأشخاص + اختيار الصالة أو الطاولة</div>
+              <div>• لا تتداخل حجوزات الطاولة الواحدة</div>
+            </div>
+            <span className="text-[8.5px] bg-amber-600 text-white py-1 rounded-lg text-center font-bold shadow-3xs">إضافة حجز الطاولات للكانفاس</span>
+          </div>
+        ),
+        action: () => {
+          onAddElement('calendar', 'احجز طاولتك', {
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom'
+          }, {
+            name: 'حجز طاولة',
+            calendarTitle: 'احجز طاولتك',
+            calendarAccentColor: calAddAccentColor,
+            calendarBookingType: 'table',
+            calendarScheduleId: 'table',
+            width: 780,
+            height: 500,
+          });
+        }
+      }] : []),
       {
         id: 'horizontal-full-booking',
         title: 'بطاقة حجز مواعيد عرضية متكاملة 🌟',

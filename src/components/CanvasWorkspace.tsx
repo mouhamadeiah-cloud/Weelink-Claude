@@ -34,9 +34,11 @@ import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
 import { useCustomerPrefill } from './customers/customerSession';
-import { BookingPageContext, createBooking, dayKey, readTaken } from '../services/bookings';
+import { BookingPageContext, createBooking, dayKey, readTaken, readTakenTables } from '../services/bookings';
 import { usePublicTeam } from '../services/team';
-import { BookingSettingsOpenContext, WEEK_DAYS, scheduleFor, scheduleFromElement, useBookingSettings } from '../services/bookingSettings';
+import { hallsFor, hasTable, stepOf, tablesFor, type Occupancy } from '../services/tableBooking';
+import { useRestaurantTables } from '../services/tableBookingData';
+import { BookingSettingsOpenContext, WEEK_DAYS, newTableSchedule, scheduleFor, scheduleFromElement, useBookingSettings } from '../services/bookingSettings';
 import { NavbarStars, RatingsWidget } from './ratings/RatingsUI';
 import { ContactFormWidget } from './contact/ContactFormWidget';
 import { 
@@ -165,9 +167,24 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   // still books with the settings its element carries until the admin copies them in.
   const bookingSettings = useBookingSettings(bookingPage?.owner, bookingPage?.project);
   const schedule = useMemo(
-    () => scheduleFor(bookingSettings ?? null, elem.calendarScheduleId) || scheduleFromElement(elem, elem.calendarScheduleId || 'main'),
+    () =>
+      scheduleFor(bookingSettings ?? null, elem.calendarScheduleId, elem.calendarBookingType) ||
+      (elem.calendarBookingType === 'table' ? newTableSchedule() : scheduleFromElement(elem, elem.calendarScheduleId || 'main')),
     [bookingSettings, elem]
   );
+  // A restaurant's table booking: a party of N books one of the restaurant's tables for the schedule's length.
+  const isTable = schedule.type === 'table';
+  const restaurantTables = useRestaurantTables(isTable ? bookingPage?.owner : null, bookingPage?.project);
+  const [party, setParty] = useState(2);
+  const [hallPick, setHallPick] = useState('');
+  const [tablePick, setTablePick] = useState('');
+  const [occupancy, setOccupancy] = useState<Occupancy>({});
+  const [savedTable, setSavedTable] = useState('');
+  const partyMax = Math.min(schedule.partyMax, Math.max(1, ...restaurantTables.map((t) => t.seats), 1));
+  const hallOptions = hallsFor(restaurantTables, party);
+  const tableOptions = tablesFor(restaurantTables, party, hallPick || undefined);
+  const hallWish = schedule.tableChoice !== 'auto' && hallOptions.some((h) => h.id === hallPick) ? hallPick : '';
+  const tableWish = schedule.tableChoice === 'table' && tableOptions.some((t) => t.id === tablePick) ? tablePick : '';
   const openSettings = useContext(BookingSettingsOpenContext);
   // Specialists: the team people who take bookings («فريق العمل»). The visitor picks one (or any free
   // one), or the first free one is taken; a time is open when someone who may take it is free.
@@ -247,7 +264,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       return;
     }
     const chosen = slotItems.find((s) => s.label === (selectedSlot || computedSlots[0]));
-    if (!chosen || taken.includes(chosen.startMin) || isPastSlot(chosen.startMin)) {
+    if (!chosen || isTakenAt(chosen.startMin) || isPastSlot(chosen.startMin)) {
       setBookError('اختر وقتاً متاحاً.');
       return;
     }
@@ -273,6 +290,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       meetingType: selectedMeetingType,
       schedule: schedule.id,
       person: person || undefined,
+      ...(isTable ? { partySize: party, hall: hallWish || undefined, tableId: tableWish || undefined } : {}),
       name, phone, email, address, desc,
       needsConfirmation,
     });
@@ -286,6 +304,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       else setBookError(`ما قدرنا نحفظ الحجز. تأكد من الإنترنت وجرّب مرة ثانية. (رمز: ${out.error === 'offline' ? 'offline' : `${out.error}/${'reason' in out ? out.reason : ''}`})`);
       return;
     }
+    setSavedTable('tableName' in out && typeof (out as any).tableName === 'string' ? (out as any).tableName : '');
     setSavedStatus(out.status === 'confirmed' ? 'confirmed' : 'new');
     setTakenTick((n) => n + 1);
     setSubmitted(true);
@@ -313,6 +332,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
     'day': 'موعد واحد يومياً',
     'manual': `موعد كل ${intervalMins} دقيقة`
   };
+  const badgeText = isTable ? `⏱️ الطاولة بتنحجز ${schedule.durationMinutes} دقيقة` : `⏱️ ${intervalTexts[interval] || 'موعد كل ٣٠ دقيقة'}`;
 
   const meetingTypeTexts: Record<string, string> = {
     personal: '👤 حضور شخصي بالمقر',
@@ -358,21 +378,23 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
     const list: { label: string; startMin: number }[] = [];
     let current = workStartMins;
 
-    while (current + duration <= workEndMins) {
+    // A table is kept for the schedule's length; the start times follow the step.
+    const length = isTable ? schedule.durationMinutes : duration;
+    while (current + length <= workEndMins) {
       const start = current;
-      const end = current + duration;
+      const end = current + length;
 
       // Check break overlap
       const overlapsBreak = hasBreak && start < breakEndMins && end > breakStartMins;
 
       if (!overlapsBreak) {
-        list.push({ label: `${formatTime(start)} - ${formatTime(end)}`, startMin: start });
+        list.push({ label: isTable ? formatTime(start) : `${formatTime(start)} - ${formatTime(end)}`, startMin: start });
       }
       current += duration;
     }
 
-    return list.length > 0 ? list : slots.map((label, i) => ({ label, startMin: i }));
-  }, [interval, intervalMins, workStart, workEnd, breakStart, breakEnd, hasBreak, slots]);
+    return list.length > 0 || isTable ? list : slots.map((label, i) => ({ label, startMin: i }));
+  }, [interval, intervalMins, workStart, workEnd, breakStart, breakEnd, hasBreak, slots, isTable, schedule.durationMinutes]);
   const computedSlots = useMemo(() => slotItems.map((s) => s.label), [slotItems]);
   // A time that has passed, or is closer than the notice the business asks for.
   function isPastOn(dayNum: number, startMin: number) {
@@ -381,9 +403,14 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
     return d.getTime() + startMin * 60000 <= Math.max(noticeUntil, today.getTime());
   }
   const isPastSlot = (startMin: number) => isPastOn(selectedDay, startMin);
+  // A time nobody can take: its person is booked, or (tables) no table that seats the party is free.
+  function isTakenAt(startMin: number) {
+    if (!isTable) return taken.includes(startMin);
+    return !hasTable(restaurantTables, occupancy, { party, start: startMin, duration: schedule.durationMinutes, step: stepOf(interval, intervalMins), hallId: hallWish || undefined, tableId: tableWish || undefined });
+  }
   const isOpenSlot = (label: string) => {
     const item = slotItems.find((s) => s.label === label);
-    return !!item && !taken.includes(item.startMin) && !isPastSlot(item.startMin);
+    return !!item && !isTakenAt(item.startMin) && !isPastSlot(item.startMin);
   };
 
   // The times already booked on the chosen day (on the published page).
@@ -391,11 +418,17 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
     if (!live || !bookingPage) return setTakenBy({});
     let alive = true;
     const date = dayKey(new Date(currentYear, currentMonth, selectedDay));
+    if (isTable) {
+      readTakenTables(bookingPage.owner, bookingPage.project, date, schedule.id)
+        .then((t) => alive && setOccupancy(t))
+        .catch(() => alive && setOccupancy({}));
+      return () => { alive = false; };
+    }
     Promise.all(candidates.map((c) => readTaken(bookingPage.owner, bookingPage.project, date, schedule.id, c).then((t) => [c, t] as const)))
       .then((rows) => alive && setTakenBy(Object.fromEntries(rows)))
       .catch(() => alive && setTakenBy({}));
     return () => { alive = false; };
-  }, [live, bookingPage?.owner, bookingPage?.project, schedule.id, candidatesKey, currentYear, currentMonth, selectedDay, takenTick]);
+  }, [live, bookingPage?.owner, bookingPage?.project, schedule.id, isTable, candidatesKey, currentYear, currentMonth, selectedDay, takenTick]);
 
   // Keep selectedSlot on a free time
   useEffect(() => {
@@ -487,7 +520,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
         </p>
 
         <div className={`w-full rounded-xl border p-2.5 text-right space-y-1 text-[9.5px] mb-3 ${isDarkBg ? 'bg-white/10 border-white/25 text-white/90' : 'bg-neutral-50 border-neutral-100 text-neutral-600'}`}>
-          <div>• <b>طريقة المقابلة:</b> {meetingTypeTexts[selectedMeetingType] || meetingTypeTexts['phone']}</div>
+          {isTable ? <div>• <b>عدد الأشخاص:</b> {Math.min(party, partyMax)}{savedTable ? ` · طاولة ${savedTable}` : ''}</div> : <div>• <b>طريقة المقابلة:</b> {meetingTypeTexts[selectedMeetingType] || meetingTypeTexts['phone']}</div>}
           {address && <div>• <b>العنوان:</b> {address}</div>}
           <div>• <b>حالة التأكيد:</b> {needsConfirmation ? '⏳ يتطلب تأكيد الإدارة أولاً' : '⚡ تأكيد فوري ومباشر'}</div>
           {savedPerson && <div>• <b>مع:</b> {savedPerson}</div>}
@@ -568,7 +601,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
         {/* Global Badges */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-lg ${isDarkBg ? 'bg-white/10 text-white/90' : 'bg-neutral-100 text-neutral-600'}`}>
-            ⏱️ {intervalTexts[interval] || 'موعد كل ٣٠ دقيقة'}
+            {badgeText}
           </span>
           <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-lg ${needsConfirmation ? 'text-amber-800 bg-amber-50 border border-amber-200' : 'text-emerald-700 bg-emerald-50 border border-emerald-200'}`}>
             {needsConfirmation ? '⏳ تأكيد مطلوب' : '⚡ تأكيد فوري'}
@@ -772,8 +805,54 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
             </div>
           )}
 
+          {/* A restaurant's table booking: how many people, and which hall or table if the restaurant lets them choose */}
+          {isTable && (
+            <div className="space-y-2">
+              <div className="space-y-1">
+                <label className={`text-[10px] block ${labelStyleClasses}`}>عدد الأشخاص:</label>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => { setParty((n) => Math.max(1, n - 1)); setSelectedSlot(null); }} className="w-7 h-7 rounded-lg border border-neutral-300 bg-white text-neutral-700 font-black cursor-pointer">−</button>
+                  <span className={`min-w-6 text-center text-sm font-black ${textStyleClasses}`}>{Math.min(party, partyMax)}</span>
+                  <button type="button" onClick={() => { setParty((n) => Math.min(partyMax, n + 1)); setSelectedSlot(null); }} className="w-7 h-7 rounded-lg border border-neutral-300 bg-white text-neutral-700 font-black cursor-pointer">+</button>
+                  <span className={`text-[9px] ${subTextStyleClasses}`}>الأكبر من {partyMax}؟ تواصل معنا مباشرة</span>
+                </div>
+              </div>
+              {schedule.tableChoice !== 'auto' && hallOptions.length > 0 && (
+                <div className="space-y-1">
+                  <label className={`text-[10px] block ${labelStyleClasses}`}>الصالة:</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[{ id: '', name: 'أي صالة' }, ...hallOptions].map((h) => {
+                      const on = hallWish === h.id;
+                      return (
+                        <button key={h.id || 'any'} type="button" onClick={() => { setHallPick(h.id); setTablePick(''); setSelectedSlot(null); }}
+                          className={`text-[9.5px] py-1 px-2.5 rounded-lg border font-bold cursor-pointer ${on ? 'bg-white border-2' : isDarkBg ? 'bg-white/10 border-white/10 text-white' : 'bg-white border-neutral-200 text-neutral-700'}`}
+                          style={{ borderColor: on ? accentColor : undefined, color: on ? accentColor : undefined }}>{h.name}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {schedule.tableChoice === 'table' && tableOptions.length > 0 && (
+                <div className="space-y-1">
+                  <label className={`text-[10px] block ${labelStyleClasses}`}>الطاولة:</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[{ id: '', name: 'أي طاولة', seats: 0 }, ...tableOptions].map((t) => {
+                      const on = tableWish === t.id;
+                      return (
+                        <button key={t.id || 'any'} type="button" onClick={() => { setTablePick(t.id); setSelectedSlot(null); }}
+                          className={`text-[9.5px] py-1 px-2.5 rounded-lg border font-bold cursor-pointer ${on ? 'bg-white border-2' : isDarkBg ? 'bg-white/10 border-white/10 text-white' : 'bg-white border-neutral-200 text-neutral-700'}`}
+                          style={{ borderColor: on ? accentColor : undefined, color: on ? accentColor : undefined }}>{t.name}{t.seats ? ` · ${t.seats} مقاعد` : ''}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {restaurantTables.length === 0 && live && <p className="text-[9.5px] text-amber-700 font-bold">الحجز غير متاح هلأ: ما في طاولات مضافة.</p>}
+            </div>
+          )}
+
           {/* Meeting Type Selection */}
-          <div className="space-y-1">
+          {!isTable && <div className="space-y-1">
             <label className={`text-[10px] block ${labelStyleClasses}`}>
               طريقة ومكان إجراء اللقاء:
             </label>
@@ -800,7 +879,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
                 );
               })}
             </div>
-          </div>
+          </div>}
 
           {/* Form Inputs Grid */}
           <div className="space-y-2">

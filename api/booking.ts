@@ -116,6 +116,7 @@ const mailHtml = (title: string, lead: string, b: any, extra = '') => `<!doctype
       ${row('طريقة اللقاء', MEETING[b.meetingType])}
       ${row('عدد الأشخاص', b.partySize)}
       ${row('الفعالية', b.sessionName)}
+      ${row('تنتهي', b.endDate ? dateLabel(b.endDate) : '')}
       ${row('الغرفة', b.roomName)}
       ${row('المغادرة', b.checkOut ? dateLabel(b.checkOut) : '')}
       ${row('الطاولة', b.tableName ? `${b.tableName}${b.hallName ? ` · ${b.hallName}` : ''}` : '')}
@@ -281,6 +282,7 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
     Object.assign(booking, {
       date: seatSession.date, startMin: seatSession.startMin, meetingType: '', partySize: seats,
       sessionId: seatSession.id, sessionName: seatSession.name, slot: `${seatSession.name} · ${timeLabel(seatSession.startMin)}`,
+      ...(seatSession.endDate ? { endDate: seatSession.endDate } : {}),
     });
   }
 

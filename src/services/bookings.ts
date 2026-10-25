@@ -32,6 +32,7 @@ export interface Booking {
   // Seats in a session (courses, trips, events): the session, and how many seats were booked (partySize).
   sessionId?: string;
   sessionName?: string;
+  endDate?: string; // a course's last day
   // The team person it was booked with («فريق العمل»), when the schedule has specialists.
   person?: string;
   personName?: string;

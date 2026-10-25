@@ -27,3 +27,14 @@ test('only upcoming sessions inside the booking window are open', () => {
   assert.deepEqual(openSessions(sessions, '2026-11-03', '2026-12-01'), []);
   assert.equal(openSessions(sessions, '2026-11-02', dayPlus('2026-11-02', 30)).length, 2);
 });
+
+test('a course keeps its end date only when it is after the start', () => {
+  const [a, b, c] = normalizeSessions([
+    { id: 'a', name: 'كورس', date: '2026-11-01', endDate: '2026-11-20', seats: 5 },
+    { id: 'b', name: 'خطأ', date: '2026-11-05', endDate: '2026-11-01', seats: 5 },
+    { id: 'c', name: 'وحدة', date: '2026-11-06', seats: 5 },
+  ]);
+  assert.equal(a.endDate, '2026-11-20');
+  assert.equal(b.endDate, '');
+  assert.equal(c.endDate, '');
+});

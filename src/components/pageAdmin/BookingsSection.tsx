@@ -117,7 +117,7 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
                   <div className="text-xs font-black text-brand leading-tight">{dateLabel(b.date)}</div>
                   <div className="text-xs font-bold text-neutral-600 mt-1" dir="rtl">{b.slot}</div>
                   {b.personName && <div className="text-xs font-bold text-brand mt-0.5">مع {b.personName}</div>}
-                  {b.sessionName && <div className="text-xs font-bold text-brand mt-0.5">🎟️ {b.sessionName} · {b.partySize} {b.partySize === 1 ? 'مقعد' : 'مقاعد'}</div>}
+                  {b.sessionName && <div className="text-xs font-bold text-brand mt-0.5">🎟️ {b.sessionName} · {b.partySize} {b.partySize === 1 ? 'مقعد' : 'مقاعد'}{b.endDate ? ` · حتى ${b.endDate}` : ''}</div>}
                   {b.roomName && <div className="text-xs font-bold text-brand mt-0.5">🛏️ {b.roomName} · {b.partySize} ضيوف · {b.nights} ليالٍ حتى {b.checkOut}</div>}
                   {b.tableName && <div className="text-xs font-bold text-brand mt-0.5">🍽️ {b.partySize} أشخاص · {b.hallName ? `${b.hallName} · ` : ''}{b.tableName}</div>}
                 </div>

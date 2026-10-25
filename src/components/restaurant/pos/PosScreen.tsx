@@ -7,6 +7,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Armchair, ShoppingBag, LogOut, X, Wallet, ReceiptText, Plus, QrCode, BellRing, Users, Printer, RotateCcw, CheckCircle2, ChefHat, Menu } from 'lucide-react';
 import { DeviceRole, MenuOrder } from '../restaurantTypes';
+import { DEFAULT_COLS, MIN_ROWS, layoutHall, rectOf } from '../floorMap';
 import type { LiveState } from '../restaurantCloud';
 import { Actor, CASH, ScreenDraft, ScreenPaid, ScreenState, Tab, Worker, WORKER_ROLES, byMethod, openTabId, shiftTips, startOfToday, tabTitle, tabTotals, unsentItems } from '../staffTypes';
 import { addLog, closeShift, endSession, openShift, openTab, reopenTab, setScreen, openCashDay, pruneCashDays, startSession, useClosedTabs, useHandovers, useOpenCashDay, useOpenTabs, useShifts, TabPlace } from '../staffCloud';
@@ -279,11 +280,12 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
     setBusy(false);
   };
 
-  const hall = menu.halls.find((h) => h.id === hallId);
+  const rawHall = menu.halls.find((h) => h.id === hallId);
+  const hall = rawHall ? layoutHall(rawHall) : undefined; // old published halls have no map yet
   const roleLabel = WORKER_ROLES.find((r) => r.id === worker.role)?.label;
   const cloudError = openTabs.error || shifts.error;
 
-  const tableCard = (t: { id: string; name: string; seats: number }, hallName: string) => {
+  const tableCard = (t: { id: string; name: string; seats: number }, hallName: string, style?: React.CSSProperties) => {
     const tb = byId.get(openTabId(t.id));
     const qr = qrFor(t.name);
     if (onlyMine && (!tb || tb.ownerId !== worker.id)) return null;
@@ -294,6 +296,7 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
       <button
         key={t.id}
         type="button"
+        style={style}
         disabled={busy}
         onClick={() => select({ kind: 'table', tableId: t.id, table: t.name, hall: hallName })}
         className={`relative min-h-[118px] p-3 rounded-3xl border-2 text-right flex flex-col gap-1 cursor-pointer active:scale-[0.98] transition ${tb ? (tb.ownerId === worker.id ? 'bg-[#FFF4E6] border-[#FD7E14]' : 'bg-[#FFF9DB] border-[#FAB005]') : 'bg-white border-neutral-200'}`}
@@ -377,7 +380,14 @@ export const PosScreen: React.FC<PosScreenProps> = ({ uid, menu, workers, device
               ))}
             </div>
           ) : hall ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 pt-2">{hall.tables.map((t) => tableCard(t, hall.name))}</div>
+            <div className="overflow-x-auto pt-2">
+              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${hall.cols ?? DEFAULT_COLS}, minmax(104px, 1fr))`, gridTemplateRows: `repeat(${hall.rows ?? MIN_ROWS}, minmax(118px, auto))`, minWidth: (hall.cols ?? DEFAULT_COLS) * 116 }}>
+                {hall.tables.map((t) => {
+                  const r = rectOf(t);
+                  return tableCard(t, hall.name, { gridColumn: `${r.col + 1} / span ${r.w}`, gridRow: `${r.row + 1} / span ${r.h}` });
+                })}
+              </div>
+            </div>
           ) : (
             <div className="py-16 text-center text-sm font-bold text-neutral-400">لا توجد صالات. أضفها من «الصالات والطاولات» في الإدارة.</div>
           )}

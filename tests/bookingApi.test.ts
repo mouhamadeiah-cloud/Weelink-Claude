@@ -54,10 +54,10 @@ test('a party gets the smallest free table and an overlapping party gets another
   const a = await tbook();
   assert.equal(a.s, 200);
   assert.equal(a.tableName, '2');
-  const b = await tbook({ startMin: 750, name: 'سمير' });
+  const b = await tbook({ name: 'سمير' });
   assert.equal(b.tableName, 'ح1');
-  assert.equal((await tbook({ startMin: 780 })).error, 'taken');
-  assert.deepEqual(store.get(`bookingDays/own1_restaurant_${tday}_table`).tables.t2, [720, 750, 780]);
+  assert.equal((await tbook()).error, 'taken');
+  assert.deepEqual(store.get(`bookingDays/own1_restaurant_${tday}_table`).tables.t2, [720]);
 });
 
 test('a table booking checks the party, the schedule and the wished table', async () => {
@@ -73,7 +73,7 @@ test('a cancelled table booking frees its times', async () => {
   const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', headers: { authorization: 'Bearer tk' }, body: JSON.stringify({ action: 'status', owner: 'own1', id: id.split('/').pop(), status: 'cancelled' }) }));
   assert.equal(r.status, 200);
   assert.deepEqual(store.get(`bookingDays/own1_restaurant_${tday}_table`).tables.t2, []);
-  assert.equal((await tbook({ startMin: 780, partySize: 4 })).tableName, '2');
+  assert.equal((await tbook({ partySize: 4 })).tableName, '2');
 });
 
 test('a restaurant that never saved table settings still books with the defaults', async () => {

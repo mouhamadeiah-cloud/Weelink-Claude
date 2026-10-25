@@ -53,3 +53,9 @@ test('a table element never falls back to an appointment schedule', async () => 
   const both = normalizeSettings({ schedules: [{ id: 'main', type: 'appointment' }, { id: 'tb', type: 'table' }] });
   assert.equal(scheduleFor(both, 'table', 'table')?.id, 'tb');
 });
+
+test('a table schedule starts a booking every durationMinutes', () => {
+  const s = normalizeSchedule({ type: 'table', durationMinutes: 120, interval: '30' });
+  assert.equal(s.interval, 'manual');
+  assert.equal(s.intervalMinutes, 120);
+});

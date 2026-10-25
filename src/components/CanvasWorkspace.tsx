@@ -33,12 +33,13 @@ import { useMenuCart, menuCartCount } from './restaurant/menuCartStore';
 import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
-import { useCustomerPrefill } from './customers/customerSession';
+import { useCustomerSession } from './customers/customerSession';
 import { BookingPageContext, createBooking, dayKey, readTaken, readTakenTables } from '../services/bookings';
 import { usePublicTeam } from '../services/team';
 import { StayBookingWidget } from './StayBookingWidget';
 import { SeatBookingWidget } from './SeatBookingWidget';
 import { depositAmount, normalizeRule } from '../services/bookingDeposit';
+import { AccountSignup, CustomerFields, EMPTY_CUSTOMER, customerProblem, type CustomerDraft } from './BookingCustomerForm';
 import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from './DepositPay';
 import { personWorks } from '../services/teamHours';
 import { coveredSlots, hallsFor, hasTable, isFree, stepOf, tablesFor, type Occupancy } from '../services/tableBooking';
@@ -146,17 +147,11 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   elem.calendarBookingType === 'stay' ? <StayBookingWidget elem={elem} /> : elem.calendarBookingType === 'seats' ? <SeatBookingWidget elem={elem} /> : <AppointmentCalendarWidget elem={elem} />;
 
 const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) => {
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  useCustomerPrefill((c) => {
-    setName((v) => v || c.name);
-    setPhone((v) => v || c.phone);
-    setAddress((v) => v || c.address);
-    setEmail((v) => v || c.email);
-  });
-  const [desc, setDesc] = useState('');
+  // The customer's details are the same in every kind of booking (BookingCustomerForm.tsx).
+  const [customer, setCustomer] = useState<CustomerDraft>(EMPTY_CUSTOMER);
+  const { name, address, phone, email, desc } = customer;
+  const signedIn = !!useCustomerSession();
+  const [signup, setSignup] = useState<CustomerDraft | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -265,17 +260,10 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBookError('');
-    if (!name.trim() || !phone.trim() || (live && !email.trim())) {
-      setBookError(live ? 'اكتب اسمك ورقم هاتفك وإيميلك ليوصلك تأكيد الموعد والتذكير.' : 'الرجاء كتابة الاسم ورقم الهاتف على الأقل لتأكيد حجز الموعد.');
-      return;
-    }
     // The same minimums /api/booking checks, so a visitor hears which field to fix.
-    if (name.trim().length < 2) {
-      setBookError('اكتب اسمك كاملاً.');
-      return;
-    }
-    if (phone.replace(/\D/g, '').length < 6) {
-      setBookError('تأكد من رقم الهاتف، لازم يكون 6 أرقام على الأقل.');
+    const personal = customerProblem(customer, live, signedIn);
+    if (personal) {
+      setBookError(personal);
       return;
     }
     const chosen = slotItems.find((s) => s.label === (selectedSlot || computedSlots[0]));
@@ -329,6 +317,7 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       return;
     }
     setSavedTable('tableName' in out && typeof (out as any).tableName === 'string' ? (out as any).tableName : '');
+    setSignup(customer.register && !signedIn ? customer : null);
     setSavedStatus(out.deposit ? 'deposit' : out.status === 'confirmed' ? 'confirmed' : 'new');
     setTakenTick((n) => n + 1);
     setSubmitted(true);
@@ -557,17 +546,16 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
           {savedStatus && email && <div>• <b>الإيميل:</b> وصلك إيميل على {email}، ورح يوصلك تذكير قبل الموعد بيوم.</div>}
         </div>
 
+        {signup && live && bookingPage && <div className="w-full mb-3"><AccountSignup draft={signup} owner={bookingPage.owner} project={bookingPage.project} pageName={bookingPage.pageName} accent={accentColor} dark={isDarkBg} /></div>}
+
         <button 
           type="button"
           onClick={() => {
             setSubmitted(false);
             setSavedStatus(null);
             setDeposit(EMPTY_DEPOSIT);
-            setName('');
-            setAddress('');
-            setPhone('');
-            setEmail('');
-            setDesc('');
+            setCustomer(EMPTY_CUSTOMER);
+            setSignup(null);
             setSelectedSlot(null);
           }}
           className="px-3.5 py-1.5 text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer shadow-xs"
@@ -906,89 +894,7 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
 
           {/* Form Inputs Grid */}
           <div className="space-y-2">
-            {/* Name Input */}
-            <div className="space-y-0.5">
-              <label className={`text-[9.5px] block ${labelStyleClasses}`}>{nameLabel}</label>
-              <input 
-                type="text"
-                required
-                placeholder="اكتب اسمك الكامل هنا"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className={`w-full text-[10.5px] font-medium px-2.5 py-1.5 rounded-xl border focus:bg-white focus:outline-none transition-all ${
-                  isDarkBg 
-                    ? 'bg-white/10 border-white/20 text-white focus:border-white' 
-                    : 'bg-neutral-50 border-neutral-200 focus:border-neutral-400'
-                }`}
-              />
-            </div>
-
-            {/* Address Input */}
-            <div className="space-y-0.5">
-              <label className={`text-[9.5px] block ${labelStyleClasses}`}>{addressLabel}</label>
-              <input 
-                type="text"
-                placeholder="مثال: الرياض، حي الياسمين"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className={`w-full text-[10.5px] font-medium px-2.5 py-1.5 rounded-xl border focus:bg-white focus:outline-none transition-all ${
-                  isDarkBg 
-                    ? 'bg-white/10 border-white/20 text-white focus:border-white' 
-                    : 'bg-neutral-50 border-neutral-200 focus:border-neutral-400'
-                }`}
-              />
-            </div>
-
-            {/* Phone & Email Row */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-0.5">
-                <label className={`text-[9.5px] block ${labelStyleClasses}`}>{phoneLabel}</label>
-                <input 
-                  type="tel"
-                  required
-                  placeholder="05xxxxxxx"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className={`w-full text-[10.5px] font-medium px-2.5 py-1.5 rounded-xl border focus:bg-white focus:outline-none transition-all text-left ${
-                    isDarkBg 
-                      ? 'bg-white/10 border-white/20 text-white focus:border-white' 
-                      : 'bg-neutral-50 border-neutral-200 focus:border-neutral-400'
-                  }`}
-                  dir="ltr"
-                />
-              </div>
-              <div className="space-y-0.5">
-                <label className={`text-[9.5px] block ${labelStyleClasses}`}>{emailLabel}</label>
-                <input 
-                  type="email"
-                  placeholder="name@domain.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full text-[10.5px] font-medium px-2.5 py-1.5 rounded-xl border focus:bg-white focus:outline-none transition-all text-left ${
-                    isDarkBg 
-                      ? 'bg-white/10 border-white/20 text-white focus:border-white' 
-                      : 'bg-neutral-50 border-neutral-200 focus:border-neutral-400'
-                  }`}
-                  dir="ltr"
-                />
-              </div>
-            </div>
-
-            {/* Description Textarea */}
-            <div className="space-y-0.5">
-              <label className={`text-[9.5px] block ${labelStyleClasses}`}>{descLabel}</label>
-              <textarea 
-                placeholder="اكتب هنا تفاصيل طلبك أو استفسارك..."
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                rows={1}
-                className={`w-full text-[10.5px] font-medium px-2.5 py-1.5 rounded-xl border focus:bg-white focus:outline-none transition-all resize-none ${
-                  isDarkBg 
-                    ? 'bg-white/10 border-white/20 text-white focus:border-white' 
-                    : 'bg-neutral-50 border-neutral-200 focus:border-neutral-400'
-                }`}
-              />
-            </div>
+            <CustomerFields draft={customer} onChange={setCustomer} dark={isDarkBg} accent={accentColor} labels={{ name: nameLabel, address: addressLabel, phone: phoneLabel, email: emailLabel, desc: descLabel }} />
           </div>
 
           {depositDue > 0 && <DepositPay payments={bookingSettings?.payments} amount={depositDue} accent={accentColor} dark={isDarkBg} value={deposit} onChange={setDeposit} />}

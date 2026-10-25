@@ -644,7 +644,6 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
               ['photo', 'صور'],
               ['illustration', 'رسومات'],
               ['vector', 'فيكتور'],
-              ['3d', '3D'],
               ...(onApplyBackgroundVideo ? ([['video', 'فيديو']] as const) : []),
             ] as ReadonlyArray<readonly [PixabayType, string]>).map(([id, label]) => (
               <button

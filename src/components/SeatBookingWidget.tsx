@@ -7,6 +7,8 @@ import { BookingPageContext, createBooking, dayKey, readSessionTaken } from '../
 import { newSeatsSchedule, scheduleFor, useBookingSettings } from '../services/bookingSettings';
 import { dayPlus, openSessions, seatsLeft } from '../services/seatBooking';
 import { timeLabel } from '../services/bookingGrid';
+import { depositAmount, normalizeRule, priceNumber } from '../services/bookingDeposit';
+import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from './DepositPay';
 import { useCustomerPrefill } from './customers/customerSession';
 
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -51,6 +53,7 @@ export const SeatBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [deposit, setDeposit] = useState<DepositDraft>(EMPTY_DEPOSIT);
   const [done, setDone] = useState<{ session: string; seats: number; status: string } | null>(null);
 
   // The seats already booked, session by session (on the published page).
@@ -67,6 +70,7 @@ export const SeatBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const left = chosen ? seatsLeft(chosen, taken[chosen.id]) : 0;
   const most = Math.max(1, Math.min(schedule.maxSeatsPerBooking, left));
   const count = Math.min(seats, most);
+  const amount = chosen ? depositAmount(normalizeRule(schedule, true), (priceNumber(chosen.price) || 0) * count || null) : 0;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,23 +79,28 @@ export const SeatBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
     if (left < 1) return setError('هالجلسة اكتملت.');
     if (name.trim().length < 2 || phone.replace(/\D/g, '').length < 6) return setError('اكتب اسمك ورقم هاتفك (6 أرقام على الأقل).');
     if (live && !email.trim()) return setError('اكتب إيميلك ليوصلك تأكيد الحجز والتذكير.');
+    if (live && amount > 0) {
+      const problem = depositProblem(deposit, settings?.payments);
+      if (problem) return setError(problem);
+    }
     if (!live || !bookingPage) return setDone({ session: chosen.name, seats: count, status: 'new' });
     setSaving(true);
     const out = await createBooking({
       owner: bookingPage.owner, project: bookingPage.project, schedule: schedule.id, pageName: bookingPage.pageName,
       date: chosen.date, startMin: chosen.startMin, slot: chosen.name, meetingType: '', partySize: count, session: chosen.id,
-      name, phone, email, address: '', desc, needsConfirmation: schedule.needsConfirmation,
+      name, phone, email, address: '', desc, needsConfirmation: schedule.needsConfirmation, deposit: depositPayload(deposit, amount),
     } as any);
     setSaving(false);
     if ('error' in out) {
       if (out.error === 'taken') { setError('انحجزت المقاعد قبل لحظات. جرّب عدداً أقل أو جلسة ثانية.'); setTick((n) => n + 1); }
+      else if (out.error === 'deposit_required') setError('لازم تدفع العربون وتكتب رقم العملية.');
       else if (out.error === 'bad_email') setError('تأكد من الإيميل.');
       else if (out.error === 'bad_session' || out.error === 'bad_date') { setError('هالجلسة ما عادت متاحة.'); setTick((n) => n + 1); setPick(''); }
       else if (out.error === 'bad_schedule') setError('الحجز غير جاهز بعد: المالك لازم يضيف الجلسات من «إعدادات الحجز».');
       else setError(`ما قدرنا نحفظ الحجز. جرّب مرة ثانية. (رمز: ${out.error})`);
       return;
     }
-    setDone({ session: chosen.name, seats: count, status: out.status });
+    setDone({ session: chosen.name, seats: count, status: out.deposit ? 'deposit' : out.status });
     setTick((n) => n + 1);
   };
 
@@ -102,12 +111,12 @@ export const SeatBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
     return (
       <div className={`${shell} items-center justify-center text-center`} dir="rtl" style={shellStyle}>
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold mb-2" style={{ backgroundColor: accent }}>✓</div>
-        <h4 className={`text-xs font-bold mb-1 ${text}`}>{done.status === 'confirmed' ? 'تم حجز مقاعدك!' : 'وصل طلب الحجز!'}</h4>
+        <h4 className={`text-xs font-bold mb-1 ${text}`}>{done.status === 'confirmed' ? 'تم حجز مقاعدك!' : done.status === 'deposit' ? 'بانتظار تأكيد العربون' : 'وصل طلب الحجز!'}</h4>
         <p className={`text-[10px] max-w-xs leading-relaxed mb-3 ${sub}`}>
           شكراً <b>{name}</b>. {done.seats} {done.seats === 1 ? 'مقعد' : 'مقاعد'} في <b>{done.session}</b>.
-          {done.status !== 'confirmed' ? ' رح يوصلك إيميل لما يتأكد الحجز.' : ''}
+          {done.status === 'deposit' ? ' رح نراجع التحويل ويوصلك إيميل لما يتأكد العربون. إذا ما انتأكد خلال 24 ساعة بيتحرر الحجز.' : done.status !== 'confirmed' ? ' رح يوصلك إيميل لما يتأكد الحجز.' : ''}
         </p>
-        <button type="button" onClick={() => { setDone(null); setPick(''); setSeats(1); setName(''); setPhone(''); setEmail(''); setDesc(''); }} className="px-3.5 py-1.5 text-white rounded-lg text-[10px] font-bold cursor-pointer" style={{ backgroundColor: accent }}>حجز جديد</button>
+        <button type="button" onClick={() => { setDone(null); setPick(''); setSeats(1); setName(''); setPhone(''); setEmail(''); setDesc(''); setDeposit(EMPTY_DEPOSIT); }} className="px-3.5 py-1.5 text-white rounded-lg text-[10px] font-bold cursor-pointer" style={{ backgroundColor: accent }}>حجز جديد</button>
       </div>
     );
   }
@@ -155,6 +164,7 @@ export const SeatBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
                 <button type="button" onClick={() => setSeats(Math.min(most, count + 1))} className={`w-6 h-6 rounded-md border text-xs font-bold cursor-pointer ${text}`}>+</button>
               </div>
             </div>
+            {amount > 0 && <DepositPay payments={settings?.payments} amount={amount} accent={accent} dark={dark} value={deposit} onChange={setDeposit} />}
             <input className={field} placeholder="الاسم الكامل" value={name} onChange={(e) => setName(e.target.value)} />
             <input className={field} dir="ltr" placeholder="05xxxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
             <input className={field} dir="ltr" type="email" placeholder="name@domain.com" value={email} onChange={(e) => setEmail(e.target.value)} />

@@ -203,3 +203,68 @@ test('a course books on its first day and keeps its last day', async () => {
   assert.equal(row.date, inD(12));
   assert.equal(row.endDate, inD(40));
 });
+
+// ---- deposits ----
+store.set('bookingSettings/own1/pages/shop', {
+  payments: { currency: '$', wallets: { syriatel: { enabled: true, account: '0933000111' }, sham: { enabled: true, account: '' } } },
+  schedules: [
+    { id: 'main', name: 'مواعيد', type: 'appointment', depositOn: true, depositType: 'fixed', depositValue: 5 },
+    { id: 'seats', name: 'دورات', type: 'seats', depositOn: true, depositType: 'percent', depositValue: 50, maxSeatsPerBooking: 4, daysAhead: 60, sessions: [
+      { id: 'd1', name: 'دورة', date: inD(15), startMin: 600, seats: 4, price: '20$ للشخص' },
+    ] },
+  ],
+});
+const dbook = async (extra: any = {}) => {
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', body: JSON.stringify({ ...base, project: 'shop', date: inD(5), startMin: 540, slot: '9:00', ...extra }) }));
+  return { s: r.status, ...(await r.json()) };
+};
+const proof = { wallet: 'syriatel', txn: 'TX12345', screenshot: 'https://x.test/i.png' };
+
+test('a fixed deposit needs a proof, then the booking waits as «new» with a hold', async () => {
+  assert.equal((await dbook()).error, 'deposit_required');
+  assert.equal((await dbook({ deposit: { ...proof, wallet: 'sham' } })).error, 'deposit_required'); // no account
+  assert.equal((await dbook({ deposit: { ...proof, txn: 'a' } })).error, 'deposit_required');
+  const ok = await dbook({ deposit: proof, needsConfirmation: false });
+  assert.equal(ok.s, 200);
+  assert.equal(ok.status, 'new');
+  assert.equal(ok.deposit, true);
+  const row = store.get(`bookings/own1/items/${ok.id}`);
+  assert.equal(row.deposit.amount, 5);
+  assert.equal(row.deposit.state, 'pending');
+  assert.equal(row.deposit.currency, '$');
+  assert.ok(store.get(`depositHolds/own1_${ok.id}`));
+});
+
+test('a percent deposit uses the numeric price of the session times the seats', async () => {
+  const r = await dbook({ schedule: 'seats', session: 'd1', date: inD(15), startMin: 600, partySize: 2, deposit: proof });
+  assert.equal(r.s, 200);
+  assert.equal(store.get(`bookings/own1/items/${r.id}`).deposit.amount, 20);
+  assert.equal(store.get('bookingSessions/own1_shop_seats_d1').taken, 2);
+});
+
+test('confirming the deposit confirms the booking and drops the hold; rejecting frees the time', async () => {
+  tokens['tk4'] = { uid: 'own1' };
+  const status = (id: string, s: string) => handler.fetch(new Request('http://x/api/booking', { method: 'POST', headers: { authorization: 'Bearer tk4' }, body: JSON.stringify({ action: 'status', owner: 'own1', id, status: s }) }));
+  const [okId] = [...store.entries()].find(([k, v]: any) => k.startsWith('bookings/own1/items/') && v.deposit?.amount === 5)!.map((x: any, i: number) => (i === 0 ? x.split('/').pop() : x));
+  assert.equal((await status(okId, 'confirmed')).status, 200);
+  assert.equal(store.get(`bookings/own1/items/${okId}`).deposit.state, 'paid');
+  assert.equal(store.get(`bookings/own1/items/${okId}`).status, 'confirmed');
+  assert.equal(store.get(`depositHolds/own1_${okId}`), undefined);
+  const seatId = [...store.entries()].find(([k, v]: any) => k.startsWith('bookings/own1/items/') && v.sessionId === 'd1')![0].split('/').pop()!;
+  assert.equal((await status(seatId, 'cancelled')).status, 200);
+  assert.equal(store.get(`bookings/own1/items/${seatId}`).deposit.state, 'rejected');
+  assert.equal(store.get('bookingSessions/own1_shop_seats_d1').taken, 0);
+});
+
+test('a deposit nobody confirms in 24 hours is released by the daily cron', async () => {
+  process.env.CRON_SECRET = 'cron';
+  const r = await dbook({ schedule: 'seats', session: 'd1', date: inD(15), startMin: 600, partySize: 3, deposit: proof });
+  assert.equal(store.get('bookingSessions/own1_shop_seats_d1').taken, 3);
+  store.set(`depositHolds/own1_${r.id}`, { owner: 'own1', id: r.id, createdAt: Date.now() - 25 * 3600000 });
+  const out = await handler.fetch(new Request('http://x/api/booking', { headers: { authorization: 'Bearer cron' } }));
+  assert.equal((await out.json()).expired, 1);
+  assert.equal(store.get(`bookings/own1/items/${r.id}`).status, 'cancelled');
+  assert.equal(store.get(`bookings/own1/items/${r.id}`).deposit.state, 'expired');
+  assert.equal(store.get('bookingSessions/own1_shop_seats_d1').taken, 0);
+  assert.equal(store.get(`depositHolds/own1_${r.id}`), undefined);
+});

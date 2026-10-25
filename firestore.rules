@@ -478,7 +478,8 @@ service cloud.firestore {
     match /bookingSettings/{ownerId}/pages/{projectKey} {
       allow get: if true;
       allow create, update: if canManage(ownerId) && isValidId(projectKey)
-        && incoming().keys().hasOnly(['schedules'])
+        && incoming().keys().hasOnly(['schedules', 'payments'])
+        && (!('payments' in incoming()) || incoming().payments is map)
         && incoming().schedules is list && incoming().schedules.size() >= 1 && incoming().schedules.size() <= 10;
     }
 

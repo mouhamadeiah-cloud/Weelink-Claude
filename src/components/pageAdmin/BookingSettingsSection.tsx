@@ -11,6 +11,8 @@ import {
 import { BookingPageContext } from '../../services/bookings';
 import { useTeam } from '../../services/team';
 import { newRoomId } from '../../services/stayBooking';
+import { usableWallets, type BookingPayments, type DepositType } from '../../services/bookingDeposit';
+import { BookingPaymentsEditor } from './BookingPaymentsEditor';
 import { MAX_SESSION_SEATS, dayPlus, newSessionId, type SeatSession } from '../../services/seatBooking';
 import { useRestaurantTables } from '../../services/tableBookingData';
 import type { ProjectKey } from '../../utils/projectKeys';
@@ -97,7 +99,21 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
     setBusy(false);
   };
 
+  const savePayments = async (payments: BookingPayments) => {
+    try {
+      await saveBookingSettings(owner, project, { schedules: list, payments });
+      return true;
+    } catch (e) {
+      console.warn('Could not save the payment accounts:', e);
+      return false;
+    }
+  };
+
   const save = () => {
+    if (current.depositOn) {
+      if (current.depositValue <= 0) return setNote({ ok: false, text: 'اكتب قيمة العربون.' });
+      if (usableWallets(settings?.payments).length === 0) return setNote({ ok: false, text: 'فعّل حساب محفظة واحد على الأقل (تحت، في «حسابات الدفع للعربون») قبل ما تشغّل العربون.' });
+    }
     if (current.type === 'seats') {
       if (current.sessions.length === 0) return setNote({ ok: false, text: 'أضف جلسة وحدة على الأقل.' });
       if (current.sessions.some((x) => !x.name.trim() || !x.date)) return setNote({ ok: false, text: 'اكتب اسماً وتاريخاً لكل جلسة.' });
@@ -351,6 +367,31 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
           </span>
         </Field>}
       </div>
+
+      <div className="space-y-3 rounded-2xl border border-neutral-200 p-3">
+        <Toggle checked={current.depositOn} onChange={(depositOn) => change({ depositOn })} label="طلب عربون" />
+        {current.depositOn && (
+          <>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {([['fixed', 'مبلغ ثابت'], ['percent', 'نسبة من السعر']] as [DepositType, string][]).map(([id, label]) => {
+                const canPercent = current.type === 'seats' || current.type === 'stay';
+                return <button key={id} type="button" disabled={id === 'percent' && !canPercent} onClick={() => change({ depositType: id })} className={`${chip(current.depositType === id)} disabled:opacity-40 disabled:cursor-default`}>{label}</button>;
+              })}
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
+                <input type="number" min={0} className={`${inputFitClass} w-28`} value={current.depositValue} onChange={(e) => change({ depositValue: Math.max(0, Number(e.target.value) || 0) })} /> {current.depositType === 'percent' ? '%' : 'للحجز الواحد'}
+              </span>
+            </div>
+            <div className="text-xs text-neutral-400 font-bold">
+              {current.type === 'seats' || current.type === 'stay'
+                ? 'النسبة بتنحسب من السعر اللي كاتبه بالجلسة أو الغرفة (لازم يبدأ برقم، مثلاً «25$ للشخص») × المقاعد أو الليالي.'
+                : 'المواعيد والطاولات ما إلها سعر، فالعربون مبلغ ثابت.'}
+              {' '}الحجز بيضل «بانتظار العربون» لحد ما تأكده، وبيتحرر تلقائياً بعد 24 ساعة إذا ما تأكد.
+            </div>
+          </>
+        )}
+      </div>
+
+      <BookingPaymentsEditor payments={settings?.payments} canSave={!!settings} onSave={savePayments} />
 
       <div className="rounded-2xl bg-neutral-50 p-3">
         <Toggle checked={current.needsConfirmation} onChange={(needsConfirmation) => change({ needsConfirmation })} label="الحجز بيحتاج تأكيدك" />

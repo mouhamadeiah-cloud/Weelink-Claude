@@ -36,6 +36,7 @@ import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
 import { useCustomerPrefill } from './customers/customerSession';
 import { BookingPageContext, createBooking, dayKey, readTaken, readTakenTables } from '../services/bookings';
 import { usePublicTeam } from '../services/team';
+import { StayBookingWidget } from './StayBookingWidget';
 import { personWorks } from '../services/teamHours';
 import { hallsFor, hasTable, stepOf, tablesFor, type Occupancy } from '../services/tableBooking';
 import { useRestaurantTables } from '../services/tableBookingData';
@@ -137,7 +138,10 @@ interface InteractiveCalendarWidgetProps {
   elem: CanvasElement;
 }
 
-const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) => {
+const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) =>
+  elem.calendarBookingType === 'stay' ? <StayBookingWidget elem={elem} /> : <AppointmentCalendarWidget elem={elem} />;
+
+const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) => {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');

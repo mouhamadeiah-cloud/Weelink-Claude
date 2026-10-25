@@ -3441,6 +3441,41 @@ export const buildAddMenuData = ({
         }
       }] : []),
       {
+        id: 'hotel-stay-booking',
+        title: 'حجز غرف (فنادق وشاليهات) 🛏️',
+        sub: 'الزبون يختار تاريخ الوصول والمغادرة وعدد الضيوف ويحجز غرفة؛ الغرف والليالي تُضبط من الإدارة',
+        subCategories: ['confirm', 'month', 'slots', 'all'],
+        type: 'calendar' as const,
+        preview: (
+          <div className="w-full h-22 bg-gradient-to-r from-sky-50/80 via-white to-neutral-50 rounded-xl p-2 flex flex-col justify-between border-2 border-sky-500/40 text-right shadow-2xs">
+            <div className="flex justify-between items-center text-[9.5px] font-bold">
+              <span className="text-sky-700 flex items-center gap-1"><span>🛏️</span><span>احجز غرفتك</span></span>
+              <span className="bg-sky-600 text-white text-[8px] px-1.5 py-0.5 rounded font-bold">بالليالي</span>
+            </div>
+            <div className="bg-white/80 border border-neutral-200 rounded p-1 text-[7.5px] text-neutral-600 space-y-0.5">
+              <div>• تاريخ الوصول والمغادرة وعدد الضيوف</div>
+              <div>• لا تتداخل حجوزات الغرفة الواحدة</div>
+            </div>
+            <span className="text-[8.5px] bg-sky-600 text-white py-1 rounded-lg text-center font-bold shadow-3xs">إضافة حجز الغرف للكانفاس</span>
+          </div>
+        ),
+        action: () => {
+          onAddElement('calendar', 'احجز غرفتك', {
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom'
+          }, {
+            name: 'حجز غرف',
+            calendarTitle: 'احجز غرفتك',
+            calendarAccentColor: calAddAccentColor,
+            calendarBookingType: 'stay',
+            calendarScheduleId: 'stay',
+            width: 780,
+            height: 520,
+          });
+        }
+      },
+      {
         id: 'horizontal-full-booking',
         title: 'بطاقة حجز مواعيد عرضية متكاملة 🌟',
         sub: 'تنسيق عرضي فاخر يجمع التقويم الشهري والساعات ونموذج الحجز جنباً إلى جنب',

@@ -19,6 +19,7 @@
 
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
+import { chooseRoom, nightsBetween, normalizeRooms, type RoomNights, type StayRoom } from '../src/services/stayBooking.js';
 import { personWorks } from '../src/services/teamHours.js';
 import { chooseTable, coveredSlots, tablesOfHalls, type BookableTable } from '../src/services/tableBooking.js';
 import { restaurantIdOf } from '../src/utils/projectKeys.js';
@@ -107,6 +108,8 @@ const mailHtml = (title: string, lead: string, b: any, extra = '') => `<!doctype
       ${row('الحالة', STATUS[b.status])}
       ${row('طريقة اللقاء', MEETING[b.meetingType])}
       ${row('عدد الأشخاص', b.partySize)}
+      ${row('الغرفة', b.roomName)}
+      ${row('المغادرة', b.checkOut ? dateLabel(b.checkOut) : '')}
       ${row('الطاولة', b.tableName ? `${b.tableName}${b.hallName ? ` · ${b.hallName}` : ''}` : '')}
       ${extra}
     </table>
@@ -138,6 +141,8 @@ const sendAll = async (mails: Mail[]) => {
 // A team person (a specialist of the schedule) has their own day: ..._p{personId}.
 const dayDoc = (admin: Admin, b: { owner: string; project: string; date: string; schedule?: string; person?: string }) =>
   admin.db.collection('bookingDays').doc(`${b.owner}_${b.project}_${b.date}${scheduleOf(b.schedule) === 'main' ? '' : `_${b.schedule}`}${b.person ? `_p${b.person}` : ''}`);
+const roomDoc = (admin: Admin, b: { owner: string; project: string; schedule?: string }, roomId: string) =>
+  admin.db.collection('bookingRooms').doc(`${b.owner}_${b.project}_${scheduleOf(b.schedule)}_${roomId}`);
 const items = (admin: Admin, owner: string) => admin.db.collection('bookings').doc(owner).collection('items');
 // The bookings of the days a bookingDays query found.
 const bookingsOf = async (admin: Admin, days: QuerySnapshot) => {
@@ -201,7 +206,7 @@ const create = async (admin: Admin, body: any) => {
   // A table booking (restaurants): the party, the schedule's length and the restaurant's tables decide it.
   let tables: BookableTable[] = [];
   let tableRule: { party: number; duration: number; step: number } | null = null;
-  if (body.partySize !== undefined) {
+  if (body.partySize !== undefined && body.checkOut === undefined) {
     const party = Math.round(Number(body.partySize));
     const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
     // A restaurant that never saved its table settings books with the defaults of the «table» schedule.
@@ -222,6 +227,33 @@ const create = async (admin: Admin, body: any) => {
     (booking as any).meetingType = '';
   }
 
+  // A room stay (hotels): check-in is `date`, the guests and the nights decide which of the rooms is free.
+  let stayRooms: StayRoom[] = [];
+  let stayRule: { guests: number; nights: string[] } | null = null;
+  if (body.checkOut !== undefined) {
+    const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
+    const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule);
+    if (!schedule || schedule.type !== 'stay') return json({ error: 'bad_schedule' }, 400);
+    stayRooms = normalizeRooms(schedule.rooms);
+    if (stayRooms.length === 0) return json({ error: 'no_rooms' }, 409);
+    const nights = nightsBetween(date, body.checkOut);
+    const minNights = Math.max(1, Math.round(Number(schedule.minNights)) || 1);
+    const maxNights = Math.min(90, Math.max(minNights, Math.round(Number(schedule.maxNights)) || 30));
+    if (nights.length < minNights || nights.length > maxNights) return json({ error: 'bad_nights' }, 400);
+    if (date > dayIn(Math.min(365, Math.max(1, Math.round(Number(schedule.daysAhead)) || 180)))) return json({ error: 'bad_date' }, 400);
+    const guests = Math.round(Number(body.partySize));
+    if (!Number.isInteger(guests) || guests < 1 || guests > Math.max(...stayRooms.map((r) => r.capacity))) return json({ error: 'bad_party' }, 400);
+    stayRule = { guests, nights };
+    Object.assign(booking, {
+      startMin: 0,
+      meetingType: '',
+      partySize: guests,
+      checkOut: body.checkOut,
+      nights: nights.length,
+      slot: `حتى ${dateLabel(body.checkOut)} · ${nights.length} ${nights.length === 1 ? 'ليلة' : 'ليالٍ'}`,
+    });
+  }
+
   const toOwner = await ownerEmail(admin, owner);
   if (!toOwner) {
     // A missing owner is 404; anything else (Google refusing the service account, say) is 500 with its reason.
@@ -238,6 +270,23 @@ const create = async (admin: Admin, body: any) => {
   let failure = '';
   const result = await admin.db
     .runTransaction(async (tx) => {
+      if (stayRule) {
+        // The smallest free room that fits the guests (or the wished one) for every night of the stay.
+        const candidates = stayRooms.filter((r) => r.capacity >= stayRule!.guests && (!validId(body.room) || r.id === body.room));
+        const refs = candidates.map((r) => roomDoc(admin, booking, r.id));
+        const docs = await Promise.all(refs.map((r) => tx.get(r)));
+        const occupancy: RoomNights = Object.fromEntries(candidates.map((r, i) => [r.id, docs[i].data()?.nights || []]));
+        const room = chooseRoom(candidates, occupancy, { guests: stayRule.guests, nights: stayRule.nights, roomId: validId(body.room) ? body.room : undefined });
+        if (!room) return 'taken';
+        const at = candidates.findIndex((r) => r.id === room.id);
+        const keep = (occupancy[room.id] as string[]).filter((n) => n >= dayIn(-1));
+        tx.set(refs[at], { owner, project, schedule: booking.schedule, nights: [...keep, ...stayRule.nights] });
+        // A bookingDays document too, so the day-before reminder finds the check-in.
+        tx.set(day, { owner, project, date }, { merge: true });
+        tx.set(ref, { ...booking, roomId: room.id, roomName: room.name });
+        Object.assign(booking, { roomId: room.id, roomName: room.name });
+        return 'ok';
+      }
       if (tableRule) {
         // The smallest free table that seats the party (inside the wished hall or table), decided here
         // so two parties never get the same table at overlapping times.
@@ -297,7 +346,7 @@ const create = async (admin: Admin, body: any) => {
       ),
     },
   ]);
-  return json({ id: ref.id, status: booking.status, ...((booking as any).tableName ? { tableName: (booking as any).tableName, hallName: (booking as any).hallName } : {}) });
+  return json({ id: ref.id, status: booking.status, ...((booking as any).tableName ? { tableName: (booking as any).tableName, hallName: (booking as any).hallName } : {}), ...((booking as any).roomName ? { roomName: (booking as any).roomName } : {}) });
 };
 
 const changeStatus = async (admin: Admin, request: Request, body: any) => {
@@ -316,7 +365,14 @@ const changeStatus = async (admin: Admin, request: Request, body: any) => {
   await ref.update({ status: body.status, updatedAt: new Date().toISOString() });
   // A cancelled time is free again.
   if (body.status === 'cancelled') {
-    if (b.tableId && Array.isArray(b.covers)) {
+    if (b.roomId && b.checkOut) {
+      const room = roomDoc(admin, b, b.roomId);
+      const gone = nightsBetween(b.date, b.checkOut);
+      await admin.db.runTransaction(async (tx) => {
+        const nights: string[] = (await tx.get(room)).data()?.nights || [];
+        tx.set(room, { nights: nights.filter((n) => !gone.includes(n)) }, { merge: true });
+      }).catch(() => {});
+    } else if (b.tableId && Array.isArray(b.covers)) {
       const day = dayDoc(admin, b);
       await admin.db.runTransaction(async (tx) => {
         const tables: Record<string, number[]> = (await tx.get(day)).data()?.tables || {};

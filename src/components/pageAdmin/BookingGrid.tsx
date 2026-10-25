@@ -44,7 +44,7 @@ export const BookingGrid: React.FC<Props> = ({ owner, project, rows, busy, onAct
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const schedules = (settings?.schedules || []).filter((s) => s.type !== 'stay');
+  const schedules = (settings?.schedules || []).filter((s) => s.type !== 'stay' && s.type !== 'seats');
   const schedule: BookingSchedule | undefined = schedules.find((s) => s.id === scheduleId) || scheduleFor(settings || null, undefined, isRestaurant ? 'table' : undefined) || schedules[0];
   const isTable = schedule?.type === 'table';
   const step = schedule ? (isTable ? Math.max(15, schedule.durationMinutes || 90) : stepOf(schedule.interval, schedule.intervalMinutes)) : 60;

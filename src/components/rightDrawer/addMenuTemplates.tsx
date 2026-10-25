@@ -3476,6 +3476,41 @@ export const buildAddMenuData = ({
         }
       },
       {
+        id: 'seats-session-booking',
+        title: 'حجز مقاعد (دورات ورحلات وفعاليات) 🎟️',
+        sub: 'الزبون يختار جلسة وعدد المقاعد؛ الجلسات وعدد مقاعدها تُضبط من الإدارة، ولا يزيد الحجز عن المقاعد',
+        subCategories: ['confirm', 'month', 'slots', 'all'],
+        type: 'calendar' as const,
+        preview: (
+          <div className="w-full h-22 bg-gradient-to-r from-violet-50/80 via-white to-neutral-50 rounded-xl p-2 flex flex-col justify-between border-2 border-violet-500/40 text-right shadow-2xs">
+            <div className="flex justify-between items-center text-[9.5px] font-bold">
+              <span className="text-violet-700 flex items-center gap-1"><span>🎟️</span><span>احجز مقعدك</span></span>
+              <span className="bg-violet-600 text-white text-[8px] px-1.5 py-0.5 rounded font-bold">بالمقاعد</span>
+            </div>
+            <div className="bg-white/80 border border-neutral-200 rounded p-1 text-[7.5px] text-neutral-600 space-y-0.5">
+              <div>• اختيار الجلسة وعدد المقاعد</div>
+              <div>• يظهر عدد المقاعد المتبقية</div>
+            </div>
+            <span className="text-[8.5px] bg-violet-600 text-white py-1 rounded-lg text-center font-bold shadow-3xs">إضافة حجز المقاعد للكانفاس</span>
+          </div>
+        ),
+        action: () => {
+          onAddElement('calendar', 'احجز مقعدك', {
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom'
+          }, {
+            name: 'حجز مقاعد',
+            calendarTitle: 'احجز مقعدك',
+            calendarAccentColor: calAddAccentColor,
+            calendarBookingType: 'seats',
+            calendarScheduleId: 'seats',
+            width: 780,
+            height: 520,
+          });
+        }
+      },
+      {
         id: 'horizontal-full-booking',
         title: 'بطاقة حجز مواعيد عرضية متكاملة 🌟',
         sub: 'تنسيق عرضي فاخر يجمع التقويم الشهري والساعات ونموذج الحجز جنباً إلى جنب',

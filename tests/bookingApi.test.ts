@@ -152,3 +152,45 @@ test('only the owner or a member may book on the grid, and the owner can pin a p
   assert.equal(p.s, 200);
   assert.equal((await obook({ project: 'page', schedule: 'main', partySize: undefined, person: 'pc3', startMin: 600, name: 'غيره' })).error, 'taken');
 });
+
+// ---- seats in a session ----
+store.set('bookingSettings/own1/pages/cars', { schedules: [
+  { id: 'seats', name: 'الدورات', type: 'seats', maxSeatsPerBooking: 3, daysAhead: 60, sessions: [
+    { id: 'x1', name: 'رحلة الشاطئ', date: inD(10), startMin: 480, seats: 5 },
+    { id: 'x2', name: 'ورشة', date: inD(100), startMin: 600, seats: 5 },
+    { id: 'x3', name: 'قديمة', date: inD(-3), startMin: 600, seats: 5 },
+  ] },
+] });
+const qbook = async (extra: any = {}) => {
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', body: JSON.stringify({ ...base, project: 'cars', schedule: 'seats', session: 'x1', date: inD(10), startMin: 480, slot: 'x', meetingType: '', partySize: 2, ...extra }) }));
+  return { s: r.status, ...(await r.json()) };
+};
+
+test('seats of a session are counted and the last seats are never given twice', async () => {
+  assert.equal((await qbook()).s, 200);
+  assert.equal(store.get('bookingSessions/own1_cars_seats_x1').taken, 2);
+  assert.equal((await qbook({ partySize: 3 })).s, 200);
+  assert.equal((await qbook({ partySize: 1 })).error, 'taken');
+  const row = [...store.values()].find((v: any) => v.sessionId === 'x1');
+  assert.equal(row.date, inD(10));
+  assert.equal(row.startMin, 480);
+  assert.match(row.slot, /رحلة الشاطئ/);
+});
+
+test('seat bookings check the session, the seats and the dates', async () => {
+  assert.equal((await qbook({ session: 'nope' })).error, 'bad_session');
+  assert.equal((await qbook({ session: 'x2' })).error, 'bad_date');
+  assert.equal((await qbook({ session: 'x3' })).error, 'bad_date');
+  assert.equal((await qbook({ partySize: 4 })).error, 'bad_party');
+  assert.equal((await qbook({ partySize: 0 })).error, 'bad_party');
+  assert.equal((await qbook({ schedule: 'main' })).error, 'bad_schedule');
+});
+
+test('a cancelled seat booking gives its seats back', async () => {
+  const entry = [...store.entries()].find(([k, v]: any) => k.startsWith('bookings/own1/items/') && v.sessionId === 'x1' && v.partySize === 3) as any;
+  tokens['tk3'] = { uid: 'own1' };
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', headers: { authorization: 'Bearer tk3' }, body: JSON.stringify({ action: 'status', owner: 'own1', id: entry[0].split('/').pop(), status: 'cancelled' }) }));
+  assert.equal(r.status, 200);
+  assert.equal(store.get('bookingSessions/own1_cars_seats_x1').taken, 2);
+  assert.equal((await qbook({ partySize: 3 })).s, 200);
+});

@@ -37,6 +37,7 @@ import { useCustomerPrefill } from './customers/customerSession';
 import { BookingPageContext, createBooking, dayKey, readTaken, readTakenTables } from '../services/bookings';
 import { usePublicTeam } from '../services/team';
 import { StayBookingWidget } from './StayBookingWidget';
+import { SeatBookingWidget } from './SeatBookingWidget';
 import { personWorks } from '../services/teamHours';
 import { coveredSlots, hallsFor, hasTable, isFree, stepOf, tablesFor, type Occupancy } from '../services/tableBooking';
 import { TableMapPicker } from './TableMapPicker';
@@ -140,7 +141,7 @@ interface InteractiveCalendarWidgetProps {
 }
 
 const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) =>
-  elem.calendarBookingType === 'stay' ? <StayBookingWidget elem={elem} /> : <AppointmentCalendarWidget elem={elem} />;
+  elem.calendarBookingType === 'stay' ? <StayBookingWidget elem={elem} /> : elem.calendarBookingType === 'seats' ? <SeatBookingWidget elem={elem} /> : <AppointmentCalendarWidget elem={elem} />;
 
 const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) => {
   const [name, setName] = useState('');

@@ -215,7 +215,8 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
               <div className="flex flex-wrap gap-1">
                 {(nights.length ? freeRooms : rooms.filter((r) => r.capacity >= guestCount)).map((r) => (
                   <button key={r.id} type="button" onClick={() => setRoomPick(wishRoom === r.id ? '' : r.id)}
-                    className={`px-2 h-7 rounded-lg border text-[10px] font-bold cursor-pointer ${wishRoom === r.id ? 'text-white' : text}`} style={wishRoom === r.id ? { backgroundColor: accent, borderColor: accent } : undefined}>
+                    className={`px-2 ${r.photo ? 'py-1 w-24 flex flex-col items-center gap-1' : 'h-7'} rounded-lg border text-[10px] font-bold cursor-pointer ${wishRoom === r.id ? 'text-white' : text}`} style={wishRoom === r.id ? { backgroundColor: accent, borderColor: accent } : undefined}>
+                    {r.photo && <img src={r.photo} alt="" referrerPolicy="no-referrer" className="w-full h-14 rounded-md object-cover" />}
                     {r.name}{r.price ? ` · ${r.price}` : ''}
                   </button>
                 ))}
@@ -223,6 +224,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
             )}
             {chosen && (
               <div className={`text-[10px] font-bold rounded-lg px-2.5 py-1.5 ${dark ? 'bg-white/10 text-white' : 'bg-neutral-50 text-neutral-700 border border-neutral-100'}`}>
+                {chosen.photo && <img src={chosen.photo} alt="" referrerPolicy="no-referrer" className="w-full h-28 rounded-lg object-cover mb-1.5" />}
                 {W.icon} {chosen.name}{rental ? '' : ` · تتسع ${chosen.capacity}`}{chosen.price ? ` · ${chosen.price}` : ''}
               </div>
             )}

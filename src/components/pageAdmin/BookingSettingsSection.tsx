@@ -16,6 +16,7 @@ import { BookingPaymentsEditor } from './BookingPaymentsEditor';
 import { MAX_SESSION_SEATS, dayPlus, newSessionId, type SeatSession } from '../../services/seatBooking';
 import { useRestaurantTables } from '../../services/tableBookingData';
 import type { ProjectKey } from '../../utils/projectKeys';
+import { ImagePicker } from '../restaurant/tabs/shared';
 import { Field, GhostButton, inputClass, inputFitClass, PrimaryButton, Toggle } from '../shop/adminUi';
 
 const DAY_NAMES: Record<string, string> = { sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت' };
@@ -230,9 +231,10 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
               </span>}
               <input className={inputFitClass} placeholder={current.rental ? 'السعر (اختياري): 40$ / يوم' : 'السعر (اختياري): 50$ / ليلة'} value={r.price} maxLength={40} onChange={(e) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)) })} />
               <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer" onClick={() => change({ rooms: current.rooms.filter((_, j) => j !== i) })}><Trash2 size={15} /></button>
+              <div className="col-span-full"><ImagePicker value={r.photo || ''} onChange={(photo) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, photo } : x)) })} /></div>
             </div>
           ))}
-          <GhostButton onClick={() => change({ rooms: [...current.rooms, { id: newRoomId(), name: '', capacity: current.rental ? 1 : 2, price: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> {current.rental ? 'أضف وحدة' : 'أضف غرفة'}</span></GhostButton>
+          <GhostButton onClick={() => change({ rooms: [...current.rooms, { id: newRoomId(), name: '', capacity: current.rental ? 1 : 2, price: '', photo: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> {current.rental ? 'أضف وحدة' : 'أضف غرفة'}</span></GhostButton>
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label={current.rental ? 'أقل عدد أيام' : 'أقل عدد ليالٍ'}>
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">

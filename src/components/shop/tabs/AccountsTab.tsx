@@ -1,13 +1,14 @@
 // الحسابات: the store page's accounts (sales and stock purchases), the side accounts the merchant
 // enters by hand (profits and expenses from outside the page), or both together; a dashboard with
 // statistics for the chosen period; and an A4 report to print or save as PDF.
-import React, { useMemo, useState } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
 import { ArrowDownLeft, ArrowUpRight, Plus, Printer, FileDown, Trash2 } from 'lucide-react';
 import { ShopEntry, PAYMENT_METHODS, newId } from '../shopTypes';
 import { Card, Field, inputClass, inputFitClass, EmptyState, PrimaryButton, formatMoney, formatDate } from '../adminUi';
 import { AdminTabProps } from './tabProps';
 import { dayKey } from '../orderModel';
 import { printReport } from './accountsReport';
+import { BookingPageContext, useDepositLines } from '../../../services/bookings';
 
 type Range = 'today' | '7d' | '30d' | 'year' | 'all' | 'custom';
 type AccountsView = 'page' | 'side' | 'all';
@@ -87,6 +88,9 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const [entry, setEntry] = useState({ type: 'income' as ShopEntry['type'], amount: '', reason: '', date: today() });
   const [entryError, setEntryError] = useState('');
   const currency = data.settings.currency;
+  // The deposits the owner confirmed on bookings count as sales of the page.
+  const bookingPage = useContext(BookingPageContext);
+  const deposits = useDepositLines(bookingPage?.owner, bookingPage?.project);
   // A negative amount keeps its minus sign before the digits in right-to-left text.
   const money = (n: number) => (n < 0 ? `\u2066-${formatMoney(-n, '').trim()}\u2069 ${currency}` : formatMoney(n, currency));
 
@@ -115,7 +119,8 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
 
   const movements = showPage ? data.movements.filter((m) => isoIn(m.createdAt)) : [];
   const entries = showSide ? data.entries.filter((e) => inRange(entryTime(e.date))) : [];
-  const sales = movements.filter((m) => m.type === 'sale').reduce((s, m) => s + m.qty * m.unitAmount, 0);
+  const depositRows = showPage ? deposits.filter((d) => isoIn(`${d.date}T12:00:00`)) : [];
+  const sales = movements.filter((m) => m.type === 'sale').reduce((s, m) => s + m.qty * m.unitAmount, 0) + depositRows.reduce((s, d) => s + d.amount, 0);
   const purchases = movements.filter((m) => m.type === 'purchase').reduce((s, m) => s + m.qty * m.unitAmount, 0);
   const income = entries.filter((e) => e.type === 'income').reduce((s, e) => s + e.amount, 0);
   const expenses = entries.filter((e) => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
@@ -127,6 +132,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
   const ledger: LedgerRow[] = [
     ...movements.map((m) => ({ id: m.id, kind: m.type, label: `${m.name} × ${m.qty}`, date: m.createdAt, amount: m.qty * m.unitAmount })),
     ...entries.map((e) => ({ id: e.id, kind: e.type, label: e.reason, date: e.date, amount: e.amount, entryId: e.id })),
+    ...depositRows.map((d) => ({ id: `dep-${d.id}`, kind: 'sale' as LedgerKind, kindLabel: 'عربون حجز', label: d.name, date: d.date, amount: d.amount })),
   ].sort((a, b) => (b.date.length === 10 ? entryTime(b.date) : new Date(b.date).getTime()) - (a.date.length === 10 ? entryTime(a.date) : new Date(a.date).getTime()));
 
   // Daily bars (last 14 days of the period at most): money in and money out.
@@ -355,7 +361,7 @@ export const AccountsTab: React.FC<AdminTabProps> = ({ data, update }) => {
                   <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${inflow ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                     {inflow ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}
                   </span>
-                  <span className="flex-1 min-w-0 truncate font-bold">{KIND_LABELS[r.kind]}: {r.label}</span>
+                  <span className="flex-1 min-w-0 truncate font-bold">{r.kindLabel || KIND_LABELS[r.kind]}: {r.label}</span>
                   <span className="text-neutral-400 shrink-0">{r.date.length === 10 ? formatDate(new Date(entryTime(r.date)).toISOString()) : formatDate(r.date)}</span>
                   <span className={`font-black shrink-0 ${inflow ? 'text-emerald-600' : 'text-amber-600'}`}>{money(r.amount)}</span>
                   {r.entryId && (

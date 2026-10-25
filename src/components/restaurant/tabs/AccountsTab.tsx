@@ -11,6 +11,8 @@ import { addLedgerEntry, deleteLedgerEntry, useLedger } from '../restaurantCloud
 import { Card, Field, inputClass, inputFitClass, PrimaryButton, EmptyState, formatMoney } from '../../shop/adminUi';
 import { CloudNotice, RestaurantTabProps, parseAmount } from './shared';
 import { GiftCardsTab } from './GiftCardsTab';
+import { useDepositLines } from '../../../services/bookings';
+import { ownerOfRestaurant, restaurantKeyOf } from '../../../utils/projectKeys';
 
 type Period = 'today' | 'week' | 'month' | 'all' | 'range';
 
@@ -28,13 +30,15 @@ const daysAgo = (n: number) => {
   return todayKey(d);
 };
 
-const SOURCE_LABEL: Record<LedgerEntry['source'], string> = { manual: 'يدوي', order: 'طلب', cashier: 'كاشير' };
+const SOURCE_LABEL: Record<LedgerEntry['source'], string> = { manual: 'يدوي', order: 'طلب', cashier: 'كاشير', booking: 'عربون حجز' };
 
 const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
 
 export const AccountsTab: React.FC<RestaurantTabProps> = (props) => {
   const { data, restaurantId } = props;
   const ledger = useLedger(restaurantId);
+  // The deposits the owner confirmed on bookings are income here too (they stay after the bookings go).
+  const deposits = useDepositLines(ownerOfRestaurant(restaurantId), restaurantKeyOf(restaurantId));
   const currency = data.settings.currency;
   const [period, setPeriod] = useState<Period>('month');
   const [range, setRange] = useState({ from: daysAgo(30), to: todayKey() });
@@ -49,7 +53,11 @@ export const AccountsTab: React.FC<RestaurantTabProps> = (props) => {
     : period === 'range' ? [range.from, range.to]
     : ['0000-00-00', '9999-99-99'];
 
-  const rows = useMemo(() => ledger.items.filter((e) => e.date >= from && e.date <= to), [ledger.items, from, to]);
+  const depositEntries = useMemo<LedgerEntry[]>(
+    () => deposits.map((d) => ({ id: `dep-${d.id}`, kind: 'income', date: d.date, createdAt: d.date, amount: d.amount, category: 'عربون حجز', method: d.walletLabel || 'تحويل', note: d.name, source: 'booking', orderId: '' })),
+    [deposits]
+  );
+  const rows = useMemo(() => [...ledger.items, ...depositEntries].filter((e) => e.date >= from && e.date <= to).sort((a, b) => b.date.localeCompare(a.date)), [ledger.items, depositEntries, from, to]);
   const income = rows.filter((e) => e.kind === 'income').reduce((s, e) => s + e.amount, 0);
   const expense = rows.filter((e) => e.kind === 'expense').reduce((s, e) => s + e.amount, 0);
   const byCategory = useMemo(() => {
@@ -77,6 +85,7 @@ export const AccountsTab: React.FC<RestaurantTabProps> = (props) => {
     setForm((f) => ({ ...f, amount: '', note: '' }));
   };
   const remove = (e: LedgerEntry) => {
+    if (e.source === 'booking') return setError('عربون الحجز يتغير من تبويب المواعيد (إلغاء الحجز).');
     if (!window.confirm(e.source === 'order' ? 'هذا القيد جاء من طلب مُسلَّم. حذفه؟' : 'حذف هذا القيد؟')) return;
     deleteLedgerEntry(restaurantId, e.id).catch(() => {});
   };

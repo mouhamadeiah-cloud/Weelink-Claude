@@ -460,6 +460,10 @@ service cloud.firestore {
     match /bookings/{ownerId}/items/{bookingId} {
       allow read: if canManage(ownerId);
     }
+    // The confirmed deposits of the page, for its accounts and report (api/booking.ts writes them).
+    match /bookingDeposits/{ownerId}/items/{bookingId} {
+      allow read: if canManage(ownerId);
+    }
     match /bookingDays/{dayId} {
       allow get: if true;
     }

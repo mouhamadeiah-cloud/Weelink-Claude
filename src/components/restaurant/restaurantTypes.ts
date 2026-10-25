@@ -438,7 +438,7 @@ export const submitOrder = (d: RestaurantAdminData, order: MenuOrder): Restauran
 // themselves (source 'order'); the cashier will add its sales the same way (source 'cashier').
 
 export type LedgerKind = 'income' | 'expense';
-type LedgerSource = 'manual' | 'order' | 'cashier';
+type LedgerSource = 'manual' | 'order' | 'cashier' | 'booking';
 
 export interface LedgerEntry {
   id: string;

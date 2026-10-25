@@ -3,6 +3,7 @@
 //   POST /api/booking  { action: 'create', owner, project, date, startMin, slot, ... }
 //        → a visitor books a free time; the booking is saved and both sides get an email
 //                                                                   → { id, status } | { error }
+//        a «مقاعد» schedule: { session, partySize } books that many seats of one session (bookingSessions/…, counted in a transaction)
 //   POST /api/booking  { action: 'owner-create', owner, project, ... }  with  Authorization: Bearer <ID token>
 //        → the owner (or a member) books on the admin's grid: confirmed, the table/person pinned, no emails
 //   POST /api/booking  { action: 'worker-…' }  → the worker's page (server/worker.ts)
@@ -24,6 +25,8 @@ import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type Q
 import { Resend } from 'resend';
 import { chooseRoom, nightsBetween, normalizeRooms, type RoomNights, type StayRoom } from '../src/services/stayBooking.js';
 import { workerAction } from '../server/worker.js';
+import { canTake, normalizeSessions, type SeatSession } from '../src/services/seatBooking.js';
+import { timeLabel } from '../src/services/bookingGrid.js';
 import { personWorks } from '../src/services/teamHours.js';
 import { chooseTable, coveredSlots, tablesOfHalls, type BookableTable } from '../src/services/tableBooking.js';
 import { restaurantIdOf } from '../src/utils/projectKeys.js';
@@ -112,6 +115,7 @@ const mailHtml = (title: string, lead: string, b: any, extra = '') => `<!doctype
       ${row('الحالة', STATUS[b.status])}
       ${row('طريقة اللقاء', MEETING[b.meetingType])}
       ${row('عدد الأشخاص', b.partySize)}
+      ${row('الفعالية', b.sessionName)}
       ${row('الغرفة', b.roomName)}
       ${row('المغادرة', b.checkOut ? dateLabel(b.checkOut) : '')}
       ${row('الطاولة', b.tableName ? `${b.tableName}${b.hallName ? ` · ${b.hallName}` : ''}` : '')}
@@ -147,6 +151,8 @@ const dayDoc = (admin: Admin, b: { owner: string; project: string; date: string;
   admin.db.collection('bookingDays').doc(`${b.owner}_${b.project}_${b.date}${scheduleOf(b.schedule) === 'main' ? '' : `_${b.schedule}`}${b.person ? `_p${b.person}` : ''}`);
 const roomDoc = (admin: Admin, b: { owner: string; project: string; schedule?: string }, roomId: string) =>
   admin.db.collection('bookingRooms').doc(`${b.owner}_${b.project}_${scheduleOf(b.schedule)}_${roomId}`);
+const sessionDoc = (admin: Admin, b: { owner: string; project: string; schedule?: string }, sessionId: string) =>
+  admin.db.collection('bookingSessions').doc(`${b.owner}_${b.project}_${scheduleOf(b.schedule)}_${sessionId}`);
 const items = (admin: Admin, owner: string) => admin.db.collection('bookings').doc(owner).collection('items');
 // The bookings of the days a bookingDays query found.
 const bookingsOf = async (admin: Admin, days: QuerySnapshot) => {
@@ -212,7 +218,7 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
   // A table booking (restaurants): the party, the schedule's length and the restaurant's tables decide it.
   let tables: BookableTable[] = [];
   let tableRule: { party: number; duration: number; step: number } | null = null;
-  if (body.partySize !== undefined && body.checkOut === undefined) {
+  if (body.partySize !== undefined && body.checkOut === undefined && body.session === undefined) {
     const party = Math.round(Number(body.partySize));
     const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
     // A restaurant that never saved its table settings books with the defaults of the «table» schedule.
@@ -260,6 +266,24 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
     });
   }
 
+  // Seats in a session (courses, trips, events): the session decides the day and time; the seats are counted below.
+  let seatSession: SeatSession | null = null;
+  if (body.session !== undefined) {
+    const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
+    const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule);
+    if (!schedule || schedule.type !== 'seats') return json({ error: 'bad_schedule' }, 400);
+    seatSession = normalizeSessions(schedule.sessions).find((s) => s.id === body.session) || null;
+    if (!seatSession) return json({ error: 'bad_session' }, 400);
+    const seats = Math.round(Number(body.partySize));
+    const most = byOwner ? seatSession.seats : Math.max(1, Math.round(Number(schedule.maxSeatsPerBooking)) || 6);
+    if (!Number.isInteger(seats) || seats < 1 || seats > most) return json({ error: 'bad_party' }, 400);
+    if (seatSession.date < dayIn(0) || (!byOwner && seatSession.date > dayIn(Math.min(365, Math.max(1, Math.round(Number(schedule.daysAhead)) || 180))))) return json({ error: 'bad_date' }, 400);
+    Object.assign(booking, {
+      date: seatSession.date, startMin: seatSession.startMin, meetingType: '', partySize: seats,
+      sessionId: seatSession.id, sessionName: seatSession.name, slot: `${seatSession.name} · ${timeLabel(seatSession.startMin)}`,
+    });
+  }
+
   const toOwner = byOwner ? '' : await ownerEmail(admin, owner);
   if (!toOwner && !byOwner) {
     // A missing owner is 404; anything else (Google refusing the service account, say) is 500 with its reason.
@@ -276,6 +300,16 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
   let failure = '';
   const result = await admin.db
     .runTransaction(async (tx) => {
+      if (seatSession) {
+        const seatsRef = sessionDoc(admin, booking, seatSession.id);
+        const taken = Number((await tx.get(seatsRef)).data()?.taken) || 0;
+        if (!canTake(seatSession, taken, (booking as any).partySize)) return 'taken';
+        tx.set(seatsRef, { owner, project, schedule: booking.schedule, taken: taken + (booking as any).partySize }, { merge: true });
+        // A bookingDays document too, so the day-before reminder finds the session.
+        tx.set(day, { owner, project, date: booking.date }, { merge: true });
+        tx.set(ref, booking);
+        return 'ok';
+      }
       if (stayRule) {
         // The smallest free room that fits the guests (or the wished one) for every night of the stay.
         const candidates = stayRooms.filter((r) => r.capacity >= stayRule!.guests && (!validId(body.room) || r.id === body.room));
@@ -328,7 +362,7 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
     {
       to: booking.email,
       fromName: booking.pageName,
-      subject: `${booking.status === 'new' ? 'وصل طلب موعدك' : 'تم تأكيد موعدك'} · ${dateLabel(date)}`,
+      subject: `${booking.status === 'new' ? 'وصل طلب موعدك' : 'تم تأكيد موعدك'} · ${dateLabel(booking.date)}`,
       html: mailHtml(
         booking.status === 'new' ? 'وصل طلب موعدك' : 'تم تأكيد موعدك',
         booking.status === 'new'
@@ -337,11 +371,11 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
         booking
       ),
     },
-    ...personMails(booking as any, toOwner, `موعد جديد معك: ${booking.name} · ${dateLabel(date)} ${booking.slot}`, 'موعد جديد معك', `حجز ${esc(booking.name)} موعداً معك على ${esc(pageName)}.`),
+    ...personMails(booking as any, toOwner, `موعد جديد معك: ${booking.name} · ${dateLabel(booking.date)} ${booking.slot}`, 'موعد جديد معك', `حجز ${esc(booking.name)} موعداً معك على ${esc(pageName)}.`),
     {
       to: toOwner,
       fromName: 'Weelink',
-      subject: `موعد جديد: ${booking.name} · ${dateLabel(date)} ${booking.slot}`,
+      subject: `موعد جديد: ${booking.name} · ${dateLabel(booking.date)} ${booking.slot}`,
       html: mailHtml(
         'موعد جديد على صفحتك',
         booking.status === 'new'
@@ -371,7 +405,13 @@ const changeStatus = async (admin: Admin, request: Request, body: any) => {
   await ref.update({ status: body.status, updatedAt: new Date().toISOString() });
   // A cancelled time is free again.
   if (body.status === 'cancelled') {
-    if (b.roomId && b.checkOut) {
+    if (b.sessionId) {
+      const seatsRef = sessionDoc(admin, b, b.sessionId);
+      await admin.db.runTransaction(async (tx) => {
+        const taken = Number((await tx.get(seatsRef)).data()?.taken) || 0;
+        tx.set(seatsRef, { taken: Math.max(0, taken - (Number(b.partySize) || 0)) }, { merge: true });
+      }).catch(() => {});
+    } else if (b.roomId && b.checkOut) {
       const room = roomDoc(admin, b, b.roomId);
       const gone = nightsBetween(b.date, b.checkOut);
       await admin.db.runTransaction(async (tx) => {

@@ -13,8 +13,9 @@ import { db } from './firebase';
 import type { CanvasElement } from '../types';
 import type { ProjectKey } from '../utils/projectKeys';
 import { normalizeRooms, type StayRoom } from './stayBooking';
+import { normalizeSessions, type SeatSession } from './seatBooking';
 
-export type BookingType = 'appointment' | 'table' | 'stay';
+export type BookingType = 'appointment' | 'table' | 'stay' | 'seats';
 // A «إقامة» schedule: 'auto' = the smallest free room that fits the guests; 'room' = the visitor picks the room.
 export type RoomChoice = 'auto' | 'room';
 // Who a visitor books with: nobody in particular, a team person of their choice (or any free one), or
@@ -48,6 +49,8 @@ export interface BookingSchedule {
   minNights: number;
   maxNights: number;
   roomChoice: RoomChoice;
+  sessions: SeatSession[]; // type 'seats': the sessions with seats to book
+  maxSeatsPerBooking: number; // type 'seats': most seats one booking takes
   daysAhead: number; // how far ahead a visitor may book
   minNoticeHours: number; // how soon before a time it can still be booked
 }
@@ -77,6 +80,8 @@ const DEFAULT: Omit<BookingSchedule, 'id' | 'name'> = {
   minNights: 1,
   maxNights: 30,
   roomChoice: 'auto',
+  sessions: [],
+  maxSeatsPerBooking: 6,
   daysAhead: 60,
   minNoticeHours: 0,
 };
@@ -88,7 +93,7 @@ const clampInt = (v: unknown, min: number, max: number, fallback: number) => {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 };
 
-export const newSchedule = (id: string, name: string): BookingSchedule => ({ ...DEFAULT, id, name, workingDays: [...DEFAULT.workingDays], meetingTypes: [...DEFAULT.meetingTypes], rooms: [] });
+export const newSchedule = (id: string, name: string): BookingSchedule => ({ ...DEFAULT, id, name, workingDays: [...DEFAULT.workingDays], meetingTypes: [...DEFAULT.meetingTypes], rooms: [], sessions: [] });
 
 export const newScheduleId = () => `s${Date.now().toString(36)}`;
 
@@ -96,7 +101,7 @@ export const normalizeSchedule = (raw: any, fallbackId = 'main'): BookingSchedul
   const id = typeof raw?.id === 'string' && /^[a-z0-9]{1,20}$/.test(raw.id) ? raw.id : fallbackId;
   const days = Array.isArray(raw?.workingDays) ? WEEK_DAYS.filter((d) => raw.workingDays.includes(d)) : DEFAULT.workingDays;
   const meetings = Array.isArray(raw?.meetingTypes) ? MEETING_TYPES.filter((m) => raw.meetingTypes.includes(m)) : [];
-  const type: BookingType = raw?.type === 'table' ? 'table' : raw?.type === 'stay' ? 'stay' : 'appointment';
+  const type: BookingType = raw?.type === 'table' ? 'table' : raw?.type === 'stay' ? 'stay' : raw?.type === 'seats' ? 'seats' : 'appointment';
   const durationMinutes = clampInt(raw?.durationMinutes, 15, 480, DEFAULT.durationMinutes);
   return {
     id,
@@ -120,6 +125,8 @@ export const normalizeSchedule = (raw: any, fallbackId = 'main'): BookingSchedul
     minNights: clampInt(raw?.minNights, 1, 30, 1),
     maxNights: Math.max(clampInt(raw?.minNights, 1, 30, 1), clampInt(raw?.maxNights, 1, 90, 30)),
     roomChoice: raw?.roomChoice === 'room' ? 'room' : 'auto',
+    sessions: normalizeSessions(raw?.sessions),
+    maxSeatsPerBooking: clampInt(raw?.maxSeatsPerBooking, 1, 50, DEFAULT.maxSeatsPerBooking),
     daysAhead: clampInt(raw?.daysAhead, 1, 365, DEFAULT.daysAhead),
     minNoticeHours: clampInt(raw?.minNoticeHours, 0, 168, 0),
   };
@@ -161,12 +168,15 @@ export const scheduleFor = (settings: BookingSettings | null, scheduleId?: strin
   const own = settings.schedules.find((s) => s.id === scheduleId && (!wantType || s.type === wantType));
   if (own) return own;
   // A table element never falls back to an appointment schedule: it waits for its own (or the defaults).
-  if (wantType === 'table' || wantType === 'stay') return settings.schedules.find((s) => s.type === wantType) || null;
+  if (wantType === 'table' || wantType === 'stay' || wantType === 'seats') return settings.schedules.find((s) => s.type === wantType) || null;
   return settings.schedules.find((s) => s.id === scheduleId) || settings.schedules[0];
 };
 
 // A hotel's first stay schedule when it has none saved (no rooms yet): shown by the element and the admin.
 export const newStaySchedule = (): BookingSchedule => ({ ...newSchedule('stay', 'حجز الغرف'), type: 'stay', breakStart: '', breakEnd: '', daysAhead: 180, meetingTypes: ['personal'] });
+
+// A page's first seats schedule when it has none saved (no sessions yet): shown by the element and the admin.
+export const newSeatsSchedule = (): BookingSchedule => ({ ...newSchedule('seats', 'حجز المقاعد'), type: 'seats', breakStart: '', breakEnd: '', daysAhead: 180, meetingTypes: ['personal'] });
 
 // A restaurant's first table schedule when it has none saved: shown by the element and the admin.
 export const newTableSchedule = (): BookingSchedule => ({ ...newSchedule('table', 'حجز الطاولات'), type: 'table', workStart: '12:00', workEnd: '23:00', breakStart: '', breakEnd: '', interval: 'manual', intervalMinutes: 90, meetingTypes: ['personal'] });

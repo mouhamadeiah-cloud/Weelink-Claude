@@ -3,6 +3,7 @@
 // sides, and bookings older than 3 months are deleted.
 //   bookings/{owner}/items/{id}                 the booking; the owner and members read it
 //   bookingDays/{owner}_{project}_{yyyy-mm-dd}  { taken: [startMin] }; anyone reads it
+//   bookingSessions/{owner}_{project}_{schedule}_{session}  { taken: seats } of a session; anyone reads it
 //   bookingRooms/{owner}_{project}_{schedule}_{room}  { nights: [yyyy-mm-dd] } of a hotel room; anyone reads it
 import { createContext } from 'react';
 import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore';
@@ -28,6 +29,9 @@ export interface Booking {
   nights?: number;
   roomId?: string;
   roomName?: string;
+  // Seats in a session (courses, trips, events): the session, and how many seats were booked (partySize).
+  sessionId?: string;
+  sessionName?: string;
   // The team person it was booked with («فريق العمل»), when the schedule has specialists.
   person?: string;
   personName?: string;
@@ -68,6 +72,13 @@ export const readTakenTables = async (owner: string, project: ProjectKey, date: 
   return Object.fromEntries(Object.entries(t).map(([id, v]) => [id, Array.isArray(v) ? v.filter((n) => typeof n === 'number') : []]));
 };
 
+// A «مقاعد» schedule's session: the seats already booked.
+export const readSessionTaken = async (owner: string, project: ProjectKey, schedule: string, session: string): Promise<number> => {
+  const snap = await getDoc(doc(db, 'bookingSessions', `${owner}_${project}_${schedule}_${session}`));
+  const n = Number(snap.data()?.taken);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+
 // A «إقامة» schedule's room: the nights already taken.
 export const readRoomNights = async (owner: string, project: ProjectKey, schedule: string, room: string): Promise<string[]> => {
   const snap = await getDoc(doc(db, 'bookingRooms', `${owner}_${project}_${schedule}_${room}`));
@@ -81,7 +92,7 @@ export const readTaken = async (owner: string, project: ProjectKey, date: string
   return Array.isArray(taken) ? taken.filter((n) => typeof n === 'number') : [];
 };
 
-export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tableName' | 'hallName' | 'durationMin' | 'roomName' | 'nights'> & { needsConfirmation: boolean; hall?: string; room?: string };
+export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tableName' | 'hallName' | 'durationMin' | 'roomName' | 'nights'> & { needsConfirmation: boolean; hall?: string; room?: string; session?: string };
 
 // 'taken': somebody booked that time a moment before.
 export const createBooking = async (b: NewBooking): Promise<{ id: string; status: BookingStatus; tableName?: string; hallName?: string; roomName?: string } | { error: string; reason?: string }> => {

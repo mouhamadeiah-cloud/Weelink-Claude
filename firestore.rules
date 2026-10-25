@@ -468,6 +468,11 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    // The seats booked of a session (api/booking.ts writes them).
+    match /bookingSessions/{sessionId} {
+      allow get: if true;
+    }
+
     // «إعدادات الحجز» (src/services/bookingSettings.ts): how a page takes bookings. The page reads it to
     // work out the free times; the owner and the members write it.
     match /bookingSettings/{ownerId}/pages/{projectKey} {

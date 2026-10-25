@@ -464,6 +464,15 @@ service cloud.firestore {
     match /bookingDeposits/{ownerId}/items/{bookingId} {
       allow read: if canManage(ownerId);
     }
+    // The hand entries of a Pro page's accounts (src/services/pageLedger.ts).
+    match /pageLedger/{ownerId}/items/{entryId} {
+      allow read, delete: if canManage(ownerId);
+      allow create: if canManage(ownerId)
+        && request.resource.data.kind in ['income', 'expense']
+        && request.resource.data.amount is number && request.resource.data.amount > 0
+        && request.resource.data.date is string && request.resource.data.date.size() == 10
+        && request.resource.data.keys().hasOnly(['project', 'kind', 'amount', 'category', 'note', 'date', 'createdAt']);
+    }
     match /bookingDays/{dayId} {
       allow get: if true;
     }

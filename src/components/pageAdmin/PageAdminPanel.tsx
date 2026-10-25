@@ -15,6 +15,7 @@ import { watchBookings } from '../../services/bookings';
 import { ServicesSection } from './ServicesSection';
 import { TeamSection } from './TeamSection';
 import { BookingSettingsSection } from './BookingSettingsSection';
+import { PageAccountsSection } from './PageAccountsSection';
 import { BookingSettingsFocusContext } from '../../services/bookingSettings';
 import type { PageAdminData } from './pageServices';
 import { AdminIntroButton } from '../introVideos/AdminIntroButton';
@@ -26,6 +27,8 @@ interface PageAdminPanelProps {
   project: ProjectKey;
   pageName: string;
   published: boolean;
+  // Bookings and accounts belong to the packages above the free page (src/utils/planLimits.ts).
+  bookingsOn?: boolean;
   // The page's services as items («خدماتي»); left out where the panel has no store for them.
   pageAdmin?: PageAdminData;
   onPageAdmin?: (fn: (d: PageAdminData) => PageAdminData) => void;
@@ -47,7 +50,7 @@ const SERVICES = [
   { icon: Globe2, title: 'دومين خاص', line: 'صفحتك على اسمك أنت بدل رابط Weelink، من نافذة «نشر».', soon: false },
 ];
 
-export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, owner, project, pageName, published, pageAdmin, onPageAdmin, onEditPage, onPublish, loadStats = readStats, watchBookings: watch }) => {
+export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, owner, project, pageName, published, bookingsOn = true, pageAdmin, onPageAdmin, onEditPage, onPublish, loadStats = readStats, watchBookings: watch }) => {
   const [stats, setStats] = useState<DayStats[] | null | 'error'>(null);
   const bookingFocus = useContext(BookingSettingsFocusContext);
 
@@ -100,9 +103,19 @@ export const PageAdminPanel: React.FC<PageAdminPanelProps> = ({ open, onClose, o
 
           {pageAdmin && onPageAdmin && <ServicesSection data={pageAdmin} onChange={onPageAdmin} />}
 
-          <BookingsSection owner={owner} project={project} watch={watch} />
+          {bookingsOn ? (
+            <>
+              <BookingsSection owner={owner} project={project} watch={watch} />
 
-          <BookingSettingsSection owner={owner} project={project} focus={bookingFocus} />
+              <BookingSettingsSection owner={owner} project={project} focus={bookingFocus} />
+
+              <PageAccountsSection owner={owner} project={project} pageName={pageName} />
+            </>
+          ) : (
+            <section className="rounded-2xl bg-white border border-neutral-200 p-4 text-xs font-bold text-neutral-600 leading-relaxed">
+              الحجوزات والحسابات متوفرة بباقة برو. رقّي باقتك من «نشر» أو من «حسابي».
+            </section>
+          )}
 
           <TeamSection owner={owner} asSection />
 

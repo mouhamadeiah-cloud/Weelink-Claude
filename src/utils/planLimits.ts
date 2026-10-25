@@ -5,38 +5,40 @@
 //   gallery      photos in one gallery element
 //   devices      tablets and screens of a restaurant, the package's own plus the extra ones bought
 //   builds       «ابن صفحتي» per day (perDay) or once for the project (perDay false)
+//   bookings     the booking element, its admin tab and the accounts (every package but the free ones, Eyad 25 Oct)
 export interface PlanLimits {
   items: number;
   gallery: number;
   devices: number;
   builds: number;
   perDay: boolean;
+  bookings: boolean;
 }
 
 /** The most photos any gallery holds (the Pro packages'); the free page's is 5. */
 export const GALLERY_MAX = 15;
 
 const NONE = Number.POSITIVE_INFINITY;
-export const UNLIMITED: PlanLimits = { items: NONE, gallery: NONE, devices: NONE, builds: NONE, perDay: true };
+export const UNLIMITED: PlanLimits = { items: NONE, gallery: NONE, devices: NONE, builds: NONE, perDay: true, bookings: true };
 
 // 30 and 60 keep the free page's gallery and build once a day; Pro gets 15 photos and 5 builds a day.
 // The restaurant's 30 has no tablet (online orders only), 60 one tablet for kitchen and cashier, Pro
 // one for each role (cashier, kitchen, bar, waiter).
 const LIMITS: Record<string, PlanLimits> = {
-  'page-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false },
-  'page-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true },
-  'restaurant-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false },
-  'shop-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false },
-  'cars-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false },
-  'restaurant-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true },
-  'restaurant-60': { items: 60, gallery: 5, devices: 1, builds: 1, perDay: true },
-  'restaurant-pro': { items: NONE, gallery: 15, devices: 4, builds: 5, perDay: true },
-  'shop-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true },
-  'shop-60': { items: 60, gallery: 5, devices: 0, builds: 1, perDay: true },
-  'shop-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true },
-  'cars-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true },
-  'cars-60': { items: 60, gallery: 5, devices: 0, builds: 1, perDay: true },
-  'cars-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true },
+  'page-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false, bookings: false },
+  'page-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true, bookings: true },
+  'restaurant-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false, bookings: false },
+  'shop-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false, bookings: false },
+  'cars-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false, bookings: false },
+  'restaurant-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
+  'restaurant-60': { items: 60, gallery: 5, devices: 1, builds: 1, perDay: true, bookings: true },
+  'restaurant-pro': { items: NONE, gallery: 15, devices: 4, builds: 5, perDay: true, bookings: true },
+  'shop-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
+  'shop-60': { items: 60, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
+  'shop-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true, bookings: true },
+  'cars-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
+  'cars-60': { items: 60, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
+  'cars-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true, bookings: true },
 };
 
 /** A package's limits, with the extra devices bought on top; an unknown package is the free page's. */

@@ -48,6 +48,8 @@ const uploadDataUrlToStorage = async (dataurl: string, baseName: string): Promis
   return hostImageBlob('images', baseName, blob);
 };
 
+const PIXABAY_BATCH = 30;
+
 type ImageDoorType = 'device' | 'gallery' | 'graphics';
 
 interface ImageDrawerSectionProps {
@@ -265,6 +267,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
   const [libType, setLibType] = useState<PixabayType>('photo');
   const [photoSource, setPhotoSource] = useState<'unsplash' | 'pixabay'>('unsplash');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(9);
   const usePixabay = libType !== 'photo' || photoSource === 'pixabay';
   const pixabayKind: PixabayType = libType;
   const galleryRootRef = useRef<HTMLDivElement>(null);
@@ -289,7 +292,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
     const timer = setTimeout(async () => {
       try {
         const result = usePixabay
-          ? await fetchPixabay({ type: pixabayKind, query: gallerySearch, category: galleryCategory, page: 1, perPage: 9 }).then((r) => ({ ...r, isLive: !r.error }))
+          ? await fetchPixabay({ type: pixabayKind, query: gallerySearch, category: galleryCategory, page: 1, perPage: PIXABAY_BATCH }).then((r) => ({ ...r, isLive: !r.error }))
           : await fetchUnsplashPhotos({
               query: gallerySearch,
               category: galleryCategory,
@@ -301,6 +304,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           setGalleryError(result.error);
           setGalleryPhotos(result.items);
           setGalleryPage(1);
+          setVisibleCount(9);
           setTotalPages(result.totalPages);
           setTotalCount(result.total);
           setIsLive(result.isLive);
@@ -320,13 +324,19 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
     };
   }, [activeDoor, galleryCategory, gallerySearch, libType, photoSource]);
 
+  // Pixabay answers 30 at a time; the grid reveals 9 per click from what is already loaded, so «عرض المزيد» is instant.
   const loadMorePixabay = async () => {
+    if (visibleCount < galleryPhotos.length) {
+      setVisibleCount((n) => n + 9);
+      return;
+    }
     if (isLoadingMore || galleryPage >= totalPages) return;
     setIsLoadingMore(true);
-    const result = await fetchPixabay({ type: pixabayKind, query: gallerySearch, category: galleryCategory, page: galleryPage + 1, perPage: 9 });
+    const result = await fetchPixabay({ type: pixabayKind, query: gallerySearch, category: galleryCategory, page: galleryPage + 1, perPage: PIXABAY_BATCH });
     if (!result.error) {
       setGalleryPhotos((prev) => [...prev, ...result.items.filter((it) => !prev.some((p) => p.id === it.id))]);
       setGalleryPage(result.page);
+      setVisibleCount((n) => n + 9);
     }
     setIsLoadingMore(false);
   };
@@ -792,7 +802,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           {/* 3x3 (or dynamic) Photo Grid (شبكة صور Unsplash الحية) */}
           {!isLoadingGallery && (
             <div className="grid grid-cols-3 gap-2 pt-1">
-              {galleryPhotos.map((photo) => (
+              {(usePixabay ? galleryPhotos.slice(0, visibleCount) : galleryPhotos).map((photo) => (
                 <div
                   key={photo.id}
                   onClick={() => handleAddGalleryPhoto(photo)}
@@ -864,7 +874,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           )}
 
           {/* «عرض المزيد» opens the wide photo panel beside the control panel. */}
-          {usePixabay && !isLoadingGallery && galleryPhotos.length > 0 && galleryPage < totalPages && (
+          {usePixabay && !isLoadingGallery && galleryPhotos.length > 0 && (visibleCount < galleryPhotos.length || galleryPage < totalPages) && (
             <button
               type="button"
               onClick={loadMorePixabay}

@@ -19,6 +19,7 @@ const PublicSite = lazy(() => import('./components/publish/PublicSite').then((m)
 const AdminSite = lazy(() => import('./components/admin/AdminSite').then((m) => ({default: m.AdminSite})));
 const SuspendedGate = lazy(() => import('./components/publish/SuspendedGate').then((m) => ({default: m.SuspendedGate})));
 const OrderStatusPage = lazy(() => import('./components/restaurant/OrderStatusPage').then((m) => ({default: m.OrderStatusPage})));
+const WorkerPage = lazy(() => import('./components/WorkerPage').then((m) => ({default: m.WorkerPage})));
 const DevicePage = lazy(() => import('./components/restaurant/DeviceScreen').then((m) => ({default: m.DevicePage})));
 
 const params = new URLSearchParams(window.location.search);
@@ -26,6 +27,7 @@ const siteUid = params.get('r');
 const kitchenUid = params.get('kitchen');
 const deviceUid = params.get('device');
 const orderId = params.get('order');
+const workerOwner = params.get('worker');
 const isAdminSite = window.location.hostname.toLowerCase().startsWith('admin.') || params.has('admin');
 const publishedSite = isAdminSite ? null : siteFromLocation();
 
@@ -53,7 +55,9 @@ const HostGate = ({host}: {host: string}) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isAdminSite ? (
+    {workerOwner && !isAdminSite ? (
+      <Suspense fallback={null}><WorkerPage owner={workerOwner} /></Suspense>
+    ) : isAdminSite ? (
       <Suspense fallback={null}><AdminSite /></Suspense>
     ) : publishedSite && 'host' in publishedSite && !siteUid ? (
       <HostGate host={publishedSite.host} />

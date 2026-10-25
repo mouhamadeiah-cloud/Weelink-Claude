@@ -18,6 +18,7 @@ import photos from '../api/photos.js';
 import rating from '../api/rating.js';
 import sendEmail from '../api/send-email.js';
 import uploadImage from './upload-image.js';
+import worker from '../api/worker.js';
 import indexSite from './index-site.js';
 import { serveMedia } from './media.js';
 import { serveSiteHead } from './site-head.js';
@@ -28,7 +29,7 @@ type Handler = { fetch(request: Request): Promise<Response> };
 
 const ROUTES: Record<string, Handler> = {
   admin, booking, 'build-page': buildPage, contact, designers, domains, 'email-code': emailCode,
-  geocode, 'item-numbers': itemNumbers, 'order-status': orderStatus, photos, rating, 'send-email': sendEmail, 'upload-image': uploadImage, 'index-site': indexSite,
+  geocode, 'item-numbers': itemNumbers, 'order-status': orderStatus, photos, rating, 'send-email': sendEmail, 'upload-image': uploadImage, 'index-site': indexSite, worker,
 };
 // These addresses share the designers handler, which reads the area from the path.
 for (const name of ['gallery', 'design-orders', 'design-access']) ROUTES[name] = designers;

@@ -2,7 +2,7 @@
 // the build folder (Eyad, 18 Oct: everything on Cloudflare). Every such link inside a page's content
 // becomes /media?u=<link> (worker/media.ts), which copies the file into R2 on its first request.
 // The page being edited keeps its original links; only the published copy is rewritten.
-const LINK = /https:\/\/images\.unsplash\.com\/[^\s"')]+|(?<![\w/.:-])\/(?:bg-videos|graphics)\/[\w.-]+/g;
+const LINK = /https:\/\/(?:images\.unsplash\.com|cdn\.pixabay\.com|i\.vimeocdn\.com)\/[^\s"')]+|(?<![\w/.:-])\/(?:bg-videos|graphics)\/[\w.-]+/g;
 
 const mirrorString = (text: string) => text.replace(LINK, (link) => `/media?u=${encodeURIComponent(link)}`);
 

@@ -1,11 +1,12 @@
 // GET /media?u=<link>: a template photo or library video from our own R2 store instead of its original
 // place (Eyad, 18 Oct: everything on Cloudflare). Published pages point here (src/services/mirror.ts).
 // The first request copies the file into R2 under shared/<sha256 of the link>, later ones read it from there.
-// Only Unsplash photos (squeezed to about 300 KB as WebP) and the library files under /bg-videos/ and
+// Only Unsplash photos (squeezed to about 300 KB as WebP), Pixabay files (as they are, up to 15 MB) and the library files under /bg-videos/ and
 // /graphics/ of our own site are copied; any other link is refused.
 import { imagesBucket, type ImagesBucket } from '../server/images.js';
 
 const MAX_BYTES = 300 * 1024;
+const MAX_PIXABAY_BYTES = 15 * 1024 * 1024;
 const OWN_PATH = /^\/(bg-videos|graphics)\/[\w.-]+$/;
 
 const sha256 = async (text: string) => {
@@ -33,6 +34,16 @@ const fetchUnsplash = async (link: URL): Promise<{ body: ArrayBuffer; type: stri
   return null;
 };
 
+// A Pixabay photo or video (or its poster, which Pixabay serves from Vimeo's image host) as it is (its videos are the small size), up to 15 MB; Pixabay asks that pages do not hotlink its files.
+const fetchPixabay = async (link: URL): Promise<{ body: ArrayBuffer; type: string } | null> => {
+  const res = await fetch(link.toString());
+  if (!res.ok) return null;
+  const type = (res.headers.get('content-type') || '').split(';')[0];
+  if (!/^(image|video)\//.test(type)) return null;
+  const body = await res.arrayBuffer();
+  return body.byteLength <= MAX_PIXABAY_BYTES ? { body, type } : null;
+};
+
 const copyIn = async (link: string, assets: { fetch(request: Request): Promise<Response> }, origin: string): Promise<{ body: ArrayBuffer; type: string } | null> => {
   if (link.startsWith('/')) {
     if (!OWN_PATH.test(link)) return null;
@@ -46,7 +57,9 @@ const copyIn = async (link: string, assets: { fetch(request: Request): Promise<R
   } catch {
     return null;
   }
-  return url.protocol === 'https:' && url.hostname === 'images.unsplash.com' ? fetchUnsplash(url) : null;
+  if (url.protocol === 'https:' && url.hostname === 'images.unsplash.com') return fetchUnsplash(url);
+  if (url.protocol === 'https:' && (url.hostname === 'cdn.pixabay.com' || url.hostname === 'i.vimeocdn.com')) return fetchPixabay(url);
+  return null;
 };
 
 const serve = async (bucket: ImagesBucket, key: string, request: Request): Promise<Response | null> => {

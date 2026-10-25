@@ -1,7 +1,11 @@
-// Server function: searches Unsplash photos for the editor's image gallery.
+// Server function: searches Unsplash photos for the editor's image gallery, and Pixabay's photos,
+// illustrations, vectors, 3D and videos (the same function: Vercel previews allow only 12 functions).
 //
 //   GET /api/photos?q=<search>&category=<arabic category>&page=1&perPage=24
 //     → { items, total, totalPages, page }
+//   GET /api/photos?src=pixabay&type=photo|illustration|vector|3d|video&q=…&category=…&page=1&perPage=24
+//     → the same shape; a video item also carries videoUrl, duration. Pixabay asks for answers cached 24 hours.
+// The Pixabay key lives only in the environment variable PIXABAY_API_KEY.
 //   GET /api/photos?track=<photo id>
 //     → tells Unsplash the photo was used (required by its API guidelines)
 //
@@ -11,12 +15,12 @@
 
 const MAX_PER_PAGE = 30;
 
-const json = (body: unknown, status = 200, cache = false) =>
+const json = (body: unknown, status = 200, cache = false, maxAge = 3600) =>
   new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      ...(cache ? { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' } : {}),
+      ...(cache ? { 'Cache-Control': `public, s-maxage=${maxAge}, stale-while-revalidate=86400` } : {}),
     },
   });
 
@@ -75,6 +79,59 @@ const toSearchTerms = (q: string) => {
   return { terms: q, lang: 'ar' };
 };
 
+const pixabayKey = () => process.env.PIXABAY_API_KEY || process.env.PIXABAY_KEY || '';
+
+type PixabayType = 'photo' | 'illustration' | 'vector' | '3d' | 'video';
+const PIXABAY_TYPES: PixabayType[] = ['photo', 'illustration', 'vector', '3d', 'video'];
+
+// Pixabay has no Arabic search, so an Arabic search goes in English where every word is known.
+// A word not in the list is sent as it is, which finds little.
+const pixabayTerms = (q: string, category: string, type: PixabayType) => {
+  const base = q ? toSearchTerms(q).terms : category !== 'all' && CATEGORY_SEARCH[category] ? CATEGORY_SEARCH[category] : '';
+  // Pixabay has no «3D» kind: its 3D works are illustrations, found by the word.
+  return (type === '3d' ? `${base} 3d render`.trim() : base).slice(0, 100);
+};
+
+const pixabayPage = (user: unknown, id: unknown) => `https://pixabay.com/users/${encodeURIComponent(String(user))}-${id}/`;
+
+const pixabaySearch = async (url: URL, category: string, key: string) => {
+  const type = PIXABAY_TYPES.includes(url.searchParams.get('type') as PixabayType) ? (url.searchParams.get('type') as PixabayType) : 'photo';
+  const q = (url.searchParams.get('q') || '').trim().slice(0, 100);
+  const page = Math.max(1, Math.min(25, Number(url.searchParams.get('page')) || 1));
+  const perPage = Math.max(6, Math.min(MAX_PER_PAGE, Number(url.searchParams.get('perPage')) || 24));
+  const terms = pixabayTerms(q, category, type);
+  const params = new URLSearchParams({ key, q: terms, page: String(page), per_page: String(perPage), safesearch: 'true', order: 'popular' });
+  if (type !== 'video') params.set('image_type', type === '3d' ? 'illustration' : type);
+  const res = await fetch(`https://pixabay.com/api/${type === 'video' ? 'videos/' : ''}?${params}`);
+  if (!res.ok) {
+    console.error('Pixabay answered', res.status, await res.text().catch(() => ''));
+    return json({ error: res.status === 400 ? 'bad_key' : res.status === 429 ? 'rate_limited' : 'pixabay_failed' }, 502);
+  }
+  const data: any = await res.json();
+  const hits: any[] = Array.isArray(data.hits) ? data.hits : [];
+  const label = category !== 'all' ? category : 'عام';
+  const items = hits.map((h) => {
+    const base = {
+      id: `pixabay-${type}-${h.id}`,
+      pixabayId: String(h.id),
+      source: 'pixabay',
+      kind: type,
+      title: String(h.tags || 'Pixabay').slice(0, 70),
+      category: label,
+      photographer: String(h.user || 'Pixabay'),
+      photographerUrl: pixabayPage(h.user, h.user_id),
+      pageUrl: typeof h.pageURL === 'string' ? h.pageURL : 'https://pixabay.com',
+    };
+    if (type === 'video') {
+      const v = h.videos?.small?.url ? h.videos.small : h.videos?.medium?.url ? h.videos.medium : h.videos?.tiny;
+      return { ...base, thumbUrl: `https://i.vimeocdn.com/video/${h.picture_id}_640x360.jpg`, fullUrl: v?.url || '', videoUrl: v?.url || '', width: v?.width, height: v?.height, duration: h.duration, bytes: v?.size };
+    }
+    return { ...base, thumbUrl: h.webformatURL, fullUrl: h.largeImageURL || h.webformatURL, width: h.imageWidth, height: h.imageHeight };
+  }).filter((it) => it.thumbUrl && it.fullUrl);
+  const total = Number(data.totalHits) || 0;
+  return json({ items, total, totalPages: Math.max(1, Math.min(25, Math.ceil(total / perPage))), page }, 200, true, 86400);
+};
+
 const accessKey = () => process.env.UNSPLASH_ACCESS_KEY || process.env.VITE_UNSPLASH_ACCESS_KEY || process.env.UNSPLASH_KEY || '';
 
 const unsplash = (path: string, key: string) =>
@@ -83,10 +140,21 @@ const unsplash = (path: string, key: string) =>
 export default {
   async fetch(request: Request): Promise<Response> {
     if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
+    const url = new URL(request.url);
+
+    if (url.searchParams.get('src') === 'pixabay') {
+      const pKey = pixabayKey();
+      if (!pKey) return json({ error: 'not_configured' }, 503);
+      try {
+        return await pixabaySearch(url, (url.searchParams.get('category') || 'all').slice(0, 40), pKey);
+      } catch (err) {
+        console.error('pixabay failed:', err);
+        return json({ error: 'pixabay_failed' }, 502);
+      }
+    }
+
     const key = accessKey();
     if (!key) return json({ error: 'not_configured' }, 503);
-
-    const url = new URL(request.url);
 
     const track = url.searchParams.get('track');
     if (track) {

@@ -34,7 +34,7 @@ export const hostImageBlob = async (folder: PhotoFolder, name: string, blob: Blo
   return getDownloadURL(snapshot.ref);
 };
 
-const hostable = (url: string) => url.startsWith('data:image/') || /^https:\/\/(images|plus)\.unsplash\.com\//.test(url);
+const hostable = (url: string) => url.startsWith('data:image/') || /^https:\/\/(images|plus)\.unsplash\.com\/|^https:\/\/cdn\.pixabay\.com\//.test(url);
 
 /**
  * A picked Unsplash photo (or an inline data: photo) copied into our own store, so a published page

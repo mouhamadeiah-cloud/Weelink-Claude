@@ -3870,6 +3870,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                       onAddImage={handleAddImageElement}
                       onBack={() => setActiveAddCategory(null)}
                       canvasElements={elements}
+                      onApplyBackgroundVideo={activeSlide ? (video) => onUpdateSlideBackground(activeSlide.id, { backgroundVideo: video.src, backgroundImage: video.poster, backgroundSize: 'cover' }) : undefined}
                     />
                   );
                 }
@@ -5139,6 +5140,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                   canvasElements={elements}
                   selectedElement={selectedElement}
                   onUpdateElement={onUpdateElement}
+                  onApplyBackgroundVideo={activeSlide ? (video) => onUpdateSlideBackground(activeSlide.id, { backgroundVideo: video.src, backgroundImage: video.poster, backgroundSize: 'cover' }) : undefined}
                 />
               )}
 

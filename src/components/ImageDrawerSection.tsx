@@ -25,6 +25,7 @@ import {
   fetchUnsplashPhotos, 
   trackUnsplashDownload 
 } from '../services/unsplashService';
+import { fetchPixabay, PIXABAY_URL, pixabayErrorText, PixabayItem, PixabayType } from '../services/pixabayService';
 import { compressImageToTargetSize } from '../utils/imageCompressor';
 import { hostImageBlob, hostRemoteImage } from '../utils/hostImage';
 import { elementDisplayName } from '../utils/elementLabels';
@@ -55,6 +56,8 @@ interface ImageDrawerSectionProps {
   canvasElements?: CanvasElement[];
   selectedElement?: CanvasElement | null;
   onUpdateElement?: (data: Partial<CanvasElement>) => void;
+  /** Sets a library video as the active slide's background (the page has no mp4 element). */
+  onApplyBackgroundVideo?: (video: { src: string; poster: string }) => void;
 }
 
 // Key for saving recent device uploads in browser localStorage
@@ -88,6 +91,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
   canvasElements = [],
   selectedElement,
   onUpdateElement,
+  onApplyBackgroundVideo,
 }) => {
   // Unified helper to either swap existing image or add a new one
   const handleImageApply = (url: string, title?: string, width?: number, height?: number, isGraphic?: boolean) => {
@@ -257,6 +261,12 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
   const [isLive, setIsLive] = useState<boolean>(true);
   const [galleryError, setGalleryError] = useState<string | undefined>();
   const [isPhotoBrowserOpen, setIsPhotoBrowserOpen] = useState(false);
+  // What the library shows: photos (Unsplash or Pixabay) or one of Pixabay's other kinds.
+  const [libType, setLibType] = useState<PixabayType>('photo');
+  const [photoSource, setPhotoSource] = useState<'unsplash' | 'pixabay'>('unsplash');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const usePixabay = libType !== 'photo' || photoSource === 'pixabay';
+  const pixabayKind: PixabayType = libType;
   const galleryRootRef = useRef<HTMLDivElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
 
@@ -278,12 +288,14 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
 
     const timer = setTimeout(async () => {
       try {
-        const result = await fetchUnsplashPhotos({
-          query: gallerySearch,
-          category: galleryCategory,
-          page: 1,
-          perPage: 9,
-        });
+        const result = usePixabay
+          ? await fetchPixabay({ type: pixabayKind, query: gallerySearch, category: galleryCategory, page: 1, perPage: 9 }).then((r) => ({ ...r, isLive: !r.error }))
+          : await fetchUnsplashPhotos({
+              query: gallerySearch,
+              category: galleryCategory,
+              page: 1,
+              perPage: 9,
+            });
 
         if (isMounted) {
           setGalleryError(result.error);
@@ -306,18 +318,37 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [activeDoor, galleryCategory, gallerySearch]);
+  }, [activeDoor, galleryCategory, gallerySearch, libType, photoSource]);
+
+  const loadMorePixabay = async () => {
+    if (isLoadingMore || galleryPage >= totalPages) return;
+    setIsLoadingMore(true);
+    const result = await fetchPixabay({ type: pixabayKind, query: gallerySearch, category: galleryCategory, page: galleryPage + 1, perPage: 9 });
+    if (!result.error) {
+      setGalleryPhotos((prev) => [...prev, ...result.items.filter((it) => !prev.some((p) => p.id === it.id))]);
+      setGalleryPage(result.page);
+    }
+    setIsLoadingMore(false);
+  };
 
   // Handle adding gallery photo to canvas with automatic compression to <= 150 KB
   const handleAddGalleryPhoto = async (photo: GalleryImageItem) => {
     if (compressingPhotoId) return; // Prevent duplicate clicks
     setCompressingPhotoId(photo.id);
 
+    const pix = (photo as Partial<PixabayItem>).source === 'pixabay' ? (photo as PixabayItem) : null;
+    if (pix?.kind === 'video') {
+      // A Pixabay video becomes the slide's background; a published page reads it through /media.
+      if (pix.videoUrl && onApplyBackgroundVideo) onApplyBackgroundVideo({ src: pix.videoUrl, poster: pix.thumbUrl });
+      setCompressingPhotoId(null);
+      return;
+    }
+
     try {
       // Compress the Unsplash photo to maximum 150 KB (153,600 bytes)
       const compressed = await compressImageToTargetSize(photo.fullUrl, 150 * 1024);
       // Our own copy on Cloudflare, so the page does not depend on Unsplash.
-      compressed.url = await hostRemoteImage('images', `${photo.unsplashId || 'unsplash'}.webp`, compressed.url);
+      compressed.url = await hostRemoteImage('images', `${pix ? `pixabay-${pix.kind}-${(pix as { pixabayId?: string }).pixabayId || Date.now()}` : photo.unsplashId || 'unsplash'}.webp`, compressed.url);
 
       // Add compressed image to canvas
       handleImageApply(
@@ -329,7 +360,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
 
       // Add to recent images list for convenient re-use
       const newEntry = {
-        id: `unsplash-${Date.now()}`,
+        id: `${pix ? 'pixabay' : 'unsplash'}-${Date.now()}`,
         title: photo.title,
         url: compressed.url,
       };
@@ -343,7 +374,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
       setTimeout(() => setCompressedNotice(null), 3500);
 
       // Trigger Unsplash API download tracking
-      if (photo.downloadLocation || photo.unsplashId) {
+      if (!pix && (photo.downloadLocation || photo.unsplashId)) {
         trackUnsplashDownload(photo.downloadLocation, photo.unsplashId);
       }
     } catch (e) {
@@ -597,6 +628,46 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
 
       {activeDoor === 'gallery' && (
         <div ref={galleryRootRef} className="space-y-3">
+          {/* What to look for: photos, drawings, vectors, 3D or video */}
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none rounded-xl bg-neutral-100 p-1">
+            {([
+              ['photo', 'صور'],
+              ['illustration', 'رسومات'],
+              ['vector', 'فيكتور'],
+              ['3d', '3D'],
+              ...(onApplyBackgroundVideo ? ([['video', 'فيديو']] as const) : []),
+            ] as ReadonlyArray<readonly [PixabayType, string]>).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setLibType(id)}
+                className={`flex-1 shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                  libType === id ? 'bg-white text-brand shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {libType === 'photo' && (
+            <div className="flex items-center gap-1.5 px-1 text-xs">
+              <span className="text-neutral-500">المصدر:</span>
+              {(['unsplash', 'pixabay'] as const).map((src) => (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setPhotoSource(src)}
+                  className={`rounded-full px-2.5 py-0.5 font-bold cursor-pointer ${
+                    photoSource === src ? 'bg-brand text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                  }`}
+                >
+                  {src === 'unsplash' ? 'Unsplash' : 'Pixabay'}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Scrollable Category Chips (كما في الصورة ٢: خلفيات، رخام، طعام، بورتريه...) */}
           <div className="relative flex items-center">
             <button
@@ -644,7 +715,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
               type="text"
               value={gallerySearch}
               onChange={(e) => setGallerySearch(e.target.value)}
-              placeholder="بحث في ملايين صور Unsplash (رخام، قهوة، طبيعة، تقنية...)"
+              placeholder={usePixabay ? 'ابحث: قهوة، طبيعة، سيارة…' : 'ابحث في الصور: رخام، قهوة، طبيعة…'}
               className="w-full pl-8 pr-9 py-2 bg-neutral-100 focus:bg-white border border-neutral-300 focus:border-brand focus:ring-1 focus:ring-brand rounded-xl text-xs text-right placeholder:text-neutral-400 focus:outline-none transition-all shadow-3xs"
               dir="rtl"
             />
@@ -668,13 +739,15 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           <div className="flex items-center justify-between px-1 text-xs text-neutral-500">
             <div className="flex items-center gap-1.5 font-medium text-neutral-700">
               <span className={`w-2 h-2 rounded-full ring-2 ${isLive ? 'bg-emerald-500 ring-emerald-500/20' : 'bg-amber-400 ring-amber-400/20'}`} />
-              <span>{isLive ? 'صور Unsplash' : 'صور مختارة'}</span>
+              <span>{!isLive ? 'صور مختارة' : usePixabay ? 'Pixabay' : 'Unsplash'}</span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold">
-                ⚡ ضغط آلي ≤ 150KB
-              </span>
+              {libType !== 'video' && (
+                <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/80 px-2 py-0.5 rounded-full font-bold">
+                  ⚡ ضغط آلي
+                </span>
+              )}
               {totalCount > 0 && !isLoadingGallery && (
                 <span className="text-xs text-neutral-400 font-mono">
                   {totalCount > 1000 ? 'آلاف الصور' : `${totalCount} صورة`}
@@ -685,7 +758,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
 
           {!isLive && !isLoadingGallery && (
             <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800">
-              {notLiveMessage(galleryError)}
+              {usePixabay ? pixabayErrorText(galleryError) : notLiveMessage(galleryError)}
             </p>
           )}
 
@@ -723,7 +796,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                 <div
                   key={photo.id}
                   onClick={() => handleAddGalleryPhoto(photo)}
-                  draggable={!compressingPhotoId}
+                  draggable={!compressingPhotoId && !usePixabay}
                   onDragStart={(e) => {
                     e.dataTransfer.setData(
                       'application/json',
@@ -754,7 +827,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
                   {compressingPhotoId === photo.id && (
                     <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center p-1 text-white gap-1.5 z-20 backdrop-blur-[1px]">
                       <RefreshCw size={18} className="animate-spin text-white" />
-                      <span className="text-xs font-bold">جاري الضغط ≤150KB...</span>
+                      <span className="text-xs font-bold">{libType === 'video' ? 'جاري التطبيق…' : 'جاري الضغط…'}</span>
                     </div>
                   )}
 
@@ -777,7 +850,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
 
           {!isLoadingGallery && galleryPhotos.length === 0 && (
             <div className="p-8 text-center text-xs text-neutral-400 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200 space-y-2">
-              <p>لا توجد نتائج مطابقة لبحثك في Unsplash.</p>
+              <p>{usePixabay ? 'لا توجد نتائج مطابقة لبحثك. جرّب الكلمة بالإنجليزية.' : 'لا توجد نتائج مطابقة لبحثك في Unsplash.'}</p>
               {gallerySearch && (
                 <button
                   type="button"
@@ -791,7 +864,18 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           )}
 
           {/* «عرض المزيد» opens the wide photo panel beside the control panel. */}
-          {!isLoadingGallery && galleryPhotos.length > 0 && (
+          {usePixabay && !isLoadingGallery && galleryPhotos.length > 0 && galleryPage < totalPages && (
+            <button
+              type="button"
+              onClick={loadMorePixabay}
+              disabled={isLoadingMore}
+              className="w-full py-2.5 rounded-xl border border-neutral-300 hover:border-brand bg-white hover:bg-neutral-50 text-xs font-bold text-neutral-800 hover:text-brand transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer disabled:opacity-60"
+            >
+              {isLoadingMore ? <RefreshCw size={13} className="animate-spin" /> : null}
+              <span>عرض المزيد</span>
+            </button>
+          )}
+          {!usePixabay && !isLoadingGallery && galleryPhotos.length > 0 && (
             <button
               type="button"
               onClick={() => setIsPhotoBrowserOpen(true)}
@@ -803,14 +887,14 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
           )}
 
           <div className="text-xs text-neutral-400 text-center flex items-center justify-center gap-1">
-            <span>الصور من</span>
+            <span>{libType === 'video' ? 'الفيديوهات من' : 'الصور من'}</span>
             <a
-              href="https://unsplash.com?utm_source=weelink&utm_medium=referral"
+              href={usePixabay ? PIXABAY_URL : 'https://unsplash.com?utm_source=weelink&utm_medium=referral'}
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-neutral-600 hover:text-brand inline-flex items-center gap-0.5"
             >
-              <span>Unsplash</span>
+              <span>{usePixabay ? 'Pixabay' : 'Unsplash'}</span>
               <ExternalLink size={10} />
             </a>
           </div>

@@ -89,7 +89,7 @@ const PIXABAY_TYPES: PixabayType[] = ['photo', 'illustration', 'vector', '3d', '
 const pixabayTerms = (q: string, category: string, type: PixabayType) => {
   const base = q ? toSearchTerms(q).terms : category !== 'all' && CATEGORY_SEARCH[category] ? CATEGORY_SEARCH[category] : '';
   // Pixabay has no «3D» kind: its 3D works are illustrations, found by the word.
-  return (type === '3d' ? `${base} 3d render`.trim() : base).slice(0, 100);
+  return (type === '3d' ? `${base} 3d`.trim() : base).slice(0, 100);
 };
 
 const pixabayPage = (user: unknown, id: unknown) => `https://pixabay.com/users/${encodeURIComponent(String(user))}-${id}/`;
@@ -124,7 +124,7 @@ const pixabaySearch = async (url: URL, category: string, key: string) => {
     };
     if (type === 'video') {
       const v = h.videos?.small?.url ? h.videos.small : h.videos?.medium?.url ? h.videos.medium : h.videos?.tiny;
-      return { ...base, thumbUrl: `https://i.vimeocdn.com/video/${h.picture_id}_640x360.jpg`, fullUrl: v?.url || '', videoUrl: v?.url || '', width: v?.width, height: v?.height, duration: h.duration, bytes: v?.size };
+      return { ...base, thumbUrl: v?.thumbnail || h.videos?.medium?.thumbnail || h.videos?.tiny?.thumbnail || `https://i.vimeocdn.com/video/${h.picture_id}_640x360.jpg`, fullUrl: v?.url || '', videoUrl: v?.url || '', width: v?.width, height: v?.height, duration: h.duration, bytes: v?.size };
     }
     return { ...base, thumbUrl: h.webformatURL, fullUrl: h.largeImageURL || h.webformatURL, width: h.imageWidth, height: h.imageHeight };
   }).filter((it) => it.thumbUrl && it.fullUrl);

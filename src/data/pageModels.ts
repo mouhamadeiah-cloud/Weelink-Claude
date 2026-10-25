@@ -40,7 +40,6 @@ const booking = sec('booking', 'ask');
 const team = sec('team', 'ask');
 const projects = sec('projects', 'ask');
 const video = sec('video', 'ask');
-const partners = sec('partners', 'ask');
 
 // The free page: the base of all.
 const FREE = [intro, about, services, prices, gallery, features, ratings, contact, privacy];
@@ -48,11 +47,11 @@ const FREE = [intro, about, services, prices, gallery, features, ratings, contac
 const freeOf = (type: 'restaurant' | 'shop' | 'cars') => [sec(type, 'always', { part: 'front' }), about, sec('table', 'always', { part: 'priceList' }), gallery, features, ratings, contact, privacy];
 // A paid one: the front slide and the live section of its type.
 const paidOf = (type: 'restaurant' | 'shop' | 'cars') => [sec(type, 'always', { part: 'front' }), sec(type, 'always', { part: 'main' }), about, gallery, features, ratings, contact, privacy];
-const proOf = (type: 'restaurant' | 'shop' | 'cars') => [sec(type, 'always', { part: 'front' }), sec(type, 'always', { part: 'main' }), about, gallery, features, team, video, partners, ratings, contact, privacy];
+const proOf = (type: 'restaurant' | 'shop' | 'cars') => [sec(type, 'always', { part: 'front' }), sec(type, 'always', { part: 'main' }), about, gallery, features, team, video, ratings, contact, privacy];
 
 export const DEFAULT_MODELS: PageModel[] = [
   { id: 'page-free', name: 'تعريفية مجانية', sections: FREE },
-  { id: 'page-pro', name: 'تعريفية برو', sections: [intro, about, services, prices, gallery, features, team, projects, video, partners, booking, ratings, contact, privacy] },
+  { id: 'page-pro', name: 'تعريفية برو', sections: [intro, about, services, prices, gallery, features, team, projects, video, booking, ratings, contact, privacy] },
   { id: 'restaurant-free', name: 'مطعم مجاني', sections: freeOf('restaurant') },
   { id: 'restaurant', name: 'مطعم 30 و60', sections: paidOf('restaurant') },
   { id: 'restaurant-pro', name: 'مطعم برو', sections: proOf('restaurant') },

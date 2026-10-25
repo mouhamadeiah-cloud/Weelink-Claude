@@ -9,10 +9,11 @@ import { ALL_PERMS, Perms, createInvite, deleteInvite, inviteUrl, removeMember, 
 import { setWorkerPin, workerPinIds, workerUrl } from '../../services/workerApi';
 import { MAX_TEAM, TeamPerson, deletePerson, newPersonId, savePerson, useTeam } from '../../services/team';
 import { Card, EmptyState, Field, GhostButton, inputClass, PrimaryButton, Toggle } from '../shop/adminUi';
+import { PersonRotaEditor, rotaFrom } from './PersonRotaEditor';
 import { CloudNotice, ImagePicker } from '../restaurant/tabs/shared';
 import { CopyLink } from '../restaurant/tabs/DevicesTab';
 
-const EMPTY: Omit<TeamPerson, 'id' | 'at'> = { name: '', role: '', photo: '', email: '', phone: '', takesBookings: true, invite: '', workingDays: [], workStart: '', workEnd: '' };
+const EMPTY: Omit<TeamPerson, 'id' | 'at'> = { name: '', role: '', photo: '', email: '', phone: '', takesBookings: true, invite: '', workingDays: [], workStart: '', workEnd: '', rota: null };
 const isEmail = (v: string) => /^\S+@\S+\.\S+$/.test(v);
 
 const whatsappLink = (url: string, name: string, phone: string) =>
@@ -153,24 +154,40 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ owner, invitePerms = {
       </div>
       {editing.takesBookings && (
         <div className="space-y-2 rounded-2xl bg-neutral-50 p-3">
-          <div className="text-xs font-black text-ink">دوامه بالحجز</div>
-          <div className="text-xs text-neutral-400 font-bold">اتركه فاضي ليمشي على أيام وساعات جدول الحجز. أو حدد أيامه وساعاته الخاصة (داخل دوام الجدول).</div>
-          <div className="flex flex-wrap gap-1.5">
-            {Object.entries(DAY_NAMES).map(([d, name]) => {
-              const on = editing.workingDays.includes(d);
-              return (
-                <button key={d} type="button" onClick={() => setEditing({ ...editing, workingDays: on ? editing.workingDays.filter((x) => x !== d) : [...editing.workingDays, d] })} className={`h-8 px-3 rounded-xl border text-xs font-bold cursor-pointer ${on ? 'bg-brand border-brand text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>{name}</button>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-2" dir="ltr">
-            <input type="time" className={`${inputClass} w-32`} value={editing.workStart} onChange={(e) => setEditing({ ...editing, workStart: e.target.value })} />
-            <span className="text-neutral-400">–</span>
-            <input type="time" className={`${inputClass} w-32`} value={editing.workEnd} onChange={(e) => setEditing({ ...editing, workEnd: e.target.value })} />
-            {(editing.workStart || editing.workEnd || editing.workingDays.length > 0) && (
-              <button type="button" className="text-xs font-bold text-brand cursor-pointer" onClick={() => setEditing({ ...editing, workingDays: [], workStart: '', workEnd: '' })}>مسح</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-xs font-black text-ink">دوامه بالحجز</div>
+            {editing.rota ? (
+              <button type="button" className="mr-auto text-xs font-bold text-brand cursor-pointer" onClick={() => setEditing({ ...editing, rota: null })}>ارجع للأيام والساعات البسيطة</button>
+            ) : (
+              <button type="button" className="mr-auto text-xs font-bold text-brand cursor-pointer" onClick={() => setEditing({ ...editing, rota: rotaFrom(editing.workingDays, editing.workStart, editing.workEnd) })}>جدول دوام (أسبوع أو أسبوعين، ورديات)</button>
             )}
           </div>
+          {editing.rota ? (
+            <>
+              <div className="text-xs text-neutral-400 font-bold">الورديات داخل أوقات جدول الحجز. الوردية الأولى افتراضية ويمكنك إضافة غيرها لأي يوم.</div>
+              <PersonRotaEditor rota={editing.rota} onChange={(rota) => setEditing({ ...editing, rota })} />
+            </>
+          ) : (
+            <>
+          <div className="text-xs text-neutral-400 font-bold">اتركه فاضي ليمشي على أيام وساعات جدول الحجز. أو حدد أيامه وساعاته الخاصة (داخل دوام الجدول).</div>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(DAY_NAMES).map(([d, name]) => {
+                  const on = editing.workingDays.includes(d);
+                  return (
+                    <button key={d} type="button" onClick={() => setEditing({ ...editing, workingDays: on ? editing.workingDays.filter((x) => x !== d) : [...editing.workingDays, d] })} className={`h-8 px-3 rounded-xl border text-xs font-bold cursor-pointer ${on ? 'bg-brand border-brand text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>{name}</button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-2" dir="ltr">
+                <input type="time" className={`${inputClass} w-32`} value={editing.workStart} onChange={(e) => setEditing({ ...editing, workStart: e.target.value })} />
+                <span className="text-neutral-400">–</span>
+                <input type="time" className={`${inputClass} w-32`} value={editing.workEnd} onChange={(e) => setEditing({ ...editing, workEnd: e.target.value })} />
+                {(editing.workStart || editing.workEnd || editing.workingDays.length > 0) && (
+                  <button type="button" className="text-xs font-bold text-brand cursor-pointer" onClick={() => setEditing({ ...editing, workingDays: [], workStart: '', workEnd: '' })}>مسح</button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
       {error && <div className="text-xs font-bold text-[#E03131]">{error}</div>}

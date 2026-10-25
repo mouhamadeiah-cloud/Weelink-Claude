@@ -92,6 +92,17 @@ export const WorkerPage: React.FC<{ owner: string }> = ({ owner }) => {
       </header>
       <main className="max-w-md mx-auto p-3 space-y-4">
         {error && <div className="text-xs font-bold text-red-600">{error}</div>}
+        {view.shifts.length > 0 && (
+          <section className="rounded-2xl bg-white p-3 space-y-1.5">
+            <div className="text-xs font-black text-neutral-500">دوامي (أسبوعان)</div>
+            {view.shifts.map((x) => (
+              <div key={x.date} className="flex items-center gap-2 text-xs font-bold">
+                <span className="w-32 text-neutral-600">{dayLabel(x.date, view.today)}</span>
+                {x.shifts.length ? <span dir="ltr" className="text-ink">{x.shifts.map((sh) => `${sh.start}–${sh.end}`).join('  ·  ')}</span> : <span className="text-neutral-400">إجازة</span>}
+              </div>
+            ))}
+          </section>
+        )}
         {days.length === 0 && <div className="rounded-2xl bg-white p-6 text-center text-sm font-bold text-neutral-500">ما في مواعيد قادمة عندك.</div>}
         {days.map((d) => (
           <section key={d} className="space-y-2">

@@ -51,3 +51,15 @@ test('ten wrong codes lock the page', async () => {
   for (let i = 0; i < 10; i++) assert.equal((await call({ action: 'view', owner: 'wown', pin: '000000' })).error, 'wrong_pin');
   assert.equal((await call({ action: 'view', owner: 'wown', pin: '123456' })).error, 'locked');
 });
+
+test('a worker with a rota sees their next two weeks of shifts', async () => {
+  store.delete('workerPins/wown'); // the lock test above filled the counter
+  store.set('team/wown/people/pr', { name: 'نور', takesBookings: true, at: '2026-01-03', rota: { weeks: 1, anchor: day(0), plan: [{ sunday: [{ start: '09:00', end: '12:00' }], monday: [{ start: '09:00', end: '12:00' }], tuesday: [{ start: '09:00', end: '12:00' }], wednesday: [{ start: '09:00', end: '12:00' }], thursday: [{ start: '09:00', end: '12:00' }], friday: [{ start: '09:00', end: '12:00' }], saturday: [{ start: '09:00', end: '12:00' }] }], exceptions: { [day(1)]: [] } } });
+  tokens['own'] = { uid: 'wown' };
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', headers: { authorization: 'Bearer own' }, body: JSON.stringify({ action: 'worker-set-pin', owner: 'wown', person: 'pr', pin: '111222' }) }));
+  assert.equal(r.status, 200);
+  const v = await call({ action: 'view', owner: 'wown', pin: '111222' });
+  assert.equal(v.shifts.length, 14);
+  assert.equal(v.shifts[0].shifts.length, 1);
+  assert.equal(v.shifts[1].shifts.length, 0);
+});

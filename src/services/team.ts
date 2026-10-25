@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { cleanDays, type PersonHours } from './teamHours';
+import { cleanDays, cleanRota, type PersonHours, type WorkRota } from './teamHours';
 
 export interface TeamPerson {
   id: string;
@@ -23,6 +23,7 @@ export interface TeamPerson {
   workingDays: string[]; // their own days inside the schedule's, [] = the schedule's
   workStart: string; // their own hours, '' = the schedule's
   workEnd: string;
+  rota: WorkRota | null; // a shift rota of 1–2 weeks; replaces the three fields above when set
   at: string;
 }
 
@@ -48,12 +49,13 @@ export const normalizePerson = (id: string, d: any): TeamPerson => ({
   workingDays: cleanDays(d?.workingDays),
   workStart: timeOf(d?.workStart),
   workEnd: timeOf(d?.workEnd),
+  rota: cleanRota(d?.rota),
   at: clip(d?.at, 40),
 });
 
 // What visitors may see: the people who take bookings, in the order of the list.
 export const publicPeople = (people: TeamPerson[]): PublicPerson[] =>
-  people.filter((p) => p.takesBookings && p.name).map(({ id, name, role, photo, workingDays, workStart, workEnd }) => ({ id, name, role, photo, workingDays, workStart, workEnd }));
+  people.filter((p) => p.takesBookings && p.name).map(({ id, name, role, photo, workingDays, workStart, workEnd, rota }) => ({ id, name, role, photo, workingDays, workStart, workEnd, ...(rota ? { rota } : {}) }));
 
 // What visitors see: the people who take bookings (teamPublic/{owner}); empty until it loads.
 export const usePublicTeam = (owner: string | null | undefined) => {
@@ -64,7 +66,7 @@ export const usePublicTeam = (owner: string | null | undefined) => {
       doc(db, 'teamPublic', owner),
       (snap) => {
         const list = snap.data()?.people;
-        setState({ owner, people: Array.isArray(list) ? list.filter((p: any) => p && typeof p.id === 'string' && typeof p.name === 'string').map((p: any) => ({ id: p.id, name: p.name, role: String(p.role || ''), photo: String(p.photo || ''), workingDays: cleanDays(p.workingDays), workStart: timeOf(p.workStart), workEnd: timeOf(p.workEnd) })) : [] });
+        setState({ owner, people: Array.isArray(list) ? list.filter((p: any) => p && typeof p.id === 'string' && typeof p.name === 'string').map((p: any) => ({ id: p.id, name: p.name, role: String(p.role || ''), photo: String(p.photo || ''), workingDays: cleanDays(p.workingDays), workStart: timeOf(p.workStart), workEnd: timeOf(p.workEnd), rota: cleanRota(p.rota) })) : [] });
       },
       () => setState({ owner, people: [] })
     );
@@ -78,8 +80,8 @@ const writePublic = (owner: string, people: TeamPerson[]) => setDoc(doc(db, 'tea
 
 // `all` is the whole list after the change, so the visitors' copy follows it.
 export const savePerson = async (owner: string, person: TeamPerson, all: TeamPerson[]) => {
-  const { id, ...rest } = normalizePerson(person.id, person);
-  await setDoc(doc(peopleCol(owner), id), rest);
+  const { id, rota, ...rest } = normalizePerson(person.id, person);
+  await setDoc(doc(peopleCol(owner), id), rota ? { ...rest, rota } : rest);
   await writePublic(owner, all);
 };
 

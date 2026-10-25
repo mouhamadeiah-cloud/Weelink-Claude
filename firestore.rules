@@ -483,7 +483,7 @@ service cloud.firestore {
       allow read: if canManage(ownerId);
       allow delete: if isOwner(ownerId);
       allow create, update: if isOwner(ownerId) && isValidId(personId)
-        && incoming().keys().hasOnly(['name', 'role', 'photo', 'email', 'phone', 'takesBookings', 'invite', 'workingDays', 'workStart', 'workEnd', 'at'])
+        && incoming().keys().hasOnly(['name', 'role', 'photo', 'email', 'phone', 'takesBookings', 'invite', 'workingDays', 'workStart', 'workEnd', 'rota', 'at'])
         && incoming().name is string && incoming().name.size() <= 80
         && incoming().get('role', '') is string && incoming().get('role', '').size() <= 80
         && incoming().get('photo', '') is string && incoming().get('photo', '').size() <= 1000
@@ -493,7 +493,8 @@ service cloud.firestore {
         && incoming().get('takesBookings', false) is bool
         && incoming().get('workingDays', []) is list && incoming().get('workingDays', []).size() <= 7
         && incoming().get('workStart', '') is string && incoming().get('workStart', '').size() <= 5
-        && incoming().get('workEnd', '') is string && incoming().get('workEnd', '').size() <= 5;
+        && incoming().get('workEnd', '') is string && incoming().get('workEnd', '').size() <= 5
+        && incoming().get('rota', {}) is map;
     }
     match /teamPublic/{ownerId} {
       allow get: if true;

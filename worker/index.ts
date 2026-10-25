@@ -68,6 +68,18 @@ const servePhoto = async (request: Request, pathname: string): Promise<Response>
   });
 };
 
+// Pixabay allows 100 requests a minute for the whole key and asks for answers to be kept 24 hours, so the same
+// search by any visitor is answered from Cloudflare's cache and costs no request.
+const cachedPixabay = async (request: Request): Promise<Response> => {
+  const cache = (globalThis as { caches?: { default?: { match(r: Request): Promise<Response | undefined>; put(r: Request, res: Response): Promise<void> } } }).caches?.default;
+  if (!cache) return route(request);
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const fresh = await route(request);
+  if (fresh.status === 200) await cache.put(request, fresh.clone()).catch(() => undefined);
+  return fresh;
+};
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
@@ -75,6 +87,7 @@ export default {
     setSearchDb(env.SEARCH);
     if (pathname.startsWith('/img/')) return servePhoto(request, pathname);
     if (pathname === '/media') return serveMedia(request, env.ASSETS);
+    if (pathname === '/api/photos' && request.method === 'GET' && new URL(request.url).searchParams.get('src') === 'pixabay') return cachedPixabay(request);
     if (pathname.startsWith('/api/')) return route(request);
     const site = await serveSiteHead(request, env.ASSETS);
     return site || env.ASSETS.fetch(request);

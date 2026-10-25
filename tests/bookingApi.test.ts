@@ -157,6 +157,7 @@ test('only the owner or a member may book on the grid, and the owner can pin a p
 store.set('bookingSettings/own1/pages/cars', { schedules: [
   { id: 'seats', name: 'الدورات', type: 'seats', maxSeatsPerBooking: 3, daysAhead: 60, sessions: [
     { id: 'x1', name: 'رحلة الشاطئ', date: inD(10), startMin: 480, seats: 5 },
+    { id: 'x4', name: 'كورس', date: inD(12), endDate: inD(40), startMin: 600, seats: 5 },
     { id: 'x2', name: 'ورشة', date: inD(100), startMin: 600, seats: 5 },
     { id: 'x3', name: 'قديمة', date: inD(-3), startMin: 600, seats: 5 },
   ] },
@@ -193,4 +194,12 @@ test('a cancelled seat booking gives its seats back', async () => {
   assert.equal(r.status, 200);
   assert.equal(store.get('bookingSessions/own1_cars_seats_x1').taken, 2);
   assert.equal((await qbook({ partySize: 3 })).s, 200);
+});
+
+test('a course books on its first day and keeps its last day', async () => {
+  const r = await qbook({ session: 'x4', date: inD(12), startMin: 600, partySize: 1 });
+  assert.equal(r.s, 200);
+  const row = [...store.values()].find((v: any) => v.sessionId === 'x4');
+  assert.equal(row.date, inD(12));
+  assert.equal(row.endDate, inD(40));
 });

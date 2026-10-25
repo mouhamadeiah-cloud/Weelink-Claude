@@ -11,7 +11,7 @@ import {
 import { BookingPageContext } from '../../services/bookings';
 import { useTeam } from '../../services/team';
 import { newRoomId } from '../../services/stayBooking';
-import { MAX_SESSION_SEATS, newSessionId, type SeatSession } from '../../services/seatBooking';
+import { MAX_SESSION_SEATS, dayPlus, newSessionId, type SeatSession } from '../../services/seatBooking';
 import { useRestaurantTables } from '../../services/tableBookingData';
 import type { ProjectKey } from '../../utils/projectKeys';
 import { Field, GhostButton, inputClass, inputFitClass, PrimaryButton, Toggle } from '../shop/adminUi';
@@ -240,23 +240,39 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
 
       {current.type === 'seats' && (
         <div className="space-y-3 rounded-2xl border border-neutral-200 p-3">
-          <div className="text-xs font-bold text-neutral-500">الجلسات اللي بيقدر الزبون يحجز فيها: {current.sessions.length}</div>
+          <div className="text-xs font-bold text-neutral-500">الجلسات اللي بيقدر الزبون يحجز فيها: {current.sessions.length}. اختر لكل وحدة منها «جلسة واحدة» أو «كورس» (من تاريخ لتاريخ). الحجز بيسكّر مع بداية الجلسة أو الكورس.</div>
           {current.sessions.map((x, i) => {
             const set = (patch: Partial<SeatSession>) => change({ sessions: current.sessions.map((y, j) => (j === i ? { ...y, ...patch } : y)) });
+            const course = !!x.endDate;
             return (
-              <div key={x.id} className="grid grid-cols-[1fr_auto] sm:grid-cols-[1.3fr_140px_110px_90px_1fr_auto] gap-2 items-center">
-                <input className={inputFitClass} placeholder="اسم الجلسة، مثلاً: رحلة الشاطئ" value={x.name} maxLength={80} onChange={(e) => set({ name: e.target.value })} />
-                <input type="date" dir="ltr" className={inputFitClass} value={x.date} onChange={(e) => set({ date: e.target.value })} />
-                <input type="time" dir="ltr" className={inputFitClass} value={`${String(Math.floor(x.startMin / 60)).padStart(2, '0')}:${String(x.startMin % 60).padStart(2, '0')}`} onChange={(e) => { const [h, m] = e.target.value.split(':').map(Number); if (!Number.isNaN(h)) set({ startMin: h * 60 + (m || 0) }); }} />
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-500">
-                  <input type="number" min={1} max={MAX_SESSION_SEATS} className={`${inputFitClass} w-16`} value={x.seats} onChange={(e) => set({ seats: Math.min(MAX_SESSION_SEATS, Math.max(1, Number(e.target.value) || 1)) })} /> مقعد
-                </span>
-                <input className={inputFitClass} placeholder="السعر (اختياري): 25$ للشخص" value={x.price} maxLength={40} onChange={(e) => set({ price: e.target.value })} />
-                <button type="button" aria-label="حذف الجلسة" className="text-[#E03131] cursor-pointer" onClick={() => change({ sessions: current.sessions.filter((_, j) => j !== i) })}><Trash2 size={15} /></button>
+              <div key={x.id} className="rounded-xl border border-neutral-200 p-2.5 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" className={chip(!course)} onClick={() => set({ endDate: '' })}>جلسة واحدة</button>
+                  <button type="button" className={chip(course)} onClick={() => set({ endDate: course ? x.endDate : dayPlus(x.date || new Date().toISOString().slice(0, 10), 7) })}>كورس (من تاريخ لتاريخ)</button>
+                  <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer mr-auto" onClick={() => change({ sessions: current.sessions.filter((_, j) => j !== i) })}><Trash2 size={15} /></button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-[1.4fr_1fr_1fr_100px_1fr] gap-2 items-center">
+                  <input className={`${inputFitClass} col-span-2 sm:col-span-1`} placeholder={course ? 'اسم الكورس، مثلاً: كورس الخياطة' : 'اسم الجلسة، مثلاً: رحلة الشاطئ'} value={x.name} maxLength={80} onChange={(e) => set({ name: e.target.value })} />
+                  <label className="text-[10px] font-bold text-neutral-400">{course ? 'يبدأ' : 'التاريخ'}
+                    <input type="date" dir="ltr" className={inputFitClass} value={x.date} onChange={(e) => set({ date: e.target.value, endDate: course && x.endDate <= e.target.value ? dayPlus(e.target.value, 7) : x.endDate })} />
+                  </label>
+                  {course ? (
+                    <label className="text-[10px] font-bold text-neutral-400">ينتهي
+                      <input type="date" dir="ltr" min={dayPlus(x.date, 1)} className={inputFitClass} value={x.endDate} onChange={(e) => set({ endDate: e.target.value > x.date ? e.target.value : dayPlus(x.date, 1) })} />
+                    </label>
+                  ) : <span />}
+                  <label className="text-[10px] font-bold text-neutral-400">{course ? 'وقت اليوم' : 'الوقت'}
+                    <input type="time" dir="ltr" className={inputFitClass} value={`${String(Math.floor(x.startMin / 60)).padStart(2, '0')}:${String(x.startMin % 60).padStart(2, '0')}`} onChange={(e) => { const [h, m] = e.target.value.split(':').map(Number); if (!Number.isNaN(h)) set({ startMin: h * 60 + (m || 0) }); }} />
+                  </label>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-500">
+                    <input type="number" min={1} max={MAX_SESSION_SEATS} className={`${inputFitClass} w-16`} value={x.seats} onChange={(e) => set({ seats: Math.min(MAX_SESSION_SEATS, Math.max(1, Number(e.target.value) || 1)) })} /> مقعد
+                  </span>
+                  <input className={`${inputFitClass} col-span-2 sm:col-span-5`} placeholder="السعر (اختياري): 25$ للشخص" value={x.price} maxLength={40} onChange={(e) => set({ price: e.target.value })} />
+                </div>
               </div>
             );
           })}
-          <GhostButton onClick={() => change({ sessions: [...current.sessions, { id: newSessionId(), name: '', date: new Date().toISOString().slice(0, 10), startMin: 600, seats: 10, price: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف جلسة</span></GhostButton>
+          <GhostButton onClick={() => change({ sessions: [...current.sessions, { id: newSessionId(), name: '', endDate: '', date: new Date().toISOString().slice(0, 10), startMin: 600, seats: 10, price: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف جلسة</span></GhostButton>
           <Field label="أكثر عدد مقاعد بالحجز الواحد" hint="كم مقعد بيقدر الزبون يحجز بمرة وحدة">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
               <input type="number" min={1} max={50} className={`${inputFitClass} w-24`} value={current.maxSeatsPerBooking} onChange={(e) => change({ maxSeatsPerBooking: Math.min(50, Math.max(1, Number(e.target.value) || 1)) })} /> مقعد

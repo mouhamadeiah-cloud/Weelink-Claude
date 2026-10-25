@@ -8,7 +8,8 @@
 export interface SeatSession {
   id: string;
   name: string;
-  date: string; // yyyy-mm-dd, the business's own day
+  date: string; // yyyy-mm-dd, the business's own day (a course: its first day)
+  endDate: string; // a course's last day; '' for a single session
   startMin: number; // minutes from midnight
   seats: number; // the session's capacity
   price: string; // free text shown to the visitor, e.g. «25$ للشخص»
@@ -27,6 +28,7 @@ export const normalizeSessions = (raw: unknown): SeatSession[] => {
       id: typeof s?.id === 'string' && /^[a-z0-9]{1,20}$/.test(s.id) ? s.id : '',
       name: String(s?.name ?? '').trim().slice(0, 80),
       date: isDate(s?.date) ? s.date : '',
+      endDate: isDate(s?.endDate) && isDate(s?.date) && s.endDate > s.date ? s.endDate : '',
       startMin: Math.min(1439, Math.max(0, Math.round(Number(s?.startMin)) || 0)),
       seats: Math.min(MAX_SESSION_SEATS, Math.max(1, Math.round(Number(s?.seats)) || 10)),
       price: String(s?.price ?? '').trim().slice(0, 40),

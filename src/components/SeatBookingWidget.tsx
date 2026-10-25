@@ -139,7 +139,7 @@ export const SeatBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
                   className={`w-full text-right rounded-xl border p-2.5 cursor-pointer disabled:cursor-default disabled:opacity-40 ${on ? 'text-white' : dark ? 'bg-white/5 border-white/15 text-white' : 'bg-white border-neutral-200 text-neutral-800'}`}
                   style={on ? { backgroundColor: accent, borderColor: accent } : undefined}>
                   <div className="text-[11px] font-black">{s.name}{s.price ? ` · ${s.price}` : ''}</div>
-                  <div className={`text-[10px] font-bold ${on ? 'text-white/85' : sub}`}>{label(s.date)} · {timeLabel(s.startMin)}</div>
+                  <div className={`text-[10px] font-bold ${on ? 'text-white/85' : sub}`}>{s.endDate ? `من ${label(s.date)} إلى ${label(s.endDate)}` : label(s.date)} · {timeLabel(s.startMin)}</div>
                   <div className={`text-[10px] font-bold ${on ? 'text-white/85' : rest <= 3 ? 'text-red-600' : sub}`}>{rest < 1 ? 'اكتملت المقاعد' : live ? `باقي ${rest} ${rest === 1 ? 'مقعد' : 'مقاعد'}` : `${s.seats} مقعد`}</div>
                 </button>
               );

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import handler from '../api/worker.ts';
+import handler from '../api/booking.ts';
 import { store, tokens } from './fakeAdmin.ts';
 
 process.env.FIREBASE_SERVICE_ACCOUNT = JSON.stringify({ private_key: 'x' });
@@ -16,7 +16,7 @@ store.set('bookings/wown/items/b4', { person: 'pa', date: day(-3), startMin: 480
 store.set('bookings/wown/items/b5', { person: 'pa', date: day(2), startMin: 480, slot: 'c', name: 'ملغى', status: 'cancelled' });
 
 const call = async (body: any, token = '') => {
-  const r = await handler.fetch(new Request('http://x/api/worker', { method: 'POST', headers: token ? { authorization: `Bearer ${token}` } : {}, body: JSON.stringify(body) }));
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', headers: token ? { authorization: `Bearer ${token}` } : {}, body: JSON.stringify({ ...body, action: `worker-${body.action}` }) }));
   return { s: r.status, ...(await r.json()) };
 };
 

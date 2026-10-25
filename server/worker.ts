@@ -1,13 +1,14 @@
-// Server function: the worker's own page (Eyad, 25 Oct). A team person with a secret 6-digit code opens the
+// The worker's own page (served through /api/booking, whose actions are prefixed «worker-»: Vercel's free plan
+// allows only 12 functions, so this is no function of its own) (Eyad, 25 Oct). A team person with a secret 6-digit code opens the
 // worker link and sees only their own bookings (read-only), and marks one «تم» when it is done.
 //
-//   POST /api/worker  { action: 'set-pin', owner, person, pin }  with  Authorization: Bearer <ID token>
+//   POST /api/booking  { action: 'worker-set-pin', owner, person, pin }  with  Authorization: Bearer <ID token>
 //        → the owner (or a member) gives a person their code            → { ok: true } | { error: 'pin_used' }
-//   POST /api/worker  { action: 'pins', owner }  with  Authorization: Bearer <ID token>
+//   POST /api/booking  { action: 'worker-pins', owner }  with  Authorization: Bearer <ID token>
 //        → which people have a code                                     → { ids: [personId] }
-//   POST /api/worker  { action: 'view', owner, pin }
+//   POST /api/booking  { action: 'worker-view', owner, pin }
 //        → the person's name and colour and their coming bookings (no phone or email)
-//   POST /api/worker  { action: 'done', owner, pin, id }
+//   POST /api/booking  { action: 'worker-done', owner, pin, id }
 //        → marks one of that person's bookings (today or earlier) as done
 //
 // workerPins/{owner}/people/{person} { salt, hash } is closed to browsers (firestore.rules' default deny); the
@@ -15,29 +16,13 @@
 // Needs FIREBASE_SERVICE_ACCOUNT.
 
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { cert, getApps, initializeApp, getAuth, getFirestore } from '../server/firebase.js';
 import { colorOf } from '../src/services/bookingGrid.js';
-import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
-const firebaseAdmin = () => {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (!raw) return null;
-  let account: { private_key?: string };
-  try {
-    account = JSON.parse(raw);
-  } catch {
-    console.error('FIREBASE_SERVICE_ACCOUNT is not valid JSON; paste the whole service-account file.');
-    return null;
-  }
-  if (!account.private_key) return null;
-  const app = getApps()[0] || initializeApp({ credential: cert(account as object), projectId: firebaseConfig.projectId });
-  const databaseId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
-  return { auth: getAuth(app), db: databaseId ? getFirestore(app, databaseId) : getFirestore(app) };
-};
-type Admin = NonNullable<ReturnType<typeof firebaseAdmin>>;
+// The admin SDK handle api/booking.ts built (auth + db).
+type Admin = { auth: { verifyIdToken(t: string): Promise<{ uid: string }> }; db: any };
 
 const validId = (v: unknown): v is string => typeof v === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(v);
 const validPin = (v: unknown): v is string => typeof v === 'string' && /^\d{6}$/.test(v);
@@ -71,7 +56,8 @@ const managerOf = async (admin: Admin, request: Request, owner: unknown) => {
   return null;
 };
 
-const pinsOf = async (admin: Admin, owner: string) =>
+type Pin = { id: string; salt?: string; hash?: string };
+const pinsOf = async (admin: Admin, owner: string): Promise<Pin[]> =>
   (await admin.db.collection('workerPins').doc(owner).collection('people').get()).docs.map((d: any) => ({ id: d.id as string, ...(d.data() as { salt?: string; hash?: string }) }));
 
 // The person a code belongs to; counts a wrong code toward the lock.
@@ -145,16 +131,11 @@ const done = async (admin: Admin, body: any) => {
   return json({ ok: true });
 };
 
-export default {
-  async fetch(request: Request): Promise<Response> {
-    const admin = firebaseAdmin();
-    if (!admin) return json({ error: 'not_configured' }, 503);
-    if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
-    const body = (await request.json().catch(() => ({}))) as any;
-    if (body?.action === 'set-pin') return setPin(admin, request, body);
-    if (body?.action === 'pins') return pins(admin, request, body);
-    if (body?.action === 'view') return view(admin, body);
-    if (body?.action === 'done') return done(admin, body);
-    return json({ error: 'bad_request' }, 400);
-  },
+// `body.action` is 'set-pin' | 'pins' | 'view' | 'done' (api/booking.ts strips the «worker-» prefix).
+export const workerAction = async (admin: Admin, request: Request, body: any): Promise<Response> => {
+  if (body?.action === 'set-pin') return setPin(admin, request, body);
+  if (body?.action === 'pins') return pins(admin, request, body);
+  if (body?.action === 'view') return view(admin, body);
+  if (body?.action === 'done') return done(admin, body);
+  return json({ error: 'bad_request' }, 400);
 };

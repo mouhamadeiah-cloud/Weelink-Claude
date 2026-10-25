@@ -1,4 +1,4 @@
-// The worker's own page and the owner's side of it (api/worker.ts).
+// The worker's own page and the owner's side of it (server/worker.ts, through /api/booking).
 import { auth } from './firebase';
 
 export interface WorkerBooking {
@@ -28,7 +28,7 @@ const post = async (body: object, withAuth = false): Promise<{ ok: boolean; stat
     headers.Authorization = `Bearer ${await user.getIdToken()}`;
   }
   try {
-    const res = await fetch('/api/worker', { method: 'POST', headers, body: JSON.stringify(body) });
+    const res = await fetch('/api/booking', { method: 'POST', headers, body: JSON.stringify(body) });
     return { ok: res.ok, status: res.status, data: await res.json().catch(() => ({})) };
   } catch {
     return { ok: false, status: 0, data: { error: 'offline' } };
@@ -36,21 +36,21 @@ const post = async (body: object, withAuth = false): Promise<{ ok: boolean; stat
 };
 
 export const workerPinIds = async (owner: string): Promise<string[]> => {
-  const r = await post({ action: 'pins', owner }, true);
+  const r = await post({ action: 'worker-pins', owner }, true);
   return r.ok && Array.isArray(r.data.ids) ? r.data.ids : [];
 };
 
 export const setWorkerPin = async (owner: string, person: string, pin: string): Promise<string> => {
-  const r = await post({ action: 'set-pin', owner, person, pin }, true);
+  const r = await post({ action: 'worker-set-pin', owner, person, pin }, true);
   return r.ok ? '' : r.data.error || 'error';
 };
 
 export const loadWorkerView = async (owner: string, pin: string): Promise<{ view: WorkerView } | { error: string }> => {
-  const r = await post({ action: 'view', owner, pin });
+  const r = await post({ action: 'worker-view', owner, pin });
   return r.ok ? { view: r.data } : { error: r.data.error || 'error' };
 };
 
 export const markWorkerDone = async (owner: string, pin: string, id: string): Promise<string> => {
-  const r = await post({ action: 'done', owner, pin, id });
+  const r = await post({ action: 'worker-done', owner, pin, id });
   return r.ok ? '' : r.data.error || 'error';
 };

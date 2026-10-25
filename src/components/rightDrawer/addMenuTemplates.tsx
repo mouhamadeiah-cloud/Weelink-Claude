@@ -3476,6 +3476,41 @@ export const buildAddMenuData = ({
         }
       },
       {
+        id: 'rental-booking',
+        title: 'تأجير (سيارات ومعدات) 🚗',
+        sub: 'الزبون يختار تاريخ الاستلام والتسليم والوحدة (سيارة، معدة…)؛ الوحدات وأسعارها وأقصى مدة تُضبط من الإدارة',
+        subCategories: ['confirm', 'month', 'slots', 'all'],
+        type: 'calendar' as const,
+        preview: (
+          <div className="w-full h-22 bg-gradient-to-r from-emerald-50/80 via-white to-neutral-50 rounded-xl p-2 flex flex-col justify-between border-2 border-emerald-500/40 text-right shadow-2xs">
+            <div className="flex justify-between items-center text-[9.5px] font-bold">
+              <span className="text-emerald-700 flex items-center gap-1"><span>🚗</span><span>احجز الآن</span></span>
+              <span className="bg-emerald-600 text-white text-[8px] px-1.5 py-0.5 rounded font-bold">بالأيام</span>
+            </div>
+            <div className="bg-white/80 border border-neutral-200 rounded p-1 text-[7.5px] text-neutral-600 space-y-0.5">
+              <div>• تاريخ الاستلام والتسليم واختيار الوحدة</div>
+              <div>• لا تتداخل حجوزات الوحدة الواحدة</div>
+            </div>
+            <span className="text-[8.5px] bg-emerald-600 text-white py-1 rounded-lg text-center font-bold shadow-3xs">إضافة التأجير للكانفاس</span>
+          </div>
+        ),
+        action: () => {
+          onAddElement('calendar', 'احجز الآن', {
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            glowIntensity: 24, glowColor: 'rgba(0,0,0,0.14)', glowPosition: 'bottom'
+          }, {
+            name: 'تأجير',
+            calendarTitle: 'احجز الآن',
+            calendarAccentColor: calAddAccentColor,
+            calendarBookingType: 'rental',
+            calendarScheduleId: 'rental',
+            width: 780,
+            height: 520,
+          });
+        }
+      },
+      {
         id: 'seats-session-booking',
         title: 'حجز مقاعد (دورات ورحلات وفعاليات) 🎟️',
         sub: 'الزبون يختار جلسة وعدد المقاعد؛ الجلسات وعدد مقاعدها تُضبط من الإدارة، ولا يزيد الحجز عن المقاعد',

@@ -19,6 +19,7 @@
 
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
+import { personWorks } from '../src/services/teamHours.js';
 import { chooseTable, coveredSlots, tablesOfHalls, type BookableTable } from '../src/services/tableBooking.js';
 import { restaurantIdOf } from '../src/utils/projectKeys.js';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
@@ -191,6 +192,7 @@ const create = async (admin: Admin, body: any) => {
     const personId = validId(body.person) ? body.person : '';
     const person = personId ? (await admin.db.collection('team').doc(owner).collection('people').doc(personId).get()).data() : null;
     if (!person || person.takesBookings !== true) return json({ error: 'bad_person' }, 400);
+    if (!personWorks(person as any, body.date, Number(body.startMin))) return json({ error: 'taken' }, 409);
     (booking as any).person = personId;
     (booking as any).personName = text(person.name, 80);
     (booking as any).personEmail = text(person.email, 120).toLowerCase();

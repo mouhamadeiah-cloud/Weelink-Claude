@@ -11,7 +11,7 @@ import { Card, EmptyState, Field, GhostButton, inputClass, PrimaryButton, Toggle
 import { CloudNotice, ImagePicker } from '../restaurant/tabs/shared';
 import { CopyLink } from '../restaurant/tabs/DevicesTab';
 
-const EMPTY: Omit<TeamPerson, 'id' | 'at'> = { name: '', role: '', photo: '', email: '', phone: '', takesBookings: true, invite: '' };
+const EMPTY: Omit<TeamPerson, 'id' | 'at'> = { name: '', role: '', photo: '', email: '', phone: '', takesBookings: true, invite: '', workingDays: [], workStart: '', workEnd: '' };
 const isEmail = (v: string) => /^\S+@\S+\.\S+$/.test(v);
 
 const whatsappLink = (url: string, name: string, phone: string) =>
@@ -24,6 +24,8 @@ interface TeamSectionProps {
   // The free page's admin shows the team as one section among others, with its own heading.
   asSection?: boolean;
 }
+
+const DAY_NAMES: Record<string, string> = { sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة', saturday: 'السبت' };
 
 export const TeamSection: React.FC<TeamSectionProps> = ({ owner, invitePerms = { ...ALL_PERMS, accounts: false }, asSection = false }) => {
   const team = useTeam(owner);
@@ -53,6 +55,7 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ owner, invitePerms = {
     if (p.name.length < 2) return setError('اكتب اسم الشخص.');
     if (p.email && !isEmail(p.email)) return setError('تأكد من الإيميل.');
     if (p.takesBookings && !p.email) return setError('اللي بيستقبل حجوزات لازم يكون إلو إيميل، ليوصله الحجز والتذكير.');
+    if (p.workStart && p.workEnd && p.workStart >= p.workEnd) return setError('ساعة بداية دوامه لازم تكون قبل النهاية.');
     const isNew = !p.id;
     if (isNew && team.people.length >= MAX_TEAM) return setError(`الحد ${MAX_TEAM} شخص.`);
     const person: TeamPerson = isNew ? { ...p, id: newPersonId(), at: new Date().toISOString() } : p;
@@ -133,6 +136,28 @@ export const TeamSection: React.FC<TeamSectionProps> = ({ owner, invitePerms = {
         <Toggle checked={editing.takesBookings} onChange={(takesBookings) => setEditing({ ...editing, takesBookings })} label="يستقبل حجوزات" />
         <div className="text-xs text-neutral-400 font-bold -mt-0.5">الزبون بيقدر يختاره وقت الحجز، وبيوصله إيميل بكل حجز عنده.</div>
       </div>
+      {editing.takesBookings && (
+        <div className="space-y-2 rounded-2xl bg-neutral-50 p-3">
+          <div className="text-xs font-black text-ink">دوامه بالحجز</div>
+          <div className="text-xs text-neutral-400 font-bold">اتركه فاضي ليمشي على أيام وساعات جدول الحجز. أو حدد أيامه وساعاته الخاصة (داخل دوام الجدول).</div>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(DAY_NAMES).map(([d, name]) => {
+              const on = editing.workingDays.includes(d);
+              return (
+                <button key={d} type="button" onClick={() => setEditing({ ...editing, workingDays: on ? editing.workingDays.filter((x) => x !== d) : [...editing.workingDays, d] })} className={`h-8 px-3 rounded-xl border text-xs font-bold cursor-pointer ${on ? 'bg-brand border-brand text-white' : 'bg-white border-neutral-200 text-neutral-600'}`}>{name}</button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2" dir="ltr">
+            <input type="time" className={`${inputClass} w-32`} value={editing.workStart} onChange={(e) => setEditing({ ...editing, workStart: e.target.value })} />
+            <span className="text-neutral-400">–</span>
+            <input type="time" className={`${inputClass} w-32`} value={editing.workEnd} onChange={(e) => setEditing({ ...editing, workEnd: e.target.value })} />
+            {(editing.workStart || editing.workEnd || editing.workingDays.length > 0) && (
+              <button type="button" className="text-xs font-bold text-brand cursor-pointer" onClick={() => setEditing({ ...editing, workingDays: [], workStart: '', workEnd: '' })}>مسح</button>
+            )}
+          </div>
+        </div>
+      )}
       {error && <div className="text-xs font-bold text-[#E03131]">{error}</div>}
       <div className="flex flex-wrap gap-2">
         <PrimaryButton onClick={save} disabled={busy === 'save'}>{busy === 'save' ? 'جاري الحفظ…' : editing.id ? 'احفظ التعديل' : 'أضف للفريق'}</PrimaryButton>

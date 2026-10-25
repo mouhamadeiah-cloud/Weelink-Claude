@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { cleanDays, type PersonHours } from './teamHours';
 
 export interface TeamPerson {
   id: string;
@@ -19,10 +20,15 @@ export interface TeamPerson {
   phone: string;
   takesBookings: boolean;
   invite: string; // the code of the invitation sent to this person, '' when none
+  workingDays: string[]; // their own days inside the schedule's, [] = the schedule's
+  workStart: string; // their own hours, '' = the schedule's
+  workEnd: string;
   at: string;
 }
 
-export type PublicPerson = Pick<TeamPerson, 'id' | 'name' | 'role' | 'photo'>;
+export type PublicPerson = Pick<TeamPerson, 'id' | 'name' | 'role' | 'photo'> & PersonHours;
+
+const timeOf = (v: unknown) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : '');
 
 export const MAX_TEAM = 50;
 
@@ -39,12 +45,15 @@ export const normalizePerson = (id: string, d: any): TeamPerson => ({
   phone: clip(d?.phone, 40),
   takesBookings: d?.takesBookings === true,
   invite: clip(d?.invite, 60),
+  workingDays: cleanDays(d?.workingDays),
+  workStart: timeOf(d?.workStart),
+  workEnd: timeOf(d?.workEnd),
   at: clip(d?.at, 40),
 });
 
 // What visitors may see: the people who take bookings, in the order of the list.
 export const publicPeople = (people: TeamPerson[]): PublicPerson[] =>
-  people.filter((p) => p.takesBookings && p.name).map(({ id, name, role, photo }) => ({ id, name, role, photo }));
+  people.filter((p) => p.takesBookings && p.name).map(({ id, name, role, photo, workingDays, workStart, workEnd }) => ({ id, name, role, photo, workingDays, workStart, workEnd }));
 
 // What visitors see: the people who take bookings (teamPublic/{owner}); empty until it loads.
 export const usePublicTeam = (owner: string | null | undefined) => {
@@ -55,7 +64,7 @@ export const usePublicTeam = (owner: string | null | undefined) => {
       doc(db, 'teamPublic', owner),
       (snap) => {
         const list = snap.data()?.people;
-        setState({ owner, people: Array.isArray(list) ? list.filter((p: any) => p && typeof p.id === 'string' && typeof p.name === 'string').map((p: any) => ({ id: p.id, name: p.name, role: String(p.role || ''), photo: String(p.photo || '') })) : [] });
+        setState({ owner, people: Array.isArray(list) ? list.filter((p: any) => p && typeof p.id === 'string' && typeof p.name === 'string').map((p: any) => ({ id: p.id, name: p.name, role: String(p.role || ''), photo: String(p.photo || ''), workingDays: cleanDays(p.workingDays), workStart: timeOf(p.workStart), workEnd: timeOf(p.workEnd) })) : [] });
       },
       () => setState({ owner, people: [] })
     );

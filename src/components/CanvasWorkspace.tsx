@@ -36,6 +36,7 @@ import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
 import { useCustomerPrefill } from './customers/customerSession';
 import { BookingPageContext, createBooking, dayKey, readTaken, readTakenTables } from '../services/bookings';
 import { usePublicTeam } from '../services/team';
+import { personWorks } from '../services/teamHours';
 import { hallsFor, hasTable, stepOf, tablesFor, type Occupancy } from '../services/tableBooking';
 import { useRestaurantTables } from '../services/tableBookingData';
 import { BookingSettingsOpenContext, WEEK_DAYS, newTableSchedule, scheduleFor, scheduleFromElement, useBookingSettings } from '../services/bookingSettings';
@@ -193,6 +194,9 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const pickedPerson = hasSpecialists && schedule.specialists === 'choose' && team.some((p) => p.id === personChoice) ? personChoice : '';
   const candidates = hasSpecialists ? (pickedPerson ? [pickedPerson] : team.map((p) => p.id)) : [''];
   const candidatesKey = candidates.join();
+  // Whether a team person works at that time of the chosen day (their own days and hours, if they set any).
+  const worksAt = (personId: string, startMin: number) =>
+    !personId || personWorks(team.find((p) => p.id === personId), dayKey(new Date(currentYear, currentMonth, selectedDay)), startMin);
   const taken = useMemo(() => {
     const lists = candidates.map((c) => takenBy[c] || []);
     return lists[0].filter((t) => lists.every((l) => l.includes(t)));
@@ -269,7 +273,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
       return;
     }
     // With specialists: the picked one, or the first (in the team's order) who is free at that time.
-    const person = hasSpecialists ? candidates.find((c) => !(takenBy[c] || []).includes(chosen.startMin)) || '' : '';
+    const person = hasSpecialists ? candidates.find((c) => !(takenBy[c] || []).includes(chosen.startMin) && worksAt(c, chosen.startMin)) || '' : '';
     if (hasSpecialists && !person) {
       setBookError('اختر وقتاً متاحاً.');
       return;
@@ -405,7 +409,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const isPastSlot = (startMin: number) => isPastOn(selectedDay, startMin);
   // A time nobody can take: its person is booked, or (tables) no table that seats the party is free.
   function isTakenAt(startMin: number) {
-    if (!isTable) return taken.includes(startMin);
+    if (!isTable) return candidates.every((c) => (takenBy[c] || []).includes(startMin) || !worksAt(c, startMin));
     return !hasTable(restaurantTables, occupancy, { party, start: startMin, duration: schedule.durationMinutes, step: stepOf(interval, intervalMins), hallId: hallWish || undefined, tableId: tableWish || undefined });
   }
   const isOpenSlot = (label: string) => {
@@ -435,7 +439,7 @@ const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
     if (computedSlots.length > 0 && (!selectedSlot || !isOpenSlot(selectedSlot))) {
       setSelectedSlot(computedSlots.find(isOpenSlot) || null);
     }
-  }, [computedSlots, selectedSlot, taken, selectedDay, currentMonth, currentYear]);
+  }, [computedSlots, selectedSlot, taken, takenBy, team, selectedDay, currentMonth, currentYear]);
 
   // Handle month switching
   const handlePrevMonth = () => {

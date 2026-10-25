@@ -8,6 +8,8 @@ users['own1'] = { email: 'owner@example.com' };
 store.set('team/own1/people/pa1', { name: 'د. سارة', takesBookings: true, email: 'sara@example.com' });
 store.set('team/own1/people/pb2', { name: 'سامر', takesBookings: false, email: 'samer@example.com' });
 
+store.set('team/own1/people/pc3', { name: 'ليث', takesBookings: true, email: 'laith@example.com', workStart: '12:00', workEnd: '15:00' });
+
 const day = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
 const base = { action: 'create', owner: 'own1', project: 'page', pageName: 'عيادة', date: day, startMin: 600, slot: '10:00 ص - 10:30 ص', meetingType: 'phone', name: 'ليلى', phone: '0933123456', email: '', needsConfirmation: true };
 const book = async (extra: any = {}) => {
@@ -79,4 +81,9 @@ test('a cancelled table booking frees its times', async () => {
 test('a restaurant that never saved table settings still books with the defaults', async () => {
   store.delete('bookingSettings/own1/pages/restaurant');
   assert.equal((await tbook({ startMin: 900 })).s, 200);
+});
+
+test('a person is not booked outside their own hours', async () => {
+  assert.equal((await book({ person: 'pc3', startMin: 600 })).error, 'taken');
+  assert.equal((await book({ person: 'pc3', startMin: 720 })).s, 200);
 });

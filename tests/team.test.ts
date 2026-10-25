@@ -16,5 +16,5 @@ test('visitors see only the named people who take bookings, without email or pho
     normalizePerson('b', { name: 'سامر', role: 'مدير', email: 'm@x.co', takesBookings: false }),
     normalizePerson('c', { name: '', takesBookings: true }),
   ];
-  assert.deepEqual(publicPeople(people), [{ id: 'a', name: 'سارة', role: 'طبيبة', photo: '' }]);
+  assert.deepEqual(publicPeople(people), [{ id: 'a', name: 'سارة', role: 'طبيبة', photo: '', workingDays: [], workStart: '', workEnd: '' }]);
 });

@@ -11,7 +11,7 @@ import { saveCustomerProfile, type PageKind } from '../services/pageCustomers';
 import { rememberLogin } from '../services/sharedLogin';
 import type { ProjectKey } from '../utils/projectKeys';
 import { EMPTY_CUSTOMER, customerProblem, pageKindOf, type CustomerDraft, type CustomerLabels } from '../services/bookingCustomer';
-import { canRequestAccount, requestAccountOpen, setCustomerSession, useCustomerPrefill, useCustomerSession } from './customers/customerSession';
+import { canRequestAccount, requestAccountOpen, setCustomerSession, useAccountCard, useCustomerPrefill, useCustomerSession } from './customers/customerSession';
 
 export { EMPTY_CUSTOMER, customerProblem, pageKindOf };
 export type { CustomerDraft, CustomerLabels };
@@ -26,6 +26,7 @@ interface FieldsProps {
 
 export const CustomerFields: React.FC<FieldsProps> = ({ draft, onChange, dark, accent, labels }) => {
   const session = useCustomerSession();
+  const own = useAccountCard();
   useCustomerPrefill((c) =>
     onChange((d) => ({ ...d, name: d.name || c.name, phone: d.phone || c.phone, address: d.address || c.address, email: d.email || c.email }))
   );
@@ -37,8 +38,8 @@ export const CustomerFields: React.FC<FieldsProps> = ({ draft, onChange, dark, a
 
   return (
     <div className="space-y-2">
-      {session ? (
-        <div className={`text-[10px] font-bold ${text}`}>✓ مسجّل بحساب Weelink{session.profile.name ? ` باسم ${session.profile.name}` : ''}</div>
+      {session || own ? (
+        <div className={`text-[10px] font-bold ${text}`}>✓ مسجّل بحساب Weelink{(session?.profile.name || own?.name) ? ` باسم ${session?.profile.name || own?.name}` : ''}</div>
       ) : canRequestAccount() ? (
         <div className={`text-[10px] ${sub}`}>
           عندك حساب Weelink؟{' '}
@@ -68,7 +69,7 @@ export const CustomerFields: React.FC<FieldsProps> = ({ draft, onChange, dark, a
         {label(labels?.desc || 'ملاحظات أو وصف الطلب')}
         <textarea rows={2} className={`${field} resize-none`} placeholder="اكتب هنا ملاحظاتك أو تفاصيل طلبك..." value={draft.desc} onChange={(e) => set({ desc: e.target.value })} />
       </div>
-      {!session && (
+      {!session && !own && (
         <div className="space-y-1.5">
           <label className={`flex items-center gap-2 text-[10.5px] font-bold cursor-pointer ${text}`}>
             <input type="checkbox" checked={draft.register} onChange={(e) => set({ register: e.target.checked, password: '' })} style={{ accentColor: accent }} />

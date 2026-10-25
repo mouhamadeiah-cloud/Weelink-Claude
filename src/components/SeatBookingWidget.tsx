@@ -9,7 +9,7 @@ import { dayPlus, openSessions, seatsLeft } from '../services/seatBooking';
 import { timeLabel } from '../services/bookingGrid';
 import { depositAmount, normalizeRule, priceNumber } from '../services/bookingDeposit';
 import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from './DepositPay';
-import { useCustomerSession } from './customers/customerSession';
+import { useAccountCard, useCustomerSession } from './customers/customerSession';
 import { AccountSignup, CustomerFields, EMPTY_CUSTOMER, customerProblem, type CustomerDraft } from './BookingCustomerForm';
 import { BookingGear } from './BookingGear';
 
@@ -44,7 +44,7 @@ export const SeatBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const [pick, setPick] = useState('');
   const [seats, setSeats] = useState(1);
   const [customer, setCustomer] = useState<CustomerDraft>(EMPTY_CUSTOMER);
-  const signedIn = !!useCustomerSession();
+  const signedIn = !!useCustomerSession() || !!useAccountCard();
   const [signup, setSignup] = useState<CustomerDraft | null>(null); // the details of a visitor who asked for an account
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

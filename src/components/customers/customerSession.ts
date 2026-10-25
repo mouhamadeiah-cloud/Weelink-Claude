@@ -28,15 +28,42 @@ const subscribe = (l: () => void) => {
 
 export const useCustomerSession = () => useSyncExternalStore(subscribe, getCustomerSession, () => null);
 
-// Fills a form from the signed-in customer's saved details (only what the visitor has not typed).
+// Anyone signed in with a Weelink account who has not joined this page (a customer of other pages,
+// the owner of another page, this page's owner or a team member): only their card (name, phone,
+// address, email) is used to fill forms. It opens nothing of theirs and joins nothing.
+export interface AccountCard {
+  uid: string;
+  email: string;
+  name: string;
+  phone: string;
+  address: string;
+}
+
+let card: AccountCard | null = null;
+
+export const setAccountCard = (c: AccountCard | null) => {
+  card = c;
+  listeners.forEach((l) => l());
+};
+
+export const getAccountCard = () => card;
+
+export const useAccountCard = () => useSyncExternalStore(subscribe, getAccountCard, () => null);
+
+// Fills a form from the signed-in person's saved details (only what the visitor has not typed):
+// the page's customer profile when they joined it, else their Weelink account card.
 export const useCustomerPrefill = (fill: (c: { name: string; phone: string; address: string; email: string }) => void) => {
   const customer = useCustomerSession();
+  const own = useAccountCard();
   useEffect(() => {
-    if (!customer) return;
-    const p = customer.profile;
-    fill({ name: p.name, phone: p.phone, address: p.address, email: customer.email || '' });
+    if (customer) {
+      const p = customer.profile;
+      fill({ name: p.name, phone: p.phone, address: p.address, email: customer.email || '' });
+    } else if (own) {
+      fill({ name: own.name, phone: own.phone, address: own.address, email: own.email });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customer]);
+  }, [customer, own]);
 };
 
 // Lets any form on a published page open the account window of its navbar entry.

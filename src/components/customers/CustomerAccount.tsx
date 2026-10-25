@@ -20,7 +20,7 @@ import {
 } from '../../services/pageCustomers';
 import { readCard } from '../../services/myAccount';
 import { forgetLogin, rememberLogin, resumeLogin } from '../../services/sharedLogin';
-import { setCustomerSession } from './customerSession';
+import { setAccountCard, setCustomerSession } from './customerSession';
 import { ORDER_STATUSES } from '../restaurant/restaurantTypes';
 import { formatMoney } from '../shop/adminUi';
 
@@ -81,9 +81,12 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
       if (mine) {
         setProfile({ name: mine.name, phone: mine.phone, address: mine.address, marketing: mine.marketing });
         setCustomerSession({ uid: u.uid, email: u.email || '', profile: mine });
+        setAccountCard(null);
         setStep('account');
       } else {
         setCustomerSession(null);
+        // Not a customer of this page (maybe its owner or a team member): forms are only filled in from the account card.
+        readCard(u).then((c) => auth.currentUser?.uid === u.uid && setAccountCard({ uid: u.uid, email: u.email || '', ...c })).catch(() => setAccountCard(null));
         setStep('profile');
       }
     } catch (e) {
@@ -103,6 +106,7 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
         else {
           setJoined(null);
           setCustomerSession(null);
+          setAccountCard(null);
           setStep('signin');
         }
       }),
@@ -255,6 +259,7 @@ export const CustomerAccount: React.FC<CustomerAccountProps> = ({ ownerUid, page
         await leavePage(ownerUid, u.uid);
         setJoined(null);
         setCustomerSession(null);
+        readCard(u).then((c) => setAccountCard({ uid: u.uid, email: u.email || '', ...c })).catch(() => {});
         setStep('profile');
       } catch {
         setError('تعذر إلغاء الاشتراك. حاول مرة أخرى.');

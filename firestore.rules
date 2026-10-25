@@ -142,9 +142,10 @@ service cloud.firestore {
       }
 
       function isValidNewOrder(data, orderId) {
-        return data.keys().hasOnly(['id', 'number', 'createdAt', 'status', 'type', 'source', 'table', 'name', 'phone', 'address', 'notes', 'lines', 'subtotal', 'deliveryFee', 'total', 'customerUid'])
+        return data.keys().hasOnly(['id', 'number', 'createdAt', 'status', 'type', 'source', 'table', 'name', 'phone', 'address', 'notes', 'lines', 'subtotal', 'deliveryFee', 'total', 'customerUid', 'payment'])
           && data.id == orderId
           && (!('customerUid' in data) || (isSignedIn() && data.customerUid == request.auth.uid))
+          && (!('payment' in data) || (data.payment is map && data.payment.state == 'pending' && data.payment.txn is string && data.payment.txn.size() <= 60 && data.payment.amount == data.total))
           && data.status == 'new'
           && data.type in ['delivery', 'pickup', 'table']
           && data.source in ['website', 'qr']
@@ -460,6 +461,19 @@ service cloud.firestore {
     match /bookings/{ownerId}/items/{bookingId} {
       allow read: if canManage(ownerId);
     }
+    // The confirmed deposits of the page, for its accounts and report (api/booking.ts writes them).
+    match /bookingDeposits/{ownerId}/items/{bookingId} {
+      allow read: if canManage(ownerId);
+    }
+    // The hand entries of a Pro page's accounts (src/services/pageLedger.ts).
+    match /pageLedger/{ownerId}/items/{entryId} {
+      allow read, delete: if canManage(ownerId);
+      allow create: if canManage(ownerId)
+        && request.resource.data.kind in ['income', 'expense']
+        && request.resource.data.amount is number && request.resource.data.amount > 0
+        && request.resource.data.date is string && request.resource.data.date.size() == 10
+        && request.resource.data.keys().hasOnly(['project', 'kind', 'amount', 'category', 'note', 'date', 'createdAt']);
+    }
     match /bookingDays/{dayId} {
       allow get: if true;
     }
@@ -480,7 +494,8 @@ service cloud.firestore {
       allow create, update: if canManage(ownerId) && isValidId(projectKey)
         && incoming().keys().hasOnly(['schedules', 'payments'])
         && (!('payments' in incoming()) || incoming().payments is map)
-        && incoming().schedules is list && incoming().schedules.size() >= 1 && incoming().schedules.size() <= 10;
+        && (!('schedules' in incoming()) || (incoming().schedules is list && incoming().schedules.size() >= 1 && incoming().schedules.size() <= 10))
+        && ('schedules' in incoming() || 'payments' in incoming());
     }
 
     // «فريق العمل» (src/services/team.ts): the owner adds and changes the people, the owner and the

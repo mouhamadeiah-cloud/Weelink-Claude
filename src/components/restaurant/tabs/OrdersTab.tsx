@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Phone, MapPin, Bike, Store, Trash2, MessageCircle, Armchair } from 'lucide-react';
 import { MenuOrder, ORDER_STATUSES, OrderStatus } from '../restaurantTypes';
 import { describeLine } from '../menuCartStore';
-import { deleteOrder, setOrderStatus, syncOrderLedger } from '../restaurantCloud';
+import { deleteOrder, setOrderPayment, setOrderStatus, syncOrderLedger } from '../restaurantCloud';
 import { Card, EmptyState, formatMoney } from '../../shop/adminUi';
 import { whatsappHref } from '../../cars/carModel';
 import { CloudNotice, RestaurantTabProps } from './shared';
@@ -44,6 +44,14 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, restaura
       syncOrderLedger(restaurantId, o, status).catch(() => {});
     } else {
       setOrderStatus(restaurantId, o, status).catch((e) => console.warn('Could not update the order:', e));
+    }
+  };
+  const setPayment = (o: MenuOrder, state: 'paid' | 'rejected') => {
+    if (state === 'rejected' && !window.confirm('رفض الدفع رح يلغي الطلب. متأكد؟')) return;
+    if (localIds.has(o.id)) {
+      update((d) => ({ ...d, orders: d.orders.map((x) => (x.id === o.id && x.payment ? { ...x, payment: { ...x.payment, state }, ...(state === 'rejected' ? { status: 'cancelled' as const } : {}) } : x)) }));
+    } else {
+      setOrderPayment(restaurantId, o, state).catch((e) => console.warn('Could not update the payment:', e));
     }
   };
   const remove = (o: MenuOrder) => {
@@ -112,6 +120,22 @@ export const OrdersTab: React.FC<RestaurantTabProps> = ({ data, update, restaura
                   {o.phone && <a href={whatsappHref(waNumber(o.phone), `مرحبًا ${o.name}، بخصوص طلبك رقم ${o.number}`)} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[#2F9E44] font-bold"><MessageCircle size={13} />واتساب</a>}
                   {o.address && <div className="flex items-start gap-1.5 text-neutral-600"><MapPin size={13} className="mt-0.5 shrink-0" />{o.address}</div>}
                   {o.notes && <div className="text-neutral-600">ملاحظة: {o.notes}</div>}
+                  {o.payment && (
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-2 space-y-1">
+                      <div className="font-black text-violet-800">
+                        💰 دفع بمحفظة: {formatMoney(o.payment.amount, o.payment.currency || currency)}
+                        {o.payment.state === 'paid' ? ' · تأكد' : o.payment.state === 'rejected' ? ' · مرفوض' : ' · بانتظار تأكيدك'}
+                      </div>
+                      <div dir="ltr" className="text-neutral-600">{o.payment.walletLabel} · {o.payment.txn}</div>
+                      {o.payment.screenshot && <a href={o.payment.screenshot} target="_blank" rel="noreferrer" className="text-brand font-bold">صورة التحويل</a>}
+                      {o.payment.state === 'pending' && (
+                        <div className="flex gap-1.5 pt-1">
+                          <button type="button" onClick={() => setPayment(o, 'paid')} className="h-7 px-3 rounded-lg bg-brand text-white font-bold cursor-pointer">تأكيد الدفع</button>
+                          <button type="button" onClick={() => setPayment(o, 'rejected')} className="h-7 px-3 rounded-lg bg-red-50 text-red-600 font-bold cursor-pointer">رفض</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">

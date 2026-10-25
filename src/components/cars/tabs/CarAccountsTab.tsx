@@ -2,7 +2,7 @@
 // out, hand entries and transfers between the two), and the profit of every sold car. Car entries
 // come from the cars themselves (purchase, expenses, sale and payments). Both views print as an A4
 // report or save as PDF.
-import React, { useMemo, useState } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Plus, Printer, FileDown, Trash2 } from 'lucide-react';
 import { CarTransaction, MANUAL_IN_CATEGORIES, MANUAL_OUT_CATEGORIES, MONEY_ACCOUNTS, MoneyAccount, CAR_CURRENCIES } from '../carTypes';
 import { carSubtitle, carTitle } from '../carModel';
@@ -13,6 +13,7 @@ import { Card, Field, inputClass, inputFitClass, EmptyState, PrimaryButton, form
 import { printReport } from '../../shop/tabs/accountsReport';
 import type { LedgerRow } from '../../shop/tabs/AccountsTab';
 import { CarTabProps } from './CarEditor';
+import { BookingPageContext, useDepositLines } from '../../../services/bookings';
 import { Segmented, money } from './moneyUi';
 
 type Range = 'today' | '30d' | 'month' | 'year' | 'all' | 'custom';
@@ -55,14 +56,22 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
   const [entry, setEntry] = useState({ kind: 'in' as Kind, account: 'cash' as MoneyAccount, amount: '', category: MANUAL_IN_CATEGORIES[0], description: '', date: todayKey() });
   const [entryCurrency, setEntryCurrency] = useState(data.settings.currency);
   const [entryError, setEntryError] = useState('');
+  // The deposits the owner confirmed on bookings come into the bank (transfer to a wallet), read-only here.
+  const bookingPage = useContext(BookingPageContext);
+  const bookingDeposits = useDepositLines(bookingPage?.owner, bookingPage?.project);
+  const depositTxs = useMemo<CarTransaction[]>(
+    () => bookingDeposits.map((d) => ({ id: `dep-${d.id}`, date: d.date, kind: 'in', account: 'bank', amount: d.amount, currency: d.currency || data.settings.currency, category: 'عربون حجز', description: `عربون حجز · ${d.name}`, source: 'deposit', createdAt: d.date })),
+    [bookingDeposits, data.settings.currency]
+  );
 
   // Every currency in use, the default first.
   const currencies = useMemo(() => {
     const set = new Set<string>([data.settings.currency]);
     data.transactions.forEach((t) => set.add(t.currency));
+    depositTxs.forEach((t) => set.add(t.currency));
     data.cars.forEach((c) => set.add(c.currency));
     return [...set];
-  }, [data.transactions, data.cars, data.settings.currency]);
+  }, [data.transactions, depositTxs, data.cars, data.settings.currency]);
   const [currency, setCurrency] = useState(data.settings.currency);
   const m = (n: number) => money(n, currency);
 
@@ -84,9 +93,9 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
   // ---- cash and bank ----
   const balances = balancesOf(data.transactions);
   const cashBal = balances.cash[currency] || 0;
-  const bankBal = balances.bank[currency] || 0;
+  const bankBal = (balances.bank[currency] || 0) + depositTxs.filter((t) => t.currency === currency).reduce((n, t) => n + t.amount, 0);
 
-  const txs = data.transactions
+  const txs = [...data.transactions, ...depositTxs]
     .filter((t) => t.currency === currency && inRange(t.date))
     .filter((t) => accountFilter === 'all' || t.account === accountFilter || t.toAccount === accountFilter)
     .filter((t) => kindFilter === 'all' || t.kind === kindFilter)
@@ -293,7 +302,7 @@ export const CarAccountsTab: React.FC<CarTabProps> = ({ data, update }) => {
                     </div>
                     <span className="text-neutral-400 shrink-0">{dateText(t.date)}</span>
                     <span className={`font-black shrink-0 ${t.kind === 'in' ? 'text-emerald-600' : t.kind === 'out' ? 'text-amber-600' : 'text-brand'}`}>{m(t.kind === 'out' ? -t.amount : t.amount)}</span>
-                    {canRemoveTx(data, t) ? (
+                    {canRemoveTx(data, t) && !t.id.startsWith('dep-') ? (
                       <button type="button" onClick={() => window.confirm('حذف هذا القيد؟') && update((d) => removeTx(d, t.id))} aria-label="حذف القيد" className="text-neutral-300 hover:text-red-500 cursor-pointer"><Trash2 size={13} /></button>
                     ) : (
                       <span className="w-[13px]" title="يتعدل من الملف المالي للسيارة في «المخزون»" />

@@ -4,11 +4,13 @@
 //   bookings/{owner}/items/{id}                 the booking; the owner and members read it
 //   bookingDays/{owner}_{project}_{yyyy-mm-dd}  { taken: [startMin] }; anyone reads it
 //   bookingSessions/{owner}_{project}_{schedule}_{session}  { taken: seats } of a session; anyone reads it
+//   bookingDeposits/{owner}/items/{bookingId}  a confirmed deposit, kept for the accounts and the report; the owner and members read it
 //   bookingRooms/{owner}_{project}_{schedule}_{room}  { nights: [yyyy-mm-dd] } of a hotel room; anyone reads it
-import { createContext } from 'react';
+import { createContext, useEffect, useState } from 'react';
 import { collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import type { ProjectKey } from '../utils/projectKeys';
+import type { DepositLine } from './bookingReport';
 
 export type BookingStatus = 'new' | 'confirmed' | 'done' | 'cancelled';
 
@@ -148,3 +150,37 @@ export const watchBookings = (owner: string, project: ProjectKey, onData: (rows:
     },
     onError
   );
+
+// The page's confirmed deposits, live (they stay after the bookings are deleted).
+export const watchDeposits = (owner: string, project: ProjectKey, onData: (rows: DepositLine[]) => void, onError: () => void) =>
+  onSnapshot(
+    query(collection(db, 'bookingDeposits', owner, 'items'), where('project', '==', project)),
+    (snap) =>
+      onData(
+        snap.docs.map((d) => {
+          const x: any = d.data();
+          return {
+            id: d.id,
+            name: String(x.name || ''),
+            amount: Number(x.amount) || 0,
+            currency: String(x.currency || ''),
+            walletLabel: String(x.walletLabel || ''),
+            txn: String(x.txn || ''),
+            bookingDate: String(x.bookingDate || ''),
+            date: String(x.date || ''),
+            state: x.state === 'cancelled' ? 'cancelled' : 'received',
+          } as DepositLine;
+        })
+      ),
+    onError
+  );
+
+// The confirmed (received) deposits of the page, for its accounts tab; [] until they load.
+export const useDepositLines = (owner: string | null | undefined, project: ProjectKey | null | undefined): DepositLine[] => {
+  const [lines, setLines] = useState<DepositLine[]>([]);
+  useEffect(() => {
+    if (!owner || !project) return setLines([]);
+    return watchDeposits(owner, project, (rows) => setLines(rows.filter((d) => d.state === 'received')), () => setLines([]));
+  }, [owner, project]);
+  return lines;
+};

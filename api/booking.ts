@@ -437,6 +437,21 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
   return json({ id: ref.id, status: booking.status, ...(waiting ? { deposit: true } : {}), ...((booking as any).tableName ? { tableName: (booking as any).tableName, hallName: (booking as any).hallName } : {}), ...((booking as any).roomName ? { roomName: (booking as any).roomName } : {}) });
 };
 
+// bookingDeposits/{owner}/items/{bookingId}: one line of the page's accounts per confirmed deposit.
+const depositEntry = (b: any, state: 'received' | 'cancelled') => ({
+  project: b.project,
+  schedule: b.schedule || 'main',
+  name: b.name,
+  amount: Number(b.deposit.amount) || 0,
+  currency: b.deposit.currency || '',
+  wallet: b.deposit.wallet || '',
+  walletLabel: b.deposit.walletLabel || '',
+  txn: b.deposit.txn || '',
+  bookingDate: b.date,
+  date: new Date().toISOString().slice(0, 10),
+  state,
+});
+
 // A cancelled (or expired) booking gives its time, seats, room or table back.
 const release = async (admin: Admin, b: any) => {
   if (b.sessionId) {
@@ -477,6 +492,14 @@ const changeStatus = async (admin: Admin, request: Request, body: any) => {
   const waitingDeposit = b.deposit?.state === 'pending';
   await ref.update({ status: body.status, updatedAt: new Date().toISOString(), ...(waitingDeposit ? { 'deposit.state': body.status === 'cancelled' ? 'rejected' : 'paid' } : {}) });
   if (waitingDeposit) await admin.db.collection('depositHolds').doc(`${body.owner}_${body.id}`).delete().catch(() => {});
+  // The deposit the owner confirmed is income in the page's accounts; it stays when the booking is deleted
+  // after 3 months. A later cancellation marks it cancelled (the owner decides about the refund).
+  if (b.deposit && (waitingDeposit ? body.status !== 'cancelled' : b.deposit.state === 'paid')) {
+    await admin.db.collection('bookingDeposits').doc(body.owner).collection('items').doc(body.id).set(
+      depositEntry(b, body.status === 'cancelled' ? 'cancelled' : 'received'),
+      { merge: true }
+    ).catch(() => {});
+  }
   // A cancelled time is free again.
   if (body.status === 'cancelled') await release(admin, b);
 

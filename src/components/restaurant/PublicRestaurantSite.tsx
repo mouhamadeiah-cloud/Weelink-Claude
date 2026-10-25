@@ -10,7 +10,7 @@ import { CanvasWorkspace } from '../CanvasWorkspace';
 import { withPhoneLayouts } from '../../utils/mobileLayout';
 import { withLocalGraphics } from '../../utils/localGraphics';
 import { loadPublishedRestaurant, placeOrder, PublishedRestaurant } from './restaurantCloud';
-import { RestaurantDataContext, RestaurantOrderContext } from './store/RestaurantDataContext';
+import { RestaurantDataContext, RestaurantOrderContext, RestaurantPaymentsContext } from './store/RestaurantDataContext';
 import { readTableFromUrl } from './tableStore';
 import type { MenuOrder } from './restaurantTypes';
 import { useAccountNav } from '../customers/useAccountNav';
@@ -18,6 +18,7 @@ import { getCustomerSession } from '../customers/customerSession';
 import { sendOrderConfirmation } from './orderStatus';
 import { countContact, countVisit, isContactLink } from '../../services/siteStats';
 import { BookingPageContext } from '../../services/bookings';
+import { usePaymentAccounts } from '../../services/bookingSettings';
 import { notifyOwner } from '../../services/contact';
 
 const PHONE_MAX = 768;
@@ -75,6 +76,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
     [uid]
   );
 
+  const payments = usePaymentAccounts(ownerOfRestaurant(uid), restaurantKeyOf(uid));
   const readySite = site && typeof site !== 'string' ? site : null;
   nameRef.current = readySite?.admin.settings.name || '';
   const { navActions, account } = useAccountNav({ ownerUid: uid, pageName: readySite?.admin.settings.name || '', kind: 'restaurant', accent: '#B5562B', currency: readySite?.admin.settings.currency, project: restaurantKeyOf(uid), owner: ownerOfRestaurant(uid) });
@@ -103,6 +105,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
     <RestaurantDataContext.Provider value={site.admin}>
       <BookingPageContext.Provider value={{ owner: ownerOfRestaurant(uid), project: restaurantKeyOf(uid), pageName: site.admin.settings.name || '', live: true }}>
       <RestaurantOrderContext.Provider value={submit}>
+      <RestaurantPaymentsContext.Provider value={payments || null}>
         <div className="h-[100dvh] flex flex-col bg-white">
           {account}
           <CanvasWorkspace
@@ -130,6 +133,7 @@ export const PublicRestaurantSite: React.FC<{ uid: string }> = ({ uid }) => {
             navActions={navActions}
           />
         </div>
+      </RestaurantPaymentsContext.Provider>
       </RestaurantOrderContext.Provider>
       </BookingPageContext.Provider>
     </RestaurantDataContext.Provider>

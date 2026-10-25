@@ -167,6 +167,10 @@ export const syncOrderLedger = (uid: string, order: MenuOrder, status: OrderStat
 export const setOrderStatus = (uid: string, order: MenuOrder, status: OrderStatus) =>
   Promise.all([updateDoc(doc(ordersCol(uid), order.id), { status }), syncOrderLedger(uid, order, status)]);
 
+// The owner confirms or refuses the e-wallet payment of a website order (a refused one cancels the order).
+export const setOrderPayment = (uid: string, order: MenuOrder, state: 'paid' | 'rejected') =>
+  updateDoc(doc(ordersCol(uid), order.id), { 'payment.state': state, ...(state === 'rejected' ? { status: 'cancelled' } : {}) });
+
 export const deleteOrder = (uid: string, id: string) => deleteDoc(doc(ordersCol(uid), id));
 
 export type LiveState<T> = { items: T[]; ready: boolean; error: string };

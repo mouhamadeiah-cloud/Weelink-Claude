@@ -2,7 +2,9 @@
 // the past ones (kept 3 months). Confirming or cancelling emails the customer (/api/booking).
 import React, { useEffect, useState } from 'react';
 import { CalendarCheck2, CalendarDays, CalendarX2, Check, Loader2, Mail, MessageCircle, Phone } from 'lucide-react';
-import { Booking, BookingStatus, dayKey, setBookingStatus, watchBookings } from '../../services/bookings';
+import { Booking, BookingStatus, dayKey, setBookingStatus, watchBookings, watchDeposits } from '../../services/bookings';
+import type { DepositLine } from '../../services/bookingReport';
+import { BookingReportView } from './BookingReportView';
 import { BookingGrid } from './BookingGrid';
 import type { ProjectKey } from '../../utils/projectKeys';
 
@@ -20,7 +22,7 @@ const STATUS: Record<BookingStatus, { label: string; cls: string }> = {
   cancelled: { label: 'ملغى', cls: 'bg-red-50 text-red-600 border-red-200' },
 };
 
-type View = 'new' | 'upcoming' | 'past' | 'grid';
+type View = 'new' | 'upcoming' | 'past' | 'grid' | 'report';
 
 interface BookingsSectionProps {
   owner: string;
@@ -28,10 +30,12 @@ interface BookingsSectionProps {
   // Where the bookings come from and go to (Firebase and /api/booking).
   watch?: typeof watchBookings;
   changeStatus?: typeof setBookingStatus;
+  watchDeposit?: typeof watchDeposits;
 }
 
-export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project, watch = watchBookings, changeStatus = setBookingStatus }) => {
+export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project, watch = watchBookings, changeStatus = setBookingStatus, watchDeposit = watchDeposits }) => {
   const [rows, setRows] = useState<Booking[] | null | 'error'>(null);
+  const [deposits, setDeposits] = useState<DepositLine[]>([]);
   const [view, setView] = useState<View>('new');
   const [busy, setBusy] = useState('');
   const [failed, setFailed] = useState('');
@@ -41,6 +45,8 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
     return watch(owner, project, setRows, () => setRows('error'));
   }, [owner, project]);
 
+  useEffect(() => watchDeposit(owner, project, setDeposits, () => setDeposits([])), [owner, project]);
+
   const today = dayKey(new Date());
   const list = Array.isArray(rows) ? rows : [];
   const isPast = (b: Booking) => b.date < today || b.status === 'done' || b.status === 'cancelled';
@@ -49,6 +55,7 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
     upcoming: list.filter((b) => !isPast(b) && b.status === 'confirmed'),
     past: list.filter(isPast).reverse(),
     grid: [],
+    report: [],
   };
 
   const act = async (b: Booking, status: Exclude<BookingStatus, 'new'>) => {
@@ -68,6 +75,7 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
     { id: 'upcoming', label: 'القادمة' },
     { id: 'past', label: 'السابقة' },
     { id: 'grid', label: 'الجدول' },
+    { id: 'report', label: 'التقرير' },
   ];
 
   return (
@@ -83,7 +91,7 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
               className={`h-8 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer ${view === t.id ? 'bg-white text-ink shadow-sm' : 'text-neutral-500'}`}
             >
               {t.label}
-              {groups[t.id].length > 0 && t.id !== 'past' && t.id !== 'grid' && (
+              {groups[t.id].length > 0 && t.id !== 'past' && t.id !== 'grid' && t.id !== 'report' && (
                 <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-xs flex items-center justify-center ${t.id === 'new' ? 'bg-[#ff3b30] text-white' : 'bg-neutral-200 text-neutral-600'}`}>{groups[t.id].length}</span>
               )}
             </button>
@@ -91,7 +99,9 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
         </div>
       </div>
 
-      {view === 'grid' && Array.isArray(rows) ? (
+      {view === 'report' && Array.isArray(rows) ? (
+        <BookingReportView pageName={list[0]?.pageName || 'الصفحة'} bookings={rows} deposits={deposits} />
+      ) : view === 'grid' && Array.isArray(rows) ? (
         <BookingGrid owner={owner} project={project} rows={rows} busy={busy} onAct={act} />
       ) : rows === null ? (
         <Loader2 size={20} className="animate-spin text-neutral-400" />

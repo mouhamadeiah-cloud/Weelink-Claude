@@ -213,6 +213,25 @@ export const useBookingSettings = (owner: string | null | undefined, project: Pr
   return state.key === key ? state.settings : undefined;
 };
 
+// The page's payment accounts alone (they do not need a booking schedule): the restaurant's online orders
+// use the same accounts as the bookings' deposits. undefined while loading, null when none are saved.
+export const usePaymentAccounts = (owner: string | null | undefined, project: ProjectKey | null | undefined) => {
+  const [state, setState] = useState<{ key: string; payments: BookingPayments | null | undefined }>({ key: '', payments: undefined });
+  const key = owner && project ? `${owner}_${project}` : '';
+  useEffect(() => {
+    if (!owner || !project) return;
+    return onSnapshot(
+      settingsDoc(owner, project),
+      (snap) => setState({ key: `${owner}_${project}`, payments: snap.data()?.payments ? normalizePayments(snap.data()!.payments) : null }),
+      () => setState({ key: `${owner}_${project}`, payments: null })
+    );
+  }, [owner, project]);
+  return state.key === key ? state.payments : undefined;
+};
+
+export const savePaymentAccounts = (owner: string, project: ProjectKey, payments: BookingPayments) =>
+  setDoc(settingsDoc(owner, project), { payments: normalizePayments(payments) }, { merge: true });
+
 // The editor (and the owner's view of the page) opens «إعدادات الحجز» in the admin from the gear on
 // a booking element. Left out on the published page, where visitors never see the gear.
 export const BookingSettingsOpenContext = createContext<((scheduleId?: string) => void) | null>(null);

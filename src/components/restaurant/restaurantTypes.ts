@@ -87,6 +87,7 @@ export interface RestaurantSettings {
   boardShows: 'takeaway' | 'all'; // the waiting screen: only orders the guest collects, or every order
   kitchenLateMinutes: number; // an order not ready after this long flashes red in the kitchen
   giftCard: GiftCardSettings; // the cashier's fixed catalog «بطاقة رصيد»
+  payWallet: boolean; // the website's orders can be paid by e-wallet (accounts of «الدفع بمحفظة إلكترونية»)
   dayStartHour: number; // يوم العمل: the hour (0-8) a new day starts; the hours after midnight before it belong to the day before
 }
 
@@ -224,6 +225,18 @@ export interface MenuOrder {
   tabId?: string;
   // A joined customer's order (see services/pageCustomers.ts): they can see it under «حسابي».
   customerUid?: string;
+  // Paid by e-wallet from the website (the same accounts as the bookings' deposits): the owner confirms it in «الطلبات».
+  payment?: OrderPayment;
+}
+
+export interface OrderPayment {
+  wallet: string;
+  walletLabel: string;
+  txn: string;
+  screenshot: string;
+  amount: number;
+  currency: string;
+  state: 'pending' | 'paid' | 'rejected';
 }
 
 export interface RestaurantAdminData {
@@ -258,6 +271,7 @@ const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
   boardShows: 'takeaway',
   kitchenLateMinutes: 5,
   dayStartHour: 4,
+  payWallet: false,
   giftCard: { ...DEFAULT_GIFT_SETTINGS },
 };
 
@@ -364,6 +378,19 @@ const normalizeOrder = (raw: any): MenuOrder => ({
   ...(str(raw?.customerUid) ? { customerUid: str(raw.customerUid) } : {}),
   ...(Array.isArray(raw?.doneLines) ? { doneLines: raw.doneLines.filter((n: unknown) => typeof n === 'number') } : {}),
   ...(typeof raw?.tabId === 'string' && raw.tabId ? { tabId: raw.tabId } : {}),
+  ...(raw?.payment && typeof raw.payment === 'object' && str(raw.payment.txn)
+    ? {
+        payment: {
+          wallet: str(raw.payment.wallet),
+          walletLabel: str(raw.payment.walletLabel),
+          txn: str(raw.payment.txn),
+          screenshot: str(raw.payment.screenshot),
+          amount: num(raw.payment.amount),
+          currency: str(raw.payment.currency),
+          state: raw.payment.state === 'paid' || raw.payment.state === 'rejected' ? raw.payment.state : 'pending',
+        } as OrderPayment,
+      }
+    : {}),
 });
 
 const normalizeStation = (raw: any, i: number): KitchenStation => ({
@@ -438,7 +465,7 @@ export const submitOrder = (d: RestaurantAdminData, order: MenuOrder): Restauran
 // themselves (source 'order'); the cashier will add its sales the same way (source 'cashier').
 
 export type LedgerKind = 'income' | 'expense';
-type LedgerSource = 'manual' | 'order' | 'cashier';
+type LedgerSource = 'manual' | 'order' | 'cashier' | 'booking';
 
 export interface LedgerEntry {
   id: string;
@@ -503,7 +530,7 @@ export const orderLedgerEntry = (o: MenuOrder): Omit<LedgerEntry, 'id'> => ({
   createdAt: new Date().toISOString(),
   amount: o.total,
   category: o.type === 'delivery' ? 'مبيعات التوصيل' : o.type === 'table' ? 'مبيعات الصالة' : 'مبيعات الموقع',
-  method: 'نقدي',
+  method: o.payment?.walletLabel || 'نقدي',
   note: `طلب #${o.number}${o.table ? ` · طاولة ${o.table}` : ''}${o.name ? ` · ${o.name}` : ''}`,
   source: 'order',
   orderId: o.id,

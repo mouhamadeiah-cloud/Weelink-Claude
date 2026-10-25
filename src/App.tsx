@@ -3607,6 +3607,10 @@ export default function App() {
     customStyles?: any,
     extraData?: Partial<CanvasElement>
   ) => {
+    if (type === 'calendar' && !limitsRef.current.bookings) {
+      window.alert('الحجوزات متوفرة في باقات برو والمطعم والمتجر والمعرض. رقّي باقتك من «نشر» أو من «حسابي».');
+      return;
+    }
     const newId = `el-${Date.now()}`;
     const defaultConfigs: Record<ElementType, Partial<CanvasElement>> = {
       heading: {
@@ -5203,6 +5207,7 @@ export default function App() {
           project={projectKey}
           pageName={currentPage.navbar.brandName || ''}
           published={!!publishedName}
+          bookingsOn={limits.bookings}
           pageAdmin={pageAdmin}
           onPageAdmin={updatePageAdmin}
           onEditPage={isPreviewActive ? editPageFromAdmin : undefined}

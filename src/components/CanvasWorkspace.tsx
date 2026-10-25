@@ -144,7 +144,7 @@ interface InteractiveCalendarWidgetProps {
 }
 
 const InteractiveCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) =>
-  elem.calendarBookingType === 'stay' ? <StayBookingWidget elem={elem} /> : elem.calendarBookingType === 'seats' ? <SeatBookingWidget elem={elem} /> : <AppointmentCalendarWidget elem={elem} />;
+  elem.calendarBookingType === 'stay' || elem.calendarBookingType === 'rental' ? <StayBookingWidget elem={elem} /> : elem.calendarBookingType === 'seats' ? <SeatBookingWidget elem={elem} /> : <AppointmentCalendarWidget elem={elem} />;
 
 const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ elem }) => {
   // The customer's details are the same in every kind of booking (BookingCustomerForm.tsx).
@@ -173,7 +173,7 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   const bookingSettings = useBookingSettings(bookingPage?.owner, bookingPage?.project);
   const schedule = useMemo(
     () =>
-      scheduleFor(bookingSettings ?? null, elem.calendarScheduleId, elem.calendarBookingType) ||
+      scheduleFor(bookingSettings ?? null, elem.calendarScheduleId, elem.calendarBookingType === 'rental' ? 'stay' : elem.calendarBookingType, elem.calendarBookingType === 'rental' ? true : elem.calendarBookingType === 'stay' ? false : undefined) ||
       (elem.calendarBookingType === 'table' ? newTableSchedule() : scheduleFromElement(elem, elem.calendarScheduleId || 'main')),
     [bookingSettings, elem]
   );

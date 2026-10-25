@@ -4,7 +4,7 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import type { CanvasElement } from '../types';
 import { BookingPageContext, createBooking, dayKey, readRoomNights } from '../services/bookings';
-import { newStaySchedule, scheduleFor, useBookingSettings } from '../services/bookingSettings';
+import { newRentalSchedule, newStaySchedule, scheduleFor, useBookingSettings } from '../services/bookingSettings';
 import { addDays, chooseRoom, isRoomFree, maxGuests, nightsBetween, type RoomNights } from '../services/stayBooking';
 import { depositAmount, normalizeRule, priceNumber } from '../services/bookingDeposit';
 import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from './DepositPay';
@@ -28,10 +28,15 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const bookingPage = useContext(BookingPageContext);
   const live = !!bookingPage?.live;
   const settings = useBookingSettings(bookingPage?.owner, bookingPage?.project);
-  const schedule = useMemo(() => scheduleFor(settings ?? null, elem.calendarScheduleId, 'stay') || newStaySchedule(), [settings, elem.calendarScheduleId]);
+  const rental = elem.calendarBookingType === 'rental';
+  const schedule = useMemo(() => scheduleFor(settings ?? null, elem.calendarScheduleId, 'stay', rental) || (rental ? newRentalSchedule() : newStaySchedule()), [settings, elem.calendarScheduleId, rental]);
+  // A rental books cars or equipment by the day, one unit at a time: the words change, the engine is the room stay's.
+  const W = rental
+    ? { unit: 'الوحدة', one: 'يوم', many: 'أيام', from: 'تاريخ الاستلام', to: 'تاريخ التسليم', pickFrom: 'اختر تاريخ الاستلام', pickTo: 'اختر تاريخ التسليم', hint: 'اختر تاريخ الاستلام والتسليم', icon: '🚗', def: 'احجز الآن', submit: 'تأكيد الحجز', booked: 'تم حجزك!', none: 'لسا ما انضافت وحدات للتأجير. أضفها من «إعدادات الحجز» بالإدارة.', taken: 'انحجزت قبل لحظات. اختر تواريخ أو وحدة غيرها.' }
+    : { unit: 'الغرفة', one: 'ليلة', many: 'ليالٍ', from: 'تاريخ الوصول', to: 'تاريخ المغادرة', pickFrom: 'اختر تاريخ الوصول', pickTo: 'اختر تاريخ المغادرة', hint: 'اختر تاريخ الوصول والمغادرة وعدد الضيوف', icon: '🛏️', def: 'احجز غرفتك', submit: 'تأكيد حجز الغرفة', booked: 'تم حجز غرفتك!', none: 'لسا ما انضافت غرف. أضفها من «إعدادات الحجز» بالإدارة.', taken: 'انحجزت الغرفة قبل لحظات. اختر تواريخ أو غرفة غيرها.' };
   const rooms = schedule.rooms;
   const accent = elem.calendarAccentColor || '#0071e3';
-  const title = elem.calendarTitle || elem.content || 'احجز غرفتك';
+  const title = elem.calendarTitle || elem.content || W.def;
   const bg = elem.styles.backgroundColor || '#ffffff';
   const dark = isDark(bg);
   const text = dark ? 'text-white' : 'text-neutral-800';
@@ -100,7 +105,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!checkIn || !checkOut || !chosen) return setError('اختر تاريخ الوصول والمغادرة.');
+    if (!checkIn || !checkOut || !chosen) return setError(`${W.hint.replace(' وعدد الضيوف', '')}.`);
     const personal = customerProblem(customer, live, signedIn);
     if (personal) return setError(personal);
     if (live && amount > 0) {
@@ -116,7 +121,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
     } as any);
     setSaving(false);
     if ('error' in out) {
-      if (out.error === 'taken') { setError('انحجزت الغرفة قبل لحظات. اختر تواريخ أو غرفة غيرها.'); setTick((n) => n + 1); setCheckOut(''); }
+      if (out.error === 'taken') { setError(W.taken); setTick((n) => n + 1); setCheckOut(''); }
       else if (out.error === 'deposit_required') setError('لازم تدفع العربون وتكتب رقم العملية.');
       else if (out.error === 'bad_email') setError('تأكد من الإيميل.');
       else if (out.error === 'no_rooms' || out.error === 'bad_schedule') setError('الحجز غير جاهز بعد: المالك لازم يضيف الغرف من «إعدادات الحجز».');
@@ -138,7 +143,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold mb-2" style={{ backgroundColor: accent }}>✓</div>
         <h4 className={`text-xs font-bold mb-1 ${text}`}>{done.status === 'confirmed' ? 'تم حجز غرفتك!' : done.status === 'deposit' ? 'بانتظار تأكيد العربون' : 'وصل طلب الحجز!'}</h4>
         <p className={`text-[10px] max-w-xs leading-relaxed mb-3 ${sub}`}>
-          شكراً <b>{customer.name}</b>. {done.room} من <b>{label(checkIn)}</b> إلى <b>{label(checkOut)}</b> ({nights.length} {nights.length === 1 ? 'ليلة' : 'ليالٍ'}).
+          شكراً <b>{customer.name}</b>. {done.room} من <b>{label(checkIn)}</b> إلى <b>{label(checkOut)}</b> ({nights.length} {nights.length === 1 ? W.one : W.many}).
           {done.status === 'deposit' ? ' رح نراجع التحويل ويوصلك إيميل لما يتأكد العربون. إذا ما انتأكد خلال 24 ساعة بيتحرر الحجز.' : done.status !== 'confirmed' ? ' رح يوصلك إيميل لما يتأكد الحجز.' : ''}
         </p>
         {signup && live && bookingPage && <div className="w-full mb-3"><AccountSignup draft={signup} owner={bookingPage.owner} project={bookingPage.project} pageName={bookingPage.pageName} accent={accent} dark={dark} /></div>}
@@ -152,10 +157,10 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
       <BookingGear scheduleId={schedule.id} />
       <div className="w-full h-1.5 shrink-0 rounded-t-xl mb-3" style={{ backgroundColor: accent }} />
       <div className="flex items-center gap-2.5 border-b pb-2.5 mb-3 shrink-0" style={{ borderColor: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)' }}>
-        <div className="w-9 h-9 rounded-xl text-white flex items-center justify-center text-sm shrink-0" style={{ backgroundColor: accent }}>🛏️</div>
+        <div className="w-9 h-9 rounded-xl text-white flex items-center justify-center text-sm shrink-0" style={{ backgroundColor: accent }}>{W.icon}</div>
         <div className="flex-1 min-w-0">
           <h3 className={`text-sm font-black leading-snug ${text}`}>{title}</h3>
-          <p className={`text-[10px] ${sub}`}>اختر تاريخ الوصول والمغادرة وعدد الضيوف</p>
+          <p className={`text-[10px] ${sub}`}>{W.hint}</p>
         </div>
         <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-lg ${schedule.needsConfirmation ? 'text-amber-800 bg-amber-50 border border-amber-200' : 'text-emerald-700 bg-emerald-50 border border-emerald-200'}`}>
           {schedule.needsConfirmation ? '⏳ تأكيد مطلوب' : '⚡ تأكيد فوري'}
@@ -193,19 +198,19 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
               })}
             </div>
             <div className={`text-[10px] font-bold ${sub}`}>
-              {!checkIn ? 'اختر تاريخ الوصول' : !checkOut ? 'اختر تاريخ المغادرة' : `${label(checkIn)} ← ${label(checkOut)} · ${nights.length} ${nights.length === 1 ? 'ليلة' : 'ليالٍ'}`}
+              {!checkIn ? W.pickFrom : !checkOut ? W.pickTo : `${label(checkIn)} ← ${label(checkOut)} · ${nights.length} ${nights.length === 1 ? W.one : W.many}`}
             </div>
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            {!rental && <div className="flex items-center justify-between">
               <span className={`text-[10.5px] font-bold ${text}`}>عدد الضيوف</span>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => { setGuests(Math.max(1, guestCount - 1)); setCheckOut(''); }} className={`w-6 h-6 rounded-md border text-xs font-bold cursor-pointer ${text}`}>−</button>
                 <span className={`text-xs font-black w-5 text-center ${text}`}>{guestCount}</span>
                 <button type="button" onClick={() => { setGuests(Math.min(cap, guestCount + 1)); setCheckOut(''); }} className={`w-6 h-6 rounded-md border text-xs font-bold cursor-pointer ${text}`}>+</button>
               </div>
-            </div>
+            </div>}
             {schedule.roomChoice === 'room' && (
               <div className="flex flex-wrap gap-1">
                 {(nights.length ? freeRooms : rooms.filter((r) => r.capacity >= guestCount)).map((r) => (
@@ -218,14 +223,14 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
             )}
             {chosen && (
               <div className={`text-[10px] font-bold rounded-lg px-2.5 py-1.5 ${dark ? 'bg-white/10 text-white' : 'bg-neutral-50 text-neutral-700 border border-neutral-100'}`}>
-                🛏️ {chosen.name} · تتسع {chosen.capacity}{chosen.price ? ` · ${chosen.price}` : ''}
+                {W.icon} {chosen.name}{rental ? '' : ` · تتسع ${chosen.capacity}`}{chosen.price ? ` · ${chosen.price}` : ''}
               </div>
             )}
             {amount > 0 && <DepositPay payments={settings?.payments} amount={amount} accent={accent} dark={dark} value={deposit} onChange={setDeposit} />}
             <CustomerFields draft={customer} onChange={setCustomer} dark={dark} accent={accent} />
             {error && <div className="text-[10px] font-bold text-red-600">{error}</div>}
             <button type="submit" disabled={saving} className="w-full py-2 rounded-xl text-white text-[11px] font-bold cursor-pointer disabled:opacity-60" style={{ backgroundColor: accent }}>
-              {saving ? 'جاري الحجز…' : 'تأكيد حجز الغرفة'}
+              {saving ? 'جاري الحجز…' : W.submit}
             </button>
           </div>
         </form>

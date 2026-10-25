@@ -31,6 +31,7 @@ export interface Booking {
   nights?: number;
   roomId?: string;
   roomName?: string;
+  rental?: boolean; // a rental (cars, equipment): the room is a unit, the nights are days
   // Seats in a session (courses, trips, events): the session, and how many seats were booked (partySize).
   sessionId?: string;
   sessionName?: string;
@@ -97,7 +98,7 @@ export const readTaken = async (owner: string, project: ProjectKey, date: string
   return Array.isArray(taken) ? taken.filter((n) => typeof n === 'number') : [];
 };
 
-export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt' | 'deposit' | 'tableName' | 'hallName' | 'durationMin' | 'roomName' | 'nights'> & { needsConfirmation: boolean; hall?: string; room?: string; session?: string; deposit?: { wallet: string; txn: string; screenshot: string } };
+export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt' | 'deposit' | 'tableName' | 'hallName' | 'durationMin' | 'roomName' | 'nights' | 'rental'> & { needsConfirmation: boolean; hall?: string; room?: string; session?: string; deposit?: { wallet: string; txn: string; screenshot: string } };
 
 // 'taken': somebody booked that time a moment before.
 export const createBooking = async (b: NewBooking): Promise<{ id: string; status: BookingStatus; deposit?: boolean; tableName?: string; hallName?: string; roomName?: string } | { error: string; reason?: string }> => {

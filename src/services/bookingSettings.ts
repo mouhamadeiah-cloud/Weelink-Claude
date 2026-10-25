@@ -46,7 +46,8 @@ export interface BookingSchedule {
   durationMinutes: number; // type 'table': how long a table is kept for a party
   partyMax: number; // type 'table': the biggest party that books online
   tableChoice: TableChoice;
-  rooms: StayRoom[]; // type 'stay': the rooms that can be booked
+  rooms: StayRoom[]; // type 'stay': the rooms that can be booked (rental: the cars or equipment)
+  rental: boolean; // type 'stay' as a rental («تأجير»): units booked by the day, one at a time
   minNights: number;
   maxNights: number;
   roomChoice: RoomChoice;
@@ -83,6 +84,7 @@ const DEFAULT: Omit<BookingSchedule, 'id' | 'name'> = {
   partyMax: 8,
   tableChoice: 'auto',
   rooms: [],
+  rental: false,
   minNights: 1,
   maxNights: 30,
   roomChoice: 'auto',
@@ -131,6 +133,7 @@ export const normalizeSchedule = (raw: any, fallbackId = 'main'): BookingSchedul
     partyMax: clampInt(raw?.partyMax, 1, 50, DEFAULT.partyMax),
     tableChoice: raw?.tableChoice === 'hall' || raw?.tableChoice === 'table' ? raw.tableChoice : 'auto',
     rooms: normalizeRooms(raw?.rooms),
+    rental: type === 'stay' && raw?.rental === true,
     minNights: clampInt(raw?.minNights, 1, 30, 1),
     maxNights: Math.max(clampInt(raw?.minNights, 1, 30, 1), clampInt(raw?.maxNights, 1, 90, 30)),
     roomChoice: raw?.roomChoice === 'room' ? 'room' : 'auto',
@@ -175,17 +178,22 @@ export const scheduleFromElement = (e: Partial<CanvasElement> | null | undefined
 
 // The schedule an element books with: its own, or the page's first.
 // `wantType`: a table element finds the page's table schedule when it has not been told which.
-export const scheduleFor = (settings: BookingSettings | null, scheduleId?: string, wantType?: BookingType): BookingSchedule | null => {
+// `rental`: a rental element and a room element are both of type 'stay'; each finds only its own kind.
+export const scheduleFor = (settings: BookingSettings | null, scheduleId?: string, wantType?: BookingType, rental?: boolean): BookingSchedule | null => {
   if (!settings) return null;
-  const own = settings.schedules.find((s) => s.id === scheduleId && (!wantType || s.type === wantType));
+  const kindOk = (s: BookingSchedule) => rental === undefined || s.type !== 'stay' || s.rental === rental;
+  const own = settings.schedules.find((s) => s.id === scheduleId && (!wantType || s.type === wantType) && kindOk(s));
   if (own) return own;
   // A table element never falls back to an appointment schedule: it waits for its own (or the defaults).
-  if (wantType === 'table' || wantType === 'stay' || wantType === 'seats') return settings.schedules.find((s) => s.type === wantType) || null;
+  if (wantType === 'table' || wantType === 'stay' || wantType === 'seats') return settings.schedules.find((s) => s.type === wantType && kindOk(s)) || null;
   return settings.schedules.find((s) => s.id === scheduleId) || settings.schedules[0];
 };
 
 // A hotel's first stay schedule when it has none saved (no rooms yet): shown by the element and the admin.
 export const newStaySchedule = (): BookingSchedule => ({ ...newSchedule('stay', 'حجز الغرف'), type: 'stay', breakStart: '', breakEnd: '', daysAhead: 180, meetingTypes: ['personal'] });
+
+// A page's first rental schedule («تأجير»: cars, equipment) when it has none saved: shown by the element and the admin.
+export const newRentalSchedule = (): BookingSchedule => ({ ...newSchedule('rental', 'التأجير'), type: 'stay', rental: true, roomChoice: 'room', breakStart: '', breakEnd: '', daysAhead: 180, meetingTypes: ['personal'] });
 
 // A page's first seats schedule when it has none saved (no sessions yet): shown by the element and the admin.
 export const newSeatsSchedule = (): BookingSchedule => ({ ...newSchedule('seats', 'حجز المقاعد'), type: 'seats', breakStart: '', breakEnd: '', daysAhead: 180, meetingTypes: ['personal'] });

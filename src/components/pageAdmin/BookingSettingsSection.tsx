@@ -6,7 +6,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { CalendarCog, Check, Plus, Trash2 } from 'lucide-react';
 import {
   BookingLegacyContext, BookingSchedule, BookingSettingsFocusContext, BookingSettings, MAX_SCHEDULES, MEETING_TYPES, SlotInterval, WEEK_DAYS,
-  SpecialistMode, TableChoice, RoomChoice, newSchedule, newSeatsSchedule, newStaySchedule, newTableSchedule, newScheduleId, normalizeSchedule, saveBookingSettings, useBookingSettings,
+  SpecialistMode, TableChoice, RoomChoice, newSchedule, newSeatsSchedule, newStaySchedule, newTableSchedule, newRentalSchedule, newScheduleId, normalizeSchedule, saveBookingSettings, useBookingSettings,
 } from '../../services/bookingSettings';
 import { BookingPageContext } from '../../services/bookings';
 import { useTeam } from '../../services/team';
@@ -73,7 +73,7 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
   const tableHalls = useRestaurantTables(isRestaurant ? owner : null, project);
   const list: BookingSchedule[] = settings?.schedules || [newSchedule('main', 'المواعيد')];
   // A table element asks for 'table' before the restaurant has saved such a schedule: shown as a new one.
-  const unsaved = activeId === 'table' && !list.some((s) => s.id === 'table') ? newTableSchedule() : activeId === 'stay' && !list.some((s) => s.id === 'stay') ? newStaySchedule() : activeId === 'seats' && !list.some((s) => s.id === 'seats') ? newSeatsSchedule() : null;
+  const unsaved = activeId === 'table' && !list.some((s) => s.id === 'table') ? newTableSchedule() : activeId === 'rental' && !list.some((s) => s.id === 'rental') ? newRentalSchedule() : activeId === 'stay' && !list.some((s) => s.id === 'stay') ? newStaySchedule() : activeId === 'seats' && !list.some((s) => s.id === 'seats') ? newSeatsSchedule() : null;
   const saved = unsaved || list.find((s) => s.id === activeId) || list[0];
   const current = draft && draft.id === saved.id ? draft : saved;
   const dirty = !settings || !!unsaved || !same(current, saved);
@@ -121,9 +121,9 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
       return write({ schedules: !settings ? [current] : exists ? list.map((s) => (s.id === current.id ? current : s)) : [...list, current] }, 'انحفظت الإعدادات، والصفحة صارت تحجز فيها.');
     }
     if (current.type === 'stay') {
-      if (current.rooms.length === 0) return setNote({ ok: false, text: 'أضف غرفة وحدة على الأقل.' });
-      if (current.rooms.some((r) => !r.name.trim())) return setNote({ ok: false, text: 'اكتب اسماً لكل غرفة.' });
-      if (current.minNights > current.maxNights) return setNote({ ok: false, text: 'أقل عدد ليالٍ لازم يكون أقل من أكثر عدد.' });
+      if (current.rooms.length === 0) return setNote({ ok: false, text: current.rental ? 'أضف وحدة وحدة على الأقل.' : 'أضف غرفة وحدة على الأقل.' });
+      if (current.rooms.some((r) => !r.name.trim())) return setNote({ ok: false, text: current.rental ? 'اكتب اسماً لكل وحدة.' : 'اكتب اسماً لكل غرفة.' });
+      if (current.minNights > current.maxNights) return setNote({ ok: false, text: current.rental ? 'أقل عدد أيام لازم يكون أقل من أكثر عدد.' : 'أقل عدد ليالٍ لازم يكون أقل من أكثر عدد.' });
       const exists = list.some((s) => s.id === current.id);
       return write({ schedules: !settings ? [current] : exists ? list.map((s) => (s.id === current.id ? current : s)) : [...list, current] }, 'انحفظت الإعدادات، والصفحة صارت تحجز فيها.');
     }
@@ -181,7 +181,8 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
         <Field label="نوع الحجز">
           <div className="flex flex-wrap gap-2">
             <button type="button" className={chip(current.type === 'appointment')} onClick={() => change({ type: 'appointment' })}>موعد</button>
-            <button type="button" className={chip(current.type === 'stay')} onClick={() => change({ type: 'stay', specialists: 'none', meetingTypes: ['personal'], breakStart: '', breakEnd: '' })}>إقامة (غرف)</button>
+            <button type="button" className={chip(current.type === 'stay' && !current.rental)} onClick={() => change({ type: 'stay', rental: false, specialists: 'none', meetingTypes: ['personal'], breakStart: '', breakEnd: '' })}>إقامة (غرف)</button>
+            <button type="button" className={chip(current.type === 'stay' && current.rental)} onClick={() => change({ type: 'stay', rental: true, roomChoice: 'room', specialists: 'none', meetingTypes: ['personal'], breakStart: '', breakEnd: '' })}>تأجير (سيارات/معدات)</button>
             <button type="button" className={chip(current.type === 'seats')} onClick={() => change({ type: 'seats', specialists: 'none', meetingTypes: ['personal'], breakStart: '', breakEnd: '' })}>مقاعد (دورات/رحلات)</button>
             {isRestaurant && (
               <button type="button" className={chip(current.type === 'table')} onClick={() => change({ type: 'table', meetingTypes: ['personal'], specialists: 'none', interval: current.interval === 'day' ? '30' : current.interval })}>طاولة</button>
@@ -220,33 +221,33 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
 
       {current.type === 'stay' && (
         <div className="space-y-3 rounded-2xl border border-neutral-200 p-3">
-          <div className="text-xs font-bold text-neutral-500">الغرف اللي بيقدر الزبون يحجزها: {current.rooms.length}</div>
+          <div className="text-xs font-bold text-neutral-500">{current.rental ? 'الوحدات (سيارات، معدات…) اللي بيقدر الزبون يأجرها' : 'الغرف اللي بيقدر الزبون يحجزها'}: {current.rooms.length}</div>
           {current.rooms.map((r, i) => (
             <div key={r.id} className="grid grid-cols-[1fr_90px_1fr_auto] gap-2 items-center">
-              <input className={inputFitClass} placeholder="اسم الغرفة، مثلاً: غرفة 101" value={r.name} maxLength={60} onChange={(e) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} />
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-500">
+              <input className={inputFitClass} placeholder={current.rental ? 'اسم الوحدة، مثلاً: كيا سيراتو 2020' : 'اسم الغرفة، مثلاً: غرفة 101'} value={r.name} maxLength={60} onChange={(e) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} />
+              {current.rental ? <span /> : <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-500">
                 <input type="number" min={1} max={20} className={`${inputFitClass} w-14`} value={r.capacity} onChange={(e) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, capacity: Math.min(20, Math.max(1, Number(e.target.value) || 1)) } : x)) })} /> شخص
-              </span>
-              <input className={inputFitClass} placeholder="السعر (اختياري): 50$ / ليلة" value={r.price} maxLength={40} onChange={(e) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)) })} />
-              <button type="button" aria-label="حذف الغرفة" className="text-[#E03131] cursor-pointer" onClick={() => change({ rooms: current.rooms.filter((_, j) => j !== i) })}><Trash2 size={15} /></button>
+              </span>}
+              <input className={inputFitClass} placeholder={current.rental ? 'السعر (اختياري): 40$ / يوم' : 'السعر (اختياري): 50$ / ليلة'} value={r.price} maxLength={40} onChange={(e) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)) })} />
+              <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer" onClick={() => change({ rooms: current.rooms.filter((_, j) => j !== i) })}><Trash2 size={15} /></button>
             </div>
           ))}
-          <GhostButton onClick={() => change({ rooms: [...current.rooms, { id: newRoomId(), name: '', capacity: 2, price: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف غرفة</span></GhostButton>
+          <GhostButton onClick={() => change({ rooms: [...current.rooms, { id: newRoomId(), name: '', capacity: current.rental ? 1 : 2, price: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> {current.rental ? 'أضف وحدة' : 'أضف غرفة'}</span></GhostButton>
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="أقل عدد ليالٍ">
+            <Field label={current.rental ? 'أقل عدد أيام' : 'أقل عدد ليالٍ'}>
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
-                <input type="number" min={1} max={30} className={`${inputFitClass} w-24`} value={current.minNights} onChange={(e) => change({ minNights: Math.max(1, Number(e.target.value) || 1) })} /> ليلة
+                <input type="number" min={1} max={30} className={`${inputFitClass} w-24`} value={current.minNights} onChange={(e) => change({ minNights: Math.max(1, Number(e.target.value) || 1) })} /> {current.rental ? 'يوم' : 'ليلة'}
               </span>
             </Field>
-            <Field label="أكثر عدد ليالٍ">
+            <Field label={current.rental ? 'أكثر عدد أيام' : 'أكثر عدد ليالٍ'}>
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
-                <input type="number" min={1} max={90} className={`${inputFitClass} w-24`} value={current.maxNights} onChange={(e) => change({ maxNights: Math.max(1, Number(e.target.value) || 1) })} /> ليلة
+                <input type="number" min={1} max={90} className={`${inputFitClass} w-24`} value={current.maxNights} onChange={(e) => change({ maxNights: Math.max(1, Number(e.target.value) || 1) })} /> {current.rental ? 'يوم' : 'ليلة'}
               </span>
             </Field>
           </div>
-          <Field label="اختيار الغرفة" hint="بالتلقائي بتنعطى أصغر غرفة فاضية بتكفي عدد الضيوف">
+          <Field label={current.rental ? 'اختيار الوحدة' : 'اختيار الغرفة'} hint={current.rental ? 'بالتلقائي بتنعطى أول وحدة فاضية' : 'بالتلقائي بتنعطى أصغر غرفة فاضية بتكفي عدد الضيوف'}>
             <div className="flex flex-wrap gap-1.5">
-              {([['auto', 'تلقائي'], ['room', 'الزبون بيختار الغرفة']] as [RoomChoice, string][]).map(([id, label]) => (
+              {([['auto', 'تلقائي'], ['room', current.rental ? 'الزبون بيختار الوحدة' : 'الزبون بيختار الغرفة']] as [RoomChoice, string][]).map(([id, label]) => (
                 <button key={id} type="button" onClick={() => change({ roomChoice: id })} className={chip(current.roomChoice === id)}>{label}</button>
               ))}
             </div>

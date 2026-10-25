@@ -121,7 +121,7 @@ const mailHtml = (title: string, lead: string, b: any, extra = '') => `<!doctype
       ${row('عدد الأشخاص', b.partySize)}
       ${row('الفعالية', b.sessionName)}
       ${row('تنتهي', b.endDate ? dateLabel(b.endDate) : '')}
-      ${row('الغرفة', b.roomName)}
+      ${row(b.rental ? 'الوحدة' : 'الغرفة', b.roomName)}
       ${row('المغادرة', b.checkOut ? dateLabel(b.checkOut) : '')}
       ${row('الطاولة', b.tableName ? `${b.tableName}${b.hallName ? ` · ${b.hallName}` : ''}` : '')}
       ${extra}
@@ -268,7 +268,8 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       partySize: guests,
       checkOut: body.checkOut,
       nights: nights.length,
-      slot: `حتى ${dateLabel(body.checkOut)} · ${nights.length} ${nights.length === 1 ? 'ليلة' : 'ليالٍ'}`,
+      ...(schedule.rental === true ? { rental: true } : {}),
+      slot: `حتى ${dateLabel(body.checkOut)} · ${nights.length} ${schedule.rental === true ? (nights.length === 1 ? 'يوم' : 'أيام') : (nights.length === 1 ? 'ليلة' : 'ليالٍ')}`,
     });
   }
 

@@ -15,6 +15,7 @@ export interface WorkerView {
   person: { id: string; name: string; role: string; color: string };
   today: string;
   bookings: WorkerBooking[];
+  shifts: { date: string; shifts: { start: string; end: string }[] }[]; // the next two weeks of their rota ([] without one)
 }
 
 // The address of a business's worker page; the worker types their code there.

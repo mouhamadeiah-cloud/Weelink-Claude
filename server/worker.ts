@@ -17,6 +17,7 @@
 
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { colorOf } from '../src/services/bookingGrid.js';
+import { cleanRota, shiftsOn } from '../src/services/teamHours.js';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
@@ -115,7 +116,16 @@ const view = async (admin: Admin, body: any) => {
     .sort((a: any, b: any) => a.date.localeCompare(b.date) || a.startMin - b.startMin)
     .slice(0, 200)
     .map((b: any) => ({ id: b.id, date: b.date, startMin: b.startMin, slot: b.slot, name: b.name, desc: b.desc || '', status: b.status, pageName: b.pageName || '' }));
-  return json({ person: { id: me.id, name: me.name || '', role: me.role || '', color: colorOf(index) }, today: from, bookings: rows });
+  // The next two weeks of the person's shift rota, when they have one.
+  const rota = cleanRota(me.rota);
+  const [y, m, d] = from.split('-').map(Number);
+  const shifts = rota
+    ? Array.from({ length: 14 }, (_, i) => {
+        const date = new Date(Date.UTC(y, m - 1, d + i)).toISOString().slice(0, 10);
+        return { date, shifts: shiftsOn(rota, date) };
+      })
+    : [];
+  return json({ person: { id: me.id, name: me.name || '', role: me.role || '', color: colorOf(index) }, today: from, bookings: rows, shifts });
 };
 
 const done = async (admin: Admin, body: any) => {

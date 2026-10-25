@@ -268,7 +268,10 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
   const [photoSource, setPhotoSource] = useState<'unsplash' | 'pixabay'>('unsplash');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [visibleCount, setVisibleCount] = useState(9);
-  const usePixabay = libType !== 'photo' || photoSource === 'pixabay';
+  const wantPixabay = libType !== 'photo' || photoSource === 'pixabay';
+  // When the chosen photo source is over its limit or down, the other one answers and the panel says so.
+  const [swappedTo, setSwappedTo] = useState<'unsplash' | 'pixabay' | null>(null);
+  const usePixabay = swappedTo ? swappedTo === 'pixabay' : wantPixabay;
   const pixabayKind: PixabayType = libType;
   const galleryRootRef = useRef<HTMLDivElement>(null);
   const categoryScrollRef = useRef<HTMLDivElement>(null);
@@ -291,16 +294,20 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
 
     const timer = setTimeout(async () => {
       try {
-        const result = usePixabay
-          ? await fetchPixabay({ type: pixabayKind, query: gallerySearch, category: galleryCategory, page: 1, perPage: PIXABAY_BATCH }).then((r) => ({ ...r, isLive: !r.error }))
-          : await fetchUnsplashPhotos({
-              query: gallerySearch,
-              category: galleryCategory,
-              page: 1,
-              perPage: 9,
-            });
+        const fromPixabay = () => fetchPixabay({ type: pixabayKind, query: gallerySearch, category: galleryCategory, page: 1, perPage: PIXABAY_BATCH }).then((r) => ({ ...r, isLive: !r.error }));
+        const fromUnsplash = () => fetchUnsplashPhotos({ query: gallerySearch, category: galleryCategory, page: 1, perPage: 9 });
+        let result = wantPixabay ? await fromPixabay() : await fromUnsplash();
+        let swapped: 'unsplash' | 'pixabay' | null = null;
+        if (libType === 'photo' && result.error) {
+          const other = wantPixabay ? await fromUnsplash() : await fromPixabay();
+          if (!other.error && other.items.length > 0) {
+            result = other;
+            swapped = wantPixabay ? 'unsplash' : 'pixabay';
+          }
+        }
 
         if (isMounted) {
+          setSwappedTo(swapped);
           setGalleryError(result.error);
           setGalleryPhotos(result.items);
           setGalleryPage(1);
@@ -322,7 +329,7 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [activeDoor, galleryCategory, gallerySearch, libType, photoSource]);
+  }, [activeDoor, galleryCategory, gallerySearch, libType, photoSource]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pixabay answers 30 at a time; the grid reveals 9 per click from what is already loaded, so «عرض المزيد» is instant.
   const loadMorePixabay = async () => {
@@ -764,6 +771,12 @@ export const ImageDrawerSection: React.FC<ImageDrawerSectionProps> = ({
               )}
             </div>
           </div>
+
+          {swappedTo && !isLoadingGallery && (
+            <p className="rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs font-semibold text-sky-800">
+              {swappedTo === 'pixabay' ? 'Unsplash وصل للحد الآن، فهذه صور من Pixabay.' : 'Pixabay وصل للحد الآن، فهذه صور من Unsplash.'}
+            </p>
+          )}
 
           {!isLive && !isLoadingGallery && (
             <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800">

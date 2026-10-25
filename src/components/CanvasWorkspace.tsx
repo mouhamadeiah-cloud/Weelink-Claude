@@ -33,7 +33,7 @@ import { useMenuCart, menuCartCount } from './restaurant/menuCartStore';
 import { CheckoutFormCard } from './CartView';
 import { Icon } from '@iconify/react';
 import { isUserNavItem, type NavbarPart } from '../utils/navbarParts';
-import { useCustomerSession } from './customers/customerSession';
+import { useAccountCard, useCustomerSession } from './customers/customerSession';
 import { BookingPageContext, createBooking, dayKey, readTaken, readTakenTables } from '../services/bookings';
 import { usePublicTeam } from '../services/team';
 import { StayBookingWidget } from './StayBookingWidget';
@@ -150,7 +150,7 @@ const AppointmentCalendarWidget: React.FC<InteractiveCalendarWidgetProps> = ({ e
   // The customer's details are the same in every kind of booking (BookingCustomerForm.tsx).
   const [customer, setCustomer] = useState<CustomerDraft>(EMPTY_CUSTOMER);
   const { name, address, phone, email, desc } = customer;
-  const signedIn = !!useCustomerSession();
+  const signedIn = !!useCustomerSession() || !!useAccountCard();
   const [signup, setSignup] = useState<CustomerDraft | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);

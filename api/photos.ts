@@ -79,6 +79,48 @@ const toSearchTerms = (q: string) => {
   return { terms: q, lang: 'ar' };
 };
 
+// Words the list does not know are put into English by Gemini (the cheap Flash-Lite model) once and remembered, so a word
+// costs one call however many visitors search it. Any failure (no key, quota, slow answer) leaves the Arabic as it is.
+const learned = new Map<string, string>();
+
+const translateWords = async (words: string[]): Promise<Record<string, string>> => {
+  const key = process.env.GEMINI_API_KEY;
+  const todo = words.filter((w) => !learned.has(w));
+  if (key && todo.length) {
+    try {
+      const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        signal: AbortSignal.timeout(4000),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Translate each Arabic word to one or two English words that work as a stock-photo search. Reply only with JSON {"arabic word": "english"}.\n${JSON.stringify(todo)}` }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+        }),
+      });
+      if (res.ok) {
+        const data: any = await res.json();
+        const parsed = JSON.parse(data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}');
+        for (const w of todo) if (typeof parsed[w] === 'string' && parsed[w].trim()) learned.set(w, parsed[w].trim().slice(0, 40));
+      }
+    } catch (err) {
+      console.error('translate failed:', err);
+    }
+  }
+  return Object.fromEntries(words.filter((w) => learned.has(w)).map((w) => [w, learned.get(w) as string]));
+};
+
+// toSearchTerms, and the unknown words asked of Gemini before giving up on English.
+const searchTerms = async (q: string) => {
+  const first = toSearchTerms(q);
+  if (first.lang === 'en') return first;
+  const words = q.replace(/[،,.!؟?]/g, ' ').split(/\s+/).filter(Boolean);
+  const unknown = words.filter((w) => !(AR_WORDS[w] || AR_WORDS[w.replace(/^ال/, '')]));
+  const got = await translateWords(unknown);
+  const out = words.map((w) => AR_WORDS[w] || AR_WORDS[w.replace(/^ال/, '')] || got[w] || '');
+  return out.every(Boolean) ? { terms: out.join(' '), lang: 'en' } : first;
+};
+
 const pixabayKey = () => process.env.PIXABAY_API_KEY || process.env.PIXABAY_KEY || '';
 
 type PixabayType = 'photo' | 'illustration' | 'vector' | '3d' | 'video';
@@ -86,8 +128,8 @@ const PIXABAY_TYPES: PixabayType[] = ['photo', 'illustration', 'vector', '3d', '
 
 // Pixabay has no Arabic search, so an Arabic search goes in English where every word is known.
 // A word not in the list is sent as it is, which finds little.
-const pixabayTerms = (q: string, category: string, type: PixabayType) => {
-  const base = q ? toSearchTerms(q).terms : category !== 'all' && CATEGORY_SEARCH[category] ? CATEGORY_SEARCH[category] : '';
+const pixabayTerms = async (q: string, category: string, type: PixabayType) => {
+  const base = q ? (await searchTerms(q)).terms : category !== 'all' && CATEGORY_SEARCH[category] ? CATEGORY_SEARCH[category] : '';
   // Pixabay has no «3D» kind: its 3D works are illustrations, found by the word.
   return (type === '3d' ? `${base} 3d`.trim() : base).slice(0, 100);
 };
@@ -99,7 +141,7 @@ const pixabaySearch = async (url: URL, category: string, key: string) => {
   const q = (url.searchParams.get('q') || '').trim().slice(0, 100);
   const page = Math.max(1, Math.min(25, Number(url.searchParams.get('page')) || 1));
   const perPage = Math.max(6, Math.min(MAX_PER_PAGE, Number(url.searchParams.get('perPage')) || 24));
-  const terms = pixabayTerms(q, category, type);
+  const terms = await pixabayTerms(q, category, type);
   const params = new URLSearchParams({ key, q: terms, page: String(page), per_page: String(perPage), safesearch: 'true', order: 'popular' });
   if (type !== 'video') params.set('image_type', type === '3d' ? 'illustration' : type);
   const res = await fetch(`https://pixabay.com/api/${type === 'video' ? 'videos/' : ''}?${params}`);
@@ -168,7 +210,7 @@ export default {
     const page = Math.max(1, Math.min(200, Number(url.searchParams.get('page')) || 1));
     const perPage = Math.max(6, Math.min(MAX_PER_PAGE, Number(url.searchParams.get('perPage')) || 24));
 
-    const search = q ? toSearchTerms(q) : category !== 'all' && CATEGORY_SEARCH[category] ? { terms: CATEGORY_SEARCH[category], lang: 'en' } : null;
+    const search = q ? await searchTerms(q) : category !== 'all' && CATEGORY_SEARCH[category] ? { terms: CATEGORY_SEARCH[category], lang: 'en' } : null;
     const path = search
       ? `/search/photos?query=${encodeURIComponent(search.terms)}&lang=${search.lang}&page=${page}&per_page=${perPage}&content_filter=high`
       : `/photos?page=${page}&per_page=${perPage}&order_by=popular`;

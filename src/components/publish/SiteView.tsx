@@ -8,6 +8,7 @@ import { ShopDataContext, ShopUpdateContext } from '../shop/store/ShopDataContex
 import { CarDataContext } from '../cars/store/CarDataContext';
 import { carsFromPublic, shopFromPublic } from './publicData';
 import type { CanvasElement, Page } from '../../types';
+import { PIXABAY_URL } from '../../services/pixabayService';
 import { kindOf, type ProjectKey } from '../../utils/projectKeys';
 
 const noop = () => {};
@@ -29,6 +30,8 @@ export const SiteView: React.FC<{
   const view = useMemo(() => (phone ? withPhoneLayouts(pages, elements) : { pages, elements }), [pages, elements, phone]);
   const shop = useMemo(() => (kindOf(project) === 'shop' ? shopFromPublic(data) : null), [project, data]);
   const cars = useMemo(() => (kindOf(project) === 'cars' ? carsFromPublic(data) : null), [project, data]);
+  // Pixabay asks that a page showing its files says so: a stored copy keeps «pixabay-» in its name, a video keeps the host.
+  const usesPixabay = useMemo(() => /pixabay/i.test(JSON.stringify([pages, elements])), [pages, elements]);
   const page = view.pages.find((p) => p.id === pageId) || view.pages[0];
   if (!page) return null;
 
@@ -61,6 +64,12 @@ export const SiteView: React.FC<{
               onContactClick={onContactClick}
               navActions={navActions}
             />
+            {usesPixabay && (
+              <p className="shrink-0 bg-white py-1 text-center text-[11px] text-neutral-500" dir="rtl">
+                بعض الصور والفيديوهات من{' '}
+                <a href={PIXABAY_URL} target="_blank" rel="noopener noreferrer" className="font-semibold underline">Pixabay</a>
+              </p>
+            )}
           </div>
         </CarDataContext.Provider>
       </ShopUpdateContext.Provider>

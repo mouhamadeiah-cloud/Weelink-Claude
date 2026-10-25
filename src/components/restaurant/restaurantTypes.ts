@@ -6,6 +6,7 @@
 import { newId } from '../shop/shopTypes';
 import { Worker, normalizeWorker } from './staffTypes';
 import { GIFT_METHOD, GiftCardSettings, DEFAULT_GIFT_SETTINGS, normalizeGiftSettings } from './giftCardLogic';
+import { layoutHall } from './floorMap';
 
 // A main catalog of the menu: مشاوي، سندويش، مشروبات...
 export interface MenuCategory {
@@ -103,6 +104,11 @@ export interface RestTable {
   id: string;
   name: string; // what the guests and the staff call it: «5», «تراس 2»; also the QR code's table
   seats: number;
+  // Place on the hall's floor map: the top-left square and how many squares it spans (see floorMap.ts)
+  col?: number;
+  row?: number;
+  w?: number;
+  h?: number;
 }
 
 // A hall of the restaurant (الصالة الداخلية، التراس، الحديقة) with its tables.
@@ -110,6 +116,8 @@ export interface Hall {
   id: string;
   name: string;
   tables: RestTable[];
+  cols?: number; // size of the floor map's grid
+  rows?: number;
 }
 
 export type DeviceRole = 'kitchen' | 'cashier' | 'combo' | 'waiter' | 'display' | 'board';
@@ -364,13 +372,18 @@ const normalizeStation = (raw: any, i: number): KitchenStation => ({
   color: str(raw?.color) || STATION_COLORS[i % STATION_COLORS.length],
 });
 
-const normalizeHall = (raw: any): Hall => ({
-  id: str(raw?.id) || newId('hall'),
-  name: str(raw?.name),
-  tables: Array.isArray(raw?.tables)
-    ? raw.tables.map((t: any) => ({ id: str(t?.id) || newId('tbl'), name: str(t?.name), seats: Math.max(0, Math.round(num(t?.seats))) }))
-    : [],
-});
+const optInt = (v: unknown) => (typeof v === 'number' && isFinite(v) ? Math.round(v) : undefined);
+
+const normalizeHall = (raw: any): Hall =>
+  layoutHall({
+    id: str(raw?.id) || newId('hall'),
+    name: str(raw?.name),
+    cols: optInt(raw?.cols),
+    rows: optInt(raw?.rows),
+    tables: Array.isArray(raw?.tables)
+      ? raw.tables.map((t: any) => ({ id: str(t?.id) || newId('tbl'), name: str(t?.name), seats: Math.max(0, Math.round(num(t?.seats))), col: optInt(t?.col), row: optInt(t?.row), w: optInt(t?.w), h: optInt(t?.h) }))
+      : [],
+  });
 
 const normalizeDevice = (raw: any): StaffDevice => ({
   id: str(raw?.id) || newId('dev'),

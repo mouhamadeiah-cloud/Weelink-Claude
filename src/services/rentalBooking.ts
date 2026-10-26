@@ -60,8 +60,12 @@ export interface RentalExtra {
   name: string; // «كرسي أطفال»
   price: number;
   per: ExtraPer; // per day or hour of the booking, or once
-  units: string[]; // only these units; [] = all
+  units: string[]; // only these units; [] = all (NO_UNIT = none)
+  note?: string; // what it includes, shown behind a «؟» to the visitor and in the contract
 }
+
+// The unit id of an extra that no unit offers (a [] list means every unit).
+export const NO_UNIT = 'none';
 
 export const WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 export const SLOT = 30; // minutes
@@ -137,6 +141,7 @@ export const normalizeExtras = (raw: unknown): RentalExtra[] => {
       price: num(x?.price),
       per: (x?.per === 'once' || x?.per === 'person' || x?.per === 'personOnce' ? x.per : 'unit') as ExtraPer,
       units: Array.isArray(x?.units) ? x.units.filter(isId).slice(0, 500) : [],
+      note: str(x?.note, 200),
     }))
     .filter((x: RentalExtra) => x.id && x.name && !seen.has(x.id) && !!seen.add(x.id));
 };
@@ -248,6 +253,7 @@ export interface RentWish {
 export interface QuoteLine {
   label: string;
   amount: number;
+  note?: string; // an extra's description
 }
 
 export interface Quote {
@@ -345,7 +351,7 @@ export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: R
     if (!x) continue;
     const guests = Math.max(1, Math.round(Number(w.guests)) || 1);
     const n = x.per === 'unit' ? count : x.per === 'person' ? count * guests : x.per === 'personOnce' ? guests : 1;
-    lines.push({ label: n > 1 ? `${x.name} × ${n}` : x.name, amount: x.price * n });
+    lines.push({ label: n > 1 ? `${x.name} × ${n}` : x.name, amount: x.price * n, ...(x.note ? { note: x.note } : {}) });
   }
   const total = Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100) / 100;
   return { lines: lines.map((l) => ({ ...l, amount: Math.round(l.amount * 100) / 100 })), total, currency: u.currency, nights, slots, count, slot };

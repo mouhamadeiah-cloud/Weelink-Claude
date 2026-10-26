@@ -37,7 +37,7 @@ export interface Booking {
   // with a driver or not; the extras; and the terms the visitor accepted, as they read them, and when.
   rentBy?: 'day' | 'hour' | 'period';
   slots?: string[];
-  price?: { lines: { label: string; amount: number }[]; total: number; currency: string };
+  price?: { lines: { label: string; amount: number; note?: string }[]; total: number; currency: string };
   driver?: boolean;
   extras?: string[];
   terms?: string;

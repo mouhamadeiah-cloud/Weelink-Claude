@@ -42,6 +42,11 @@ const call = async (user: User, body: object) => {
 // 'skipped' while the server has no email set up yet: the sign-up then goes on without a code.
 export const sendEmailCode = async (user: User): Promise<'sent' | 'skipped' | 'verified'> => {
   const r = await call(user, { action: 'send' });
+  if (r.verified) {
+    // Pick up emailVerified in the user and in the token the rules see.
+    await user.reload();
+    await user.getIdToken(true);
+  }
   return r.skipped ? 'skipped' : r.verified ? 'verified' : 'sent';
 };
 

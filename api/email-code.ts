@@ -23,6 +23,7 @@ import { cert, getApps, initializeApp, getAuth, getFirestore } from '../server/f
 import { Resend } from 'resend';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
+const TEST_ACCOUNT = /^test\d?@web\.de$/i;
 const VALID_MS = 10 * 60 * 1000;
 const RESEND_AFTER_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -137,6 +138,15 @@ export default {
       return new Response(JSON.stringify({ saved: true }), {
         headers: { 'Content-Type': 'application/json', 'Set-Cookie': cookieHeader(request, `${who.uid}.${exp}.${sessionSig(`${who.uid}.${exp}`)}`, SESSION_DAYS * 86400) },
       });
+    }
+    // The owner's test accounts (test@web.de, test1@web.de ...) skip the code and are confirmed on the spot.
+    if (admin && body.action === 'send') {
+      const t = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      const tester = t ? await admin.auth.verifyIdToken(t).catch(() => null) : null;
+      if (tester?.email && TEST_ACCOUNT.test(tester.email)) {
+        if (!tester.email_verified) await admin.auth.updateUser(tester.uid, { emailVerified: true });
+        return json({ verified: true });
+      }
     }
     if (!admin || !from || !resendKey) {
       return body.action === 'send' ? json({ skipped: true }) : json({ error: 'not_configured' }, 503);

@@ -155,7 +155,7 @@ test('a period of days or fixed dates is priced whole and takes its days', () =>
 test('a rental period of days is booked and freed as days', async () => {
   store.set('bookingSettings/own9/pages/rental-packs', {
     payments: { currency: '$', wallets: { syriatel: { enabled: true, account: '0933000111' } } },
-    schedules: [{ id: 'rental', name: 'التأجير', type: 'stay', rental: true, minNights: 1, maxNights: 10, daysAhead: 60, rooms: [{ id: 'u1', name: 'خيمة', item: 'p_tent', ...packs }] }],
+    schedules: [{ id: 'rental', name: 'التأجير', type: 'stay', rental: true, minNights: 1, maxNights: 10, daysAhead: 60, rooms: [{ id: 'u1', name: 'خيمة', ...packs, item: 'p_tent' }] }],
   });
   const book = async (extra: any = {}) => {
     const body = { action: 'create', owner: 'own9', project: 'rental-packs', schedule: 'rental', pageName: 'تأجير', date: inD(5), startMin: 0, slot: 'x', meetingType: '', name: 'ليلى', phone: '0933123456', email: '', needsConfirmation: true, room: 'u1', deposit: proof, ...extra };

@@ -1,14 +1,12 @@
 // «إضافة للمعرض»: one tab to add to a rental's gallery. First what is added (a car, or a chalet, hall,
-// machine or anything else), then the entry of that kind, and when it is saved the rental prices
-// (by the day or the hour, special days and hours) of the new item come next.
-import React, { useEffect, useRef, useState } from 'react';
+// machine or anything else), then the entry of that kind; its rental prices, periods and availability are in its price step.
+import React, { useState } from 'react';
 import { Boxes, CarFront, CheckCircle2, Plus } from 'lucide-react';
 import type { CarAdminData } from '../cars/carTypes';
 import type { ShopAdminData } from '../shop/shopTypes';
 import { CarEditor } from '../cars/tabs/CarEditor';
 import { AddProductTab } from '../shop/tabs/AddProductTab';
 import { PrimaryButton } from '../shop/adminUi';
-import { RentalPricing } from './RentalPricing';
 import type { RentalAdminData } from './rentalTypes';
 
 type Kind = 'car' | 'item';
@@ -23,36 +21,11 @@ interface RentalAddTabProps {
 
 export const RentalAddTab: React.FC<RentalAddTabProps> = ({ data, onCarsChange, onShopChange, editingId, onEditingChange }) => {
   const [kind, setKind] = useState<Kind>(editingId || data.cars.cars.length || !data.shop.products.length ? 'car' : 'item');
-  // The id of what was just saved (empty while it is not known yet), and the ids known before the save.
-  const [done, setDone] = useState<{ id: string } | null>(null);
-  const [watch, setWatch] = useState<string[] | null>(null);
+  const [done, setDone] = useState(false);
   const [round, setRound] = useState(0);
-  const ids = kind === 'car' ? data.cars.cars.map((c) => c.id) : data.shop.products.map((p) => p.id);
-  const idsRef = useRef(ids);
-  idsRef.current = ids;
-
-  // A new item shows up in the data a moment after the save: that is the one to price.
-  useEffect(() => {
-    if (!watch) return;
-    const fresh = ids.find((id) => !watch.includes(id));
-    if (fresh) {
-      setDone({ id: fresh });
-      setWatch(null);
-      return;
-    }
-    const t = window.setTimeout(() => { setDone({ id: '' }); setWatch(null); }, 1500);
-    return () => window.clearTimeout(t);
-  }, [watch, ids.join('|')]);
-
-  const saved = () => {
-    if (kind === 'car' && editingId) {
-      setDone({ id: editingId });
-      return;
-    }
-    setWatch(idsRef.current);
-  };
+  const saved = () => setDone(true);
   const another = () => {
-    setDone(null);
+    setDone(false);
     onEditingChange(null);
     setRound((r) => r + 1);
   };
@@ -61,9 +34,8 @@ export const RentalAddTab: React.FC<RentalAddTabProps> = ({ data, onCarsChange, 
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold">
-          <CheckCircle2 size={15} /> تم الحفظ. حدّد الآن كيف بيتأجّر: باليوم أو بالساعة، الفترات، والأيام والساعات المميزة بسعر آخر.
+          <CheckCircle2 size={15} /> تم الحفظ.
         </div>
-        {done.id ? <RentalPricing only={done.id} focusItem={done.id} /> : <RentalPricing />}
         <PrimaryButton onClick={another} className="h-11 flex items-center gap-1.5"><Plus size={15} /> إضافة عنصر آخر</PrimaryButton>
       </div>
     );

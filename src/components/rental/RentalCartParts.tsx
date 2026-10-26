@@ -7,10 +7,10 @@ import { CalendarCheck, ClipboardList, Minus, Plus, ShoppingCart, Trash2 } from 
 import { useCarData } from '../cars/store/CarDataContext';
 import { useShopData } from '../shop/store/ShopDataContext';
 import { BookingPageContext, createBooking, dayKey, readUnitTaken } from '../../services/bookings';
-import { addDays } from '../../services/stayBooking';
+import { addDays, nightsBetween } from '../../services/stayBooking';
 import { ExtraHelp } from '../ExtraHelp';
 import {
-  DEFAULT_TERMS, copyIdOf, daysFree, extrasFor, hourStarts, minOf, periodKind, periodNights, quote, slotsFree, slotsOf, timeOf, type Quote, type RentBy, type RentalUnit, type UnitTaken,
+  DEFAULT_TERMS, copyIdOf, dayAvailable, daysFree, extrasFor, hoursAvailable, hourStarts, minOf, periodKind, periodNights, quote, slotsFree, slotsOf, timeOf, type Quote, type RentBy, type RentalUnit, type UnitTaken,
 } from '../../services/rentalBooking';
 import type { StayRoom } from '../../services/stayBooking';
 import { depositAmount, normalizeRule } from '../../services/bookingDeposit';
@@ -117,7 +117,11 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
   const workEnd = minOf(schedule.workEnd);
   const cur = unit.currency;
   const price = mode === 'day' && unit.dayPrice > 0 ? `${money(unit.dayPrice, cur)} لليوم` : mode === 'hour' && unit.hourPrice > 0 ? `${money(unit.hourPrice, cur)} للساعة` : mode === 'period' ? unit.periods.map((p) => `${p.name}: ${money(p.price, cur)}`).join(' · ') : '';
-  const missing = !line.date ? 'اختر تاريخ الاستلام' : mode === 'day' && !line.checkOut ? 'اختر تاريخ التسليم' : mode === 'hour' && line.start === null ? 'اختر ساعة البداية' : mode === 'period' && !line.period ? 'اختر الفترة' : !q ? 'تحقق من التواريخ (أقل أو أكثر من المدة المسموحة)' : '';
+  // The first day the unit can't be rented (its availability rules).
+  const chosen = unit.periods.find((x) => x.id === line.period);
+  const days = !line.date ? [] : mode === 'day' ? (line.checkOut ? nightsBetween(line.date, line.checkOut) : []) : mode === 'period' && chosen && periodKind(chosen) !== 'time' ? periodNights(chosen, line.date) : [line.date];
+  const closed = days.find((d) => !dayAvailable(unit, d)) || '';
+  const missing = !line.date ? 'اختر تاريخ الاستلام' : mode === 'day' && !line.checkOut ? 'اختر تاريخ التسليم' : mode === 'hour' && line.start === null ? 'اختر ساعة البداية' : mode === 'period' && !line.period ? 'اختر الفترة' : closed ? `غير متاح بتاريخ ${label(closed)}. اختر تاريخاً آخر.` : !q ? 'تحقق من التواريخ (أقل أو أكثر من المدة المسموحة)' : '';
   const unavailable = !!q && free < line.qty;
 
   return (
@@ -164,7 +168,7 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
             <span>ساعة البداية</span>
             <select className={smallField} value={line.start ?? ''} disabled={!line.date} onChange={(e) => update({ start: e.target.value === '' ? null : Number(e.target.value) })}>
               <option value="">— اختر —</option>
-              {hourStarts(workStart, workEnd, hours).map((m) => <option key={m} value={m}>{timeOf(m)}</option>)}
+              {hourStarts(workStart, workEnd, hours).filter((m) => hoursAvailable(unit, m, m + hours * 60)).map((m) => <option key={m} value={m}>{timeOf(m)}</option>)}
             </select>
           </label>
         )}
@@ -176,7 +180,7 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
               {unit.periods.map((p) => {
                 const kind = periodKind(p);
                 const day = kind === 'dates' ? p.from || '' : line.date;
-                const busy = !!day && !!taken && !taken.some((t) => (kind === 'time' ? slotsFree(t, slotsOf(day, p.start, p.end)) : daysFree(t, periodNights(p, day))));
+                const busy = (kind === 'time' && !hoursAvailable(unit, p.start, p.end)) || (!!day && !!taken && !taken.some((t) => (kind === 'time' ? slotsFree(t, slotsOf(day, p.start, p.end)) : daysFree(t, periodNights(p, day)))));
                 return <option key={p.id} value={p.id} disabled={busy}>{p.name} · {kind === 'time' ? `${timeOf(p.start)}–${timeOf(p.end)}` : kind === 'length' ? `${p.days} يوم` : `${label(p.from || '')} – ${label(p.to || '')}`}</option>;
               })}
             </select>

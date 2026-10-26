@@ -63,7 +63,7 @@ import { CarDataContext, CarRequestContext } from './components/cars/store/CarDa
 import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { RentalAdminPanel } from './components/rental/RentalAdminPanel';
-import { featuredSlide, hasFeaturedCards, listPageOf, withFeaturedKind, withFeaturedSlide, type FeaturedKind } from './data/featuredSlide';
+import { withFeaturedKind } from './data/featuredSlide';
 import { RentalAdminData, RentalModeContext, createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentalItemCount, rentalShopView, rentsCars } from './components/rental/rentalTypes';
 import { getRentalTemplate } from './data/rentalTemplate';
 import { HotelAdminPanel } from './components/hotel/HotelAdminPanel';
@@ -350,8 +350,6 @@ export default function App() {
   const [hasShop, setHasShop] = useState<boolean>(false);
   // The open project's package limits (src/utils/planLimits.ts); unlimited until paying is switched on.
   const [limits, setLimits] = useState<PlanLimits>(UNLIMITED);
-  // True once the package was read (before that the limits are the open ones).
-  const [limitsRead, setLimitsRead] = useState(false);
   // The platform admin making a gallery / ready slide has no package: nothing is limited or hidden (Eyad, 25 Oct).
   const adminOpenAll = galleryEdit?.as === 'admin';
   const limitsRef = useRef(limits);
@@ -430,8 +428,7 @@ export default function App() {
   // Read again when «نشر» closes, since a payment may have changed the package.
   useEffect(() => {
     let live = true;
-    setLimitsRead(false);
-    readGate(ownerUid, projectKey).then((g) => { if (live) { setLimits(projectLimits(g, ownerUid, projectKey)); setLimitsRead(true); } }).catch(() => undefined);
+    readGate(ownerUid, projectKey).then((g) => { if (live) { setLimits(projectLimits(g, ownerUid, projectKey)); } }).catch(() => undefined);
     return () => { live = false; };
   }, [ownerUid, projectKey, isPublishOpen]);
   // The signed-in owner (or a member) looking at the page as visitors see it: its navbar gets «الإدارة».
@@ -470,34 +467,6 @@ export default function App() {
       else addRatingsSlide();
     }
   }, [project, hasRatings, pages[0]?.id, pages[0]?.ratingsSuggested]);
-  // A paid shop, car showroom, rental, hotel or restaurant gets its «عروض مميزة» slide once (the free page has
-  // none): live cards of what is marked «مميز». Removing it keeps it removed. See data/featuredSlide.ts.
-  useEffect(() => {
-    if (!projectReadyRef.current || !limitsRead || !limits.bookings || adminOpenAll || designerModeRef.current || !pages[0] || pages[0].featuredSuggested) return;
-    if (project !== 'shop' && project !== 'cars' && project !== 'rental' && project !== 'hotel' && project !== 'restaurant') return;
-    if (hasFeaturedCards(pages, elements)) {
-      setPages((prev) => prev.map((p, i) => (i === 0 ? { ...p, featuredSuggested: true } : p)));
-      return;
-    }
-    // What it lists: a rental has cars and items, by what the warehouse or the page already holds.
-    const kinds: FeaturedKind[] =
-      project === 'cars' ? ['cars']
-      : project === 'restaurant' ? ['dishes']
-      : project === 'rental'
-        ? [
-            ...(carAdmin.cars.length > 0 || elements.some((e) => e.type === 'carListings') ? (['cars'] as FeaturedKind[]) : []),
-            ...(shopAdmin.products.length > 0 || elements.some((e) => e.type === 'shopProducts') ? (['items'] as FeaturedKind[]) : []),
-          ]
-        : ['items'];
-    const made = featuredSlide({
-      kinds,
-      listPageId: listPageOf(pages, elements, kinds.length ? kinds : ['cars']),
-      stamp: Date.now(),
-      ...(project === 'hotel' ? { title: 'غرف مميزة' } : {}),
-    });
-    setPages((prev) => withFeaturedSlide(prev, made.slide));
-    setElements((prev) => [...prev, ...made.elements]);
-  }, [project, limitsRead, limits.bookings, adminOpenAll, pages, elements, carAdmin.cars.length, shopAdmin.products.length]);
   // A rental's featured slide shows the kind that has featured things: an item marked «مميز» appears even when the
   // slide (the car template's) only had car cards, and the other way round.
   const rentalFeaturedItems = project === 'rental' && shopAdmin.products.some((p) => p.featured);

@@ -11,7 +11,7 @@ import { businessFacts, ownerServices, type WeeAnswers } from './weeWriter';
 import { trackUnsplashDownload } from './unsplashService';
 import { WEE_COLOR_CHOICES } from '../data/weeColorChoices';
 import { WEE_SLIDE_BY_ID } from '../data/weeSlideTemplates';
-import { getSlideTemplatePayload } from '../data/slideTemplates';
+import { getStoreSlideRaw } from '../data/slideTemplates';
 import { STORE_SLIDE_IDS } from '../data/storeSlideAi';
 import { DEFAULT_LOOK, pageLookById } from '../data/pageLooks';
 import { SLIDE_DIVIDER_OPTIONS } from '../components/SlideDividers';
@@ -177,7 +177,7 @@ const readySlide = (template: string, extra?: Record<string, GalleryPayload>): (
   if (WEE_SLIDE_BY_ID[template]) return JSON.parse(JSON.stringify(WEE_SLIDE_BY_ID[template]()));
   for (const [kind, ids] of Object.entries(STORE_SLIDE_IDS)) {
     const i = ids.indexOf(template);
-    if (i >= 0) return JSON.parse(JSON.stringify(getSlideTemplatePayload(kind, i, '')));
+    if (i >= 0) return JSON.parse(JSON.stringify(getStoreSlideRaw(kind as 'shop' | 'cars' | 'restaurant', i)));
   }
   return null;
 };

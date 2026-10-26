@@ -3803,7 +3803,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               اختر فئة لتصفح الشرائح المصممة مسبقاً:
                             </h4>
                             <div className="grid grid-cols-2 gap-2">
-                              {READY_SLIDE_CATEGORIES.filter((cat) => allKindsOpen || ((cat.id !== 'shop' || isShopProject || isRentalProject || isHotelProject) && (cat.id !== 'cars' || isCarProject || isRentalProject) && (cat.id !== 'restaurant' || isRestaurantProject))).map((cat) => (
+                              {READY_SLIDE_CATEGORIES.map((cat) => (
                                 <button
                                   key={cat.id}
                                   type="button"

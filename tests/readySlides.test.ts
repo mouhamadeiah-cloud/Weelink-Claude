@@ -19,9 +19,9 @@ const design = () => ({
   ],
 });
 
-test('the shop, showroom and menu categories stay in the code; the others are the admin\'s', () => {
-  assert.deepEqual([...FIXED_READY_CATEGORIES].sort(), ['cars', 'restaurant', 'shop']);
-  assert.equal(GALLERY_READY_CATEGORIES.length, READY_SLIDE_CATEGORIES.length - 3);
+test('the shop, showroom, menu and featured categories stay in the code; the others are the admin\'s', () => {
+  assert.deepEqual([...FIXED_READY_CATEGORIES].sort(), ['cars', 'featured', 'restaurant', 'shop']);
+  assert.equal(GALLERY_READY_CATEGORIES.length, READY_SLIDE_CATEGORIES.length - 4);
 });
 
 test('the slots of a slide are found from its elements: title, eyebrow, sub, cta', () => {

@@ -235,7 +235,33 @@ export const customizeElementsForIndex = (elements: any[], categoryId: string, i
 // How many ready slides a category offers.
 // The approved designs of weeSlideTemplates come first in their categories.
 export const slideTemplateCount = (categoryId: string) =>
-  categoryId === 'shop' ? SHOP_SLIDE_COUNT : categoryId === 'cars' ? CAR_SLIDE_COUNT : categoryId === 'restaurant' ? REST_SLIDE_COUNT : (categoryId === 'team' || categoryId === 'special_offer' || categoryId === 'gallery') ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
+  categoryId === 'featured' ? FEATURED_READY.length : isStoreKind(categoryId) ? storeRawCount(categoryId) - FEATURED_READY.filter((f) => f.kind === categoryId).length : (categoryId === 'team' || categoryId === 'special_offer' || categoryId === 'gallery') ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
+
+// «عروض مميزة» (Eyad, 26 Oct): the featured slides of the shop, the showroom and the menu live in a category of
+// their own, so they are one list for every kind of page; each is a live grid of what the owner marked «مميز».
+// The pairs are the place of each in its kind's own list (the AI ids in storeSlideAi.ts follow the same places).
+type StoreKind = 'shop' | 'cars' | 'restaurant';
+const FEATURED_READY: { kind: StoreKind; index: number }[] = [
+  { kind: 'cars', index: 2 }, { kind: 'cars', index: 6 }, { kind: 'cars', index: 7 },
+  { kind: 'shop', index: 8 }, { kind: 'shop', index: 10 },
+  { kind: 'restaurant', index: 1 }, { kind: 'restaurant', index: 2 }, { kind: 'restaurant', index: 3 },
+];
+const isStoreKind = (id: string): id is StoreKind => id === 'shop' || id === 'cars' || id === 'restaurant';
+const storeRawCount = (kind: StoreKind) => (kind === 'shop' ? SHOP_SLIDE_COUNT : kind === 'cars' ? CAR_SLIDE_COUNT : REST_SLIDE_COUNT);
+// The place in the kind's own list of the n-th slide still left in its category.
+const storeRawIndex = (kind: StoreKind, n: number) => {
+  const moved = FEATURED_READY.filter((f) => f.kind === kind).map((f) => f.index).sort((a, b) => a - b);
+  let raw = n;
+  for (const m of moved) if (m <= raw) raw++;
+  return raw;
+};
+
+/** A shop, showroom or menu slide by its place in its own list (the AI page build finds them by id). */
+export const getStoreSlideRaw = (kind: StoreKind, rawIndex: number) => {
+  const payload = kind === 'shop' ? getShopSlidePayload(rawIndex) : kind === 'cars' ? getCarSlidePayload(rawIndex) : getRestaurantSlidePayload(rawIndex);
+  // Cards in these slides arrive as groups (moved, copied and phone-arranged together).
+  return withStoreSlideNames(kind, rawIndex, { ...payload, elements: groupTemplateCards(payload.elements as any[]) });
+};
 
 export const getSlideTemplatePayload = (categoryId: string, index: number, catName: string) => {
   const wee = weeSlideCount(categoryId);
@@ -244,11 +270,11 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
 };
 
 const getOlderSlidePayload = (categoryId: string, index: number, catName: string) => {
-  // Cards in the shop and showroom slides arrive as groups (moved, copied and phone-arranged together).
-  if (categoryId === 'shop' || categoryId === 'cars' || categoryId === 'restaurant') {
-    const payload = categoryId === 'shop' ? getShopSlidePayload(index) : categoryId === 'cars' ? getCarSlidePayload(index) : getRestaurantSlidePayload(index);
-    return withStoreSlideNames(categoryId, index, { ...payload, elements: groupTemplateCards(payload.elements as any[]) });
+  if (categoryId === 'featured') {
+    const f = FEATURED_READY[Math.min(index, FEATURED_READY.length - 1)];
+    return getStoreSlideRaw(f.kind, f.index);
   }
+  if (isStoreKind(categoryId)) return getStoreSlideRaw(categoryId, storeRawIndex(categoryId, index));
   const title = `${catName} - نموذج ${index + 1}`;
   const height = 580; // slightly taller to accommodate gorgeous overlapping layouts!
   

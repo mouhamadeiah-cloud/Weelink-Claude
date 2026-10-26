@@ -171,3 +171,30 @@ test('a rental period of days is booked and freed as days', async () => {
   assert.equal((await book({ date: inD(8), checkOut: inD(9), rent: { by: 'day' } })).error, 'taken');
   assert.equal((await book({ date: inD(12), checkOut: inD(13), rent: { by: 'day' } })).s, 200);
 });
+
+// ---- availability ----
+const avail = normalizeUnit({
+  byDay: true, byHour: true, dayPrice: 50, hourPrice: 10, currency: '$', minHours: 1, maxHours: 8,
+  avail: [
+    { id: 'a1', allow: true, kind: 'dates', from: '2030-06-01', to: '2030-09-30' },
+    { id: 'a2', allow: false, kind: 'days', days: ['friday'] },
+    { id: 'a3', allow: true, kind: 'hours', from: '10:00', to: '18:00' },
+    { id: 'a4', allow: false, kind: 'dates', from: '2030-07-10', to: '2030-07-12' },
+    { id: 'bad', allow: true, kind: 'dates', from: '2030-09-30', to: '2030-09-01' },
+  ],
+});
+
+test('availability: allowed dates, hours and weekdays limit the rental, blocked ones are left out', () => {
+  assert.equal(avail.avail.length, 4); // the rule with reversed dates is left out
+  // 2030-06-03 is a Monday: inside the season
+  assert.ok(quote(avail, [], 'u1', { by: 'day', date: '2030-06-03', checkOut: '2030-06-05' }));
+  assert.equal(quote(avail, [], 'u1', { by: 'day', date: '2030-05-30', checkOut: '2030-06-02' }), null); // starts before the season
+  assert.equal(quote(avail, [], 'u1', { by: 'day', date: '2030-06-06', checkOut: '2030-06-08' }), null); // takes Friday 7th
+  assert.equal(quote(avail, [], 'u1', { by: 'day', date: '2030-07-09', checkOut: '2030-07-11' }), null); // takes a blocked date
+  assert.ok(quote(avail, [], 'u1', { by: 'hour', date: '2030-06-03', start: 600, hours: 8 })); // 10:00-18:00
+  assert.equal(quote(avail, [], 'u1', { by: 'hour', date: '2030-06-03', start: 540, hours: 2 }), null); // before 10:00
+  assert.equal(quote(avail, [], 'u1', { by: 'hour', date: '2030-06-03', start: 960, hours: 3 }), null); // after 18:00
+  assert.equal(quote(avail, [], 'u1', { by: 'hour', date: '2030-06-07', start: 600, hours: 2 }), null); // a Friday
+  // days rules don't apply to hours of the day, and hours rules don't apply to whole days
+  assert.ok(quote(avail, [], 'u1', { by: 'day', date: '2030-06-03', checkOut: '2030-06-04' }));
+});

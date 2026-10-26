@@ -18,7 +18,7 @@ import { Segmented } from './moneyUi';
 import { itemNoLabel } from '../../../utils/itemNumbers';
 import { useRentalMode } from '../../rental/rentalTypes';
 import { ItemServices } from '../../rental/ItemServices';
-import { ItemRentalWays, useItemUnit } from '../../rental/ItemRentalWays';
+import { RentalPriceBlock, useItemUnit } from '../../rental/ItemRentalWays';
 
 export interface CarTabProps {
   data: CarAdminData;
@@ -32,8 +32,7 @@ export interface CarTabProps {
 }
 
 const STEPS = ['السيارة', 'المواصفات', 'التجهيزات والحالة', 'الصور', 'السعر والشراء', 'العرض في المعرض'];
-// A rental adds «طريقة التأجير» before the price.
-const RENTAL_STEPS = [...STEPS.slice(0, 4), 'طريقة التأجير', ...STEPS.slice(4)];
+const LAST = STEPS.length;
 const YEARS = Array.from({ length: 45 }, (_, i) => new Date().getFullYear() + 1 - i);
 
 const num = (v: string) => {
@@ -82,10 +81,6 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
   const [draftId, setDraftId] = useState(() => newId('car'));
   const itemId = car.id || draftId;
   const rentalUnit = useItemUnit(itemId, car.price || 0, car.currency);
-  const steps = rentsOut ? RENTAL_STEPS : STEPS;
-  const LAST = steps.length;
-  const ways = rentsOut && step === 5; // the stage before the price
-  const k = rentsOut && step > 5 ? step - 1 : step; // the step of the plain entry
   const [error, setError] = useState('');
   const [customFeature, setCustomFeature] = useState('');
 
@@ -201,7 +196,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           </div>
         )}
         <div className="flex flex-wrap gap-1.5">
-          {steps.map((s, i) => (
+          {STEPS.map((s, i) => (
             <button
               key={s}
               type="button"
@@ -339,26 +334,21 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           </Card>
         )}
 
-        {ways && (
-          <Card title="طريقة التأجير">
-            <ItemRentalWays item={rentalUnit} />
-          </Card>
-        )}
-
-        {k === 5 && !ways && (
+        {step === 5 && (
           <>
             <Card title={rentsOut ? 'سعر الإيجار' : 'السعر للزبون'}>
               <div className="grid sm:grid-cols-2 gap-3">
-                <Field label={rentsOut ? 'سعر اليوم' : 'السعر'} hint={rentsOut ? 'بعد الحفظ بتحدد سعر الساعة والفترات والأسعار المميزة.' : undefined}>
+                <Field label={rentsOut ? 'العملة' : 'السعر'}>
                   <div className="flex gap-2">
-                    <input className={inputClass} inputMode="decimal" value={car.price || ''} onChange={(e) => set({ price: num(e.target.value) })} dir="ltr" />
-                    <select className={`${inputClass} !w-24`} value={car.currency} onChange={(e) => set({ currency: e.target.value })}>
+                    {!rentsOut && <input className={inputClass} inputMode="decimal" value={car.price || ''} onChange={(e) => set({ price: num(e.target.value) })} dir="ltr" />}
+                    <select className={`${inputClass} ${rentsOut ? '' : '!w-24'}`} value={car.currency} onChange={(e) => set({ currency: e.target.value })}>
                       {CAR_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                 </Field>
                 <Field label="السعر قبل التخفيض" hint="اختياري، يظهر مشطوبًا"><input className={inputClass} inputMode="decimal" value={car.oldPrice || ''} onChange={(e) => set({ oldPrice: num(e.target.value) })} dir="ltr" /></Field>
               </div>
+              {rentsOut && <RentalPriceBlock item={rentalUnit} dayPrice={car.price} onDayPrice={(price) => set({ price })} currency={car.currency} />}
               <div className="divide-y divide-neutral-100">
                 <Toggle checked={car.showPrice} onChange={(showPrice) => set({ showPrice })} label="إظهار السعر في المعرض" />
                 <Toggle checked={car.negotiable} onChange={(negotiable) => set({ negotiable })} label="قابل للتفاوض" />
@@ -399,7 +389,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           </>
         )}
 
-        {k === 6 && (
+        {step === 6 && (
           <>
             <Card title="العرض في المعرض">
               <Field label="الشرح" hint="يظهر في صفحة السيارة تحت «عن السيارة»"><textarea className={`${textareaClass} min-h-[120px]`} value={car.description} onChange={(e) => set({ description: e.target.value })} /></Field>
@@ -438,7 +428,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           {step > 1 && <GhostButton onClick={() => goTo(step - 1)} className="h-11 flex items-center gap-1"><ArrowRight size={13} /> رجوع</GhostButton>}
           {step < LAST && (
             <PrimaryButton onClick={() => goTo(step + 1)} className="flex-1 h-11 flex items-center justify-center gap-1.5">
-              التالي: {steps[step]} <ArrowLeft size={14} />
+              التالي: {STEPS[step]} <ArrowLeft size={14} />
             </PrimaryButton>
           )}
         </div>

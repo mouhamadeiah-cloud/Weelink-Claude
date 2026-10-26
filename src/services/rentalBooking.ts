@@ -51,6 +51,17 @@ export interface SpecialPrice {
   price: number;
 }
 
+// When a unit can be rented (Eyad, 26 Oct): rules «متاح» or «غير متاح» for dates, hours of the day or weekdays. «غير متاح» always
+// blocks. When there are «متاح» rules of a kind (dates, weekdays, hours), the rental must be inside one of them.
+export interface AvailRule {
+  id: string;
+  allow: boolean;
+  kind: SpecialKind;
+  days: string[]; // kind 'days': WEEK ids
+  from: string; // kind 'dates': yyyy-mm-dd; kind 'hours': HH:MM
+  to: string;
+}
+
 // What the rental schedule keeps about each unit, on its room.
 export interface RentalUnit {
   item: string; // the warehouse car or item it stands for ('' = added by hand)
@@ -67,6 +78,7 @@ export interface RentalUnit {
   driverDay: number;
   driverHour: number;
   prices: SpecialPrice[];
+  avail: AvailRule[];
   copies: number; // identical copies of the unit (5 tents): each one is booked on its own, up to this many at once
 }
 
@@ -103,6 +115,25 @@ export const newRentalId = (p = 'x') => `${p}${Date.now().toString(36)}${Math.ra
 export const unitIdOf = (itemId: string) => `u${itemId.toLowerCase().replace(/[^a-z0-9]/g, '')}`.slice(0, 20);
 
 export const MAX_COPIES = 100;
+export const normalizeAvail = (raw: unknown): AvailRule[] => {
+  const seen = new Set<string>();
+  return (Array.isArray(raw) ? raw : [])
+    .slice(0, 20)
+    .map((p: any): AvailRule => {
+      const kind: SpecialKind = p?.kind === 'hours' ? 'hours' : p?.kind === 'days' ? 'days' : 'dates';
+      const good = kind === 'dates' ? isDate : kind === 'hours' ? isTime : () => true;
+      return {
+        id: isId(p?.id) ? p.id : '',
+        allow: p?.allow !== false,
+        kind,
+        days: Array.isArray(p?.days) ? WEEK.filter((d) => p.days.includes(d)) : [],
+        from: good(p?.from) ? p.from : '',
+        to: good(p?.to) ? p.to : '',
+      };
+    })
+    .filter((p: AvailRule) => p.id && !seen.has(p.id) && !!seen.add(p.id) && (p.kind === 'days' ? p.days.length > 0 : !!p.from && !!p.to && (p.kind === 'hours' ? p.from !== p.to : p.from <= p.to)));
+};
+
 export const normalizeUnit = (r: any): RentalUnit => {
   const byDay = r?.byDay !== false;
   const byHour = r?.byHour === true;
@@ -137,6 +168,7 @@ export const normalizeUnit = (r: any): RentalUnit => {
     driver: r?.driver === 'with' || r?.driver === 'without' || r?.driver === 'both' ? r.driver : 'none',
     driverDay: num(r?.driverDay),
     driverHour: num(r?.driverHour),
+    avail: normalizeAvail(r?.avail),
     prices: (Array.isArray(r?.prices) ? r.prices : [])
       .slice(0, 20)
       .map((p: any): SpecialPrice => {
@@ -306,6 +338,24 @@ export const priceAt = (u: RentalUnit, date: string, min?: number): { price: num
   return { price: hit ? hit.price : want === 'day' ? u.dayPrice : u.hourPrice, special: hit || null };
 };
 
+const ruleOnDay = (r: AvailRule, date: string) => (r.kind === 'dates' ? date >= r.from && date <= r.to : r.kind === 'days' ? r.days.includes(weekdayOf(date)) : false);
+/** Can the unit be rented on this day (the dates and weekdays rules)? */
+export const dayAvailable = (u: RentalUnit, date: string): boolean => {
+  const rules = u.avail.filter((r) => r.kind !== 'hours');
+  if (rules.some((r) => !r.allow && ruleOnDay(r, date))) return false;
+  return (['dates', 'days'] as const).every((kind) => {
+    const allow = rules.filter((r) => r.allow && r.kind === kind);
+    return allow.length === 0 || allow.some((r) => ruleOnDay(r, date));
+  });
+};
+/** Can the unit be rented from minute `start` to `end` of a day (the hours rules)? */
+export const hoursAvailable = (u: RentalUnit, start: number, end: number): boolean => {
+  const rules = u.avail.filter((r) => r.kind === 'hours').map((r) => ({ allow: r.allow, from: minOf(r.from), to: minOf(r.to) > minOf(r.from) ? minOf(r.to) : 1440 }));
+  if (rules.some((r) => !r.allow && start < r.to && end > r.from)) return false;
+  const allow = rules.filter((r) => r.allow);
+  return allow.length === 0 || allow.some((r) => start >= r.from && end <= r.to);
+};
+
 const fmt = (n: number) => String(Math.round(n * 100) / 100);
 const words = (n: number, one: string, two: string, many: string) => (n === 1 ? one : n === 2 ? two : `${n} ${many}`);
 
@@ -325,6 +375,7 @@ export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: R
     if (!u.byDay || !w.checkOut) return null;
     nights = nightsBetween(w.date, w.checkOut);
     if (nights.length < (opts.minDays || 1) || nights.length > (opts.maxDays || 90)) return null;
+    if (nights.some((d) => !dayAvailable(u, d))) return null;
     // Group the days by their price: «3 أيام × 50» and «يوم الجمعة × 70».
     const groups = new Map<string, { n: number; price: number; special: SpecialPrice | null }>();
     for (const d of nights) {
@@ -347,6 +398,7 @@ export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: R
     if (end > 1440) return null;
     if (opts.workStart !== undefined && start < opts.workStart) return null;
     if (opts.workEnd !== undefined && opts.workEnd > (opts.workStart || 0) && end > opts.workEnd) return null;
+    if (!dayAvailable(u, w.date) || !hoursAvailable(u, start, end)) return null;
     slots = slotsOf(w.date, start, end);
     const groups = new Map<string, { n: number; price: number; special: SpecialPrice | null }>();
     for (let h = 0; h < hours; h++) {
@@ -367,12 +419,13 @@ export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: R
     if (periodKind(p) !== 'time') {
       // A number of days or fixed dates: taken as days, at the period's price.
       nights = periodNights(p, w.date);
-      if (nights.length === 0) return null;
+      if (nights.length === 0 || nights.some((d) => !dayAvailable(u, d))) return null;
       lines.push({ label: `${p.name} (${words(nights.length, 'يوم', 'يومان', 'أيام')})`, amount: p.price });
       count = nights.length;
       driverPrice = u.driverDay * count;
       slot = `${p.name} · حتى ${addDays(nights[nights.length - 1], 1)}`;
     } else {
+      if (!dayAvailable(u, w.date) || !hoursAvailable(u, p.start, p.end)) return null;
       slots = slotsOf(w.date, p.start, p.end);
       lines.push({ label: `${p.name} (${timeOf(p.start)} - ${timeOf(p.end)})`, amount: p.price });
       driverPrice = u.driverHour * Math.ceil((p.end - p.start) / 60);

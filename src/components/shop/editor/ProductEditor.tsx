@@ -23,7 +23,7 @@ import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 import { itemNoLabel } from '../../../utils/itemNumbers';
 import { useRentalMode } from '../../rental/rentalTypes';
 import { ItemServices } from '../../rental/ItemServices';
-import { ItemRentalWays, useItemUnit } from '../../rental/ItemRentalWays';
+import { RentalPriceBlock, useItemUnit } from '../../rental/ItemRentalWays';
 import { useHotelMode } from '../../hotel/hotelTypes';
 
 const newProductDraft = (currency: string): ShopProduct => ({
@@ -72,8 +72,6 @@ const pathOf = (product: ShopProduct | undefined, catalogs: ShopCatalog[]): Pick
 type ExportTarget = 'store' | 'warehouse' | 'both';
 
 const STEPS = ['المنتج', 'الصور', 'السعر', 'المواصفات والمخزون', 'الشرح', 'منتجات مرتبطة'];
-// A rental adds «طريقة التأجير» before the price.
-const RENTAL_STEPS = [...STEPS.slice(0, 2), 'طريقة التأجير', ...STEPS.slice(2)];
 
 const DISPLAYS: { id: ProductDisplay; label: string; icon: React.ElementType }[] = [
   { id: 'card', label: 'بطاقة', icon: LayoutGrid },
@@ -116,10 +114,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
   const [draftId] = useState(() => newId('prd'));
   const itemId = p.id || draftId;
   const rentalUnit = useItemUnit(itemId, p.price || 0, p.currency);
-  const steps = rentsOut ? RENTAL_STEPS : STEPS;
-  const LAST_STEP = steps.length;
-  const ways = rentsOut && step === 3; // the stage before the price
-  const k = rentsOut && step > 3 ? step - 1 : step; // the step of the plain entry
+  const LAST_STEP = STEPS.length;
   const [error, setError] = useState('');
   const set = (patch: Partial<ShopProduct>) => setP((prev) => ({ ...prev, ...patch }));
   const isEdit = !!initial;
@@ -253,7 +248,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
       )}
       {step < LAST_STEP && (
         <PrimaryButton onClick={() => goTo(step + 1)} className="flex-1 h-11 flex items-center justify-center gap-1.5">
-          التالي: {steps[step]} <ArrowLeft size={14} />
+          التالي: {STEPS[step]} <ArrowLeft size={14} />
         </PrimaryButton>
       )}
     </div>
@@ -263,7 +258,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
     <div className="grid lg:grid-cols-[minmax(0,1fr)_250px] gap-4 items-start">
       <div className="space-y-4 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5">
-          {steps.map((label, i) => (
+          {STEPS.map((label, i) => (
             <React.Fragment key={label}>
               {i > 0 && <ArrowLeft size={12} className="text-neutral-300" />}
               <button
@@ -319,18 +314,14 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           </Card>
         )}
 
-        {ways && (
-          <Card title="طريقة التأجير">
-            <ItemRentalWays item={rentalUnit} />
-          </Card>
-        )}
-
-        {k === 3 && !ways && (
+        {step === 3 && (
           <Card title="السعر">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Field label={rentsOut ? 'سعر اليوم' : 'السعر'} hint={rentsOut ? 'بعد الحفظ بتحدد سعر الساعة والفترات والأسعار المميزة.' : undefined}>
-                <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.price || ''} onChange={(e) => set({ price: num(e.target.value) })} />
-              </Field>
+              {!rentsOut && (
+                <Field label="السعر">
+                  <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.price || ''} onChange={(e) => set({ price: num(e.target.value) })} />
+                </Field>
+              )}
               <Field label="السعر الأصلي (مشطوب)">
                 <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.oldPrice || ''} onChange={(e) => set({ oldPrice: num(e.target.value) })} />
               </Field>
@@ -345,6 +336,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
                 </Field>
               )}
             </div>
+            {rentsOut && <RentalPriceBlock item={rentalUnit} dayPrice={p.price} onDayPrice={(price) => set({ price })} currency={p.currency} />}
             {pct > 0 && (
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#ff3b30]"><Percent size={12} /> خصم {pct}% عن السعر الأصلي</div>
             )}
@@ -388,7 +380,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           </Card>
         )}
 
-        {k === 4 && (
+        {step === 4 && (
           <Card title="المواصفات والمخزون" actions={isEdit ? <span className="text-xs text-neutral-400">مرتبط بالمستودع</span> : undefined}>
             <OptionsEditor
               options={p.options}
@@ -420,7 +412,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           </Card>
         )}
 
-        {k === 5 && (
+        {step === 5 && (
           <Card title="شرح المنتج">
             <RichTextEditor value={p.description} onChange={(description) => set({ description })} placeholder="اكتب وصفاً كاملاً للمنتج: المزايا، طريقة الاستعمال، المحتويات…" />
             <Field label="شرح قصير تحت الاسم">
@@ -430,7 +422,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           </Card>
         )}
 
-        {k === 6 && (
+        {step === 6 && (
           <>
             <Card title="منتجات مرتبطة" actions={<span className="text-xs text-neutral-400">تظهر أسفل البطاقة العائمة، حتى 5</span>}>
               <RelatedProductsPicker

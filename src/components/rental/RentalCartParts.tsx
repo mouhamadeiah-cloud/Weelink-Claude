@@ -10,7 +10,7 @@ import { BookingPageContext, createBooking, dayKey, readUnitTaken } from '../../
 import { addDays, nightsBetween } from '../../services/stayBooking';
 import { ExtraHelp } from '../ExtraHelp';
 import {
-  DEFAULT_TERMS, copyIdOf, dayAvailable, daysFree, extrasFor, hoursAvailable, hourStarts, minOf, periodKind, periodNights, quote, slotsFree, slotsOf, timeOf, type Quote, type RentBy, type RentalUnit, type UnitTaken,
+  DEFAULT_TERMS, copyIdOf, dayAvailable, daysFree, extraPriceFor, extrasFor, hoursAvailable, hourStarts, minOf, periodKind, periodNights, quote, slotsFree, slotsOf, timeOf, type Quote, type RentBy, type RentalUnit, type UnitTaken,
 } from '../../services/rentalBooking';
 import type { StayRoom } from '../../services/stayBooking';
 import { depositAmount, normalizeRule } from '../../services/bookingDeposit';
@@ -210,7 +210,7 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
             <label key={x.id} className="flex items-center gap-2 text-xs cursor-pointer">
               <input type="checkbox" checked={line.extras.includes(x.id)} onChange={(e) => update({ extras: e.target.checked ? [...line.extras, x.id] : line.extras.filter((id) => id !== x.id) })} />
               <span className="flex-1">{x.name} <ExtraHelp note={x.note} /></span>
-              <span className="font-bold text-(--muted)">{money(x.price, unit.currency)}{x.per === 'unit' ? (mode === 'day' ? ' لليوم' : mode === 'hour' ? ' للساعة' : '') : ''}</span>
+              <span className="font-bold text-(--muted)">{money(extraPriceFor(x, unit.id), unit.currency)}{x.per === 'unit' ? (mode === 'day' ? ' لليوم' : mode === 'hour' ? ' للساعة' : '') : ''}</span>
             </label>
           ))}
         </div>

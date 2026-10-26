@@ -338,17 +338,17 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           <>
             <Card title={rentsOut ? 'سعر الإيجار' : 'السعر للزبون'}>
               <div className="grid sm:grid-cols-2 gap-3">
-                <Field label={rentsOut ? 'العملة' : 'السعر'}>
+                <Field label="السعر">
                   <div className="flex gap-2">
-                    {!rentsOut && <input className={inputClass} inputMode="decimal" value={car.price || ''} onChange={(e) => set({ price: num(e.target.value) })} dir="ltr" />}
-                    <select className={`${inputClass} ${rentsOut ? '' : '!w-24'}`} value={car.currency} onChange={(e) => set({ currency: e.target.value })}>
+                    <input className={inputClass} inputMode="decimal" value={car.price || ''} onChange={(e) => set({ price: num(e.target.value) })} dir="ltr" />
+                    <select className={`${inputClass} !w-24`} value={car.currency} onChange={(e) => set({ currency: e.target.value })}>
                       {CAR_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                 </Field>
                 <Field label="السعر قبل التخفيض" hint="اختياري، يظهر مشطوبًا"><input className={inputClass} inputMode="decimal" value={car.oldPrice || ''} onChange={(e) => set({ oldPrice: num(e.target.value) })} dir="ltr" /></Field>
               </div>
-              {rentsOut && <RentalPriceBlock item={rentalUnit} dayPrice={car.price} onDayPrice={(price) => set({ price })} currency={car.currency} />}
+              {rentsOut && <RentalPriceBlock item={rentalUnit} price={car.price} currency={car.currency} />}
               <div className="divide-y divide-neutral-100">
                 <Toggle checked={car.showPrice} onChange={(showPrice) => set({ showPrice })} label="إظهار السعر في المعرض" />
                 <Toggle checked={car.negotiable} onChange={(negotiable) => set({ negotiable })} label="قابل للتفاوض" />
@@ -357,7 +357,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
             </Card>
             {rentsOut && (
               <Card title="الخدمات الجاهزة" actions={<span className="text-xs text-neutral-400">تنحفظ في «الخدمات الإضافية»</span>}>
-                <ItemServices itemId={itemId} />
+                <ItemServices itemId={itemId} currency={car.currency} />
               </Card>
             )}
             <Card title={rentsOut ? 'بيانات السيارة' : 'الشراء'} actions={<span className="text-xs text-neutral-400">لا يظهر للزبون</span>}>

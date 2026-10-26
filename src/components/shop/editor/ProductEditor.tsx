@@ -317,11 +317,9 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
         {step === 3 && (
           <Card title="السعر">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {!rentsOut && (
-                <Field label="السعر">
-                  <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.price || ''} onChange={(e) => set({ price: num(e.target.value) })} />
-                </Field>
-              )}
+              <Field label="السعر">
+                <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.price || ''} onChange={(e) => set({ price: num(e.target.value) })} />
+              </Field>
               <Field label="السعر الأصلي (مشطوب)">
                 <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.oldPrice || ''} onChange={(e) => set({ oldPrice: num(e.target.value) })} />
               </Field>
@@ -336,7 +334,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
                 </Field>
               )}
             </div>
-            {rentsOut && <RentalPriceBlock item={rentalUnit} dayPrice={p.price} onDayPrice={(price) => set({ price })} currency={p.currency} />}
+            {rentsOut && <RentalPriceBlock item={rentalUnit} price={p.price} currency={p.currency} />}
             {pct > 0 && (
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#ff3b30]"><Percent size={12} /> خصم {pct}% عن السعر الأصلي</div>
             )}
@@ -393,7 +391,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
             />
             {rentsOut && (
               <Field label="الخدمات الجاهزة" hint="فعّل الخدمات المرافقة لهذا العنصر، أو أضف خدمة جديدة وبتنحفظ بالإعدادات في «الخدمات الإضافية».">
-                <ItemServices itemId={itemId} />
+                <ItemServices itemId={itemId} currency={p.currency} />
               </Field>
             )}
             {rentsOut && (

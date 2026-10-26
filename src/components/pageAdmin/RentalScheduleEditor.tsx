@@ -42,33 +42,33 @@ export const SpecialPrices: React.FC<{ prices: SpecialPrice[]; onChange: (prices
       <Field label="أسعار خاصة" hint="مثلاً الجمعة والسبت بسعر، أو أيام العيد، أو المساء للملاعب. إذا انطبق أكتر من سعر: التواريخ أولاً، بعدين الساعات، بعدين الأيام">
         <div className="space-y-2">
           {u.prices.map((p, i) => (
-            <div key={p.id} className="rounded-xl border border-neutral-200 p-2 space-y-2">
-              <div className="flex flex-wrap items-center gap-1.5">
+            <div key={p.id} className="flex flex-wrap items-center gap-2 py-2 border-b border-neutral-100">
+              <div className="contents">
                 {([['days', 'أيام الأسبوع'], ['dates', 'تواريخ'], ['hours', 'ساعات']] as [SpecialPrice['kind'], string][]).filter(([kind]) => !(night && kind === 'hours')).map(([kind, label]) => (
                   <button key={kind} type="button" className={chip(p.kind === kind)} onClick={() => setPrice(i, { kind, for: kind === 'hours' ? 'hour' : p.for, from: '', to: '' })}>{label}</button>
                 ))}
                 <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer mr-auto" onClick={() => set({ prices: u.prices.filter((_, j) => j !== i) })}><Trash2 size={15} /></button>
               </div>
               {p.kind === 'days' && (
-                <div className="flex flex-wrap gap-1">
+                <div className="contents">
                   {WEEK.map((d) => <button key={d} type="button" className={chip(p.days.includes(d))} onClick={() => setPrice(i, { days: p.days.includes(d) ? p.days.filter((x) => x !== d) : WEEK.filter((x) => x === d || p.days.includes(x)) })}>{dayNameAr(d)}</button>)}
                 </div>
               )}
               {p.kind === 'dates' && (
-                <div className="flex flex-wrap items-center gap-2" dir="ltr">
+                <div className="contents" dir="ltr">
                   <input type="date" className={`${inputFitClass} w-40`} value={p.from} onChange={(e) => setPrice(i, { from: e.target.value, to: p.to && p.to >= e.target.value ? p.to : e.target.value })} />
                   <span className="text-neutral-400">–</span>
                   <input type="date" min={p.from} className={`${inputFitClass} w-40`} value={p.to} onChange={(e) => setPrice(i, { to: e.target.value })} />
                 </div>
               )}
               {p.kind === 'hours' && (
-                <div className="flex flex-wrap items-center gap-2" dir="ltr">
+                <div className="contents" dir="ltr">
                   <input type="time" className={`${inputFitClass} w-28`} value={p.from} onChange={(e) => setPrice(i, { from: e.target.value })} />
                   <span className="text-neutral-400">–</span>
                   <input type="time" className={`${inputFitClass} w-28`} value={p.to} onChange={(e) => setPrice(i, { to: e.target.value })} />
                 </div>
               )}
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="contents">
                 {p.kind !== 'hours' && u.byDay && u.byHour && (
                   <>
                     <button type="button" className={chip(p.for === 'day')} onClick={() => setPrice(i, { for: 'day' })}>بدل سعر اليوم</button>
@@ -148,8 +148,8 @@ export const AvailabilityEditor: React.FC<{ rules: AvailRule[]; onChange: (rules
     <Field label="الإتاحة" hint="متى بيكون العنصر متاح أو غير متاح للتأجير. «متاح» بيحصر التأجير ضمنها، و«غير متاح» بيستثني منها. بدون قواعد: متاح دائماً">
       <div className="space-y-2">
         {rules.map((r, i) => (
-          <div key={r.id} className="rounded-xl border border-neutral-200 p-2 space-y-2">
-            <div className="flex flex-wrap items-center gap-1.5">
+          <div key={r.id} className="flex flex-wrap items-center gap-2 py-2 border-b border-neutral-100">
+            <div className="contents">
               <button type="button" className={chip(r.allow)} onClick={() => setRule(i, { allow: true })}>متاح</button>
               <button type="button" className={chip(!r.allow)} onClick={() => setRule(i, { allow: false })}>غير متاح</button>
               <span className="w-2" />
@@ -159,19 +159,19 @@ export const AvailabilityEditor: React.FC<{ rules: AvailRule[]; onChange: (rules
               <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer mr-auto" onClick={() => onChange(rules.filter((_, j) => j !== i))}><Trash2 size={15} /></button>
             </div>
             {r.kind === 'days' && (
-              <div className="flex flex-wrap gap-1">
+              <div className="contents">
                 {WEEK.map((d) => <button key={d} type="button" className={chip(r.days.includes(d))} onClick={() => setRule(i, { days: r.days.includes(d) ? r.days.filter((x) => x !== d) : WEEK.filter((x) => x === d || r.days.includes(x)) })}>{dayNameAr(d)}</button>)}
               </div>
             )}
             {r.kind === 'dates' && (
-              <div className="flex flex-wrap items-center gap-2" dir="ltr">
+              <div className="contents" dir="ltr">
                 <input type="date" className={`${inputFitClass} w-40`} value={r.from} onChange={(e) => setRule(i, { from: e.target.value, to: r.to && r.to >= e.target.value ? r.to : e.target.value })} />
                 <span className="text-neutral-400">–</span>
                 <input type="date" min={r.from} className={`${inputFitClass} w-40`} value={r.to} onChange={(e) => setRule(i, { to: e.target.value })} />
               </div>
             )}
             {r.kind === 'hours' && (
-              <div className="flex flex-wrap items-center gap-2" dir="ltr">
+              <div className="contents" dir="ltr">
                 <input type="time" className={`${inputFitClass} w-28`} value={r.from} onChange={(e) => setRule(i, { from: e.target.value })} />
                 <span className="text-neutral-400">–</span>
                 <input type="time" className={`${inputFitClass} w-28`} value={r.to} onChange={(e) => setRule(i, { to: e.target.value })} />

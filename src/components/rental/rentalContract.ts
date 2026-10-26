@@ -42,10 +42,12 @@ export const buildRentalPaper = (b: Booking, kind: RentalPaper, terms = ''): str
     ${cell('الإيميل', b.email, true)}${blank(hotel ? 'رقم الهوية أو جواز السفر' : 'الرقم الوطني', false)}
     ${b.address ? cell('العنوان', b.address) : blank('العنوان')}
   </div></section>`;
-  const item = `<section class="box"><h3>${hotel ? 'الغرفة' : 'الوحدة المؤجّرة'}</h3><div class="grid">
-    ${cell(hotel ? 'الغرفة' : 'الوحدة', unit)}${cell('المدة', period)}
+  const item = `<section class="box"><h3>${b.items && b.items.length > 1 ? (hotel ? 'الغرف' : 'الوحدات المؤجّرة') : hotel ? 'الغرفة' : 'الوحدة المؤجّرة'}</h3><div class="grid">
+    ${b.items && b.items.length > 1
+      ? b.items.map((it, i) => cell(`${hotel ? 'الغرفة' : 'الوحدة'} ${i + 1}`, `${it.roomName}${it.driver ? ' (مع سائق)' : ''} · ${it.total} ${b.price?.currency || ''}`.trim())).join('')
+      : cell(hotel ? 'الغرفة' : 'الوحدة', unit)}${cell('المدة', period)}
     ${hotel && b.partySize ? cell('عدد الضيوف', String(b.partySize)) : ''}
-    ${b.driver ? cell('السائق', 'مع سائق') : ''}
+    ${b.driver && !(b.items && b.items.length > 1) ? cell('السائق', 'مع سائق') : ''}
     ${b.desc ? `<div class="cell wide"><span>ملاحظات ${lessee}</span><b>${esc(b.desc)}</b></div>` : ''}
   </div></section>`;
   const money = `<section class="box"><h3>${hotel ? 'السعر والعربون' : 'الأجرة والعربون'}</h3>

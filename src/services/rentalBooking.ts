@@ -80,6 +80,8 @@ export interface RentalUnit {
   prices: SpecialPrice[];
   avail: AvailRule[];
   copies: number; // identical copies of the unit (5 tents): each one is booked on its own, up to this many at once
+  perPerson: boolean; // the price (day, hour, period, special) is for one person: it is multiplied by the guests (halls, villas, rooms)
+  maxGuests: number; // the most people in one booking (a room for 2, a villa for 6); 0 = no limit
 }
 
 export interface RentalExtra {
@@ -151,6 +153,8 @@ export const normalizeUnit = (r: any): RentalUnit => {
   return {
     item: typeof r?.item === 'string' ? r.item.slice(0, 80) : '',
     copies: int(r?.copies, 1, MAX_COPIES, 1),
+    perPerson: r?.perPerson === true,
+    maxGuests: int(r?.maxGuests, 0, 500, 0),
     // A unit is always rented some way: by the day when nothing else is on.
     byDay: byDay || (!byHour && !(Array.isArray(r?.periods) && r.periods.length)),
     byHour,
@@ -375,7 +379,7 @@ const specialName = (p: SpecialPrice) =>
 // The price of a wish, line by line, and what it takes. null when the unit can't be rented so.
 export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: RentWish, opts: { minDays?: number; maxDays?: number; workStart?: number; workEnd?: number; night?: boolean } = {}): Quote | null => {
   if (!isDate(w.date)) return null;
-  const lines: QuoteLine[] = [];
+  let lines: QuoteLine[] = [];
   let nights: string[] = [];
   let slots: string[] = [];
   let count = 1;
@@ -442,12 +446,15 @@ export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: R
       slot = `${p.name} · ${timeOf(p.start)} - ${timeOf(p.end)}`;
     }
   }
+  // People (Eyad, 26 Oct): a unit has a most (a room for 2), and may be priced for one person, so every price line times the guests.
+  const guests = Math.max(1, Math.round(Number(w.guests)) || 1);
+  if (u.maxGuests > 0 && guests > u.maxGuests) return null;
+  if (u.perPerson && guests > 1) lines = lines.map((l) => ({ ...l, label: `${l.label} × ${words(guests, 'شخص', 'شخصان', 'أشخاص')}`, amount: l.amount * guests }));
   const withDriver = (u.driver === 'with') || (u.driver === 'both' && w.driver === true);
   if (withDriver && driverPrice > 0) lines.push({ label: 'السائق', amount: driverPrice });
   for (const id of w.extras || []) {
     const x = extras.find((e) => e.id === id && (e.units.length === 0 || e.units.includes(unitId)));
     if (!x) continue;
-    const guests = Math.max(1, Math.round(Number(w.guests)) || 1);
     const n = x.per === 'unit' ? count : x.per === 'person' ? count * guests : x.per === 'personOnce' ? guests : 1;
     lines.push({ label: n > 1 ? `${x.name} × ${n}` : x.name, amount: extraPriceFor(x, unitId) * n, ...(x.note ? { note: x.note } : {}) });
   }
@@ -475,6 +482,7 @@ export interface WarehouseUnit {
   price: number;
   currency: string;
   copies?: number; // identical copies in the warehouse (a rental item's «عدد النسخ»)
+  maxGuests?: number; // the most people in one booking (an estate item's «العدد الأقصى للأشخاص»)
 }
 
 // The schedule's rooms after the warehouse changed: one per car or item, in the warehouse's order, each
@@ -501,6 +509,7 @@ export const mergeUnits = (rooms: (StayRoom & Partial<RentalUnit>)[], items: War
       hourPrice: repriced && hourOnly ? it.price : u.hourPrice,
       fromPrice: it.price,
       copies: it.copies ? Math.min(MAX_COPIES, Math.max(1, Math.round(it.copies))) : 1,
+      maxGuests: it.maxGuests ? Math.min(500, Math.max(0, Math.round(it.maxGuests))) : 0,
     };
   });
   const byHand = rooms.filter((r) => !r.item).map((r) => ({ ...r, ...normalizeUnit(r) }));

@@ -215,3 +215,33 @@ test('a service can cost something else for one item, and a unit rented several 
   assert.equal(hourly[0].byHour, true);
   assert.equal(hourly[0].hourPrice, 6);
 });
+
+const villa = normalizeUnit({ item: 'p_villa', byDay: true, dayPrice: 10, currency: '$', perPerson: true, maxGuests: 4 });
+
+test('a price for one person is multiplied by the guests, and a unit takes no more people than its most', () => {
+  const day = { by: 'day' as const, date: '2030-04-01', checkOut: '2030-04-03' };
+  assert.equal(quote(villa, [], 'u1', { ...day, guests: 3 })!.total, 2 * 10 * 3);
+  assert.equal(quote(villa, [], 'u1', day)!.total, 2 * 10); // no guests given = one person
+  assert.equal(quote(villa, [], 'u1', { ...day, guests: 5 }), null);
+  const whole = normalizeUnit({ byDay: true, dayPrice: 10, maxGuests: 2 });
+  assert.equal(quote(whole, [], 'u1', { ...day, guests: 2 })!.total, 20); // one price for the whole unit
+  assert.equal(quote(whole, [], 'u1', { ...day, guests: 3 }), null);
+  const noLimit = normalizeUnit({ byDay: true, dayPrice: 10 });
+  assert.equal(quote(noLimit, [], 'u1', { ...day, guests: 40 })!.total, 20);
+  // an estate item's most people goes to its unit, the price mode stays the unit's own
+  const merged = mergeUnits([{ id: 'u7', name: 'ف', capacity: 1, price: '', photo: '', ...villa }], [{ item: 'p_villa', name: 'ف', photo: '', price: 10, currency: '$', maxGuests: 6 }]);
+  assert.equal(merged[0].maxGuests, 6);
+  assert.equal(merged[0].perPerson, true);
+});
+
+test('the server prices a rental per person and refuses more people than the unit takes', async () => {
+  store.set('bookingSettings/own9/pages/rental-guest', {
+    payments: { currency: '$', wallets: {} },
+    schedules: [{ id: 'rental', name: 'تأجير', type: 'stay', rental: true, minNights: 1, maxNights: 10, daysAhead: 60, workStart: '09:00', workEnd: '23:00', termsOn: false, depositOn: false, extras: [], rooms: [{ id: 'u1', name: 'فيلا', item: 'p_villa', byDay: true, dayPrice: 10, currency: '$', perPerson: true, maxGuests: 4 }] }],
+  });
+  const go = (guests: number) => rbook({ project: 'rental-guest', deposit: undefined, acceptTerms: false, needsConfirmation: true, rent: { by: 'day', items: [{ room: 'u1', by: 'day', date: inD(5), checkOut: inD(7), guests }] } });
+  assert.equal((await go(5)).error, 'bad_rent');
+  const ok = await go(3);
+  assert.equal(ok.s, 200);
+  assert.equal(store.get(`bookings/own9/items/${ok.id}`).price.total, 2 * 10 * 3);
+});

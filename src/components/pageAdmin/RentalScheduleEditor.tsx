@@ -13,6 +13,7 @@ import {
 } from '../../services/rentalBooking';
 import { ImagePicker } from '../restaurant/tabs/shared';
 import { Field, GhostButton, inputClass, inputFitClass, textareaClass, Toggle } from '../shop/adminUi';
+import { useEstateMode } from '../rental/rentalTypes';
 
 export type Unit = StayRoom & RentalUnit;
 
@@ -31,7 +32,7 @@ const TimeIn: React.FC<{ value: number; onChange: (m: number) => void }> = ({ va
 
 const DRIVERS: [DriverMode, string][] = [['none', 'بدون سائق'], ['with', 'مع سائق دائماً'], ['both', 'الزبون بيختار']];
 const TERMS_KINDS: [keyof typeof DEFAULT_TERMS, string][] = [['cars', 'سيارات'], ['equipment', 'معدات'], ['halls', 'صالات'], ['other', 'أغراض أخرى']];
-export const HOTEL_TERMS_KINDS: [keyof typeof DEFAULT_TERMS, string][] = [['hotel', 'فندق']];
+const ESTATE_TERMS_KINDS: [keyof typeof DEFAULT_TERMS, string][] = [['hotel', 'فندق'], ['halls', 'صالات وفلل'], ['other', 'أخرى']];
 
 // «أسعار خاصة»: prices by weekday, dates or hours that replace the unit's own (a hotel's room type uses it for nights).
 export const SpecialPrices: React.FC<{ prices: SpecialPrice[]; onChange: (prices: SpecialPrice[]) => void; currency: string; byDay: boolean; byHour: boolean; night?: boolean }> = ({ prices, onChange, currency, byDay, byHour, night }) => {
@@ -277,7 +278,7 @@ export const toggleUnit = (x: RentalExtra, unitId: string, all: string[]): strin
 };
 export const offeredTo = (x: RentalExtra, unitId: string) => x.units.length === 0 || x.units.includes(unitId);
 
-export const ExtrasEditor: React.FC<{ extras: RentalExtra[]; units: Unit[]; onChange: (extras: RentalExtra[]) => void; hotel?: boolean }> = ({ extras, units, onChange, hotel }) => {
+export const ExtrasEditor: React.FC<{ extras: RentalExtra[]; units: Unit[]; onChange: (extras: RentalExtra[]) => void; hotel?: boolean; persons?: boolean }> = ({ extras, units, onChange, hotel, persons }) => {
   const set = (i: number, patch: Partial<RentalExtra>) => onChange(extras.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   return (
     <div className="space-y-2">
@@ -288,8 +289,8 @@ export const ExtrasEditor: React.FC<{ extras: RentalExtra[]; units: Unit[]; onCh
             <NumberIn value={x.price} onChange={(price) => set(i, { price })} unit="" w="w-24" />
             <button type="button" className={chip(x.per === 'unit')} onClick={() => set(i, { per: 'unit' })}>{hotel ? 'لكل ليلة' : 'لكل يوم أو ساعة'}</button>
             <button type="button" className={chip(x.per === 'once')} onClick={() => set(i, { per: 'once' })}>مرة وحدة</button>
-            {hotel && <button type="button" className={chip(x.per === 'person')} onClick={() => set(i, { per: 'person' })}>للشخص لكل ليلة</button>}
-            {hotel && <button type="button" className={chip(x.per === 'personOnce')} onClick={() => set(i, { per: 'personOnce' })}>للشخص مرة وحدة</button>}
+            {(hotel || persons) && <button type="button" className={chip(x.per === 'person')} onClick={() => set(i, { per: 'person' })}>{hotel ? 'للشخص لكل ليلة' : 'للشخص لكل يوم أو ساعة'}</button>}
+            {(hotel || persons) && <button type="button" className={chip(x.per === 'personOnce')} onClick={() => set(i, { per: 'personOnce' })}>للشخص مرة وحدة</button>}
             <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer" onClick={() => onChange(extras.filter((_, j) => j !== i))}><Trash2 size={15} /></button>
           </div>
           <input className={inputFitClass + ' w-full'} placeholder="وصف الخدمة (يظهر للزبون خلف علامة «؟»): مثلاً عشاء لـ100 شخص يشمل 3 أصناف ومقبلات" value={x.note || ''} maxLength={200} onChange={(e) => set(i, { note: e.target.value })} />
@@ -338,6 +339,7 @@ export const TermsBox: React.FC<{ schedule: BookingSchedule; change: (patch: Par
 );
 
 export const RentalScheduleEditor: React.FC<RentalScheduleEditorProps> = ({ schedule: s, change, fromWarehouse }) => {
+  const estate = useEstateMode();
   const units = s.rooms.map((r) => ({ ...r, ...normalizeUnit(r) })) as Unit[];
   const setUnit = (i: number, patch: Partial<Unit>) => change({ rooms: units.map((u, j) => (j === i ? { ...u, ...patch } : u)) });
   const hourly = units.some((u) => u.byHour);
@@ -369,10 +371,10 @@ export const RentalScheduleEditor: React.FC<RentalScheduleEditorProps> = ({ sche
       )}
 
       <Field label="الخدمات المرافقة" hint="الزبون بيختارها وقت الحجز وبتنضاف للمجموع والعربون">
-        <ExtrasEditor extras={s.extras} units={units} onChange={(extras) => change({ extras })} />
+        <ExtrasEditor persons={estate} extras={s.extras} units={units} onChange={(extras) => change({ extras })} />
       </Field>
 
-      <TermsBox schedule={s} change={change} guess={guess} kinds={TERMS_KINDS} />
+      <TermsBox schedule={s} change={change} guess={estate ? 'hotel' : guess} kinds={estate ? ESTATE_TERMS_KINDS : TERMS_KINDS} />
     </div>
   );
 };

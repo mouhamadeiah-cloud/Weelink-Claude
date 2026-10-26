@@ -279,7 +279,7 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       const q = quote(room, normalizeExtras(schedule.extras), room.id, {
         by, date: from, checkOut: typeof until === 'string' ? until : undefined,
         start: Number(w.start ?? body.rent?.start), hours: Number(w.hours ?? body.rent?.hours), period: typeof (w.period ?? body.rent?.period) === 'string' ? (w.period ?? body.rent.period) : undefined,
-        driver: w.driver, extras: Array.isArray(w.extras) ? w.extras.filter(validId).slice(0, 30) : [],
+        driver: w.driver, extras: Array.isArray(w.extras) ? w.extras.filter(validId).slice(0, 30) : [], guests: Math.round(Number(w.guests)) || 1,
       }, {
         minDays, maxDays: Math.min(90, Math.max(minDays, Math.round(Number(schedule.maxNights)) || 30)),
         workStart: isTime(schedule.workStart) ? minOf(schedule.workStart) : undefined, workEnd: isTime(schedule.workEnd) ? minOf(schedule.workEnd) : undefined,

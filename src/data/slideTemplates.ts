@@ -235,22 +235,69 @@ export const customizeElementsForIndex = (elements: any[], categoryId: string, i
 // How many ready slides a category offers.
 // The approved designs of weeSlideTemplates come first in their categories.
 export const slideTemplateCount = (categoryId: string) =>
-  categoryId === 'featured' ? FEATURED_READY.length : isStoreKind(categoryId) ? storeRawCount(categoryId) - FEATURED_READY.filter((f) => f.kind === categoryId).length : (categoryId === 'team' || categoryId === 'special_offer' || categoryId === 'gallery') ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
+  categoryId === 'featured' ? FEATURED_READY.length : isStoreKind(categoryId) ? storeRawCount(categoryId) - MOVED.filter((f) => f.kind === categoryId).length : (categoryId === 'team' || categoryId === 'special_offer' || categoryId === 'gallery') ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
 
-// «عروض مميزة» (Eyad, 26 Oct): the featured slides of the shop, the showroom and the menu live in a category of
-// their own, so they are one list for every kind of page; each is a live grid of what the owner marked «مميز».
-// The pairs are the place of each in its kind's own list (the AI ids in storeSlideAi.ts follow the same places).
+// «عروض مميزة» (Eyad, 26 Oct): the featured slides of every kind of page live in a category of their own, each named
+// for the page it belongs to («شريحة السيارات المميزة»…); each is a live grid of what the owner marked «مميز».
+// The shop, showroom and menu ones were moved out of their own lists (MOVED: their place in the kind's list, which the
+// AI ids in storeSlideAi.ts follow). The hotel's rooms and a rental's cars and items use the same cards and effects:
+// the hotel's rooms are product cards, so its slides are the shop's with the words of rooms (`derived`).
 type StoreKind = 'shop' | 'cars' | 'restaurant';
-const FEATURED_READY: { kind: StoreKind; index: number }[] = [
+interface FeaturedReady {
+  kind: StoreKind;
+  index: number;
+  label: string; // the page it belongs to
+  variant: string; // cards, a running strip or shaking cards
+  derived?: boolean; // made from another kind's slide: no AI id of its own
+  still?: boolean; // the cards without the shake
+  words?: Record<string, string>; // the words of the page, instead of the original's
+}
+const CARDS = 'بطاقات', STRIP = 'شريط متحرك', SHAKE = 'بطاقات باهتزاز';
+const MOVED: { kind: StoreKind; index: number }[] = [
   { kind: 'cars', index: 2 }, { kind: 'cars', index: 6 }, { kind: 'cars', index: 7 },
   { kind: 'shop', index: 8 }, { kind: 'shop', index: 10 },
   { kind: 'restaurant', index: 1 }, { kind: 'restaurant', index: 2 }, { kind: 'restaurant', index: 3 },
 ];
+const ROOMS = { 'منتجات مختارة': 'غرف مميزة', 'الأكثر طلبًا من عملائنا هذا الأسبوع': 'الأكثر طلبًا عند ضيوفنا' };
+const RENTAL_ITEMS = { 'منتجات مختارة': 'مميز للإيجار', 'الأكثر طلبًا من عملائنا هذا الأسبوع': 'الأكثر طلبًا عندنا' };
+const RENTAL_CARS = { 'في المعرض الآن': 'متاح للإيجار الآن', 'اخترناها لك من أفضل ما في المعرض': 'الأكثر طلبًا للإيجار' };
+const FEATURED_READY: FeaturedReady[] = [
+  { kind: 'cars', index: 2, label: 'السيارات', variant: CARDS },
+  { kind: 'cars', index: 6, label: 'السيارات', variant: STRIP },
+  { kind: 'cars', index: 7, label: 'السيارات', variant: SHAKE },
+  { kind: 'restaurant', index: 1, label: 'المطعم', variant: CARDS },
+  { kind: 'restaurant', index: 2, label: 'المطعم', variant: STRIP },
+  { kind: 'restaurant', index: 3, label: 'المطعم', variant: SHAKE },
+  { kind: 'shop', index: 10, label: 'المتجر', variant: CARDS, derived: true, still: true },
+  { kind: 'shop', index: 8, label: 'المتجر', variant: STRIP },
+  { kind: 'shop', index: 10, label: 'المتجر', variant: SHAKE },
+  { kind: 'shop', index: 10, label: 'الفندق', variant: CARDS, derived: true, still: true, words: ROOMS },
+  { kind: 'shop', index: 8, label: 'الفندق', variant: STRIP, derived: true },
+  { kind: 'shop', index: 10, label: 'الفندق', variant: SHAKE, derived: true, words: ROOMS },
+  { kind: 'cars', index: 6, label: 'التأجير (سيارات)', variant: STRIP, derived: true, words: RENTAL_CARS },
+  { kind: 'cars', index: 7, label: 'التأجير (سيارات)', variant: SHAKE, derived: true, words: RENTAL_CARS },
+  { kind: 'shop', index: 8, label: 'التأجير (أغراض)', variant: STRIP, derived: true },
+  { kind: 'shop', index: 10, label: 'التأجير (أغراض)', variant: SHAKE, derived: true, words: RENTAL_ITEMS },
+];
+// One of the featured slides: named for its page, in the words of its page.
+const featuredReadySlide = (f: FeaturedReady) => {
+  const slide: any = getStoreSlideRaw(f.kind, f.index);
+  const retext = (e: any) => {
+    const next = { ...e };
+    if (f.words && f.words[next.content]) next.content = f.words[next.content];
+    if (f.still && next.shopCardAnimation) next.shopCardAnimation = 'none';
+    if (f.derived) delete next.aiSlot;
+    return next;
+  };
+  const out: any = { ...slide, name: `شريحة ${f.label} المميزة · ${f.variant}`, elements: slide.elements.map((e: any) => (e.items ? { ...e, items: e.items.map(retext) } : retext(e))) };
+  if (f.derived) delete out.aiTemplate;
+  return out;
+};
 const isStoreKind = (id: string): id is StoreKind => id === 'shop' || id === 'cars' || id === 'restaurant';
 const storeRawCount = (kind: StoreKind) => (kind === 'shop' ? SHOP_SLIDE_COUNT : kind === 'cars' ? CAR_SLIDE_COUNT : REST_SLIDE_COUNT);
 // The place in the kind's own list of the n-th slide still left in its category.
 const storeRawIndex = (kind: StoreKind, n: number) => {
-  const moved = FEATURED_READY.filter((f) => f.kind === kind).map((f) => f.index).sort((a, b) => a - b);
+  const moved = MOVED.filter((f) => f.kind === kind).map((f) => f.index).sort((a, b) => a - b);
   let raw = n;
   for (const m of moved) if (m <= raw) raw++;
   return raw;
@@ -270,10 +317,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
 };
 
 const getOlderSlidePayload = (categoryId: string, index: number, catName: string) => {
-  if (categoryId === 'featured') {
-    const f = FEATURED_READY[Math.min(index, FEATURED_READY.length - 1)];
-    return getStoreSlideRaw(f.kind, f.index);
-  }
+  if (categoryId === 'featured') return featuredReadySlide(FEATURED_READY[Math.min(index, FEATURED_READY.length - 1)]);
   if (isStoreKind(categoryId)) return getStoreSlideRaw(categoryId, storeRawIndex(categoryId, index));
   const title = `${catName} - نموذج ${index + 1}`;
   const height = 580; // slightly taller to accommodate gorgeous overlapping layouts!

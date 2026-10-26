@@ -13,6 +13,8 @@ import { useTeam } from '../../services/team';
 import { newRoomId } from '../../services/stayBooking';
 import { usableWallets, type BookingPayments, type DepositType } from '../../services/bookingDeposit';
 import { BookingPaymentsEditor } from './BookingPaymentsEditor';
+import { RentalScheduleEditor } from './RentalScheduleEditor';
+import { kindOf } from '../../utils/projectKeys';
 import { MAX_SESSION_SEATS, dayPlus, newSessionId, type SeatSession } from '../../services/seatBooking';
 import { useRestaurantTables } from '../../services/tableBookingData';
 import type { ProjectKey } from '../../utils/projectKeys';
@@ -124,6 +126,7 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
     if (current.type === 'stay') {
       if (current.rooms.length === 0) return setNote({ ok: false, text: current.rental ? 'أضف وحدة وحدة على الأقل.' : 'أضف غرفة وحدة على الأقل.' });
       if (current.rooms.some((r) => !r.name.trim())) return setNote({ ok: false, text: current.rental ? 'اكتب اسماً لكل وحدة.' : 'اكتب اسماً لكل غرفة.' });
+      if (current.rental && current.rooms.some((r: any) => r.byHour) && current.workStart >= current.workEnd) return setNote({ ok: false, text: 'نهاية ساعات التأجير لازم تكون بعد بدايتها.' });
       if (current.minNights > current.maxNights) return setNote({ ok: false, text: current.rental ? 'أقل عدد أيام لازم يكون أقل من أكثر عدد.' : 'أقل عدد ليالٍ لازم يكون أقل من أكثر عدد.' });
       const exists = list.some((s) => s.id === current.id);
       return write({ schedules: !settings ? [current] : exists ? list.map((s) => (s.id === current.id ? current : s)) : [...list, current] }, 'انحفظت الإعدادات، والصفحة صارت تحجز فيها.');
@@ -222,8 +225,9 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
 
       {current.type === 'stay' && (
         <div className="space-y-3 rounded-2xl border border-neutral-200 p-3">
-          <div className="text-xs font-bold text-neutral-500">{current.rental ? 'الوحدات (سيارات، معدات…) اللي بيقدر الزبون يأجرها' : 'الغرف اللي بيقدر الزبون يحجزها'}: {current.rooms.length}</div>
-          {current.rooms.map((r, i) => (
+          {current.rental && <RentalScheduleEditor schedule={current} change={change} fromWarehouse={kindOf(project) === 'rental'} />}
+          {!current.rental && <div className="text-xs font-bold text-neutral-500">الغرف اللي بيقدر الزبون يحجزها: {current.rooms.length}</div>}
+          {!current.rental && current.rooms.map((r, i) => (
             <div key={r.id} className="grid grid-cols-[1fr_90px_1fr_auto] gap-2 items-center">
               <input className={inputFitClass} placeholder={current.rental ? 'اسم الوحدة، مثلاً: كيا سيراتو 2020' : 'اسم الغرفة، مثلاً: غرفة 101'} value={r.name} maxLength={60} onChange={(e) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} />
               {current.rental ? <span /> : <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-500">
@@ -234,7 +238,7 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
               <div className="col-span-full"><ImagePicker value={r.photo || ''} onChange={(photo) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, photo } : x)) })} /></div>
             </div>
           ))}
-          <GhostButton onClick={() => change({ rooms: [...current.rooms, { id: newRoomId(), name: '', capacity: current.rental ? 1 : 2, price: '', photo: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> {current.rental ? 'أضف وحدة' : 'أضف غرفة'}</span></GhostButton>
+          {!current.rental && <GhostButton onClick={() => change({ rooms: [...current.rooms, { id: newRoomId(), name: '', capacity: 2, price: '', photo: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف غرفة</span></GhostButton>}
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label={current.rental ? 'أقل عدد أيام' : 'أقل عدد ليالٍ'}>
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">

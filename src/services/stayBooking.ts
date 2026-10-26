@@ -30,11 +30,13 @@ export const nightsBetween = (checkIn: string, checkOut: string): string[] => {
 
 export const addDays = (date: string, n: number) => iso(stamp(date) + n * DAY);
 
-export const normalizeRooms = (raw: unknown): StayRoom[] => {
+// `extra`: more of each room to keep (a rental's units keep their rental settings, rentalBooking.ts).
+export const normalizeRooms = (raw: unknown, max = 100, extra?: (r: any) => object): StayRoom[] => {
   const seen = new Set<string>();
   return (Array.isArray(raw) ? raw : [])
-    .slice(0, 100)
+    .slice(0, max)
     .map((r: any) => ({
+      ...(extra ? extra(r) : {}),
       id: typeof r?.id === 'string' && /^[a-z0-9]{1,20}$/.test(r.id) ? r.id : '',
       name: String(r?.name ?? '').trim().slice(0, 60),
       capacity: Math.min(20, Math.max(1, Math.round(Number(r?.capacity)) || 2)),

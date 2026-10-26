@@ -201,7 +201,7 @@ const meterClose = async (m: Meter | null, kind: string, model: string, u: { inp
 
 // ---------- «ابن صفحتي» per package ----------
 const BUILD_KIND_PROJECT: Record<string, string> = { free: 'page', restaurant: 'restaurant', shop: 'shop', cars: 'cars' };
-const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/.test(p);
+const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant|rental)(-[a-z0-9]{4,12})?$/.test(p);
 const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 // The number of builds per package is not held to for now (Eyad, 23 Oct): builds are still counted, set true to enforce it again.

@@ -21,6 +21,7 @@ import { ProductCard, ProductSlide } from '../store/ProductCard';
 import { CardStyleSettings } from './CardStyleSettings';
 import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 import { itemNoLabel } from '../../../utils/itemNumbers';
+import { useRentalMode } from '../../rental/rentalTypes';
 
 const newProductDraft = (currency: string): ShopProduct => ({
   id: '',
@@ -98,6 +99,7 @@ interface ProductEditorProps {
 }
 
 export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, initial, onDone, onCancel }) => {
+  const rental = useRentalMode();
   const [p, setP] = useState<ShopProduct>(() =>
     initial ? { ...initial } : { ...newProductDraft(data.settings.currency), sku: nextSku(data.products) }
   );
@@ -112,7 +114,9 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
     ...p,
     images: slots.filter(Boolean),
     stock: p.variants.length ? p.variants.reduce((s, v) => s + v.stock, 0) : p.stock,
-  }), [p, slots]);
+    // A rental's item is shown as its page shows it: never «sold out» (rentalShopView).
+    ...(rental ? { inWarehouse: false } : {}),
+  }), [p, slots, rental]);
 
   const suggested = useMemo(() => suggestedPresets(path.mainSlug, path.subSlug), [path.mainSlug, path.subSlug]);
   const pct = discountPercent(p);

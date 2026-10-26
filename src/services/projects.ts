@@ -13,6 +13,7 @@ export const PROJECT_FIELDS: Record<ProjectType, { pagesField: string; elementsF
   shop: { pagesField: 'shopPages', elementsField: 'shopElements', adminField: 'shopAdmin' },
   cars: { pagesField: 'carPages', elementsField: 'carElements', adminField: 'carAdmin' },
   restaurant: { pagesField: 'restaurantPages', elementsField: 'restaurantElements', adminField: 'restaurantAdmin' },
+  rental: { pagesField: 'rentalPages', elementsField: 'rentalElements', adminField: 'rentalAdmin' },
 };
 
 export const projectDoc = (uid: string, key: string) =>

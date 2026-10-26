@@ -2,6 +2,7 @@
 // Each visitor is already among the customers as «مهتم»; from here the showroom calls them back, marks
 // the request handled and opens a test drive form filled with the visitor and the car.
 import React, { useState } from 'react';
+import { useRentalMode } from '../../rental/rentalTypes';
 import { Phone, MessageCircle, Trash2, KeyRound, ShoppingBag, UserPlus, FileText, Info } from 'lucide-react';
 import { CarRequest, CarRequestStatus } from '../carTypes';
 import { emptyCustomer, saveCustomer } from '../carMoney';
@@ -24,6 +25,7 @@ const when = (v: string) => {
 };
 
 export const CarRequestsTab: React.FC<CarTabProps> = ({ data, update, onNewDocument }) => {
+  const rental = useRentalMode();
   const [filter, setFilter] = useState<CarRequestStatus | 'all'>('all');
   const shown = data.requests.filter((r) => filter === 'all' || r.status === filter);
 
@@ -78,7 +80,7 @@ export const CarRequestsTab: React.FC<CarTabProps> = ({ data, update, onNewDocum
                       {r.type === 'testDrive' ? <KeyRound size={16} /> : <ShoppingBag size={16} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-black text-ink">{r.type === 'testDrive' ? 'تجربة قيادة' : 'طلب السيارة'} · {r.name}</div>
+                      <div className="text-xs font-black text-ink">{r.type === 'testDrive' ? 'تجربة قيادة' : rental ? 'طلب إيجار' : 'طلب السيارة'} · {r.name}</div>
                       <div className="text-xs text-neutral-500 truncate">{r.carLabel}</div>
                     </div>
                     <select aria-label="حالة الطلب" value={r.status} onChange={(e) => setRequest(r.id, { status: e.target.value as CarRequestStatus })}

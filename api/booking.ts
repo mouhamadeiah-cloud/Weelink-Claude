@@ -63,7 +63,7 @@ const esc = (v: unknown) =>
 // A project key: the kind, or the kind and the project's own id (src/utils/projectKeys.ts).
 // A schedule of the page's «إعدادات الحجز» (src/services/bookingSettings.ts); 'main' is the first.
 const scheduleOf = (v: unknown) => (typeof v === 'string' && /^[a-z0-9]{1,20}$/.test(v) ? v : 'main');
-const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant)(-[a-z0-9]{4,12})?$/.test(p);
+const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant|rental)(-[a-z0-9]{4,12})?$/.test(p);
 const MEETING: Record<string, string> = { personal: 'حضور شخصي بالمقر', phone: 'مكالمة هاتفية', whatsapp: 'اتصال فيديو واتساب' };
 const STATUS: Record<string, string> = { new: 'بانتظار التأكيد', confirmed: 'مؤكد', done: 'منجز', cancelled: 'ملغى' };
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];

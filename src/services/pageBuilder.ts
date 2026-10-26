@@ -29,7 +29,8 @@ import { GALLERY_MAX } from '../utils/planLimits';
 import { freeToBuilt, type FreeDesign } from '../utils/freeDesign';
 
 export type BuildKind = 'free' | 'restaurant' | 'shop' | 'cars';
-export const KIND_OF_PROJECT: Record<ProjectType, BuildKind> = { page: 'free', restaurant: 'restaurant', shop: 'shop', cars: 'cars' };
+// A rental builds its main page like a free page (its intro slides); its cards stay on «للإيجار».
+export const KIND_OF_PROJECT: Record<ProjectType, BuildKind> = { page: 'free', restaurant: 'restaurant', shop: 'shop', cars: 'cars', rental: 'free' };
 
 // As api/build-page.ts returns it.
 interface PlannedSection {

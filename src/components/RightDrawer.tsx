@@ -151,6 +151,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   allKindsOpen = false,
   isShopProject = false,
   isCarProject = false,
+  isRentalProject = false,
   isRestaurantProject = false,
   onAddPageTemplate,
   onAddGallerySlide,
@@ -3801,7 +3802,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               اختر فئة لتصفح الشرائح المصممة مسبقاً:
                             </h4>
                             <div className="grid grid-cols-2 gap-2">
-                              {READY_SLIDE_CATEGORIES.filter((cat) => allKindsOpen || ((cat.id !== 'shop' || isShopProject) && (cat.id !== 'cars' || isCarProject) && (cat.id !== 'restaurant' || isRestaurantProject))).map((cat) => (
+                              {READY_SLIDE_CATEGORIES.filter((cat) => allKindsOpen || ((cat.id !== 'shop' || isShopProject || isRentalProject) && (cat.id !== 'cars' || isCarProject || isRentalProject) && (cat.id !== 'restaurant' || isRestaurantProject))).map((cat) => (
                                 <button
                                   key={cat.id}
                                   type="button"
@@ -5854,7 +5855,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           onEditAnswers={onEditAnswers}
           restoreAvailable={restoreAvailable}
           introSlot={panelVideo('weeai')}
-          pageKind={isShopProject ? 'shop' : isRestaurantProject ? 'restaurant' : isCarProject ? 'cars' : 'page'}
+          pageKind={isShopProject ? 'shop' : isRestaurantProject ? 'restaurant' : isCarProject ? 'cars' : isRentalProject ? 'rental' : 'page'}
         />
 
         {/* All the text effects: beside the panel, or over it on a phone's sheet. */}
@@ -5929,7 +5930,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
               const cat = READY_SLIDE_CATEGORIES.find(c => c.id === activeTemplateCategory);
               const catName = cat ? cat.name : 'شريحة';
               // Shown and added in the page's look («ستايل الصفحة») when it has one.
-              const templatePayload = lookSlide(getSlideTemplatePayload(activeTemplateCategory, idx, catName), pageLookById(currentPage.styleLook), isShopProject ? 'shop' : isCarProject ? 'cars' : isRestaurantProject ? 'restaurant' : 'free');
+              const templatePayload = lookSlide(getSlideTemplatePayload(activeTemplateCategory, idx, catName), pageLookById(currentPage.styleLook), isShopProject ? 'shop' : isCarProject || isRentalProject ? 'cars' : isRestaurantProject ? 'restaurant' : 'free');
               return (
                 <SlideTemplatePreview
                   key={`${activeTemplateCategory}-${idx}`}

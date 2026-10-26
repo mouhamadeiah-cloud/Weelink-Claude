@@ -830,7 +830,7 @@ export default {
       const period = String(body.period || '') as Period;
       let amount = Number(body.amount);
       const method = String(body.method || '');
-      if (!/^(page|restaurant|shop|cars)-(pro|30|60)$/.test(plan)) return json({ error: 'bad-plan' }, 400);
+      if (!/^(page|restaurant|shop|cars|rental)-(pro|30|60)$/.test(plan)) return json({ error: 'bad-plan' }, 400);
       if (!PERIODS.includes(period)) return json({ error: 'bad-period' }, 400);
       if (!(amount >= 0 && amount < 1e12)) return json({ error: 'bad-amount' }, 400);
       if (!METHODS[method]) return json({ error: 'bad-method' }, 400);
@@ -1698,7 +1698,7 @@ export default {
       if (code.length < 3) return json({ error: 'bad-code' }, 400);
       if (!COUPON_KINDS[kind]) return json({ error: 'bad-kind' }, 400);
       if (!(value >= 1) || (kind === 'discount' && value > 100) || (kind === 'trial' && value > 365) || value > 100_000_000) return json({ error: 'bad-value' }, 400);
-      if (!/^(page|restaurant|shop|cars)-(pro|30|60)$/.test(plan)) return json({ error: 'bad-plan' }, 400);
+      if (!/^(page|restaurant|shop|cars|rental)-(pro|30|60)$/.test(plan)) return json({ error: 'bad-plan' }, 400);
       let expiresAt = 0;
       if (body.expires) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.expires))) return json({ error: 'bad-date' }, 400);

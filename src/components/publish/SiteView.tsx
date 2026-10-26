@@ -6,6 +6,7 @@ import { CanvasWorkspace } from '../CanvasWorkspace';
 import { withPhoneLayouts } from '../../utils/mobileLayout';
 import { ShopDataContext, ShopUpdateContext } from '../shop/store/ShopDataContext';
 import { CarDataContext } from '../cars/store/CarDataContext';
+import { RentalModeContext, rentalShopView } from '../rental/rentalTypes';
 import { carsFromPublic, shopFromPublic } from './publicData';
 import type { CanvasElement, Page } from '../../types';
 import { PIXABAY_URL } from '../../services/pixabayService';
@@ -28,14 +29,16 @@ export const SiteView: React.FC<{
   navActions?: { id: string; label: string; onClick: () => void; icon?: 'person' }[];
 }> = ({ project, pages, elements, data, phone, pageId, onSelectPage, onContactClick, navActions }) => {
   const view = useMemo(() => (phone ? withPhoneLayouts(pages, elements) : { pages, elements }), [pages, elements, phone]);
-  const shop = useMemo(() => (kindOf(project) === 'shop' ? shopFromPublic(data) : null), [project, data]);
-  const cars = useMemo(() => (kindOf(project) === 'cars' ? carsFromPublic(data) : null), [project, data]);
+  const rental = kindOf(project) === 'rental';
+  const shop = useMemo(() => (kindOf(project) === 'shop' ? shopFromPublic(data) : rental ? rentalShopView(shopFromPublic(data?.shop)) : null), [project, data, rental]);
+  const cars = useMemo(() => (kindOf(project) === 'cars' ? carsFromPublic(data) : rental ? carsFromPublic(data?.cars) : null), [project, data, rental]);
   // Pixabay asks that a page showing its files says so: a stored copy keeps «pixabay-» in its name, a video keeps the host.
   const usesPixabay = useMemo(() => /pixabay/i.test(JSON.stringify([pages, elements])), [pages, elements]);
   const page = view.pages.find((p) => p.id === pageId) || view.pages[0];
   if (!page) return null;
 
   return (
+    <RentalModeContext.Provider value={rental}>
     <ShopDataContext.Provider value={shop}>
       <ShopUpdateContext.Provider value={shop ? keepNothing : null}>
         <CarDataContext.Provider value={cars}>
@@ -74,5 +77,6 @@ export const SiteView: React.FC<{
         </CarDataContext.Provider>
       </ShopUpdateContext.Provider>
     </ShopDataContext.Provider>
+    </RentalModeContext.Provider>
   );
 };

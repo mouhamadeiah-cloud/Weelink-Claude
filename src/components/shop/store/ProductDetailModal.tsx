@@ -1,14 +1,19 @@
 // The full product card that floats over the store page when a product is clicked: gallery in
 // the chosen layout, prices and quantity tiers, option pickers that only offer combinations in
 // stock, quantity and add to cart, delivery price, specs, the description and related products.
-// After adding to the cart, the related products take the card's place, larger.
+// After adding to the cart, the related products take the card's place, larger. In a rental there is
+// no cart: the visitor asks to rent the item (the showroom's request form) or writes on WhatsApp.
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Minus, Plus, ShoppingBag, Truck, Check } from 'lucide-react';
+import { X, Minus, Plus, ShoppingBag, Truck, Check, KeyRound, MessageCircle, Phone } from 'lucide-react';
 import { ShopProduct, ShopSettings } from '../shopTypes';
 import { badgeColor, badgeText, descriptionHtml, discountPercent, findVariant, isSoldOut, stockOptions, totalStock, tracksStock, unitPriceFor, UNLIMITED, variantLabel } from '../productModel';
 import { addToCart, formatPrice } from '../../../utils/cartStore';
 import { ProductGallery } from './ProductGallery';
+import { useRentalMode } from '../../rental/rentalTypes';
+import { useCarData } from '../../cars/store/CarDataContext';
+import { RequestForm } from '../../cars/store/CarDetailModal';
+import { whatsappHref } from '../../cars/carModel';
 
 interface ProductDetailModalProps {
   product: ShopProduct;
@@ -37,6 +42,10 @@ const RelatedTile: React.FC<{ product: ShopProduct; accent: string; large?: bool
 );
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product: p, settings, accent, related, onOpenRelated, onClose, onAdded }) => {
+  const rental = useRentalMode();
+  // A rental's contacts and requests are its settings' («الإعدادات»), kept with its cars.
+  const rentalSettings = useCarData()?.settings;
+  const [asking, setAsking] = useState(false);
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
   const [afterAdd, setAfterAdd] = useState(false);
@@ -198,31 +207,56 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
               </div>
             ))}
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center rounded-full border border-black/10">
-                <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center cursor-pointer" aria-label="إنقاص"><Minus size={15} /></button>
-                <span className="w-8 text-center font-bold">{qty}</span>
-                <button type="button" onClick={() => setQty((q) => Math.min(Math.max(available, 1), q + 1))} className="w-10 h-10 flex items-center justify-center cursor-pointer" aria-label="زيادة"><Plus size={15} /></button>
+            {rental && rentalSettings ? (
+              <div className="space-y-2">
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {rentalSettings.whatsappNumber && (
+                    <a href={whatsappHref(rentalSettings.whatsappNumber, `مرحبًا، أستفسر عن إيجار ${p.name}`)} target="_blank" rel="noopener noreferrer" className="h-12 rounded-full bg-[#25d366] text-white text-sm font-bold flex items-center justify-center gap-2">
+                      <MessageCircle size={18} /> استفسر عبر واتساب
+                    </a>
+                  )}
+                  {rentalSettings.phone && (
+                    <a href={`tel:${rentalSettings.phone.replace(/[^\d+]/g, '')}`} className="h-12 rounded-full text-white text-sm font-bold flex items-center justify-center gap-2" style={{ backgroundColor: accent }}>
+                      <Phone size={18} /> اتصل بنا
+                    </a>
+                  )}
+                  {rentalSettings.acceptRequests && !asking && (
+                    <button type="button" onClick={() => setAsking(true)} className="sm:col-span-2 h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ borderColor: accent, color: accent }}>
+                      <KeyRound size={18} /> اطلب الإيجار
+                    </button>
+                  )}
+                </div>
+                {asking && <RequestForm item={{ id: p.id, label: p.name }} type="buy" settings={rentalSettings} accent={accent} onDone={() => setAsking(false)} />}
               </div>
-              <button
-                type="button"
-                onClick={add}
-                disabled={soldOut || (allPicked && available <= 0)}
-                className="flex-1 h-12 rounded-full text-white font-bold flex items-center justify-center gap-2 transition active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                style={{ backgroundColor: accent }}
-              >
-                <ShoppingBag size={18} /> {soldOut ? 'نفد من المخزون' : allPicked && available <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}
-              </button>
-            </div>
-            {tracksStock(p) && allPicked && available > 0 && available <= 3 && <div className="text-xs font-bold text-[#ff9500]">بقي {available} فقط</div>}
+            ) : (
+              <>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center rounded-full border border-black/10">
+                  <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center cursor-pointer" aria-label="إنقاص"><Minus size={15} /></button>
+                  <span className="w-8 text-center font-bold">{qty}</span>
+                  <button type="button" onClick={() => setQty((q) => Math.min(Math.max(available, 1), q + 1))} className="w-10 h-10 flex items-center justify-center cursor-pointer" aria-label="زيادة"><Plus size={15} /></button>
+                </div>
+                <button
+                  type="button"
+                  onClick={add}
+                  disabled={soldOut || (allPicked && available <= 0)}
+                  className="flex-1 h-12 rounded-full text-white font-bold flex items-center justify-center gap-2 transition active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  style={{ backgroundColor: accent }}
+                >
+                  <ShoppingBag size={18} /> {soldOut ? 'نفد من المخزون' : allPicked && available <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}
+                </button>
+              </div>
+              {tracksStock(p) && allPicked && available > 0 && available <= 3 && <div className="text-xs font-bold text-[#ff9500]">بقي {available} فقط</div>}
 
-            {settings.delivery.delivery && (
-              <div className="flex items-center gap-2 text-xs text-[#5A4C42]">
-                <Truck size={15} /> التوصيل: {delivery > 0 ? formatPrice(delivery, p.currency) : 'مجاني'}
-                {delivery > 0 && settings.delivery.freeEnabled && settings.delivery.freeFrom > 0 && (
-                  <span className="text-[#34a853] font-bold">· مجاني للطلبات من {formatPrice(settings.delivery.freeFrom, p.currency)}</span>
-                )}
-              </div>
+              {settings.delivery.delivery && (
+                <div className="flex items-center gap-2 text-xs text-[#5A4C42]">
+                  <Truck size={15} /> التوصيل: {delivery > 0 ? formatPrice(delivery, p.currency) : 'مجاني'}
+                  {delivery > 0 && settings.delivery.freeEnabled && settings.delivery.freeFrom > 0 && (
+                    <span className="text-[#34a853] font-bold">· مجاني للطلبات من {formatPrice(settings.delivery.freeFrom, p.currency)}</span>
+                  )}
+                </div>
+              )}
+              </>
             )}
 
             {specs.length > 0 && (

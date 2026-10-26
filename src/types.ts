@@ -414,8 +414,6 @@ export interface Page {
   aiLook?: string; // the look Wee AI chose when it built the page («اختاره Wee AI» in the picker)
   // A paid page got its «التقييمات» slide suggested once; removing it then keeps it removed.
   ratingsSuggested?: boolean;
-  // A paid rental got its «عروض مميزة» slide once (data/rentalFeatured.ts); removing it then keeps it removed.
-  featuredSuggested?: boolean;
   // Slides sit as rounded cards on this background colour (cardMode); curved dividers are off then.
   pageBackground?: string;
   cardMode?: boolean;

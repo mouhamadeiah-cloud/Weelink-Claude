@@ -13,6 +13,7 @@ import { db } from './firebase';
 import type { CanvasElement } from '../types';
 import type { ProjectKey } from '../utils/projectKeys';
 import { normalizeRooms, type StayRoom } from './stayBooking';
+import { normalizeExtras, normalizeRentalRooms, normalizeTerms, type RentalExtra } from './rentalBooking';
 import { normalizeSessions, type SeatSession } from './seatBooking';
 import { normalizePayments, type BookingPayments, type DepositType } from './bookingDeposit';
 
@@ -47,7 +48,10 @@ export interface BookingSchedule {
   partyMax: number; // type 'table': the biggest party that books online
   tableChoice: TableChoice;
   rooms: StayRoom[]; // type 'stay': the rooms that can be booked (rental: the cars or equipment)
-  rental: boolean; // type 'stay' as a rental («تأجير»): units booked by the day, one at a time
+  rental: boolean; // type 'stay' as a rental («تأجير»): units booked by the day, the hour or a period (rentalBooking.ts)
+  extras: RentalExtra[]; // a rental's «الخدمات المرافقة»
+  termsOn: boolean; // the visitor accepts the terms before booking
+  terms: string;
   minNights: number;
   maxNights: number;
   roomChoice: RoomChoice;
@@ -85,6 +89,9 @@ const DEFAULT: Omit<BookingSchedule, 'id' | 'name'> = {
   tableChoice: 'auto',
   rooms: [],
   rental: false,
+  extras: [],
+  termsOn: false,
+  terms: '',
   minNights: 1,
   maxNights: 30,
   roomChoice: 'auto',
@@ -104,7 +111,7 @@ const clampInt = (v: unknown, min: number, max: number, fallback: number) => {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 };
 
-export const newSchedule = (id: string, name: string): BookingSchedule => ({ ...DEFAULT, id, name, workingDays: [...DEFAULT.workingDays], meetingTypes: [...DEFAULT.meetingTypes], rooms: [], sessions: [] });
+export const newSchedule = (id: string, name: string): BookingSchedule => ({ ...DEFAULT, id, name, workingDays: [...DEFAULT.workingDays], meetingTypes: [...DEFAULT.meetingTypes], rooms: [], sessions: [], extras: [] });
 
 export const newScheduleId = () => `s${Date.now().toString(36)}`;
 
@@ -132,8 +139,11 @@ export const normalizeSchedule = (raw: any, fallbackId = 'main'): BookingSchedul
     durationMinutes,
     partyMax: clampInt(raw?.partyMax, 1, 50, DEFAULT.partyMax),
     tableChoice: raw?.tableChoice === 'hall' || raw?.tableChoice === 'table' ? raw.tableChoice : 'auto',
-    rooms: normalizeRooms(raw?.rooms),
+    rooms: type === 'stay' && raw?.rental === true ? normalizeRentalRooms(raw?.rooms) : normalizeRooms(raw?.rooms),
     rental: type === 'stay' && raw?.rental === true,
+    extras: type === 'stay' && raw?.rental === true ? normalizeExtras(raw?.extras) : [],
+    termsOn: raw?.termsOn === true,
+    terms: normalizeTerms(raw?.terms),
     minNights: clampInt(raw?.minNights, 1, 30, 1),
     maxNights: Math.max(clampInt(raw?.minNights, 1, 30, 1), clampInt(raw?.maxNights, 1, 90, 30)),
     roomChoice: raw?.roomChoice === 'room' ? 'room' : 'auto',

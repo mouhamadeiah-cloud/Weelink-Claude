@@ -26,6 +26,7 @@
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
 import { chooseRoom, nightsBetween, normalizeRooms, type RoomNights, type StayRoom } from '../src/services/stayBooking.js';
+import { daysFree, DEFAULT_TERMS, minOf, normalizeExtras, normalizeRentalRooms, normalizeTerms, quote, slotsFree, type Quote, type RentalUnit } from '../src/services/rentalBooking.js';
 import { workerAction } from '../server/worker.js';
 import { canTake, normalizeSessions, type SeatSession } from '../src/services/seatBooking.js';
 import { timeLabel } from '../src/services/bookingGrid.js';
@@ -124,8 +125,11 @@ const mailHtml = (title: string, lead: string, b: any, extra = '') => `<!doctype
       ${row(b.rental ? 'الوحدة' : 'الغرفة', b.roomName)}
       ${row('المغادرة', b.checkOut ? dateLabel(b.checkOut) : '')}
       ${row('الطاولة', b.tableName ? `${b.tableName}${b.hallName ? ` · ${b.hallName}` : ''}` : '')}
+      ${row('السعر', b.price?.lines?.length ? b.price.lines.map((l: any) => `${l.label}: ${l.amount}`).join(' + ') : '')}
+      ${row('المجموع', b.price?.total ? `${b.price.total} ${b.price.currency || ''}` : '')}
       ${extra}
     </table>
+    ${b.terms ? `<div style="margin:14px 0 0;padding:12px 14px;border:1px solid #eee;border-radius:12px;font-size:12px;color:#555;line-height:1.8;white-space:pre-line"><b>الشروط التي وافق عليها الزبون${b.termsAt ? ` (${esc(new Date(b.termsAt).toISOString().slice(0, 16).replace('T', ' '))} UTC)` : ''}:</b>\n${esc(b.terms)}</div>` : ''}
     <p style="color:#999;font-size:12px;margin:18px 0 0">رسالة من Weelink بخصوص موعد على ${esc(b.pageName || 'صفحة على Weelink')}.</p>
   </div>
 </body></html>`;
@@ -245,10 +249,50 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
     (booking as any).meetingType = '';
   }
 
+  // A rental unit (rentalBooking.ts): by the day (`checkOut`), by the hour or for a period, at the price
+  // worked out here, with the driver and extras, after the visitor accepted the terms.
+  let rentPlan: { room: StayRoom & RentalUnit; q: Quote } | null = null;
+  if (body.rent !== undefined) {
+    const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
+    const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule);
+    if (!schedule || schedule.type !== 'stay' || schedule.rental !== true) return json({ error: 'bad_schedule' }, 400);
+    const room = normalizeRentalRooms(schedule.rooms).find((x) => x.id === body.room);
+    if (!room) return json({ error: 'no_rooms' }, 409);
+    const by = body.rent?.by === 'hour' || body.rent?.by === 'period' ? body.rent.by : 'day';
+    const minDays = Math.max(1, Math.round(Number(schedule.minNights)) || 1);
+    const isTime = (v: unknown): v is string => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+    const q = quote(room, normalizeExtras(schedule.extras), room.id, {
+      by, date, checkOut: typeof body.checkOut === 'string' ? body.checkOut : undefined,
+      start: Number(body.rent?.start), hours: Number(body.rent?.hours), period: typeof body.rent?.period === 'string' ? body.rent.period : undefined,
+      driver: body.rent?.driver === true, extras: Array.isArray(body.rent?.extras) ? body.rent.extras.filter(validId).slice(0, 30) : [],
+    }, {
+      minDays, maxDays: Math.min(90, Math.max(minDays, Math.round(Number(schedule.maxNights)) || 30)),
+      workStart: isTime(schedule.workStart) ? minOf(schedule.workStart) : undefined, workEnd: isTime(schedule.workEnd) ? minOf(schedule.workEnd) : undefined,
+    });
+    if (!q) return json({ error: 'bad_rent' }, 400);
+    if (date > dayIn(Math.min(365, Math.max(1, Math.round(Number(schedule.daysAhead)) || 180)))) return json({ error: 'bad_date' }, 400);
+    if (schedule.termsOn === true && body.acceptTerms !== true && !byOwner) return json({ error: 'terms_required' }, 400);
+    const terms = schedule.termsOn === true && !byOwner ? normalizeTerms(schedule.terms) || DEFAULT_TERMS.other : '';
+    Object.assign(booking, {
+      startMin: q.slots.length ? Number(q.slots[0].split('@')[1]) : 0,
+      meetingType: '',
+      rental: true,
+      rentBy: by,
+      roomId: room.id,
+      roomName: room.name,
+      slot: by === 'day' ? `حتى ${dateLabel(body.checkOut)} · ${q.count} ${q.count === 1 ? 'يوم' : 'أيام'}` : q.slot,
+      price: { lines: q.lines, total: q.total, currency: q.currency },
+      ...(by === 'day' ? { checkOut: body.checkOut, nights: q.count } : { slots: q.slots }),
+      ...(room.driver === 'with' || (room.driver === 'both' && body.rent?.driver === true) ? { driver: true } : {}),
+      ...(terms ? { terms, termsAt: new Date().toISOString() } : {}),
+    });
+    rentPlan = { room, q };
+  }
+
   // A room stay (hotels): check-in is `date`, the guests and the nights decide which of the rooms is free.
   let stayRooms: StayRoom[] = [];
   let stayRule: { guests: number; nights: string[] } | null = null;
-  if (body.checkOut !== undefined) {
+  if (body.checkOut !== undefined && body.rent === undefined) {
     const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
     const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule);
     if (!schedule || schedule.type !== 'stay') return json({ error: 'bad_schedule' }, 400);
@@ -345,19 +389,36 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
         tx.set(ref, booking);
         return 'ok';
       }
+      if (rentPlan) {
+        const { room, q } = rentPlan;
+        const unitRef = roomDoc(admin, booking, room.id);
+        const data = (await tx.get(unitRef)).data();
+        const taken = { nights: (data?.nights || []) as string[], slots: (data?.slots || []) as string[] };
+        if (!(q.nights.length ? daysFree(taken, q.nights) : slotsFree(taken, q.slots))) return 'taken';
+        const need = applyDeposit(q.total || null);
+        if (need) return need;
+        const from = dayIn(-1);
+        tx.set(unitRef, { owner, project, schedule: booking.schedule, nights: [...taken.nights.filter((n) => n >= from), ...q.nights], slots: [...taken.slots.filter((x) => x.slice(0, 10) >= from), ...q.slots] });
+        // A bookingDays document too, so the day-before reminder finds it.
+        tx.set(day, { owner, project, date }, { merge: true });
+        tx.set(ref, booking);
+        return 'ok';
+      }
       if (stayRule) {
         // The smallest free room that fits the guests (or the wished one) for every night of the stay.
         const candidates = stayRooms.filter((r) => r.capacity >= stayRule!.guests && (!validId(body.room) || r.id === body.room));
         const refs = candidates.map((r) => roomDoc(admin, booking, r.id));
         const docs = await Promise.all(refs.map((r) => tx.get(r)));
-        const occupancy: RoomNights = Object.fromEntries(candidates.map((r, i) => [r.id, docs[i].data()?.nights || []]));
+        // A rental unit's day with an hour booked is taken too (rentalBooking.ts).
+        const nightsOf = (i: number): string[] => docs[i].data()?.nights || [];
+        const occupancy: RoomNights = Object.fromEntries(candidates.map((r, i) => [r.id, [...nightsOf(i), ...(docs[i].data()?.slots || []).map((x: string) => x.slice(0, 10))]]));
         const room = chooseRoom(candidates, occupancy, { guests: stayRule.guests, nights: stayRule.nights, roomId: validId(body.room) ? body.room : undefined });
         if (!room) return 'taken';
         const need = applyDeposit((priceNumber(room.price) || 0) * stayRule.nights.length || null);
         if (need) return need;
         const at = candidates.findIndex((r) => r.id === room.id);
-        const keep = (occupancy[room.id] as string[]).filter((n) => n >= dayIn(-1));
-        tx.set(refs[at], { owner, project, schedule: booking.schedule, nights: [...keep, ...stayRule.nights] });
+        const keep = nightsOf(at).filter((n) => n >= dayIn(-1));
+        tx.set(refs[at], { owner, project, schedule: booking.schedule, nights: [...keep, ...stayRule.nights] }, { merge: true });
         // A bookingDays document too, so the day-before reminder finds the check-in.
         tx.set(day, { owner, project, date }, { merge: true });
         tx.set(ref, { ...booking, roomId: room.id, roomName: room.name });
@@ -460,6 +521,12 @@ const release = async (admin: Admin, b: any) => {
     await admin.db.runTransaction(async (tx) => {
       const taken = Number((await tx.get(seatsRef)).data()?.taken) || 0;
       tx.set(seatsRef, { taken: Math.max(0, taken - (Number(b.partySize) || 0)) }, { merge: true });
+    }).catch(() => {});
+  } else if (b.roomId && Array.isArray(b.slots)) {
+    const unit = roomDoc(admin, b, b.roomId);
+    await admin.db.runTransaction(async (tx) => {
+      const slots: string[] = (await tx.get(unit)).data()?.slots || [];
+      tx.set(unit, { slots: slots.filter((x) => !b.slots.includes(x)) }, { merge: true });
     }).catch(() => {});
   } else if (b.roomId && b.checkOut) {
     const room = roomDoc(admin, b, b.roomId);

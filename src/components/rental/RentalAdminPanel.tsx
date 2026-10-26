@@ -23,6 +23,7 @@ import { PageCustomersTab } from '../pageAdmin/PageCustomersTab';
 import { RatingsTab } from '../pageAdmin/RatingsTab';
 import { TeamTab } from '../pageAdmin/TeamTab';
 import { BookingSettingsTab } from '../pageAdmin/BookingSettingsSection';
+import { useRentalUnitsSync } from './rentalUnits';
 
 type TabId = 'add-car' | 'cars' | 'add-item' | 'items' | 'catalogs' | 'requests' | 'bookings' | 'booking-settings' | 'signups' | 'inquiries' | 'ratings' | 'customers' | 'team' | 'accounts' | 'settings';
 
@@ -64,6 +65,8 @@ interface RentalAdminPanelProps {
 
 export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCarsChange, onShopChange, maxItems = Infinity, openRequest = 0, hideGear = false, onEditPage, tabRequest }) => {
   const [open, setOpen] = useState(false);
+  // The warehouse's cars and items are the units the page books (rentalUnits.ts).
+  useRentalUnitsSync(data);
   useEffect(() => {
     if (openRequest > 0) setOpen(true);
   }, [openRequest]);

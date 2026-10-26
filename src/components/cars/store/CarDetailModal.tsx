@@ -13,6 +13,7 @@ import { useCarRequest } from './CarDataContext';
 import { carPriceLabel, carSpecRows, carSubtitle, carTitle, formatKm, statusMeta, whatsappHref, accidentsLabel, paintLabel } from '../carModel';
 import { formatMoney } from '../../shop/adminUi';
 import { useRentalMode } from '../../rental/rentalTypes';
+import { RentalBookingForm, useRentalUnit } from '../../rental/RentalBookingForm';
 
 interface CarDetailModalProps {
   car: Car;
@@ -133,7 +134,9 @@ export const RequestForm: React.FC<{ item: { id: string; label: string }; type: 
 export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, accent, font, onClose }) => {
   const [asking, setAsking] = useState<CarRequestType | null>(null);
   const rental = useRentalMode();
-  const canAsk = settings.acceptRequests && car.status !== 'sold';
+  // A rental books the car at once when the page's rental schedule has it (RentalBookingForm), else asks to rent.
+  const bookable = !!useRentalUnit(car.id) && rental;
+  const canAsk = (settings.acceptRequests || bookable) && car.status !== 'sold';
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -220,7 +223,7 @@ export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, a
               )}
               {canAsk && !asking && rental && (
                 <button type="button" onClick={() => setAsking('buy')} className="sm:col-span-2 h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ borderColor: accent, color: accent }}>
-                  <KeyRound size={18} /> اطلب الإيجار
+                  <KeyRound size={18} /> {bookable ? 'احجز الآن' : 'اطلب الإيجار'}
                 </button>
               )}
               {canAsk && !asking && !rental && (
@@ -234,7 +237,8 @@ export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, a
                 </>
               )}
             </div>
-            {canAsk && asking && <RequestForm key={asking} item={carRequestItem(car)} type={asking} settings={settings} accent={accent} onDone={() => setAsking(null)} />}
+            {canAsk && asking && bookable && <RentalBookingForm itemId={car.id} accent={accent} onClose={() => setAsking(null)} />}
+            {canAsk && asking && !bookable && <RequestForm key={asking} item={carRequestItem(car)} type={asking} settings={settings} accent={accent} onDone={() => setAsking(null)} />}
           </div>
         </div>
 

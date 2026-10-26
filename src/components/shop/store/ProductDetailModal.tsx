@@ -13,6 +13,7 @@ import { ProductGallery } from './ProductGallery';
 import { useRentalMode } from '../../rental/rentalTypes';
 import { useCarData } from '../../cars/store/CarDataContext';
 import { RequestForm } from '../../cars/store/CarDetailModal';
+import { RentalBookingForm, useRentalUnit } from '../../rental/RentalBookingForm';
 import { whatsappHref } from '../../cars/carModel';
 
 interface ProductDetailModalProps {
@@ -45,6 +46,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
   const rental = useRentalMode();
   // A rental's contacts and requests are its settings' («الإعدادات»), kept with its cars.
   const rentalSettings = useCarData()?.settings;
+  const bookable = !!useRentalUnit(p.id) && rental;
   const [asking, setAsking] = useState(false);
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
@@ -220,13 +222,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
                       <Phone size={18} /> اتصل بنا
                     </a>
                   )}
-                  {rentalSettings.acceptRequests && !asking && (
+                  {(rentalSettings.acceptRequests || bookable) && !asking && (
                     <button type="button" onClick={() => setAsking(true)} className="sm:col-span-2 h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ borderColor: accent, color: accent }}>
-                      <KeyRound size={18} /> اطلب الإيجار
+                      <KeyRound size={18} /> {bookable ? 'احجز الآن' : 'اطلب الإيجار'}
                     </button>
                   )}
                 </div>
-                {asking && <RequestForm item={{ id: p.id, label: p.name }} type="buy" settings={rentalSettings} accent={accent} onDone={() => setAsking(false)} />}
+                {asking && bookable && <RentalBookingForm itemId={p.id} accent={accent} onClose={() => setAsking(false)} />}
+                {asking && !bookable && <RequestForm item={{ id: p.id, label: p.name }} type="buy" settings={rentalSettings} accent={accent} onDone={() => setAsking(false)} />}
               </div>
             ) : (
               <>

@@ -258,8 +258,42 @@ export const isSigned = (d: CarDocument) => !!(d.showroomSignature && d.customer
 
 // ---- the A4 page ----
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
-const dateAr = (d: string) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('ar-SY-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' }) : '');
+export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+export const dateAr = (d: string) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('ar-SY-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' }) : '');
+
+// The A4 page's style, shared with the rental's contract and handover pages.
+export const DOC_STYLE = `
+  @page { size: A4; margin: 12mm; }
+  @media screen { body { padding: 18px; } }
+  * { box-sizing: border-box; }
+  body { font-family: 'IBM Plex Sans Arabic', 'Cairo', Tahoma, Arial, sans-serif; color: #1d1d1f; font-size: 10.5pt; margin: 0; padding: 0; background: #fff; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1d1d1f; padding-bottom: 8px; margin-bottom: 10px; gap: 12px; }
+  header h1 { font-size: 15pt; margin: 0; }
+  header p { margin: 2px 0 0; color: #6e6e73; font-size: 9pt; }
+  .meta { text-align: left; font-size: 9pt; color: #6e6e73; white-space: nowrap; }
+  .meta b { color: #1d1d1f; }
+  h2 { text-align: center; font-size: 16pt; margin: 6px 0 4px; }
+  .intro { margin: 4px 0 10px; line-height: 1.7; }
+  .box { border: 1px solid #d2d2d7; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; break-inside: avoid; }
+  .box h3 { font-size: 10.5pt; margin: 0 0 6px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+  .cell { display: flex; gap: 6px; border-bottom: 1px dotted #c7c7cc; padding: 2px 0; min-height: 20px; }
+  .cell.wide { grid-column: 1 / -1; }
+  .cell span { color: #6e6e73; white-space: nowrap; }
+  .cell b { font-weight: 600; flex: 1; }
+  ol { margin: 0; padding-inline-start: 20px; line-height: 1.7; }
+  .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; }
+  .check { display: flex; align-items: center; gap: 6px; }
+  .check i { width: 14px; height: 14px; border: 1px solid #1d1d1f; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 10pt; }
+  .sigs { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 14px; break-inside: avoid; }
+  .sigs.small { margin-top: 26px; }
+  .sig { text-align: center; }
+  .sig span { font-weight: 700; }
+  .pad { height: 70px; border-bottom: 1px solid #1d1d1f; display: flex; align-items: flex-end; justify-content: center; }
+  .sigs.small .pad { height: 44px; }
+  .pad img { max-height: 68px; max-width: 100%; }
+  .sig b { display: block; font-weight: 600; margin-top: 4px; min-height: 16px; }
+`;
 
 export const buildDocHtml = (doc: CarDocument, data: CarAdminData) => {
   const s = data.settings;
@@ -292,36 +326,7 @@ export const buildDocHtml = (doc: CarDocument, data: CarAdminData) => {
       : `<p class="intro">بتاريخ ${esc(dateAr(doc.date))} سُلِّمت السيارة الموصوفة أدناه من المعرض إلى المستلم بالحالة والملحقات المذكورة.</p>`;
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(`${docTypeLabel(doc.type)} ${doc.number}`)}</title>
 <style>
-  @page { size: A4; margin: 12mm; }
-  @media screen { body { padding: 18px; } }
-  * { box-sizing: border-box; }
-  body { font-family: 'IBM Plex Sans Arabic', 'Cairo', Tahoma, Arial, sans-serif; color: #1d1d1f; font-size: 10.5pt; margin: 0; padding: 0; background: #fff; }
-  header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1d1d1f; padding-bottom: 8px; margin-bottom: 10px; gap: 12px; }
-  header h1 { font-size: 15pt; margin: 0; }
-  header p { margin: 2px 0 0; color: #6e6e73; font-size: 9pt; }
-  .meta { text-align: left; font-size: 9pt; color: #6e6e73; white-space: nowrap; }
-  .meta b { color: #1d1d1f; }
-  h2 { text-align: center; font-size: 16pt; margin: 6px 0 4px; }
-  .intro { margin: 4px 0 10px; line-height: 1.7; }
-  .box { border: 1px solid #d2d2d7; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; break-inside: avoid; }
-  .box h3 { font-size: 10.5pt; margin: 0 0 6px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
-  .cell { display: flex; gap: 6px; border-bottom: 1px dotted #c7c7cc; padding: 2px 0; min-height: 20px; }
-  .cell.wide { grid-column: 1 / -1; }
-  .cell span { color: #6e6e73; white-space: nowrap; }
-  .cell b { font-weight: 600; flex: 1; }
-  ol { margin: 0; padding-inline-start: 20px; line-height: 1.7; }
-  .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; }
-  .check { display: flex; align-items: center; gap: 6px; }
-  .check i { width: 14px; height: 14px; border: 1px solid #1d1d1f; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 10pt; }
-  .sigs { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 14px; break-inside: avoid; }
-  .sigs.small { margin-top: 26px; }
-  .sig { text-align: center; }
-  .sig span { font-weight: 700; }
-  .pad { height: 70px; border-bottom: 1px solid #1d1d1f; display: flex; align-items: flex-end; justify-content: center; }
-  .sigs.small .pad { height: 44px; }
-  .pad img { max-height: 68px; max-width: 100%; }
-  .sig b { display: block; font-weight: 600; margin-top: 4px; min-height: 16px; }
+${DOC_STYLE}
 </style></head><body>
 <header>
   <div><h1>${esc(s.showroomName || 'المعرض')}</h1><p>${esc([s.address, s.phone, s.commercialRecord ? `سجل تجاري ${s.commercialRecord}` : ''].filter(Boolean).join(' · '))}</p></div>
@@ -337,16 +342,15 @@ ${witnesses}
 </body></html>`;
 };
 
-// Prints the page through the browser's print dialog, where "Save as PDF" gives the PDF file.
-export const printDoc = (doc: CarDocument, data: CarAdminData, pdf: boolean) => {
-  const title = `${docTypeLabel(doc.type)}-${doc.number}-${carTitle(data.cars.find((c) => c.id === doc.carId) || { brand: '', model: '' })}`.replace(/\s+/g, '-');
+// Prints a page through the browser's print dialog, where "Save as PDF" gives the PDF file.
+export const printHtml = (html: string, title: string, pdf: boolean) => {
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   frame.style.cssText = 'position:fixed;width:0;height:0;border:0;left:-9999px;top:0;';
   document.body.appendChild(frame);
   const d = frame.contentDocument!;
   d.open();
-  d.write(buildDocHtml(doc, data));
+  d.write(html);
   d.close();
   const oldTitle = document.title;
   if (pdf) document.title = title;
@@ -364,3 +368,6 @@ export const printDoc = (doc: CarDocument, data: CarAdminData, pdf: boolean) => 
     }, 150);
   });
 };
+
+export const printDoc = (doc: CarDocument, data: CarAdminData, pdf: boolean) =>
+  printHtml(buildDocHtml(doc, data), `${docTypeLabel(doc.type)}-${doc.number}-${carTitle(data.cars.find((c) => c.id === doc.carId) || { brand: '', model: '' })}`.replace(/\s+/g, '-'), pdf);

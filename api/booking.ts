@@ -26,7 +26,7 @@
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
 import { chooseRoom, nightsBetween, normalizeRooms, type RoomNights, type StayRoom } from '../src/services/stayBooking.js';
-import { daysFree, DEFAULT_TERMS, minOf, normalizeExtras, normalizeRentalRooms, normalizeTerms, quote, slotsFree, type Quote, type RentalUnit } from '../src/services/rentalBooking.js';
+import { daysFree, DEFAULT_TERMS, minOf, normalizeExtras, normalizeHotelRooms, normalizeRentalRooms, normalizeTerms, quote, slotsFree, unitOf, type Quote, type RentalExtra, type RentalUnit } from '../src/services/rentalBooking.js';
 import { workerAction } from '../server/worker.js';
 import { canTake, normalizeSessions, type SeatSession } from '../src/services/seatBooking.js';
 import { timeLabel } from '../src/services/bookingGrid.js';
@@ -291,12 +291,14 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
 
   // A room stay (hotels): check-in is `date`, the guests and the nights decide which of the rooms is free.
   let stayRooms: StayRoom[] = [];
-  let stayRule: { guests: number; nights: string[] } | null = null;
+  let hotelStay = false;
+  let stayRule: { guests: number; nights: string[]; extras: RentalExtra[]; extraIds: string[]; minDays: number; maxDays: number } | null = null;
   if (body.checkOut !== undefined && body.rent === undefined) {
     const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
     const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule);
     if (!schedule || schedule.type !== 'stay') return json({ error: 'bad_schedule' }, 400);
-    stayRooms = normalizeRooms(schedule.rooms);
+    hotelStay = schedule.rental !== true;
+    stayRooms = schedule.rental === true ? normalizeRooms(schedule.rooms) : normalizeHotelRooms(schedule.rooms);
     if (stayRooms.length === 0) return json({ error: 'no_rooms' }, 409);
     const nights = nightsBetween(date, body.checkOut);
     const minNights = Math.max(1, Math.round(Number(schedule.minNights)) || 1);
@@ -305,8 +307,13 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
     if (date > dayIn(Math.min(365, Math.max(1, Math.round(Number(schedule.daysAhead)) || 180)))) return json({ error: 'bad_date' }, 400);
     const guests = Math.round(Number(body.partySize));
     if (!Number.isInteger(guests) || guests < 1 || guests > Math.max(...stayRooms.map((r) => r.capacity))) return json({ error: 'bad_party' }, 400);
-    stayRule = { guests, nights };
+    stayRule = { guests, nights, extras: normalizeExtras(schedule.extras), extraIds: Array.isArray(body.stayExtras) ? body.stayExtras.filter(validId).slice(0, 30) : [], minDays: minNights, maxDays: maxNights };
+    // A hotel's terms are accepted before booking, like a rental's; the text accepted is kept with the booking.
+    if (schedule.rental !== true && schedule.termsOn === true && body.acceptTerms !== true && !byOwner) return json({ error: 'terms_required' }, 400);
+    const stayTerms = schedule.rental !== true && schedule.termsOn === true && !byOwner ? normalizeTerms(schedule.terms) || DEFAULT_TERMS.hotel : '';
     Object.assign(booking, {
+      ...(schedule.rental !== true ? { hotel: true } : {}),
+      ...(stayTerms ? { terms: stayTerms, termsAt: new Date().toISOString() } : {}),
       startMin: 0,
       meetingType: '',
       partySize: guests,
@@ -406,7 +413,7 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       }
       if (stayRule) {
         // The smallest free room that fits the guests (or the wished one) for every night of the stay.
-        const candidates = stayRooms.filter((r) => r.capacity >= stayRule!.guests && (!validId(body.room) || r.id === body.room));
+        const candidates = stayRooms.filter((r) => r.capacity >= stayRule!.guests && (!validId(body.room) || r.id === body.room) && (typeof body.roomType !== 'string' || !body.roomType || (r as any).item === body.roomType));
         const refs = candidates.map((r) => roomDoc(admin, booking, r.id));
         const docs = await Promise.all(refs.map((r) => tx.get(r)));
         // A rental unit's day with an hour booked is taken too (rentalBooking.ts).
@@ -414,8 +421,16 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
         const occupancy: RoomNights = Object.fromEntries(candidates.map((r, i) => [r.id, [...nightsOf(i), ...(docs[i].data()?.slots || []).map((x: string) => x.slice(0, 10))]]));
         const room = chooseRoom(candidates, occupancy, { guests: stayRule.guests, nights: stayRule.nights, roomId: validId(body.room) ? body.room : undefined });
         if (!room) return 'taken';
-        const need = applyDeposit((priceNumber(room.price) || 0) * stayRule.nights.length || null);
+        // A hotel room with a price per night is priced here: the nights at the room type's price (special
+        // prices win), the extras the visitor ticked; a room without one keeps the old text price.
+        let stayPrice: Quote | null = null;
+        if (hotelStay && (room as any).dayPrice > 0) {
+          stayPrice = quote(unitOf(room as any), stayRule.extras, room.id, { by: 'day', date, checkOut: body.checkOut, extras: stayRule.extraIds }, { minDays: stayRule.minDays, maxDays: stayRule.maxDays, night: true });
+          if (!stayPrice) return 'bad_rent';
+        }
+        const need = applyDeposit(stayPrice ? stayPrice.total || null : (priceNumber(room.price) || 0) * stayRule.nights.length || null);
         if (need) return need;
+        if (stayPrice) Object.assign(booking, { price: { lines: stayPrice.lines, total: stayPrice.total, currency: stayPrice.currency } });
         const at = candidates.findIndex((r) => r.id === room.id);
         const keep = nightsOf(at).filter((n) => n >= dayIn(-1));
         tx.set(refs[at], { owner, project, schedule: booking.schedule, nights: [...keep, ...stayRule.nights] }, { merge: true });
@@ -457,7 +472,7 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       return 'error';
     });
   if (result === 'taken') return json({ error: 'taken' }, 409);
-  if (result !== 'ok') return json({ error: result, ...(failure ? { reason: failure } : {}) }, result === 'full' ? 409 : result === 'deposit_required' ? 400 : 500);
+  if (result !== 'ok') return json({ error: result, ...(failure ? { reason: failure } : {}) }, result === 'full' ? 409 : result === 'deposit_required' || result === 'bad_rent' ? 400 : 500);
   // A booking waiting for its deposit is released after HOLD_HOURS (the daily cron looks at depositHolds).
   if ((booking as any).deposit) await admin.db.collection('depositHolds').doc(`${owner}_${ref.id}`).set({ owner, id: ref.id, createdAt: Date.now() }).catch(() => {});
 

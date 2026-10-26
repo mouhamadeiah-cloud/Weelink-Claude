@@ -32,6 +32,7 @@ export interface Booking {
   roomId?: string;
   roomName?: string;
   rental?: boolean; // a rental (cars, equipment): the room is a unit, the nights are days
+  hotel?: boolean; // a hotel project's room stay (priced per night, with extras and terms)
   // A rental by the hour or a period (rentalBooking.ts): the half hours it takes; its price, line by line;
   // with a driver or not; the extras; and the terms the visitor accepted, as they read them, and when.
   rentBy?: 'day' | 'hour' | 'period';
@@ -114,11 +115,14 @@ export const readTaken = async (owner: string, project: ProjectKey, date: string
   return Array.isArray(taken) ? taken.filter((n) => typeof n === 'number') : [];
 };
 
-export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt' | 'deposit' | 'tableName' | 'hallName' | 'durationMin' | 'roomName' | 'nights' | 'rental' | 'rentBy' | 'slots' | 'price' | 'driver' | 'extras' | 'terms' | 'termsAt'> & {
+export type NewBooking = Omit<Booking, 'id' | 'status' | 'createdAt' | 'deposit' | 'tableName' | 'hallName' | 'durationMin' | 'roomName' | 'nights' | 'rental' | 'hotel' | 'rentBy' | 'slots' | 'price' | 'driver' | 'extras' | 'terms' | 'termsAt'> & {
   needsConfirmation: boolean; hall?: string; room?: string; session?: string; deposit?: { wallet: string; txn: string; screenshot: string };
   // A rental unit's booking (rentalBooking.ts RentWish), and the visitor's yes to the terms.
   rent?: { by: 'day' | 'hour' | 'period'; start?: number; hours?: number; period?: string; driver?: boolean; extras?: string[] };
   acceptTerms?: boolean;
+  // A hotel stay: the room type wished (a hotel room's `item`) and the extras ticked.
+  roomType?: string;
+  stayExtras?: string[];
 };
 
 // 'taken': somebody booked that time a moment before.

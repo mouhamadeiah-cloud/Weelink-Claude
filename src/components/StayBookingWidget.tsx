@@ -6,6 +6,7 @@ import type { CanvasElement } from '../types';
 import { BookingPageContext, createBooking, dayKey, readRoomNights } from '../services/bookings';
 import { newRentalSchedule, newStaySchedule, scheduleFor, useBookingSettings } from '../services/bookingSettings';
 import { addDays, chooseRoom, isRoomFree, maxGuests, nightsBetween, type RoomNights } from '../services/stayBooking';
+import { DEFAULT_TERMS, extrasFor, quote, unitOf } from '../services/rentalBooking';
 import { depositAmount, normalizeRule, priceNumber } from '../services/bookingDeposit';
 import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from './DepositPay';
 import { useAccountCard, useCustomerSession } from './customers/customerSession';
@@ -24,7 +25,8 @@ const isDark = (bg: string) => {
 
 const label = (d: string) => `${Number(d.slice(8))} ${MONTHS[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
 
-export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) => {
+// `only`: a hotel's room type (the rooms' `item`): the booking opened from its card books that type only.
+export const StayBookingWidget: React.FC<{ elem: CanvasElement; only?: string }> = ({ elem, only }) => {
   const bookingPage = useContext(BookingPageContext);
   const live = !!bookingPage?.live;
   const settings = useBookingSettings(bookingPage?.owner, bookingPage?.project);
@@ -34,7 +36,8 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const W = rental
     ? { unit: 'الوحدة', one: 'يوم', many: 'أيام', from: 'تاريخ الاستلام', to: 'تاريخ التسليم', pickFrom: 'اختر تاريخ الاستلام', pickTo: 'اختر تاريخ التسليم', hint: 'اختر تاريخ الاستلام والتسليم', icon: '🚗', def: 'احجز الآن', submit: 'تأكيد الحجز', booked: 'تم حجزك!', none: 'لسا ما انضافت وحدات للتأجير. أضفها من «إعدادات الحجز» بالإدارة.', taken: 'انحجزت قبل لحظات. اختر تواريخ أو وحدة غيرها.' }
     : { unit: 'الغرفة', one: 'ليلة', many: 'ليالٍ', from: 'تاريخ الوصول', to: 'تاريخ المغادرة', pickFrom: 'اختر تاريخ الوصول', pickTo: 'اختر تاريخ المغادرة', hint: 'اختر تاريخ الوصول والمغادرة وعدد الضيوف', icon: '🛏️', def: 'احجز غرفتك', submit: 'تأكيد حجز الغرفة', booked: 'تم حجز غرفتك!', none: 'لسا ما انضافت غرف. أضفها من «إعدادات الحجز» بالإدارة.', taken: 'انحجزت الغرفة قبل لحظات. اختر تواريخ أو غرفة غيرها.' };
-  const rooms = schedule.rooms;
+  // A hotel room keeps its type and its price per night (hotel/hotelUnits.ts); `quote` prices them like a rental's days.
+  const rooms = useMemo(() => (only ? schedule.rooms.filter((r) => (r as any).item === only) : schedule.rooms), [schedule.rooms, only]);
   const accent = elem.calendarAccentColor || '#0071e3';
   const title = elem.calendarTitle || elem.content || W.def;
   const bg = elem.styles.backgroundColor || '#ffffff';
@@ -57,6 +60,9 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [deposit, setDeposit] = useState<DepositDraft>(EMPTY_DEPOSIT);
+  const [extras, setExtras] = useState<string[]>([]);
+  const [accepted, setAccepted] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [done, setDone] = useState<{ room: string; status: string } | null>(null);
 
   const cap = Math.max(1, maxGuests(rooms));
@@ -77,7 +83,14 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
   const roomFor = (nights: string[]) => (nights.length ? chooseRoom(rooms, occupancy, { guests: guestCount, nights, roomId: wishRoom || undefined }) : null);
   const nights = checkIn && checkOut ? nightsBetween(checkIn, checkOut) : [];
   const chosen = nights.length ? roomFor(nights) : null;
-  const amount = chosen ? depositAmount(normalizeRule(schedule, true), (priceNumber(chosen.price) || 0) * nights.length || null) : 0;
+  // The price of the stay: per night at the room type's price (special prices win) plus the extras; a room
+  // without a nightly price keeps its text price.
+  const priced = !rental && !!chosen && (chosen as any).dayPrice > 0;
+  const offered = !rental && chosen ? extrasFor(schedule.extras, chosen.id) : [];
+  const q = priced && chosen && checkIn && checkOut
+    ? quote(unitOf(chosen as any), schedule.extras, chosen.id, { by: 'day', date: checkIn, checkOut, extras }, { minDays: schedule.minNights, maxDays: schedule.maxNights, night: true })
+    : null;
+  const amount = chosen ? depositAmount(normalizeRule(schedule, true), q ? q.total || null : (priceNumber(chosen.price) || 0) * nights.length || null) : 0;
   const freeRooms = nights.length ? rooms.filter((r) => r.capacity >= guestCount && isRoomFree(occupancy[r.id], nights)) : [];
 
   // A date can start a stay when the first night has a room; end one when the stay is allowed and has a room.
@@ -108,6 +121,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
     if (!checkIn || !checkOut || !chosen) return setError(`${W.hint.replace(' وعدد الضيوف', '')}.`);
     const personal = customerProblem(customer, live, signedIn);
     if (personal) return setError(personal);
+    if (!rental && schedule.termsOn && !accepted) return setError('لازم توافق على الشروط لتكمل الحجز.');
     if (live && amount > 0) {
       const problem = depositProblem(deposit, settings?.payments);
       if (problem) return setError(problem);
@@ -116,13 +130,15 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
     setSaving(true);
     const out = await createBooking({
       owner: bookingPage.owner, project: bookingPage.project, schedule: schedule.id, pageName: bookingPage.pageName,
-      date: checkIn, startMin: 0, slot: `${nights.length}`, meetingType: '', checkOut, partySize: guestCount, room: wishRoom || undefined,
+      date: checkIn, startMin: 0, slot: `${nights.length}`, meetingType: '', checkOut, partySize: guestCount, room: wishRoom || undefined, ...(only ? { roomType: only } : {}), ...(rental ? {} : { stayExtras: extras, acceptTerms: accepted }),
       name: customer.name, phone: customer.phone, email: customer.email, address: customer.address, desc: customer.desc, needsConfirmation: schedule.needsConfirmation, deposit: depositPayload(deposit, amount),
     } as any);
     setSaving(false);
     if ('error' in out) {
       if (out.error === 'taken') { setError(W.taken); setTick((n) => n + 1); setCheckOut(''); }
       else if (out.error === 'deposit_required') setError('لازم تدفع العربون وتكتب رقم العملية.');
+      else if (out.error === 'terms_required') setError('لازم توافق على الشروط لتكمل الحجز.');
+      else if (out.error === 'bad_rent') setError('ما قدرنا نحسب سعر هالإقامة. غيّر التواريخ وجرّب مرة ثانية.');
       else if (out.error === 'bad_email') setError('تأكد من الإيميل.');
       else if (out.error === 'no_rooms' || out.error === 'bad_schedule') setError('الحجز غير جاهز بعد: المالك لازم يضيف الغرف من «إعدادات الحجز».');
       else setError(`ما قدرنا نحفظ الحجز. جرّب مرة ثانية. (رمز: ${out.error})`);
@@ -226,6 +242,33 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement }> = ({ elem }) =
               <div className={`text-[10px] font-bold rounded-lg px-2.5 py-1.5 ${dark ? 'bg-white/10 text-white' : 'bg-neutral-50 text-neutral-700 border border-neutral-100'}`}>
                 {chosen.photo && <img src={chosen.photo} alt="" referrerPolicy="no-referrer" className="w-full h-28 rounded-lg object-cover mb-1.5" />}
                 {W.icon} {chosen.name}{rental ? '' : ` · تتسع ${chosen.capacity}`}{chosen.price ? ` · ${chosen.price}` : ''}
+              </div>
+            )}
+            {offered.length > 0 && (
+              <div className="space-y-1">
+                <div className={`text-[10.5px] font-bold ${text}`}>خدمات مرافقة</div>
+                {offered.map((x) => (
+                  <label key={x.id} className={`flex items-center gap-2 text-[10px] font-bold cursor-pointer ${sub}`}>
+                    <input type="checkbox" checked={extras.includes(x.id)} onChange={(e) => setExtras(e.target.checked ? [...extras, x.id] : extras.filter((id) => id !== x.id))} />
+                    <span className="flex-1">{x.name}</span>
+                    <span>{x.price}{chosen && (chosen as any).currency ? ` ${(chosen as any).currency}` : ''}{x.per === 'unit' ? ' / ليلة' : ''}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {q && (
+              <div className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold space-y-0.5 ${dark ? 'bg-white/10 text-white' : 'bg-neutral-50 text-neutral-700 border border-neutral-100'}`}>
+                {q.lines.map((l, i) => <div key={i} className="flex justify-between gap-2"><span>{l.label}</span><span>{l.amount}</span></div>)}
+                <div className="flex justify-between gap-2 border-t pt-0.5 mt-0.5" style={{ borderColor: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.08)' }}><span>المجموع</span><span>{q.total}{q.currency ? ` ${q.currency}` : ''}</span></div>
+              </div>
+            )}
+            {!rental && schedule.termsOn && (
+              <div className="space-y-1">
+                <label className={`flex items-center gap-2 text-[10px] font-bold cursor-pointer ${text}`}>
+                  <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
+                  <span>أوافق على <button type="button" className="underline cursor-pointer" onClick={() => setShowTerms((v) => !v)}>الشروط</button></span>
+                </label>
+                {showTerms && <div className={`max-h-32 overflow-y-auto rounded-lg border p-2 text-[10px] leading-relaxed whitespace-pre-line ${sub}`}>{schedule.terms || DEFAULT_TERMS.hotel}</div>}
               </div>
             )}
             {amount > 0 && <DepositPay payments={settings?.payments} amount={amount} accent={accent} dark={dark} value={deposit} onChange={setDeposit} />}

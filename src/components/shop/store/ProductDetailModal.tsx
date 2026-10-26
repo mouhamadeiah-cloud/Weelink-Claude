@@ -12,6 +12,7 @@ import { addToCart, formatPrice } from '../../../utils/cartStore';
 import { ProductGallery } from './ProductGallery';
 import { useRentalMode } from '../../rental/rentalTypes';
 import { useHotelMode } from '../../hotel/hotelTypes';
+import { HotelTypeBooking } from '../../hotel/HotelTypeBooking';
 import { useCarData } from '../../cars/store/CarDataContext';
 import { RequestForm } from '../../cars/store/CarDetailModal';
 import { RentalBookingForm, useRentalUnit } from '../../rental/RentalBookingForm';
@@ -215,6 +216,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
             {hotel ? (
               <div className="space-y-2">
                 <div className="text-sm font-bold text-[#2A1F1A]">تتسع {hotel.capacity[p.id] || 2} أشخاص · {formatPrice(p.price, p.currency)} / ليلة</div>
+                <HotelTypeBooking typeId={p.id} accent={accent} />
                 {settings.whatsappNumber && (
                   <a href={whatsappHref(settings.whatsappNumber, `مرحبًا، أستفسر عن الإقامة في ${p.name}`)} target="_blank" rel="noopener noreferrer" className="h-12 rounded-full bg-[#25d366] text-white text-sm font-bold flex items-center justify-center gap-2">
                     <MessageCircle size={18} /> استفسر عبر واتساب

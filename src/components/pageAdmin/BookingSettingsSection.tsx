@@ -13,7 +13,7 @@ import { useTeam } from '../../services/team';
 import { newRoomId } from '../../services/stayBooking';
 import { usableWallets, type BookingPayments, type DepositType } from '../../services/bookingDeposit';
 import { BookingPaymentsEditor } from './BookingPaymentsEditor';
-import { RentalScheduleEditor } from './RentalScheduleEditor';
+import { ExtrasEditor, HOTEL_TERMS_KINDS, RentalScheduleEditor, TermsBox } from './RentalScheduleEditor';
 import { kindOf } from '../../utils/projectKeys';
 import { MAX_SESSION_SEATS, dayPlus, newSessionId, type SeatSession } from '../../services/seatBooking';
 import { useRestaurantTables } from '../../services/tableBookingData';
@@ -229,6 +229,14 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
         <div className="space-y-3 rounded-2xl border border-neutral-200 p-3">
           {current.rental && <RentalScheduleEditor schedule={current} change={change} fromWarehouse={kindOf(project) === 'rental'} />}
           {!current.rental && hotelFed && <div className="text-xs font-bold text-neutral-500 leading-relaxed">الغرف ({current.rooms.length}) تُضاف وتُعدَّل من «الطوابق والغرف» في إدارة الفندق.</div>}
+          {!current.rental && hotelFed && (
+            <>
+              <Field label="الخدمات المرافقة" hint="فطور، موقف سيارات، نقل من المطار… الزبون بيختارها وقت الحجز وبتنضاف للمجموع والعربون">
+                <ExtrasEditor extras={current.extras} units={[]} onChange={(extras) => change({ extras })} />
+              </Field>
+              <TermsBox schedule={current} change={change} guess="hotel" kinds={HOTEL_TERMS_KINDS} />
+            </>
+          )}
           {!current.rental && !hotelFed && <div className="text-xs font-bold text-neutral-500">الغرف اللي بيقدر الزبون يحجزها: {current.rooms.length}</div>}
           {!current.rental && !hotelFed && current.rooms.map((r, i) => (
             <div key={r.id} className="grid grid-cols-[1fr_90px_1fr_auto] gap-2 items-center">

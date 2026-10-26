@@ -9,7 +9,7 @@ import { BookingGrid } from './BookingGrid';
 import type { ProjectKey } from '../../utils/projectKeys';
 import { useBookingSettings } from '../../services/bookingSettings';
 import { printHtml } from '../cars/carDocs';
-import { buildRentalPaper, PAPER_LABEL, type RentalPaper } from '../rental/rentalContract';
+import { buildRentalPaper, paperLabel, type RentalPaper } from '../rental/rentalContract';
 
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -43,10 +43,10 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
   const [busy, setBusy] = useState('');
   const [failed, setFailed] = useState('');
   const settings = useBookingSettings(owner, project);
-  // A rental booking prints as a contract or a handover record, with the page's terms when it has none saved.
+  // A rental or hotel booking prints as a contract or a handover record, with the page's terms when it has none saved.
   const printPaper = (b: Booking, kind: RentalPaper) => {
     const terms = settings?.schedules.find((s) => s.id === (b.schedule || 'main'))?.terms || '';
-    printHtml(buildRentalPaper(b, kind, terms), `${PAPER_LABEL[kind]}-${b.name}`.replace(/\s+/g, '-'), false);
+    printHtml(buildRentalPaper(b, kind, terms), `${paperLabel(kind, b)}-${b.name}`.replace(/\s+/g, '-'), false);
   };
 
   useEffect(() => {
@@ -164,10 +164,10 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
                       {b.deposit.screenshot && <a href={b.deposit.screenshot} target="_blank" rel="noreferrer" className="text-brand">صورة التحويل</a>}
                     </div>
                   )}
-                  {b.rental && b.status !== 'cancelled' && (
+                  {(b.rental || b.hotel) && b.status !== 'cancelled' && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
-                      <button type="button" onClick={() => printPaper(b, 'contract')} className="h-8 px-3 rounded-lg border border-neutral-200 text-neutral-700 text-xs font-bold flex items-center gap-1 cursor-pointer"><FileText size={14} /> عقد للطباعة</button>
-                      <button type="button" onClick={() => printPaper(b, 'handover')} className="h-8 px-3 rounded-lg border border-neutral-200 text-neutral-700 text-xs font-bold flex items-center gap-1 cursor-pointer"><ClipboardCheck size={14} /> محضر تسليم واستلام</button>
+                      <button type="button" onClick={() => printPaper(b, 'contract')} className="h-8 px-3 rounded-lg border border-neutral-200 text-neutral-700 text-xs font-bold flex items-center gap-1 cursor-pointer"><FileText size={14} /> {b.hotel ? 'عقد إقامة للطباعة' : 'عقد للطباعة'}</button>
+                      <button type="button" onClick={() => printPaper(b, 'handover')} className="h-8 px-3 rounded-lg border border-neutral-200 text-neutral-700 text-xs font-bold flex items-center gap-1 cursor-pointer"><ClipboardCheck size={14} /> {b.hotel ? 'محضر استلام وتسليم الغرفة' : 'محضر تسليم واستلام'}</button>
                     </div>
                   )}
                   {b.address && <div className="text-xs text-neutral-500">{b.address}</div>}

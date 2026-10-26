@@ -7,6 +7,7 @@ import { withPhoneLayouts } from '../../utils/mobileLayout';
 import { ShopDataContext, ShopUpdateContext } from '../shop/store/ShopDataContext';
 import { CarDataContext } from '../cars/store/CarDataContext';
 import { RentalModeContext, rentalShopView } from '../rental/rentalTypes';
+import { HotelModeContext } from '../hotel/hotelTypes';
 import { carsFromPublic, shopFromPublic } from './publicData';
 import type { CanvasElement, Page } from '../../types';
 import { PIXABAY_URL } from '../../services/pixabayService';
@@ -30,7 +31,9 @@ export const SiteView: React.FC<{
 }> = ({ project, pages, elements, data, phone, pageId, onSelectPage, onContactClick, navActions }) => {
   const view = useMemo(() => (phone ? withPhoneLayouts(pages, elements) : { pages, elements }), [pages, elements, phone]);
   const rental = kindOf(project) === 'rental';
-  const shop = useMemo(() => (kindOf(project) === 'shop' ? shopFromPublic(data) : rental ? rentalShopView(shopFromPublic(data?.shop)) : null), [project, data, rental]);
+  const hotel = kindOf(project) === 'hotel';
+  const hotelMode = useMemo(() => (hotel ? { capacity: (data?.capacity && typeof data.capacity === 'object' ? data.capacity : {}) as Record<string, number> } : null), [hotel, data]);
+  const shop = useMemo(() => (kindOf(project) === 'shop' ? shopFromPublic(data) : rental || hotel ? rentalShopView(shopFromPublic(data?.shop)) : null), [project, data, rental, hotel]);
   const cars = useMemo(() => (kindOf(project) === 'cars' ? carsFromPublic(data) : rental ? carsFromPublic(data?.cars) : null), [project, data, rental]);
   // Pixabay asks that a page showing its files says so: a stored copy keeps «pixabay-» in its name, a video keeps the host.
   const usesPixabay = useMemo(() => /pixabay/i.test(JSON.stringify([pages, elements])), [pages, elements]);
@@ -39,6 +42,7 @@ export const SiteView: React.FC<{
 
   return (
     <RentalModeContext.Provider value={rental}>
+    <HotelModeContext.Provider value={hotelMode}>
     <ShopDataContext.Provider value={shop}>
       <ShopUpdateContext.Provider value={shop ? keepNothing : null}>
         <CarDataContext.Provider value={cars}>
@@ -77,6 +81,7 @@ export const SiteView: React.FC<{
         </CarDataContext.Provider>
       </ShopUpdateContext.Provider>
     </ShopDataContext.Provider>
+    </HotelModeContext.Provider>
     </RentalModeContext.Provider>
   );
 };

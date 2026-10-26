@@ -31,6 +31,7 @@ const LIMITS: Record<string, PlanLimits> = {
   'shop-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false, bookings: false },
   'cars-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false, bookings: false },
   'rental-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false, bookings: false },
+  'hotel-free': { items: NONE, gallery: 5, devices: 0, builds: 1, perDay: false, bookings: false },
   'restaurant-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
   'restaurant-60': { items: 60, gallery: 5, devices: 1, builds: 1, perDay: true, bookings: true },
   'restaurant-pro': { items: NONE, gallery: 15, devices: 4, builds: 5, perDay: true, bookings: true },
@@ -44,6 +45,10 @@ const LIMITS: Record<string, PlanLimits> = {
   'rental-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
   'rental-60': { items: 60, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
   'rental-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true, bookings: true },
+  // A hotel counts every room on its own (room types are free).
+  'hotel-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
+  'hotel-60': { items: 60, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
+  'hotel-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true, bookings: true },
 };
 
 /** A package's limits, with the extra devices bought on top; an unknown package is the free page's. */
@@ -56,7 +61,7 @@ export const limitsOf = (planId: string, extraDevices = 0): PlanLimits => {
 export const smallestFitting = (planIds: string[], items: number) => planIds.find((id) => limitsOf(id).items >= items) || '';
 
 /** «30 صنف», «60 منتج»... the word for a kind's items. */
-export const ITEM_WORD: Record<string, string> = { restaurant: 'صنف', shop: 'منتج', cars: 'سيارة', rental: 'سيارة وعنصر', page: 'عنصر' };
+export const ITEM_WORD: Record<string, string> = { restaurant: 'صنف', shop: 'منتج', cars: 'سيارة', rental: 'سيارة وعنصر', hotel: 'غرفة', page: 'عنصر' };
 
 export const isLimited = (n: number) => Number.isFinite(n);
 

@@ -51,7 +51,7 @@ const esc = (v: unknown) =>
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 
 // A project key: the kind, or the kind and the project's own id (src/utils/projectKeys.ts).
-const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant|rental)(-[a-z0-9]{4,12})?$/.test(p);
+const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant|rental|hotel)(-[a-z0-9]{4,12})?$/.test(p);
 const starsText = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
 const ownerEmail = async (admin: Admin, owner: string) => {

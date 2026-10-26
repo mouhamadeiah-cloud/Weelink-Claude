@@ -72,6 +72,8 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
       .catch(() => { migrated.current = false; });
   }, [settings, legacy, owner, project]);
 
+  // A hotel's rooms come from its «الطوابق والغرف» (hotel/hotelUnits.ts), not from here.
+  const hotelFed = kindOf(project) === 'hotel';
   const isRestaurant = project === 'restaurant' || project.startsWith('restaurant-');
   const tableHalls = useRestaurantTables(isRestaurant ? owner : null, project);
   const list: BookingSchedule[] = settings?.schedules || [newSchedule('main', 'المواعيد')];
@@ -226,8 +228,9 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
       {current.type === 'stay' && (
         <div className="space-y-3 rounded-2xl border border-neutral-200 p-3">
           {current.rental && <RentalScheduleEditor schedule={current} change={change} fromWarehouse={kindOf(project) === 'rental'} />}
-          {!current.rental && <div className="text-xs font-bold text-neutral-500">الغرف اللي بيقدر الزبون يحجزها: {current.rooms.length}</div>}
-          {!current.rental && current.rooms.map((r, i) => (
+          {!current.rental && hotelFed && <div className="text-xs font-bold text-neutral-500 leading-relaxed">الغرف ({current.rooms.length}) تُضاف وتُعدَّل من «الطوابق والغرف» في إدارة الفندق.</div>}
+          {!current.rental && !hotelFed && <div className="text-xs font-bold text-neutral-500">الغرف اللي بيقدر الزبون يحجزها: {current.rooms.length}</div>}
+          {!current.rental && !hotelFed && current.rooms.map((r, i) => (
             <div key={r.id} className="grid grid-cols-[1fr_90px_1fr_auto] gap-2 items-center">
               <input className={inputFitClass} placeholder={current.rental ? 'اسم الوحدة، مثلاً: كيا سيراتو 2020' : 'اسم الغرفة، مثلاً: غرفة 101'} value={r.name} maxLength={60} onChange={(e) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} />
               {current.rental ? <span /> : <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-500">
@@ -238,7 +241,7 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
               <div className="col-span-full"><ImagePicker value={r.photo || ''} onChange={(photo) => change({ rooms: current.rooms.map((x, j) => (j === i ? { ...x, photo } : x)) })} /></div>
             </div>
           ))}
-          {!current.rental && <GhostButton onClick={() => change({ rooms: [...current.rooms, { id: newRoomId(), name: '', capacity: 2, price: '', photo: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف غرفة</span></GhostButton>}
+          {!current.rental && !hotelFed && <GhostButton onClick={() => change({ rooms: [...current.rooms, { id: newRoomId(), name: '', capacity: 2, price: '', photo: '' }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف غرفة</span></GhostButton>}
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label={current.rental ? 'أقل عدد أيام' : 'أقل عدد ليالٍ'}>
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">

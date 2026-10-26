@@ -45,7 +45,7 @@ export interface IndexedPage {
   name: string;
   owner: string;
   project: string;
-  kind: 'page' | 'shop' | 'cars' | 'restaurant' | 'rental';
+  kind: 'page' | 'shop' | 'cars' | 'restaurant' | 'rental' | 'hotel';
   title: string;
   description: string;
   keywords: string[];
@@ -75,6 +75,8 @@ const plain = (html: unknown) => str(html, 2000).replace(/<[^>]*>/g, ' ').replac
 export const itemsOf = (kind: IndexedPage['kind'], data: any): IndexedItem[] => {
   // A rental's published copy holds its cars and its items side by side.
   if (kind === 'rental') return [...itemsOf('cars', data?.cars), ...itemsOf('shop', data?.shop)];
+  // A hotel's published copy holds its room types as a shop's products.
+  if (kind === 'hotel') return itemsOf('shop', data?.shop);
   if (kind === 'page') {
     return (Array.isArray(data?.services) ? data.services : [])
       .filter((s: any) => str(s?.name) && s?.published !== false)

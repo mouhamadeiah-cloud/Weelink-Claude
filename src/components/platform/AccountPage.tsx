@@ -32,7 +32,7 @@ interface AccountPageProps extends NavProps {
   onAccountDeleted: () => void;
 }
 
-const KIND_NAME: Record<ProjectType, string> = { page: 'صفحة', shop: 'متجر', cars: 'معرض سيارات', restaurant: 'مطعم', rental: 'تأجير' };
+const KIND_NAME: Record<ProjectType, string> = { page: 'صفحة', shop: 'متجر', cars: 'معرض سيارات', restaurant: 'مطعم', rental: 'تأجير', hotel: 'فندق' };
 const DAY = 24 * 3600 * 1000;
 const dateText = (v: number | string | undefined | null) => {
   const t = typeof v === 'number' ? v : Date.parse(String(v || ''));

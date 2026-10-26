@@ -69,6 +69,7 @@ const PAGE_NAME_LABEL: Record<ProjectType, string> = {
   restaurant: 'اسم المطعم',
   cars: 'اسم المعرض',
   rental: 'اسم شركة التأجير',
+  hotel: 'اسم الفندق',
 };
 
 // The work step's three lists, named for each kind of page.
@@ -78,6 +79,7 @@ const CATALOG_LABELS = {
   restaurant: { category: 'نوع المطعم *', sub: 'المطبخ أو الأكلة الأساسية', item: '', ex: ['مثال: مطاعم متخصصة', 'مثال: مشاوي', ''], need: 'يرجى اختيار نوع مطعمك.' },
   cars: { category: 'نوع المعرض *', sub: 'الماركة الأساسية', item: '', ex: ['مثال: سيارات مستعملة', 'مثال: تويوتا', ''], need: 'يرجى اختيار نوع معرضك.' },
   rental: { category: 'شو بتأجّر؟ *', sub: 'النوع', item: '', ex: ['مثال: سيارات', 'مثال: سيارات فخمة وأعراس', ''], need: 'يرجى اختيار شو بتأجّر.' },
+  hotel: { category: 'نوع المكان *', sub: 'التصنيف', item: '', ex: ['مثال: فنادق', 'مثال: فندق 4 نجوم', ''], need: 'يرجى اختيار نوع مكانك.' },
 } as const;
 
 // What makes a store, restaurant or showroom worth choosing: the owner ticks what is true, and the
@@ -87,6 +89,7 @@ const FEATURE_CHOICES: Partial<Record<ProjectType, string[]>> = {
   shop: ['توصيل لكل المحافظات', 'الدفع عند الاستلام', 'إرجاع وتبديل', 'كفالة على المنتجات', 'منتجات أصلية', 'أسعار جملة', 'عروض أسبوعية', 'تغليف هدايا'],
   cars: ['تقسيط', 'فحص فني قبل البيع', 'كفالة', 'تبديل سيارتك', 'شراء سيارتك', 'تسجيل ونقل ملكية', 'توصيل السيارة', 'تجربة قيادة'],
   rental: ['إيجار بالساعة', 'إيجار باليوم', 'مع سائق', 'توصيل للعنوان', 'تأمين شامل', 'بدون عربون', 'متاح 24 ساعة', 'عروض للمناسبات'],
+  hotel: ['فطور مشمول', 'موقف سيارات', 'نقل من وإلى المطار', 'واي فاي مجاني', 'مسبح', 'مطعم', 'خدمة الغرف', 'مناسب للعائلات'],
 };
 
 // What the description is asked to say, by kind of page.
@@ -96,6 +99,7 @@ const DESCRIPTION_HINT: Record<ProjectType, string> = {
   shop: 'مثال: متجر ألبسة أطفال من عمر يوم لـ 12 سنة، ماركات تركية، وأسعار مناسبة.',
   cars: 'مثال: معرض سيارات مستعملة مفحوصة بحماة، أغلبها تويوتا وهيونداي، ومنقبل التقسيط.',
   rental: 'مثال: تأجير سيارات سياحية وفانات بدمشق، باليوم أو بالساعة، مع سائق أو بدون، ومنوصّل للمطار.',
+  hotel: 'مثال: فندق 4 نجوم بقلب دمشق القديمة، غرف مفردة ومزدوجة وأجنحة، فطور مشمول وموقف سيارات، وقريب من الأسواق.',
 };
 
 // The questions in the words of each kind of page (Eyad, 12 Oct: a restaurant is asked about its
@@ -105,6 +109,7 @@ const KIND_QUESTIONS: Partial<Record<ProjectType, Record<number, string>>> = {
   shop: { 1: 'عرّفنا على متجرك:', 4: 'شو نوع المنتجات اللي بتبيعها؟', 5: 'اوصف متجرك: شو بتبيع، لمين، وشو بيميزكم:' },
   cars: { 1: 'عرّفنا على معرضك:', 4: 'شو نوع سيارات معرضك؟', 5: 'اوصف معرضك: نوع السيارات، الماركات، وخدماتكم:' },
   rental: { 1: 'عرّفنا على شغلك بالتأجير:', 4: 'شو بتأجّر؟', 5: 'اوصف شغلك: شو بتأجّر، بالساعة أو باليوم، وشو بيميزكم:' },
+  hotel: { 1: 'عرّفنا على فندقك:', 4: 'شو نوع مكانك؟', 5: 'اوصف فندقك: موقعه، أنواع الغرف، الخدمات، وشو بيميزكم:' },
 };
 
 
@@ -302,7 +307,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // The 12 page looks, those that suit this kind of page first; the divider answer of older sessions
   // used four short names.
-  const buildKind = pageKind === 'page' || pageKind === 'rental' || !pageKind ? 'free' : pageKind;
+  const buildKind = pageKind === 'page' || pageKind === 'rental' || pageKind === 'hotel' || !pageKind ? 'free' : pageKind;
   const lookChoices = looksFor(buildKind);
   const luminanceIsDark = (hex: string) => luminance(hex) < 0.45;
   const currentDivider = ({ sine: 'double-wave', curved: 'curve-down' } as Record<string, string>)[aiAnswers.dividerStyle] || aiAnswers.dividerStyle;
@@ -371,7 +376,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       // Answers given for another kind of page keep the owner's own details (name, address,
       // contacts, look), not what that business was: its name, kind, description and offer.
       const otherKind = !!pageKind && !!data.pageKind && data.pageKind !== pageKind;
-      setSavedFlavor(['restaurant', 'shop', 'cars', 'rental'].includes(data.flavor) ? data.flavor : undefined);
+      setSavedFlavor(['restaurant', 'shop', 'cars', 'rental', 'hotel'].includes(data.flavor) ? data.flavor : undefined);
       if (data.personalInfo) setPersonalInfo({ pageName: '', ...data.personalInfo, ...(otherKind ? { pageName: '' } : {}) });
       if (data.addressInfo) setAddressInfo({ placeType: 'city', area: '', district: '', subdistrict: '', village: '', ...data.addressInfo });
       if (data.contactInfo) setContactInfo(data.contactInfo);
@@ -628,7 +633,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           done={step >= 13}
           rows={[
             ['اسم الصفحة', personalInfo.pageName || personalInfo.fullName],
-            [tone === 'restaurant' ? 'نوع المطعم' : tone === 'shop' ? 'المنتجات' : tone === 'cars' ? 'نوع المعرض' : tone === 'rental' ? 'شو بتأجّر' : 'العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.subCategory, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
+            [tone === 'restaurant' ? 'نوع المطعم' : tone === 'shop' ? 'المنتجات' : tone === 'cars' ? 'نوع المعرض' : tone === 'rental' ? 'شو بتأجّر' : tone === 'hotel' ? 'نوع المكان' : 'العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.subCategory, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
             ['الوصف', aiAnswers.description],
             ['الألوان', colorSummary],
             ['طابع الصفحة', aiAnswers.motionEffects],
@@ -668,7 +673,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 type="text"
                 value={personalInfo.pageName || ''}
                 onChange={e => setPersonalInfo(p => ({ ...p, pageName: e.target.value }))}
-                placeholder={tone === 'restaurant' ? 'مثال: مطعم بيت جدي' : tone === 'shop' ? 'مثال: متجر لمسة' : tone === 'cars' ? 'مثال: معرض الشام للسيارات' : tone === 'rental' ? 'مثال: الشام لتأجير السيارات' : 'مثال: عيادة د. سلمى للأسنان'}
+                placeholder={tone === 'restaurant' ? 'مثال: مطعم بيت جدي' : tone === 'shop' ? 'مثال: متجر لمسة' : tone === 'cars' ? 'مثال: معرض الشام للسيارات' : tone === 'rental' ? 'مثال: الشام لتأجير السيارات' : tone === 'hotel' ? 'مثال: فندق الياسمين' : 'مثال: عيادة د. سلمى للأسنان'}
                 className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
               />
               <p className="text-xs text-neutral-400">هو عنوان صفحتك. إذا تركته فاضي بيصير اسمك هو العنوان.</p>

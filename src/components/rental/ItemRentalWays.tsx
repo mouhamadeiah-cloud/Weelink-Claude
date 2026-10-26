@@ -7,6 +7,7 @@ import { newRentalSchedule, saveBookingSettings, useBookingSettings } from '../.
 import { minOf, newRentalId, normalizeRentalRooms, normalizeUnit, unitIdOf, timeOf, unitOf, type RentalPeriod, type RentalUnit } from '../../services/rentalBooking';
 import { Trash2 } from 'lucide-react';
 import { AvailabilityEditor, SpecialPrices, chip } from '../pageAdmin/RentalScheduleEditor';
+import { useEstateMode } from './rentalTypes';
 import { inputFitClass } from '../shop/adminUi';
 
 type Room = { id: string; item?: string };
@@ -59,6 +60,7 @@ const row = 'flex flex-wrap items-center gap-2';
 const label = 'text-xs font-bold text-neutral-500';
 
 export const RentalPriceBlock: React.FC<{ item: ReturnType<typeof useItemUnit>; price: number; currency: string }> = ({ item, price, currency }) => {
+  const estate = useEstateMode();
   if (!item.ready) return <p className="text-xs text-neutral-400">جارٍ التحميل…</p>;
   const u = item.unit;
   const set = item.change;
@@ -82,6 +84,15 @@ export const RentalPriceBlock: React.FC<{ item: ReturnType<typeof useItemUnit>; 
           {mode === 'day' ? 'السعر أعلاه هو سعر اليوم.' : mode === 'hour' ? 'السعر أعلاه هو سعر الساعة.' : 'لكل فترة سعرها.'}
         </span>
       </div>
+
+      {estate && (
+        <div className={row}>
+          <span className={label}>السعر:</span>
+          <button type="button" className={chip(!u.perPerson)} onClick={() => set({ perPerson: false })}>للوحدة كاملة</button>
+          <button type="button" className={chip(u.perPerson)} onClick={() => set({ perPerson: true })}>للشخص الواحد</button>
+          <span className="text-xs text-neutral-400">{u.perPerson ? 'يُضرب بعدد الأشخاص عند الحجز.' : 'سعر واحد مهما كان عدد الأشخاص.'}</span>
+        </div>
+      )}
 
       {mode === 'hour' && (
         <div className={`${row} ${label}`}>

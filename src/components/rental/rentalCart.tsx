@@ -22,9 +22,10 @@ export interface RentLine {
   period: string;
   driver: boolean;
   extras: string[];
+  guests: number; // people, for a unit with a most or a price for one person
 }
 
-export const newLine = (id: string): RentLine => ({ id, qty: 1, on: true, by: '', date: '', checkOut: '', hours: 0, start: null, period: '', driver: false, extras: [] });
+export const newLine = (id: string): RentLine => ({ id, qty: 1, on: true, by: '', date: '', checkOut: '', hours: 0, start: null, period: '', driver: false, extras: [], guests: 1 });
 
 const lineOf = (raw: unknown): RentLine | null => {
   if (typeof raw === 'string') return raw ? newLine(raw) : null;
@@ -42,6 +43,7 @@ const lineOf = (raw: unknown): RentLine | null => {
     period: str(x.period),
     driver: x.driver === true,
     extras: Array.isArray(x.extras) ? x.extras.filter((e): e is string => typeof e === 'string') : [],
+    guests: Math.min(500, Math.max(1, Math.round(Number(x.guests)) || 1)),
   };
 };
 

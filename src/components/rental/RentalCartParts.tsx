@@ -39,6 +39,9 @@ interface Row {
   total: number; // all its copies
 }
 
+// People in one booking of a unit: at least 1, at most the unit's most (when it has one).
+const guestsOf = (unit: Unit, n: number) => Math.max(1, unit.maxGuests > 0 ? Math.min(n, unit.maxGuests) : n);
+
 // The cart, its units and the totals, the same in the summary and the booking card.
 const useRentalCheckout = () => {
   const cart = useRentalCart();
@@ -54,7 +57,7 @@ const useRentalCheckout = () => {
       const mode = line.by && ways.includes(line.by) ? line.by : ways[0] || 'day';
       const hours = Math.min(Math.max(unit.minHours, unit.maxHours), Math.max(unit.minHours, line.hours || unit.minHours));
       const q = line.date
-        ? quote(unit, s.extras, unit.id, { by: mode, date: line.date, checkOut: line.checkOut || undefined, start: line.start ?? undefined, hours, period: line.period, driver: line.driver, extras: line.extras }, { minDays: s.minNights, maxDays: s.maxNights, workStart: minOf(s.workStart), workEnd: minOf(s.workEnd) })
+        ? quote(unit, s.extras, unit.id, { by: mode, date: line.date, checkOut: line.checkOut || undefined, start: line.start ?? undefined, hours, period: line.period, driver: line.driver, extras: line.extras, guests: guestsOf(unit, line.guests) }, { minDays: s.minNights, maxDays: s.maxNights, workStart: minOf(s.workStart), workEnd: minOf(s.workEnd) })
         : null;
       return [{ line, unit, ways, mode, hours, q, total: q ? q.total * line.qty : 0 }];
     });
@@ -116,7 +119,9 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
   const workStart = minOf(schedule.workStart);
   const workEnd = minOf(schedule.workEnd);
   const cur = unit.currency;
-  const price = mode === 'day' && unit.dayPrice > 0 ? `${money(unit.dayPrice, cur)} لليوم` : mode === 'hour' && unit.hourPrice > 0 ? `${money(unit.hourPrice, cur)} للساعة` : mode === 'period' ? unit.periods.map((p) => `${p.name}: ${money(p.price, cur)}`).join(' · ') : '';
+  const price = (mode === 'day' && unit.dayPrice > 0 ? `${money(unit.dayPrice, cur)} لليوم` : mode === 'hour' && unit.hourPrice > 0 ? `${money(unit.hourPrice, cur)} للساعة` : mode === 'period' ? unit.periods.map((p) => `${p.name}: ${money(p.price, cur)}`).join(' · ') : '') + (unit.perPerson ? ' للشخص' : '');
+  const guests = guestsOf(unit, line.guests);
+  const peopleOn = unit.perPerson || unit.maxGuests > 0;
   // The first day the unit can't be rented (its availability rules).
   const chosen = unit.periods.find((x) => x.id === line.period);
   const days = !line.date ? [] : mode === 'day' ? (line.checkOut ? nightsBetween(line.date, line.checkOut) : []) : mode === 'period' && chosen && periodKind(chosen) !== 'time' ? periodNights(chosen, line.date) : [line.date];
@@ -145,6 +150,15 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
         </div>
         <div className="font-bold text-sm text-(--accent) shrink-0">{q ? money(row.total, cur) : ''}</div>
       </div>
+
+      {peopleOn && (
+        <div className="flex items-center gap-2 text-xs font-bold">
+          <span className="text-(--muted)">عدد الأشخاص{unit.maxGuests > 0 ? ` (حتى ${unit.maxGuests})` : ''}</span>
+          <button type="button" aria-label="إنقاص" disabled={guests <= 1} onClick={() => update({ guests: guests - 1 })} className="w-7 h-7 rounded-lg border cursor-pointer disabled:opacity-40">−</button>
+          <span className="w-6 text-center">{guests}</span>
+          <button type="button" aria-label="زيادة" disabled={unit.maxGuests > 0 && guests >= unit.maxGuests} onClick={() => update({ guests: guests + 1 })} className="w-7 h-7 rounded-lg border cursor-pointer disabled:opacity-40">+</button>
+        </div>
+      )}
 
       {ways.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
@@ -336,7 +350,7 @@ export const RentalCheckoutForm: React.FC<PartProps> = ({ look, isPreviewActive 
           ...(r.mode === 'day' ? { checkOut: r.line.checkOut } : {}),
           ...(r.mode === 'hour' ? { start: r.line.start ?? undefined, hours: r.hours } : {}),
           ...(r.mode === 'period' ? { period: r.line.period } : {}),
-          driver: r.line.driver, extras: r.line.extras,
+          driver: r.line.driver, extras: r.line.extras, guests: guestsOf(r.unit, r.line.guests),
         })),
       },
       acceptTerms: accepted,

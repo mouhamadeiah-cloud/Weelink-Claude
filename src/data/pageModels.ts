@@ -67,9 +67,9 @@ export const DEFAULT_MODELS: PageModel[] = [
   { id: 'rental-free', name: 'تأجير مجاني', sections: freeOf('rental') },
   { id: 'rental', name: 'تأجير 30 و60', sections: paidOf('rental') },
   { id: 'rental-pro', name: 'تأجير برو', sections: proOf('rental') },
-  { id: 'hotel-free', name: 'فندق مجاني', sections: freeOf('hotel') },
-  { id: 'hotel', name: 'فندق 30 و60', sections: paidOf('hotel') },
-  { id: 'hotel-pro', name: 'فندق برو', sections: proOf('hotel') },
+  { id: 'hotel-free', name: 'فنادق ومساحات مجاني', sections: freeOf('hotel') },
+  { id: 'hotel', name: 'فنادق ومساحات 30 و60', sections: paidOf('hotel') },
+  { id: 'hotel-pro', name: 'فنادق ومساحات برو', sections: proOf('hotel') },
 ];
 
 export const MODEL_IDS = DEFAULT_MODELS.map((m) => m.id);

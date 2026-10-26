@@ -30,7 +30,7 @@ const INTENTS: { id: Intent; title: string; line: string; icon: React.ElementTyp
 const intentOf = (kind: ProjectType): Intent | null =>
   (Object.entries(INTENT_KIND) as [Intent, ProjectType][]).find(([, k]) => k === kind)?.[0] || null;
 
-const KIND_LABEL: Record<ProjectType, string> = { page: 'مشروع', shop: 'متجر', cars: 'معرض سيارات', restaurant: 'مطعم', rental: 'تأجير', hotel: 'فندق' };
+const KIND_LABEL: Record<ProjectType, string> = { page: 'مشروع', shop: 'متجر', cars: 'معرض سيارات', restaurant: 'مطعم', rental: 'تأجير', hotel: 'فنادق ومساحات' };
 
 // What each kind of page gives its owner, shown as the visitor scrolls down.
 const FEATURES: { title: string; lead: string; points: string[]; image: string; contain?: boolean }[] = [

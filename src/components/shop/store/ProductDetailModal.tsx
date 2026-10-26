@@ -11,8 +11,6 @@ import { badgeColor, badgeText, descriptionHtml, discountPercent, findVariant, i
 import { addToCart, formatPrice } from '../../../utils/cartStore';
 import { ProductGallery } from './ProductGallery';
 import { useRentalMode } from '../../rental/rentalTypes';
-import { useHotelMode } from '../../hotel/hotelTypes';
-import { HotelTypeBooking } from '../../hotel/HotelTypeBooking';
 import { useCarData } from '../../cars/store/CarDataContext';
 import { RequestForm } from '../../cars/store/CarDetailModal';
 import { useRentalUnit } from '../../rental/RentalBookingForm';
@@ -47,8 +45,6 @@ const RelatedTile: React.FC<{ product: ShopProduct; accent: string; large?: bool
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product: p, settings, accent, related, onOpenRelated, onClose, onAdded }) => {
   const rental = useRentalMode();
-  // A hotel's room type: no cart, the guests it takes and a way to ask (hotelTypes.ts).
-  const hotel = useHotelMode();
   // A rental's contacts and requests are its settings' («الإعدادات»), kept with its cars.
   const rentalSettings = useCarData()?.settings;
   const bookable = !!useRentalUnit(p.id) && rental;
@@ -214,17 +210,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
               </div>
             ))}
 
-            {hotel ? (
-              <div className="space-y-2">
-                <div className="text-sm font-bold text-[#2A1F1A]">تتسع {hotel.capacity[p.id] || 2} أشخاص · {formatPrice(p.price, p.currency)} / ليلة</div>
-                <HotelTypeBooking typeId={p.id} accent={accent} />
-                {settings.whatsappNumber && (
-                  <a href={whatsappHref(settings.whatsappNumber, `مرحبًا، أستفسر عن الإقامة في ${p.name}`)} target="_blank" rel="noopener noreferrer" className="h-12 rounded-full bg-[#25d366] text-white text-sm font-bold flex items-center justify-center gap-2">
-                    <MessageCircle size={18} /> استفسر عبر واتساب
-                  </a>
-                )}
-              </div>
-            ) : rental && rentalSettings ? (
+            {rental && rentalSettings ? (
               <div className="space-y-2">
                 <div className="grid sm:grid-cols-2 gap-2">
                   {rentalSettings.whatsappNumber && (

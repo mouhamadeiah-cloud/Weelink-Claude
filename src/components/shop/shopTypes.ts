@@ -107,6 +107,7 @@ export interface ShopProduct {
   published: boolean; // true = shown on the store page
   inWarehouse: boolean; // true = stock is counted; false = sold from the store without stock
   copies: number; // a rental item's identical copies (5 tents = 5); each counts toward the package's limit, 1 elsewhere
+  maxGuests: number; // a hotel-and-property rental's most people for one booking of it (a room for 2, a villa for 6); 0 = not set
   relatedIds: string[]; // up to MAX_RELATED products shown at the bottom of the floating card
   createdAt: string;
 }
@@ -377,6 +378,7 @@ export const normalizeProduct = (p: any, currency: string): ShopProduct => ({
   published: p.published ?? true,
   inWarehouse: p.inWarehouse ?? true,
   copies: Math.min(100, Math.max(1, Math.floor(Number(p.copies) || 1))),
+  maxGuests: Math.min(500, Math.max(0, Math.floor(Number(p.maxGuests) || 0))),
   relatedIds: Array.isArray(p.relatedIds) ? p.relatedIds : [],
   createdAt: p.createdAt || new Date().toISOString(),
 });

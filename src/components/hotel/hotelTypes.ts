@@ -1,13 +1,12 @@
-// «فندق» (Eyad, 25 Oct): rooms in floors or sections, booked by the night. It is built from the platform's
-// own parts: a room TYPE is a shop product (its card, photos, price per night, the product entry and the
-// warehouse), and the hotel adds only what the shop does not have: the floors (or sections) and the
-// rooms in them. Both live in the project's `hotelAdmin` field:
-//   hotelAdmin: { shop: ShopAdminData, floors, rooms, capacity }
-// The rooms are kept in step with the page's room stay schedule (hotelUnits.ts), so the booking that
-// exists already (StayBookingWidget, /api/booking) books them.
-import { createContext, useContext } from 'react';
+// The first «فندق» (Eyad, 25 Oct) kept room types as shop products, with floors and rooms in a
+// `hotelAdmin` field. Since 26 Oct a hotel project is a «تأجير فنادق ومساحات عقارية»: a rental's
+// warehouse (rentalAdmin) where a room type is an item with as many copies as it has rooms. This file
+// only reads that older shape and turns it into the new one (`rentalFromHotel`, used when such a
+// project is opened); the old stay-room helpers stay for the bookings it already holds.
 import { normalizeUnit, type SpecialPrice } from '../../services/rentalBooking';
-import { ShopAdminData, ShopCatalog, createEmptyShopAdmin, normalizeShopAdmin } from '../shop/shopTypes';
+import { ShopAdminData, createEmptyShopAdmin, normalizeShopAdmin } from '../shop/shopTypes';
+import { createEmptyCarAdmin } from '../cars/carTypes';
+import type { RentalAdminData } from '../rental/rentalTypes';
 
 export interface HotelFloor {
   id: string;
@@ -70,19 +69,6 @@ export const normalizeHotelAdmin = (raw: any): HotelAdminData => {
 
 export const newHotelId = () => `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-// A new hotel's catalogs for the room types, so the product entry has them ready.
-export const HOTEL_TYPE_NAMES = ['غرفة مفردة', 'غرفة مزدوجة', 'غرفة ثلاثية', 'جناح', 'شقة عائلية'];
-export const hotelCatalogs = (): ShopCatalog[] => {
-  const now = new Date().toISOString();
-  return [
-    { id: 'hotel-cat-1', name: 'أنواع الغرف', parentId: null, images: [], createdAt: now },
-    ...HOTEL_TYPE_NAMES.map((n, i) => ({ id: `hotel-cat-1-${i + 1}`, name: n, parentId: 'hotel-cat-1', images: [], createdAt: now })),
-  ];
-};
-
-// The room types as the hotel's pages show them: a room is rented by the night, not sold from a stock.
-export const hotelShopView = (shop: ShopAdminData): ShopAdminData => ({ ...shop, products: shop.products.map((p) => (p.inWarehouse === false ? p : { ...p, inWarehouse: false })) });
-
 export const typeCapacity = (d: HotelAdminData, typeId: string) => d.capacity[typeId] || 2;
 
 /** How many rooms of a type (open ones only with `openOnly`). */
@@ -104,8 +90,12 @@ export const stayRoomsOf = (d: HotelAdminData) => {
     .filter((x): x is NonNullable<typeof x> => !!x);
 };
 
-// Set inside a hotel project and on its published page (null elsewhere): the room cards ask for a stay
-// instead of the cart, and know how many guests a room type takes.
-export interface HotelMode { capacity: Record<string, number> }
-export const HotelModeContext = createContext<HotelMode | null>(null);
-export const useHotelMode = () => useContext(HotelModeContext);
+
+/** An older hotel as a rental's warehouse: each room type is an item with a copy per open room and the guests it takes. */
+export const rentalFromHotel = (h: HotelAdminData): RentalAdminData => ({
+  cars: createEmptyCarAdmin(),
+  shop: {
+    ...h.shop,
+    products: h.shop.products.map((p) => ({ ...p, copies: Math.min(100, Math.max(1, roomsOfType(h, p.id, true))), maxGuests: h.capacity[p.id] || 0, inWarehouse: false })),
+  },
+});

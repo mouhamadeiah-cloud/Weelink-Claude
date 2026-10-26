@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { isProjectKey, kindOf, localPrefixOf, newProjectKey } from '../src/utils/projectKeys.ts';
-import { createEmptyHotelAdmin, hotelCatalogs, hotelShopView, normalizeHotelAdmin, roomsOfType, stayRoomsOf, typeCapacity } from '../src/components/hotel/hotelTypes.ts';
-import { syncedHotelSettings } from '../src/components/hotel/hotelUnits.ts';
+import { createEmptyHotelAdmin, normalizeHotelAdmin, rentalFromHotel, roomsOfType, stayRoomsOf, typeCapacity } from '../src/components/hotel/hotelTypes.ts';
+import { rentalItemCount, rentalShopView } from '../src/components/rental/rentalTypes.ts';
+import { loadCategories } from '../src/utils/businessCategories.ts';
 import { getHotelTemplate } from '../src/data/hotelTemplate.ts';
 import { itemsOf } from '../server/searchIndex.ts';
 import { limitsOf } from '../src/utils/planLimits.ts';
@@ -10,7 +11,6 @@ import { flavorOf, PLANS } from '../src/data/plans.ts';
 import { publicDataFor } from '../src/components/publish/publicData.ts';
 import { createEmptyShopAdmin } from '../src/components/shop/shopTypes.ts';
 import { createEmptyCarAdmin } from '../src/components/cars/carTypes.ts';
-import { normalizeSchedule } from '../src/services/bookingSettings.ts';
 import categories from '../src/data/hotelCategories.json' with { type: 'json' };
 
 const product = (id: string, name: string, extra: object = {}) => ({ id, name, price: 80, currency: '$', images: ['https://x/a.jpg'], published: true, inWarehouse: true, ...extra });
@@ -72,48 +72,39 @@ test('the open rooms of published types are the rooms the booking offers, each w
   assert.equal(typeCapacity(d, 'zz'), 2);
 });
 
-test('the rooms go into the stay schedule, other schedules and the payments stay, and nothing changes twice', () => {
-  const d = withTypes();
-  const rooms = stayRoomsOf(d);
-  assert.equal(syncedHotelSettings(null, []), null);
-  const first = syncedHotelSettings(null, rooms)!;
-  assert.equal(first.schedules.length, 1);
-  assert.equal(first.schedules[0].type, 'stay');
-  assert.equal(first.schedules[0].rental, false);
-  assert.equal(first.schedules[0].rooms.length, 2);
-  assert.equal(syncedHotelSettings(first, rooms), null);
-  const other = normalizeSchedule({ id: 'main', type: 'appointment' });
-  const mixed = { schedules: [other, ...first.schedules], payments: { currency: '$', wallets: {} } as any };
-  const again = syncedHotelSettings(mixed, rooms.slice(0, 1))!;
-  assert.equal(again.schedules[0].id, 'main');
-  assert.equal(again.schedules[1].rooms.length, 1);
-  assert.ok(again.payments);
-  // a hotel with 120 rooms keeps all of them
-  const many = Array.from({ length: 120 }, (_, i) => ({ id: `m${i}`, name: `غرفة ${i}`, capacity: 2, price: '', photo: '' }));
-  assert.equal(normalizeSchedule({ type: 'stay', rooms: many }).rooms.length, 120);
+test('an older hotel opens as a rental warehouse: a copy per open room and the guests it takes', () => {
+  const r = rentalFromHotel(withTypes());
+  assert.deepEqual(r.cars.cars, []);
+  const [t1, t2] = r.shop.products;
+  assert.equal(t1.copies, 1); // 101 is open, 102 is closed
+  assert.equal(t2.copies, 1);
+  assert.equal(t1.maxGuests, 2);
+  assert.equal(t2.maxGuests, 4);
+  assert.equal(rentalItemCount(r.shop.products), 2);
+  assert.ok(rentalShopView(r.shop).products.every((p) => p.inWarehouse === false));
 });
 
-test('the room types are shop cards never sold out, and the catalogs are ready', () => {
-  const view = hotelShopView(withTypes().shop);
-  assert.ok(view.products.every((p) => p.inWarehouse === false));
-  const cats = hotelCatalogs();
-  assert.equal(cats.filter((c) => !c.parentId).length, 1);
-  assert.ok(cats.length > 3);
+test('the kinds of an hotel-and-property rental: hotel rooms, halls and villas, and a rental keeps none of them', async () => {
+  const estate = await loadCategories('estate');
+  const names = estate.map((c) => c.name);
+  assert.ok(names.includes('غرف فندقية') && names.includes('صالات') && names.includes('مساحات وعقارات'));
+  const rental = (await loadCategories('rental')).map((c) => c.name);
+  assert.ok(!rental.includes('صالات') && !rental.includes('مساحات وعقارات'));
 });
 
-test('the published copy holds the room types and the guests each takes; the search lists the room types', () => {
-  const d = withTypes();
-  const pub: any = publicDataFor('hotel', d.shop, createEmptyCarAdmin(), undefined, d.capacity);
-  assert.equal(pub.capacity.t2, 4);
+test('the published copy holds the warehouse like a rental\'s; the search lists the rooms', () => {
+  const d = rentalFromHotel(withTypes());
+  const pub: any = publicDataFor('hotel', d.shop, d.cars);
   assert.equal(pub.shop.products.length, 2);
   assert.equal(itemsOf('hotel', pub).length, 2);
 });
 
-test('the hotel template: 4 pages in the words of a stay, with product cards for the room types', () => {
+test('the template: the rental\'s pages with the cart, in the words of a stay, with product cards for the rooms', () => {
   const t = getHotelTemplate();
-  assert.equal(t.pages.length, 4);
+  assert.equal(t.pages.length, 5);
+  assert.equal(t.elements.filter((e) => e.type === 'cart').length, 1);
   assert.ok(t.elements.some((e) => e.type === 'shopProducts'));
   assert.ok(!t.elements.some((e) => e.type === 'carListings' || e.type === 'carSearch'));
-  assert.ok(t.pages.some((p) => p.name === 'الغرف'));
+  assert.ok(t.pages.some((p) => p.name === 'المتاح'));
   assert.ok(categories.length >= 3 && categories.every((c) => c.subs.length > 0));
 });

@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { Settings, X, PencilLine, Warehouse, SlidersHorizontal, Users, Wallet, Inbox, CalendarDays, Star, MessageSquare, UserCog, CalendarCog, PackagePlus, FolderTree, KeyRound } from 'lucide-react';
 import type { CarAdminData } from '../cars/carTypes';
 import type { ShopAdminData } from '../shop/shopTypes';
-import { RentalModeContext, rentalItemCount, type RentalAdminData } from './rentalTypes';
+import { EstateModeContext, RentalModeContext, rentalItemCount, type RentalAdminData } from './rentalTypes';
 import type { CarTabProps } from '../cars/tabs/CarEditor';
 import { CarSettingsTab } from '../cars/tabs/CarSettingsTab';
 import { CarCustomersTab } from '../cars/tabs/CarCustomersTab';
@@ -59,9 +59,11 @@ interface RentalAdminPanelProps {
   hideGear?: boolean;
   onEditPage?: () => void;
   tabRequest?: { tab: string; n: number } | null;
+  // «تأجير فنادق ومساحات عقارية»: the same admin for rooms, halls and villas (no cars, so no car requests).
+  estate?: boolean;
 }
 
-export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCarsChange, onShopChange, maxItems = Infinity, openRequest = 0, hideGear = false, onEditPage, tabRequest }) => {
+export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCarsChange, onShopChange, maxItems = Infinity, openRequest = 0, hideGear = false, onEditPage, tabRequest, estate = false }) => {
   const [open, setOpen] = useState(false);
   // The warehouse's cars and items are the units the page books (rentalUnits.ts).
   useRentalUnitsSync(data);
@@ -70,11 +72,13 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
   }, [openRequest]);
   const [tab, setTab] = useState<TabId>(data.cars.cars.length || data.shop.products.length ? 'warehouse' : 'add');
   useEffect(() => {
-    if (!tabRequest?.n || !TABS.some((t) => t.id === tabRequest.tab)) return;
+    if (!tabRequest?.n || !tabs.some((t) => t.id === tabRequest.tab)) return;
     setTab(tabRequest.tab as TabId);
     setOpen(true);
   }, [tabRequest?.n]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const title = estate ? 'إدارة الفنادق والمساحات' : 'إدارة التأجير';
+  const tabs = estate ? TABS.filter((t) => t.id !== 'requests') : TABS;
 
   useEffect(() => {
     if (!open) return;
@@ -85,13 +89,13 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
 
   const newRequests = data.cars.requests.filter((r) => r.status === 'new').length;
   const total = data.cars.cars.length + rentalItemCount(data.shop.products);
-  const active = TABS.find((t) => t.id === tab)!;
+  const active = tabs.find((t) => t.id === tab) || tabs[0];
   const editing = tab === 'add' && editingId ? data.cars.cars.find((c) => c.id === editingId) : undefined;
   const name = data.cars.settings.showroomName;
 
   const body = () => {
     if (active.id === 'add') {
-      return <RentalAddTab data={data} onCarsChange={onCarsChange} onShopChange={onShopChange} editingId={editingId} onEditingChange={setEditingId} />;
+      return <RentalAddTab estate={estate} data={data} onCarsChange={onCarsChange} onShopChange={onShopChange} editingId={editingId} onEditingChange={setEditingId} />;
     }
     if (active.id === 'warehouse') {
       return <RentalWarehouseTab data={data} onCarsChange={onCarsChange} onShopChange={onShopChange} onEditCar={(id) => { setEditingId(id || null); setTab('add'); }} />;
@@ -126,8 +130,8 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
           type="button"
           onClick={() => setOpen(true)}
           className="fixed bottom-6 left-6 z-[1000000] w-16 h-16 rounded-full bg-ink text-white shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:scale-105 active:scale-95 transition flex items-center justify-center cursor-pointer"
-          title="إدارة التأجير"
-          aria-label="إدارة التأجير"
+          title={title}
+          aria-label={title}
         >
           <Settings size={30} strokeWidth={1.8} />
         </button>
@@ -143,9 +147,9 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
             <header className="flex items-center gap-3 px-4 sm:px-6 h-16 bg-white border-b border-neutral-200 shrink-0">
               <div className="w-9 h-9 rounded-xl bg-ink text-white flex items-center justify-center"><KeyRound size={18} /></div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-black text-ink truncate">إدارة التأجير{name ? ` · ${name}` : ''}</div>
+                <div className="text-sm font-black text-ink truncate">{title}{name ? ` · ${name}` : ''}</div>
                 <div className="text-xs text-neutral-400 font-bold">
-                  Weelink / Rental · {Number.isFinite(maxItems) ? `${total} من ${maxItems} سيارة وعنصر` : `${total} سيارة وعنصر`}
+                  {estate ? 'Weelink / Hotels & Property' : 'Weelink / Rental'} · {Number.isFinite(maxItems) ? `${total} من ${maxItems} ${estate ? 'وحدة' : 'سيارة وعنصر'}` : `${total} ${estate ? 'وحدة' : 'سيارة وعنصر'}`}
                 </div>
               </div>
               {onEditPage && (
@@ -160,7 +164,7 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
 
             <div className="flex-1 flex flex-col md:flex-row min-h-0">
               <nav className="md:w-52 shrink-0 bg-white md:border-l border-b md:border-b-0 border-neutral-200 p-2 flex md:flex-col gap-1 overflow-x-auto">
-                {TABS.map((t) => {
+                {tabs.map((t) => {
                   const count = t.id === 'warehouse' ? data.cars.cars.length + data.shop.products.length : 0;
                   return (
                     <button
@@ -183,7 +187,7 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
               </nav>
               <main className="flex-1 min-w-0 overflow-y-auto p-3 sm:p-6">
                 <h2 className="text-lg font-black text-ink mb-4">{editing ? 'تعديل سيارة' : active.label}</h2>
-                <RentalModeContext.Provider value>{body()}</RentalModeContext.Provider>
+                <RentalModeContext.Provider value><EstateModeContext.Provider value={estate}>{body()}</EstateModeContext.Provider></RentalModeContext.Provider>
               </main>
             </div>
           </div>

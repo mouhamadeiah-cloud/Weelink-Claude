@@ -73,10 +73,8 @@ const plain = (html: unknown) => str(html, 2000).replace(/<[^>]*>/g, ' ').replac
 // The items of a published page, by its kind. `data` is the published copy's data (publicData.ts), or for
 // a restaurant its published menu.
 export const itemsOf = (kind: IndexedPage['kind'], data: any): IndexedItem[] => {
-  // A rental's published copy holds its cars and its items side by side.
-  if (kind === 'rental') return [...itemsOf('cars', data?.cars), ...itemsOf('shop', data?.shop)];
-  // A hotel's published copy holds its room types as a shop's products.
-  if (kind === 'hotel') return itemsOf('shop', data?.shop);
+  // A rental's published copy holds its cars and its items side by side (a hotel-and-property rental has items only).
+  if (kind === 'rental' || kind === 'hotel') return [...itemsOf('cars', data?.cars), ...itemsOf('shop', data?.shop)];
   if (kind === 'page') {
     return (Array.isArray(data?.services) ? data.services : [])
       .filter((s: any) => str(s?.name) && s?.published !== false)

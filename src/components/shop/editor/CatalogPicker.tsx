@@ -7,9 +7,8 @@ import { Search, Loader2, ChevronLeft, Plus } from 'lucide-react';
 import { ShopCatalog } from '../shopTypes';
 import { ArtikelCatalog, loadArtikel, normalizeSearch, searchArtikel } from '../artikel';
 import { Field, inputClass } from '../adminUi';
-import { RENTAL_CARS, useRentalMode } from '../../rental/rentalTypes';
+import { RENTAL_CARS, useEstateMode, useRentalMode } from '../../rental/rentalTypes';
 import { loadCategories } from '../../../utils/businessCategories';
-import { useHotelMode } from '../../hotel/hotelTypes';
 
 // key: '' = not chosen, 'a:<id>' = from artikel.json, 'c:<name>' = the store's own catalog,
 // 'other' = typing a new name.
@@ -44,13 +43,14 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
   const [query, setQuery] = useState('');
   // A rental's items are picked from its own catalogs only (the store's artikel.json is for selling).
   const renting = useRentalMode();
-  const rental = renting || !!useHotelMode();
+  const estate = useEstateMode();
+  const rental = renting;
 
   useEffect(() => {
     let alive = true;
     if (renting) {
       // The things a rental rents come from rentalCategories.json (its cars are the showroom's, not products).
-      loadCategories('rental').then((list) => alive && setCatalogs(list.filter((c) => c.name !== RENTAL_CARS).map((c, i) => ({
+      loadCategories(estate ? 'estate' : 'rental').then((list) => alive && setCatalogs(list.filter((c) => c.name !== RENTAL_CARS).map((c, i) => ({
         id: i + 1, slug: '', name_ar: c.name, name_en: '', keywords: [],
         subcategories: c.subs.map((x, j) => ({ id: (i + 1) * 1000 + j, slug: '', name_ar: x.name, name_en: '', keywords: [], items: [] })),
       })))).catch(() => alive && setCatalogs([]));

@@ -21,10 +21,9 @@ import { ProductCard, ProductSlide } from '../store/ProductCard';
 import { CardStyleSettings } from './CardStyleSettings';
 import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 import { itemNoLabel } from '../../../utils/itemNumbers';
-import { useRentalMode } from '../../rental/rentalTypes';
+import { useEstateMode, useRentalMode } from '../../rental/rentalTypes';
 import { ItemServices } from '../../rental/ItemServices';
 import { RentalPriceBlock, useItemUnit } from '../../rental/ItemRentalWays';
-import { useHotelMode } from '../../hotel/hotelTypes';
 
 const newProductDraft = (currency: string): ShopProduct => ({
   id: '',
@@ -56,6 +55,7 @@ const newProductDraft = (currency: string): ShopProduct => ({
   published: true,
   inWarehouse: true,
   copies: 1,
+  maxGuests: 0,
   relatedIds: [],
   createdAt: '',
 });
@@ -103,7 +103,8 @@ interface ProductEditorProps {
 
 export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, initial, onDone, onCancel }) => {
   const rentsOut = useRentalMode();
-  const rental = rentsOut || !!useHotelMode();
+  const estate = useEstateMode();
+  const rental = rentsOut;
   const [p, setP] = useState<ShopProduct>(() =>
     initial ? { ...initial } : { ...newProductDraft(data.settings.currency), sku: nextSku(data.products) }
   );
@@ -397,6 +398,11 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
             {rentsOut && (
               <Field label="عدد النسخ المتطابقة" hint="مثلاً 5 خيم متطابقة: ضيفها مرة وحدة واكتب 5. الزبون بيحجز واحدة والباقي بيضل متاح، وكل نسخة بتنحسب من حد الباقة.">
                 <input type="number" min={1} max={100} className={`${inputFitClass} w-24`} value={p.copies} onChange={(e) => set({ copies: Math.min(100, Math.max(1, Math.floor(Number(e.target.value)) || 1)) })} />
+              </Field>
+            )}
+            {rentsOut && estate && (
+              <Field label="العدد الأقصى للأشخاص" hint="غرفة لشخصين أو ثلاثة، فيلا لستة… الزبون لا يستطيع الحجز بأكثر منه. اتركه 0 بلا حد.">
+                <input type="number" min={0} max={500} className={`${inputFitClass} w-24`} value={p.maxGuests} onChange={(e) => set({ maxGuests: Math.min(500, Math.max(0, Math.floor(Number(e.target.value)) || 0)) })} />
               </Field>
             )}
             <Field label="رقم المنتج" hint="يُعطى تلقائياً بالتسلسل بدءاً من 0، ويمكنك تغييره. يُستعمل لربط المنتجات المرتبطة.">

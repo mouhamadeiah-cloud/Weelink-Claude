@@ -189,31 +189,31 @@ export const PLANS: Record<ProjectType, Plan[]> = {
       features: ['كل شي بباقة 60', 'سيارات وعناصر بلا حدود', 'معرض حتى 15 صورة', '«ابن صفحتي» حتى 5 مرات باليوم'],
     },
   ],
-  // «فندق» (Eyad, 25 Oct): rooms in floors or sections; every room counts on its own; the prices are set later.
+  // «تأجير فنادق ومساحات عقارية» (Eyad, 26 Oct): hotel rooms, halls and villas with the rental's parts; every copy counts on its own.
   hotel: [
     {
       id: 'hotel-free',
       name: 'مجانية',
       monthly: 0,
       art: 'page',
-      tagline: 'صفحة تعريفية لفندقك.',
-      features: [FREE_SLIDES, 'اتصال وواتساب وإيميل وكل وسائل التواصل', 'بدون غرف للحجز', 'معرض حتى 5 صور', '«ابن صفحتي» مرة وحدة'],
+      tagline: 'صفحة تعريفية لمكانك.',
+      features: [FREE_SLIDES, 'اتصال وواتساب وإيميل وكل وسائل التواصل', 'بدون وحدات للحجز', 'معرض حتى 5 صور', '«ابن صفحتي» مرة وحدة'],
     },
     {
       id: 'hotel-30',
       name: '30',
       monthly: 299000,
       art: 'phone',
-      tagline: 'فندق صغير.',
-      features: ['كل شرائح الصفحة المجانية', 'حتى 30 غرفة', 'طوابق وأقسام وأنواع غرف', 'بطاقات الغرف بالصور'],
+      tagline: 'مكان صغير.',
+      features: ['كل شرائح الصفحة المجانية', 'حتى 30 غرفة أو وحدة', 'غرف وصالات وفلل وشقق', 'بطاقات بالصور'],
     },
     {
       id: 'hotel-60',
       name: '60',
       monthly: 499000,
       art: 'phoneTablet',
-      tagline: 'فندق عم يكبر.',
-      features: ['كل شي بباقة 30', 'حتى 60 غرفة', 'حسابات وزبائن'],
+      tagline: 'مكان عم يكبر.',
+      features: ['كل شي بباقة 30', 'حتى 60 غرفة أو وحدة', 'حسابات وزبائن'],
       popular: true,
     },
     {
@@ -221,8 +221,8 @@ export const PLANS: Record<ProjectType, Plan[]> = {
       name: 'Pro',
       monthly: 999000,
       art: 'team',
-      tagline: 'فندق بلا حدود.',
-      features: ['كل شي بباقة 60', 'غرف بلا حدود', 'معرض حتى 15 صورة', '«ابن صفحتي» حتى 5 مرات باليوم'],
+      tagline: 'بلا حدود.',
+      features: ['كل شي بباقة 60', 'غرف ووحدات بلا حدود', 'معرض حتى 15 صورة', '«ابن صفحتي» حتى 5 مرات باليوم'],
     },
   ],
 };

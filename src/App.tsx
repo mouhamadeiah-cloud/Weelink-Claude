@@ -63,7 +63,7 @@ import { CarDataContext, CarRequestContext } from './components/cars/store/CarDa
 import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { RentalAdminPanel } from './components/rental/RentalAdminPanel';
-import { featuredSlide, hasFeaturedCards, listPageOf, withFeaturedSlide, type FeaturedKind } from './data/featuredSlide';
+import { featuredSlide, hasFeaturedCards, listPageOf, withFeaturedKind, withFeaturedSlide, type FeaturedKind } from './data/featuredSlide';
 import { RentalAdminData, RentalModeContext, createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentalItemCount, rentalShopView, rentsCars } from './components/rental/rentalTypes';
 import { getRentalTemplate } from './data/rentalTemplate';
 import { HotelAdminPanel } from './components/hotel/HotelAdminPanel';
@@ -498,6 +498,18 @@ export default function App() {
     setPages((prev) => withFeaturedSlide(prev, made.slide));
     setElements((prev) => [...prev, ...made.elements]);
   }, [project, limitsRead, limits.bookings, adminOpenAll, pages, elements, carAdmin.cars.length, shopAdmin.products.length]);
+  // A rental's featured slide shows the kind that has featured things: an item marked «مميز» appears even when the
+  // slide (the car template's) only had car cards, and the other way round.
+  const rentalFeaturedItems = project === 'rental' && shopAdmin.products.some((p) => p.featured);
+  const rentalFeaturedCars = project === 'rental' && carAdmin.cars.some((c) => c.featured);
+  useEffect(() => {
+    if (!projectReadyRef.current || adminOpenAll || designerModeRef.current) return;
+    for (const [on, kind] of [[rentalFeaturedItems, 'items'], [rentalFeaturedCars, 'cars']] as const) {
+      if (!on) continue;
+      const next = withFeaturedKind(pages, elements, kind, Date.now());
+      if (next) { setElements(next); return; }
+    }
+  }, [rentalFeaturedItems, rentalFeaturedCars, adminOpenAll, pages, elements]);
   // The ratings slide may be removed from any page (it was fixed on the free page before Eyad's 21 Oct decision).
   const isLockedRatings = (_el: CanvasElement) => false;
   const ratingsSlide = useMemo(() => ({ has: hasRatings, add: addRatingsSlide }), [hasRatings, addRatingsSlide]);

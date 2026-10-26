@@ -8,7 +8,7 @@ const db = getFirestore() as any;
 const reset = () => { for (const k of [...store.keys()]) if (k.startsWith('pageModels/')) store.delete(k); };
 
 test('eleven models: the free page, its pro, and three types in free, paid and pro', () => {
-  assert.deepEqual(DEFAULT_MODELS.map((m) => m.id), ['page-free', 'page-pro', 'restaurant-free', 'restaurant', 'restaurant-pro', 'shop-free', 'shop', 'shop-pro', 'cars-free', 'cars', 'cars-pro']);
+  assert.deepEqual(DEFAULT_MODELS.map((m) => m.id), ['page-free', 'page-pro', 'restaurant-free', 'restaurant', 'restaurant-pro', 'shop-free', 'shop', 'shop-pro', 'cars-free', 'cars', 'cars-pro', 'rental-free', 'rental', 'rental-pro', 'hotel-free', 'hotel', 'hotel-pro']);
 });
 
 test('every model starts with an intro slide, ends with the contact (and the optional privacy) and uses known categories', () => {

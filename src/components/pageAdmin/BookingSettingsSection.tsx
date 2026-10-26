@@ -232,7 +232,7 @@ export const BookingSettingsSection: React.FC<BookingSettingsSectionProps> = ({ 
           {!current.rental && hotelFed && (
             <>
               <Field label="الخدمات المرافقة" hint="فطور، موقف سيارات، نقل من المطار… الزبون بيختارها وقت الحجز وبتنضاف للمجموع والعربون">
-                <ExtrasEditor extras={current.extras} units={[]} onChange={(extras) => change({ extras })} />
+                <ExtrasEditor hotel extras={current.extras} units={[]} onChange={(extras) => change({ extras })} />
               </Field>
               <TermsBox schedule={current} change={change} guess="hotel" kinds={HOTEL_TERMS_KINDS} />
             </>

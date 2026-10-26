@@ -7,7 +7,7 @@ import { CalendarCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BookingPageContext, createBooking, dayKey, readUnitTaken } from '../../services/bookings';
 import { useBookingSettings } from '../../services/bookingSettings';
 import { addDays, nightsBetween } from '../../services/stayBooking';
-import { DEFAULT_TERMS, daysFree, extrasFor, hourStarts, minOf, normalizeRentalRooms, quote, slotsFree, slotsOf, timeOf, type RentBy, type UnitTaken } from '../../services/rentalBooking';
+import { DEFAULT_TERMS, copyIdOf, daysFree, extrasFor, hourStarts, minOf, normalizeRentalRooms, quote, slotsFree, slotsOf, timeOf, type RentBy, type UnitTaken } from '../../services/rentalBooking';
 import { depositAmount, normalizeRule } from '../../services/bookingDeposit';
 import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from '../DepositPay';
 import { useAccountCard, useCustomerSession } from '../customers/customerSession';
@@ -51,7 +51,7 @@ export const RentalBookingView: React.FC<{ found: Found; accent: string; onClose
   const [extras, setExtras] = useState<string[]>([]);
   const [accepted, setAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [taken, setTaken] = useState<UnitTaken>({ nights: [], slots: [] });
+  const [taken, setTaken] = useState<UnitTaken[]>([]); // one per copy of the unit
   const [tick, setTick] = useState(0);
   const [customer, setCustomer] = useState<CustomerDraft>(EMPTY_CUSTOMER);
   const [deposit, setDeposit] = useState<DepositDraft>(EMPTY_DEPOSIT);
@@ -64,9 +64,9 @@ export const RentalBookingView: React.FC<{ found: Found; accent: string; onClose
   useEffect(() => {
     if (!live || !page) return;
     let alive = true;
-    readUnitTaken(page.owner, page.project, schedule.id, unit.id).then((t) => alive && setTaken(t)).catch(() => {});
+    Promise.all(Array.from({ length: unit.copies }, (_, i) => readUnitTaken(page.owner, page.project, schedule.id, copyIdOf(unit.id, i + 1)))).then((t) => alive && setTaken(t)).catch(() => {});
     return () => { alive = false; };
-  }, [live, page?.owner, page?.project, schedule.id, unit.id, tick]);
+  }, [live, page?.owner, page?.project, schedule.id, unit.id, unit.copies, tick]);
 
   const ways: { id: RentBy; label: string }[] = [
     ...(unit.byDay ? [{ id: 'day' as const, label: 'باليوم' }] : []),

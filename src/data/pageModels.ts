@@ -44,10 +44,13 @@ const video = sec('video', 'ask');
 // The free page: the base of all.
 const FREE = [intro, about, services, prices, gallery, features, ratings, contact, privacy];
 // A free restaurant, shop or showroom: the base with the type's front slide and a price list the owner types by hand (no live items).
-const freeOf = (type: 'restaurant' | 'shop' | 'cars') => [sec(type, 'always', { part: 'front' }), about, sec('table', 'always', { part: 'priceList' }), gallery, features, ratings, contact, privacy];
+// A rental builds from the showroom's slides (its cards are the units for rent) and a hotel from the shop's (its cards are the room types).
+type ModelType = 'restaurant' | 'shop' | 'cars' | 'rental' | 'hotel';
+const SLIDES_OF: Record<ModelType, 'restaurant' | 'shop' | 'cars'> = { restaurant: 'restaurant', shop: 'shop', cars: 'cars', rental: 'cars', hotel: 'shop' };
+const freeOf = (kind: ModelType) => { const type = SLIDES_OF[kind]; return [sec(type, 'always', { part: 'front' }), about, sec('table', 'always', { part: 'priceList' }), gallery, features, ratings, contact, privacy]; };
 // A paid one: the front slide and the live section of its type.
-const paidOf = (type: 'restaurant' | 'shop' | 'cars') => [sec(type, 'always', { part: 'front' }), sec(type, 'always', { part: 'main' }), about, gallery, features, ratings, contact, privacy];
-const proOf = (type: 'restaurant' | 'shop' | 'cars') => [sec(type, 'always', { part: 'front' }), sec(type, 'always', { part: 'main' }), about, gallery, features, team, video, ratings, contact, privacy];
+const paidOf = (kind: ModelType) => { const type = SLIDES_OF[kind]; return [sec(type, 'always', { part: 'front' }), sec(type, 'always', { part: 'main' }), about, gallery, features, ratings, contact, privacy]; };
+const proOf = (kind: ModelType) => { const type = SLIDES_OF[kind]; return [sec(type, 'always', { part: 'front' }), sec(type, 'always', { part: 'main' }), about, gallery, features, team, video, ratings, contact, privacy]; };
 
 export const DEFAULT_MODELS: PageModel[] = [
   { id: 'page-free', name: 'تعريفية مجانية', sections: FREE },
@@ -61,6 +64,12 @@ export const DEFAULT_MODELS: PageModel[] = [
   { id: 'cars-free', name: 'سيارات مجاني', sections: freeOf('cars') },
   { id: 'cars', name: 'سيارات 30 و60', sections: paidOf('cars') },
   { id: 'cars-pro', name: 'سيارات برو', sections: proOf('cars') },
+  { id: 'rental-free', name: 'تأجير مجاني', sections: freeOf('rental') },
+  { id: 'rental', name: 'تأجير 30 و60', sections: paidOf('rental') },
+  { id: 'rental-pro', name: 'تأجير برو', sections: proOf('rental') },
+  { id: 'hotel-free', name: 'فندق مجاني', sections: freeOf('hotel') },
+  { id: 'hotel', name: 'فندق 30 و60', sections: paidOf('hotel') },
+  { id: 'hotel-pro', name: 'فندق برو', sections: proOf('hotel') },
 ];
 
 export const MODEL_IDS = DEFAULT_MODELS.map((m) => m.id);
@@ -69,7 +78,7 @@ export const MODEL_IDS = DEFAULT_MODELS.map((m) => m.id);
 export const modelOf = (planId: string): string => {
   if (planId === 'page-pro') return 'page-pro';
   const [type, tier] = planId.split('-');
-  if (!['restaurant', 'shop', 'cars'].includes(type)) return 'page-free';
+  if (!['restaurant', 'shop', 'cars', 'rental', 'hotel'].includes(type)) return 'page-free';
   return tier === 'free' ? `${type}-free` : tier === 'pro' ? `${type}-pro` : type;
 };
 

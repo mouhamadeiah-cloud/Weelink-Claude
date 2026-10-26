@@ -12,7 +12,7 @@ export const warehouseUnits = (d: RentalAdminData): WarehouseUnit[] => [
   ...d.cars.cars
     .filter((c) => c.published && c.status !== 'sold')
     .map((c) => ({ item: c.id, name: `${carTitle(c)}${c.year ? ` ${c.year}` : ''}`, photo: c.images[0] || '', price: c.price || 0, currency: c.currency || '' })),
-  ...d.shop.products.filter((p) => p.published).map((p) => ({ item: p.id, name: p.name, photo: p.images[0] || '', price: p.price || 0, currency: p.currency || '' })),
+  ...d.shop.products.filter((p) => p.published).map((p) => ({ item: p.id, name: p.name, photo: p.images[0] || '', price: p.price || 0, currency: p.currency || '', copies: p.copies })),
 ];
 
 // The page's rental schedule with the warehouse's units: null when nothing changes.

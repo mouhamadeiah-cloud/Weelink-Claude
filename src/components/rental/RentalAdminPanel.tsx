@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { Settings, X, PencilLine, CarFront, Warehouse, SlidersHorizontal, Users, Wallet, Inbox, CalendarDays, Star, MessageSquare, UserCog, CalendarCog, PackagePlus, Boxes, FolderTree, KeyRound } from 'lucide-react';
 import type { CarAdminData } from '../cars/carTypes';
 import type { ShopAdminData } from '../shop/shopTypes';
-import { RentalModeContext, type RentalAdminData } from './rentalTypes';
+import { RentalModeContext, rentalItemCount, type RentalAdminData } from './rentalTypes';
 import { CarEditor, CarTabProps } from '../cars/tabs/CarEditor';
 import { InventoryTab } from '../cars/tabs/InventoryTab';
 import { CarSettingsTab } from '../cars/tabs/CarSettingsTab';
@@ -86,7 +86,7 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
   }, [open]);
 
   const newRequests = data.cars.requests.filter((r) => r.status === 'new').length;
-  const total = data.cars.cars.length + data.shop.products.length;
+  const total = data.cars.cars.length + rentalItemCount(data.shop.products);
   const active = TABS.find((t) => t.id === tab)!;
   const editing = tab === 'add-car' && editingId ? data.cars.cars.find((c) => c.id === editingId) : undefined;
   const name = data.cars.settings.showroomName;

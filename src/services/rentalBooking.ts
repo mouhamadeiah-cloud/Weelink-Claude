@@ -12,7 +12,8 @@ import { addDays, nightsBetween, normalizeRooms } from './stayBooking';
 
 export type RentBy = 'day' | 'hour' | 'period';
 export type DriverMode = 'none' | 'with' | 'without' | 'both';
-export type ExtraPer = 'unit' | 'once';
+// per: each day, hour or night · once · each person each night · each person once (hotels and halls)
+export type ExtraPer = 'unit' | 'once' | 'person' | 'personOnce';
 export type SpecialKind = 'dates' | 'hours' | 'days';
 
 export interface RentalPeriod {
@@ -51,6 +52,7 @@ export interface RentalUnit {
   driverDay: number;
   driverHour: number;
   prices: SpecialPrice[];
+  copies: number; // identical copies of the unit (5 tents): each one is booked on its own, up to this many at once
 }
 
 export interface RentalExtra {
@@ -81,6 +83,7 @@ export const newRentalId = (p = 'x') => `${p}${Date.now().toString(36)}${Math.ra
 // The unit of a warehouse car or item: its room id is made from the item's id.
 export const unitIdOf = (itemId: string) => `u${itemId.toLowerCase().replace(/[^a-z0-9]/g, '')}`.slice(0, 20);
 
+export const MAX_COPIES = 100;
 export const normalizeUnit = (r: any): RentalUnit => {
   const byDay = r?.byDay !== false;
   const byHour = r?.byHour === true;
@@ -88,6 +91,7 @@ export const normalizeUnit = (r: any): RentalUnit => {
   const seen = new Set<string>();
   return {
     item: typeof r?.item === 'string' ? r.item.slice(0, 80) : '',
+    copies: int(r?.copies, 1, MAX_COPIES, 1),
     // A unit is always rented some way: by the day when nothing else is on.
     byDay: byDay || (!byHour && !(Array.isArray(r?.periods) && r.periods.length)),
     byHour,
@@ -131,7 +135,7 @@ export const normalizeExtras = (raw: unknown): RentalExtra[] => {
       id: isId(x?.id) ? x.id : '',
       name: str(x?.name, 60),
       price: num(x?.price),
-      per: (x?.per === 'once' ? 'once' : 'unit') as ExtraPer,
+      per: (x?.per === 'once' || x?.per === 'person' || x?.per === 'personOnce' ? x.per : 'unit') as ExtraPer,
       units: Array.isArray(x?.units) ? x.units.filter(isId).slice(0, 500) : [],
     }))
     .filter((x: RentalExtra) => x.id && x.name && !seen.has(x.id) && !!seen.add(x.id));
@@ -214,12 +218,18 @@ export const slotsOf = (date: string, start: number, end: number): string[] => {
 };
 
 // Free for whole days: none of the days is taken, and no hour of them is.
-export const daysFree = (t: UnitTaken | undefined, nights: string[]) =>
+const oneDaysFree = (t: UnitTaken | undefined, nights: string[]) =>
   !t || !nights.some((n) => t.nights.includes(n) || t.slots.some((s) => s.startsWith(`${n}@`)));
+// `t` may be the taken times of every copy of a unit: free when any copy is.
+export const daysFree = (t: UnitTaken | UnitTaken[] | undefined, nights: string[]) => (Array.isArray(t) ? t.length === 0 || t.some((x) => oneDaysFree(x, nights)) : oneDaysFree(t, nights));
 
 // Free for some hours of a day: the day is not rented whole, and none of the half hours is taken.
-export const slotsFree = (t: UnitTaken | undefined, slots: string[]) =>
+const oneSlotsFree = (t: UnitTaken | undefined, slots: string[]) =>
   !t || !slots.some((s) => t.nights.includes(s.slice(0, 10)) || t.slots.includes(s));
+export const slotsFree = (t: UnitTaken | UnitTaken[] | undefined, slots: string[]) => (Array.isArray(t) ? t.length === 0 || t.some((x) => oneSlotsFree(x, slots)) : oneSlotsFree(t, slots));
+
+// The booking document of copy `k` (1-based) of a unit: the first copy is the unit's own, so bookings made before copies existed stay.
+export const copyIdOf = (unitId: string, k: number) => (k <= 1 ? unitId : `${unitId.slice(0, 20 - String(k).length - 1)}k${k}`);
 
 // ---- The price ----
 
@@ -232,6 +242,7 @@ export interface RentWish {
   period?: string; // by: 'period'
   driver?: boolean;
   extras?: string[];
+  guests?: number; // people, for the extras priced per person (a hotel stay)
 }
 
 export interface QuoteLine {
@@ -332,7 +343,8 @@ export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: R
   for (const id of w.extras || []) {
     const x = extras.find((e) => e.id === id && (e.units.length === 0 || e.units.includes(unitId)));
     if (!x) continue;
-    const n = x.per === 'unit' ? count : 1;
+    const guests = Math.max(1, Math.round(Number(w.guests)) || 1);
+    const n = x.per === 'unit' ? count : x.per === 'person' ? count * guests : x.per === 'personOnce' ? guests : 1;
     lines.push({ label: n > 1 ? `${x.name} × ${n}` : x.name, amount: x.price * n });
   }
   const total = Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100) / 100;
@@ -358,6 +370,7 @@ export interface WarehouseUnit {
   photo: string;
   price: number;
   currency: string;
+  copies?: number; // identical copies in the warehouse (a rental item's «عدد النسخ»)
 }
 
 // The schedule's rooms after the warehouse changed: one per car or item, in the warehouse's order, each
@@ -380,6 +393,7 @@ export const mergeUnits = (rooms: (StayRoom & Partial<RentalUnit>)[], items: War
       currency: it.currency || u.currency,
       dayPrice: repriced ? it.price : u.dayPrice,
       fromPrice: it.price,
+      copies: it.copies ? Math.min(MAX_COPIES, Math.max(1, Math.round(it.copies))) : 1,
     };
   });
   const byHand = rooms.filter((r) => !r.item).map((r) => ({ ...r, ...normalizeUnit(r) }));

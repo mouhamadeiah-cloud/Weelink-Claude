@@ -26,7 +26,7 @@
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
 import { chooseRoom, nightsBetween, normalizeRooms, type RoomNights, type StayRoom } from '../src/services/stayBooking.js';
-import { daysFree, DEFAULT_TERMS, minOf, normalizeExtras, normalizeHotelRooms, normalizeRentalRooms, normalizeTerms, quote, slotsFree, unitOf, type Quote, type RentalExtra, type RentalUnit } from '../src/services/rentalBooking.js';
+import { copyIdOf, daysFree, DEFAULT_TERMS, minOf, normalizeExtras, normalizeHotelRooms, normalizeRentalRooms, normalizeTerms, quote, slotsFree, unitOf, type Quote, type RentalExtra, type RentalUnit } from '../src/services/rentalBooking.js';
 import { workerAction } from '../server/worker.js';
 import { canTake, normalizeSessions, type SeatSession } from '../src/services/seatBooking.js';
 import { timeLabel } from '../src/services/bookingGrid.js';
@@ -398,12 +398,18 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       }
       if (rentPlan) {
         const { room, q } = rentPlan;
-        const unitRef = roomDoc(admin, booking, room.id);
-        const data = (await tx.get(unitRef)).data();
-        const taken = { nights: (data?.nights || []) as string[], slots: (data?.slots || []) as string[] };
-        if (!(q.nights.length ? daysFree(taken, q.nights) : slotsFree(taken, q.slots))) return 'taken';
+        // A unit with copies (5 identical tents) is booked on its first free copy; each copy keeps its own taken times.
+        const refs = Array.from({ length: room.copies }, (_, i) => roomDoc(admin, booking, copyIdOf(room.id, i + 1)));
+        const docs = await Promise.all(refs.map((r) => tx.get(r)));
+        const takens = docs.map((d) => ({ nights: (d.data()?.nights || []) as string[], slots: (d.data()?.slots || []) as string[] }));
+        const at = takens.findIndex((t) => (q.nights.length ? daysFree(t, q.nights) : slotsFree(t, q.slots)));
+        if (at < 0) return 'taken';
+        const taken = takens[at];
+        const unitRef = refs[at];
         const need = applyDeposit(q.total || null);
         if (need) return need;
+        // The booking keeps the copy's document id, so cancelling it frees that copy's times.
+        if (room.copies > 1) Object.assign(booking, { roomId: copyIdOf(room.id, at + 1), roomName: `${room.name} · ${at + 1}` });
         const from = dayIn(-1);
         tx.set(unitRef, { owner, project, schedule: booking.schedule, nights: [...taken.nights.filter((n) => n >= from), ...q.nights], slots: [...taken.slots.filter((x) => x.slice(0, 10) >= from), ...q.slots] });
         // A bookingDays document too, so the day-before reminder finds it.
@@ -425,7 +431,7 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
         // prices win), the extras the visitor ticked; a room without one keeps the old text price.
         let stayPrice: Quote | null = null;
         if (hotelStay && (room as any).dayPrice > 0) {
-          stayPrice = quote(unitOf(room as any), stayRule.extras, room.id, { by: 'day', date, checkOut: body.checkOut, extras: stayRule.extraIds }, { minDays: stayRule.minDays, maxDays: stayRule.maxDays, night: true });
+          stayPrice = quote(unitOf(room as any), stayRule.extras, room.id, { by: 'day', date, checkOut: body.checkOut, extras: stayRule.extraIds, guests: stayRule.guests }, { minDays: stayRule.minDays, maxDays: stayRule.maxDays, night: true });
           if (!stayPrice) return 'bad_rent';
         }
         const need = applyDeposit(stayPrice ? stayPrice.total || null : (priceNumber(room.price) || 0) * stayRule.nights.length || null);

@@ -53,6 +53,7 @@ const newProductDraft = (currency: string): ShopProduct => ({
   artikelItem: 0,
   published: true,
   inWarehouse: true,
+  copies: 1,
   relatedIds: [],
   createdAt: '',
 });
@@ -100,7 +101,8 @@ interface ProductEditorProps {
 }
 
 export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, initial, onDone, onCancel }) => {
-  const rental = useRentalMode() || !!useHotelMode();
+  const rentsOut = useRentalMode();
+  const rental = rentsOut || !!useHotelMode();
   const [p, setP] = useState<ShopProduct>(() =>
     initial ? { ...initial } : { ...newProductDraft(data.settings.currency), sku: nextSku(data.products) }
   );
@@ -375,6 +377,11 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
               currency={p.currency}
               onChange={(patch) => set(patch)}
             />
+            {rentsOut && (
+              <Field label="عدد النسخ المتطابقة" hint="مثلاً 5 خيم متطابقة: ضيفها مرة وحدة واكتب 5. الزبون بيحجز واحدة والباقي بيضل متاح، وكل نسخة بتنحسب من حد الباقة.">
+                <input type="number" min={1} max={100} className={`${inputFitClass} w-24`} value={p.copies} onChange={(e) => set({ copies: Math.min(100, Math.max(1, Math.floor(Number(e.target.value)) || 1)) })} />
+              </Field>
+            )}
             <Field label="رقم المنتج" hint="يُعطى تلقائياً بالتسلسل بدءاً من 0، ويمكنك تغييره. يُستعمل لربط المنتجات المرتبطة.">
               <input className={`${inputFitClass} w-48`} value={p.sku} onChange={(e) => set({ sku: e.target.value })} dir="ltr" />
             </Field>

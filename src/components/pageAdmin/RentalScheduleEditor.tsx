@@ -101,7 +101,7 @@ const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => void; re
         <div className="flex-1 min-w-0">
           <div className="text-sm font-black text-ink truncate">{u.name || 'وحدة بدون اسم'}</div>
           <div className="text-xs text-neutral-400 font-bold truncate">
-            {ways}{u.byDay && u.dayPrice ? ` · ${u.dayPrice}${cur} لليوم` : ''}{u.byHour && u.hourPrice ? ` · ${u.hourPrice}${cur} للساعة` : ''}{u.driver !== 'none' ? ' · سائق' : ''}{u.prices.length ? ` · ${u.prices.length} سعر خاص` : ''}
+            {ways}{u.copies > 1 ? ` · ${u.copies} نسخ` : ''}{u.byDay && u.dayPrice ? ` · ${u.dayPrice}${cur} لليوم` : ''}{u.byHour && u.hourPrice ? ` · ${u.hourPrice}${cur} للساعة` : ''}{u.driver !== 'none' ? ' · سائق' : ''}{u.prices.length ? ` · ${u.prices.length} سعر خاص` : ''}
           </div>
         </div>
         <ChevronDown size={16} className="text-neutral-400 transition group-open:rotate-180" />
@@ -171,7 +171,8 @@ const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => void; re
   );
 };
 
-export const ExtrasEditor: React.FC<{ extras: RentalExtra[]; units: Unit[]; onChange: (extras: RentalExtra[]) => void }> = ({ extras, units, onChange }) => {
+// `hotel`: nights, and prices per person (the breakfast of each guest).
+export const ExtrasEditor: React.FC<{ extras: RentalExtra[]; units: Unit[]; onChange: (extras: RentalExtra[]) => void; hotel?: boolean }> = ({ extras, units, onChange, hotel }) => {
   const set = (i: number, patch: Partial<RentalExtra>) => onChange(extras.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   return (
     <div className="space-y-2">
@@ -180,8 +181,10 @@ export const ExtrasEditor: React.FC<{ extras: RentalExtra[]; units: Unit[]; onCh
           <div className="flex flex-wrap items-center gap-2">
             <input className={`${inputFitClass} flex-1 min-w-[140px]`} placeholder="كرسي أطفال، توصيل للعنوان، ضيافة…" value={x.name} maxLength={60} onChange={(e) => set(i, { name: e.target.value })} />
             <NumberIn value={x.price} onChange={(price) => set(i, { price })} unit="" w="w-24" />
-            <button type="button" className={chip(x.per === 'unit')} onClick={() => set(i, { per: 'unit' })}>لكل يوم أو ساعة</button>
+            <button type="button" className={chip(x.per === 'unit')} onClick={() => set(i, { per: 'unit' })}>{hotel ? 'لكل ليلة' : 'لكل يوم أو ساعة'}</button>
             <button type="button" className={chip(x.per === 'once')} onClick={() => set(i, { per: 'once' })}>مرة وحدة</button>
+            {hotel && <button type="button" className={chip(x.per === 'person')} onClick={() => set(i, { per: 'person' })}>للشخص لكل ليلة</button>}
+            {hotel && <button type="button" className={chip(x.per === 'personOnce')} onClick={() => set(i, { per: 'personOnce' })}>للشخص مرة وحدة</button>}
             <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer" onClick={() => onChange(extras.filter((_, j) => j !== i))}><Trash2 size={15} /></button>
           </div>
           {units.length > 1 && (

@@ -1,12 +1,15 @@
 // The page's appointments in its admin: the new ones waiting for the owner, the coming ones, and
 // the past ones (kept 3 months). Confirming or cancelling emails the customer (/api/booking).
 import React, { useEffect, useState } from 'react';
-import { CalendarCheck2, CalendarDays, CalendarX2, Check, Loader2, Mail, MessageCircle, Phone } from 'lucide-react';
+import { CalendarCheck2, CalendarDays, CalendarX2, Check, FileText, Loader2, Mail, MessageCircle, Phone, ClipboardCheck } from 'lucide-react';
 import { Booking, BookingStatus, dayKey, setBookingStatus, watchBookings, watchDeposits } from '../../services/bookings';
 import type { DepositLine } from '../../services/bookingReport';
 import { BookingReportView } from './BookingReportView';
 import { BookingGrid } from './BookingGrid';
 import type { ProjectKey } from '../../utils/projectKeys';
+import { useBookingSettings } from '../../services/bookingSettings';
+import { printHtml } from '../cars/carDocs';
+import { buildRentalPaper, PAPER_LABEL, type RentalPaper } from '../rental/rentalContract';
 
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -39,6 +42,12 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
   const [view, setView] = useState<View>('new');
   const [busy, setBusy] = useState('');
   const [failed, setFailed] = useState('');
+  const settings = useBookingSettings(owner, project);
+  // A rental booking prints as a contract or a handover record, with the page's terms when it has none saved.
+  const printPaper = (b: Booking, kind: RentalPaper) => {
+    const terms = settings?.schedules.find((s) => s.id === (b.schedule || 'main'))?.terms || '';
+    printHtml(buildRentalPaper(b, kind, terms), `${PAPER_LABEL[kind]}-${b.name}`.replace(/\s+/g, '-'), false);
+  };
 
   useEffect(() => {
     setRows(null);
@@ -153,6 +162,12 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
                       <span>💰 عربون {b.deposit.amount} {b.deposit.currency}{b.deposit.state === 'paid' ? ' · تأكد' : b.deposit.state === 'rejected' ? ' · مرفوض' : b.deposit.state === 'expired' ? ' · انتهت المهلة' : ''}</span>
                       <span dir="ltr">{b.deposit.walletLabel} · {b.deposit.txn}</span>
                       {b.deposit.screenshot && <a href={b.deposit.screenshot} target="_blank" rel="noreferrer" className="text-brand">صورة التحويل</a>}
+                    </div>
+                  )}
+                  {b.rental && b.status !== 'cancelled' && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <button type="button" onClick={() => printPaper(b, 'contract')} className="h-8 px-3 rounded-lg border border-neutral-200 text-neutral-700 text-xs font-bold flex items-center gap-1 cursor-pointer"><FileText size={14} /> عقد للطباعة</button>
+                      <button type="button" onClick={() => printPaper(b, 'handover')} className="h-8 px-3 rounded-lg border border-neutral-200 text-neutral-700 text-xs font-bold flex items-center gap-1 cursor-pointer"><ClipboardCheck size={14} /> محضر تسليم واستلام</button>
                     </div>
                   )}
                   {b.address && <div className="text-xs text-neutral-500">{b.address}</div>}

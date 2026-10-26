@@ -15,8 +15,8 @@ import { useHotelMode } from '../../hotel/hotelTypes';
 import { HotelTypeBooking } from '../../hotel/HotelTypeBooking';
 import { useCarData } from '../../cars/store/CarDataContext';
 import { RequestForm } from '../../cars/store/CarDetailModal';
-import { RentalBookingForm, useRentalUnit } from '../../rental/RentalBookingForm';
-import { RentalCartAdd } from '../../rental/rentalCart';
+import { useRentalUnit } from '../../rental/RentalBookingForm';
+import { RentalCartAdd, RentalOrderNow } from '../../rental/rentalCart';
 import { whatsappHref } from '../../cars/carModel';
 
 interface ProductDetailModalProps {
@@ -237,14 +237,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
                       <Phone size={18} /> اتصل بنا
                     </a>
                   )}
-                  {(rentalSettings.acceptRequests || bookable) && !asking && (
+                  {rentalSettings.acceptRequests && !bookable && !asking && (
                     <button type="button" onClick={() => setAsking(true)} className="sm:col-span-2 h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ borderColor: accent, color: accent }}>
-                      <KeyRound size={18} /> {bookable ? 'احجز الآن' : 'اطلب الإيجار'}
+                      <KeyRound size={18} /> اطلب الإيجار
                     </button>
                   )}
-                  {bookable && !asking && <RentalCartAdd itemId={p.id} accent={accent} className="sm:col-span-2" onClose={onClose} />}
+                  {bookable && <RentalOrderNow itemId={p.id} accent={accent} className="sm:col-span-2" onClose={onClose} />}
+                  {bookable && <RentalCartAdd itemId={p.id} accent={accent} className="sm:col-span-2" onClose={onClose} />}
                 </div>
-                {asking && bookable && <RentalBookingForm itemId={p.id} accent={accent} onClose={() => setAsking(false)} />}
                 {asking && !bookable && <RequestForm item={{ id: p.id, label: p.name }} type="buy" settings={rentalSettings} accent={accent} onDone={() => setAsking(false)} />}
               </div>
             ) : (

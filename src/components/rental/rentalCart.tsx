@@ -2,7 +2,7 @@
 // at once, all or nothing (api/booking.ts, rent.items). The cart keeps each line (the warehouse id, how many, the dates, the
 // driver and the services) in the visitor's browser, per page; the price and the free times are worked out when it is booked.
 import React, { useContext, useMemo, useSyncExternalStore } from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { KeyRound, ShoppingCart } from 'lucide-react';
 import { BookingPageContext } from '../../services/bookings';
 import type { RentBy } from '../../services/rentalBooking';
 
@@ -99,6 +99,22 @@ export const RentalCartAdd: React.FC<{ itemId: string; accent: string; className
       style={{ borderColor: accent, color: accent }}
     >
       <ShoppingCart size={18} /> {inCart ? 'في السلة ✓ افتح السلة' : 'أضف للسلة'}
+    </button>
+  );
+};
+
+/** «اطلب الآن»: puts the car or item in the cart and opens the cart page straight away, nothing else. */
+export const RentalOrderNow: React.FC<{ itemId: string; accent: string; className?: string; onClose?: () => void }> = ({ itemId, accent, className = '', onClose }) => {
+  const cart = useRentalCart();
+  return (
+    <button
+      type="button"
+      onClick={() => { cart.add(itemId); onClose?.(); openRentalCart(); }}
+      disabled={!cart.has(itemId) && cart.full}
+      className={`h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 ${className}`}
+      style={{ borderColor: accent, color: accent }}
+    >
+      <KeyRound size={18} /> اطلب الآن
     </button>
   );
 };

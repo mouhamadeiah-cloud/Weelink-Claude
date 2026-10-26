@@ -14,7 +14,7 @@ import {
 import { ImagePicker } from '../restaurant/tabs/shared';
 import { Field, GhostButton, inputClass, inputFitClass, textareaClass, Toggle } from '../shop/adminUi';
 
-type Unit = StayRoom & RentalUnit;
+export type Unit = StayRoom & RentalUnit;
 
 const chip = (on: boolean) => `h-9 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${on ? 'bg-brand border-brand text-white' : 'bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`;
 const money = (v: string) => Math.max(0, Number(v) || 0);
@@ -89,13 +89,13 @@ export const SpecialPrices: React.FC<{ prices: SpecialPrice[]; onChange: (prices
   );
 };
 
-const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => void; remove?: () => void; fromWarehouse: boolean }> = ({ unit: u, set, remove, fromWarehouse }) => {
+export const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => void; remove?: () => void; fromWarehouse: boolean; defaultOpen?: boolean }> = ({ unit: u, set, remove, fromWarehouse, defaultOpen }) => {
   const cur = u.currency ? ` ${u.currency}` : '';
   const setPeriod = (i: number, patch: Partial<RentalPeriod>) => set({ periods: u.periods.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const setPrice = (i: number, patch: Partial<SpecialPrice>) => set({ prices: u.prices.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const ways = [u.byDay && 'باليوم', u.byHour && 'بالساعة', u.periods.length > 0 && 'بالفترة'].filter(Boolean).join('، ');
   return (
-    <details className="group rounded-xl border border-neutral-200 bg-white">
+    <details open={defaultOpen} className="group rounded-xl border border-neutral-200 bg-white">
       <summary className="flex items-center gap-3 p-2.5 cursor-pointer list-none">
         <div className="w-12 h-9 rounded-lg bg-neutral-100 overflow-hidden shrink-0">{u.photo && <img src={u.photo} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />}</div>
         <div className="flex-1 min-w-0">

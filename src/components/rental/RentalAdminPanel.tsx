@@ -3,18 +3,15 @@
 // chalets, halls, other things) with the shop's product tabs; each tab gets its half of the rental's
 // data. The common tabs (bookings, messages, ratings, team) are the same as everywhere.
 import React, { useEffect, useState } from 'react';
-import { Settings, X, PencilLine, CarFront, Warehouse, SlidersHorizontal, Users, Wallet, Inbox, CalendarDays, Star, MessageSquare, UserCog, CalendarCog, PackagePlus, Boxes, FolderTree, KeyRound } from 'lucide-react';
+import { Settings, X, PencilLine, Warehouse, SlidersHorizontal, Users, Wallet, Inbox, CalendarDays, Star, MessageSquare, UserCog, CalendarCog, PackagePlus, FolderTree, KeyRound } from 'lucide-react';
 import type { CarAdminData } from '../cars/carTypes';
 import type { ShopAdminData } from '../shop/shopTypes';
 import { RentalModeContext, rentalItemCount, type RentalAdminData } from './rentalTypes';
-import { CarEditor, CarTabProps } from '../cars/tabs/CarEditor';
-import { InventoryTab } from '../cars/tabs/InventoryTab';
+import type { CarTabProps } from '../cars/tabs/CarEditor';
 import { CarSettingsTab } from '../cars/tabs/CarSettingsTab';
 import { CarCustomersTab } from '../cars/tabs/CarCustomersTab';
 import { CarAccountsTab } from '../cars/tabs/CarAccountsTab';
 import { CarRequestsTab } from '../cars/tabs/CarRequestsTab';
-import { AddProductTab } from '../shop/tabs/AddProductTab';
-import { WarehouseTab } from '../shop/tabs/WarehouseTab';
 import { CatalogsTab } from '../shop/tabs/CatalogsTab';
 import type { AdminTabProps } from '../shop/tabs/tabProps';
 import { BookingsTab } from '../pageAdmin/BookingsTab';
@@ -24,20 +21,21 @@ import { RatingsTab } from '../pageAdmin/RatingsTab';
 import { TeamTab } from '../pageAdmin/TeamTab';
 import { BookingSettingsTab } from '../pageAdmin/BookingSettingsSection';
 import { useRentalUnitsSync } from './rentalUnits';
+import { RentalAddTab } from './RentalAddTab';
+import { RentalWarehouseTab } from './RentalWarehouseTab';
 
-type TabId = 'add-car' | 'cars' | 'add-item' | 'items' | 'catalogs' | 'requests' | 'bookings' | 'booking-settings' | 'signups' | 'inquiries' | 'ratings' | 'customers' | 'team' | 'accounts' | 'settings';
+type TabId = 'add' | 'warehouse' | 'catalogs' | 'requests' | 'bookings' | 'booking-settings' | 'signups' | 'inquiries' | 'ratings' | 'customers' | 'team' | 'accounts' | 'settings';
 
 // Which half of the data a tab works on.
 type Tab =
   | { id: TabId; label: string; icon: React.ElementType; part: 'cars'; Component: React.FC<CarTabProps> }
+  | { id: TabId; label: string; icon: React.ElementType; part: 'rental'; Component?: undefined }
   | { id: TabId; label: string; icon: React.ElementType; part: 'shop'; Component: React.FC<AdminTabProps> }
   | { id: TabId; label: string; icon: React.ElementType; part: 'none'; Component: React.FC };
 
 const TABS: Tab[] = [
-  { id: 'add-car', label: 'إضافة سيارة', icon: CarFront, part: 'cars', Component: CarEditor },
-  { id: 'cars', label: 'السيارات', icon: Warehouse, part: 'cars', Component: InventoryTab },
-  { id: 'add-item', label: 'إضافة عنصر', icon: PackagePlus, part: 'shop', Component: AddProductTab },
-  { id: 'items', label: 'العناصر والصالات', icon: Boxes, part: 'shop', Component: WarehouseTab },
+  { id: 'add', label: 'إضافة للمعرض', icon: PackagePlus, part: 'rental' },
+  { id: 'warehouse', label: 'المستودع', icon: Warehouse, part: 'rental' },
   { id: 'catalogs', label: 'التصنيفات', icon: FolderTree, part: 'shop', Component: CatalogsTab },
   { id: 'requests', label: 'طلبات الإيجار', icon: Inbox, part: 'cars', Component: CarRequestsTab },
   { id: 'bookings', label: 'المواعيد', icon: CalendarDays, part: 'none', Component: BookingsTab as React.FC },
@@ -70,7 +68,7 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
   useEffect(() => {
     if (openRequest > 0) setOpen(true);
   }, [openRequest]);
-  const [tab, setTab] = useState<TabId>(data.cars.cars.length || !data.shop.products.length ? 'cars' : 'items');
+  const [tab, setTab] = useState<TabId>(data.cars.cars.length || data.shop.products.length ? 'warehouse' : 'add');
   useEffect(() => {
     if (!tabRequest?.n || !TABS.some((t) => t.id === tabRequest.tab)) return;
     setTab(tabRequest.tab as TabId);
@@ -88,10 +86,16 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
   const newRequests = data.cars.requests.filter((r) => r.status === 'new').length;
   const total = data.cars.cars.length + rentalItemCount(data.shop.products);
   const active = TABS.find((t) => t.id === tab)!;
-  const editing = tab === 'add-car' && editingId ? data.cars.cars.find((c) => c.id === editingId) : undefined;
+  const editing = tab === 'add' && editingId ? data.cars.cars.find((c) => c.id === editingId) : undefined;
   const name = data.cars.settings.showroomName;
 
   const body = () => {
+    if (active.id === 'add') {
+      return <RentalAddTab data={data} onCarsChange={onCarsChange} onShopChange={onShopChange} editingId={editingId} onEditingChange={setEditingId} />;
+    }
+    if (active.id === 'warehouse') {
+      return <RentalWarehouseTab data={data} onCarsChange={onCarsChange} onShopChange={onShopChange} onEditCar={(id) => { setEditingId(id || null); setTab('add'); }} />;
+    }
     if (active.part === 'cars') {
       const C = active.Component;
       return (
@@ -99,8 +103,8 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
           data={data.cars}
           update={onCarsChange}
           editingId={editingId}
-          onEdit={(id) => { setEditingId(id || null); setTab('add-car'); }}
-          onSaved={() => setTab('cars')}
+          onEdit={(id) => { setEditingId(id || null); setTab('add'); }}
+          onSaved={() => undefined}
         />
       );
     }
@@ -108,8 +112,11 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
       const C = active.Component;
       return <C data={data.shop} update={onShopChange} />;
     }
-    const C = active.Component;
-    return <C />;
+    if (active.part === 'none') {
+      const C = active.Component;
+      return <C />;
+    }
+    return null;
   };
 
   return (
@@ -154,12 +161,12 @@ export const RentalAdminPanel: React.FC<RentalAdminPanelProps> = ({ data, onCars
             <div className="flex-1 flex flex-col md:flex-row min-h-0">
               <nav className="md:w-52 shrink-0 bg-white md:border-l border-b md:border-b-0 border-neutral-200 p-2 flex md:flex-col gap-1 overflow-x-auto">
                 {TABS.map((t) => {
-                  const count = t.id === 'cars' ? data.cars.cars.length : t.id === 'items' ? data.shop.products.length : 0;
+                  const count = t.id === 'warehouse' ? data.cars.cars.length + data.shop.products.length : 0;
                   return (
                     <button
                       key={t.id}
                       type="button"
-                      onClick={() => { setTab(t.id); if (t.id === 'add-car') setEditingId(null); }}
+                      onClick={() => { setTab(t.id); if (t.id === 'add') setEditingId(null); }}
                       className={`shrink-0 flex items-center gap-2.5 h-10 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${tab === t.id ? 'bg-brand text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}
                     >
                       <t.icon size={16} />

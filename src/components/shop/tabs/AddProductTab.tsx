@@ -8,7 +8,7 @@ import { AdminTabProps } from './tabProps';
 import { ProductEditor } from '../editor/ProductEditor';
 import { totalStock, tracksStock } from '../productModel';
 
-export const AddProductTab: React.FC<AdminTabProps> = ({ data, update }) => {
+export const AddProductTab: React.FC<AdminTabProps & { onAdded?: () => void }> = ({ data, update, onAdded }) => {
   const [mode, setMode] = useState<'manual' | 'warehouse'>('manual');
   const [picked, setPicked] = useState<ShopProduct | null>(null);
   const [query, setQuery] = useState('');
@@ -17,6 +17,7 @@ export const AddProductTab: React.FC<AdminTabProps> = ({ data, update }) => {
 
   const finish = (msg: string) => {
     setDone(msg);
+    onAdded?.();
     setPicked(null);
     setEditorKey((k) => k + 1); // fresh, empty editor for the next product
     window.setTimeout(() => setDone(null), 3000);

@@ -91,7 +91,15 @@ export const SPEC_PRESETS: Record<string, SpecPreset> = {
   width: { key: 'width', name: 'العرض', kind: 'text', values: [], affectsStock: false },
   height: { key: 'height', name: 'الارتفاع', kind: 'text', values: [], affectsStock: false },
   material: { key: 'material', name: 'الخامة', kind: 'text', values: [], affectsStock: false },
+  brand: { key: 'brand', name: 'الماركة', kind: 'text', values: [], affectsStock: false },
+  model: { key: 'model', name: 'الموديل', kind: 'text', values: [], affectsStock: false },
+  area: { key: 'area', name: 'المساحة', kind: 'text', values: [], affectsStock: false },
+  power: { key: 'power', name: 'الاستطاعة', kind: 'text', values: [], affectsStock: false },
 };
+
+// A rental item's specs, all optional and typed by hand: brand and model of a machine, the area of a
+// hall or a chalet, what it is made of, its power.
+export const RENTAL_SPEC_PRESETS = ['brand', 'model', 'area', 'material', 'power', 'length', 'width', 'height'];
 
 const CLOTHING_SUBS = ['mens-fashion', 'womens-fashion', 'kids-clothing', 'traditional-fashion', 'workwear', 'sportswear', 'kids-clothing-toys', 'pet-clothing'];
 const CAPACITY_SUBS = ['mobile-phones', 'computers-laptops', 'tablets-ereaders', 'storage-solutions'];

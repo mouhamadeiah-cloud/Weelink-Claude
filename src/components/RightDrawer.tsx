@@ -5856,7 +5856,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           onEditAnswers={onEditAnswers}
           restoreAvailable={restoreAvailable}
           introSlot={panelVideo('weeai')}
-          pageKind={isShopProject ? 'shop' : isRestaurantProject ? 'restaurant' : isCarProject ? 'cars' : isRentalProject ? 'rental' : isHotelProject ? 'hotel' : 'page'}
+          pageKind={isShopProject ? 'shop' : isRestaurantProject ? 'restaurant' : isCarProject ? 'cars' : isHotelProject ? 'hotel' : isRentalProject ? 'rental' : 'page'}
         />
 
         {/* All the text effects: beside the panel, or over it on a phone's sheet. */}

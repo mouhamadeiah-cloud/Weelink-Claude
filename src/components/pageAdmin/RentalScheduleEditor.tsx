@@ -8,7 +8,7 @@ import type { BookingSchedule } from '../../services/bookingSettings';
 import type { StayRoom } from '../../services/stayBooking';
 import { newRoomId } from '../../services/stayBooking';
 import {
-  DEFAULT_TERMS, NO_UNIT, WEEK, dayNameAr, minOf, newRentalId, normalizeUnit, timeOf,
+  DEFAULT_TERMS, NO_UNIT, WEEK, dayNameAr, minOf, newRentalId, normalizeUnit, periodKind, timeOf,
   type DriverMode, type RentalExtra, type RentalPeriod, type RentalUnit, type SpecialPrice,
 } from '../../services/rentalBooking';
 import { ImagePicker } from '../restaurant/tabs/shared';
@@ -89,9 +89,90 @@ export const SpecialPrices: React.FC<{ prices: SpecialPrice[]; onChange: (prices
   );
 };
 
+// How a unit is rented: by the day, the hour, periods (hours, days, fixed dates) and the special prices. The same in «إعدادات الحجز»
+// and in the item entry (`hideDay`: the day price is the item's price there).
+export const WaysFields: React.FC<{ unit: Unit | (RentalUnit & { id?: string }); set: (patch: Partial<RentalUnit>) => void; hideDay?: boolean }> = ({ unit: u, set, hideDay }) => {
+  const setPeriod = (i: number, patch: Partial<RentalPeriod>) => set({ periods: u.periods.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
+  return (
+    <>
+        <Field label="طريقة التأجير" hint="بتقدر تشغّل أكتر من طريقة، والزبون بيختار">
+          <div className="flex flex-wrap gap-1.5">
+            <button type="button" className={chip(u.byDay)} onClick={() => set({ byDay: !u.byDay || (!u.byHour && !u.periods.length) })}>باليوم</button>
+            <button type="button" className={chip(u.byHour)} onClick={() => set({ byHour: !u.byHour, byDay: u.byHour && !u.periods.length ? true : u.byDay })}>بالساعة</button>
+          </div>
+        </Field>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {u.byDay && !hideDay && <Field label="سعر اليوم"><NumberIn value={u.dayPrice} onChange={(dayPrice) => set({ dayPrice })} unit={u.currency || 'لليوم'} /></Field>}
+          {u.byHour && <Field label="سعر الساعة"><NumberIn value={u.hourPrice} onChange={(hourPrice) => set({ hourPrice })} unit={u.currency || 'للساعة'} /></Field>}
+          {u.byHour && (
+            <Field label="عدد الساعات بالحجز">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
+                من <input type="number" min={1} max={24} className={`${inputFitClass} w-16`} value={u.minHours} onChange={(e) => set({ minHours: Math.min(24, Math.max(1, Number(e.target.value) || 1)) })} />
+                لـ <input type="number" min={1} max={24} className={`${inputFitClass} w-16`} value={u.maxHours} onChange={(e) => set({ maxHours: Math.min(24, Math.max(1, Number(e.target.value) || 1)) })} /> ساعة
+              </span>
+            </Field>
+          )}
+        </div>
+
+        <Field label="الفترات" hint="ساعات من اليوم (صباحية)، أو مدة بالأيام (أسبوع، شهر، سنة)، أو تواريخ محددة من إلى. كل فترة بسعرها، وبتقدر تجمعهم">
+          <div className="space-y-2">
+            {u.periods.map((p, i) => {
+              const kind = periodKind(p);
+              return (
+                <div key={p.id} className="rounded-xl border border-neutral-200 p-2 space-y-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button type="button" className={chip(kind === 'time')} onClick={() => setPeriod(i, { kind: 'time' })}>ساعات من اليوم</button>
+                    <button type="button" className={chip(kind === 'length')} onClick={() => setPeriod(i, { kind: 'length', days: p.days || 7 })}>مدة بالأيام</button>
+                    <button type="button" className={chip(kind === 'dates')} onClick={() => setPeriod(i, { kind: 'dates' })}>تواريخ محددة</button>
+                    <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer mr-auto" onClick={() => set({ periods: u.periods.filter((_, j) => j !== i) })}><Trash2 size={15} /></button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input className={`${inputFitClass} w-36`} placeholder={kind === 'time' ? 'صباحية' : kind === 'length' ? 'أسبوع' : 'عطلة العيد'} value={p.name} maxLength={40} onChange={(e) => setPeriod(i, { name: e.target.value })} />
+                    {kind === 'time' && (
+                      <>
+                        <TimeIn value={p.start} onChange={(start) => setPeriod(i, { start })} />
+                        <span className="text-neutral-400">–</span>
+                        <TimeIn value={p.end} onChange={(end) => setPeriod(i, { end: end || 1440 })} />
+                      </>
+                    )}
+                    {kind === 'length' && (
+                      <>
+                        {[['أسبوع', 7], ['شهر', 30], ['سنة', 365]].map(([n, d]) => <button key={n} type="button" className={chip(p.days === d)} onClick={() => setPeriod(i, { days: d as number, name: p.name || (n as string) })}>{n}</button>)}
+                        <NumberIn value={p.days || 0} onChange={(days) => setPeriod(i, { days: Math.min(365, Math.max(1, days)) })} unit="يوم" w="w-20" max={365} />
+                      </>
+                    )}
+                    {kind === 'dates' && (
+                      <>
+                        <input type="date" dir="ltr" className={`${inputFitClass} w-40`} value={p.from || ''} onChange={(e) => setPeriod(i, { from: e.target.value })} />
+                        <span className="text-neutral-400">إلى</span>
+                        <input type="date" dir="ltr" className={`${inputFitClass} w-40`} min={p.from || undefined} value={p.to || ''} onChange={(e) => setPeriod(i, { to: e.target.value })} />
+                      </>
+                    )}
+                    <NumberIn value={p.price} onChange={(price) => setPeriod(i, { price })} unit={u.currency} w="w-24" />
+                  </div>
+                  {kind === 'dates' && <p className="text-xs text-neutral-400">الأول يوم الاستلام والثاني يوم التسليم، والزبون بيحجز الفترة كاملة بالسعر.</p>}
+                </div>
+              );
+            })}
+            {u.periods.length < 8 && (
+              <GhostButton onClick={() => set({ periods: [...u.periods, { id: newRentalId('p'), name: '', start: 600, end: 900, price: 0 }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف فترة</span></GhostButton>
+            )}
+          </div>
+        </Field>
+
+
+        <SpecialPrices prices={u.prices} onChange={(prices) => set({ prices })} currency={u.currency} byDay={u.byDay} byHour={u.byHour} />
+        {u.driver !== 'none' && (
+          <Field label="السائق (إعداد قديم)" hint="السائق صار خدمة إضافية: أضفه من «الخدمات الجاهزة» بسعره، وأزل هذا.">
+            <button type="button" className={chip(false)} onClick={() => set({ driver: 'none', driverDay: 0, driverHour: 0 })}>إزالة السائق من هنا</button>
+          </Field>
+        )}
+    </>
+  );
+};
+
 export const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => void; remove?: () => void; fromWarehouse: boolean; defaultOpen?: boolean; extras?: RentalExtra[]; onToggleExtra?: (extraId: string) => void }> = ({ unit: u, set, remove, fromWarehouse, defaultOpen, extras = [], onToggleExtra }) => {
   const cur = u.currency ? ` ${u.currency}` : '';
-  const setPeriod = (i: number, patch: Partial<RentalPeriod>) => set({ periods: u.periods.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const setPrice = (i: number, patch: Partial<SpecialPrice>) => set({ prices: u.prices.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const ways = [u.byDay && 'باليوم', u.byHour && 'بالساعة', u.periods.length > 0 && 'بالفترة'].filter(Boolean).join('، ');
   return (
@@ -124,56 +205,7 @@ export const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => v
         )}
         {fromWarehouse && <div className="pt-3 text-xs text-neutral-400 font-bold">الاسم والصورة من المستودع. سعر اليوم بيتبع سعر المستودع لما يتغير هناك.</div>}
 
-        <Field label="طريقة التأجير" hint="بتقدر تشغّل أكتر من طريقة، والزبون بيختار">
-          <div className="flex flex-wrap gap-1.5">
-            <button type="button" className={chip(u.byDay)} onClick={() => set({ byDay: !u.byDay || (!u.byHour && !u.periods.length) })}>باليوم</button>
-            <button type="button" className={chip(u.byHour)} onClick={() => set({ byHour: !u.byHour, byDay: u.byHour && !u.periods.length ? true : u.byDay })}>بالساعة</button>
-          </div>
-        </Field>
-        <div className="grid sm:grid-cols-2 gap-3">
-          {u.byDay && <Field label="سعر اليوم"><NumberIn value={u.dayPrice} onChange={(dayPrice) => set({ dayPrice })} unit={u.currency || 'لليوم'} /></Field>}
-          {u.byHour && <Field label="سعر الساعة"><NumberIn value={u.hourPrice} onChange={(hourPrice) => set({ hourPrice })} unit={u.currency || 'للساعة'} /></Field>}
-          {u.byHour && (
-            <Field label="عدد الساعات بالحجز">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
-                من <input type="number" min={1} max={24} className={`${inputFitClass} w-16`} value={u.minHours} onChange={(e) => set({ minHours: Math.min(24, Math.max(1, Number(e.target.value) || 1)) })} />
-                لـ <input type="number" min={1} max={24} className={`${inputFitClass} w-16`} value={u.maxHours} onChange={(e) => set({ maxHours: Math.min(24, Math.max(1, Number(e.target.value) || 1)) })} /> ساعة
-              </span>
-            </Field>
-          )}
-        </div>
-
-        <Field label="الفترات" hint="للصالات مثلاً: صباحية، مسائية، يوم كامل. كل فترة بسعرها">
-          <div className="space-y-2">
-            {u.periods.map((p, i) => (
-              <div key={p.id} className="flex flex-wrap items-center gap-2">
-                <input className={`${inputFitClass} w-36`} placeholder="صباحية" value={p.name} maxLength={40} onChange={(e) => setPeriod(i, { name: e.target.value })} />
-                <TimeIn value={p.start} onChange={(start) => setPeriod(i, { start })} />
-                <span className="text-neutral-400">–</span>
-                <TimeIn value={p.end} onChange={(end) => setPeriod(i, { end: end || 1440 })} />
-                <NumberIn value={p.price} onChange={(price) => setPeriod(i, { price })} unit={u.currency} w="w-24" />
-                <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer" onClick={() => set({ periods: u.periods.filter((_, j) => j !== i) })}><Trash2 size={15} /></button>
-              </div>
-            ))}
-            {u.periods.length < 8 && (
-              <GhostButton onClick={() => set({ periods: [...u.periods, { id: newRentalId('p'), name: '', start: 600, end: 900, price: 0 }] })}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف فترة</span></GhostButton>
-            )}
-          </div>
-        </Field>
-
-        <Field label="السائق">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {DRIVERS.map(([id, label]) => <button key={id} type="button" className={chip(u.driver === id)} onClick={() => set({ driver: id })}>{label}</button>)}
-          </div>
-          {u.driver !== 'none' && (
-            <div className="flex flex-wrap gap-3 pt-1">
-              {u.byDay && <NumberIn value={u.driverDay} onChange={(driverDay) => set({ driverDay })} unit={`${u.currency} لليوم`.trim()} w="w-24" />}
-              {(u.byHour || u.periods.length > 0) && <NumberIn value={u.driverHour} onChange={(driverHour) => set({ driverHour })} unit={`${u.currency} للساعة`.trim()} w="w-24" />}
-            </div>
-          )}
-        </Field>
-
-        <SpecialPrices prices={u.prices} onChange={(prices) => set({ prices })} currency={u.currency} byDay={u.byDay} byHour={u.byHour} />
+        <WaysFields unit={u} set={set} />
       </div>
     </details>
   );

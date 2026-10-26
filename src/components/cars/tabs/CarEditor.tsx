@@ -18,6 +18,7 @@ import { Segmented } from './moneyUi';
 import { itemNoLabel } from '../../../utils/itemNumbers';
 import { useRentalMode } from '../../rental/rentalTypes';
 import { ItemServices } from '../../rental/ItemServices';
+import { ItemRentalWays, useItemUnit } from '../../rental/ItemRentalWays';
 
 export interface CarTabProps {
   data: CarAdminData;
@@ -31,7 +32,8 @@ export interface CarTabProps {
 }
 
 const STEPS = ['السيارة', 'المواصفات', 'التجهيزات والحالة', 'الصور', 'السعر والشراء', 'العرض في المعرض'];
-const LAST = STEPS.length;
+// A rental adds «طريقة التأجير» before the price.
+const RENTAL_STEPS = [...STEPS.slice(0, 4), 'طريقة التأجير', ...STEPS.slice(4)];
 const YEARS = Array.from({ length: 45 }, (_, i) => new Date().getFullYear() + 1 - i);
 
 const num = (v: string) => {
@@ -76,12 +78,21 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
   const rentsOut = useRentalMode();
   const [car, setCar] = useState<Car>(() => existing || emptyCar(data.settings.currency));
   const [step, setStep] = useState(1);
+  // A new car has no id until it is saved, but its services and rental settings need one.
+  const [draftId, setDraftId] = useState(() => newId('car'));
+  const itemId = car.id || draftId;
+  const rentalUnit = useItemUnit(itemId, car.price || 0, car.currency);
+  const steps = rentsOut ? RENTAL_STEPS : STEPS;
+  const LAST = steps.length;
+  const ways = rentsOut && step === 5; // the stage before the price
+  const k = rentsOut && step > 5 ? step - 1 : step; // the step of the plain entry
   const [error, setError] = useState('');
   const [customFeature, setCustomFeature] = useState('');
 
   // Opening another car (or a new one) from the inventory starts over.
   useEffect(() => {
     setCar(existing || emptyCar(data.settings.currency));
+    setDraftId(newId('car'));
     setStep(1);
     setError('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -156,7 +167,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           : { status: car.status === 'sold' || car.status === 'reserved' ? 'available' : car.status }),
         brand: car.brand.trim(),
         model: car.model.trim(),
-        id: car.id || newId('car'),
+        id: itemId,
         // Numbered by Weelink while this form was open: keep it.
         publicNo: current?.publicNo || car.publicNo,
         stockNumber: car.stockNumber.trim() || nextStockNumber(d.cars),
@@ -169,8 +180,10 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
         : { ...d, cars: [saved, ...d.cars] };
       return syncPurchaseTx(next, saved);
     });
+    if (rentsOut) rentalUnit.commit(`${car.brand.trim()} ${car.model.trim()}`.trim()).catch((e) => console.warn('Could not save the rental settings:', e));
     onEdit(null);
     setCar(emptyCar(data.settings.currency));
+    setDraftId(newId('car'));
     setStep(1);
     onSaved();
   };
@@ -188,7 +201,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           </div>
         )}
         <div className="flex flex-wrap gap-1.5">
-          {STEPS.map((s, i) => (
+          {steps.map((s, i) => (
             <button
               key={s}
               type="button"
@@ -326,7 +339,13 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           </Card>
         )}
 
-        {step === 5 && (
+        {ways && (
+          <Card title="طريقة التأجير">
+            <ItemRentalWays item={rentalUnit} />
+          </Card>
+        )}
+
+        {k === 5 && !ways && (
           <>
             <Card title={rentsOut ? 'سعر الإيجار' : 'السعر للزبون'}>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -348,7 +367,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
             </Card>
             {rentsOut && (
               <Card title="الخدمات الجاهزة" actions={<span className="text-xs text-neutral-400">تنحفظ في «الخدمات الإضافية»</span>}>
-                <ItemServices itemId={car.id} />
+                <ItemServices itemId={itemId} />
               </Card>
             )}
             <Card title={rentsOut ? 'بيانات السيارة' : 'الشراء'} actions={<span className="text-xs text-neutral-400">لا يظهر للزبون</span>}>
@@ -380,7 +399,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           </>
         )}
 
-        {step === 6 && (
+        {k === 6 && (
           <>
             <Card title="العرض في المعرض">
               <Field label="الشرح" hint="يظهر في صفحة السيارة تحت «عن السيارة»"><textarea className={`${textareaClass} min-h-[120px]`} value={car.description} onChange={(e) => set({ description: e.target.value })} /></Field>
@@ -419,7 +438,7 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
           {step > 1 && <GhostButton onClick={() => goTo(step - 1)} className="h-11 flex items-center gap-1"><ArrowRight size={13} /> رجوع</GhostButton>}
           {step < LAST && (
             <PrimaryButton onClick={() => goTo(step + 1)} className="flex-1 h-11 flex items-center justify-center gap-1.5">
-              التالي: {STEPS[step]} <ArrowLeft size={14} />
+              التالي: {steps[step]} <ArrowLeft size={14} />
             </PrimaryButton>
           )}
         </div>

@@ -10,7 +10,7 @@ import { BookingPageContext, createBooking, dayKey, readUnitTaken } from '../../
 import { addDays } from '../../services/stayBooking';
 import { ExtraHelp } from '../ExtraHelp';
 import {
-  DEFAULT_TERMS, copyIdOf, daysFree, extrasFor, hourStarts, minOf, quote, slotsFree, slotsOf, timeOf, type Quote, type RentBy, type RentalUnit, type UnitTaken,
+  DEFAULT_TERMS, copyIdOf, daysFree, extrasFor, hourStarts, minOf, periodKind, periodNights, quote, slotsFree, slotsOf, timeOf, type Quote, type RentBy, type RentalUnit, type UnitTaken,
 } from '../../services/rentalBooking';
 import type { StayRoom } from '../../services/stayBooking';
 import { depositAmount, normalizeRule } from '../../services/bookingDeposit';
@@ -150,8 +150,8 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
 
       <div className="grid grid-cols-2 gap-2">
         <label className="space-y-1 text-[11px] font-bold text-(--muted)">
-          <span>{mode === 'day' ? 'تاريخ الاستلام' : 'اليوم'}</span>
-          <input type="date" dir="ltr" className={smallField} min={today} max={last} value={line.date} onChange={(e) => update({ date: e.target.value, checkOut: mode === 'day' && line.checkOut <= e.target.value ? '' : line.checkOut, start: null, period: '' })} />
+          <span>{mode === 'day' || (mode === 'period' && unit.periods.some((x) => x.kind === 'length')) ? 'تاريخ الاستلام' : 'اليوم'}</span>
+          <input type="date" dir="ltr" className={smallField} min={today} max={last} value={line.date} onChange={(e) => update({ date: e.target.value, checkOut: mode === 'day' && line.checkOut <= e.target.value ? '' : line.checkOut, start: null, period: '' })} disabled={mode === 'period' && unit.periods.find((x) => x.id === line.period)?.kind === 'dates'} />
         </label>
         {mode === 'day' && (
           <label className="space-y-1 text-[11px] font-bold text-(--muted)">
@@ -171,9 +171,14 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
         {mode === 'period' && (
           <label className="space-y-1 text-[11px] font-bold text-(--muted)">
             <span>الفترة</span>
-            <select className={smallField} value={line.period} disabled={!line.date} onChange={(e) => update({ period: e.target.value })}>
+            <select className={smallField} value={line.period} onChange={(e) => { const p = unit.periods.find((x) => x.id === e.target.value); update({ period: e.target.value, ...(p && periodKind(p) === 'dates' ? { date: p.from || '' } : {}) }); }}>
               <option value="">— اختر —</option>
-              {unit.periods.map((p) => <option key={p.id} value={p.id} disabled={!!line.date && !!taken && !taken.some((t) => slotsFree(t, slotsOf(line.date, p.start, p.end)))}>{p.name} · {timeOf(p.start)}–{timeOf(p.end)}</option>)}
+              {unit.periods.map((p) => {
+                const kind = periodKind(p);
+                const day = kind === 'dates' ? p.from || '' : line.date;
+                const busy = !!day && !!taken && !taken.some((t) => (kind === 'time' ? slotsFree(t, slotsOf(day, p.start, p.end)) : daysFree(t, periodNights(p, day))));
+                return <option key={p.id} value={p.id} disabled={busy}>{p.name} · {kind === 'time' ? `${timeOf(p.start)}–${timeOf(p.end)}` : kind === 'length' ? `${p.days} يوم` : `${label(p.from || '')} – ${label(p.to || '')}`}</option>;
+              })}
             </select>
           </label>
         )}

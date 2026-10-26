@@ -16,13 +16,28 @@ export type DriverMode = 'none' | 'with' | 'without' | 'both';
 export type ExtraPer = 'unit' | 'once' | 'person' | 'personOnce';
 export type SpecialKind = 'dates' | 'hours' | 'days';
 
+// A period (Eyad, 26 Oct): hours of a day («صباحية»: time), a number of days («أسبوع»، «شهر»، «سنة»: length, from the day
+// the visitor picks), or fixed dates («عيد الأضحى»: dates, from the day it starts to the day it is given back).
+export type PeriodKind = 'time' | 'length' | 'dates';
 export interface RentalPeriod {
   id: string;
   name: string; // «صباحية»
-  start: number; // minutes from midnight
+  kind?: PeriodKind; // missing = 'time'
+  start: number; // time: minutes from midnight
   end: number;
+  days?: number; // length: the days it lasts
+  from?: string; // dates: yyyy-mm-dd, the day it starts
+  to?: string; // dates: the day it is given back
   price: number;
 }
+export const periodKind = (p: RentalPeriod): PeriodKind => p.kind || 'time';
+// The nights (days) a length or dates period takes when it starts on `date`; [] for a time period or a wrong date.
+export const periodNights = (p: RentalPeriod, date: string): string[] => {
+  const kind = periodKind(p);
+  if (kind === 'time') return [];
+  if (kind === 'dates') return date === p.from && p.from && p.to ? nightsBetween(p.from, p.to) : [];
+  return isDate(date) ? nightsBetween(date, addDays(date, p.days || 1)) : [];
+};
 
 // A special price (Eyad): for dates (Eid), for hours of the day (evenings), or for weekdays (the weekend).
 // It takes the place of the day price or the hour price (`for`). The most exact one wins: dates, then hours, then weekdays.
@@ -107,8 +122,18 @@ export const normalizeUnit = (r: any): RentalUnit => {
     maxHours: Math.max(minHours, int(r?.maxHours, 1, 24, 12)),
     periods: (Array.isArray(r?.periods) ? r.periods : [])
       .slice(0, 8)
-      .map((p: any) => ({ id: isId(p?.id) ? p.id : '', name: str(p?.name, 40), start: int(p?.start, 0, 1439, 600), end: int(p?.end, 1, 1440, 900), price: num(p?.price) }))
-      .filter((p: RentalPeriod) => p.id && p.name && p.end > p.start && !seen.has(p.id) && !!seen.add(p.id)),
+      .map((p: any): RentalPeriod => {
+        const kind: PeriodKind = p?.kind === 'length' || p?.kind === 'dates' ? p.kind : 'time';
+        return {
+          id: isId(p?.id) ? p.id : '', name: str(p?.name, 40),
+          ...(kind === 'time' ? {} : { kind }),
+          start: int(p?.start, 0, 1439, 600), end: int(p?.end, 1, 1440, 900),
+          ...(kind === 'length' ? { days: int(p?.days, 1, 365, 7) } : {}),
+          ...(kind === 'dates' ? { from: isDate(p?.from) ? p.from : '', to: isDate(p?.to) ? p.to : '' } : {}),
+          price: num(p?.price),
+        };
+      })
+      .filter((p: RentalPeriod) => p.id && p.name && (periodKind(p) === 'time' ? p.end > p.start : periodKind(p) === 'length' || (!!p.from && !!p.to && p.to > p.from)) && !seen.has(p.id) && !!seen.add(p.id)),
     driver: r?.driver === 'with' || r?.driver === 'without' || r?.driver === 'both' ? r.driver : 'none',
     driverDay: num(r?.driverDay),
     driverHour: num(r?.driverHour),
@@ -339,10 +364,20 @@ export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: R
   } else {
     const p = u.periods.find((x) => x.id === w.period);
     if (!p) return null;
-    slots = slotsOf(w.date, p.start, p.end);
-    lines.push({ label: `${p.name} (${timeOf(p.start)} - ${timeOf(p.end)})`, amount: p.price });
-    driverPrice = u.driverHour * Math.ceil((p.end - p.start) / 60);
-    slot = `${p.name} · ${timeOf(p.start)} - ${timeOf(p.end)}`;
+    if (periodKind(p) !== 'time') {
+      // A number of days or fixed dates: taken as days, at the period's price.
+      nights = periodNights(p, w.date);
+      if (nights.length === 0) return null;
+      lines.push({ label: `${p.name} (${words(nights.length, 'يوم', 'يومان', 'أيام')})`, amount: p.price });
+      count = nights.length;
+      driverPrice = u.driverDay * count;
+      slot = `${p.name} · حتى ${addDays(nights[nights.length - 1], 1)}`;
+    } else {
+      slots = slotsOf(w.date, p.start, p.end);
+      lines.push({ label: `${p.name} (${timeOf(p.start)} - ${timeOf(p.end)})`, amount: p.price });
+      driverPrice = u.driverHour * Math.ceil((p.end - p.start) / 60);
+      slot = `${p.name} · ${timeOf(p.start)} - ${timeOf(p.end)}`;
+    }
   }
   const withDriver = (u.driver === 'with') || (u.driver === 'both' && w.driver === true);
   if (withDriver && driverPrice > 0) lines.push({ label: 'السائق', amount: driverPrice });

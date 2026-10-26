@@ -34,6 +34,6 @@ export const customerProblem = (d: CustomerDraft, live: boolean, signedIn = fals
 
 export const pageKindOf = (project: ProjectKey): PageKind => {
   const k = kindOf(project);
-  return k === 'page' || k === 'rental' ? 'site' : k;
+  return k === 'page' || k === 'rental' || k === 'hotel' ? 'site' : k;
 };
 

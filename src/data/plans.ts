@@ -189,13 +189,49 @@ export const PLANS: Record<ProjectType, Plan[]> = {
       features: ['كل شي بباقة 60', 'سيارات وعناصر بلا حدود', 'معرض حتى 15 صورة', '«ابن صفحتي» حتى 5 مرات باليوم'],
     },
   ],
+  // «فندق» (Eyad, 25 Oct): rooms in floors or sections; every room counts on its own; the prices are set later.
+  hotel: [
+    {
+      id: 'hotel-free',
+      name: 'مجانية',
+      monthly: 0,
+      art: 'page',
+      tagline: 'صفحة تعريفية لفندقك.',
+      features: [FREE_SLIDES, 'اتصال وواتساب وإيميل وكل وسائل التواصل', 'بدون غرف للحجز', 'معرض حتى 5 صور', '«ابن صفحتي» مرة وحدة'],
+    },
+    {
+      id: 'hotel-30',
+      name: '30',
+      monthly: 299000,
+      art: 'phone',
+      tagline: 'فندق صغير.',
+      features: ['كل شرائح الصفحة المجانية', 'حتى 30 غرفة', 'طوابق وأقسام وأنواع غرف', 'بطاقات الغرف بالصور'],
+    },
+    {
+      id: 'hotel-60',
+      name: '60',
+      monthly: 499000,
+      art: 'phoneTablet',
+      tagline: 'فندق عم يكبر.',
+      features: ['كل شي بباقة 30', 'حتى 60 غرفة', 'حسابات وزبائن'],
+      popular: true,
+    },
+    {
+      id: 'hotel-pro',
+      name: 'Pro',
+      monthly: 999000,
+      art: 'team',
+      tagline: 'فندق بلا حدود.',
+      features: ['كل شي بباقة 60', 'غرف بلا حدود', 'معرض حتى 15 صورة', '«ابن صفحتي» حتى 5 مرات باليوم'],
+    },
+  ],
 };
 
 // The free packages of the restaurant, the shop and the showroom are a free page «with the flavour» of their type (Eyad, 21 Oct): the
 // project is a page (no live menu, products, orders or cars), with the type's front slide and look and a price list typed by hand.
-export type Flavor = 'restaurant' | 'shop' | 'cars' | 'rental';
+export type Flavor = 'restaurant' | 'shop' | 'cars' | 'rental' | 'hotel';
 export const flavorOf = (planId: string | null | undefined): Flavor | null => {
-  const m = /^(restaurant|shop|cars|rental)-free$/.exec(planId || '');
+  const m = /^(restaurant|shop|cars|rental|hotel)-free$/.exec(planId || '');
   return m ? (m[1] as Flavor) : null;
 };
 
@@ -207,6 +243,7 @@ export const ADD_ONS: Record<ProjectType, AddOn[]> = {
   shop: [DOMAIN],
   cars: [DOMAIN],
   rental: [DOMAIN],
+  hotel: [DOMAIN],
 };
 
 const planKey = (owner: string, kind: ProjectType) => `weelink_plan_${owner}_${kind}`;

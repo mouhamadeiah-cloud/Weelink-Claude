@@ -83,7 +83,7 @@ service cloud.firestore {
       match /projects/{key} {
         allow read: if canManage(userId);
         allow create, update: if canManage(userId)
-          && key.matches('^(page|shop|cars|restaurant|rental)-[a-z0-9]{4,12}$')
+          && key.matches('^(page|shop|cars|restaurant|rental|hotel)-[a-z0-9]{4,12}$')
           && (!('kind' in incoming()) || incoming().kind == key.split('-')[0])
           && isValidDesign(incoming(), userId)
           && (!('createdAt' in incoming()) || incoming().createdAt == request.time || incoming().createdAt is string);
@@ -365,7 +365,7 @@ service cloud.firestore {
     // A project key (src/utils/projectKeys.ts): the kind for an account's first project of it,
     // else the kind and the project's own id.
     function isProjectKind(p) {
-      return p is string && p.matches('^(page|shop|cars|restaurant|rental)(-[a-z0-9]{4,12})?$');
+      return p is string && p.matches('^(page|shop|cars|restaurant|rental|hotel)(-[a-z0-9]{4,12})?$');
     }
 
     // The page's title, description and keywords (for Google and Weelink's search).

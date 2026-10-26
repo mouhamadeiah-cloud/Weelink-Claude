@@ -22,6 +22,7 @@ import { CardStyleSettings } from './CardStyleSettings';
 import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 import { itemNoLabel } from '../../../utils/itemNumbers';
 import { useRentalMode } from '../../rental/rentalTypes';
+import { useHotelMode } from '../../hotel/hotelTypes';
 
 const newProductDraft = (currency: string): ShopProduct => ({
   id: '',
@@ -99,7 +100,7 @@ interface ProductEditorProps {
 }
 
 export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, initial, onDone, onCancel }) => {
-  const rental = useRentalMode();
+  const rental = useRentalMode() || !!useHotelMode();
   const [p, setP] = useState<ShopProduct>(() =>
     initial ? { ...initial } : { ...newProductDraft(data.settings.currency), sku: nextSku(data.products) }
   );

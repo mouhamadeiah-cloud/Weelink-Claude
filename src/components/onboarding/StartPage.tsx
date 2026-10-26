@@ -6,7 +6,7 @@
 import { PlatformNav } from '../platform/PlatformNav';
 import React, { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { ArrowLeft, CarFront, Check, ClipboardList, FileText, KeyRound, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
+import { ArrowLeft, BedDouble, CarFront, Check, ClipboardList, FileText, KeyRound, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
 import { flavorOf, type Flavor } from '../../data/plans';
@@ -69,6 +69,14 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
     perks: ['بطاقات بالصور والأسعار', 'بالساعة أو باليوم', 'طلبات إيجار من الصفحة'],
     icon: KeyRound,
     image: carPhoto(CAR_PHOTOS.road, 1200),
+  },
+  {
+    type: 'hotel',
+    title: 'فندق',
+    line: 'غرف بالطوابق والأقسام، بصورها وأسعار الليلة، وحجز من الصفحة.',
+    perks: ['أنواع غرف وبطاقات', 'طوابق وأقسام', 'حجز بالليالي'],
+    icon: BedDouble,
+    image: photo('1566073771259-6a8506099945'),
   },
 ];
 
@@ -220,7 +228,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
 
           {/* The five kinds, as photo cards */}
           {signedIn && <h2 className="text-heading font-bold">إضافة مشروع</h2>}
-          <section className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${signedIn ? 'xl:grid-cols-5' : 'xl:grid-cols-6'} gap-3 sm:gap-4`}>
+          <section className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${signedIn ? 'xl:grid-cols-6' : 'xl:grid-cols-7'} gap-3 sm:gap-4`}>
             {KINDS.map((k, i) => (
               <button
                 key={k.type}

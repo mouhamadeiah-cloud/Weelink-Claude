@@ -25,7 +25,7 @@ import { cert, getApps, initializeApp, getAuth, getFirestore } from '../server/f
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 
 // A project key: the kind, or the kind and the project's own id (src/utils/projectKeys.ts).
-const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant|rental)(-[a-z0-9]{4,12})?$/.test(p);
+const isProjectKey = (p: unknown): p is string => typeof p === 'string' && /^(page|shop|cars|restaurant|rental|hotel)(-[a-z0-9]{4,12})?$/.test(p);
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });

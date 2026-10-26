@@ -152,6 +152,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
   isShopProject = false,
   isCarProject = false,
   isRentalProject = false,
+  isHotelProject = false,
   isRestaurantProject = false,
   onAddPageTemplate,
   onAddGallerySlide,
@@ -3802,7 +3803,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
                               اختر فئة لتصفح الشرائح المصممة مسبقاً:
                             </h4>
                             <div className="grid grid-cols-2 gap-2">
-                              {READY_SLIDE_CATEGORIES.filter((cat) => allKindsOpen || ((cat.id !== 'shop' || isShopProject || isRentalProject) && (cat.id !== 'cars' || isCarProject || isRentalProject) && (cat.id !== 'restaurant' || isRestaurantProject))).map((cat) => (
+                              {READY_SLIDE_CATEGORIES.filter((cat) => allKindsOpen || ((cat.id !== 'shop' || isShopProject || isRentalProject || isHotelProject) && (cat.id !== 'cars' || isCarProject || isRentalProject) && (cat.id !== 'restaurant' || isRestaurantProject))).map((cat) => (
                                 <button
                                   key={cat.id}
                                   type="button"
@@ -5855,7 +5856,7 @@ export const RightDrawer: React.FC<RightDrawerProps> = ({
           onEditAnswers={onEditAnswers}
           restoreAvailable={restoreAvailable}
           introSlot={panelVideo('weeai')}
-          pageKind={isShopProject ? 'shop' : isRestaurantProject ? 'restaurant' : isCarProject ? 'cars' : isRentalProject ? 'rental' : 'page'}
+          pageKind={isShopProject ? 'shop' : isRestaurantProject ? 'restaurant' : isCarProject ? 'cars' : isRentalProject ? 'rental' : isHotelProject ? 'hotel' : 'page'}
         />
 
         {/* All the text effects: beside the panel, or over it on a phone's sheet. */}

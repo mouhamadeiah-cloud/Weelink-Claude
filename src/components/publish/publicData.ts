@@ -41,10 +41,12 @@ const publicCarData = (cars: CarAdminData) => ({
 const publicPageData = (page: PageAdminData) => (publicServices(page).length ? { services: publicServices(page) } : null);
 
 // A rental publishes both halves: its cars as a showroom's and its items as a shop's (rentalTypes.ts).
-export const publicDataFor = (project: ProjectType, shop: ShopAdminData, cars: CarAdminData, page?: PageAdminData) =>
+// A hotel publishes its room types as a shop's products, and the guests each takes (hotelTypes.ts).
+export const publicDataFor = (project: ProjectType, shop: ShopAdminData, cars: CarAdminData, page?: PageAdminData, hotelCapacity?: Record<string, number>) =>
   project === 'shop' ? publicShopData(shop)
   : project === 'cars' ? publicCarData(cars)
   : project === 'rental' ? { cars: publicCarData(cars), shop: publicShopData(shop) }
+  : project === 'hotel' ? { shop: publicShopData(shop), capacity: hotelCapacity || {} }
   : project === 'page' && page ? publicPageData(page) : null;
 
 // Back to the shape the store elements read (empty customers, orders and accounts).

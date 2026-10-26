@@ -8,6 +8,7 @@ import { ShopCatalog } from '../shopTypes';
 import { ArtikelCatalog, loadArtikel, normalizeSearch, searchArtikel } from '../artikel';
 import { Field, inputClass } from '../adminUi';
 import { useRentalMode } from '../../rental/rentalTypes';
+import { useHotelMode } from '../../hotel/hotelTypes';
 
 // key: '' = not chosen, 'a:<id>' = from artikel.json, 'c:<name>' = the store's own catalog,
 // 'other' = typing a new name.
@@ -41,7 +42,7 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
   const [catalogs, setCatalogs] = useState<ArtikelCatalog[] | null>(null);
   const [query, setQuery] = useState('');
   // A rental's items are picked from its own catalogs only (the store's artikel.json is for selling).
-  const rental = useRentalMode();
+  const rental = useRentalMode() || !!useHotelMode();
 
   useEffect(() => {
     let alive = true;

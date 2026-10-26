@@ -64,9 +64,9 @@ import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { RentalAdminPanel } from './components/rental/RentalAdminPanel';
 import { withFeaturedKind } from './data/featuredSlide';
+import { rentalCartPage } from './data/rentalCartPage';
 import { RentalAdminData, RentalModeContext, createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentalItemCount, rentalShopView, rentsCars } from './components/rental/rentalTypes';
 import { getRentalTemplate } from './data/rentalTemplate';
-import { RentalCartLauncher } from './components/rental/rentalCart';
 import { HotelAdminPanel } from './components/hotel/HotelAdminPanel';
 import { HotelAdminData, HotelModeContext, createEmptyHotelAdmin, hotelCatalogs, hotelShopView, normalizeHotelAdmin } from './components/hotel/hotelTypes';
 import { getHotelTemplate } from './data/hotelTemplate';
@@ -480,6 +480,12 @@ export default function App() {
       if (next) { setElements(next); return; }
     }
   }, [rentalFeaturedItems, rentalFeaturedCars, adminOpenAll, pages, elements]);
+  // A rental made before its cart page existed gets «السلة» once (rentalCartPage.ts).
+  useEffect(() => {
+    if (project !== 'rental' || !projectReadyRef.current || adminOpenAll || designerModeRef.current) return;
+    const added = rentalCartPage(pages, elements, Date.now());
+    if (added) { setPages(added.pages); setElements(added.elements); }
+  }, [project, adminOpenAll, pages, elements]);
   // The ratings slide may be removed from any page (it was fixed on the free page before Eyad's 21 Oct decision).
   const isLockedRatings = (_el: CanvasElement) => false;
   const ratingsSlide = useMemo(() => ({ has: hasRatings, add: addRatingsSlide }), [hasRatings, addRatingsSlide]);
@@ -5184,7 +5190,6 @@ export default function App() {
         <CarRequestContext.Provider value={project === 'cars' || project === 'rental' ? submitCarRequest : null}>
         <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : project === 'rental' ? rentalShop : project === 'hotel' ? hotelShopView(shopAdmin) : null}>
         <ShopUpdateContext.Provider value={project === 'shop' || project === 'rental' || project === 'hotel' ? updateShopAdmin : null}>
-        {project === 'rental' && <RentalCartLauncher />}
         <CanvasWorkspace
           motionPreview={motionPreview}
           onMotionAction={handleMotionAction}

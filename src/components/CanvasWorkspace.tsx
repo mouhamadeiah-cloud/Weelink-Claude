@@ -1,3 +1,5 @@
+import { useRentalMode } from './rental/rentalTypes';
+import { RENTAL_CART_OPEN, useRentalCart } from './rental/rentalCart';
 import { lightboxFor } from '../utils/imageGroup';
 import { cleanHtml, isSafeUrl } from '../utils/safeHtml';
 import { createPortal } from 'react-dom';
@@ -2350,12 +2352,22 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   // The cart page's navbar link shows how many items the visitor has in the cart.
   const cartItems = useCart();
   const menuCartLines = useMenuCart();
-  const cartCount = cartItems.reduce((n, i) => n + i.qty, 0) + menuCartCount(menuCartLines);
+  const isRentalMode = useRentalMode();
+  const rentalCart = useRentalCart();
+  const cartCount = cartItems.reduce((n, i) => n + i.qty, 0) + menuCartCount(menuCartLines) + (isRentalMode ? rentalCart.ids.length : 0);
   const cartPageIds = new Set(
     (allPages || [])
       .filter((p) => p.slides.some((sl) => rawElements.some((e) => (e.type === 'cart' || e.type === 'menuCart') && e.slideId === sl.id)))
       .map((p) => p.id)
   );
+  // «افتح السلة» on a rental's car or item leads to the cart page.
+  const firstCartPage = [...cartPageIds][0];
+  useEffect(() => {
+    if (!isRentalMode) return;
+    const open = () => { if (firstCartPage) onSelectPage?.(firstCartPage); };
+    window.addEventListener(RENTAL_CART_OPEN, open);
+    return () => window.removeEventListener(RENTAL_CART_OPEN, open);
+  }, [isRentalMode, firstCartPage, onSelectPage]);
   // The store's main product slide (the tallest one: the full store rather than a featured row)
   // shows the results of a store search; a search from another page opens its page.
   const storeList = rawElements

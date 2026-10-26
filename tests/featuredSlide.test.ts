@@ -46,3 +46,17 @@ test('it goes after the hero, or at the end of a one-slide page, and marks the p
   const one = withFeaturedSlide([page('p1', ['h'])], made);
   assert.deepEqual(one[0].slides.map((s) => s.id), ['h', made.id]);
 });
+
+test('a rental slide with only car cards gets the item cards when an item is featured, once', async () => {
+  const { withFeaturedKind } = await import('../src/data/featuredSlide.ts');
+  const pages = [page('p1', ['h', 'f'])];
+  const els = [el('c', 'f', 'carListings', { carSource: 'featured', y: 170, height: 440 }), el('b', 'f', 'button', { y: 628, height: 50 })];
+  const next = withFeaturedKind(pages, els, 'items', 5)!;
+  const added = next.find((e) => e.type === 'shopProducts')!;
+  assert.equal(added.shopSource, 'featured');
+  assert.equal(added.slideId, 'f');
+  assert.equal(added.y, 630);
+  assert.equal(next.find((e) => e.id === 'b')!.y, 628 + 420);
+  assert.equal(withFeaturedKind(pages, next, 'items', 6), null);
+  assert.equal(withFeaturedKind(pages, [], 'items', 7), null);
+});

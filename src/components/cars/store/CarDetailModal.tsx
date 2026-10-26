@@ -14,6 +14,7 @@ import { carPriceLabel, carSpecRows, carSubtitle, carTitle, formatKm, statusMeta
 import { formatMoney } from '../../shop/adminUi';
 import { useRentalMode } from '../../rental/rentalTypes';
 import { RentalBookingForm, useRentalUnit } from '../../rental/RentalBookingForm';
+import { RentalCartAdd } from '../../rental/rentalCart';
 
 interface CarDetailModalProps {
   car: Car;
@@ -226,6 +227,7 @@ export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, a
                   <KeyRound size={18} /> {bookable ? 'احجز الآن' : 'اطلب الإيجار'}
                 </button>
               )}
+              {rental && bookable && canAsk && !asking && <RentalCartAdd itemId={car.id} accent={accent} className="sm:col-span-2" />}
               {canAsk && !asking && !rental && (
                 <>
                   <button type="button" onClick={() => setAsking('testDrive')} className="h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ borderColor: accent, color: accent }}>

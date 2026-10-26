@@ -16,6 +16,7 @@ import { HotelTypeBooking } from '../../hotel/HotelTypeBooking';
 import { useCarData } from '../../cars/store/CarDataContext';
 import { RequestForm } from '../../cars/store/CarDetailModal';
 import { RentalBookingForm, useRentalUnit } from '../../rental/RentalBookingForm';
+import { RentalCartAdd } from '../../rental/rentalCart';
 import { whatsappHref } from '../../cars/carModel';
 
 interface ProductDetailModalProps {
@@ -241,6 +242,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
                       <KeyRound size={18} /> {bookable ? 'احجز الآن' : 'اطلب الإيجار'}
                     </button>
                   )}
+                  {bookable && !asking && <RentalCartAdd itemId={p.id} accent={accent} className="sm:col-span-2" />}
                 </div>
                 {asking && bookable && <RentalBookingForm itemId={p.id} accent={accent} onClose={() => setAsking(false)} />}
                 {asking && !bookable && <RequestForm item={{ id: p.id, label: p.name }} type="buy" settings={rentalSettings} accent={accent} onDone={() => setAsking(false)} />}

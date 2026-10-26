@@ -182,7 +182,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
       // Numbered by Weelink while this form was open: keep it.
       // The artikel.json sub-catalog and product name it was picked from go with it, for Weelink's search.
       const artikel = pathChosen
-        ? { artikelSub: path.subKey.startsWith('a:') ? Number(path.subKey.slice(2)) || 0 : 0, artikelItem: path.itemId && path.itemId > 0 ? path.itemId : 0 }
+        ? { artikelSub: !rentsOut && path.subKey.startsWith('a:') ? Number(path.subKey.slice(2)) || 0 : 0, artikelItem: path.itemId && path.itemId > 0 ? path.itemId : 0 }
         : { artikelSub: product.artikelSub, artikelItem: product.artikelItem };
       const saved = { ...product, ...artikel, publicNo: before?.publicNo || product.publicNo, catalogIds: Array.from(catalogIds) };
 

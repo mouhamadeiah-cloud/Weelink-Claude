@@ -66,6 +66,7 @@ import { RentalAdminPanel } from './components/rental/RentalAdminPanel';
 import { withFeaturedKind } from './data/featuredSlide';
 import { RentalAdminData, RentalModeContext, createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentalItemCount, rentalShopView, rentsCars } from './components/rental/rentalTypes';
 import { getRentalTemplate } from './data/rentalTemplate';
+import { RentalCartLauncher } from './components/rental/rentalCart';
 import { HotelAdminPanel } from './components/hotel/HotelAdminPanel';
 import { HotelAdminData, HotelModeContext, createEmptyHotelAdmin, hotelCatalogs, hotelShopView, normalizeHotelAdmin } from './components/hotel/hotelTypes';
 import { getHotelTemplate } from './data/hotelTemplate';
@@ -5183,6 +5184,7 @@ export default function App() {
         <CarRequestContext.Provider value={project === 'cars' || project === 'rental' ? submitCarRequest : null}>
         <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : project === 'rental' ? rentalShop : project === 'hotel' ? hotelShopView(shopAdmin) : null}>
         <ShopUpdateContext.Provider value={project === 'shop' || project === 'rental' || project === 'hotel' ? updateShopAdmin : null}>
+        {project === 'rental' && <RentalCartLauncher />}
         <CanvasWorkspace
           motionPreview={motionPreview}
           onMotionAction={handleMotionAction}

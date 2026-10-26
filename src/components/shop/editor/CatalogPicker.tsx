@@ -7,7 +7,8 @@ import { Search, Loader2, ChevronLeft, Plus } from 'lucide-react';
 import { ShopCatalog } from '../shopTypes';
 import { ArtikelCatalog, loadArtikel, normalizeSearch, searchArtikel } from '../artikel';
 import { Field, inputClass } from '../adminUi';
-import { useRentalMode } from '../../rental/rentalTypes';
+import { RENTAL_CARS, useRentalMode } from '../../rental/rentalTypes';
+import { loadCategories } from '../../../utils/businessCategories';
 import { useHotelMode } from '../../hotel/hotelTypes';
 
 // key: '' = not chosen, 'a:<id>' = from artikel.json, 'c:<name>' = the store's own catalog,
@@ -42,10 +43,19 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
   const [catalogs, setCatalogs] = useState<ArtikelCatalog[] | null>(null);
   const [query, setQuery] = useState('');
   // A rental's items are picked from its own catalogs only (the store's artikel.json is for selling).
-  const rental = useRentalMode() || !!useHotelMode();
+  const renting = useRentalMode();
+  const rental = renting || !!useHotelMode();
 
   useEffect(() => {
     let alive = true;
+    if (renting) {
+      // The things a rental rents come from rentalCategories.json (its cars are the showroom's, not products).
+      loadCategories('rental').then((list) => alive && setCatalogs(list.filter((c) => c.name !== RENTAL_CARS).map((c, i) => ({
+        id: i + 1, slug: '', name_ar: c.name, name_en: '', keywords: [],
+        subcategories: c.subs.map((x, j) => ({ id: (i + 1) * 1000 + j, slug: '', name_ar: x.name, name_en: '', keywords: [], items: [] })),
+      })))).catch(() => alive && setCatalogs([]));
+      return () => { alive = false; };
+    }
     if (rental) { setCatalogs([]); return; }
     loadArtikel().then((c) => alive && setCatalogs(c)).catch(() => alive && setCatalogs([]));
     return () => { alive = false; };
@@ -174,7 +184,7 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
         )}
       </div>}
 
-      <div className="grid sm:grid-cols-3 gap-3 items-start">
+      <div className={`grid ${renting ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-3 items-start`}>
         <Field label="التصنيف الرئيسي">
           <select className={inputClass} value={path.mainKey} onChange={(e) => pickMain(e.target.value)}>
             <option value="">— اختر —</option>
@@ -211,16 +221,16 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
             </>
           )}
         </Field>
-        <Field label="المنتج">
+        {!renting && <Field label="المنتج">
           <select className={inputClass} value={path.itemId === null ? '' : path.itemId === 0 ? OTHER : String(path.itemId)} onChange={(e) => pickItem(e.target.value)} disabled={!sub}>
             <option value="">— اختر —</option>
             {sub?.items.map((it) => <option key={it.id} value={it.id}>{it.name_ar}</option>)}
             <option value={OTHER}>غير ذلك (اكتب الاسم بالأسفل)</option>
           </select>
-        </Field>
+        </Field>}
       </div>
 
-      <Field label="اسم المنتج كما يظهر في المتجر" hint="يُملأ تلقائياً عند اختيار منتج، ويمكنك تعديله، مثلاً بإضافة الماركة أو الموديل.">
+      <Field label={renting ? 'اسم العنصر كما يظهر في الصفحة' : 'اسم المنتج كما يظهر في المتجر'} hint={renting ? undefined : 'يُملأ تلقائياً عند اختيار منتج، ويمكنك تعديله، مثلاً بإضافة الماركة أو الموديل.'}>
         <input className={inputClass} value={productName} onChange={(e) => onProductName(e.target.value)} placeholder="مثال: آيفون 15 برو 256GB" />
       </Field>
     </div>

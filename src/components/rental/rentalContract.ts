@@ -50,6 +50,7 @@ export const buildRentalPaper = (b: Booking, kind: RentalPaper, terms = ''): str
   </div></section>`;
   const money = `<section class="box"><h3>${hotel ? 'السعر والعربون' : 'الأجرة والعربون'}</h3>
     ${b.price?.lines?.length ? `<div class="grid">${b.price.lines.map((l) => cell(l.label, `${l.amount} ${b.price!.currency || ''}`.trim())).join('')}</div>` : ''}
+    ${b.price?.lines?.some((l) => l.note) ? `<ul class="notes">${b.price.lines.filter((l) => l.note).map((l) => `<li><b>${esc(l.label)}:</b> ${esc(l.note || '')}</li>`).join('')}</ul>` : ''}
     <div class="grid">${cell('المجموع', price)}${cell('العربون (الضمانة)', deposit ? `${deposit}${b.deposit?.state === 'paid' ? ' · مستلم' : ''}` : 'لا يوجد')}</div>
   </section>`;
   if (kind === 'contract') {

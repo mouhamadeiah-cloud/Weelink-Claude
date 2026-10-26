@@ -7,6 +7,7 @@ import { CalendarCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BookingPageContext, createBooking, dayKey, readUnitTaken } from '../../services/bookings';
 import { useBookingSettings } from '../../services/bookingSettings';
 import { addDays, nightsBetween } from '../../services/stayBooking';
+import { ExtraHelp } from '../ExtraHelp';
 import { DEFAULT_TERMS, copyIdOf, daysFree, extrasFor, hourStarts, minOf, normalizeRentalRooms, quote, slotsFree, slotsOf, timeOf, type RentBy, type UnitTaken } from '../../services/rentalBooking';
 import { depositAmount, normalizeRule } from '../../services/bookingDeposit';
 import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from '../DepositPay';
@@ -261,7 +262,7 @@ export const RentalBookingView: React.FC<{ found: Found; accent: string; onClose
           {offered.map((x) => (
             <label key={x.id} className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={extras.includes(x.id)} onChange={(e) => setExtras(e.target.checked ? [...extras, x.id] : extras.filter((id) => id !== x.id))} />
-              <span className="flex-1">{x.name}</span>
+              <span className="flex-1">{x.name} <ExtraHelp note={x.note} /></span>
               <span className="text-xs font-bold text-neutral-500">{money(x.price, cur)}{x.per === 'unit' ? (mode === 'day' ? ' لليوم' : mode === 'hour' ? ' للساعة' : '') : ''}</span>
             </label>
           ))}

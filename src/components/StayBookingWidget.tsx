@@ -6,6 +6,7 @@ import type { CanvasElement } from '../types';
 import { BookingPageContext, createBooking, dayKey, readRoomNights } from '../services/bookings';
 import { newRentalSchedule, newStaySchedule, scheduleFor, useBookingSettings } from '../services/bookingSettings';
 import { addDays, chooseRoom, isRoomFree, maxGuests, nightsBetween, type RoomNights } from '../services/stayBooking';
+import { ExtraHelp } from './ExtraHelp';
 import { DEFAULT_TERMS, extrasFor, quote, unitOf } from '../services/rentalBooking';
 import { depositAmount, normalizeRule, priceNumber } from '../services/bookingDeposit';
 import { DepositPay, EMPTY_DEPOSIT, depositPayload, depositProblem, type DepositDraft } from './DepositPay';
@@ -250,7 +251,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement; only?: string }>
                 {offered.map((x) => (
                   <label key={x.id} className={`flex items-center gap-2 text-[10px] font-bold cursor-pointer ${sub}`}>
                     <input type="checkbox" checked={extras.includes(x.id)} onChange={(e) => setExtras(e.target.checked ? [...extras, x.id] : extras.filter((id) => id !== x.id))} />
-                    <span className="flex-1">{x.name}</span>
+                    <span className="flex-1">{x.name} <ExtraHelp note={x.note} /></span>
                     <span>{x.price}{chosen && (chosen as any).currency ? ` ${(chosen as any).currency}` : ''}{x.per === 'unit' ? ' / ليلة' : x.per === 'person' ? ' / شخص / ليلة' : x.per === 'personOnce' ? ' / شخص' : ''}</span>
                   </label>
                 ))}

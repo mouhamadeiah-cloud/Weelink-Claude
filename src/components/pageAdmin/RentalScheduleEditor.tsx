@@ -8,7 +8,7 @@ import type { BookingSchedule } from '../../services/bookingSettings';
 import type { StayRoom } from '../../services/stayBooking';
 import { newRoomId } from '../../services/stayBooking';
 import {
-  DEFAULT_TERMS, WEEK, dayNameAr, minOf, newRentalId, normalizeUnit, timeOf,
+  DEFAULT_TERMS, NO_UNIT, WEEK, dayNameAr, minOf, newRentalId, normalizeUnit, timeOf,
   type DriverMode, type RentalExtra, type RentalPeriod, type RentalUnit, type SpecialPrice,
 } from '../../services/rentalBooking';
 import { ImagePicker } from '../restaurant/tabs/shared';
@@ -89,7 +89,7 @@ export const SpecialPrices: React.FC<{ prices: SpecialPrice[]; onChange: (prices
   );
 };
 
-export const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => void; remove?: () => void; fromWarehouse: boolean; defaultOpen?: boolean }> = ({ unit: u, set, remove, fromWarehouse, defaultOpen }) => {
+export const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => void; remove?: () => void; fromWarehouse: boolean; defaultOpen?: boolean; extras?: RentalExtra[]; onToggleExtra?: (extraId: string) => void }> = ({ unit: u, set, remove, fromWarehouse, defaultOpen, extras = [], onToggleExtra }) => {
   const cur = u.currency ? ` ${u.currency}` : '';
   const setPeriod = (i: number, patch: Partial<RentalPeriod>) => set({ periods: u.periods.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const setPrice = (i: number, patch: Partial<SpecialPrice>) => set({ prices: u.prices.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
@@ -106,6 +106,14 @@ export const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => v
         </div>
         <ChevronDown size={16} className="text-neutral-400 transition group-open:rotate-180" />
       </summary>
+      {onToggleExtra && extras.length > 0 && (
+        <div className="px-2.5 pb-2.5 -mt-1 flex flex-wrap items-center gap-1">
+          <span className="text-xs font-bold text-neutral-400 ml-1">الخدمات:</span>
+          {extras.map((x) => (
+            <button key={x.id} type="button" className={chip(offeredTo(x, u.id))} onClick={() => onToggleExtra(x.id)}>{x.name || 'بدون اسم'}</button>
+          ))}
+        </div>
+      )}
       <div className="p-3 pt-0 space-y-3 border-t border-neutral-100">
         {!fromWarehouse && (
           <div className="grid grid-cols-[1fr_auto] gap-2 items-center pt-3">
@@ -172,6 +180,15 @@ export const UnitEditor: React.FC<{ unit: Unit; set: (patch: Partial<Unit>) => v
 };
 
 // `hotel`: nights, and prices per person (the breakfast of each guest).
+// The units an extra is offered to after one is switched on or off ([] = all of them, NO_UNIT = none).
+export const toggleUnit = (x: RentalExtra, unitId: string, all: string[]): string[] => {
+  const now = x.units.length === 0 ? all : x.units.filter((id) => id !== NO_UNIT);
+  const next = now.includes(unitId) ? now.filter((id) => id !== unitId) : [...now, unitId];
+  if (next.length === 0) return [NO_UNIT];
+  return all.every((id) => next.includes(id)) ? [] : next;
+};
+export const offeredTo = (x: RentalExtra, unitId: string) => x.units.length === 0 || x.units.includes(unitId);
+
 export const ExtrasEditor: React.FC<{ extras: RentalExtra[]; units: Unit[]; onChange: (extras: RentalExtra[]) => void; hotel?: boolean }> = ({ extras, units, onChange, hotel }) => {
   const set = (i: number, patch: Partial<RentalExtra>) => onChange(extras.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   return (
@@ -187,19 +204,20 @@ export const ExtrasEditor: React.FC<{ extras: RentalExtra[]; units: Unit[]; onCh
             {hotel && <button type="button" className={chip(x.per === 'personOnce')} onClick={() => set(i, { per: 'personOnce' })}>للشخص مرة وحدة</button>}
             <button type="button" aria-label="حذف" className="text-[#E03131] cursor-pointer" onClick={() => onChange(extras.filter((_, j) => j !== i))}><Trash2 size={15} /></button>
           </div>
+          <input className={inputFitClass + ' w-full'} placeholder="وصف الخدمة (يظهر للزبون خلف علامة «؟»): مثلاً عشاء لـ100 شخص يشمل 3 أصناف ومقبلات" value={x.note || ''} maxLength={200} onChange={(e) => set(i, { note: e.target.value })} />
           {units.length > 1 && (
             <div className="flex flex-wrap gap-1 items-center">
               <span className="text-xs font-bold text-neutral-400 ml-1">متاحة لـ:</span>
               <button type="button" className={chip(x.units.length === 0)} onClick={() => set(i, { units: [] })}>الكل</button>
               {units.map((u) => (
-                <button key={u.id} type="button" className={chip(x.units.includes(u.id))} onClick={() => set(i, { units: x.units.includes(u.id) ? x.units.filter((id) => id !== u.id) : [...x.units, u.id] })}>{u.name}</button>
+                <button key={u.id} type="button" className={chip(x.units.includes(u.id))} onClick={() => set(i, { units: toggleUnit(x, u.id, units.map((v) => v.id)) })}>{u.name}</button>
               ))}
             </div>
           )}
         </div>
       ))}
       {extras.length < 30 && (
-        <GhostButton onClick={() => onChange([...extras, { id: newRentalId('e'), name: '', price: 0, per: 'unit', units: [] }])}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف خدمة</span></GhostButton>
+        <GhostButton onClick={() => onChange([...extras, { id: newRentalId('e'), name: '', price: 0, per: 'unit', units: [], note: '' }])}><span className="inline-flex items-center gap-1"><Plus size={13} /> أضف خدمة</span></GhostButton>
       )}
     </div>
   );

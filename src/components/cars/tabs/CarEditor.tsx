@@ -17,6 +17,7 @@ import { carCost, syncPurchaseTx } from '../carMoney';
 import { Segmented } from './moneyUi';
 import { itemNoLabel } from '../../../utils/itemNumbers';
 import { useRentalMode } from '../../rental/rentalTypes';
+import { ItemServices } from '../../rental/ItemServices';
 
 export interface CarTabProps {
   data: CarAdminData;
@@ -345,6 +346,11 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
               </div>
               {!car.showPrice && <p className="text-xs text-neutral-400">يرى الزبون «السعر عند التواصل» بدل السعر.</p>}
             </Card>
+            {rentsOut && (
+              <Card title="الخدمات الجاهزة" actions={<span className="text-xs text-neutral-400">تنحفظ في «الخدمات الإضافية»</span>}>
+                <ItemServices itemId={car.id} />
+              </Card>
+            )}
             <Card title={rentsOut ? 'بيانات السيارة' : 'الشراء'} actions={<span className="text-xs text-neutral-400">لا يظهر للزبون</span>}>
               <div className="grid sm:grid-cols-2 gap-3">
                 {!rentsOut && <Field label="سعر الشراء"><input className={inputClass} inputMode="decimal" value={car.purchasePrice || ''} onChange={(e) => set({ purchasePrice: num(e.target.value) })} dir="ltr" /></Field>}

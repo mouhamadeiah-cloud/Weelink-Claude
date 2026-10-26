@@ -22,6 +22,7 @@ import { CardStyleSettings } from './CardStyleSettings';
 import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 import { itemNoLabel } from '../../../utils/itemNumbers';
 import { useRentalMode } from '../../rental/rentalTypes';
+import { ItemServices } from '../../rental/ItemServices';
 import { useHotelMode } from '../../hotel/hotelTypes';
 
 const newProductDraft = (currency: string): ShopProduct => ({
@@ -381,6 +382,11 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
               currency={p.currency}
               onChange={(patch) => set(patch)}
             />
+            {rentsOut && (
+              <Field label="الخدمات الجاهزة" hint="فعّل الخدمات المرافقة لهذا العنصر، أو أضف خدمة جديدة وبتنحفظ بالإعدادات في «الخدمات الإضافية».">
+                <ItemServices itemId={p.id} />
+              </Field>
+            )}
             {rentsOut && (
               <Field label="عدد النسخ المتطابقة" hint="مثلاً 5 خيم متطابقة: ضيفها مرة وحدة واكتب 5. الزبون بيحجز واحدة والباقي بيضل متاح، وكل نسخة بتنحسب من حد الباقة.">
                 <input type="number" min={1} max={100} className={`${inputFitClass} w-24`} value={p.copies} onChange={(e) => set({ copies: Math.min(100, Math.max(1, Math.floor(Number(e.target.value)) || 1)) })} />

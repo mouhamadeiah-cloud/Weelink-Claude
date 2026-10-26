@@ -4,6 +4,8 @@
 // and the deposit, and its button books everything at once, all or nothing (api/booking.ts).
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { CalendarCheck, ClipboardList, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import { useCarData } from '../cars/store/CarDataContext';
+import { useShopData } from '../shop/store/ShopDataContext';
 import { BookingPageContext, createBooking, dayKey, readUnitTaken } from '../../services/bookings';
 import { addDays } from '../../services/stayBooking';
 import { ExtraHelp } from '../ExtraHelp';
@@ -102,7 +104,10 @@ const smallField = `${fieldClass} h-9 text-xs`;
 
 const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useRentalCheckout>['schedule']>; taken: UnitTaken[] | undefined; update: (patch: Partial<RentLine>) => void; remove: () => void }> = ({ row, schedule, taken, update, remove }) => {
   const { line, unit, ways, mode, hours, q } = row;
-  const [services, setServices] = useState(false);
+  // The photo comes from the warehouse itself (the schedule keeps only web links).
+  const carData = useCarData();
+  const shopData = useShopData();
+  const photo = carData?.cars.find((c) => c.id === unit.id || c.id === line.id)?.images[0] || shopData?.products.find((x) => x.id === unit.id || x.id === line.id)?.images[0] || unit.photo;
   const today = dayKey(new Date());
   const last = addDays(today, schedule.daysAhead);
   const offered = extrasFor(schedule.extras, unit.id);
@@ -118,7 +123,7 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
   return (
     <div className={`py-3 space-y-2.5 ${line.on ? '' : 'opacity-50'}`}>
       <div className="flex items-center gap-3">
-        {unit.photo ? <img src={unit.photo} alt="" referrerPolicy="no-referrer" className="w-14 h-14 rounded-xl object-cover bg-neutral-100 shrink-0" /> : <div className="w-14 h-14 rounded-xl bg-neutral-100 shrink-0" />}
+        {photo ? <img src={photo} alt="" referrerPolicy="no-referrer" className="w-14 h-14 rounded-xl object-cover bg-neutral-100 shrink-0" /> : <div className="w-14 h-14 rounded-xl bg-neutral-100 shrink-0" />}
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-sm truncate">{unit.name}</div>
           {price && <div className="text-xs text-(--muted)">{price}</div>}
@@ -183,12 +188,8 @@ const LineRow: React.FC<{ row: Row; schedule: NonNullable<ReturnType<typeof useR
       )}
 
       {(unit.driver !== 'none' || offered.length > 0) && (
-        <button type="button" onClick={() => setServices((v) => !v)} className="text-xs font-bold text-(--accent) cursor-pointer flex items-center gap-1">
-          <Plus size={12} /> {services ? 'إخفاء الخدمات' : 'إضافة خدمة'}{line.driver || line.extras.length > 0 ? ` (${line.extras.length + (line.driver ? 1 : 0)})` : ''}
-        </button>
-      )}
-      {services && (
         <div className="space-y-2 rounded-xl bg-(--soft) p-3">
+          <div className="text-xs font-bold">الخدمات الإضافية</div>
           {unit.driver === 'with' && <div className="text-xs font-bold text-(--muted)">الإيجار مع سائق.</div>}
           {unit.driver === 'both' && (
             <div className="flex flex-wrap gap-1.5">

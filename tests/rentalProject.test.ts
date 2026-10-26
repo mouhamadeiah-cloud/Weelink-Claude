@@ -7,6 +7,7 @@ import { itemsOf } from '../server/searchIndex.ts';
 import { limitsOf } from '../src/utils/planLimits.ts';
 import { flavorOf, PLANS } from '../src/data/plans.ts';
 import categories from '../src/data/rentalCategories.json' with { type: 'json' };
+import estateCategories from '../src/data/estateCategories.json' with { type: 'json' };
 
 test('a rental is a project kind of its own', () => {
   assert.ok(isProjectKey('rental'));
@@ -56,7 +57,7 @@ test('a car rental lists car cards; any other rental lists the item cards in the
 });
 
 test('the catalogs of a new rental: everything but cars, the owner\'s kind first', () => {
-  const list = categories.map((c) => ({ name: c.name, subs: c.subs }));
+  const list = [...categories, ...estateCategories].map((c) => ({ name: c.name, subs: c.subs }));
   const cats = rentalCatalogs(list, 'صالات');
   const top = cats.filter((c) => !c.parentId);
   assert.equal(top[0].name, 'صالات');

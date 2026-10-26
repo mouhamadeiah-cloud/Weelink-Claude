@@ -11,6 +11,8 @@ import { useEffect, useState } from 'react';
 import type { ProjectType } from '../components/shop/shopTypes';
 
 export type CategorySource = 'shop' | 'restaurant' | 'cars' | 'rental' | 'hotel' | 'jobs';
+// What a hotel-and-property rental offers (halls, villas, hotel rooms: src/data/estateCategories.json); not a Wee AI question.
+type LoadSource = CategorySource | 'estate';
 
 export interface CategoryNode {
   name: string;
@@ -20,7 +22,7 @@ export interface CategoryNode {
 export const categorySourceOf = (kind: ProjectType | undefined): CategorySource =>
   kind === 'shop' ? 'shop' : kind === 'restaurant' ? 'restaurant' : kind === 'cars' ? 'cars' : kind === 'rental' ? 'rental' : kind === 'hotel' ? 'hotel' : 'jobs';
 
-const loaders: Record<CategorySource, () => Promise<CategoryNode[]>> = {
+const loaders: Record<LoadSource, () => Promise<CategoryNode[]>> = {
   shop: () => import('../data/shopCategories.json').then((m) => (m.default || m) as unknown as CategoryNode[]),
   restaurant: () =>
     import('../data/restaurantCategories.json').then((m) =>
@@ -32,6 +34,10 @@ const loaders: Record<CategorySource, () => Promise<CategoryNode[]>> = {
     ),
   rental: () =>
     import('../data/rentalCategories.json').then((m) =>
+      ((m.default || m) as unknown as { name: string; subs: string[] }[]).map((c) => ({ name: c.name, subs: c.subs.map((s) => ({ name: s, items: [] })) }))
+    ),
+  estate: () =>
+    import('../data/estateCategories.json').then((m) =>
       ((m.default || m) as unknown as { name: string; subs: string[] }[]).map((c) => ({ name: c.name, subs: c.subs.map((s) => ({ name: s, items: [] })) }))
     ),
   hotel: () =>
@@ -47,8 +53,8 @@ const loaders: Record<CategorySource, () => Promise<CategoryNode[]>> = {
     ),
 };
 
-const cache: Partial<Record<CategorySource, Promise<CategoryNode[]>>> = {};
-export const loadCategories = (source: CategorySource) =>
+const cache: Partial<Record<LoadSource, Promise<CategoryNode[]>>> = {};
+export const loadCategories = (source: LoadSource) =>
   (cache[source] ||= loaders[source]().catch((err) => {
     delete cache[source];
     throw err;

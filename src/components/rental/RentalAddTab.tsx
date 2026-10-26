@@ -17,10 +17,12 @@ interface RentalAddTabProps {
   onShopChange: (fn: (d: ShopAdminData) => ShopAdminData) => void;
   editingId: string | null;
   onEditingChange: (id: string | null) => void;
+  // Rooms, halls and villas only: there are no cars to add.
+  estate?: boolean;
 }
 
-export const RentalAddTab: React.FC<RentalAddTabProps> = ({ data, onCarsChange, onShopChange, editingId, onEditingChange }) => {
-  const [kind, setKind] = useState<Kind>(editingId || data.cars.cars.length || !data.shop.products.length ? 'car' : 'item');
+export const RentalAddTab: React.FC<RentalAddTabProps> = ({ data, onCarsChange, onShopChange, editingId, onEditingChange, estate = false }) => {
+  const [kind, setKind] = useState<Kind>(estate ? 'item' : editingId || data.cars.cars.length || !data.shop.products.length ? 'car' : 'item');
   const [done, setDone] = useState(false);
   const [round, setRound] = useState(0);
   const saved = () => setDone(true);
@@ -43,7 +45,7 @@ export const RentalAddTab: React.FC<RentalAddTabProps> = ({ data, onCarsChange, 
 
   return (
     <div className="space-y-4">
-      {!editingId && (
+      {!editingId && !estate && (
         <div className="space-y-1.5">
           <div className="text-xs font-bold text-neutral-500">شو بدك تضيف؟</div>
           <div className="flex gap-2 p-1 bg-neutral-100 rounded-2xl w-full sm:w-fit">

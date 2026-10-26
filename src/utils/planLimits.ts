@@ -45,7 +45,7 @@ const LIMITS: Record<string, PlanLimits> = {
   'rental-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
   'rental-60': { items: 60, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
   'rental-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true, bookings: true },
-  // A hotel counts every room on its own (room types are free).
+  // A hotel-and-property rental counts every copy of a room, hall or villa on its own.
   'hotel-30': { items: 30, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
   'hotel-60': { items: 60, gallery: 5, devices: 0, builds: 1, perDay: true, bookings: true },
   'hotel-pro': { items: NONE, gallery: 15, devices: 0, builds: 5, perDay: true, bookings: true },
@@ -61,7 +61,7 @@ export const limitsOf = (planId: string, extraDevices = 0): PlanLimits => {
 export const smallestFitting = (planIds: string[], items: number) => planIds.find((id) => limitsOf(id).items >= items) || '';
 
 /** «30 صنف», «60 منتج»... the word for a kind's items. */
-export const ITEM_WORD: Record<string, string> = { restaurant: 'صنف', shop: 'منتج', cars: 'سيارة', rental: 'سيارة وعنصر', hotel: 'غرفة', page: 'عنصر' };
+export const ITEM_WORD: Record<string, string> = { restaurant: 'صنف', shop: 'منتج', cars: 'سيارة', rental: 'سيارة وعنصر', hotel: 'غرفة أو عقار', page: 'عنصر' };
 
 export const isLimited = (n: number) => Number.isFinite(n);
 

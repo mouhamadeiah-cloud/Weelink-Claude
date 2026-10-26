@@ -52,3 +52,8 @@ export const rentalShopView = (shop: ShopAdminData): ShopAdminData => ({ ...shop
 // instead of offering a test drive, a purchase or the cart.
 export const RentalModeContext = createContext(false);
 export const useRentalMode = () => useContext(RentalModeContext);
+
+// True inside a hotel-and-property rental («تأجير فنادق ومساحات عقارية», Eyad 26 Oct): the same rental pages and
+// admin, for hotel rooms, halls, villas and other property (no cars; its kinds come from estateCategories.json).
+export const EstateModeContext = createContext(false);
+export const useEstateMode = () => useContext(EstateModeContext);

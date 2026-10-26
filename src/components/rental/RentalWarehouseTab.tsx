@@ -5,7 +5,7 @@ import type { ShopAdminData } from '../shop/shopTypes';
 import { InventoryTab } from '../cars/tabs/InventoryTab';
 import { WarehouseTab } from '../shop/tabs/WarehouseTab';
 import { RentalPricing } from './RentalPricing';
-import type { RentalAdminData } from './rentalTypes';
+import { useEstateMode, type RentalAdminData } from './rentalTypes';
 
 type Part = 'cars' | 'items' | 'prices';
 
@@ -17,10 +17,11 @@ interface RentalWarehouseTabProps {
 }
 
 export const RentalWarehouseTab: React.FC<RentalWarehouseTabProps> = ({ data, onCarsChange, onShopChange, onEditCar }) => {
-  const [part, setPart] = useState<Part>(data.cars.cars.length || !data.shop.products.length ? 'cars' : 'items');
+  const estate = useEstateMode();
+  const [part, setPart] = useState<Part>(!estate && (data.cars.cars.length || !data.shop.products.length) ? 'cars' : 'items');
   const parts: { id: Part; label: string; count?: number }[] = [
-    { id: 'cars', label: 'السيارات', count: data.cars.cars.length },
-    { id: 'items', label: 'العناصر والصالات', count: data.shop.products.length },
+    ...(estate ? [] : [{ id: 'cars' as const, label: 'السيارات', count: data.cars.cars.length }]),
+    { id: 'items', label: estate ? 'الغرف والصالات والفلل' : 'العناصر والصالات', count: data.shop.products.length },
     { id: 'prices', label: 'أسعار التأجير' },
   ];
   return (

@@ -28,6 +28,13 @@ export const buildRentalPaper = (b: Booking, kind: RentalPaper, terms = ''): str
   const L = paperLabel(kind, b);
   const [lessor, lessee] = hotel ? ['الفندق', 'النزيل'] : ['المؤجّر', 'المستأجر'];
   const unit = b.roomName || '';
+  // A cart's items each have their own dates (booked before that, they share the booking's).
+  const periodOf = (it: NonNullable<Booking['items']>[number]) => {
+    const from = it.date || b.date;
+    const to = it.checkOut || (it.date ? '' : b.checkOut);
+    const n = it.nights || (it.date ? 0 : b.nights);
+    return to ? `من ${dateAr(from)} إلى ${dateAr(to)} (${n || ''} ${n === 1 ? 'يوم' : 'أيام'})` : `${dateAr(from)}${it.slot || b.slot ? ` · ${it.slot || b.slot}` : ''}`;
+  };
   const period = b.checkOut ? `من ${dateAr(b.date)} إلى ${dateAr(b.checkOut)} (${b.nights || ''} ${hotel ? (b.nights === 1 ? 'ليلة' : 'ليالٍ') : b.nights === 1 ? 'يوم' : 'أيام'})` : `${dateAr(b.date)} · ${b.slot}`;
   const price = b.price?.total ? `${b.price.total} ${b.price.currency || ''}`.trim() : '';
   const deposit = b.deposit ? `${b.deposit.amount} ${b.deposit.currency || ''}`.trim() : '';
@@ -44,8 +51,8 @@ export const buildRentalPaper = (b: Booking, kind: RentalPaper, terms = ''): str
   </div></section>`;
   const item = `<section class="box"><h3>${b.items && b.items.length > 1 ? (hotel ? 'الغرف' : 'الوحدات المؤجّرة') : hotel ? 'الغرفة' : 'الوحدة المؤجّرة'}</h3><div class="grid">
     ${b.items && b.items.length > 1
-      ? b.items.map((it, i) => cell(`${hotel ? 'الغرفة' : 'الوحدة'} ${i + 1}`, `${it.roomName}${it.driver ? ' (مع سائق)' : ''} · ${it.total} ${b.price?.currency || ''}`.trim())).join('')
-      : cell(hotel ? 'الغرفة' : 'الوحدة', unit)}${cell('المدة', period)}
+      ? b.items.map((it, i) => `<div class="cell wide"><span>${hotel ? 'الغرفة' : 'الوحدة'} ${i + 1}</span><b>${esc(`${it.roomName}${it.driver ? ' (مع سائق)' : ''} · ${periodOf(it)} · ${it.total} ${b.price?.currency || ''}`.trim())}</b></div>`).join('')
+      : `${cell(hotel ? 'الغرفة' : 'الوحدة', unit)}${cell('المدة', period)}`}
     ${hotel && b.partySize ? cell('عدد الضيوف', String(b.partySize)) : ''}
     ${b.driver && !(b.items && b.items.length > 1) ? cell('السائق', 'مع سائق') : ''}
     ${b.desc ? `<div class="cell wide"><span>ملاحظات ${lessee}</span><b>${esc(b.desc)}</b></div>` : ''}

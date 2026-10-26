@@ -2354,7 +2354,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
   const menuCartLines = useMenuCart();
   const isRentalMode = useRentalMode();
   const rentalCart = useRentalCart();
-  const cartCount = cartItems.reduce((n, i) => n + i.qty, 0) + menuCartCount(menuCartLines) + (isRentalMode ? rentalCart.ids.length : 0);
+  const cartCount = cartItems.reduce((n, i) => n + i.qty, 0) + menuCartCount(menuCartLines) + (isRentalMode ? rentalCart.count : 0);
   const cartPageIds = new Set(
     (allPages || [])
       .filter((p) => p.slides.some((sl) => rawElements.some((e) => (e.type === 'cart' || e.type === 'menuCart') && e.slideId === sl.id)))

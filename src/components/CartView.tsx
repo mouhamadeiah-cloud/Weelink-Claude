@@ -11,7 +11,7 @@ import { useShopData } from './shop/store/ShopDataContext';
 import { CartSummary, CheckoutForm, CheckoutView } from './shop/store/CheckoutView';
 import { checkoutLook } from './shop/store/checkoutStore';
 import { useRentalMode } from './rental/rentalTypes';
-import { RentalCartPage } from './rental/rentalCart';
+import { RentalCartSummary, RentalCheckoutForm } from './rental/RentalCartParts';
 
 interface CartViewProps {
   elem: CanvasElement;
@@ -29,8 +29,18 @@ export const CartView: React.FC<CartViewProps> = ({ elem, isPreviewActive }) => 
 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
-  // A rental's cart page books what the visitor added, all at once (rental/rentalCart.tsx).
-  if (rental) return <RentalCartPage accent={accent} isPreviewActive={isPreviewActive} />;
+  // A rental's cart page books what the visitor added, all at once (rental/RentalCartParts.tsx): the summary, and the booking card
+  // in its own 'checkout' element (or in this one when it is not split).
+  if (rental) {
+    const look = checkoutLook(elem);
+    if (elem.cartSplit) return <RentalCartSummary look={look} isPreviewActive={isPreviewActive} />;
+    return (
+      <div className="w-full h-full grid grid-cols-2 gap-4">
+        <RentalCartSummary look={look} isPreviewActive={isPreviewActive} />
+        <RentalCheckoutForm look={look} isPreviewActive={isPreviewActive} />
+      </div>
+    );
+  }
 
   // In an Online Shop the cart page is the checkout page: the cart summary beside the order card
   // (a 'checkout' element), or both in this element for carts made before the order card.
@@ -123,6 +133,7 @@ export const CartView: React.FC<CartViewProps> = ({ elem, isPreviewActive }) => 
 // The 'checkout' element: the Online Shop's order card (the visitor's details and payment).
 export const CheckoutFormCard: React.FC<CartViewProps> = ({ elem, isPreviewActive }) => {
   const shop = useShopData();
+  if (useRentalMode()) return <RentalCheckoutForm look={checkoutLook(elem)} isPreviewActive={isPreviewActive} />;
   if (!shop) {
     return (
       <div dir="rtl" className="w-full h-full rounded-3xl border border-dashed border-black/[0.15] flex items-center justify-center p-6 text-center text-sm text-neutral-500">

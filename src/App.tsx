@@ -64,7 +64,7 @@ import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { RentalAdminPanel } from './components/rental/RentalAdminPanel';
 import { withFeaturedKind } from './data/featuredSlide';
-import { rentalCartPage } from './data/rentalCartPage';
+import { withRentalCart } from './data/rentalCartPage';
 import { RentalAdminData, RentalModeContext, createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentalItemCount, rentalShopView, rentsCars } from './components/rental/rentalTypes';
 import { getRentalTemplate } from './data/rentalTemplate';
 import { HotelAdminPanel } from './components/hotel/HotelAdminPanel';
@@ -483,7 +483,7 @@ export default function App() {
   // A rental made before its cart page existed gets «السلة» once (rentalCartPage.ts).
   useEffect(() => {
     if (project !== 'rental' || !projectReadyRef.current || adminOpenAll || designerModeRef.current) return;
-    const added = rentalCartPage(pages, elements, Date.now());
+    const added = withRentalCart(pages, elements, Date.now());
     if (added) { setPages(added.pages); setElements(added.elements); }
   }, [project, adminOpenAll, pages, elements]);
   // The ratings slide may be removed from any page (it was fixed on the free page before Eyad's 21 Oct decision).

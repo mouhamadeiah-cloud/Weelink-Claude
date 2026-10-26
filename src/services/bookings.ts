@@ -39,8 +39,8 @@ export interface Booking {
   slots?: string[];
   price?: { lines: { label: string; amount: number; note?: string }[]; total: number; currency: string };
   driver?: boolean;
-  // A cart booking (several units at once): each unit with its own price; roomName joins their names.
-  items?: { roomId: string; roomName: string; total: number; driver?: boolean }[];
+  // A cart booking (several units at once): each unit with its own price and dates; roomName joins their names.
+  items?: { roomId: string; roomName: string; total: number; driver?: boolean; by?: 'day' | 'hour' | 'period'; date?: string; checkOut?: string; nights?: number; slot?: string }[];
   extras?: string[];
   terms?: string;
   termsAt?: string;

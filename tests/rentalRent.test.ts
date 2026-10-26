@@ -129,3 +129,45 @@ test('a rental by the day blocks its days for hours too, and a cancelled one fre
   // the hours of the 5th are kept when another booking is saved
   assert.equal(store.get('bookingRooms/own9_rental_rental_u1').slots.filter((x: string) => x.startsWith(inD(5))).length, 8);
 });
+
+// ---- periods of days and fixed dates ----
+const packs = normalizeUnit({
+  byDay: true, dayPrice: 50, currency: '$',
+  periods: [
+    { id: 'w', name: 'أسبوع', kind: 'length', days: 7, price: 300 },
+    { id: 'eid', name: 'العيد', kind: 'dates', from: '2030-06-10', to: '2030-06-14', price: 180 },
+    { id: 'bad', name: 'ناقص', kind: 'dates', from: '2030-06-10', to: '2030-06-10', price: 1 },
+  ],
+});
+
+test('a period of days or fixed dates is priced whole and takes its days', () => {
+  assert.equal(packs.periods.length, 2); // the one with no days between is left out
+  const w = quote(packs, [], 'u1', { by: 'period', date: '2030-05-01', period: 'w' })!;
+  assert.equal(w.total, 300);
+  assert.equal(w.nights.length, 7);
+  assert.equal(w.nights[6], '2030-05-07');
+  const e = quote(packs, [], 'u1', { by: 'period', date: '2030-06-10', period: 'eid' })!;
+  assert.equal(e.total, 180);
+  assert.equal(e.nights.length, 4);
+  assert.equal(quote(packs, [], 'u1', { by: 'period', date: '2030-06-11', period: 'eid' }), null); // fixed dates start on their day
+});
+
+test('a rental period of days is booked and freed as days', async () => {
+  store.set('bookingSettings/own9/pages/rental-packs', {
+    payments: { currency: '$', wallets: { syriatel: { enabled: true, account: '0933000111' } } },
+    schedules: [{ id: 'rental', name: 'التأجير', type: 'stay', rental: true, minNights: 1, maxNights: 10, daysAhead: 60, rooms: [{ id: 'u1', name: 'خيمة', ...packs, item: 'p_tent' }] }],
+  });
+  const book = async (extra: any = {}) => {
+    const body = { action: 'create', owner: 'own9', project: 'rental-packs', schedule: 'rental', pageName: 'تأجير', date: inD(5), startMin: 0, slot: 'x', meetingType: '', name: 'ليلى', phone: '0933123456', email: '', needsConfirmation: true, room: 'u1', deposit: proof, ...extra };
+    const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', body: JSON.stringify(body) }));
+    return { s: r.status, ...(await r.json()) };
+  };
+  const ok = await book({ rent: { by: 'period', period: 'w' } });
+  assert.equal(ok.s, 200);
+  const row = store.get(`bookings/own9/items/${ok.id}`);
+  assert.equal(row.price.total, 300);
+  assert.equal(row.nights, 7);
+  assert.equal(row.checkOut, new Date(Date.now() + 12 * 86400000).toISOString().slice(0, 10));
+  assert.equal((await book({ date: inD(8), checkOut: inD(9), rent: { by: 'day' } })).error, 'taken');
+  assert.equal((await book({ date: inD(12), checkOut: inD(13), rent: { by: 'day' } })).s, 200);
+});

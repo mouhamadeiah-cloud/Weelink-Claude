@@ -25,7 +25,7 @@
 
 import { cert, getApps, initializeApp, getAuth, FieldValue, getFirestore, type QuerySnapshot } from '../server/firebase.js';
 import { Resend } from 'resend';
-import { chooseRoom, nightsBetween, normalizeRooms, type RoomNights, type StayRoom } from '../src/services/stayBooking.js';
+import { addDays, chooseRoom, nightsBetween, normalizeRooms, type RoomNights, type StayRoom } from '../src/services/stayBooking.js';
 import { copyIdOf, daysFree, DEFAULT_TERMS, minOf, normalizeExtras, normalizeHotelRooms, normalizeRentalRooms, normalizeTerms, quote, slotsFree, unitOf, type Quote, type RentalExtra, type RentalUnit } from '../src/services/rentalBooking.js';
 import { workerAction } from '../server/worker.js';
 import { canTake, normalizeSessions, type SeatSession } from '../src/services/seatBooking.js';
@@ -285,7 +285,9 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
         workStart: isTime(schedule.workStart) ? minOf(schedule.workStart) : undefined, workEnd: isTime(schedule.workEnd) ? minOf(schedule.workEnd) : undefined,
       });
       if (!q) return json({ error: 'bad_rent' }, 400);
-      for (let k = 0; k < copies; k++) rentPlans.push({ room, q, driver: room.driver === 'with' || (room.driver === 'both' && w.driver), by, date: from, checkOut: typeof until === 'string' ? until : undefined });
+      // A period of days (a week, fixed dates) is booked and freed as days: it ends the day after its last day.
+      const asDays = by === 'period' && q.nights.length > 0;
+      for (let k = 0; k < copies; k++) rentPlans.push({ room, q, driver: room.driver === 'with' || (room.driver === 'both' && w.driver), by: asDays ? 'day' : by, date: from, checkOut: asDays ? addDays(q.nights[q.nights.length - 1], 1) : typeof until === 'string' ? until : undefined });
     }
     if (rentPlans.length > 8) return json({ error: 'bad_rent' }, 400);
     if (rentPlans.some((r) => r.q.currency !== rentPlans[0].q.currency)) return json({ error: 'bad_rent' }, 400);

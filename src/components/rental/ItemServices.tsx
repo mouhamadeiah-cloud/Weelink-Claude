@@ -53,6 +53,9 @@ export const ItemServices: React.FC<{ itemId: string }> = ({ itemId }) => {
           ))}
         </div>
       )}
+      {!adding && !extras.some((x) => x.name.includes('سائق')) && (
+        <button type="button" className={chip(false)} onClick={() => { setDraft({ name: 'سائق', price: '', per: 'unit', note: '' }); setAdding(true); }}>+ سائق</button>
+      )}
       {adding ? (
         <div className="rounded-xl border border-neutral-200 p-2 space-y-2">
           <div className="flex flex-wrap items-center gap-2">

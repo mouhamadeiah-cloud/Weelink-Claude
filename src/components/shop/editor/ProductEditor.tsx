@@ -23,6 +23,7 @@ import { GALLERY_LAYOUTS, GalleryLayoutIcon } from '../store/ProductGallery';
 import { itemNoLabel } from '../../../utils/itemNumbers';
 import { useRentalMode } from '../../rental/rentalTypes';
 import { ItemServices } from '../../rental/ItemServices';
+import { ItemRentalWays, useItemUnit } from '../../rental/ItemRentalWays';
 import { useHotelMode } from '../../hotel/hotelTypes';
 
 const newProductDraft = (currency: string): ShopProduct => ({
@@ -71,7 +72,8 @@ const pathOf = (product: ShopProduct | undefined, catalogs: ShopCatalog[]): Pick
 type ExportTarget = 'store' | 'warehouse' | 'both';
 
 const STEPS = ['المنتج', 'الصور', 'السعر', 'المواصفات والمخزون', 'الشرح', 'منتجات مرتبطة'];
-const LAST_STEP = STEPS.length;
+// A rental adds «طريقة التأجير» before the price.
+const RENTAL_STEPS = [...STEPS.slice(0, 2), 'طريقة التأجير', ...STEPS.slice(2)];
 
 const DISPLAYS: { id: ProductDisplay; label: string; icon: React.ElementType }[] = [
   { id: 'card', label: 'بطاقة', icon: LayoutGrid },
@@ -110,6 +112,14 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
   const [slots, setSlots] = useState<string[]>(() => toSlots(initial?.images || []));
   const [path, setPath] = useState<PickerPath>(() => pathOf(initial, data.catalogs));
   const [step, setStep] = useState(1);
+  // A new item has no id until it is saved, but its services and rental settings need one.
+  const [draftId] = useState(() => newId('prd'));
+  const itemId = p.id || draftId;
+  const rentalUnit = useItemUnit(itemId, p.price || 0, p.currency);
+  const steps = rentsOut ? RENTAL_STEPS : STEPS;
+  const LAST_STEP = steps.length;
+  const ways = rentsOut && step === 3; // the stage before the price
+  const k = rentsOut && step > 3 ? step - 1 : step; // the step of the plain entry
   const [error, setError] = useState('');
   const set = (patch: Partial<ShopProduct>) => setP((prev) => ({ ...prev, ...patch }));
   const isEdit = !!initial;
@@ -149,7 +159,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
     const variants = buildVariants(p.options, p.variants);
     const product: ShopProduct = {
       ...p,
-      id: p.id || newId('prd'),
+      id: itemId,
       name,
       description: sanitizeHtml(p.description),
       shortDescription: p.shortDescription.trim(),
@@ -214,6 +224,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
         movements: [...movements, ...d.movements],
       };
     });
+    if (rentsOut) rentalUnit.commit(name).catch((e) => console.warn('Could not save the rental settings:', e));
     onDone(
       target === 'store' ? `تم تصدير "${name}" إلى المتجر.`
         : target === 'warehouse' ? `تم حفظ "${name}" في المستودع.`
@@ -242,7 +253,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
       )}
       {step < LAST_STEP && (
         <PrimaryButton onClick={() => goTo(step + 1)} className="flex-1 h-11 flex items-center justify-center gap-1.5">
-          التالي: {STEPS[step]} <ArrowLeft size={14} />
+          التالي: {steps[step]} <ArrowLeft size={14} />
         </PrimaryButton>
       )}
     </div>
@@ -252,7 +263,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
     <div className="grid lg:grid-cols-[minmax(0,1fr)_250px] gap-4 items-start">
       <div className="space-y-4 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5">
-          {STEPS.map((label, i) => (
+          {steps.map((label, i) => (
             <React.Fragment key={label}>
               {i > 0 && <ArrowLeft size={12} className="text-neutral-300" />}
               <button
@@ -308,7 +319,13 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           </Card>
         )}
 
-        {step === 3 && (
+        {ways && (
+          <Card title="طريقة التأجير">
+            <ItemRentalWays item={rentalUnit} />
+          </Card>
+        )}
+
+        {k === 3 && !ways && (
           <Card title="السعر">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Field label={rentsOut ? 'سعر اليوم' : 'السعر'} hint={rentsOut ? 'بعد الحفظ بتحدد سعر الساعة والفترات والأسعار المميزة.' : undefined}>
@@ -371,7 +388,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           </Card>
         )}
 
-        {step === 4 && (
+        {k === 4 && (
           <Card title="المواصفات والمخزون" actions={isEdit ? <span className="text-xs text-neutral-400">مرتبط بالمستودع</span> : undefined}>
             <OptionsEditor
               options={p.options}
@@ -384,7 +401,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
             />
             {rentsOut && (
               <Field label="الخدمات الجاهزة" hint="فعّل الخدمات المرافقة لهذا العنصر، أو أضف خدمة جديدة وبتنحفظ بالإعدادات في «الخدمات الإضافية».">
-                <ItemServices itemId={p.id} />
+                <ItemServices itemId={itemId} />
               </Field>
             )}
             {rentsOut && (
@@ -403,7 +420,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           </Card>
         )}
 
-        {step === 5 && (
+        {k === 5 && (
           <Card title="شرح المنتج">
             <RichTextEditor value={p.description} onChange={(description) => set({ description })} placeholder="اكتب وصفاً كاملاً للمنتج: المزايا، طريقة الاستعمال، المحتويات…" />
             <Field label="شرح قصير تحت الاسم">
@@ -413,7 +430,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
           </Card>
         )}
 
-        {step === 6 && (
+        {k === 6 && (
           <>
             <Card title="منتجات مرتبطة" actions={<span className="text-xs text-neutral-400">تظهر أسفل البطاقة العائمة، حتى 5</span>}>
               <RelatedProductsPicker

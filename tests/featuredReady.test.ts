@@ -9,14 +9,20 @@ const isFeaturedLive = (e: any) => (e.type === 'carListings' && e.carSource === 
 test('the featured slides of shop, showroom and menu are one category of their own', () => {
   assert.ok(READY_SLIDE_CATEGORIES.some((c) => c.id === 'featured'));
   const n = slideTemplateCount('featured');
-  assert.equal(n, 8);
+  assert.equal(n, 16);
   const ids = new Set<string>();
+  const names: string[] = [];
   for (let i = 0; i < n; i++) {
     const p: any = getSlideTemplatePayload('featured', i, 'عروض مميزة');
     assert.ok(p.elements.some(isFeaturedLive), `slide ${i} shows featured cards`);
-    ids.add(p.aiTemplate);
+    names.push(p.name);
+    if (p.aiTemplate) ids.add(p.aiTemplate);
   }
-  assert.equal(ids.size, n);
+  assert.equal(ids.size, 8);
+  assert.equal(new Set(names).size, n);
+  for (const page of ['السيارات', 'المطعم', 'المتجر', 'الفندق', 'التأجير (سيارات)', 'التأجير (أغراض)']) assert.ok(names.some((x) => x.startsWith(`شريحة ${page} المميزة`)), page);
+  const hotel: any = getSlideTemplatePayload('featured', 9, '');
+  assert.ok(JSON.stringify(hotel.elements).includes('غرف مميزة'));
 });
 
 test('the shop, showroom and menu lists no longer hold them, and keep every other slide', () => {

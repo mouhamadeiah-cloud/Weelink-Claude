@@ -89,7 +89,10 @@ export interface RentalExtra {
   per: ExtraPer; // per day or hour of the booking, or once
   units: string[]; // only these units; [] = all (NO_UNIT = none)
   note?: string; // what it includes, shown behind a «؟» to the visitor and in the contract
+  prices?: Record<string, number>; // a price of its own for some units (set while the item is entered); the others pay `price`
 }
+// What an extra costs on one unit.
+export const extraPriceFor = (x: RentalExtra, unitId: string) => (x.prices && typeof x.prices[unitId] === 'number' ? x.prices[unitId] : x.price);
 
 // The unit id of an extra that no unit offers (a [] list means every unit).
 export const NO_UNIT = 'none';
@@ -115,6 +118,12 @@ export const newRentalId = (p = 'x') => `${p}${Date.now().toString(36)}${Math.ra
 export const unitIdOf = (itemId: string) => `u${itemId.toLowerCase().replace(/[^a-z0-9]/g, '')}`.slice(0, 20);
 
 export const MAX_COPIES = 100;
+// One way to rent (Eyad, 26 Oct): a unit rented by several ways at once becomes a day rental, the first way.
+export const singleWay = <T extends RentalUnit>(u: T): T => {
+  const ways = (u.byDay ? 1 : 0) + (u.byHour ? 1 : 0) + (u.periods.length > 0 ? 1 : 0);
+  return ways > 1 ? { ...u, byDay: true, byHour: false, periods: [] } : u;
+};
+
 export const normalizeAvail = (raw: unknown): AvailRule[] => {
   const seen = new Set<string>();
   return (Array.isArray(raw) ? raw : [])
@@ -199,6 +208,7 @@ export const normalizeExtras = (raw: unknown): RentalExtra[] => {
       per: (x?.per === 'once' || x?.per === 'person' || x?.per === 'personOnce' ? x.per : 'unit') as ExtraPer,
       units: Array.isArray(x?.units) ? x.units.filter(isId).slice(0, 500) : [],
       note: str(x?.note, 200),
+      prices: Object.fromEntries((Object.entries(x?.prices && typeof x.prices === 'object' ? x.prices : {}) as [string, unknown][]).filter(([k, v]) => isId(k) && typeof v === 'number' && v >= 0 && v < 1e9).slice(0, 500)) as Record<string, number>,
     }))
     .filter((x: RentalExtra) => x.id && x.name && !seen.has(x.id) && !!seen.add(x.id));
 };
@@ -439,7 +449,7 @@ export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: R
     if (!x) continue;
     const guests = Math.max(1, Math.round(Number(w.guests)) || 1);
     const n = x.per === 'unit' ? count : x.per === 'person' ? count * guests : x.per === 'personOnce' ? guests : 1;
-    lines.push({ label: n > 1 ? `${x.name} × ${n}` : x.name, amount: x.price * n, ...(x.note ? { note: x.note } : {}) });
+    lines.push({ label: n > 1 ? `${x.name} × ${n}` : x.name, amount: extraPriceFor(x, unitId) * n, ...(x.note ? { note: x.note } : {}) });
   }
   const total = Math.round(lines.reduce((s, l) => s + l.amount, 0) * 100) / 100;
   return { lines: lines.map((l) => ({ ...l, amount: Math.round(l.amount * 100) / 100 })), total, currency: u.currency, nights, slots, count, slot };
@@ -474,8 +484,10 @@ export const mergeUnits = (rooms: (StayRoom & Partial<RentalUnit>)[], items: War
   const byItem = new Map(rooms.filter((r) => r.item).map((r) => [r.item!, r]));
   const fromWarehouse = items.map((it) => {
     const old = byItem.get(it.item);
-    const u = normalizeUnit(old || { byDay: true, dayPrice: it.price, fromPrice: it.price });
+    const u = singleWay(normalizeUnit(old || { byDay: true, dayPrice: it.price, fromPrice: it.price }));
     const repriced = !old || u.fromPrice !== it.price;
+    // The item's price is the price of the way it is rented by: the day, or the hour.
+    const hourOnly = u.byHour && !u.byDay && u.periods.length === 0;
     return {
       id: old?.id || unitIdOf(it.item),
       name: it.name.slice(0, 60) || 'بدون اسم',
@@ -485,7 +497,8 @@ export const mergeUnits = (rooms: (StayRoom & Partial<RentalUnit>)[], items: War
       ...u,
       item: it.item,
       currency: it.currency || u.currency,
-      dayPrice: repriced ? it.price : u.dayPrice,
+      dayPrice: repriced && !hourOnly ? it.price : u.dayPrice,
+      hourPrice: repriced && hourOnly ? it.price : u.hourPrice,
       fromPrice: it.price,
       copies: it.copies ? Math.min(MAX_COPIES, Math.max(1, Math.round(it.copies))) : 1,
     };

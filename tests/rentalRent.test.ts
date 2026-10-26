@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import handler from '../api/booking.ts';
 import { store, tokens, users } from './fakeAdmin.ts';
-import { daysFree, mergeUnits, normalizeUnit, quote, slotsFree, slotsOf, unitIdOf, type RentalExtra } from '../src/services/rentalBooking.ts';
+import { daysFree, mergeUnits, normalizeExtras, normalizeUnit, quote, slotsFree, slotsOf, unitIdOf, type RentalExtra } from '../src/services/rentalBooking.ts';
 import { normalizeSchedule } from '../src/services/bookingSettings.ts';
 
 // ---- the price ----
@@ -197,4 +197,21 @@ test('availability: allowed dates, hours and weekdays limit the rental, blocked 
   assert.equal(quote(avail, [], 'u1', { by: 'hour', date: '2030-06-07', start: 600, hours: 2 }), null); // a Friday
   // days rules don't apply to hours of the day, and hours rules don't apply to whole days
   assert.ok(quote(avail, [], 'u1', { by: 'day', date: '2030-06-03', checkOut: '2030-06-04' }));
+});
+
+// ---- one way, and a service price for one item ----
+test('a service can cost something else for one item, and a unit rented several ways becomes a day rental', () => {
+  const x: RentalExtra[] = [{ id: 'e1', name: 'سائق', price: 20, per: 'unit', units: [], prices: { u1: 35 } }];
+  const q = quote(unit, x, 'u1', { by: 'day', date: '2030-04-01', checkOut: '2030-04-03', extras: ['e1'] })!;
+  assert.equal(q.total, 100 + 2 * 35); // the item's own price
+  assert.equal(quote(unit, x, 'u2', { by: 'day', date: '2030-04-01', checkOut: '2030-04-03', extras: ['e1'] })!.total, 100 + 2 * 20);
+  assert.equal(normalizeExtras(x)[0].prices!.u1, 35);
+  const several = mergeUnits([{ id: 'u9', name: 'م', capacity: 1, price: '', photo: '', ...normalizeUnit({ item: 'p_a', byDay: true, byHour: true, dayPrice: 5, hourPrice: 2, periods: [{ id: 'p1', name: 'م', start: 600, end: 900, price: 9 }] }) }], [{ item: 'p_a', name: 'م', photo: '', price: 5, currency: '' }]);
+  assert.equal(several[0].byDay, true);
+  assert.equal(several[0].byHour, false);
+  assert.equal(several[0].periods.length, 0);
+  // rented by the hour only: the item's price is the hour's
+  const hourly = mergeUnits([{ id: 'u8', name: 'ن', capacity: 1, price: '', photo: '', ...normalizeUnit({ item: 'p_b', byDay: false, byHour: true, hourPrice: 4, fromPrice: 4 }) }], [{ item: 'p_b', name: 'ن', photo: '', price: 6, currency: '' }]);
+  assert.equal(hourly[0].byHour, true);
+  assert.equal(hourly[0].hourPrice, 6);
 });

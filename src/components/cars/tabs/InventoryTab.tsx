@@ -10,6 +10,7 @@ import { Card, EmptyState, inputClass, PrimaryButton, formatMoney } from '../../
 import { matchesSearch } from '../../shop/store/shopSearchStore';
 import { CarTabProps } from './CarEditor';
 import { itemNoLabel } from '../../../utils/itemNumbers';
+import { useRentalMode } from '../../rental/rentalTypes';
 
 const Stat: React.FC<{ label: string; value: string; color?: string }> = ({ label, value, color }) => (
   <div className="bg-white border border-neutral-200 rounded-2xl p-3">
@@ -24,12 +25,16 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
   const [moneyFor, setMoneyFor] = useState<{ id: string; initial: 'sale' | 'reserve' } | null>(null);
   const openMoney = (id: string, initial: 'sale' | 'reserve' = 'sale') => setMoneyFor({ id, initial });
   const currency = data.settings.currency;
+  // A rental's cars are rented, not sold: no sale, profit or money file here (rentals come with booking).
+  const rental = useRentalMode();
+  const statuses = rental ? CAR_STATUSES.filter((s) => s.id !== 'sold') : CAR_STATUSES;
 
   const setCar = (id: string, changes: Partial<Car>) =>
     update((d) => ({ ...d, cars: d.cars.map((c) => (c.id === id ? { ...c, ...changes, updatedAt: new Date().toISOString() } : c)) }));
   // «مباعة» goes through the sale window (price, buyer, payment); leaving «مباعة» undoes the sale.
   const setStatus = (car: Car, status: CarStatus) => {
     if (status === car.status) return;
+    if (rental) return setCar(car.id, { status });
     if (status === 'sold' && !car.sale) return openMoney(car.id);
     // A reservation is made (customer and deposit) and ended (refund or keep) in the money file.
     if (status === 'reserved' && !car.sale && !car.reservation) return openMoney(car.id, 'reserve');
@@ -60,10 +65,19 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Stat label="في المعرض الآن" value={String(inStock.length)} />
+        <Stat label={rental ? 'كل السيارات' : 'في المعرض الآن'} value={String(inStock.length)} />
         <Stat label="محجوزة" value={String(count('reserved'))} color="#f29900" />
-        <Stat label="قيمة المخزون (الكلفة)" value={formatMoney(stockValue, currency)} />
-        <Stat label="الربح المتوقع" value={formatMoney(expected, currency)} color="#34a853" />
+        {rental ? (
+          <>
+            <Stat label="متاحة" value={String(count('available'))} color="#34a853" />
+            <Stat label="قيد التجهيز" value={String(count('preparing'))} color="#5e5ce6" />
+          </>
+        ) : (
+          <>
+            <Stat label="قيمة المخزون (الكلفة)" value={formatMoney(stockValue, currency)} />
+            <Stat label="الربح المتوقع" value={formatMoney(expected, currency)} color="#34a853" />
+          </>
+        )}
       </div>
 
       <Card
@@ -76,7 +90,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
             <input className={`${inputClass} pr-9`} placeholder="ابحث بالماركة، الموديل، الرقم، الشاصي..." value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
           <div className="flex flex-wrap gap-1">
-            {[{ id: 'all' as const, label: 'الكل' }, ...CAR_STATUSES].map((s) => (
+            {[{ id: 'all' as const, label: 'الكل' }, ...statuses].map((s) => (
               <button
                 key={s.id}
                 type="button"
@@ -110,7 +124,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
                       </div>
                       <div className="text-xs font-bold mt-0.5">
                         {c.sale ? <>بيعت بـ {formatMoney(c.sale.price, c.currency)}</> : c.price > 0 ? formatMoney(c.price, c.currency) : <span className="text-neutral-400">بدون سعر</span>}
-                        {margin !== 0 && <span className={`mr-2 text-xs ${margin > 0 ? 'text-green-600' : 'text-red-500'}`}>{c.sale ? 'ربح' : 'ربح متوقع'} {formatMoney(margin, c.currency)}</span>}
+                        {!rental && margin !== 0 && <span className={`mr-2 text-xs ${margin > 0 ? 'text-green-600' : 'text-red-500'}`}>{c.sale ? 'ربح' : 'ربح متوقع'} {formatMoney(margin, c.currency)}</span>}
                         {owed > 0 && <span className="mr-2 text-xs text-[#f29900]">متبقٍ على المشتري {formatMoney(owed, c.currency)}</span>}
                         {c.reservation && (
                           <span className="mr-2 text-xs text-[#f29900]">
@@ -121,10 +135,10 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {!c.sale && (
+                    {!rental && !c.sale && (
                       <button type="button" onClick={() => openMoney(c.id)} className="h-9 px-3 rounded-xl bg-[#34a853] hover:bg-[#2d9047] text-white text-xs font-bold flex items-center gap-1 cursor-pointer"><BadgeCheck size={14} /> تم البيع</button>
                     )}
-                    <button type="button" onClick={() => openMoney(c.id)} title="الملف المالي: المصاريف والبيع والدفعات" aria-label="الملف المالي" className="w-9 h-9 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 flex items-center justify-center cursor-pointer"><Wallet size={15} /></button>
+                    {!rental && <button type="button" onClick={() => openMoney(c.id)} title="الملف المالي: المصاريف والبيع والدفعات" aria-label="الملف المالي" className="w-9 h-9 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 flex items-center justify-center cursor-pointer"><Wallet size={15} /></button>}
                     <select
                       value={c.status}
                       onChange={(e) => setStatus(c, e.target.value as CarStatus)}
@@ -132,7 +146,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
                       style={{ color: st.color, borderColor: `${st.color}55`, backgroundColor: `${st.color}12` }}
                       aria-label="حالة السيارة"
                     >
-                      {CAR_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                      {statuses.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                     </select>
                     <button type="button" onClick={() => setCar(c.id, { published: !c.published })} title={c.published ? 'ظاهرة في المعرض: اضغط للإخفاء' : 'مخفية: اضغط للعرض في المعرض'} aria-label={c.published ? 'إخفاء من المعرض' : 'عرض في المعرض'} className={`w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer ${c.published ? 'border-green-200 bg-green-50 text-green-600' : 'border-neutral-200 text-neutral-400'}`}>
                       {c.published ? <Eye size={15} /> : <EyeOff size={15} />}

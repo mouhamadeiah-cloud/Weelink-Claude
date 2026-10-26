@@ -26,7 +26,7 @@ const ACTIONS: Record<SubscriberStatus, { to: SubscriberStatus; label: string; s
   cancelled: [{ to: 'active', label: 'إعادة التفعيل', sure: 'يعود حسابه وصفحاته كما كانت، ويُلغى موعد التجميد التلقائي (لتاريخ محدد استعمل «تأجيل التجميد»).' }],
 };
 
-const KIND_AR: Record<string, string> = { page: 'صفحة', restaurant: 'مطعم', shop: 'متجر', cars: 'سيارات' };
+const KIND_AR: Record<string, string> = { page: 'صفحة', restaurant: 'مطعم', shop: 'متجر', cars: 'سيارات', rental: 'تأجير' };
 // The paid packages with the price from plans.ts (the admin may change the amount for a discount).
 const PAID_PLANS = Object.entries(PLANS).flatMap(([kind, list]) => list.filter((p) => p.monthly > 0).map((p) => ({ id: p.id, name: `${KIND_AR[kind] || kind} ${p.name}`, monthly: p.monthly })));
 const day = (ms: number) => (ms ? new Date(ms).toLocaleDateString('ar-SY', { year: 'numeric', month: 'long', day: 'numeric' }) : '—');

@@ -9,7 +9,7 @@ export interface InvoiceItem { label: string; amount: number }
 export interface Invoice { plan: string; planName: string; period: Period; devices: number; items: InvoiceItem[]; total: number }
 
 export const MAX_DEVICES = 20;
-const KIND_NAMES: Record<ProjectType, string> = { page: 'صفحة', restaurant: 'مطعم', shop: 'متجر', cars: 'معرض سيارات' };
+const KIND_NAMES: Record<ProjectType, string> = { page: 'صفحة', restaurant: 'مطعم', shop: 'متجر', cars: 'معرض سيارات', rental: 'تأجير' };
 const priceFor = (monthly: number, period: Period) => (period === 'yearly' ? yearlyPrice(monthly) : monthly);
 
 /** The invoice of a package for a project, or null when the package is not a paid one of its kind. */

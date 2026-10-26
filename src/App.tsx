@@ -62,7 +62,11 @@ import { CarAdminPanel } from './components/cars/CarAdminPanel';
 import { CarDataContext, CarRequestContext } from './components/cars/store/CarDataContext';
 import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
+import { RentalAdminPanel } from './components/rental/RentalAdminPanel';
+import { RentalAdminData, RentalModeContext, createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentalShopView, rentsCars } from './components/rental/rentalTypes';
+import { getRentalTemplate } from './data/rentalTemplate';
 import { getCarShowroomTemplate } from './data/carShowroomTemplate';
+import { loadCategories } from './utils/businessCategories';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { PageAdminPanel } from './components/pageAdmin/PageAdminPanel';
 import { BookingPage, BookingPageContext } from './services/bookings';
@@ -174,10 +178,11 @@ const PROJECT_STORAGE: Record<ProjectType, { pagesField: string; elementsField: 
   shop: { pagesField: 'shopPages', elementsField: 'shopElements', localPrefix: 'weelink_shop_' },
   cars: { pagesField: 'carPages', elementsField: 'carElements', localPrefix: 'weelink_cars_' },
   restaurant: { pagesField: 'restaurantPages', elementsField: 'restaurantElements', localPrefix: 'weelink_restaurant_' },
+  rental: { pagesField: 'rentalPages', elementsField: 'rentalElements', localPrefix: 'weelink_rental_' },
 };
 
 // Named in the top bar until the site has its own name (the navbar's brand name).
-const PROJECT_KIND_LABEL: Record<ProjectType, string> = { page: 'صفحتي', shop: 'المتجر', cars: 'معرض السيارات', restaurant: 'المطعم' };
+const PROJECT_KIND_LABEL: Record<ProjectType, string> = { page: 'صفحتي', shop: 'المتجر', cars: 'معرض السيارات', restaurant: 'المطعم', rental: 'التأجير' };
 
 const RESUME_KEY = 'weelink_resume';
 // Where this tab was before a refresh (written by the screen effect in App).
@@ -324,7 +329,7 @@ export default function App() {
   // The kind a visitor chose on the start page: the account comes first, then its questions (Eyad, 17 Oct).
   const questionsAfterAuthRef = useRef<{ kind: ProjectType } | null>(null);
   // What the signed-in account owns, from the last workspace load (decides where «صفحتي» goes).
-  const ownedRef = useRef({ page: false, shop: false, cars: false, restaurant: false });
+  const ownedRef = useRef({ page: false, shop: false, cars: false, restaurant: false, rental: false });
   const [isChatActive, setIsChatActive] = useState<boolean>(true);
   const [isCanvasLoading, setIsCanvasLoading] = useState<boolean>(false);
   // The account whose workspace is open (see services/accounts.ts); 'mouhamadeiah' while signed out.
@@ -352,10 +357,13 @@ export default function App() {
     setTimeout(() => window.alert(`باقتك بتسمح بـ ${what}. رقّي الباقة من «نشر» أو من «حسابي» لتضيف أكتر.`), 0);
   };
   const [shopAdmin, setShopAdmin] = useState<ShopAdminData>(createEmptyShopAdmin);
+  // A rental counts its cars and its items together: each side may use what the other leaves.
+  const rentalCountsRef = useRef({ on: false, cars: 0, products: 0 });
   const updateShopAdmin = useCallback((fn: (d: ShopAdminData) => ShopAdminData) => setShopAdmin((prev) => {
     const next = fn(prev);
-    const max = limitsRef.current.items;
-    if (overLimit(prev.products.length, next.products.length, max)) { refuseOverLimit(`${max} ${ITEM_WORD.shop}`); return prev; }
+    const rental = rentalCountsRef.current;
+    const max = limitsRef.current.items - (rental.on ? rental.cars : 0);
+    if (overLimit(prev.products.length, next.products.length, max)) { refuseOverLimit(`${limitsRef.current.items} ${ITEM_WORD[rental.on ? 'rental' : 'shop']}`); return prev; }
     return next;
   }), []);
   const [hasCars, setHasCars] = useState<boolean>(false);
@@ -365,8 +373,9 @@ export default function App() {
   const [publishedName, setPublishedName] = useState<string | null>(null);
   const updateCarAdmin = useCallback((fn: (d: CarAdminData) => CarAdminData) => setCarAdmin((prev) => {
     const next = fn(prev);
-    const max = limitsRef.current.items;
-    if (overLimit(prev.cars.length, next.cars.length, max)) { refuseOverLimit(`${max} ${ITEM_WORD.cars}`); return prev; }
+    const rental = rentalCountsRef.current;
+    const max = limitsRef.current.items - (rental.on ? rental.products : 0);
+    if (overLimit(prev.cars.length, next.cars.length, max)) { refuseOverLimit(`${limitsRef.current.items} ${ITEM_WORD[rental.on ? 'rental' : 'cars']}`); return prev; }
     return next;
   }), []);
   const submitCarRequest = useCallback((r: RequestInput) => setCarAdmin((prev) => submitRequest(prev, r)), []);
@@ -388,10 +397,12 @@ export default function App() {
   const updatePageAdmin = useCallback((fn: (d: PageAdminData) => PageAdminData) => setPageAdmin((prev) => fn(prev)), []);
   // Every car, dish and product gets Weelink's public number once the admin is open (see services/itemNumbers.ts).
   const numberingOn = !!currentUser && !isFirebaseLoading;
-  useItemNumbers('car', carAdmin.cars, numberingOn && project === 'cars', (fn) => setCarAdmin((d) => ({ ...d, cars: fn(d.cars) })));
+  rentalCountsRef.current = { on: project === 'rental', cars: carAdmin.cars.length, products: shopAdmin.products.length };
+  const rentalShop = useMemo(() => rentalShopView(shopAdmin), [shopAdmin]);
+  useItemNumbers('car', carAdmin.cars, numberingOn && (project === 'cars' || project === 'rental'), (fn) => setCarAdmin((d) => ({ ...d, cars: fn(d.cars) })));
   useItemNumbers('dish', restaurantAdmin.dishes, numberingOn && project === 'restaurant', (fn) => setRestaurantAdmin((d) => ({ ...d, dishes: fn(d.dishes) })));
   useItemNumbers('service', pageAdmin.services, numberingOn && project === 'page' && pageAdminReadyRef.current, (fn) => setPageAdmin((d) => ({ ...d, services: fn(d.services) })));
-  useItemNumbers('product', shopAdmin.products, numberingOn && project === 'shop', (fn) => setShopAdmin((d) => ({ ...d, products: fn(d.products) })));
+  useItemNumbers('product', shopAdmin.products, numberingOn && (project === 'shop' || project === 'rental'), (fn) => setShopAdmin((d) => ({ ...d, products: fn(d.products) })));
   // The open restaurant's live data: restaurants/{uid} for the account's first, restaurants/{uid}__{key} after.
   const restaurantId = restaurantIdOf(ownerUid, projectKey);
   // Read again when «نشر» closes, since a payment may have changed the package.
@@ -642,11 +653,13 @@ export default function App() {
     let shopExists = false;
     let carsExist = false;
     let restaurantExists = false;
+    let rentalExists = false;
     let pageHasContent = false;
     try {
       shopExists = !!localStorage.getItem(`${PROJECT_STORAGE.shop.localPrefix}pages_${userId}`);
       carsExist = !!localStorage.getItem(`${PROJECT_STORAGE.cars.localPrefix}pages_${userId}`);
       restaurantExists = !!localStorage.getItem(`${PROJECT_STORAGE.restaurant.localPrefix}pages_${userId}`);
+      rentalExists = !!localStorage.getItem(`${PROJECT_STORAGE.rental.localPrefix}pages_${userId}`);
     } catch {
       // storage unavailable
     }
@@ -658,6 +671,7 @@ export default function App() {
         if (Array.isArray(data.shopPages) && data.shopPages.length > 0) shopExists = true;
         if (Array.isArray(data.carPages) && data.carPages.length > 0) carsExist = true;
         if (Array.isArray(data.restaurantPages) && data.restaurantPages.length > 0) restaurantExists = true;
+        if (Array.isArray(data.rentalPages) && data.rentalPages.length > 0) rentalExists = true;
         const cloudPages: Page[] = normalizeLegacyNavbarDefaults(Array.isArray(data.pages) ? data.pages : []);
         if (cloudPages.length > 0) {
           const cloudElements: CanvasElement[] = deserializeElements(data.elements || []);
@@ -685,7 +699,7 @@ export default function App() {
     setHasShop(shopExists);
     setHasCars(carsExist);
     setHasRestaurant(restaurantExists);
-    ownedRef.current = { page: pageHasContent, shop: shopExists, cars: carsExist, restaurant: restaurantExists };
+    ownedRef.current = { page: pageHasContent, shop: shopExists, cars: carsExist, restaurant: restaurantExists, rental: rentalExists };
     setActivePageId('page-home');
     projectReadyRef.current = true;
 
@@ -834,6 +848,81 @@ export default function App() {
     setSelectedElementId(null);
     setIsChatActive(false);
     setHasCars(true);
+    projectReadyRef.current = true;
+  };
+
+  // Loads a rental project («تأجير»). It keeps its cars in the showroom's car data and everything else
+  // in the shop's product data (components/rental/rentalTypes.ts), so the editor's car and product
+  // elements and the admin's tabs work on it as they are. A first visit starts from the rental
+  // template for what the owner rents (Wee AI), with example cars when it rents cars, and with the
+  // catalogs of everything else.
+  const loadRentalWorkspace = async (userId: string, key: string = 'rental') => {
+    const seq = ++loadSeqRef.current;
+    projectReadyRef.current = false;
+    const { pagesField, elementsField } = PROJECT_STORAGE.rental;
+    const localPrefix = localPrefixOf(key);
+    let rentalPages: Page[] = [];
+    let rentalElements: CanvasElement[] = [];
+    let admin: RentalAdminData | null = null;
+    try {
+      const designSnap = await getDoc(projectDoc(userId, key));
+      if (designSnap.exists()) {
+        const data: any = designSnap.data();
+        if (Array.isArray(data[pagesField]) && data[pagesField].length > 0) {
+          rentalPages = normalizeLegacyNavbarDefaults(data[pagesField]);
+          rentalElements = deserializeElements(data[elementsField] || []);
+        }
+        if (data.rentalAdmin) admin = normalizeRentalAdmin(data.rentalAdmin);
+      }
+    } catch (e) {
+      console.warn("Could not load the rental from Firebase, falling back to local cache:", e);
+    }
+    if (seq !== loadSeqRef.current) return;
+    try {
+      if (rentalPages.length === 0) {
+        const storedPages = localStorage.getItem(`${localPrefix}pages_${userId}`);
+        const storedElements = localStorage.getItem(`${localPrefix}elements_${userId}`);
+        if (storedPages) rentalPages = normalizeLegacyNavbarDefaults(JSON.parse(storedPages));
+        if (storedElements) rentalElements = deserializeElements(JSON.parse(storedElements));
+      }
+      if (!admin) {
+        const storedAdmin = localStorage.getItem(`${localPrefix}admin_${userId}`);
+        if (storedAdmin) admin = normalizeRentalAdmin(JSON.parse(storedAdmin));
+      }
+    } catch (e) {
+      console.warn("Could not read the local rental cache:", e);
+    }
+    freshProjectRef.current = rentalPages.length === 0;
+    if (rentalPages.length === 0) {
+      const category = readCatalogAnswer(userId, 'rental')?.category || '';
+      const template = inStartingLook(getRentalTemplate(category), 'cars');
+      rentalPages = template.pages;
+      rentalElements = template.elements;
+      if (!admin) {
+        const empty = createEmptyRentalAdmin();
+        const kinds = await loadCategories('rental').catch(() => []);
+        if (seq !== loadSeqRef.current) return;
+        admin = {
+          cars: rentsCars(category) ? { ...empty.cars, cars: exampleCars() } : empty.cars,
+          shop: { ...empty.shop, catalogs: rentalCatalogs(kinds.map((k) => ({ name: k.name, subs: k.subs.map((x) => x.name) })), category) },
+        };
+      }
+    } else {
+      ({ pages: rentalPages, elements: rentalElements } = withTemplateGroups(rentalPages, rentalElements));
+    }
+    const data = admin || createEmptyRentalAdmin();
+    setProject('rental');
+    setProjectKey(key);
+    setPages(rentalPages);
+    setElements(rentalElements);
+    setHistory([rentalElements]);
+    setHistoryIndex(0);
+    setCarAdmin(data.cars);
+    setShopAdmin(data.shop);
+    setActivePageId(rentalPages[0].id);
+    setActiveSlideId(rentalPages[0].slides[0]?.id || 'slide-1');
+    setSelectedElementId(null);
+    setIsChatActive(false);
     projectReadyRef.current = true;
   };
 
@@ -1168,6 +1257,32 @@ export default function App() {
     return () => clearTimeout(delayDebounceFn);
   }, [carAdmin, currentUser, isFirebaseLoading, activeUserUid, project, projectKey]);
 
+  // 5b. Debounced save of a rental's admin data: its cars and its items together (rentalTypes.ts).
+  useEffect(() => {
+    if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'rental' || !projectReadyRef.current) {
+      return;
+    }
+    const targetUserId = activeUserUid;
+    const rentalAdmin: RentalAdminData = { cars: carAdmin, shop: shopAdmin };
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        localStorage.setItem(`${localPrefixOf(projectKey)}admin_${targetUserId}`, JSON.stringify(rentalAdmin));
+      } catch (e) {
+        console.warn("Could not save rental data locally:", e);
+      }
+      try {
+        await setDoc(projectDoc(targetUserId, projectKey), {
+          rentalAdmin: sanitizeData(rentalAdmin),
+          ...laterProjectFields(projectKey),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Cloud save of rental data failed:", e);
+      }
+    }, 800);
+    return () => clearTimeout(delayDebounceFn);
+  }, [carAdmin, shopAdmin, currentUser, isFirebaseLoading, activeUserUid, project, projectKey]);
+
   // 6. Debounced save of the restaurant's admin data (menu, orders, settings).
   useEffect(() => {
     if (!isInitialLoadComplete.current || isFirebaseLoading || project !== 'restaurant') {
@@ -1229,6 +1344,7 @@ export default function App() {
       if (project === 'shop') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(shopAdmin));
       if (project === 'cars') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(carAdmin));
       if (project === 'restaurant') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify(restaurantAdmin));
+      if (project === 'rental') localStorage.setItem(`${localPrefix}admin_${targetUserId}`, JSON.stringify({ cars: carAdmin, shop: shopAdmin }));
     } catch (e) {
       console.warn("Could not save to LocalStorage:", e);
     }
@@ -1241,6 +1357,7 @@ export default function App() {
       ...(project === 'shop' ? { shopAdmin: sanitizeData(shopAdmin) } : {}),
       ...(project === 'cars' ? { carAdmin: sanitizeData(carAdmin) } : {}),
       ...(project === 'restaurant' ? { restaurantAdmin: sanitizeData(withoutStaff(restaurantAdmin)) } : {}),
+      ...(project === 'rental' ? { rentalAdmin: sanitizeData({ cars: carAdmin, shop: shopAdmin }) } : {}),
       updatedAt: serverTimestamp(),
     }, { merge: true }).then(() => true, (e) => {
       console.warn("Cloud save failed:", e);
@@ -1650,6 +1767,7 @@ export default function App() {
       if (kind === 'shop') await loadShopWorkspace(uid);
       else if (kind === 'cars') await loadCarsWorkspace(uid);
       else if (kind === 'restaurant') await loadRestaurantWorkspace(uid);
+      else if (kind === 'rental') await loadRentalWorkspace(uid);
       else await loadUserWorkspace(uid);
     } catch (e) {
       console.warn('Could not bring the page back:', e);
@@ -1721,6 +1839,7 @@ export default function App() {
         if (kind === 'shop') await loadShopWorkspace(targetUserId, type);
         else if (kind === 'cars') await loadCarsWorkspace(targetUserId, type);
         else if (kind === 'restaurant') await loadRestaurantWorkspace(targetUserId, type);
+        else if (kind === 'rental') await loadRentalWorkspace(targetUserId, type);
         else if (isFirstOfKind(type)) await loadUserWorkspace(targetUserId);
         else await loadPageProject(targetUserId, type);
       }
@@ -1740,7 +1859,7 @@ export default function App() {
   // (several projects, or none yet).
   const openMyPage = (accountId: string) => {
     const owned = ownedRef.current;
-    const kinds = (['shop', 'cars', 'restaurant'] as const).filter((k) => owned[k]);
+    const kinds = (['shop', 'cars', 'restaurant', 'rental'] as const).filter((k) => owned[k]);
     let last: string | null = null;
     try {
       last = localStorage.getItem(`weelink_last_project_${accountId}`);
@@ -1854,7 +1973,7 @@ export default function App() {
     const inviteProblem = takeInviteProblem();
     if (inviteProblem) window.setTimeout(() => window.alert(inviteProblem), 300);
     if (isNewUser) {
-      ownedRef.current = { page: false, shop: false, cars: false, restaurant: false };
+      ownedRef.current = { page: false, shop: false, cars: false, restaurant: false, rental: false };
       // ALWAYS start a brand-new account with a blank page. The editor screen
       // (isAuthActive === false) never renders before authentication succeeds,
       // so there is no such thing as "guest work designed before signup" to
@@ -2357,7 +2476,7 @@ export default function App() {
     setCarAdmin(createEmptyCarAdmin());
     setHasRestaurant(false);
     setRestaurantAdmin(createEmptyRestaurantAdmin());
-    ownedRef.current = { page: false, shop: false, cars: false, restaurant: false };
+    ownedRef.current = { page: false, shop: false, cars: false, restaurant: false, rental: false };
   };
 
   const handleRestoreBuiltPage = () => {
@@ -3421,7 +3540,7 @@ export default function App() {
     cmds.push({ id: 'structure', section: 'أوامر', title: 'هيكل الموقع', keywords: 'صفحات شرائح عناصر شجرة', icon: <FolderTree size={14} />, run: () => { setIsChatActive(false); setTabRequest((r) => ({ tab: 'structure', n: r.n + 1 })); setIsRightDrawerOpen(true); } });
     cmds.push({ id: 'page-settings', section: 'أوامر', title: 'إعدادات الصفحة', keywords: 'ألوان الصفحة', icon: <Settings size={14} />, run: () => { setIsChatActive(false); setDrawerSection('page-settings'); setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 })); setIsRightDrawerOpen(true); } });
     cmds.push({ id: 'project-settings', section: 'أوامر', title: 'إعدادات المشروع', keywords: 'اسم المشروع', icon: <Settings size={14} />, run: () => { setIsChatActive(false); setDrawerSection('project-settings'); setTabRequest((r) => ({ tab: 'tool', n: r.n + 1 })); setIsRightDrawerOpen(true); } });
-    cmds.push({ id: 'admin', section: 'أوامر', title: project === 'shop' ? 'إدارة المتجر' : project === 'cars' ? 'إدارة معرض السيارات' : project === 'restaurant' ? 'إدارة المطعم' : 'إدارة الصفحة', keywords: 'ادارة طلبات منتجات مواعيد حجوزات زوار', icon: <Store size={14} />, run: openAdmin });
+    cmds.push({ id: 'admin', section: 'أوامر', title: project === 'shop' ? 'إدارة المتجر' : project === 'cars' ? 'إدارة معرض السيارات' : project === 'rental' ? 'إدارة التأجير' : project === 'restaurant' ? 'إدارة المطعم' : 'إدارة الصفحة', keywords: 'ادارة طلبات منتجات مواعيد حجوزات زوار', icon: <Store size={14} />, run: openAdmin });
     cmds.push({ id: 'wee-ai', section: 'أوامر', title: 'Wee AI', keywords: 'ذكاء اصطناعي كتابة نصوص', icon: <SlidersHorizontal size={14} />, run: () => { setIsChatActive(true); setIsRightDrawerOpen(true); } });
     return cmds;
   };
@@ -4876,7 +4995,7 @@ export default function App() {
           onManualSave={handleManualSave}
           projectName={currentPage.navbar.brandName || PROJECT_KIND_LABEL[project]}
           onOpenProjectSettings={() => handleSelectTool('project-settings')}
-          projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'restaurant' ? 'Restaurant' : undefined}
+          projectLabel={project === 'shop' ? 'Shops' : project === 'cars' ? 'Cars' : project === 'rental' ? 'Rental' : project === 'restaurant' ? 'Restaurant' : undefined}
           onOpenProjects={handleOpenProjects}
           currentProjectKey={projectKey}
           onLoadProjects={async () => {
@@ -4926,10 +5045,11 @@ export default function App() {
       >
         <RestaurantDataContext.Provider value={project === 'restaurant' ? restaurantAdmin : null}>
         <RestaurantOrderContext.Provider value={project === 'restaurant' ? submitRestaurantOrder : null}>
-        <CarDataContext.Provider value={project === 'cars' ? carAdmin : null}>
-        <CarRequestContext.Provider value={project === 'cars' ? submitCarRequest : null}>
-        <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : null}>
-        <ShopUpdateContext.Provider value={project === 'shop' ? updateShopAdmin : null}>
+        <RentalModeContext.Provider value={project === 'rental'}>
+        <CarDataContext.Provider value={project === 'cars' || project === 'rental' ? carAdmin : null}>
+        <CarRequestContext.Provider value={project === 'cars' || project === 'rental' ? submitCarRequest : null}>
+        <ShopDataContext.Provider value={project === 'shop' ? shopAdmin : project === 'rental' ? rentalShop : null}>
+        <ShopUpdateContext.Provider value={project === 'shop' || project === 'rental' ? updateShopAdmin : null}>
         <CanvasWorkspace
           motionPreview={motionPreview}
           onMotionAction={handleMotionAction}
@@ -4983,6 +5103,7 @@ export default function App() {
         </ShopDataContext.Provider>
         </CarRequestContext.Provider>
         </CarDataContext.Provider>
+        </RentalModeContext.Provider>
         </RestaurantOrderContext.Provider>
         </RestaurantDataContext.Provider>
         {isCanvasLoading && (
@@ -5041,6 +5162,7 @@ export default function App() {
             admin={
               project === 'shop' ? { label: 'إدارة المتجر', onOpen: () => setAdminOpenRequest((n) => n + 1) }
               : project === 'cars' ? { label: 'إدارة معرض السيارات', onOpen: () => setAdminOpenRequest((n) => n + 1) }
+              : project === 'rental' ? { label: 'إدارة التأجير', onOpen: () => setAdminOpenRequest((n) => n + 1) }
               : project === 'restaurant' ? { label: 'إدارة المطعم', onOpen: () => setAdminOpenRequest((n) => n + 1) }
               : { label: 'إدارة الصفحة', onOpen: () => setIsPageAdminOpen(true) }
             }
@@ -5065,6 +5187,7 @@ export default function App() {
         allKindsOpen={adminOpenAll}
         isShopProject={project === 'shop'}
         isCarProject={project === 'cars'}
+        isRentalProject={project === 'rental'}
         isRestaurantProject={project === 'restaurant'}
         isOpen={isRightDrawerOpen}
         onToggle={() => setIsRightDrawerOpen(!isRightDrawerOpen)}
@@ -5182,7 +5305,7 @@ export default function App() {
                 suggestedName={currentPage.navbar.brandName || ''}
                 onPublishedChange={setPublishedName}
                 used={{
-                  items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
+                  items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'rental' ? carAdmin.cars.length + shopAdmin.products.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
                   devices: project === 'restaurant' ? restaurantAdmin.devices.filter((d) => d.active).length : 0,
                 }}
               />
@@ -5198,6 +5321,9 @@ export default function App() {
       )}
       {project === 'cars' && (
         <CarAdminPanel data={carAdmin} onChange={updateCarAdmin} openRequest={adminOpenRequest} tabRequest={adminTabRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
+      )}
+      {project === 'rental' && (
+        <RentalAdminPanel data={{ cars: carAdmin, shop: shopAdmin }} onCarsChange={updateCarAdmin} onShopChange={updateShopAdmin} maxItems={limits.items} openRequest={adminOpenRequest} tabRequest={adminTabRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
       )}
       {project === 'restaurant' && (
         <RestaurantAdminPanel data={restaurantAdmin} onChange={updateRestaurantAdmin} ownerUid={ownerUid} restaurantId={restaurantId} access={access} openRequest={adminOpenRequest} tabRequest={adminTabRequest} hideGear={isDocked || isOwnerView} onEditPage={isPreviewActive ? editPageFromAdmin : undefined} />
@@ -5265,7 +5391,7 @@ export default function App() {
         suggestedName={currentPage.navbar.brandName || ''}
         onPublishedChange={setPublishedName}
         used={{
-          items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
+          items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'rental' ? carAdmin.cars.length + shopAdmin.products.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
           devices: project === 'restaurant' ? restaurantAdmin.devices.filter((d) => d.active).length : 0,
         }}
       />

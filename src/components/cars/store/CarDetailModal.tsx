@@ -1,7 +1,8 @@
 // The car's full page that floats over the showroom when a visitor opens a car: its photos, price,
 // main facts, the specification table, features, condition and description, with WhatsApp and
 // call buttons that tell the showroom which car the visitor means, and «احجز تجربة قيادة» /
-// «اطلب السيارة» forms whose requests land in the showroom's «طلبات الزوار».
+// «اطلب السيارة» forms whose requests land in the showroom's «طلبات الزوار». In a rental it asks to
+// rent the car instead («اطلب الإيجار»), and the request lands in «طلبات الإيجار».
 import React, { useContext, useEffect, useState } from 'react';
 import { BookingPageContext } from '../../../services/bookings';
 import { notifyOwner } from '../../../services/contact';
@@ -11,6 +12,7 @@ import { Car, CarRequestType, CarSettings } from '../carTypes';
 import { useCarRequest } from './CarDataContext';
 import { carPriceLabel, carSpecRows, carSubtitle, carTitle, formatKm, statusMeta, whatsappHref, accidentsLabel, paintLabel } from '../carModel';
 import { formatMoney } from '../../shop/adminUi';
+import { useRentalMode } from '../../rental/rentalTypes';
 
 interface CarDetailModalProps {
   car: Car;
@@ -55,22 +57,27 @@ const REQUEST_TEXT: Record<CarRequestType, { title: string; button: string; date
   testDrive: { title: 'احجز تجربة قيادة', button: 'أرسل طلب التجربة', dateLabel: 'الموعد المناسب لك' },
   buy: { title: 'اطلب السيارة', button: 'أرسل الطلب', dateLabel: 'متى تود زيارة المعرض؟' },
 };
+const RENT_TEXT = { title: 'اطلب الإيجار', button: 'أرسل طلب الإيجار', dateLabel: 'من أي يوم بدك تستأجر؟' };
 
-const RequestForm: React.FC<{ car: Car; type: CarRequestType; settings: CarSettings; accent: string; onDone: () => void }> = ({ car, type, settings, accent, onDone }) => {
+// What a request is about: a car, or in a rental also any item (its name as the label).
+export const carRequestItem = (car: Car) => ({ id: car.id, label: `${carTitle(car)}${car.year ? ` ${car.year}` : ''}${car.stockNumber ? ` (رقم ${car.stockNumber})` : ''}` });
+
+export const RequestForm: React.FC<{ item: { id: string; label: string }; type: CarRequestType; settings: CarSettings; accent: string; onDone: () => void }> = ({ item, type, settings, accent, onDone }) => {
   const submit = useCarRequest();
   const page = useContext(BookingPageContext);
   const [f, setF] = useState({ name: '', phone: '', preferredDate: '', message: '' });
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
-  const t = REQUEST_TEXT[type];
-  const label = `${carTitle(car)}${car.year ? ` ${car.year}` : ''}${car.stockNumber ? ` (رقم ${car.stockNumber})` : ''}`;
+  const rental = useRentalMode();
+  const t = rental ? RENT_TEXT : REQUEST_TEXT[type];
+  const label = item.label;
   const field = 'w-full h-11 px-3 rounded-xl border border-neutral-200 bg-white text-sm outline-none focus:border-neutral-400';
 
   const send = () => {
     if (!f.name.trim()) return setError('اكتب اسمك.');
     if (f.phone.replace(/\D/g, '').length < 7) return setError('اكتب رقم هاتف صحيحًا.');
     setError('');
-    const r = { type, carId: car.id, carLabel: label, name: f.name.trim(), phone: f.phone.trim(), preferredDate: f.preferredDate, message: f.message.trim() };
+    const r = { type, carId: item.id, carLabel: label, name: f.name.trim(), phone: f.phone.trim(), preferredDate: f.preferredDate, message: f.message.trim() };
     submit?.(r);
     if (page?.live) {
       void notifyOwner({
@@ -81,7 +88,7 @@ const RequestForm: React.FC<{ car: Car; type: CarRequestType; settings: CarSetti
     }
     if (settings.whatsappNumber) {
       const text = [
-        `مرحبًا، ${type === 'testDrive' ? 'أود حجز تجربة قيادة' : 'أود طلب'} السيارة ${label}`,
+        `مرحبًا، ${rental ? 'أود استئجار' : type === 'testDrive' ? 'أود حجز تجربة قيادة السيارة' : 'أود طلب السيارة'} ${label}`,
         `الاسم: ${r.name}`,
         `الهاتف: ${r.phone}`,
         r.preferredDate ? `الموعد: ${r.preferredDate}` : '',
@@ -97,7 +104,7 @@ const RequestForm: React.FC<{ car: Car; type: CarRequestType; settings: CarSetti
       <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-4 text-center space-y-2">
         <CheckCircle2 size={30} style={{ color: accent }} className="mx-auto" />
         <div className="text-sm font-black">وصل طلبك، شكرًا لك</div>
-        <p className="text-xs text-neutral-500">سيتواصل معك المعرض على الرقم الذي كتبته.</p>
+        <p className="text-xs text-neutral-500">{rental ? 'سنتواصل معك على الرقم الذي كتبته لتأكيد الحجز.' : 'سيتواصل معك المعرض على الرقم الذي كتبته.'}</p>
         <button type="button" onClick={onDone} className="text-xs font-bold underline cursor-pointer">إغلاق</button>
       </div>
     );
@@ -125,6 +132,7 @@ const RequestForm: React.FC<{ car: Car; type: CarRequestType; settings: CarSetti
 
 export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, accent, font, onClose }) => {
   const [asking, setAsking] = useState<CarRequestType | null>(null);
+  const rental = useRentalMode();
   const canAsk = settings.acceptRequests && car.status !== 'sold';
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -133,7 +141,7 @@ export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, a
   }, [onClose]);
 
   const title = carTitle(car);
-  const ask = `مرحبًا، أستفسر عن السيارة ${title}${car.year ? ` ${car.year}` : ''}${car.stockNumber ? ` (رقم ${car.stockNumber})` : ''}`;
+  const ask = `مرحبًا، أستفسر عن ${rental ? 'إيجار ' : ''}السيارة ${title}${car.year ? ` ${car.year}` : ''}${car.stockNumber ? ` (رقم ${car.stockNumber})` : ''}`;
   const status = statusMeta(car.status);
   const facts: { icon: React.ElementType; label: string; value: string }[] = [
     { icon: Calendar, label: 'سنة الصنع', value: car.year ? String(car.year) : '' },
@@ -210,7 +218,12 @@ export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, a
               {!settings.whatsappNumber && !settings.phone && (
                 <p className="sm:col-span-2 text-xs text-neutral-400">أضف رقم واتساب أو هاتف المعرض من إعدادات المعرض لتظهر أزرار التواصل هنا.</p>
               )}
-              {canAsk && !asking && (
+              {canAsk && !asking && rental && (
+                <button type="button" onClick={() => setAsking('buy')} className="sm:col-span-2 h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ borderColor: accent, color: accent }}>
+                  <KeyRound size={18} /> اطلب الإيجار
+                </button>
+              )}
+              {canAsk && !asking && !rental && (
                 <>
                   <button type="button" onClick={() => setAsking('testDrive')} className="h-12 rounded-full border-2 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ borderColor: accent, color: accent }}>
                     <KeyRound size={18} /> احجز تجربة قيادة
@@ -221,7 +234,7 @@ export const CarDetailModal: React.FC<CarDetailModalProps> = ({ car, settings, a
                 </>
               )}
             </div>
-            {canAsk && asking && <RequestForm key={asking} car={car} type={asking} settings={settings} accent={accent} onDone={() => setAsking(null)} />}
+            {canAsk && asking && <RequestForm key={asking} item={carRequestItem(car)} type={asking} settings={settings} accent={accent} onDone={() => setAsking(null)} />}
           </div>
         </div>
 

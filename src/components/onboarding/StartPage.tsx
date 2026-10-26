@@ -6,7 +6,7 @@
 import { PlatformNav } from '../platform/PlatformNav';
 import React, { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { ArrowLeft, CarFront, Check, ClipboardList, FileText, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
+import { ArrowLeft, CarFront, Check, ClipboardList, FileText, KeyRound, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
 import { flavorOf, type Flavor } from '../../data/plans';
@@ -61,6 +61,14 @@ const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; 
     perks: ['بحث متقدم للزوار', 'طلبات تجربة', 'مصاريف وربح كل سيارة'],
     icon: CarFront,
     image: carPhoto(CAR_PHOTOS.dark, 1200),
+  },
+  {
+    type: 'rental',
+    title: 'تأجير',
+    line: 'سيارات، معدات، شاليهات، صالات أفراح ورياضة وعزاء، وأي شي بيتأجّر.',
+    perks: ['بطاقات بالصور والأسعار', 'بالساعة أو باليوم', 'طلبات إيجار من الصفحة'],
+    icon: KeyRound,
+    image: carPhoto(CAR_PHOTOS.road, 1200),
   },
 ];
 
@@ -210,9 +218,9 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
             </div>
           </section>
 
-          {/* The four kinds, as photo cards */}
+          {/* The five kinds, as photo cards */}
           {signedIn && <h2 className="text-heading font-bold">إضافة مشروع</h2>}
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          <section className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${signedIn ? 'xl:grid-cols-5' : 'xl:grid-cols-6'} gap-3 sm:gap-4`}>
             {KINDS.map((k, i) => (
               <button
                 key={k.type}
@@ -244,13 +252,13 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               </button>
             ))}
 
-            {/* The fifth card: a visitor joins the designers here (their own sign-up); a signed-in account never becomes one from here */}
+            {/* The last card: a visitor joins the designers here (their own sign-up); a signed-in account never becomes one from here */}
             {!signedIn && <button
               type="button"
               disabled={!!loadingType}
               onClick={onDesigner}
               style={{ animationDelay: `${120 + KINDS.length * 90}ms` }}
-              className="wl-rise group relative rounded-card overflow-hidden text-right text-white bg-ink min-h-[220px] sm:min-h-[340px] sm:col-span-2 lg:col-span-1 flex items-end transition duration-300 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
+              className="wl-rise group relative rounded-card overflow-hidden text-right text-white bg-ink min-h-[220px] sm:min-h-[340px] flex items-end transition duration-300 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40"
             >
               <img src="/designers/designer-card.jpg" alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover object-[25%_70%] transition duration-700 group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/5" />

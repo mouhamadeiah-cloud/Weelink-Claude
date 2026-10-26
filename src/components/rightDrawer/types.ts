@@ -59,6 +59,7 @@ export interface RightDrawerProps {
   allKindsOpen?: boolean; // the platform admin editing a gallery / ready slide: every kind's slides and elements are offered
   isShopProject?: boolean;
   isCarProject?: boolean;
+  isRentalProject?: boolean; // rental project: both the car and the shop slide categories are offered
   isRestaurantProject?: boolean; // restaurant project: the restaurant slide category is offered // Online Shop project: the online-shop slide category is offered
   onAddPageTemplate?: (template: any) => void;
   // «من معرض التصاميم»: a gallery slide added to the open page, or a gallery design (a navbar and slides) added as a new page of the project.

@@ -7,6 +7,7 @@ import { Search, Loader2, ChevronLeft, Plus } from 'lucide-react';
 import { ShopCatalog } from '../shopTypes';
 import { ArtikelCatalog, loadArtikel, normalizeSearch, searchArtikel } from '../artikel';
 import { Field, inputClass } from '../adminUi';
+import { useRentalMode } from '../../rental/rentalTypes';
 
 // key: '' = not chosen, 'a:<id>' = from artikel.json, 'c:<name>' = the store's own catalog,
 // 'other' = typing a new name.
@@ -39,9 +40,12 @@ interface CatalogPickerProps {
 export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, productName, onProductName, storeCatalogs, onAddCatalog }) => {
   const [catalogs, setCatalogs] = useState<ArtikelCatalog[] | null>(null);
   const [query, setQuery] = useState('');
+  // A rental's items are picked from its own catalogs only (the store's artikel.json is for selling).
+  const rental = useRentalMode();
 
   useEffect(() => {
     let alive = true;
+    if (rental) { setCatalogs([]); return; }
     loadArtikel().then((c) => alive && setCatalogs(c)).catch(() => alive && setCatalogs([]));
     return () => { alive = false; };
   }, []);
@@ -137,7 +141,7 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
 
   return (
     <div className="space-y-3">
-      <div className="relative">
+      {!rental && <div className="relative">
         <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400" />
         <input
           className={`${inputClass} pr-9`}
@@ -167,7 +171,7 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({ path, onChange, pr
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
       <div className="grid sm:grid-cols-3 gap-3 items-start">
         <Field label="التصنيف الرئيسي">

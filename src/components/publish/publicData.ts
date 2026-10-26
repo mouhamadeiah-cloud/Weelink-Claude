@@ -40,8 +40,12 @@ const publicCarData = (cars: CarAdminData) => ({
 // A free page publishes its services (the shown ones) when it has any.
 const publicPageData = (page: PageAdminData) => (publicServices(page).length ? { services: publicServices(page) } : null);
 
+// A rental publishes both halves: its cars as a showroom's and its items as a shop's (rentalTypes.ts).
 export const publicDataFor = (project: ProjectType, shop: ShopAdminData, cars: CarAdminData, page?: PageAdminData) =>
-  project === 'shop' ? publicShopData(shop) : project === 'cars' ? publicCarData(cars) : project === 'page' && page ? publicPageData(page) : null;
+  project === 'shop' ? publicShopData(shop)
+  : project === 'cars' ? publicCarData(cars)
+  : project === 'rental' ? { cars: publicCarData(cars), shop: publicShopData(shop) }
+  : project === 'page' && page ? publicPageData(page) : null;
 
 // Back to the shape the store elements read (empty customers, orders and accounts).
 export const shopFromPublic = (data: any): ShopAdminData => normalizeShopAdmin(data || {});

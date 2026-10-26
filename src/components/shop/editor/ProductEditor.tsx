@@ -10,7 +10,7 @@ import {
   MAX_PRICE_TIERS, ProductDisplay, newId, DEFAULT_CARD_STYLE, CARD_SIZES,
 } from '../shopTypes';
 import { buildVariants, discountPercent, nextSku, sanitizeHtml, totalStock, variantLabel } from '../productModel';
-import { suggestedPresets } from '../artikel';
+import { RENTAL_SPEC_PRESETS, suggestedPresets } from '../artikel';
 import { Card, Field, inputClass, inputFitClass, PrimaryButton, GhostButton, Toggle } from '../adminUi';
 import { CatalogPicker, PickerPath, emptyPickerPath } from './CatalogPicker';
 import { ImageSlots, toSlots } from './ImageSlots';
@@ -121,7 +121,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
     ...(rental ? { inWarehouse: false } : {}),
   }), [p, slots, rental]);
 
-  const suggested = useMemo(() => suggestedPresets(path.mainSlug, path.subSlug), [path.mainSlug, path.subSlug]);
+  const suggested = useMemo(() => (rentsOut ? RENTAL_SPEC_PRESETS : suggestedPresets(path.mainSlug, path.subSlug)), [rentsOut, path.mainSlug, path.subSlug]);
   const pct = discountPercent(p);
 
   // "غير ذلك" + the green button: a catalog for this store only.
@@ -310,7 +310,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
         {step === 3 && (
           <Card title="السعر">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Field label="السعر">
+              <Field label={rentsOut ? 'سعر اليوم' : 'السعر'} hint={rentsOut ? 'بعد الحفظ بتحدد سعر الساعة والفترات والأسعار المميزة.' : undefined}>
                 <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.price || ''} onChange={(e) => set({ price: num(e.target.value) })} />
               </Field>
               <Field label="السعر الأصلي (مشطوب)">
@@ -321,38 +321,42 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
                   {Array.from(new Set([p.currency, ...CURRENCIES])).map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </Field>
-              <Field label="سعر الشراء" hint="لحساب الأرباح، لا يظهر للزبون.">
-                <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.cost || ''} onChange={(e) => set({ cost: num(e.target.value) })} />
-              </Field>
+              {!rental && (
+                <Field label="سعر الشراء" hint="لحساب الأرباح، لا يظهر للزبون.">
+                  <input className={inputClass} type="number" min="0" inputMode="decimal" value={p.cost || ''} onChange={(e) => set({ cost: num(e.target.value) })} />
+                </Field>
+              )}
             </div>
             {pct > 0 && (
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#ff3b30]"><Percent size={12} /> خصم {pct}% عن السعر الأصلي</div>
             )}
 
-            <Field label="سعر خاص عند شراء كمية أكبر">
-              <div className="space-y-2">
-                {p.tiers.map((t, i) => (
-                  <div key={i} className="flex flex-wrap items-center gap-2 text-xs font-bold text-neutral-600">
-                    <span>عند شراء</span>
-                    <input className={`${inputFitClass} h-9 w-20`} type="number" min="2" value={t.minQty || ''} onChange={(e) => setTier(i, { minQty: Math.floor(num(e.target.value)) })} aria-label="الكمية" />
-                    <span>أو أكثر: سعر القطعة</span>
-                    <input className={`${inputFitClass} h-9 w-28`} type="number" min="0" value={t.price || ''} onChange={(e) => setTier(i, { price: num(e.target.value) })} aria-label="سعر القطعة" />
-                    <span>{p.currency}</span>
-                    <button type="button" onClick={() => set({ tiers: p.tiers.filter((_, idx) => idx !== i) })} className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer" aria-label="حذف المستوى">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                ))}
-                {p.tiers.length < MAX_PRICE_TIERS && (
-                  <GhostButton
-                    onClick={() => set({ tiers: [...p.tiers, { minQty: (p.tiers[p.tiers.length - 1]?.minQty || 1) + 1, price: 0 }] })}
-                    className="flex items-center gap-1"
-                  >
-                    <Plus size={13} /> إضافة مستوى ({p.tiers.length}/{MAX_PRICE_TIERS})
-                  </GhostButton>
-                )}
-              </div>
-            </Field>
+            {!rental && (
+              <Field label="سعر خاص عند شراء كمية أكبر">
+                <div className="space-y-2">
+                  {p.tiers.map((t, i) => (
+                    <div key={i} className="flex flex-wrap items-center gap-2 text-xs font-bold text-neutral-600">
+                      <span>عند شراء</span>
+                      <input className={`${inputFitClass} h-9 w-20`} type="number" min="2" value={t.minQty || ''} onChange={(e) => setTier(i, { minQty: Math.floor(num(e.target.value)) })} aria-label="الكمية" />
+                      <span>أو أكثر: سعر القطعة</span>
+                      <input className={`${inputFitClass} h-9 w-28`} type="number" min="0" value={t.price || ''} onChange={(e) => setTier(i, { price: num(e.target.value) })} aria-label="سعر القطعة" />
+                      <span>{p.currency}</span>
+                      <button type="button" onClick={() => set({ tiers: p.tiers.filter((_, idx) => idx !== i) })} className="w-8 h-8 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center cursor-pointer" aria-label="حذف المستوى">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                  {p.tiers.length < MAX_PRICE_TIERS && (
+                    <GhostButton
+                      onClick={() => set({ tiers: [...p.tiers, { minQty: (p.tiers[p.tiers.length - 1]?.minQty || 1) + 1, price: 0 }] })}
+                      className="flex items-center gap-1"
+                    >
+                      <Plus size={13} /> إضافة مستوى ({p.tiers.length}/{MAX_PRICE_TIERS})
+                    </GhostButton>
+                  )}
+                </div>
+              </Field>
+            )}
 
             <Field label="سعر التوصيل لهذا المنتج" hint={`اتركه فارغاً لاستعمال رسم التوصيل العام للمتجر (${data.settings.delivery.deliveryFee || 0} ${data.settings.currency}).`}>
               <input

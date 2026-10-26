@@ -16,6 +16,7 @@ import { useVehicleLists, isOther } from '../vehicleLists';
 import { carCost, syncPurchaseTx } from '../carMoney';
 import { Segmented } from './moneyUi';
 import { itemNoLabel } from '../../../utils/itemNumbers';
+import { useRentalMode } from '../../rental/rentalTypes';
 
 export interface CarTabProps {
   data: CarAdminData;
@@ -71,6 +72,7 @@ const list = (items: string[]) => items.map((x) => ({ id: x, label: x }));
 
 export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEdit, onSaved }) => {
   const existing = editingId ? data.cars.find((c) => c.id === editingId) : undefined;
+  const rentsOut = useRentalMode();
   const [car, setCar] = useState<Car>(() => existing || emptyCar(data.settings.currency));
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
@@ -325,9 +327,9 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
 
         {step === 5 && (
           <>
-            <Card title="السعر للزبون">
+            <Card title={rentsOut ? 'سعر الإيجار' : 'السعر للزبون'}>
               <div className="grid sm:grid-cols-2 gap-3">
-                <Field label="السعر">
+                <Field label={rentsOut ? 'سعر اليوم' : 'السعر'} hint={rentsOut ? 'بعد الحفظ بتحدد سعر الساعة والفترات والأسعار المميزة.' : undefined}>
                   <div className="flex gap-2">
                     <input className={inputClass} inputMode="decimal" value={car.price || ''} onChange={(e) => set({ price: num(e.target.value) })} dir="ltr" />
                     <select className={`${inputClass} !w-24`} value={car.currency} onChange={(e) => set({ currency: e.target.value })}>
@@ -343,25 +345,27 @@ export const CarEditor: React.FC<CarTabProps> = ({ data, update, editingId, onEd
               </div>
               {!car.showPrice && <p className="text-xs text-neutral-400">يرى الزبون «السعر عند التواصل» بدل السعر.</p>}
             </Card>
-            <Card title="الشراء" actions={<span className="text-xs text-neutral-400">لا يظهر للزبون</span>}>
+            <Card title={rentsOut ? 'بيانات السيارة' : 'الشراء'} actions={<span className="text-xs text-neutral-400">لا يظهر للزبون</span>}>
               <div className="grid sm:grid-cols-2 gap-3">
-                <Field label="سعر الشراء"><input className={inputClass} inputMode="decimal" value={car.purchasePrice || ''} onChange={(e) => set({ purchasePrice: num(e.target.value) })} dir="ltr" /></Field>
-                <Field label="تاريخ الشراء"><input type="date" className={inputClass} value={car.purchaseDate} onChange={(e) => set({ purchaseDate: e.target.value })} /></Field>
-                <Field label="اشتُريت من"><input className={inputClass} value={car.purchaseFrom} onChange={(e) => set({ purchaseFrom: e.target.value })} /></Field>
+                {!rentsOut && <Field label="سعر الشراء"><input className={inputClass} inputMode="decimal" value={car.purchasePrice || ''} onChange={(e) => set({ purchasePrice: num(e.target.value) })} dir="ltr" /></Field>}
+                {!rentsOut && <Field label="تاريخ الشراء"><input type="date" className={inputClass} value={car.purchaseDate} onChange={(e) => set({ purchaseDate: e.target.value })} /></Field>}
+                {!rentsOut && <Field label="اشتُريت من"><input className={inputClass} value={car.purchaseFrom} onChange={(e) => set({ purchaseFrom: e.target.value })} /></Field>}
                 <Field label="رقم الهيكل (الشاصي)"><input className={inputClass} value={car.vin} onChange={(e) => set({ vin: e.target.value.toUpperCase() })} dir="ltr" /></Field>
                 <Field label="رقم المحرك"><input className={inputClass} value={car.engineNumber} onChange={(e) => set({ engineNumber: e.target.value.toUpperCase() })} dir="ltr" /></Field>
                 <Field label="رقم اللوحة"><input className={inputClass} value={car.plateNumber} placeholder="مثال: دمشق 123456" onChange={(e) => set({ plateNumber: e.target.value })} /></Field>
               </div>
-              <Field label="دُفع ثمن الشراء من" hint="الصندوق أو البنك: يُسجَّل سعر الشراء في «الحسابات» ويتعدل معه. بدون تسجيل: يُحسب في كلفة السيارة فقط.">
-                <Segmented
-                  label="دُفع ثمن الشراء من"
-                  options={[{ id: 'none' as const, label: 'بدون تسجيل' }, { id: 'cash' as const, label: 'الصندوق' }, { id: 'bank' as const, label: 'البنك' }]}
-                  value={car.purchaseAccount}
-                  onChange={(purchaseAccount) => set({ purchaseAccount })}
-                />
-              </Field>
+              {!rentsOut && (
+                <Field label="دُفع ثمن الشراء من" hint="الصندوق أو البنك: يُسجَّل سعر الشراء في «الحسابات» ويتعدل معه. بدون تسجيل: يُحسب في كلفة السيارة فقط.">
+                  <Segmented
+                    label="دُفع ثمن الشراء من"
+                    options={[{ id: 'none' as const, label: 'بدون تسجيل' }, { id: 'cash' as const, label: 'الصندوق' }, { id: 'bank' as const, label: 'البنك' }]}
+                    value={car.purchaseAccount}
+                    onChange={(purchaseAccount) => set({ purchaseAccount })}
+                  />
+                </Field>
+              )}
               <Field label="ملاحظات داخلية"><textarea className={textareaClass} value={car.internalNotes} onChange={(e) => set({ internalNotes: e.target.value })} /></Field>
-              {margin !== 0 && (
+              {!rentsOut && margin !== 0 && (
                 <div className={`rounded-xl px-3 py-2 text-xs font-bold ${margin > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
                   الربح المتوقع: {formatMoney(margin, car.currency)}
                 </div>

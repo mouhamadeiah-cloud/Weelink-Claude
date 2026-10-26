@@ -72,3 +72,11 @@ test('Weelink search indexes a published rental\'s cars and items', () => {
   assert.deepEqual(items.map((i) => i.kind), ['car', 'product']);
   assert.equal(items[1].category, 'صالات');
 });
+
+test('the rental catalogs repeat no sub kind, and a rental item\'s specs are all known presets', async () => {
+  const subs = categories.flatMap((c) => c.subs);
+  assert.equal(new Set(subs).size, subs.length);
+  const { RENTAL_SPEC_PRESETS, SPEC_PRESETS } = await import('../src/components/shop/artikel.ts');
+  assert.ok(RENTAL_SPEC_PRESETS.every((k: string) => SPEC_PRESETS[k]));
+  for (const k of ['brand', 'model', 'area', 'power']) assert.ok(RENTAL_SPEC_PRESETS.includes(k) && !SPEC_PRESETS[k].affectsStock);
+});

@@ -6,6 +6,7 @@
 // The rooms are kept in step with the page's room stay schedule (hotelUnits.ts), so the booking that
 // exists already (StayBookingWidget, /api/booking) books them.
 import { createContext, useContext } from 'react';
+import { normalizeUnit, type SpecialPrice } from '../../services/rentalBooking';
 import { ShopAdminData, ShopCatalog, createEmptyShopAdmin, normalizeShopAdmin } from '../shop/shopTypes';
 
 export interface HotelFloor {
@@ -26,12 +27,13 @@ export interface HotelAdminData {
   floors: HotelFloor[];
   rooms: HotelRoom[];
   capacity: Record<string, number>; // guests a room of the type takes, by product id
+  specials: Record<string, SpecialPrice[]>; // special prices per night by weekday or date range, by product id
 }
 
 export const MAX_ROOMS = 300;
 export const MAX_FLOORS = 40;
 
-export const createEmptyHotelAdmin = (): HotelAdminData => ({ shop: createEmptyShopAdmin(), floors: [], rooms: [], capacity: {} });
+export const createEmptyHotelAdmin = (): HotelAdminData => ({ shop: createEmptyShopAdmin(), floors: [], rooms: [], capacity: {}, specials: {} });
 
 const str = (v: unknown, max: number) => String(v ?? '').trim().slice(0, max);
 const idOk = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9]{1,20}$/.test(v);
@@ -58,7 +60,12 @@ export const normalizeHotelAdmin = (raw: any): HotelAdminData => {
     const n = Math.round(Number(v));
     if (k && n >= 1) capacity[k.slice(0, 60)] = Math.min(20, n);
   }
-  return { shop: normalizeShopAdmin(raw?.shop || {}), floors, rooms, capacity };
+  const specials: Record<string, SpecialPrice[]> = {};
+  for (const [k, v] of Object.entries(raw?.specials && typeof raw.specials === 'object' ? raw.specials : {})) {
+    const list = normalizeUnit({ prices: v }).prices.filter((p) => p.for === 'day' && p.kind !== 'hours');
+    if (k && list.length) specials[k.slice(0, 60)] = list;
+  }
+  return { shop: normalizeShopAdmin(raw?.shop || {}), floors, rooms, capacity, specials };
 };
 
 export const newHotelId = () => `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -92,7 +99,7 @@ export const stayRoomsOf = (d: HotelAdminData) => {
       const t = d.shop.products.find((p) => p.id === r.type);
       if (!t || !t.published) return null;
       const where = floorName(r.floor);
-      return { id: r.id, name: `غرفة ${r.number} · ${t.name}${where ? ` · ${where}` : ''}`.slice(0, 60), capacity: typeCapacity(d, t.id), price: priceText(t).slice(0, 40), photo: t.images[0] || '' };
+      return { id: r.id, name: `غرفة ${r.number} · ${t.name}${where ? ` · ${where}` : ''}`.slice(0, 60), capacity: typeCapacity(d, t.id), price: priceText(t).slice(0, 40), photo: t.images[0] || '', item: t.id, dayPrice: t.price > 0 ? t.price : 0, currency: t.currency || '', prices: d.specials[t.id] || [] };
     })
     .filter((x): x is NonNullable<typeof x> => !!x);
 };

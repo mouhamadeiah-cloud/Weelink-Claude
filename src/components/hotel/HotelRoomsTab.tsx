@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { Trash2, Plus, Pencil, Check, X } from 'lucide-react';
 import { Card, Field, GhostButton, PrimaryButton, EmptyState, inputClass, inputFitClass } from '../shop/adminUi';
+import { SpecialPrices } from '../pageAdmin/RentalScheduleEditor';
 import { MAX_FLOORS, MAX_ROOMS, newHotelId, roomsOfType, typeCapacity, type HotelAdminData, type HotelRoom } from './hotelTypes';
 
 interface Props {
@@ -102,17 +103,22 @@ export const HotelRoomsTab: React.FC<Props> = ({ data, update }) => {
           <EmptyState text="لا توجد أنواع غرف بعد. أضف نوعاً من «إضافة نوع غرفة»: اسمه وسعر الليلة وصوره." />
         ) : (
           types.map((t) => (
-            <div key={t.id} className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-[#fbfbfd]">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-ink truncate">{t.name}</div>
-                <div className="text-xs text-neutral-400">{roomsOfType(data, t.id)} غرفة{t.price > 0 ? ` · ${t.price} ${t.currency} / ليلة` : ''}</div>
+            <details key={t.id} className="group rounded-xl border border-neutral-100 bg-[#fbfbfd]">
+              <summary className="flex items-center gap-3 p-2.5 cursor-pointer list-none">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-ink truncate">{t.name}</div>
+                  <div className="text-xs text-neutral-400">{roomsOfType(data, t.id)} غرفة{t.price > 0 ? ` · ${t.price} ${t.currency} / ليلة` : ''}{(data.specials[t.id] || []).length ? ` · ${(data.specials[t.id] || []).length} سعر خاص` : ''}</div>
+                </div>
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-500" onClick={(e) => e.stopPropagation()}>
+                  تتسع
+                  <input type="number" min={1} max={20} className={`${inputFitClass} w-14`} value={typeCapacity(data, t.id)} onChange={(e) => update((d) => ({ ...d, capacity: { ...d.capacity, [t.id]: Math.min(20, Math.max(1, Number(e.target.value) || 1)) } }))} />
+                  شخص
+                </span>
+              </summary>
+              <div className="p-3 pt-0 border-t border-neutral-100">
+                <SpecialPrices night byDay byHour={false} currency={t.currency} prices={data.specials[t.id] || []} onChange={(prices) => update((d) => ({ ...d, specials: { ...d.specials, [t.id]: prices } }))} />
               </div>
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-neutral-500">
-                تتسع
-                <input type="number" min={1} max={20} className={`${inputFitClass} w-14`} value={typeCapacity(data, t.id)} onChange={(e) => update((d) => ({ ...d, capacity: { ...d.capacity, [t.id]: Math.min(20, Math.max(1, Number(e.target.value) || 1)) } }))} />
-                شخص
-              </span>
-            </div>
+            </details>
           ))
         )}
       </Card>

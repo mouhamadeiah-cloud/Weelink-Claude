@@ -362,7 +362,7 @@ export default function App() {
   };
   const [shopAdmin, setShopAdmin] = useState<ShopAdminData>(createEmptyShopAdmin);
   // A hotel keeps its room types in the shop data and its floors and rooms here (components/hotel/hotelTypes.ts).
-  const [hotelRooms, setHotelRooms] = useState<Omit<HotelAdminData, 'shop'>>({ floors: [], rooms: [], capacity: {} });
+  const [hotelRooms, setHotelRooms] = useState<Omit<HotelAdminData, 'shop'>>({ floors: [], rooms: [], capacity: {}, specials: {} });
   // A rental counts its cars and its items together: each side may use what the other leaves.
   const rentalCountsRef = useRef({ on: false, cars: 0, products: 0, hotel: false });
   const updateShopAdmin = useCallback((fn: (d: ShopAdminData) => ShopAdminData) => setShopAdmin((prev) => {
@@ -415,7 +415,7 @@ export default function App() {
     const next = fn(prev);
     if (overLimit(prev.rooms.length, next.rooms.length, limitsRef.current.items)) { refuseOverLimit(`${limitsRef.current.items} ${ITEM_WORD.hotel}`); return; }
     if (next.shop !== prev.shop) setShopAdmin(next.shop);
-    if (next.floors !== prev.floors || next.rooms !== prev.rooms || next.capacity !== prev.capacity) setHotelRooms({ floors: next.floors, rooms: next.rooms, capacity: next.capacity });
+    if (next.floors !== prev.floors || next.rooms !== prev.rooms || next.capacity !== prev.capacity || next.specials !== prev.specials) setHotelRooms({ floors: next.floors, rooms: next.rooms, capacity: next.capacity, specials: next.specials });
   }, []);
   useItemNumbers('car', carAdmin.cars, numberingOn && (project === 'cars' || project === 'rental'), (fn) => setCarAdmin((d) => ({ ...d, cars: fn(d.cars) })));
   useItemNumbers('dish', restaurantAdmin.dishes, numberingOn && project === 'restaurant', (fn) => setRestaurantAdmin((d) => ({ ...d, dishes: fn(d.dishes) })));
@@ -1006,7 +1006,7 @@ export default function App() {
     setHistory([hotelElements]);
     setHistoryIndex(0);
     setShopAdmin(data.shop);
-    setHotelRooms({ floors: data.floors, rooms: data.rooms, capacity: data.capacity });
+    setHotelRooms({ floors: data.floors, rooms: data.rooms, capacity: data.capacity, specials: data.specials });
     setActivePageId(hotelPages[0].id);
     setActiveSlideId(hotelPages[0].slides[0]?.id || 'slide-1');
     setSelectedElementId(null);

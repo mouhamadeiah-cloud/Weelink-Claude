@@ -4,6 +4,7 @@
 import { useContext, useEffect, useMemo } from 'react';
 import { BookingPageContext } from '../../services/bookings';
 import { newStaySchedule, saveBookingSettings, useBookingSettings, type BookingSettings } from '../../services/bookingSettings';
+import { normalizeHotelRooms } from '../../services/rentalBooking';
 import { stayRoomsOf, type HotelAdminData } from './hotelTypes';
 
 // The page's room stay schedule with the hotel's rooms: null when nothing changes.
@@ -12,8 +13,10 @@ export const syncedHotelSettings = (settings: BookingSettings | null, rooms: Ret
   const current = list.find((s) => s.type === 'stay' && !s.rental);
   if (!current && rooms.length === 0) return null;
   const base = current || newStaySchedule();
-  if (current && JSON.stringify(rooms) === JSON.stringify(current.rooms)) return null;
-  const next = { ...base, rooms };
+  // Compared the way the schedule keeps them, so the same rooms never save twice.
+  const kept = normalizeHotelRooms(rooms);
+  if (current && JSON.stringify(kept) === JSON.stringify(normalizeHotelRooms(current.rooms))) return null;
+  const next = { ...base, rooms: kept };
   return { schedules: current ? list.map((s) => (s.id === current.id ? next : s)) : [...list, next], ...(settings?.payments ? { payments: settings.payments } : {}) };
 };
 
@@ -21,7 +24,7 @@ export const syncedHotelSettings = (settings: BookingSettings | null, rooms: Ret
 export const useHotelRoomsSync = (data: HotelAdminData) => {
   const page = useContext(BookingPageContext);
   const settings = useBookingSettings(page?.owner, page?.project);
-  const rooms = useMemo(() => stayRoomsOf(data), [data.rooms, data.floors, data.capacity, data.shop.products]);
+  const rooms = useMemo(() => stayRoomsOf(data), [data.rooms, data.floors, data.capacity, data.specials, data.shop.products]);
   useEffect(() => {
     if (!page || settings === undefined) return;
     const next = syncedHotelSettings(settings, rooms);

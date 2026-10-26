@@ -3,10 +3,11 @@
 // have their own tab (HotelRoomsTab), and the common tabs (bookings, messages, ratings, team) are the
 // same as everywhere. The rooms are kept in step with the booking's stay schedule (hotelUnits.ts).
 import React, { useEffect, useState } from 'react';
-import { Settings, X, PencilLine, BedDouble, Building2, PackagePlus, Boxes, SlidersHorizontal, Users, CalendarDays, Star, MessageSquare, UserCog, CalendarCog } from 'lucide-react';
+import { Settings, X, PencilLine, BedDouble, Building2, PackagePlus, Boxes, SlidersHorizontal, Users, CalendarDays, Star, MessageSquare, UserCog, CalendarCog, LayoutGrid } from 'lucide-react';
 import type { ShopAdminData } from '../shop/shopTypes';
 import { HotelModeContext, type HotelAdminData } from './hotelTypes';
 import { HotelRoomsTab } from './HotelRoomsTab';
+import { HotelGridTab } from './HotelGridTab';
 import { useHotelRoomsSync } from './hotelUnits';
 import { AddProductTab } from '../shop/tabs/AddProductTab';
 import { WarehouseTab } from '../shop/tabs/WarehouseTab';
@@ -19,17 +20,19 @@ import { RatingsTab } from '../pageAdmin/RatingsTab';
 import { TeamTab } from '../pageAdmin/TeamTab';
 import { BookingSettingsTab } from '../pageAdmin/BookingSettingsSection';
 
-type TabId = 'add-type' | 'types' | 'rooms' | 'bookings' | 'booking-settings' | 'signups' | 'inquiries' | 'ratings' | 'team' | 'settings';
+type TabId = 'add-type' | 'types' | 'rooms' | 'grid' | 'bookings' | 'booking-settings' | 'signups' | 'inquiries' | 'ratings' | 'team' | 'settings';
 
 type Tab =
   | { id: TabId; label: string; icon: React.ElementType; part: 'shop'; Component: React.FC<AdminTabProps> }
   | { id: TabId; label: string; icon: React.ElementType; part: 'hotel'; Component: React.FC<{ data: HotelAdminData; update: (fn: (d: HotelAdminData) => HotelAdminData) => void }> }
+  | { id: TabId; label: string; icon: React.ElementType; part: 'grid'; Component: React.FC<{ data: HotelAdminData }> }
   | { id: TabId; label: string; icon: React.ElementType; part: 'none'; Component: React.FC };
 
 const TABS: Tab[] = [
   { id: 'add-type', label: 'إضافة نوع غرفة', icon: PackagePlus, part: 'shop', Component: AddProductTab },
   { id: 'types', label: 'أنواع الغرف', icon: BedDouble, part: 'shop', Component: WarehouseTab },
   { id: 'rooms', label: 'الطوابق والغرف', icon: Building2, part: 'hotel', Component: HotelRoomsTab },
+  { id: 'grid', label: 'جدول الغرف', icon: LayoutGrid, part: 'grid', Component: HotelGridTab },
   { id: 'bookings', label: 'المواعيد', icon: CalendarDays, part: 'none', Component: BookingsTab as React.FC },
   { id: 'booking-settings', label: 'إعدادات الحجز', icon: CalendarCog, part: 'none', Component: BookingSettingsTab as React.FC },
   { id: 'signups', label: 'مشتركو الصفحة', icon: Users, part: 'none', Component: PageCustomersTab as React.FC },
@@ -79,6 +82,10 @@ export const HotelAdminPanel: React.FC<HotelAdminPanelProps> = ({ data, onShopCh
     if (active.part === 'shop') {
       const C = active.Component;
       return <C data={data.shop} update={onShopChange} />;
+    }
+    if (active.part === 'grid') {
+      const C = active.Component;
+      return <C data={data} />;
     }
     if (active.part === 'hotel') {
       const C = active.Component;

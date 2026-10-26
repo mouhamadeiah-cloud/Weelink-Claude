@@ -141,12 +141,20 @@ export const normalizeExtras = (raw: unknown): RentalExtra[] => {
 export const unitOf = (room: StayRoom & Partial<RentalUnit>): RentalUnit => normalizeUnit(room);
 
 // A rental schedule's units: its rooms with their rental settings (a Pro rental has many).
+// A hotel's room keeps only what prices a night: the room type it is of, the type's price per night
+// and its special prices by date or weekday (hotelTypes.ts fills them; /api/booking prices with them).
+export const normalizeHotelRoom = (r: any) => {
+  const u = normalizeUnit(r);
+  return { item: u.item, dayPrice: u.dayPrice, currency: u.currency, prices: u.prices.filter((p) => p.for === 'day' && p.kind !== 'hours') };
+};
+export const normalizeHotelRooms = (raw: unknown) => normalizeRooms(raw, 300, normalizeHotelRoom) as (StayRoom & ReturnType<typeof normalizeHotelRoom>)[];
+
 export const MAX_UNITS = 500;
 export const normalizeRentalRooms = (raw: unknown) => normalizeRooms(raw, MAX_UNITS, normalizeUnit) as (StayRoom & RentalUnit)[];
 
 // The terms («الشروط») a visitor accepts before booking. A default text for each kind of rental; the
 // owner changes it in «إعدادات الحجز» and can go back to it.
-export const DEFAULT_TERMS: Record<'cars' | 'equipment' | 'halls' | 'other', string> = {
+export const DEFAULT_TERMS: Record<'cars' | 'equipment' | 'halls' | 'other' | 'hotel', string> = {
   cars: [
     '1. يستلم المستأجر السيارة بحالة جيدة ويعيدها بنفس الحالة وفي الموعد المتفق عليه.',
     '2. السائق يجب أن يحمل رخصة قيادة سارية، ولا يقود السيارة غير المستأجر أو من يوافق عليه المؤجّر.',
@@ -168,6 +176,14 @@ export const DEFAULT_TERMS: Record<'cars' | 'equipment' | 'halls' | 'other', str
     '3. أي ضرر في الصالة أو محتوياتها على المستأجر.',
     '4. تجاوز الوقت المحجوز يُحسب بسعر ساعة إضافية.',
     '5. الإلغاء قبل 7 أيام من الموعد مجاني، وبعدها يحق للمؤجّر الاحتفاظ بالعربون.',
+  ].join('\n'),
+  hotel: [
+    '1. موعد الوصول من الساعة 2 ظهراً والمغادرة قبل الساعة 12 ظهراً، إلا إذا اتفقنا على غير ذلك.',
+    '2. يُبرز النزيل هويته عند الوصول، ولا يزيد عدد الأشخاص في الغرفة عن العدد المحجوز.',
+    '3. أي ضرر أو فقدان في الغرفة أو محتوياتها على النزيل.',
+    '4. التدخين ممنوع داخل الغرف، والهدوء مطلوب بعد منتصف الليل.',
+    '5. الإلغاء قبل 48 ساعة من الوصول مجاني، وبعدها يحق للفندق الاحتفاظ بالعربون.',
+    '6. الفندق غير مسؤول عن الأغراض الثمينة غير المودعة عند الاستقبال.',
   ].join('\n'),
   other: [
     '1. يستلم المستأجر الغرض بحالة جيدة ويعيده بنفس الحالة وفي الموعد المتفق عليه.',
@@ -255,7 +271,7 @@ const specialName = (p: SpecialPrice) =>
   p.kind === 'dates' ? `من ${p.from} إلى ${p.to}` : p.kind === 'hours' ? `من ${p.from} إلى ${p.to}` : p.days.map(dayNameAr).join(' و');
 
 // The price of a wish, line by line, and what it takes. null when the unit can't be rented so.
-export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: RentWish, opts: { minDays?: number; maxDays?: number; workStart?: number; workEnd?: number } = {}): Quote | null => {
+export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: RentWish, opts: { minDays?: number; maxDays?: number; workStart?: number; workEnd?: number; night?: boolean } = {}): Quote | null => {
   if (!isDate(w.date)) return null;
   const lines: QuoteLine[] = [];
   let nights: string[] = [];
@@ -277,10 +293,10 @@ export const quote = (u: RentalUnit, extras: RentalExtra[], unitId: string, w: R
       groups.set(key, g);
     }
     for (const g of groups.values())
-      lines.push({ label: `${words(g.n, 'يوم', 'يومان', 'أيام')} × ${fmt(g.price)}${g.special ? ` (${specialName(g.special)})` : ''}`, amount: g.n * g.price });
+      lines.push({ label: `${opts.night ? words(g.n, 'ليلة', 'ليلتان', 'ليالٍ') : words(g.n, 'يوم', 'يومان', 'أيام')} × ${fmt(g.price)}${g.special ? ` (${specialName(g.special)})` : ''}`, amount: g.n * g.price });
     count = nights.length;
     driverPrice = u.driverDay * count;
-    slot = `حتى ${w.checkOut} · ${words(count, 'يوم', 'يومان', 'أيام')}`;
+    slot = `حتى ${w.checkOut} · ${opts.night ? words(count, 'ليلة', 'ليلتان', 'ليالٍ') : words(count, 'يوم', 'يومان', 'أيام')}`;
   } else if (w.by === 'hour') {
     const hours = Math.round(Number(w.hours));
     const start = Math.round(Number(w.start));

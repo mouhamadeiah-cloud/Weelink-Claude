@@ -48,3 +48,33 @@ test('a cart with the same item twice or an unknown item is refused', async () =
   assert.equal((await cart([{ room: 'uhall' }, { room: 'uhall' }], { date: inD(30), checkOut: inD(31) })).error, 'bad_rent');
   assert.equal((await cart([{ room: 'uhall' }, { room: 'nope' }], { date: inD(30), checkOut: inD(31) })).error, 'no_rooms');
 });
+
+test('each item of a cart has its own dates, and a count books that many copies', async () => {
+  store.set('bookingSettings/own11/pages/rental', {
+    schedules: [{
+      id: 'rental', name: 'التأجير', type: 'stay', rental: true, minNights: 1, maxNights: 10, daysAhead: 60, workStart: '09:00', workEnd: '23:00',
+      rooms: [
+        { id: 'uhall2', name: 'صالة', item: 'p_hall2', byDay: true, dayPrice: 300, currency: '$' },
+        { id: 'utent2', name: 'خيمة', item: 'p_tent2', byDay: true, dayPrice: 20, currency: '$', copies: 3 },
+      ],
+    }],
+  });
+  const ok = await cart([
+    { room: 'uhall2', date: inD(40), checkOut: inD(42) },
+    { room: 'utent2', qty: 2, date: inD(41), checkOut: inD(44) },
+  ], { date: inD(40), checkOut: inD(42) });
+  assert.equal(ok.s, 200);
+  const b = store.get(`bookings/own11/items/${ok.id}`);
+  assert.equal(b.items.length, 3);
+  assert.equal(b.date, inD(40));
+  assert.equal(b.price.total, 300 * 2 + 20 * 3 * 2);
+  assert.deepEqual(b.items.map((i: any) => i.roomName), ['صالة', 'خيمة · 1', 'خيمة · 2']);
+  assert.equal(store.get(`bookingRooms/own11_rental_rental_utent2`).nights.length, 3);
+  assert.equal(store.get(`bookingRooms/own11_rental_rental_utent2`.replace('utent2', 'utent2')).nights[0], inD(41));
+  // a third tent on the same days is free, a fourth is not
+  assert.equal((await cart([{ room: 'utent2', qty: 2, date: inD(41), checkOut: inD(44) }], { date: inD(41), checkOut: inD(44) })).error, 'taken');
+  const r = await handler.fetch(new Request('http://x/api/booking', { method: 'POST', headers: { authorization: 'Bearer tk11' }, body: JSON.stringify({ action: 'status', owner: 'own11', id: ok.id, status: 'cancelled' }) }));
+  assert.equal(r.status, 200);
+  assert.equal(store.get(`bookingRooms/own11_rental_rental_uhall2`).nights.length, 0);
+  assert.equal(store.get(`bookingRooms/own11_rental_rental_utent2`).nights.length, 0);
+});

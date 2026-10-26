@@ -251,52 +251,62 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
 
   // A rental unit (rentalBooking.ts): by the day (`checkOut`), by the hour or for a period, at the price
   // worked out here, with the driver and extras, after the visitor accepted the terms.
-  // A cart (several cars or items on the same days or hours) is booked all or nothing: one plan per item.
-  let rentPlans: { room: StayRoom & RentalUnit; q: Quote; driver: boolean }[] = [];
+  // A cart (several cars or items) is booked all or nothing: one plan per item, and per copy of an item (`qty`);
+  // each item may carry its own dates, else the booking's are used.
+  let rentPlans: { room: StayRoom & RentalUnit; q: Quote; driver: boolean; by: 'day' | 'hour' | 'period'; date: string; checkOut?: string }[] = [];
   if (body.rent !== undefined) {
     const saved = (await admin.db.collection('bookingSettings').doc(owner).collection('pages').doc(project).get()).data();
     const schedule = (Array.isArray(saved?.schedules) ? saved.schedules : []).find((s: any) => s?.id === booking.schedule);
     if (!schedule || schedule.type !== 'stay' || schedule.rental !== true) return json({ error: 'bad_schedule' }, 400);
     const all = normalizeRentalRooms(schedule.rooms);
-    const wished: { room: unknown; driver: boolean; extras: unknown }[] =
+    const wished: any[] =
       Array.isArray(body.rent?.items) && body.rent.items.length > 0
-        ? body.rent.items.slice(0, 8).map((x: any) => ({ room: x?.room, driver: x?.driver === true, extras: x?.extras }))
+        ? body.rent.items.slice(0, 8).map((x: any) => ({ ...x, room: x?.room, driver: x?.driver === true }))
         : [{ room: body.room, driver: body.rent?.driver === true, extras: body.rent?.extras }];
     if (new Set(wished.map((w) => w.room)).size !== wished.length) return json({ error: 'bad_rent' }, 400);
-    const by = body.rent?.by === 'hour' || body.rent?.by === 'period' ? body.rent.by : 'day';
     const minDays = Math.max(1, Math.round(Number(schedule.minNights)) || 1);
     const isTime = (v: unknown): v is string => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+    const isDay = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    const lastDay = dayIn(Math.min(365, Math.max(1, Math.round(Number(schedule.daysAhead)) || 180)));
     for (const w of wished) {
       const room = all.find((x) => x.id === w.room);
       if (!room) return json({ error: 'no_rooms' }, 409);
+      const by = (w.by ?? body.rent?.by) === 'hour' || (w.by ?? body.rent?.by) === 'period' ? (w.by ?? body.rent.by) : 'day';
+      const from = w.date !== undefined ? w.date : date;
+      const until = w.date !== undefined ? w.checkOut : body.checkOut;
+      if (!isDay(from) || from < dayIn(-1) || from > lastDay) return json({ error: 'bad_date' }, 400);
+      const copies = Math.min(room.copies, Math.max(1, Math.round(Number(w.qty)) || 1));
       const q = quote(room, normalizeExtras(schedule.extras), room.id, {
-        by, date, checkOut: typeof body.checkOut === 'string' ? body.checkOut : undefined,
-        start: Number(body.rent?.start), hours: Number(body.rent?.hours), period: typeof body.rent?.period === 'string' ? body.rent.period : undefined,
+        by, date: from, checkOut: typeof until === 'string' ? until : undefined,
+        start: Number(w.start ?? body.rent?.start), hours: Number(w.hours ?? body.rent?.hours), period: typeof (w.period ?? body.rent?.period) === 'string' ? (w.period ?? body.rent.period) : undefined,
         driver: w.driver, extras: Array.isArray(w.extras) ? w.extras.filter(validId).slice(0, 30) : [],
       }, {
         minDays, maxDays: Math.min(90, Math.max(minDays, Math.round(Number(schedule.maxNights)) || 30)),
         workStart: isTime(schedule.workStart) ? minOf(schedule.workStart) : undefined, workEnd: isTime(schedule.workEnd) ? minOf(schedule.workEnd) : undefined,
       });
       if (!q) return json({ error: 'bad_rent' }, 400);
-      rentPlans.push({ room, q, driver: room.driver === 'with' || (room.driver === 'both' && w.driver) });
+      for (let k = 0; k < copies; k++) rentPlans.push({ room, q, driver: room.driver === 'with' || (room.driver === 'both' && w.driver), by, date: from, checkOut: typeof until === 'string' ? until : undefined });
     }
+    if (rentPlans.length > 8) return json({ error: 'bad_rent' }, 400);
     if (rentPlans.some((r) => r.q.currency !== rentPlans[0].q.currency)) return json({ error: 'bad_rent' }, 400);
     if (date > dayIn(Math.min(365, Math.max(1, Math.round(Number(schedule.daysAhead)) || 180)))) return json({ error: 'bad_date' }, 400);
     if (schedule.termsOn === true && body.acceptTerms !== true && !byOwner) return json({ error: 'terms_required' }, 400);
     const terms = schedule.termsOn === true && !byOwner ? normalizeTerms(schedule.terms) || DEFAULT_TERMS.other : '';
-    const { room, q } = rentPlans[0];
+    const { room, q, by } = rentPlans[0];
     const several = rentPlans.length > 1;
     const total = rentPlans.reduce((n, r) => n + r.q.total, 0);
+    const soonest = rentPlans.reduce((a, r) => (r.date < a ? r.date : a), rentPlans[0].date);
     Object.assign(booking, {
-      startMin: q.slots.length ? Number(q.slots[0].split('@')[1]) : 0,
+      date: soonest,
+      startMin: q.slots.length && !several ? Number(q.slots[0].split('@')[1]) : 0,
       meetingType: '',
       rental: true,
       rentBy: by,
       roomId: room.id,
       roomName: rentPlans.map((r) => r.room.name).join('، '),
-      slot: by === 'day' ? `حتى ${dateLabel(body.checkOut)} · ${q.count} ${q.count === 1 ? 'يوم' : 'أيام'}` : q.slot,
+      slot: several ? `${rentPlans.length} عناصر` : by === 'day' ? `حتى ${dateLabel(rentPlans[0].checkOut || '')} · ${q.count} ${q.count === 1 ? 'يوم' : 'أيام'}` : q.slot,
       price: { lines: several ? rentPlans.flatMap((r) => r.q.lines.map((l) => ({ ...l, label: `${r.room.name}: ${l.label}` }))) : q.lines, total, currency: q.currency },
-      ...(by === 'day' ? { checkOut: body.checkOut, nights: q.count } : { slots: q.slots }),
+      ...(!several ? (by === 'day' ? { checkOut: rentPlans[0].checkOut, nights: q.count } : { slots: q.slots }) : {}),
       ...(rentPlans.some((r) => r.driver) ? { driver: true } : {}),
       ...(terms ? { terms, termsAt: new Date().toISOString() } : {}),
     });
@@ -411,34 +421,41 @@ const create = async (admin: Admin, body: any, byOwner = false) => {
       }
       if (rentPlans.length > 0) {
         // A unit with copies (5 identical tents) is booked on its first free copy; each copy keeps its own taken times.
-        // Every item of a cart must be free, or nothing is booked.
-        const refsOf = rentPlans.map(({ room }) => Array.from({ length: room.copies }, (_, i) => roomDoc(admin, booking, copyIdOf(room.id, i + 1))));
-        const docsOf = await Promise.all(refsOf.map((refs) => Promise.all(refs.map((r) => tx.get(r)))));
-        const picks: { ref: any; at: number; taken: { nights: string[]; slots: string[] } }[] = [];
-        for (let i = 0; i < rentPlans.length; i++) {
-          const { q } = rentPlans[i];
-          const takens = docsOf[i].map((d) => ({ nights: (d.data()?.nights || []) as string[], slots: (d.data()?.slots || []) as string[] }));
-          const at = takens.findIndex((t) => (q.nights.length ? daysFree(t, q.nights) : slotsFree(t, q.slots)));
+        // Every item of a cart must be free, or nothing is booked: the times a plan takes count for the plans after it.
+        const roomIds = Array.from(new Set(rentPlans.map((r) => r.room.id)));
+        const refsOf = new Map(roomIds.map((id) => [id, Array.from({ length: rentPlans.find((r) => r.room.id === id)!.room.copies }, (_, i) => roomDoc(admin, booking, copyIdOf(id, i + 1)))]));
+        const takens = new Map<string, { nights: string[]; slots: string[] }[]>();
+        for (const id of roomIds) {
+          const docs = await Promise.all(refsOf.get(id)!.map((r) => tx.get(r)));
+          takens.set(id, docs.map((d) => ({ nights: (d.data()?.nights || []) as string[], slots: (d.data()?.slots || []) as string[] })));
+        }
+        const picks: number[] = [];
+        for (const { room, q } of rentPlans) {
+          const list = takens.get(room.id)!;
+          const at = list.findIndex((t) => (q.nights.length ? daysFree(t, q.nights) : slotsFree(t, q.slots)));
           if (at < 0) return 'taken';
-          picks.push({ ref: refsOf[i][at], at, taken: takens[at] });
+          list[at] = { nights: [...list[at].nights, ...q.nights], slots: [...list[at].slots, ...q.slots] };
+          picks.push(at);
         }
         const need = applyDeposit((booking as any).price.total || null);
         if (need) return need;
         // The booking keeps each copy's document id, so cancelling it frees that copy's times.
-        const named = rentPlans.map(({ room, driver, q }, i) => ({
-          roomId: room.copies > 1 ? copyIdOf(room.id, picks[i].at + 1) : room.id,
-          roomName: room.copies > 1 ? `${room.name} · ${picks[i].at + 1}` : room.name,
+        const named = rentPlans.map(({ room, driver, q, by, date: from, checkOut }, i) => ({
+          roomId: room.copies > 1 ? copyIdOf(room.id, picks[i] + 1) : room.id,
+          roomName: room.copies > 1 ? `${room.name} · ${picks[i] + 1}` : room.name,
           total: q.total,
           ...(driver ? { driver: true } : {}),
+          by, date: from, ...(by === 'day' ? { checkOut, nights: q.count } : { slots: q.slots, slot: q.slot }),
         }));
         Object.assign(booking, { roomId: named[0].roomId, roomName: named.map((n) => n.roomName).join('، '), ...(named.length > 1 ? { items: named } : {}) });
         const from = dayIn(-1);
-        rentPlans.forEach(({ q }, i) => {
-          const taken = picks[i].taken;
-          tx.set(picks[i].ref, { owner, project, schedule: booking.schedule, nights: [...taken.nights.filter((n) => n >= from), ...q.nights], slots: [...taken.slots.filter((x) => x.slice(0, 10) >= from), ...q.slots] });
-        });
+        for (const id of roomIds) {
+          takens.get(id)!.forEach((t, k) => {
+            tx.set(refsOf.get(id)![k], { owner, project, schedule: booking.schedule, nights: t.nights.filter((n) => n >= from), slots: t.slots.filter((x) => x.slice(0, 10) >= from) });
+          });
+        }
         // A bookingDays document too, so the day-before reminder finds it.
-        tx.set(day, { owner, project, date }, { merge: true });
+        tx.set(day, { owner, project, date: booking.date }, { merge: true });
         tx.set(ref, booking);
         return 'ok';
       }
@@ -564,7 +581,7 @@ const depositEntry = (b: any, state: 'received' | 'cancelled') => ({
 const release = async (admin: Admin, b: any): Promise<void> => {
   // A cart booking frees each of its items.
   if (Array.isArray(b.items) && b.items.length > 1) {
-    for (const it of b.items) await release(admin, { ...b, items: undefined, roomId: it.roomId });
+    for (const it of b.items) await release(admin, { ...b, items: undefined, roomId: it.roomId, date: it.date ?? b.date, checkOut: it.checkOut ?? b.checkOut, slots: it.slots ?? b.slots });
     return;
   }
   if (b.sessionId) {

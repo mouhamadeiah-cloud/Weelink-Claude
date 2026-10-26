@@ -20,16 +20,16 @@ import { newId, ShopAdminData, ShopOrder, ShopCustomer, SYRIAN_GOVERNORATES } fr
 import { uploadImageFile } from '../adminUi';
 import { CheckoutLook, lookVars, setCheckoutChoices, useCheckoutChoices } from './checkoutStore';
 
-interface PartProps {
+export interface PartProps {
   look: CheckoutLook;
   isPreviewActive: boolean;
 }
 
 // The fields look like the platform's own input element.
-const fieldClass =
+export const fieldClass =
   'w-full h-11 px-3.5 rounded-xl border border-neutral-300 bg-white/95 text-sm text-neutral-800 placeholder:text-neutral-400 outline-none focus:border-(--accent) focus:ring-2 focus:ring-(--accent)/20 transition shadow-2xs';
 
-const Section: React.FC<{ n: number; title: string; children: React.ReactNode }> = ({ n, title, children }) => (
+export const Section: React.FC<{ n: number; title: string; children: React.ReactNode }> = ({ n, title, children }) => (
   <section className="space-y-3">
     <h3 className="flex items-center gap-2 text-[15px] font-bold text-(--ink)">
       <span className="w-6 h-6 rounded-full bg-(--accent) text-white text-xs flex items-center justify-center">{n}</span>
@@ -75,10 +75,10 @@ const useCheckout = () => {
   return { items, shop, s, currency, canDeliver, canPickup, method, wallets, offersCash, pay, walletId, delivering, quote, subtotal, deliveryFee, wallet, walletMeta, fee, total };
 };
 
-const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+export const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
 // The element's root: its own white card when the element has no background of its own.
-const Root: React.FC<PartProps & { className?: string; children: React.ReactNode }> = ({ look, isPreviewActive, className = '', children }) => (
+export const Root: React.FC<PartProps & { className?: string; children: React.ReactNode }> = ({ look, isPreviewActive, className = '', children }) => (
   <div
     dir="rtl"
     className={`@container w-full h-full overflow-hidden text-(--ink) ${look.framed ? 'bg-white rounded-3xl border border-black/[0.06]' : ''} ${className}`}

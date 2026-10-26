@@ -1,4 +1,4 @@
-// Booking a rental's car or item (or several in a cart, all on the same days or hours, all or nothing) from its page (Eyad, 25 Oct, step 2 of «تأجير»): by the day, by the hour
+// Booking a rental's car or item from its page (Eyad, 25 Oct, step 2 of «تأجير»): by the day, by the hour
 // or for a period, with the driver and the extras, the price line by line, the terms to accept, and the
 // deposit. It books the unit the page's rental schedule keeps for this car or item (rentalUnits.ts), on
 // the same engine and the same customer and deposit fields as the «حجز» elements (StayBookingWidget).
@@ -32,7 +32,7 @@ export const useRentalUnit = (itemId: string) => {
 type Found = NonNullable<ReturnType<typeof useRentalUnit>>;
 type Unit = Found['unit'];
 
-// The page's rental units for several warehouse items (a cart), in the order asked; the ones the page does not have are left out.
+// The page's rental units for several warehouse items (the cart), in the order asked; the ones the page does not have are left out.
 export const useRentalUnits = (itemIds: string[]) => {
   const page = useContext(BookingPageContext);
   const settings = useBookingSettings(page?.owner, page?.project);
@@ -51,7 +51,7 @@ export const RentalBookingForm: React.FC<{ itemId: string; accent: string; onClo
   return found ? <RentalBookingView found={found} accent={accent} onClose={onClose} /> : null;
 };
 
-export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: string; onClose?: () => void; onRemove?: (unitId: string) => void; onBooked?: () => void }> = ({ found, more = [], accent, onClose, onRemove, onBooked }) => {
+export const RentalBookingView: React.FC<{ found: Found; accent: string; onClose?: () => void }> = ({ found, accent, onClose }) => {
   const page = useContext(BookingPageContext);
   const live = !!page?.live;
   const signedIn = !!useCustomerSession() || !!useAccountCard();
@@ -63,12 +63,11 @@ export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: 
   const [hours, setHours] = useState(0);
   const [start, setStart] = useState<number | null>(null);
   const [period, setPeriod] = useState('');
-  // Each item of a cart keeps its own driver and services.
-  const [drivers, setDrivers] = useState<Record<string, boolean>>({});
-  const [extrasBy, setExtrasBy] = useState<Record<string, string[]>>({});
+  const [driver, setDriver] = useState(false);
+  const [extras, setExtras] = useState<string[]>([]);
   const [accepted, setAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [takenBy, setTakenBy] = useState<Record<string, UnitTaken[]>>({}); // per unit, one per copy of it
+  const [taken, setTaken] = useState<UnitTaken[]>([]); // one per copy of the unit
   const [tick, setTick] = useState(0);
   const [customer, setCustomer] = useState<CustomerDraft>(EMPTY_CUSTOMER);
   const [deposit, setDeposit] = useState<DepositDraft>(EMPTY_DEPOSIT);
@@ -78,57 +77,39 @@ export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: 
   const [done, setDone] = useState<{ status: string; slot: string } | null>(null);
 
   const { unit, schedule } = found;
-  const units: Unit[] = [unit, ...more.filter((u) => u.id !== unit.id)];
-  const several = units.length > 1;
-  const unitKey = units.map((u) => `${u.id}:${u.copies}`).join('|');
   useEffect(() => {
     if (!live || !page) return;
     let alive = true;
-    Promise.all(units.map((u) => Promise.all(Array.from({ length: u.copies }, (_, i) => readUnitTaken(page.owner, page.project, schedule.id, copyIdOf(u.id, i + 1)))))).then((all) => alive && setTakenBy(Object.fromEntries(units.map((u, i) => [u.id, all[i]])))).catch(() => {});
+    Promise.all(Array.from({ length: unit.copies }, (_, i) => readUnitTaken(page.owner, page.project, schedule.id, copyIdOf(unit.id, i + 1)))).then((t) => alive && setTaken(t)).catch(() => {});
     return () => { alive = false; };
-  }, [live, page?.owner, page?.project, schedule.id, unitKey, tick]);
-  const freeFor = (u: Unit, check: (t: UnitTaken[]) => boolean) => check(takenBy[u.id] || []);
+  }, [live, page?.owner, page?.project, schedule.id, unit.id, unit.copies, tick]);
 
-  // The ways every item of the cart can be booked by.
   const ways: { id: RentBy; label: string }[] = [
-    ...(units.every((u) => u.byDay) ? [{ id: 'day' as const, label: 'باليوم' }] : []),
-    ...(units.every((u) => u.byHour) ? [{ id: 'hour' as const, label: 'بالساعة' }] : []),
-    // A period belongs to one item (its own hours and price), so it is offered for a single item only.
-    ...(!several && unit.periods.length ? [{ id: 'period' as const, label: 'بالفترة' }] : []),
+    ...(unit.byDay ? [{ id: 'day' as const, label: 'باليوم' }] : []),
+    ...(unit.byHour ? [{ id: 'hour' as const, label: 'بالساعة' }] : []),
+    ...(unit.periods.length ? [{ id: 'period' as const, label: 'بالفترة' }] : []),
   ];
-  const mode: RentBy = by && ways.some((w) => w.id === by) ? by : (ways[0]?.id || 'day');
-  const minHours = Math.max(...units.map((u) => u.minHours));
-  const maxHours = Math.min(...units.map((u) => u.maxHours));
-  const hourCount = Math.min(Math.max(minHours, maxHours), Math.max(minHours, hours || minHours));
+  const mode: RentBy = by && ways.some((w) => w.id === by) ? by : ways[0].id;
+  const hourCount = Math.min(unit.maxHours, Math.max(unit.minHours, hours || unit.minHours));
   const workStart = minOf(schedule.workStart);
   const workEnd = minOf(schedule.workEnd);
   const cur = unit.currency;
-  const periods = several ? [] : unit.periods;
-  if (ways.length === 0) {
-    return (
-      <div className="rounded-2xl border border-neutral-200 p-4 text-center text-sm font-bold text-neutral-600">
-        العناصر المختارة ما بتشترك بطريقة حجز وحدة (باليوم أو بالساعة). احجز كل عنصر لحاله.
-        {onClose && <div className="mt-2"><button type="button" onClick={onClose} className="h-10 px-4 rounded-full text-white text-xs font-bold cursor-pointer" style={{ backgroundColor: accent }}>رجوع</button></div>}
-      </div>
-    );
-  }
+  const offered = extrasFor(schedule.extras, unit.id);
 
   const todayKey = dayKey(new Date());
   const lastKey = addDays(todayKey, schedule.daysAhead);
   const inRange = (d: string) => d >= todayKey && d <= lastKey;
-  const slotsOk = (slots: string[]) => units.every((u) => freeFor(u, (t) => slotsFree(t, slots)));
-  const daysOk = (days: string[]) => units.every((u) => freeFor(u, (t) => daysFree(t, days)));
-  const freeStarts = (d: string) => hourStarts(workStart, workEnd, hourCount).filter((m) => slotsOk(slotsOf(d, m, m + hourCount * 60)));
+  const freeStarts = (d: string) => hourStarts(workStart, workEnd, hourCount).filter((m) => slotsFree(taken, slotsOf(d, m, m + hourCount * 60)));
   const dayOk = (d: string) => {
     if (!inRange(d)) return false;
-    if (mode === 'day') return daysOk([d]);
+    if (mode === 'day') return daysFree(taken, [d]);
     if (mode === 'hour') return freeStarts(d).length > 0;
-    return periods.some((p) => slotsOk(slotsOf(d, p.start, p.end)));
+    return unit.periods.some((p) => slotsFree(taken, slotsOf(d, p.start, p.end)));
   };
   const canEnd = (d: string) => {
     if (!date || d <= date) return false;
     const n = nightsBetween(date, d);
-    return n.length >= schedule.minNights && n.length <= schedule.maxNights && daysOk(n);
+    return n.length >= schedule.minNights && n.length <= schedule.maxNights && daysFree(taken, n);
   };
   const reset = () => { setDate(''); setCheckOut(''); setStart(null); setPeriod(''); setError(''); };
   const pick = (d: string) => {
@@ -139,17 +120,7 @@ export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: 
     if (canEnd(d)) setCheckOut(d);
   };
 
-  const quoteOf = (u: Unit) => quote(u, schedule.extras, u.id, { by: mode, date, checkOut: checkOut || undefined, start: start ?? undefined, hours: hourCount, period, driver: drivers[u.id] === true, extras: extrasBy[u.id] || [] }, { minDays: schedule.minNights, maxDays: schedule.maxNights, workStart, workEnd });
-  const quotes = date ? units.map(quoteOf) : [];
-  const ready = quotes.length > 0 && quotes.every((x) => !!x);
-  // One price for the whole cart: each item's lines (named after the item), and the total.
-  const q = ready
-    ? {
-        slot: quotes[0]!.slot,
-        lines: quotes.flatMap((x, i) => x!.lines.map((l) => ({ ...l, label: several ? `${units[i].name}: ${l.label}` : l.label }))),
-        total: quotes.reduce((n, x) => n + x!.total, 0),
-      }
-    : null;
+  const q = date ? quote(unit, schedule.extras, unit.id, { by: mode, date, checkOut: checkOut || undefined, start: start ?? undefined, hours: hourCount, period, driver, extras }, { minDays: schedule.minNights, maxDays: schedule.maxNights, workStart, workEnd }) : null;
   const amount = q ? depositAmount(normalizeRule(schedule, true), q.total || null) : 0;
 
   const first = new Date(month.y, month.m, 1);
@@ -177,10 +148,7 @@ export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: 
       owner: page.owner, project: page.project, schedule: schedule.id, pageName: page.pageName,
       date, startMin: 0, slot: q.slot.slice(0, 40), meetingType: '', room: unit.id,
       ...(mode === 'day' ? { checkOut } : {}),
-      rent: {
-        by: mode, start: start ?? undefined, hours: hourCount, period, driver: drivers[unit.id] === true, extras: extrasBy[unit.id] || [],
-        ...(several ? { items: units.map((u) => ({ room: u.id, driver: drivers[u.id] === true, extras: extrasBy[u.id] || [] })) } : {}),
-      },
+      rent: { by: mode, start: start ?? undefined, hours: hourCount, period, driver, extras },
       acceptTerms: accepted,
       name: customer.name, phone: customer.phone, email: customer.email, address: customer.address, desc: customer.desc,
       needsConfirmation: schedule.needsConfirmation, deposit: depositPayload(deposit, amount),
@@ -196,7 +164,6 @@ export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: 
       return;
     }
     setSignup(customer.register && !signedIn ? customer : null);
-    onBooked?.();
     setDone({ status: out.deposit ? 'deposit' : out.status, slot: q.slot });
     setTick((n) => n + 1);
   };
@@ -210,7 +177,7 @@ export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: 
         <div className="w-10 h-10 mx-auto rounded-full flex items-center justify-center text-white text-lg font-bold" style={{ backgroundColor: accent }}>✓</div>
         <h4 className="font-black">{done.status === 'confirmed' ? 'تم حجزك!' : done.status === 'deposit' ? 'بانتظار تأكيد العربون' : 'وصل طلب الحجز!'}</h4>
         <p className="text-xs text-neutral-500 leading-relaxed">
-          شكراً <b>{customer.name}</b>. {units.map((u) => u.name).join('، ')} · {label(date)} · {done.slot}.
+          شكراً <b>{customer.name}</b>. {unit.name} · {label(date)} · {done.slot}.
           {done.status === 'deposit' ? ' رح نراجع التحويل ويوصلك إيميل لما يتأكد العربون. إذا ما انتأكد خلال 24 ساعة بيتحرر الحجز.' : done.status !== 'confirmed' ? ' رح يوصلك إيميل لما يتأكد الحجز.' : ''}
         </p>
         {signup && live && page && <AccountSignup draft={signup} owner={page.owner} project={page.project} pageName={page.pageName} accent={accent} dark={false} />}
@@ -221,23 +188,17 @@ export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: 
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-neutral-200 p-3 sm:p-4 space-y-3 text-right">
-      <div className="flex items-center gap-2 font-black"><CalendarCheck size={18} style={{ color: accent }} /> احجز {units.map((u) => u.name).join('، ')}</div>
-      {onRemove && (
-        <div className="flex flex-wrap gap-1.5">
-          {units.map((u) => <button key={u.id} type="button" onClick={() => onRemove(u.id)} className="h-8 px-3 rounded-full bg-neutral-100 text-xs font-bold text-neutral-600 cursor-pointer">{u.name} ✕</button>)}
-        </div>
-      )}
+      <div className="flex items-center gap-2 font-black"><CalendarCheck size={18} style={{ color: accent }} /> احجز {unit.name}</div>
       {ways.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
           {ways.map((w) => <button key={w.id} type="button" onClick={() => { setBy(w.id); reset(); }} className={chip(mode === w.id)} style={on(mode === w.id)}>{w.label}</button>)}
         </div>
       )}
       <div className="text-xs text-neutral-500 font-bold">
-        {!several && mode === 'day' && unit.dayPrice > 0 && `${money(unit.dayPrice, cur)} لليوم`}
-        {!several && mode === 'hour' && unit.hourPrice > 0 && `${money(unit.hourPrice, cur)} للساعة`}
-        {!several && mode === 'period' && unit.periods.map((p) => `${p.name}: ${money(p.price, cur)}`).join(' · ')}
-        {!several && unit.prices.length > 0 && ' · في أسعار خاصة لبعض الأيام'}
-        {several && 'السعر لكل عنصر يظهر في الملخص تحت'}
+        {mode === 'day' && unit.dayPrice > 0 && `${money(unit.dayPrice, cur)} لليوم`}
+        {mode === 'hour' && unit.hourPrice > 0 && `${money(unit.hourPrice, cur)} للساعة`}
+        {mode === 'period' && unit.periods.map((p) => `${p.name}: ${money(p.price, cur)}`).join(' · ')}
+        {unit.prices.length > 0 && ' · في أسعار خاصة لبعض الأيام'}
       </div>
 
       <div className="rounded-2xl bg-neutral-50 border border-neutral-200 p-3 space-y-2">
@@ -277,15 +238,15 @@ export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: 
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold">عدد الساعات</span>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => { setHours(Math.max(minHours, hourCount - 1)); setStart(null); }} className="w-8 h-8 rounded-lg border font-bold cursor-pointer">−</button>
+              <button type="button" onClick={() => { setHours(Math.max(unit.minHours, hourCount - 1)); setStart(null); }} className="w-8 h-8 rounded-lg border font-bold cursor-pointer">−</button>
               <span className="font-black w-6 text-center">{hourCount}</span>
-              <button type="button" onClick={() => { setHours(Math.min(maxHours, hourCount + 1)); setStart(null); }} className="w-8 h-8 rounded-lg border font-bold cursor-pointer">+</button>
+              <button type="button" onClick={() => { setHours(Math.min(unit.maxHours, hourCount + 1)); setStart(null); }} className="w-8 h-8 rounded-lg border font-bold cursor-pointer">+</button>
             </div>
           </div>
           {date && (
             <div className="flex flex-wrap gap-1.5">
               {hourStarts(workStart, workEnd, hourCount).map((m) => {
-                const free = slotsOk(slotsOf(date, m, m + hourCount * 60));
+                const free = slotsFree(taken, slotsOf(date, m, m + hourCount * 60));
                 return <button key={m} type="button" disabled={!free} onClick={() => setStart(m)} className={chip(start === m)} style={on(start === m)} dir="ltr">{timeOf(m)}</button>;
               })}
             </div>
@@ -295,42 +256,33 @@ export const RentalBookingView: React.FC<{ found: Found; more?: Unit[]; accent: 
 
       {mode === 'period' && date && (
         <div className="flex flex-wrap gap-1.5">
-          {periods.map((p) => {
-            const free = slotsOk(slotsOf(date, p.start, p.end));
+          {unit.periods.map((p) => {
+            const free = slotsFree(taken, slotsOf(date, p.start, p.end));
             return <button key={p.id} type="button" disabled={!free} onClick={() => setPeriod(p.id)} className={chip(period === p.id)} style={on(period === p.id)}>{p.name} · {timeOf(p.start)}–{timeOf(p.end)}</button>;
           })}
         </div>
       )}
 
-      {units.map((u) => {
-        const offered = extrasFor(schedule.extras, u.id);
-        const extras = extrasBy[u.id] || [];
-        const driver = drivers[u.id] === true;
-        return (
-          <div key={u.id} className="space-y-2">
-            {several && <div className="text-sm font-black">{u.name}</div>}
-            {u.driver === 'with' && <div className="text-xs font-bold text-neutral-500">الإيجار مع سائق.</div>}
-            {u.driver === 'both' && (
-              <div className="flex flex-wrap gap-1.5">
-                <button type="button" onClick={() => setDrivers({ ...drivers, [u.id]: false })} className={chip(!driver)} style={on(!driver)}>بدون سائق</button>
-                <button type="button" onClick={() => setDrivers({ ...drivers, [u.id]: true })} className={chip(driver)} style={on(driver)}>مع سائق</button>
-              </div>
-            )}
-            {offered.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="text-sm font-bold">الخدمات المرافقة</div>
-                {offered.map((x) => (
-                  <label key={x.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" checked={extras.includes(x.id)} onChange={(e) => setExtrasBy({ ...extrasBy, [u.id]: e.target.checked ? [...extras, x.id] : extras.filter((id) => id !== x.id) })} />
-                    <span className="flex-1">{x.name} <ExtraHelp note={x.note} /></span>
-                    <span className="text-xs font-bold text-neutral-500">{money(x.price, u.currency)}{x.per === 'unit' ? (mode === 'day' ? ' لليوم' : mode === 'hour' ? ' للساعة' : '') : ''}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {unit.driver === 'with' && <div className="text-xs font-bold text-neutral-500">الإيجار مع سائق.</div>}
+      {unit.driver === 'both' && (
+        <div className="flex flex-wrap gap-1.5">
+          <button type="button" onClick={() => setDriver(false)} className={chip(!driver)} style={on(!driver)}>بدون سائق</button>
+          <button type="button" onClick={() => setDriver(true)} className={chip(driver)} style={on(driver)}>مع سائق</button>
+        </div>
+      )}
+
+      {offered.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-sm font-bold">الخدمات المرافقة</div>
+          {offered.map((x) => (
+            <label key={x.id} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={extras.includes(x.id)} onChange={(e) => setExtras(e.target.checked ? [...extras, x.id] : extras.filter((id) => id !== x.id))} />
+              <span className="flex-1">{x.name} <ExtraHelp note={x.note} /></span>
+              <span className="text-xs font-bold text-neutral-500">{money(x.price, cur)}{x.per === 'unit' ? (mode === 'day' ? ' لليوم' : mode === 'hour' ? ' للساعة' : '') : ''}</span>
+            </label>
+          ))}
+        </div>
+      )}
 
       {q && (
         <div className="rounded-xl bg-neutral-50 border border-neutral-200 p-3 space-y-1 text-sm">

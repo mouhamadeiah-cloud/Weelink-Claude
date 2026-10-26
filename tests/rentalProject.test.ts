@@ -50,6 +50,7 @@ test('a car rental lists car cards; any other rental lists the item cards in the
   assert.ok(halls.elements.some((e) => e.type === 'shopSearch'));
   assert.equal(halls.pages.length, 5);
   assert.equal(halls.elements.filter((e) => e.type === 'cart').length, 1);
+  assert.equal(halls.elements.filter((e) => e.type === 'checkout').length, 1);
   assert.ok(halls.pages.every((p) => p.navbar.items.some((i) => i.label === 'للإيجار')));
   assert.equal(new Set(halls.elements.map((e) => e.id)).size, halls.elements.length);
 });
@@ -83,11 +84,21 @@ test('the rental catalogs repeat no sub kind, and a rental item\'s specs are all
 });
 
 test('a rental made before its cart page gets one, once', async () => {
-  const { rentalCartPage } = await import('../src/data/rentalCartPage.ts');
+  const { withRentalCart } = await import('../src/data/rentalCartPage.ts');
   const t = getRentalTemplate('سيارات');
-  const stripped = { pages: t.pages.filter((p) => p.id !== 'rental-page-cart'), elements: t.elements.filter((e) => e.type !== 'cart') };
-  const added = rentalCartPage(stripped.pages, stripped.elements, 9)!;
+  const stripped = { pages: t.pages.filter((p) => p.id !== 'rental-page-cart'), elements: t.elements.filter((e) => e.type !== 'cart' && e.type !== 'checkout') };
+  const added = withRentalCart(stripped.pages, stripped.elements, 9)!;
   assert.equal(added.pages.length, stripped.pages.length + 1);
   assert.equal(added.elements.filter((e) => e.type === 'cart').length, 1);
-  assert.equal(rentalCartPage(added.pages, added.elements, 10), null);
+  assert.equal(withRentalCart(added.pages, added.elements, 10), null);
+});
+
+test('the first rental cart (one cart element) is split into the summary and the booking card, once', async () => {
+  const { withRentalCart } = await import('../src/data/rentalCartPage.ts');
+  const t = getRentalTemplate('سيارات');
+  const first = { pages: t.pages, elements: t.elements.filter((e) => e.type !== 'checkout').map((e) => (e.type === 'cart' ? { ...e, cartSplit: undefined, width: 900 } : e)) };
+  const split = withRentalCart(first.pages, first.elements, 11)!;
+  assert.ok(split.elements.find((e) => e.type === 'cart')!.cartSplit);
+  assert.equal(split.elements.filter((e) => e.type === 'checkout').length, 1);
+  assert.equal(withRentalCart(split.pages, split.elements, 12), null);
 });

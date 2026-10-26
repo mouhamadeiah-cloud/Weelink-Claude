@@ -137,7 +137,10 @@ export const BookingsSection: React.FC<BookingsSectionProps> = ({ owner, project
                   <div className="text-xs font-bold text-neutral-600 mt-1" dir="rtl">{b.slot}</div>
                   {b.personName && <div className="text-xs font-bold text-brand mt-0.5">مع {b.personName}</div>}
                   {b.sessionName && <div className="text-xs font-bold text-brand mt-0.5">🎟️ {b.sessionName} · {b.partySize} {b.partySize === 1 ? 'مقعد' : 'مقاعد'}{b.endDate ? ` · حتى ${b.endDate}` : ''}</div>}
-                  {b.roomName && <div className="text-xs font-bold text-brand mt-0.5">{b.rental ? `🚗 ${b.roomName}${b.checkOut ? ` · ${b.nights} أيام حتى ${b.checkOut}` : ''}${b.driver ? ' · مع سائق' : ''}` : `🛏️ ${b.roomName} · ${b.partySize} ضيوف · ${b.nights} ليالٍ حتى ${b.checkOut}`}</div>}
+                  {b.rental && b.items && b.items.length > 1 && b.items.map((it, i) => (
+                    <div key={i} className="text-xs font-bold text-brand mt-0.5">🚗 {it.roomName}{it.driver ? ' · مع سائق' : ''}{it.date ? ` · ${it.checkOut ? `${it.date} ← ${it.checkOut}` : `${it.date}${it.slot ? ` ${it.slot}` : ''}`}` : ''}</div>
+                  ))}
+                  {b.roomName && !(b.rental && b.items && b.items.length > 1) && <div className="text-xs font-bold text-brand mt-0.5">{b.rental ? `🚗 ${b.roomName}${b.checkOut ? ` · ${b.nights} أيام حتى ${b.checkOut}` : ''}${b.driver ? ' · مع سائق' : ''}` : `🛏️ ${b.roomName} · ${b.partySize} ضيوف · ${b.nights} ليالٍ حتى ${b.checkOut}`}</div>}
                   {b.price && b.price.total > 0 && <div className="text-xs font-bold text-neutral-500 mt-0.5">{b.price.lines.map((l) => l.label).join(' + ')} = {b.price.total} {b.price.currency}</div>}
                   {b.termsAt && <div className="text-xs font-bold text-[#2B8A3E] mt-0.5">✓ وافق على الشروط · {new Date(b.termsAt).toLocaleString('ar')}</div>}
                   {b.tableName && <div className="text-xs font-bold text-brand mt-0.5">🍽️ {b.partySize} أشخاص · {b.hallName ? `${b.hallName} · ` : ''}{b.tableName}</div>}

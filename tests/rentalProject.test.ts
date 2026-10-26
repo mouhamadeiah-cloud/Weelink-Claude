@@ -48,7 +48,8 @@ test('a car rental lists car cards; any other rental lists the item cards in the
   assert.equal(grids.length, 2);
   assert.ok(grids.some((e) => e.shopSource === 'featured'));
   assert.ok(halls.elements.some((e) => e.type === 'shopSearch'));
-  assert.equal(halls.pages.length, 4);
+  assert.equal(halls.pages.length, 5);
+  assert.equal(halls.elements.filter((e) => e.type === 'cart').length, 1);
   assert.ok(halls.pages.every((p) => p.navbar.items.some((i) => i.label === 'للإيجار')));
   assert.equal(new Set(halls.elements.map((e) => e.id)).size, halls.elements.length);
 });
@@ -79,4 +80,14 @@ test('the rental catalogs repeat no sub kind, and a rental item\'s specs are all
   const { RENTAL_SPEC_PRESETS, SPEC_PRESETS } = await import('../src/components/shop/artikel.ts');
   assert.ok(RENTAL_SPEC_PRESETS.every((k: string) => SPEC_PRESETS[k]));
   for (const k of ['brand', 'model', 'area', 'power']) assert.ok(RENTAL_SPEC_PRESETS.includes(k) && !SPEC_PRESETS[k].affectsStock);
+});
+
+test('a rental made before its cart page gets one, once', async () => {
+  const { rentalCartPage } = await import('../src/data/rentalCartPage.ts');
+  const t = getRentalTemplate('سيارات');
+  const stripped = { pages: t.pages.filter((p) => p.id !== 'rental-page-cart'), elements: t.elements.filter((e) => e.type !== 'cart') };
+  const added = rentalCartPage(stripped.pages, stripped.elements, 9)!;
+  assert.equal(added.pages.length, stripped.pages.length + 1);
+  assert.equal(added.elements.filter((e) => e.type === 'cart').length, 1);
+  assert.equal(rentalCartPage(added.pages, added.elements, 10), null);
 });

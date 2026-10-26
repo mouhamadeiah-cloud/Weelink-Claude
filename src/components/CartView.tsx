@@ -10,6 +10,8 @@ import { useCart, setCartQty, clearCart, cartTotal, formatPrice, buildWhatsappOr
 import { useShopData } from './shop/store/ShopDataContext';
 import { CartSummary, CheckoutForm, CheckoutView } from './shop/store/CheckoutView';
 import { checkoutLook } from './shop/store/checkoutStore';
+import { useRentalMode } from './rental/rentalTypes';
+import { RentalCartPage } from './rental/rentalCart';
 
 interface CartViewProps {
   elem: CanvasElement;
@@ -23,8 +25,12 @@ export const CartView: React.FC<CartViewProps> = ({ elem, isPreviewActive }) => 
   const phone = elem.cartWhatsapp || '';
   const shop = useShopData();
   const total = cartTotal(items);
+  const rental = useRentalMode();
 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+
+  // A rental's cart page books what the visitor added, all at once (rental/rentalCart.tsx).
+  if (rental) return <RentalCartPage accent={accent} isPreviewActive={isPreviewActive} />;
 
   // In an Online Shop the cart page is the checkout page: the cart summary beside the order card
   // (a 'checkout' element), or both in this element for carts made before the order card.

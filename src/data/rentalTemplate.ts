@@ -4,6 +4,7 @@
 // cards and product search in the same places, filled from the rental's items.
 import type { CanvasElement, Page } from '../types';
 import { getCarShowroomTemplate, CAR_PAGE_IDS } from './carShowroomTemplate';
+import { rentalCartPage } from './rentalCartPage';
 
 type Words = Record<string, string>;
 
@@ -82,5 +83,5 @@ export function getRentalTemplate(category?: string | null): { pages: Page[]; el
     const next = words[e.id] !== undefined ? { ...e, content: words[e.id] } : e;
     return cars ? next : asItems(next);
   });
-  return { pages, elements };
+  return rentalCartPage(pages, elements, 1) || { pages, elements };
 }

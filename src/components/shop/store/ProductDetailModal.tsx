@@ -242,7 +242,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
                       <KeyRound size={18} /> {bookable ? 'احجز الآن' : 'اطلب الإيجار'}
                     </button>
                   )}
-                  {bookable && !asking && <RentalCartAdd itemId={p.id} accent={accent} className="sm:col-span-2" />}
+                  {bookable && !asking && <RentalCartAdd itemId={p.id} accent={accent} className="sm:col-span-2" onClose={onClose} />}
                 </div>
                 {asking && bookable && <RentalBookingForm itemId={p.id} accent={accent} onClose={() => setAsking(false)} />}
                 {asking && !bookable && <RequestForm item={{ id: p.id, label: p.name }} type="buy" settings={rentalSettings} accent={accent} onDone={() => setAsking(false)} />}

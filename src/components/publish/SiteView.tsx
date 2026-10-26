@@ -7,7 +7,6 @@ import { withPhoneLayouts } from '../../utils/mobileLayout';
 import { ShopDataContext, ShopUpdateContext } from '../shop/store/ShopDataContext';
 import { CarDataContext } from '../cars/store/CarDataContext';
 import { RentalModeContext, rentalShopView } from '../rental/rentalTypes';
-import { RentalCartLauncher } from '../rental/rentalCart';
 import { HotelModeContext } from '../hotel/hotelTypes';
 import { carsFromPublic, shopFromPublic } from './publicData';
 import type { CanvasElement, Page } from '../../types';
@@ -72,7 +71,6 @@ export const SiteView: React.FC<{
               onContactClick={onContactClick}
               navActions={navActions}
             />
-            {rental && <RentalCartLauncher />}
             {usesPixabay && (
               <p className="shrink-0 bg-white py-1 text-center text-[11px] text-neutral-500" dir="rtl">
                 بعض الصور والفيديوهات من{' '}

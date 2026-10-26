@@ -41,6 +41,9 @@ export const rentalCatalogs = (list: { name: string; subs: string[] }[], first?:
   });
 };
 
+// What a rental's items count in the package's limit: every copy of an item counts (5 tents = 5).
+export const rentalItemCount = (products: { copies?: number }[]) => products.reduce((n, p) => n + Math.max(1, p.copies || 1), 0);
+
 // The items as the rental's pages show them: renting is not selling stock, so an item is never «sold
 // out» (how many of one can be booked at once comes with the booking step).
 export const rentalShopView = (shop: ShopAdminData): ShopAdminData => ({ ...shop, products: shop.products.map((p) => (p.inWarehouse === false ? p : { ...p, inWarehouse: false })) });

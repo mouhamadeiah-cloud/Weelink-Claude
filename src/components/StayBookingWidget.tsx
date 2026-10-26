@@ -88,7 +88,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement; only?: string }>
   const priced = !rental && !!chosen && (chosen as any).dayPrice > 0;
   const offered = !rental && chosen ? extrasFor(schedule.extras, chosen.id) : [];
   const q = priced && chosen && checkIn && checkOut
-    ? quote(unitOf(chosen as any), schedule.extras, chosen.id, { by: 'day', date: checkIn, checkOut, extras }, { minDays: schedule.minNights, maxDays: schedule.maxNights, night: true })
+    ? quote(unitOf(chosen as any), schedule.extras, chosen.id, { by: 'day', date: checkIn, checkOut, extras, guests: guestCount }, { minDays: schedule.minNights, maxDays: schedule.maxNights, night: true })
     : null;
   const amount = chosen ? depositAmount(normalizeRule(schedule, true), q ? q.total || null : (priceNumber(chosen.price) || 0) * nights.length || null) : 0;
   const freeRooms = nights.length ? rooms.filter((r) => r.capacity >= guestCount && isRoomFree(occupancy[r.id], nights)) : [];
@@ -251,7 +251,7 @@ export const StayBookingWidget: React.FC<{ elem: CanvasElement; only?: string }>
                   <label key={x.id} className={`flex items-center gap-2 text-[10px] font-bold cursor-pointer ${sub}`}>
                     <input type="checkbox" checked={extras.includes(x.id)} onChange={(e) => setExtras(e.target.checked ? [...extras, x.id] : extras.filter((id) => id !== x.id))} />
                     <span className="flex-1">{x.name}</span>
-                    <span>{x.price}{chosen && (chosen as any).currency ? ` ${(chosen as any).currency}` : ''}{x.per === 'unit' ? ' / ليلة' : ''}</span>
+                    <span>{x.price}{chosen && (chosen as any).currency ? ` ${(chosen as any).currency}` : ''}{x.per === 'unit' ? ' / ليلة' : x.per === 'person' ? ' / شخص / ليلة' : x.per === 'personOnce' ? ' / شخص' : ''}</span>
                   </label>
                 ))}
               </div>

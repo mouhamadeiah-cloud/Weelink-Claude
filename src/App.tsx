@@ -63,7 +63,7 @@ import { CarDataContext, CarRequestContext } from './components/cars/store/CarDa
 import { submitRequest, RequestInput } from './components/cars/carMoney';
 import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
 import { RentalAdminPanel } from './components/rental/RentalAdminPanel';
-import { RentalAdminData, RentalModeContext, createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentalShopView, rentsCars } from './components/rental/rentalTypes';
+import { RentalAdminData, RentalModeContext, createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentalItemCount, rentalShopView, rentsCars } from './components/rental/rentalTypes';
 import { getRentalTemplate } from './data/rentalTemplate';
 import { HotelAdminPanel } from './components/hotel/HotelAdminPanel';
 import { HotelAdminData, HotelModeContext, createEmptyHotelAdmin, hotelCatalogs, hotelShopView, normalizeHotelAdmin } from './components/hotel/hotelTypes';
@@ -370,7 +370,8 @@ export default function App() {
     const rental = rentalCountsRef.current;
     if (rental.hotel) return next; // a hotel's room types are free: its rooms are what counts (updateHotelAdmin)
     const max = limitsRef.current.items - (rental.on ? rental.cars : 0);
-    if (overLimit(prev.products.length, next.products.length, max)) { refuseOverLimit(`${limitsRef.current.items} ${ITEM_WORD[rental.on ? 'rental' : 'shop']}`); return prev; }
+    const count = (d: ShopAdminData) => (rental.on ? rentalItemCount(d.products) : d.products.length);
+    if (overLimit(count(prev), count(next), max)) { refuseOverLimit(`${limitsRef.current.items} ${ITEM_WORD[rental.on ? 'rental' : 'shop']}`); return prev; }
     return next;
   }), []);
   const [hasCars, setHasCars] = useState<boolean>(false);
@@ -404,7 +405,7 @@ export default function App() {
   const updatePageAdmin = useCallback((fn: (d: PageAdminData) => PageAdminData) => setPageAdmin((prev) => fn(prev)), []);
   // Every car, dish and product gets Weelink's public number once the admin is open (see services/itemNumbers.ts).
   const numberingOn = !!currentUser && !isFirebaseLoading;
-  rentalCountsRef.current = { on: project === 'rental', cars: carAdmin.cars.length, products: shopAdmin.products.length, hotel: project === 'hotel' };
+  rentalCountsRef.current = { on: project === 'rental', cars: carAdmin.cars.length, products: rentalItemCount(shopAdmin.products), hotel: project === 'hotel' };
   const rentalShop = useMemo(() => rentalShopView(shopAdmin), [shopAdmin]);
   const hotelData = useMemo<HotelAdminData>(() => ({ ...hotelRooms, shop: shopAdmin }), [hotelRooms, shopAdmin]);
   const hotelDataRef = useRef(hotelData);
@@ -5427,7 +5428,7 @@ export default function App() {
                 suggestedName={currentPage.navbar.brandName || ''}
                 onPublishedChange={setPublishedName}
                 used={{
-                  items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'rental' ? carAdmin.cars.length + shopAdmin.products.length : project === 'hotel' ? hotelRooms.rooms.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
+                  items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'rental' ? carAdmin.cars.length + rentalItemCount(shopAdmin.products) : project === 'hotel' ? hotelRooms.rooms.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
                   devices: project === 'restaurant' ? restaurantAdmin.devices.filter((d) => d.active).length : 0,
                 }}
               />
@@ -5516,7 +5517,7 @@ export default function App() {
         suggestedName={currentPage.navbar.brandName || ''}
         onPublishedChange={setPublishedName}
         used={{
-          items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'rental' ? carAdmin.cars.length + shopAdmin.products.length : project === 'hotel' ? hotelRooms.rooms.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
+          items: project === 'shop' ? shopAdmin.products.length : project === 'cars' ? carAdmin.cars.length : project === 'rental' ? carAdmin.cars.length + rentalItemCount(shopAdmin.products) : project === 'hotel' ? hotelRooms.rooms.length : project === 'restaurant' ? restaurantAdmin.dishes.length : 0,
           devices: project === 'restaurant' ? restaurantAdmin.devices.filter((d) => d.active).length : 0,
         }}
       />

@@ -582,7 +582,7 @@ export const buildPrompt = (kind: Kind, profile: Record<string, string>, assets:
 
 // ---------- The page's model (docs/READY_SLIDES_PLAN.md step 4c) ----------
 
-const FLAVORS = ['restaurant', 'shop', 'cars'];
+const FLAVORS = ['restaurant', 'shop', 'cars', 'rental', 'hotel'];
 
 // The package the project builds as: a paid one while its access lasts, else the free page (with the flavour of a free restaurant, shop or
 // showroom page), else the smallest of its kind.

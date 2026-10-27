@@ -21,6 +21,7 @@ import { Root, Section, fieldClass, stop, type PartProps } from '../shop/store/C
 import { lookVars } from '../shop/store/checkoutStore';
 import { useRentalUnits } from './RentalBookingForm';
 import { useRentalCart, type RentLine } from './rentalCart';
+import { RentalCompare } from './RentalCompare';
 
 type Unit = StayRoom & RentalUnit;
 
@@ -252,7 +253,12 @@ export const RentalCartSummary: React.FC<PartProps> = ({ look, isPreviewActive }
           <ShoppingCart size={20} className="text-(--accent)" />
           <span>سلة الحجز{rows.length > 0 ? ` (${rows.length})` : ''}</span>
         </div>
-        {rows.length > 0 && <button type="button" onClick={cart.clear} className="text-xs text-(--muted) hover:text-red-500 cursor-pointer">إفراغ السلة</button>}
+        {rows.length > 0 && (
+          <div className="flex items-center gap-4">
+            <RentalCompare rows={rows} extras={schedule?.extras || []} look={look} only={cart.only} remove={cart.remove} />
+            <button type="button" onClick={cart.clear} className="text-xs text-(--muted) hover:text-red-500 cursor-pointer">إفراغ السلة</button>
+          </div>
+        )}
       </div>
       {rows.length === 0 || !schedule ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center px-6 py-10">

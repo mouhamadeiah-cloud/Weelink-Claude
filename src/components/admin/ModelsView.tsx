@@ -43,6 +43,8 @@ export const ModelsView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEn
   const saved = pagesOf(model);
   const changed = JSON.stringify(draft) !== JSON.stringify(saved);
   const page = draft[Math.min(pageIx, draft.length - 1)];
+  // The first render after a model opens, before its pages are copied into the draft.
+  if (!page) return <div className="flex justify-center p-10 text-faint"><Loader2 className="h-5 w-5 animate-spin" /></div>;
   const at = draft.indexOf(page);
   const setPage = (p: Partial<ModelPage>) => setDraft((d) => d.map((x, j) => (j === at ? { ...x, ...p } : x)));
   const setSections = (f: (s: ModelSection[]) => ModelSection[]) => setPage({ sections: f(page.sections) });

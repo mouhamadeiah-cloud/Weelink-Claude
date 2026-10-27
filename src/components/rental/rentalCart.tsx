@@ -80,6 +80,8 @@ export const useRentalCart = () => {
     has: (id: string) => lines.some((l) => l.id === id),
     add: (id: string) => { if (!lines.some((l) => l.id === id) && lines.length < MAX_ITEMS) write(key, [...lines, newLine(id)]); },
     update: (id: string, patch: Partial<RentLine>) => write(key, lines.map((l) => (l.id === id ? { ...l, ...patch } : l))),
+    // Only this line stays in the booking (the others stay in the cart).
+    only: (id: string) => write(key, lines.map((l) => ({ ...l, on: l.id === id }))),
     remove: (id: string) => write(key, lines.filter((l) => l.id !== id)),
     clear: () => write(key, []),
     full: lines.length >= MAX_ITEMS,

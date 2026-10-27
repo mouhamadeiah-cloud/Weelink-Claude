@@ -208,6 +208,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 }) => {
   // Answers finished once stay finished while the owner walks through them again.
   const finishedRef = useRef(false);
+  const byKindRef = useRef<Record<string, { catalogInfo: any; aiAnswers: any }>>({});
   const [freeOpen, setFreeOpen] = useState(false);
   const [freeText, setFreeText] = useState('');
   const [freeBusy, setFreeBusy] = useState(false);
@@ -375,6 +376,11 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     const applyData = (data: any) => {
       // Answers given for another kind of page keep the owner's own details (name, address,
       // contacts, look), not what that business was: its name, kind, description and offer.
+      // Each kind keeps its own answers too (byKind), so opening a rental after a hotel brings the
+      // rental's own back instead of an empty description.
+      byKindRef.current = data.byKind || {};
+      const mine = pageKind ? byKindRef.current[pageKind] : null;
+      if (mine && pageKind !== data.pageKind) data = { ...data, catalogInfo: mine.catalogInfo, aiAnswers: mine.aiAnswers, pageKind };
       const otherKind = !!pageKind && !!data.pageKind && data.pageKind !== pageKind;
       setSavedFlavor(['restaurant', 'shop', 'cars', 'rental', 'hotel'].includes(data.flavor) ? data.flavor : undefined);
       if (data.personalInfo) setPersonalInfo({ pageName: '', ...data.personalInfo, ...(otherKind ? { pageName: '' } : {}) });
@@ -468,13 +474,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   // Save progress at each transition: instantly to LocalStorage, and live up to Firebase
   const saveProgress = (nextStep: number) => {
     if (!userId) return;
+    if (pageKind) byKindRef.current = { ...byKindRef.current, [pageKind]: { catalogInfo, aiAnswers } };
     const dataToSave = {
       personalInfo,
       addressInfo,
       contactInfo,
       catalogInfo,
       aiAnswers,
-      ...(pageKind ? { pageKind } : {}),
+      ...(pageKind ? { pageKind, byKind: byKindRef.current } : {}),
       ...(ownFlavor ? { flavor: ownFlavor } : {}),
       currentStep: finishedRef.current ? 13 : nextStep,
       updatedAt: new Date().toISOString()

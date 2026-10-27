@@ -42,6 +42,7 @@ import { StartPage, type MyProject } from './components/onboarding/StartPage';
 import { moveGuestAnswers } from './services/guestAnswers';
 import { PlatformNav } from './components/platform/PlatformNav';
 import { readPlan, savePlan } from './data/plans';
+import { withExampleProducts } from './data/exampleItems';
 import { readCatalogAnswer, sampleRestaurantAdmin, sampleShopAdmin } from './services/sampleItems';
 import { PublishModal } from './components/publish/PublishModal';
 import { publicDataFor } from './components/publish/publicData';
@@ -802,6 +803,7 @@ export default function App() {
       const answer = readCatalogAnswer(userId, 'shop');
       if (answer) admin = await sampleShopAdmin(answer, createEmptyShopAdmin()).catch(() => null);
       if (seq !== loadSeqRef.current) return;
+      if (!admin) admin = withExampleProducts(createEmptyShopAdmin(), 'shop');
     }
     setProject('shop');
     setProjectKey(key);
@@ -941,8 +943,10 @@ export default function App() {
         if (seq !== loadSeqRef.current) return;
         admin = {
           cars: !estate && rentsCars(category) ? { ...empty.cars, cars: exampleCars() } : empty.cars,
-          shop: { ...empty.shop, catalogs: rentalCatalogs(kinds.map((k) => ({ name: k.name, subs: k.subs.map((x) => x.name) })), category) },
+          shop: withExampleProducts({ ...empty.shop, catalogs: rentalCatalogs(kinds.map((k) => ({ name: k.name, subs: k.subs.map((x) => x.name) })), category) }, estate ? 'hotel' : 'rental'),
         };
+        // A rental of cars shows the example cars; its items would only crowd them.
+        if (!estate && rentsCars(category)) admin.shop = { ...admin.shop, products: [] };
       }
     } else {
       ({ pages: rentalPages, elements: rentalElements } = withTemplateGroups(rentalPages, rentalElements));

@@ -4,6 +4,7 @@
 // large photos, or a running strip that loops the dishes sideways); the card colours and corners are the element's own. In preview / on the live
 // site a dish opens its window (ingredients, extras, note, quantity), and on the live page the
 // slide grows to fit all the dishes (onGrow).
+import { fitExtra, fitMinHeight } from '../../../utils/listFit';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Plus, ImageOff, UtensilsCrossed, CheckCircle2, X } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
@@ -198,12 +199,12 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
       onGrow(0);
       return;
     }
-    const measure = () => onGrow(Math.max(0, Math.ceil(node.offsetHeight - box)));
+    const measure = () => onGrow(fitExtra(node.offsetHeight, box, limited.length > 0));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(node);
     return () => ro.disconnect();
-  }, [grows, onGrow, box]);
+  }, [grows, onGrow, box, limited.length > 0]);
   useEffect(() => () => onGrow?.(0), [onGrow]);
 
   useEffect(() => {
@@ -245,7 +246,7 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
       style={{ pointerEvents: isPreviewActive ? 'auto' : 'none', fontFamily: look.font }}
       onClick={stop}
     >
-      <div ref={contentRef} data-menu-list={showsSearch ? 'search' : ''} className="w-full flex flex-col gap-6" style={grows ? { minHeight: box } : { height: '100%' }}>
+      <div ref={contentRef} data-menu-list={showsSearch ? 'search' : ''} className="w-full flex flex-col gap-6" style={grows ? { minHeight: fitMinHeight(limited.length > 0, box) } : { height: '100%' }}>
         {searching && (
           <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: look.text }}>
             <span className="font-bold">{query ? `نتائج البحث عن «${query}»` : 'نتائج البحث'}: {limited.length} طبق</span>

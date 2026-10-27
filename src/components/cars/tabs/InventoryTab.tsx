@@ -1,5 +1,6 @@
 // المخزون: every car of the showroom with its state. From here the owner changes a car's status,
 // shows it in or hides it from the showroom, marks it as featured, opens it to edit, or deletes it.
+import { SampleBanner } from '../../shop/SampleBanner';
 import React, { useMemo, useState } from 'react';
 import { Pencil, Trash2, Eye, EyeOff, Star, Search, ImageOff, Plus, BadgeCheck, Wallet } from 'lucide-react';
 import { Car, CarStatus, CAR_STATUSES } from '../carTypes';
@@ -64,6 +65,7 @@ export const InventoryTab: React.FC<CarTabProps> = ({ data, update, onEdit, onNe
 
   return (
     <div className="space-y-4">
+      <SampleBanner count={data.cars.filter((c) => c.sample && !c.sale && !c.reservation).length} noun="سيارات" onRemove={() => update((d) => ({ ...d, cars: d.cars.filter((c) => !c.sample || c.sale || c.reservation) }))} />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Stat label={rental ? 'كل السيارات' : 'في المعرض الآن'} value={String(inStock.length)} />
         <Stat label="محجوزة" value={String(count('reserved'))} color="#f29900" />

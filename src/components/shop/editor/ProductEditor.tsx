@@ -71,7 +71,7 @@ const pathOf = (product: ShopProduct | undefined, catalogs: ShopCatalog[]): Pick
 
 type ExportTarget = 'store' | 'warehouse' | 'both';
 
-const STEPS = ['المنتج', 'الصور', 'السعر', 'المواصفات والمخزون', 'الشرح', 'منتجات مرتبطة'];
+const stepsOf = (word: string, related: string) => [word, 'الصور', 'السعر', 'المواصفات والمخزون', 'الشرح', related];
 
 const DISPLAYS: { id: ProductDisplay; label: string; icon: React.ElementType }[] = [
   { id: 'card', label: 'بطاقة', icon: LayoutGrid },
@@ -115,6 +115,10 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
   const [draftId] = useState(() => newId('prd'));
   const itemId = p.id || draftId;
   const rentalUnit = useItemUnit(itemId, p.price || 0, p.currency);
+  // A rental's cards are rented, not sold: the same words say «عنصر الإيجار».
+  const WORD = rentsOut ? 'عنصر الإيجار' : 'المنتج';
+  const RELATED = rentsOut ? 'عناصر مرتبطة' : 'منتجات مرتبطة';
+  const STEPS = stepsOf(WORD, RELATED);
   const LAST_STEP = STEPS.length;
   const [error, setError] = useState('');
   const set = (patch: Partial<ShopProduct>) => setP((prev) => ({ ...prev, ...patch }));
@@ -147,7 +151,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
     const name = p.name.trim();
     if (!name) {
       setStep(1);
-      setError('اكتب اسم المنتج أولاً.');
+      setError(`اكتب اسم ${WORD} أولاً.`);
       return;
     }
     setError('');
@@ -235,7 +239,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
   const goTo = (n: number) => {
     if (n > 1 && !p.name.trim()) {
       setStep(1);
-      setError('اكتب اسم المنتج أولاً.');
+      setError(`اكتب اسم ${WORD} أولاً.`);
       return;
     }
     setError('');
@@ -277,7 +281,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
         {error && <div className="p-3 rounded-xl bg-red-50 text-red-600 text-xs font-bold">{error}</div>}
 
         {step === 1 && (
-          <Card title="المنتج">
+          <Card title={WORD}>
             <CatalogPicker
               path={path}
               onChange={setPath}
@@ -367,7 +371,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
               </Field>
             )}
 
-            <Field label="سعر التوصيل لهذا المنتج" hint={`اتركه فارغاً لاستعمال رسم التوصيل العام للمتجر (${data.settings.delivery.deliveryFee || 0} ${data.settings.currency}).`}>
+            <Field label={`سعر التوصيل لهذا ${rentsOut ? 'العنصر' : 'المنتج'}`} hint={`اتركه فارغاً لاستعمال رسم التوصيل العام للمتجر (${data.settings.delivery.deliveryFee || 0} ${data.settings.currency}).`}>
               <input
                 className={`${inputFitClass} w-40`}
                 type="number"
@@ -405,11 +409,11 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
                 <input type="number" min={0} max={500} className={`${inputFitClass} w-24`} value={p.maxGuests} onChange={(e) => set({ maxGuests: Math.min(500, Math.max(0, Math.floor(Number(e.target.value)) || 0)) })} />
               </Field>
             )}
-            <Field label="رقم المنتج" hint="يُعطى تلقائياً بالتسلسل بدءاً من 0، ويمكنك تغييره. يُستعمل لربط المنتجات المرتبطة.">
+            <Field label={`رقم ${WORD}`} hint={`يُعطى تلقائياً بالتسلسل بدءاً من 0، ويمكنك تغييره. يُستعمل لربط ${RELATED}.`}>
               <input className={`${inputFitClass} w-48`} value={p.sku} onChange={(e) => set({ sku: e.target.value })} dir="ltr" />
             </Field>
             {itemNoLabel('product', p.publicNo) && (
-              <Field label="رقم Weelink" hint="رقم المنتج على Weelink كله: لا يتكرر ولا يتغير، وبه تجد الإدارة منتجك للإعلان.">
+              <Field label="رقم Weelink" hint={`رقم ${WORD} على Weelink كله: لا يتكرر ولا يتغير، وبه تجد الإدارة ${rentsOut ? 'عنصرك' : 'منتجك'} للإعلان.`}>
                 <div dir="ltr" className="text-sm font-black text-ink">{itemNoLabel('product', p.publicNo)}</div>
               </Field>
             )}
@@ -417,8 +421,8 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
         )}
 
         {step === 5 && (
-          <Card title="شرح المنتج">
-            <RichTextEditor value={p.description} onChange={(description) => set({ description })} placeholder="اكتب وصفاً كاملاً للمنتج: المزايا، طريقة الاستعمال، المحتويات…" />
+          <Card title={`شرح ${WORD}`}>
+            <RichTextEditor value={p.description} onChange={(description) => set({ description })} placeholder={rentsOut ? 'اكتب وصفاً كاملاً للعنصر: المزايا، شروط الاستعمال، ما يشمله الإيجار…' : 'اكتب وصفاً كاملاً للمنتج: المزايا، طريقة الاستعمال، المحتويات…'} />
             <Field label="شرح قصير تحت الاسم">
               <input className={inputClass} value={p.shortDescription} maxLength={120} onChange={(e) => set({ shortDescription: e.target.value })} placeholder="مثال: قطن 100%، مريح للاستعمال اليومي" />
             </Field>
@@ -428,7 +432,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
 
         {step === 6 && (
           <>
-            <Card title="منتجات مرتبطة" actions={<span className="text-xs text-neutral-400">تظهر أسفل البطاقة العائمة، حتى 5</span>}>
+            <Card title={RELATED} actions={<span className="text-xs text-neutral-400">تظهر أسفل البطاقة العائمة، حتى 5</span>}>
               <RelatedProductsPicker
                 productId={p.id}
                 selected={p.relatedIds}
@@ -486,7 +490,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({ data, update, init
             ))}
           </div>
           {p.display === 'slide' && (
-            <p className="mt-1 text-xs text-neutral-400 leading-relaxed">يظهر المنتج بعرض الصف كاملاً: الصورة الأساسية خلفية، والاسم والسعر والزر في شريط أسفلها.</p>
+            <p className="mt-1 text-xs text-neutral-400 leading-relaxed">يظهر {rentsOut ? 'العنصر' : 'المنتج'} بعرض الصف كاملاً: الصورة الأساسية خلفية، والاسم والسعر والزر في شريط أسفلها.</p>
           )}
         </div>
         {p.display === 'card' && (

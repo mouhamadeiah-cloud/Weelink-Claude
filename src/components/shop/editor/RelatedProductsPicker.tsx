@@ -1,6 +1,7 @@
 // منتجات مرتبطة: up to MAX_RELATED products shown at the bottom of this product's floating card.
 // Added by product number, or by catalog → sub catalog → product. Only products shown in the
 // store can be added.
+import { useRentalMode } from '../../rental/rentalTypes';
 import React, { useMemo, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { ShopProduct, ShopCatalog, MAX_RELATED } from '../shopTypes';
@@ -15,6 +16,7 @@ interface RelatedProductsPickerProps {
 }
 
 export const RelatedProductsPicker: React.FC<RelatedProductsPickerProps> = ({ productId, selected, products, catalogs, onChange }) => {
+  const W = useRentalMode() ? 'عنصر' : 'منتج';
   const [number, setNumber] = useState('');
   const [mainId, setMainId] = useState('');
   const [subId, setSubId] = useState('');
@@ -41,8 +43,8 @@ export const RelatedProductsPicker: React.FC<RelatedProductsPickerProps> = ({ pr
     const n = number.trim();
     if (!n) return;
     const p = products.find((x) => x.sku === n);
-    if (!p) return setError(`لا يوجد منتج بالرقم ${n}.`);
-    if (p.id === productId) return setError('لا يمكن ربط المنتج بنفسه.');
+    if (!p) return setError(`لا يوجد ${W} بالرقم ${n}.`);
+    if (p.id === productId) return setError(`لا يمكن ربط ال${W} بنفسه.`);
     if (!p.published) return setError(`"${p.name}" غير معروض في المتجر، فلا يمكن ربطه.`);
     add(p.id);
     setNumber('');
@@ -70,14 +72,14 @@ export const RelatedProductsPicker: React.FC<RelatedProductsPickerProps> = ({ pr
       )}
 
       {full ? (
-        <p className="text-xs text-neutral-400">وصلت إلى الحد الأقصى ({MAX_RELATED} منتجات).</p>
+        <p className="text-xs text-neutral-400">وصلت إلى الحد الأقصى ({MAX_RELATED} {W === 'عنصر' ? 'عناصر' : 'منتجات'}).</p>
       ) : (
         <>
           <Field label="بالرقم">
             <div className="flex gap-2">
               <input
                 className={`${inputFitClass} w-32`}
-                placeholder="رقم المنتج"
+                placeholder={`رقم ال${W}`}
                 value={number}
                 onChange={(e) => setNumber(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addByNumber(); } }}
@@ -97,8 +99,8 @@ export const RelatedProductsPicker: React.FC<RelatedProductsPickerProps> = ({ pr
                 <option value="">كل الفرعية</option>
                 {subs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <select className={inputClass} value={pick} onChange={(e) => add(e.target.value)} aria-label="المنتج المرتبط">
-                <option value="">{filtered.length ? '— اختر منتجاً —' : 'لا منتجات معروضة هنا'}</option>
+              <select className={inputClass} value={pick} onChange={(e) => add(e.target.value)} aria-label={`ال${W} المرتبط`}>
+                <option value="">{filtered.length ? `— اختر ${W === 'عنصر' ? 'عنصراً' : 'منتجاً'} —` : `لا ${W === 'عنصر' ? 'عناصر' : 'منتجات'} معروضة هنا`}</option>
                 {filtered.map((p) => <option key={p.id} value={p.id}>{p.sku ? `#${p.sku} · ` : ''}{p.name}</option>)}
               </select>
             </div>

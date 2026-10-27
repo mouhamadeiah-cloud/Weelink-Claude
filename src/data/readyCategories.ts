@@ -16,6 +16,7 @@ export const READY_SLIDE_CATEGORIES = [
   { id: 'cars', name: 'معرض السيارات', desc: 'واجهات، عرض السيارات، بحث وأشرطة متحركة لمعرضك', icon: '🚗' },
   { id: 'restaurant', name: 'المطعم', desc: 'واجهات، المنيو بعدة أشكال، سلة الطلب وأشرطة متحركة لمطعمك', icon: '🍽️' },
   { id: 'featured', name: 'عروض مميزة', desc: 'بطاقات العناصر المعلَّمة «مميز»: شريط متحرك وبطاقات باهتزاز لأي نوع صفحة', icon: '⭐' },
+  { id: 'search', name: 'شرائح البحث', desc: 'شريط بحث ضيق مع بحث متقدم لكل نوع صفحة: مطعم، متجر، سيارات، تأجير، فنادق', icon: '🔎' },
   { id: 'services', name: 'خدماتنا', desc: 'تفاصيل الخدمات والحلول المتاحة', icon: '🛠️' },
   { id: 'projects', name: 'آخر مشاريعنا', desc: 'ألبوم وصور من إنجازاتك السابقة', icon: '🏗️' },
   { id: 'privacy', name: 'قوانين وخصوصية', desc: 'الشروط والأحكام وسياسة الخصوصية', icon: '🔒' }
@@ -23,5 +24,5 @@ export const READY_SLIDE_CATEGORIES = [
 
 // Their slides read live shop, showroom or menu data: they stay in the code and the admin cannot add a gallery design to them
 // (Eyad, 21 Oct). The contact, booking and gallery blocks are elements like any other, so a designer can design those slides too.
-export const FIXED_READY_CATEGORIES = ['shop', 'cars', 'restaurant', 'featured'];
+export const FIXED_READY_CATEGORIES = ['shop', 'cars', 'restaurant', 'featured', 'search'];
 export const GALLERY_READY_CATEGORIES = READY_SLIDE_CATEGORIES.filter((c) => !FIXED_READY_CATEGORIES.includes(c.id));

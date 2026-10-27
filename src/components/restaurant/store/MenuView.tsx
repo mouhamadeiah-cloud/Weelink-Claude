@@ -5,19 +5,22 @@
 // site a dish opens its window (ingredients, extras, note, quantity), and on the live page the
 // slide grows to fit all the dishes (onGrow).
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Plus, ImageOff, UtensilsCrossed, CheckCircle2 } from 'lucide-react';
+import { Plus, ImageOff, UtensilsCrossed, CheckCircle2, X } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useRestaurantData } from './RestaurantDataContext';
 import { DishModal, MenuLook } from './DishModal';
 import { Dish, DISH_BADGES, MenuCategory, dishSubCatalogs } from '../restaurantTypes';
 import { addMenuLine } from '../menuCartStore';
 import { formatMoney } from '../../shop/adminUi';
+import { clearShopSearch, matchesSearch, setShopFilters, takeReveal, useShopSearch } from '../../shop/store/shopSearchStore';
+import { hasItemFilters, itemFilterChips, itemFromDish, itemMatches, sortItems, withoutItemChip } from '../../shop/store/itemSearch';
 
 interface MenuViewProps {
   elem: CanvasElement;
   isPreviewActive: boolean;
   onGrow?: (extra: number) => void;
   boxHeight?: number;
+  showsSearch?: boolean; // the menu's main list, which shows the results of the page's search
 }
 
 const menuLookOf = (elem: CanvasElement): MenuLook => ({
@@ -127,7 +130,7 @@ const CARD_MIN: Record<string, number> = { grid: 250, list: 420, large: 420 };
 const STRIP_CARD = 260;
 const STRIP_GAP = 20;
 
-export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGrow, boxHeight }) => {
+export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGrow, boxHeight, showsSearch }) => {
   const data = useRestaurantData();
   const look = menuLookOf(elem);
   const layout = elem.menuLayout || 'grid';
@@ -144,11 +147,20 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
     if (source === 'category') return all.filter((d) => d.categoryId === elem.menuCategoryId);
     return all;
   }, [data, categories, source, elem.menuCategoryId]);
-  const limited = elem.menuLimit ? dishes.slice(0, elem.menuLimit) : dishes;
-  const usedCats = categories.filter((c) => limited.some((d) => d.categoryId === c.id));
   const marquee = layout === 'marquee';
+  // The page's search (typed word and advanced filters) narrows the menu's main list to the matches.
+  const { query, reveal, filters } = useShopSearch();
+  const searching = !!showsSearch && !marquee && (!!query || hasItemFilters(filters));
+  const found = useMemo(() => {
+    if (!searching) return dishes;
+    const items = new Map(dishes.map((d) => [d.id, itemFromDish(d, categories)]));
+    return sortItems(dishes.filter((d) => matchesSearch(items.get(d.id)!.texts, query) && itemMatches(items.get(d.id)!, filters)), items, filters.sort);
+  }, [searching, dishes, categories, query, filters]);
+  const limited = !searching && elem.menuLimit ? found.slice(0, elem.menuLimit) : found;
+  const usedCats = categories.filter((c) => limited.some((d) => d.categoryId === c.id));
+  const chips = searching ? itemFilterChips(filters, (id) => categories.find((c) => c.id === id)?.name || id) : [];
   const cardAnim = elem.shopCardAnimation || 'none';
-  const showTabs = !marquee && elem.menuTabs !== false && source === 'all' && usedCats.length > 1;
+  const showTabs = !marquee && !searching && elem.menuTabs !== false && source === 'all' && usedCats.length > 1;
   useEffect(() => {
     if (tab !== 'all' && !usedCats.some((c) => c.id === tab)) setTab('all');
   }, [tab, usedCats]);
@@ -214,6 +226,16 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
     setToast(dish.name);
   };
 
+  // A new search: the menu scrolls into view.
+  useEffect(() => {
+    if (!isPreviewActive || !searching || !reveal) return;
+    const t = window.setTimeout(() => {
+      const node = contentRef.current;
+      if (node && takeReveal(reveal)) (node.closest('[id^="slide-container-"]') || node).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+    return () => window.clearTimeout(t);
+  }, [reveal, searching, isPreviewActive]);
+
   const Card = layout === 'list' ? RowCard : layout === 'large' ? LargeCard : GridCard;
 
   return (
@@ -223,7 +245,18 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
       style={{ pointerEvents: isPreviewActive ? 'auto' : 'none', fontFamily: look.font }}
       onClick={stop}
     >
-      <div ref={contentRef} data-menu-list className="w-full flex flex-col gap-6" style={grows ? { minHeight: box } : { height: '100%' }}>
+      <div ref={contentRef} data-menu-list={showsSearch ? 'search' : ''} className="w-full flex flex-col gap-6" style={grows ? { minHeight: box } : { height: '100%' }}>
+        {searching && (
+          <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: look.text }}>
+            <span className="font-bold">{query ? `نتائج البحث عن «${query}»` : 'نتائج البحث'}: {limited.length} طبق</span>
+            {chips.map((c) => (
+              <button key={c.key} type="button" onClick={() => setShopFilters(withoutItemChip(filters, c.key))} className="h-8 px-3 rounded-full text-xs font-bold inline-flex items-center gap-1 cursor-pointer text-white" style={{ backgroundColor: look.accent }}>
+                {c.label} <X size={12} />
+              </button>
+            ))}
+            <button type="button" onClick={clearShopSearch} className="h-8 px-3 rounded-full border border-black/10 bg-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer hover:bg-black/[0.03]"><X size={13} /> مسح البحث</button>
+          </div>
+        )}
         {showTabs && (
           <div className="flex gap-2 overflow-x-auto pb-1 justify-center flex-wrap">
             {[{ id: 'all', name: 'الكل', icon: '🍽️' }, ...usedCats].map((c) => (
@@ -244,8 +277,8 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
         {limited.length === 0 ? (
           <div className="flex-1 min-h-[220px] flex flex-col items-center justify-center gap-3 text-center rounded-3xl border-2 border-dashed border-black/10 bg-white/60 p-8">
             <UtensilsCrossed size={40} style={{ color: look.accent }} />
-            <div className="font-black text-lg text-[#2B2118]">لا توجد أطباق هنا بعد</div>
-            <p className="text-sm text-black/50 max-w-sm leading-relaxed">أضف أقسام المنيو والأطباق من ترس الإدارة أسفل الشاشة، وستظهر هنا مباشرة.</p>
+            <div className="font-black text-lg text-[#2B2118]">{searching ? 'لا توجد أطباق مطابقة لبحثك' : 'لا توجد أطباق هنا بعد'}</div>
+            <p className="text-sm text-black/50 max-w-sm leading-relaxed">{searching ? 'جرّب كلمة أخرى أو امسح البحث لعرض كل الأطباق.' : 'أضف أقسام المنيو والأطباق من ترس الإدارة أسفل الشاشة، وستظهر هنا مباشرة.'}</p>
           </div>
         ) : marquee ? (
           <div ref={stripRef} className="shop-marquee flex-1 min-h-0 overflow-hidden" dir="ltr">

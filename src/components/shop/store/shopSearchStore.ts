@@ -22,6 +22,12 @@ export const setShopSearch = (query: string) => {
   emit();
 };
 
+// The word typed in a list's own search box: the cards filter as it is typed, without scrolling the page.
+export const setShopQuery = (query: string) => {
+  state = { ...state, query };
+  emit();
+};
+
 export const setShopFilters = (filters: ItemFilters) => {
   state = { ...state, filters, reveal: hasItemFilters(filters) ? state.reveal + 1 : state.reveal };
   emit();

@@ -8,7 +8,8 @@ tokens['own'] = { uid: 'wown' };
 tokens['stranger'] = { uid: 'nobody' };
 store.set('team/wown/people/pa', { name: 'سارة', role: 'حلاقة', takesBookings: true, at: '2026-01-01' });
 store.set('team/wown/people/pb', { name: 'ليث', takesBookings: true, at: '2026-01-02' });
-const day = (n: number) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+// The server counts days in Damascus time, so the fixtures do too (UTC dates drift from it after 21:00 UTC).
+const day = (n: number) => new Date(Date.now() + n * 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Damascus' });
 store.set('bookings/wown/items/b1', { person: 'pa', date: day(1), startMin: 600, slot: '10:00 ص', name: 'ليلى', phone: '0933000111', email: 'l@x.com', desc: 'قص', status: 'confirmed' });
 store.set('bookings/wown/items/b2', { person: 'pb', date: day(1), startMin: 700, slot: 'x', name: 'غيرها', status: 'confirmed' });
 store.set('bookings/wown/items/b3', { person: 'pa', date: day(0), startMin: 480, slot: '8:00 ص', name: 'اليوم', status: 'confirmed' });

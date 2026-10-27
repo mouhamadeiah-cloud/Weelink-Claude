@@ -15,7 +15,9 @@ import { useShopData, useShopUpdate } from './ShopDataContext';
 import { recordVisit } from '../orderModel';
 import { ProductCard, ProductSlide, ProductZigzag, ProductWide, ProductMini, ProductChip, cardWidth } from './ProductCard';
 import { ProductDetailModal } from './ProductDetailModal';
-import { useShopSearch, clearShopSearch, matchesSearch, takeReveal, setShopFilters } from './shopSearchStore';
+import { useShopSearch, clearShopSearch, matchesSearch, takeReveal, setShopFilters, setShopQuery } from './shopSearchStore';
+import { ListSearchBar } from './ListSearchBar';
+import { ItemAdvancedSearch } from './ItemAdvancedSearch';
 import { hasItemFilters, itemFilterChips, itemFromProduct, itemMatches, sortItems, withoutItemChip } from './itemSearch';
 
 // Card width of each layout for a product at the default size (50%); a product's card size
@@ -77,7 +79,7 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
   const marquee = layout === 'marquee';
   const cardAnim = elem.shopCardAnimation || (layout === 'spotlight' ? 'float' : 'none');
   const { query, reveal, filters } = useShopSearch();
-  const searching = !!showsSearch && !marquee && (!!query || hasItemFilters(filters));
+  const searching = !!showsSearch && !marquee && (!!query.trim() || hasItemFilters(filters));
   const active = tabs.find((t) => t.id === catalog);
   const inCatalog = active ? products.filter((p) => p.catalogIds.some((id) => active.ids.includes(id))) : products;
   const filtered = useMemo(() => {
@@ -86,6 +88,9 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
     const found = inCatalog.filter((p) => matchesSearch([p.name, p.shortDescription, p.sku], query) && itemMatches(items.get(p.id)!, filters));
     return sortItems(found, items, filters.sort);
   }, [searching, inCatalog, query, filters, admin]);
+  const [advanced, setAdvanced] = useState(false);
+  const allItems = useMemo(() => products.map((p) => itemFromProduct(p, admin?.catalogs || [])), [products, admin]);
+  const currency = products.find((p) => p.price > 0)?.currency || '';
   const chips = searching ? itemFilterChips(filters, (id) => (admin?.catalogs || []).find((c) => c.id === id)?.name || id) : [];
 
   // Pages: the slide's own size (shopLimit, 20 by default) or the visitor's choice of 20 / 30.
@@ -185,6 +190,10 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
         className="w-full flex flex-col gap-4"
         style={grows ? { minHeight: fitMinHeight(list.length > 0, box) } : { height: '100%' }}
       >
+      {showsSearch && !marquee && (
+        <ListSearchBar value={query} placeholder="ابحث بالاسم أو الوصف..." accent={accent} filterCount={chips.length} onChange={setShopQuery} onAdvanced={() => isPreviewActive && setAdvanced(true)} onClear={clearShopSearch} />
+      )}
+
       {showTabs && (
         <div className="flex flex-wrap justify-center gap-2 shrink-0">
           {[{ id: 'all', name: 'الكل' }, ...tabs].map((t) => (
@@ -352,6 +361,22 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
         </div>
       )}
       </div>
+
+      {advanced && isPreviewActive && (
+        <ItemAdvancedSearch
+          items={allItems}
+          groups={(admin?.catalogs || []).filter((c) => !c.parentId).map((c) => ({ id: c.id, name: c.name }))}
+          groupTitle="التصنيف"
+          noun={{ one: 'نتيجة', two: 'نتيجتين', few: 'نتائج', many: 'نتيجة' }}
+          currency={currency}
+          initial={filters}
+          accent={accent}
+          font="'IBM Plex Sans Arabic', sans-serif"
+          matches={(it) => matchesSearch(it.texts, query)}
+          onApply={(f) => { setShopFilters(f); setAdvanced(false); }}
+          onClose={() => setAdvanced(false)}
+        />
+      )}
 
       {open && admin && isPreviewActive && (
         <ProductDetailModal

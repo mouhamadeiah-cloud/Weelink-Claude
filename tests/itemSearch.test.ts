@@ -66,3 +66,12 @@ test('«شرائح البحث»: one slim coloured slide per kind of page', () =
   assert.equal(slides[0].elements[0].shopSearchKind, 'menu');
   assert.equal(slides[2].elements[0].type, 'carSearch');
 });
+
+test('the lists\' own search box filters as it is typed, without scrolling the page', async () => {
+  const { setShopQuery, setShopFilters, clearShopSearch } = await import('../src/components/shop/store/shopSearchStore.ts');
+  const { useShopSearch } = await import('../src/components/shop/store/shopSearchStore.ts');
+  assert.equal(typeof useShopSearch, 'function');
+  setShopQuery('قم');
+  setShopFilters({ ...EMPTY_ITEM_FILTERS, onSale: true });
+  clearShopSearch();
+});

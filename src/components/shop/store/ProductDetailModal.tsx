@@ -124,7 +124,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
               <span className="w-11 h-11 rounded-full bg-[#34c759] text-white flex items-center justify-center shrink-0"><Check size={22} /></span>
               <div className="min-w-0">
                 <div className="text-lg font-bold text-[#2A1F1A] truncate">تمت إضافة «{p.name}» إلى السلة</div>
-                <div className="text-sm text-[#8A7B70]">منتجات قد تعجبك أيضاً</div>
+                <div className="text-sm text-[#8A7B70]">{rental ? 'عناصر قد تعجبك أيضاً' : 'منتجات قد تعجبك أيضاً'}</div>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -280,7 +280,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
         {html && (
           <div className="px-4 sm:px-6 pb-6">
             <div className="border-t border-black/[0.06] pt-4">
-              <div className="text-sm font-bold text-[#2A1F1A] mb-2">تفاصيل المنتج</div>
+              <div className="text-sm font-bold text-[#2A1F1A] mb-2">{rental ? 'تفاصيل العنصر' : 'تفاصيل المنتج'}</div>
               <div className="product-rich-text text-sm text-[#5A4C42] leading-relaxed" dangerouslySetInnerHTML={{ __html: html }} />
             </div>
           </div>
@@ -289,7 +289,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product:
         {related.length > 0 && (
           <div className="px-4 sm:px-6 pb-6">
             <div className="border-t border-black/[0.06] pt-4">
-              <div className="text-sm font-bold text-[#2A1F1A] mb-2">منتجات مرتبطة</div>
+              <div className="text-sm font-bold text-[#2A1F1A] mb-2">{rental ? 'عناصر مرتبطة' : 'منتجات مرتبطة'}</div>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {related.map((r) => <RelatedTile key={r.id} product={r} accent={accent} onClick={() => onOpenRelated(r.id)} />)}
               </div>

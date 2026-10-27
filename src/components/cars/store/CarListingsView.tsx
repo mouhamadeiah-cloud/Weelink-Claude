@@ -5,6 +5,7 @@
 // and the card colours and corners are the element's own. The showroom's main list also shows the
 // results of the search bar and of the advanced search. On the live page the slide grows to fit its cards (onGrow).
 import { fitExtra, fitMinHeight } from '../../../utils/listFit';
+import { ListSearchBar } from '../../shop/store/ListSearchBar';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CarFront, ChevronLeft, ChevronRight, X, SlidersHorizontal } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
@@ -12,7 +13,7 @@ import { useCarData } from './CarDataContext';
 import { CarCard, CarWide, CarLarge, CarChip, CarStripCard, CarLook } from './CarCard';
 import { CarDetailModal } from './CarDetailModal';
 import { carTitle } from '../carModel';
-import { useShopSearch, clearShopSearch, matchesSearch, takeReveal, bumpShopReveal } from '../../shop/store/shopSearchStore';
+import { useShopSearch, clearShopSearch, matchesSearch, takeReveal, bumpShopReveal, setShopQuery } from '../../shop/store/shopSearchStore';
 import { CarAdvancedSearch } from './CarAdvancedSearch';
 import { carFilterChips, carMatchesFilters, clearCarFilters, CarFilters, setCarFilters, useCarFilters, withoutChip } from './carFilterStore';
 
@@ -74,7 +75,7 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
   const advFilters = useCarFilters();
   const chips = showsSearch && !marquee ? carFilterChips(advFilters) : [];
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const textSearch = !!showsSearch && !marquee && !!query;
+  const textSearch = !!showsSearch && !marquee && !!query.trim();
   const searching = textSearch || chips.length > 0;
   const filtered = useMemo(() => {
     let list = cars.filter((c) => (!brand || c.brand === brand) && (!body || c.bodyType === body));
@@ -179,6 +180,10 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
           <CarAdvancedSearch cars={cars} initial={advFilters} accent={look.accent} font={look.font}
             onApply={(f: CarFilters) => { setCarFilters(f); setAdvancedOpen(false); bumpShopReveal(); }} onClose={() => setAdvancedOpen(false)} />
         )}
+        {showsSearch && !marquee && (
+          <ListSearchBar value={query} placeholder="ابحث بالماركة أو الموديل أو السنة..." accent={look.accent} filterCount={chips.length} onChange={setShopQuery}
+            onAdvanced={() => isPreviewActive && setAdvancedOpen(true)} onClear={() => { clearShopSearch(); clearCarFilters(); }} />
+        )}
         {showFilters && (
           <div className="flex flex-wrap items-center justify-center gap-2 shrink-0">
             <select className={selectClass} value={brand} onChange={(e) => setBrand(e.target.value)} aria-label="الماركة">
@@ -194,11 +199,6 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
             <select className={selectClass} value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="الترتيب">
               {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
-            {showsSearch && (
-              <button type="button" onClick={() => setAdvancedOpen(true)} className={`${selectClass} inline-flex items-center gap-1.5`} style={chips.length ? { borderColor: look.accent, color: look.accent } : undefined}>
-                <SlidersHorizontal size={15} /> بحث متقدم{chips.length ? ` (${chips.length})` : ''}
-              </button>
-            )}
             <span className="text-sm font-bold opacity-60 px-2">{filtered.length} سيارة</span>
           </div>
         )}

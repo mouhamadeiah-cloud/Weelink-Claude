@@ -13,7 +13,9 @@ import { DishModal, MenuLook } from './DishModal';
 import { Dish, DISH_BADGES, MenuCategory, dishSubCatalogs } from '../restaurantTypes';
 import { addMenuLine } from '../menuCartStore';
 import { formatMoney } from '../../shop/adminUi';
-import { clearShopSearch, matchesSearch, setShopFilters, takeReveal, useShopSearch } from '../../shop/store/shopSearchStore';
+import { clearShopSearch, matchesSearch, setShopFilters, setShopQuery, takeReveal, useShopSearch } from '../../shop/store/shopSearchStore';
+import { ListSearchBar } from '../../shop/store/ListSearchBar';
+import { ItemAdvancedSearch } from '../../shop/store/ItemAdvancedSearch';
 import { hasItemFilters, itemFilterChips, itemFromDish, itemMatches, sortItems, withoutItemChip } from '../../shop/store/itemSearch';
 
 interface MenuViewProps {
@@ -151,7 +153,7 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
   const marquee = layout === 'marquee';
   // The page's search (typed word and advanced filters) narrows the menu's main list to the matches.
   const { query, reveal, filters } = useShopSearch();
-  const searching = !!showsSearch && !marquee && (!!query || hasItemFilters(filters));
+  const searching = !!showsSearch && !marquee && (!!query.trim() || hasItemFilters(filters));
   const found = useMemo(() => {
     if (!searching) return dishes;
     const items = new Map(dishes.map((d) => [d.id, itemFromDish(d, categories)]));
@@ -159,6 +161,8 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
   }, [searching, dishes, categories, query, filters]);
   const limited = !searching && elem.menuLimit ? found.slice(0, elem.menuLimit) : found;
   const usedCats = categories.filter((c) => limited.some((d) => d.categoryId === c.id));
+  const [advanced, setAdvanced] = useState(false);
+  const allItems = useMemo(() => dishes.map((d) => itemFromDish(d, categories)), [dishes, categories]);
   const chips = searching ? itemFilterChips(filters, (id) => categories.find((c) => c.id === id)?.name || id) : [];
   const cardAnim = elem.shopCardAnimation || 'none';
   const showTabs = !marquee && !searching && elem.menuTabs !== false && source === 'all' && usedCats.length > 1;
@@ -247,6 +251,9 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
       onClick={stop}
     >
       <div ref={contentRef} data-menu-list={showsSearch ? 'search' : ''} className="w-full flex flex-col gap-6" style={grows ? { minHeight: fitMinHeight(limited.length > 0, box) } : { height: '100%' }}>
+        {showsSearch && !marquee && (
+          <ListSearchBar value={query} placeholder="ابحث عن طبق أو مشروب..." accent={look.accent} filterCount={chips.length} onChange={setShopQuery} onAdvanced={() => isPreviewActive && setAdvanced(true)} onClear={clearShopSearch} />
+        )}
         {searching && (
           <div className="flex flex-wrap items-center gap-2 text-sm" style={{ color: look.text }}>
             <span className="font-bold">{query ? `نتائج البحث عن «${query}»` : 'نتائج البحث'}: {limited.length} طبق</span>
@@ -316,6 +323,21 @@ export const MenuView: React.FC<MenuViewProps> = ({ elem, isPreviewActive, onGro
         )}
       </div>
 
+      {advanced && isPreviewActive && (
+        <ItemAdvancedSearch
+          items={allItems}
+          groups={categories.map((c) => ({ id: c.id, name: c.name }))}
+          groupTitle="القسم"
+          noun={{ one: 'طبق', two: 'طبقين', few: 'أطباق', many: 'طبق' }}
+          currency={data?.settings.currency || ''}
+          initial={filters}
+          accent={look.accent}
+          font={look.font}
+          matches={(it) => matchesSearch(it.texts, query)}
+          onApply={(f) => { setShopFilters(f); setAdvanced(false); }}
+          onClose={() => setAdvanced(false)}
+        />
+      )}
       {open && data && isPreviewActive && <DishModal dish={open} data={data} look={look} onClose={() => setOpenId(null)} onAdded={setToast} />}
       {toast && isPreviewActive && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000001] px-5 h-12 rounded-full bg-[#1d1d1f] text-white text-sm font-bold flex items-center gap-2 shadow-xl" dir="rtl" style={{ fontFamily: look.font }}>

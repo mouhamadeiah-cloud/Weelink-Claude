@@ -63,13 +63,15 @@ export const pickSections = async (o: { sections: ModelSection[]; codeSections: 
     // The gallery section takes only slides that can hold all of the owner's photos (frames are fixed in number; the viewer slides hold 5 or 15).
     const holds = (template: string, spec?: TemplateSpec) => id !== 'gallery' || !o.photos || photoCapacity(template, spec || o.specs?.[template]) >= o.photos;
     const fromCode = (code?.templates || []).filter((t) => holds(t)).map((t) => ({ template: t }));
-    const fromGallery = o.gallery.ids(s.category).map((g) => ({ template: `g:${g}`, gallery: g }));
+    // Slides the admin allowed for this section (the ones that still work); none left of them = the category as a whole.
+    const allowed = s.slides?.length ? o.gallery.ids(s.category).filter((g) => s.slides!.includes(g)) : [];
+    const fromGallery = (allowed.length ? allowed : o.gallery.ids(s.category)).map((g) => ({ template: `g:${g}`, gallery: g }));
     // A category switched to the gallery uses only gallery slides, while it has one the AI can fill.
     const order = (list: { template: string; gallery?: string }[]) => {
       const mix = shuffled(list.filter((c) => !taken.has(c.template)), rng);
       return [...mix.filter((c) => !avoid.has(c.template)), ...mix.filter((c) => avoid.has(c.template))];
     };
-    const tries = o.gallery.useGallery(s.category) ? [order(fromGallery), order(fromCode)] : [order([...fromCode, ...fromGallery])];
+    const tries = allowed.length ? [order(fromGallery)] : o.gallery.useGallery(s.category) ? [order(fromGallery), order(fromCode)] : [order([...fromCode, ...fromGallery])];
     let chosen: { template: string; spec?: TemplateSpec; data?: GallerySlideData } | null = null;
     for (const list of tries) {
       for (const c of list) {

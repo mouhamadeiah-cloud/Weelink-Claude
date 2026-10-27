@@ -141,3 +141,14 @@ test('the gallery category holds exactly eight slides, each beside an explanatio
   const layouts = new Set(made.map((s) => s.elements.find((e: any) => e.type === 'gallery').galleryConfig.layout));
   assert.equal(layouts.size, 4); // all four layouts of the block are used
 });
+
+test('the slides the admin allowed for a section are the only ones it takes; when none of them works the whole category is used', async () => {
+  const sections = [{ id: 'about', category: 'about', mode: 'always' as const, slides: ['g2'] }];
+  const gallery = pool({ byCat: { about: ['g1', 'g2', 'g3'] }, on: ['about'] });
+  for (const r of [0, 0.4, 0.99]) {
+    const out = await pickSections({ sections, codeSections: code, gallery, rng: seq(r) });
+    assert.deepEqual(out.pool[0].templates, ['g:g2']);
+  }
+  const gone = await pickSections({ sections: [{ ...sections[0], slides: ['gone'] }], codeSections: code, gallery: pool({ byCat: { about: ['g1'] }, on: ['about'] }), rng: seq(0.1) });
+  assert.deepEqual(gone.pool[0].templates, ['g:g1']);
+});

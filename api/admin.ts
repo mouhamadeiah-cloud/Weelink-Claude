@@ -1250,7 +1250,7 @@ export default {
     if (action === 'models-get') return json({ models: await readModels(db) });
     if (action === 'models-save') {
       const id = String(body.id || '');
-      const r = await saveModel(db, id, body.sections, session.u);
+      const r = await saveModel(db, id, body.pages ?? body.sections, session.u);
       if ('error' in r) return json({ error: r.error }, 400);
       await audit(session.u, `models-save:${id}`);
       return json(r);

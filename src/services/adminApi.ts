@@ -66,7 +66,7 @@ export class AdminError extends Error {
   }
 }
 
-import type { ModelSection, PageModel } from '../data/pageModels';
+import type { ModelPage, PageModel } from '../data/pageModels';
 const call = async <T,>(body: Record<string, unknown>): Promise<T> => {
   const token = getAdminToken();
   let res: Response;
@@ -216,7 +216,7 @@ export const adminReadyDoc = (id: string) => call<{ design: { id: string; name: 
 export const adminReadyCategory = (id: string, category: string) => call<{ ok: true }>({ action: 'ready-category', id, category });
 export const adminReadyMove = (id: string, dir: 'up' | 'down') => call<{ ok: true }>({ action: 'ready-move', id, dir });
 export const adminModels = () => call<{ models: (PageModel & { custom: boolean })[] }>({ action: 'models-get' });
-export const adminModelSave = (id: string, sections: ModelSection[]) => call<{ ok: true; sections: ModelSection[] }>({ action: 'models-save', id, sections });
+export const adminModelSave = (id: string, pages: ModelPage[]) => call<{ ok: true; pages: ModelPage[] }>({ action: 'models-save', id, pages });
 export const adminModelReset = (id: string) => call<{ ok: true }>({ action: 'models-reset', id });
 // Slides made outside the editor (a JSON file of {name, category, slide, elements}): each is saved as a new ready slide, the way the editor's save does it.
 export const adminReadyImport = async (items: { name: string; category: string; slide: any; elements: any[] }[]) => {

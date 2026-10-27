@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_MODELS, MODEL_CATEGORIES, cleanSections, modelOf } from '../src/data/pageModels.ts';
+import { DEFAULT_MODELS, MODEL_CATEGORIES, cleanPages, cleanSections, modelOf, pagesOf } from '../src/data/pageModels.ts';
 import { readModels, resetModel, saveModel } from '../server/pageModels.ts';
 import { getFirestore, store } from './fakeAdmin.ts';
 
@@ -65,4 +65,38 @@ test('the admin saves a model, reads it back over the defaults, and resets it', 
   assert.deepEqual(free.sections.map((s) => s.id), ['intro', 'contact']);
   assert.deepEqual(await resetModel(db, 'page-free'), { ok: true });
   assert.equal((await readModels(db)).find((m) => m.id === 'page-free')!.custom, false);
+});
+
+test('pages are cleaned: named, unique ids, empty pages dropped, the same section may be in two pages', () => {
+  const out = cleanPages([
+    { id: 'a', name: '  ', sections: [{ category: 'intro', mode: 'always' }, { category: 'about', mode: 'always' }] },
+    { id: 'a', name: 'خدماتنا', sections: [{ category: 'about', mode: 'ask' }] },
+    { name: 'فارغة', sections: [] },
+  ])!;
+  assert.deepEqual(out.map((p) => p.name), ['الرئيسية', 'خدماتنا']);
+  assert.equal(new Set(out.map((p) => p.id)).size, 2);
+  assert.equal(out[1].sections[0].id, 'about');
+  assert.equal(cleanPages([{ sections: [] }]), null);
+  assert.equal(cleanPages('x'), null);
+});
+
+test('a section keeps the slides the admin allowed, without repeats or blanks', () => {
+  const [s] = cleanSections([{ category: 'about', mode: 'always', slides: ['r1', 'r1', '', 'r2'] }])!;
+  assert.deepEqual(s.slides, ['r1', 'r2']);
+  assert.equal('slides' in cleanSections([{ category: 'about', mode: 'always', slides: [] }])![0], false);
+});
+
+test('a model is saved as pages; the first page stays as `sections` for the builder; an old model is one page', async () => {
+  reset();
+  const r = await saveModel(db, 'page-free', [{ name: 'الرئيسية', sections: [{ category: 'intro', mode: 'always' }, { category: 'contact', mode: 'always' }] }, { name: 'من نحن', sections: [{ category: 'about', mode: 'always' }] }], 'x');
+  assert.ok('ok' in r);
+  const m = (await readModels(db)).find((x) => x.id === 'page-free')!;
+  assert.deepEqual(m.pages!.map((p) => p.name), ['الرئيسية', 'من نحن']);
+  assert.deepEqual(m.sections.map((s) => s.id), ['intro', 'contact']);
+  store.set('pageModels/page-pro', { sections: [{ category: 'intro', mode: 'always' }] });
+  const old = (await readModels(db)).find((x) => x.id === 'page-pro')!;
+  assert.equal(old.custom, true);
+  assert.deepEqual(old.pages!.map((p) => [p.name, p.sections.length]), [['الرئيسية', 1]]);
+  assert.deepEqual(pagesOf(DEFAULT_MODELS[0]).map((p) => p.name), ['الرئيسية']);
+  reset();
 });

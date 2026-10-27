@@ -7,6 +7,7 @@ import { ShopProduct, PRODUCT_BADGES, newId } from '../shopTypes';
 import { itemNoLabel } from '../../../utils/itemNumbers';
 import { Card, inputClass, inputFitClass, PrimaryButton, GhostButton, EmptyState, formatMoney } from '../adminUi';
 import { AdminTabProps } from './tabProps';
+import { SampleBanner } from '../SampleBanner';
 import { ProductEditor } from '../editor/ProductEditor';
 import { changeStock, tracksStock, unitPriceFor, variantLabel } from '../productModel';
 
@@ -127,6 +128,7 @@ export const WarehouseTab: React.FC<AdminTabProps> = ({ data, update }) => {
 
   return (
     <div className="space-y-4">
+      <SampleBanner count={data.products.filter((p) => p.sample).length} noun="منتجات" onRemove={() => update((d) => ({ ...d, products: d.products.filter((p) => !p.sample) }))} />
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'عدد المنتجات', value: String(data.products.length) },

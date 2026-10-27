@@ -6,6 +6,7 @@
 // visitor can switch to 20 or 30 per page and move between pages with the arrows under the cards.
 // On the live page the slide grows to fit its cards (onGrow). A search from the store's search bar
 // filters the store's main product slide to every matching product.
+import { fitExtra, fitMinHeight } from '../../../utils/listFit';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PackageOpen, ChevronLeft, ChevronRight, X } from 'lucide-react';
@@ -124,12 +125,12 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
       onGrow(0);
       return;
     }
-    const measure = () => onGrow(Math.max(0, Math.ceil(node.offsetHeight - box)));
+    const measure = () => onGrow(fitExtra(node.offsetHeight, box, list.length > 0));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(node);
     return () => ro.disconnect();
-  }, [grows, onGrow, box]);
+  }, [grows, onGrow, box, list.length > 0]);
   useEffect(() => () => onGrow?.(0), [onGrow]);
 
   // A new search: the store's product slide scrolls into view, with its heading.
@@ -182,7 +183,7 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
         ref={contentRef}
         data-shop-products={showsSearch ? 'search' : marquee ? 'strip' : 'list'}
         className="w-full flex flex-col gap-4"
-        style={grows ? { minHeight: box } : { height: '100%' }}
+        style={grows ? { minHeight: fitMinHeight(list.length > 0, box) } : { height: '100%' }}
       >
       {showTabs && (
         <div className="flex flex-wrap justify-center gap-2 shrink-0">

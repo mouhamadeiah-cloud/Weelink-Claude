@@ -1009,7 +1009,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     }
     return handler;
   };
-  const growing = isPreviewActive ? layoutElements.filter((e) => (shopGrow[e.id] || 0) > 0) : [];
+  const growing = isPreviewActive ? layoutElements.filter((e) => (shopGrow[e.id] || 0) !== 0) : [];
   const elements = useMemo(() => {
     if (!growing.length) return layoutElements;
     return layoutElements.map((e) => {

@@ -4,6 +4,7 @@
 // a running strip), carLimit how many fit on one page, carFilters adds a brand / body / sort bar,
 // and the card colours and corners are the element's own. The showroom's main list also shows the
 // results of the search bar and of the advanced search. On the live page the slide grows to fit its cards (onGrow).
+import { fitExtra, fitMinHeight } from '../../../utils/listFit';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CarFront, ChevronLeft, ChevronRight, X, SlidersHorizontal } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
@@ -111,12 +112,12 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
       onGrow(0);
       return;
     }
-    const measure = () => onGrow(Math.max(0, Math.ceil(node.offsetHeight - box)));
+    const measure = () => onGrow(fitExtra(node.offsetHeight, box, list.length > 0));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(node);
     return () => ro.disconnect();
-  }, [grows, onGrow, box]);
+  }, [grows, onGrow, box, list.length > 0]);
   useEffect(() => () => onGrow?.(0), [onGrow]);
 
   // A new search: the showroom's list scrolls into view, with its heading.
@@ -172,7 +173,7 @@ export const CarListingsView: React.FC<CarListingsViewProps> = ({ elem, isPrevie
         ref={contentRef}
         data-car-listings={showsSearch ? 'search' : marquee ? 'strip' : 'list'}
         className="w-full flex flex-col gap-4"
-        style={grows ? { minHeight: box } : { height: '100%' }}
+        style={grows ? { minHeight: fitMinHeight(list.length > 0, box) } : { height: '100%' }}
       >
         {advancedOpen && (
           <CarAdvancedSearch cars={cars} initial={advFilters} accent={look.accent} font={look.font}

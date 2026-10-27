@@ -109,6 +109,7 @@ export interface ShopProduct {
   copies: number; // a rental item's identical copies (5 tents = 5); each counts toward the package's limit, 1 elsewhere
   maxGuests: number; // a hotel-and-property rental's most people for one booking of it (a room for 2, a villa for 6); 0 = not set
   relatedIds: string[]; // up to MAX_RELATED products shown at the bottom of the floating card
+  sample?: boolean; // an example the page started with: «احذف الأمثلة» removes it
   createdAt: string;
 }
 
@@ -380,6 +381,7 @@ export const normalizeProduct = (p: any, currency: string): ShopProduct => ({
   copies: Math.min(100, Math.max(1, Math.floor(Number(p.copies) || 1))),
   maxGuests: Math.min(500, Math.max(0, Math.floor(Number(p.maxGuests) || 0))),
   relatedIds: Array.isArray(p.relatedIds) ? p.relatedIds : [],
+  ...(p.sample ? { sample: true } : {}),
   createdAt: p.createdAt || new Date().toISOString(),
 });
 

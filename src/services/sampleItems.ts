@@ -79,6 +79,7 @@ export const sampleShopAdmin = async (answer: CatalogAnswer, base: ShopAdminData
         shortDescription: SAMPLE_NOTE,
         price: SAMPLE_PRICES[i % SAMPLE_PRICES.length],
         stock: 10,
+        sample: true,
         images: photos[i] ? [photos[i]] : [],
         featured: i < 4,
         catalogIds: [main.id, subOf(p.sub).id],

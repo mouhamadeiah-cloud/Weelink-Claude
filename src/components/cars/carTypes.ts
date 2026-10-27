@@ -67,6 +67,7 @@ export interface Car {
   status: CarStatus;
   published: boolean; // shown in the showroom
   featured: boolean; // shown in the «سيارات مميزة» slides
+  sample?: boolean; // an example the showroom started with: «احذف الأمثلة» removes it
   createdAt: string;
   updatedAt: string;
 }
@@ -548,6 +549,7 @@ export const exampleCars = (): Car[] => {
     stockNumber: `A-${String(n).padStart(4, '0')}`,
     createdAt: now,
     updatedAt: now,
+    sample: true,
     ...fields,
   });
   return [
@@ -571,6 +573,13 @@ export const exampleCars = (): Car[] => {
       features: ['مكيف أوتوماتيك', 'سقف بانورامي', 'مقاعد جلد', 'تدفئة مقاعد', 'نظام ملاحة', 'حساسات ركن', 'مثبت سرعة'],
       description: 'أودي A6 دفع رباعي، رش جزئي على الباب الخلفي، محرك وجير بحالة ممتازة.',
       images: [unsplash(AUDI_PHOTO)], price: 21000, negotiable: true, purchasePrice: 18500,
+    }),
+    make(5, {
+      brand: 'تويوتا', model: 'كامري', trim: 'GLE', year: 2021, bodyType: 'سيدان', fuel: 'هايبرد', transmission: 'أوتوماتيك', drive: 'دفع أمامي',
+      engineCc: 2500, horsepower: 208, mileage: 29000, color: 'أبيض', interiorColor: 'بيج', specs: 'خليجي', owners: 1,
+      features: ['مكيف أوتوماتيك', 'شاشة', 'كاميرا خلفية', 'حساسات ركن', 'مثبت سرعة', 'فتح بدون مفتاح'],
+      description: 'كامري هايبرد اقتصادية جدًا بالوقود، ممشى قليل وفحص كامل.',
+      images: [], price: 23800, purchasePrice: 21200,
     }),
     make(4, {
       brand: 'فولكس فاغن', model: 'غولف', trim: 'GTI', year: 2020, bodyType: 'هاتشباك', fuel: 'بنزين', transmission: 'أوتوماتيك', drive: 'دفع أمامي',

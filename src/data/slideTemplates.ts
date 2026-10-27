@@ -73,6 +73,7 @@ import { CAR_SLIDE_COUNT, getCarSlidePayload } from './carSlideTemplates';
 import { REST_SLIDE_COUNT, getRestaurantSlidePayload } from './restaurantSlideTemplates';
 import { withStoreSlideNames } from './storeSlideAi';
 import { WEE_SLIDES, weeSlideCount } from './weeSlideTemplates';
+import { SEARCH_READY, searchReadySlide } from './searchReadySlides';
 
 import { READY_SLIDE_CATEGORIES } from './readyCategories';
 export { READY_SLIDE_CATEGORIES };
@@ -235,7 +236,7 @@ export const customizeElementsForIndex = (elements: any[], categoryId: string, i
 // How many ready slides a category offers.
 // The approved designs of weeSlideTemplates come first in their categories.
 export const slideTemplateCount = (categoryId: string) =>
-  categoryId === 'featured' ? FEATURED_READY.length : isStoreKind(categoryId) ? storeRawCount(categoryId) - MOVED.filter((f) => f.kind === categoryId).length : (categoryId === 'team' || categoryId === 'special_offer' || categoryId === 'gallery') ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
+  categoryId === 'featured' ? FEATURED_READY.length : categoryId === 'search' ? SEARCH_READY.length : isStoreKind(categoryId) ? storeRawCount(categoryId) - MOVED.filter((f) => f.kind === categoryId).length : (categoryId === 'team' || categoryId === 'special_offer' || categoryId === 'gallery') ? weeSlideCount(categoryId) : weeSlideCount(categoryId) + 10;
 
 // «عروض مميزة» (Eyad, 26 Oct): the featured slides of every kind of page live in a category of their own, each named
 // for the page it belongs to («شريحة السيارات المميزة»…); each is a live grid of what the owner marked «مميز».
@@ -317,6 +318,7 @@ export const getSlideTemplatePayload = (categoryId: string, index: number, catNa
 };
 
 const getOlderSlidePayload = (categoryId: string, index: number, catName: string) => {
+  if (categoryId === 'search') return searchReadySlide(SEARCH_READY[Math.min(index, SEARCH_READY.length - 1)]);
   if (categoryId === 'featured') return featuredReadySlide(FEATURED_READY[Math.min(index, FEATURED_READY.length - 1)]);
   if (isStoreKind(categoryId)) return getStoreSlideRaw(categoryId, storeRawIndex(categoryId, index));
   const title = `${catName} - نموذج ${index + 1}`;

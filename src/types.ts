@@ -173,6 +173,7 @@ export interface CanvasElement {
   shopSpeed?: number; // 'marquee' layout: seconds for one full pass
   // 'shopSearch' element only: the look of the search bar (its placeholder is the content).
   shopSearchStyle?: ShopSearchStyle;
+  shopSearchKind?: 'shop' | 'menu'; // 'shopSearch': looks through the store's products (default) or the restaurant's dishes
   shopSource?: 'all' | 'featured'; // shopProducts: every product, or only the «عروض مميزة» ones
   // Car showroom 'carListings' element: how the showroom's cars are shown (see cars/store).
   carLayout?: 'grid' | 'wide' | 'large' | 'marquee';

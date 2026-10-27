@@ -2,24 +2,35 @@
 // slides ('shopProducts'): submitting a search shows every matching product in the store's product
 // slide. Kept in memory for the visit only.
 import { useSyncExternalStore } from 'react';
+import { EMPTY_ITEM_FILTERS, ItemFilters, hasItemFilters } from './itemSearch';
 
 interface ShopSearchState {
   query: string;
+  // The advanced search window's choices (price, catalog, guests...), shared by shop, rental, hotel and menu.
+  filters: ItemFilters;
   // Set by a new search: the product slide scrolls itself into view once, then clears it.
   reveal: number;
 }
 
-let state: ShopSearchState = { query: '', reveal: 0 };
+let state: ShopSearchState = { query: '', filters: EMPTY_ITEM_FILTERS, reveal: 0 };
 const listeners = new Set<() => void>();
 
 const emit = () => listeners.forEach((l) => l());
 
 export const setShopSearch = (query: string) => {
-  state = { query: query.trim(), reveal: query.trim() ? state.reveal + 1 : state.reveal };
+  state = { ...state, query: query.trim(), reveal: query.trim() ? state.reveal + 1 : state.reveal };
   emit();
 };
 
-export const clearShopSearch = () => setShopSearch('');
+export const setShopFilters = (filters: ItemFilters) => {
+  state = { ...state, filters, reveal: hasItemFilters(filters) ? state.reveal + 1 : state.reveal };
+  emit();
+};
+
+export const clearShopSearch = () => {
+  state = { ...state, query: '', filters: EMPTY_ITEM_FILTERS };
+  emit();
+};
 
 // Asks the results slide to scroll into view again (a search made with filters instead of text).
 export const bumpShopReveal = () => {

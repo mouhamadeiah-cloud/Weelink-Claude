@@ -14,7 +14,8 @@ import { useShopData, useShopUpdate } from './ShopDataContext';
 import { recordVisit } from '../orderModel';
 import { ProductCard, ProductSlide, ProductZigzag, ProductWide, ProductMini, ProductChip, cardWidth } from './ProductCard';
 import { ProductDetailModal } from './ProductDetailModal';
-import { useShopSearch, clearShopSearch, matchesSearch, takeReveal } from './shopSearchStore';
+import { useShopSearch, clearShopSearch, matchesSearch, takeReveal, setShopFilters } from './shopSearchStore';
+import { hasItemFilters, itemFilterChips, itemFromProduct, itemMatches, sortItems, withoutItemChip } from './itemSearch';
 
 // Card width of each layout for a product at the default size (50%); a product's card size
 // (25 / 50 / 100%) scales it. Cards wrap in rows centred in the slide, and the cards of a row
@@ -74,11 +75,17 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
   const layout = elem.shopLayout || 'grid';
   const marquee = layout === 'marquee';
   const cardAnim = elem.shopCardAnimation || (layout === 'spotlight' ? 'float' : 'none');
-  const { query, reveal } = useShopSearch();
-  const searching = !!showsSearch && !marquee && !!query;
+  const { query, reveal, filters } = useShopSearch();
+  const searching = !!showsSearch && !marquee && (!!query || hasItemFilters(filters));
   const active = tabs.find((t) => t.id === catalog);
   const inCatalog = active ? products.filter((p) => p.catalogIds.some((id) => active.ids.includes(id))) : products;
-  const filtered = searching ? inCatalog.filter((p) => matchesSearch([p.name, p.shortDescription, p.sku], query)) : inCatalog;
+  const filtered = useMemo(() => {
+    if (!searching) return inCatalog;
+    const items = new Map(inCatalog.map((p) => [p.id, itemFromProduct(p, admin?.catalogs || [])]));
+    const found = inCatalog.filter((p) => matchesSearch([p.name, p.shortDescription, p.sku], query) && itemMatches(items.get(p.id)!, filters));
+    return sortItems(found, items, filters.sort);
+  }, [searching, inCatalog, query, filters, admin]);
+  const chips = searching ? itemFilterChips(filters, (id) => (admin?.catalogs || []).find((c) => c.id === id)?.name || id) : [];
 
   // Pages: the slide's own size (shopLimit, 20 by default) or the visitor's choice of 20 / 30.
   const baseSize = Math.min(MAX_PAGE_SIZE, elem.shopLimit && elem.shopLimit > 0 ? elem.shopLimit : 20);
@@ -89,7 +96,7 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
   const current = Math.min(page, pageCount - 1);
   const list = marquee ? products.slice(0, MAX_PAGE_SIZE) : filtered.slice(current * pageSize, current * pageSize + pageSize);
   const showSizes = !marquee && baseSize >= 20 && filtered.length > 20;
-  useEffect(() => setPage(0), [catalog, query, pageSize]);
+  useEffect(() => setPage(0), [catalog, query, filters, pageSize]);
 
   // Catalog tabs only where there is room for them.
   const showTabs = tabs.length > 1 && !marquee && elem.height >= 300;
@@ -196,10 +203,21 @@ export const ShopProductsView: React.FC<ShopProductsViewProps> = ({ elem, isPrev
       {(searching || showSizes) && (
         <div className="flex flex-wrap items-center justify-between gap-3 shrink-0 text-sm text-[#5A4C42]">
           {searching ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="font-bold">
-                نتائج البحث عن «{query}»: {filtered.length} منتج
+                {query ? `نتائج البحث عن «${query}»` : 'نتائج البحث'}: {filtered.length} منتج
               </span>
+              {chips.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setShopFilters(withoutItemChip(filters, c.key))}
+                  className="h-8 px-3 rounded-full text-xs font-bold inline-flex items-center gap-1 cursor-pointer text-white"
+                  style={{ backgroundColor: accent }}
+                >
+                  {c.label} <X size={12} />
+                </button>
+              ))}
               <button
                 type="button"
                 onClick={clearShopSearch}

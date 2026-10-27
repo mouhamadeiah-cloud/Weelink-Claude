@@ -2374,8 +2374,14 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     .filter((e) => e.type === 'shopProducts' && e.shopLayout !== 'marquee' && e.shopSource !== 'featured')
     .sort((a, b) => b.height - a.height)[0];
   const storePageId = storeList && (allPages || []).find((p) => p.slides.some((sl) => sl.id === storeList.slideId))?.id;
+  // The menu's main list (the tallest list of every dish, not a strip) does the same for a restaurant.
+  const menuMain = rawElements
+    .filter((e) => e.type === 'menuList' && e.menuLayout !== 'marquee' && (e.menuSource || 'all') === 'all')
+    .sort((a, b) => b.height - a.height)[0];
+  const menuPageId = menuMain && (allPages || []).find((p) => p.slides.some((sl) => sl.id === menuMain.slideId))?.id;
   const openStorePage = () => {
-    if (storePageId) onSelectPage?.(storePageId);
+    const target = storePageId || menuPageId;
+    if (target) onSelectPage?.(target);
   };
   // The showroom's main car list (the tallest non-featured one) shows car search results; a search
   // from another page opens the page that holds it.
@@ -4950,7 +4956,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
                         )}
 
                         {elem.type === 'menuList' && (
-                          <MenuView elem={elem} isPreviewActive={isPreviewActive} onGrow={shopGrowHandler(elem.id)} boxHeight={elem.height - (isPreviewActive ? shopGrow[elem.id] || 0 : 0)} />
+                          <MenuView elem={elem} isPreviewActive={isPreviewActive} showsSearch={elem.id === menuMain?.id} onGrow={shopGrowHandler(elem.id)} boxHeight={elem.height - (isPreviewActive ? shopGrow[elem.id] || 0 : 0)} />
                         )}
 
                         {elem.type === 'menuCart' && (

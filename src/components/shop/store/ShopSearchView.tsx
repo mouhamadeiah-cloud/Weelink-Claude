@@ -1,15 +1,20 @@
 // The 'shopSearch' canvas element: a search bar over the store's published products. Typing lists
 // the first matches under the bar (picking one opens its floating card); pressing Enter or «بحث»
 // shows every match in the store's product slide, opening the store page when this page has none.
-// The element's text is the bar's placeholder and shopSearchStyle its look.
+// The element's text is the bar's placeholder and shopSearchStyle its look. «بحث متقدم» opens the
+// filters window (catalog, price, people, kind of food, options...) over the same results; a bar
+// made for the menu (shopSearchKind) looks through the restaurant's dishes instead.
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, ImageOff } from 'lucide-react';
+import { Search, ImageOff, SlidersHorizontal } from 'lucide-react';
 import type { CanvasElement } from '../../../types';
 import { useShopData } from './ShopDataContext';
 import { ProductDetailModal } from './ProductDetailModal';
 import { formatPrice } from '../../../utils/cartStore';
-import { matchesSearch, setShopSearch } from './shopSearchStore';
+import { matchesSearch, setShopSearch, setShopFilters, useShopSearch } from './shopSearchStore';
+import { ItemAdvancedSearch } from './ItemAdvancedSearch';
+import { useItemSearch } from './useItemSearch';
+import { hasItemFilters } from './itemSearch';
 
 interface ShopSearchViewProps {
   elem: CanvasElement;
@@ -29,9 +34,13 @@ export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewA
   const barRef = useRef<HTMLDivElement>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
+  const source = useItemSearch(elem);
+  const isMenu = source.kind === 'menu';
+  const { filters } = useShopSearch();
+  const [advanced, setAdvanced] = useState(false);
   const products = useMemo(() => (admin?.products || []).filter((p) => p.published), [admin]);
   const q = query.trim();
-  const allMatches = q ? products.filter((p) => matchesSearch([p.name, p.shortDescription, p.sku], q)) : [];
+  const allMatches = q ? source.rows.filter((r) => matchesSearch(r.texts, q)) : [];
   const matches = allMatches.slice(0, 6);
   const showList = isPreviewActive && focused && q.length > 0;
 
@@ -40,7 +49,14 @@ export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewA
     if (!q || !isPreviewActive) return;
     setShopSearch(q);
     setFocused(false);
-    if (!document.querySelector('[data-shop-products="search"]')) onOpenStore?.();
+    if (!document.querySelector('[data-shop-products="search"], [data-menu-list="search"]')) onOpenStore?.();
+  };
+
+  // The filters window's choices: shown in the store's main list like a typed search.
+  const applyFilters = (f: typeof filters) => {
+    setShopFilters(f);
+    setAdvanced(false);
+    if (!document.querySelector('[data-shop-products="search"], [data-menu-list="search"]')) onOpenStore?.();
   };
 
   // The result list floats over the page under the bar, so it follows the bar while open.
@@ -57,7 +73,7 @@ export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewA
   }, [showList]);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
-  const open = products.find((p) => p.id === openId);
+  const open = isMenu ? undefined : products.find((p) => p.id === openId);
   const related = open ? open.relatedIds.map((id) => products.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p) : [];
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
@@ -80,16 +96,28 @@ export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewA
       <input
         type="text"
         inputMode="search"
-        aria-label="ابحث في المتجر"
+        aria-label={isMenu ? 'ابحث في المنيو' : 'ابحث في المتجر'}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => window.setTimeout(() => setFocused(false), 150)}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
-        placeholder={elem.content || 'ابحث عن منتج...'}
+        placeholder={elem.content || (isMenu ? 'ابحث عن طبق...' : 'ابحث عن منتج...')}
         className={`flex-1 min-w-0 h-full bg-transparent outline-none text-base ${look === 'glass' ? 'placeholder:text-white/80' : 'placeholder:text-[#8A7B70]'}`}
         style={{ color: bar.text }}
       />
+      {isPreviewActive && (
+        <button
+          type="button"
+          onClick={() => setAdvanced(true)}
+          aria-label="بحث متقدم"
+          className="shrink-0 h-9 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer border"
+          style={{ borderColor: look === 'glass' ? 'rgba(255,255,255,0.6)' : `${accent}55`, color: look === 'glass' ? '#FFFFFF' : accent, backgroundColor: hasItemFilters(filters) ? `${accent}22` : 'transparent' }}
+        >
+          <SlidersHorizontal size={15} />
+          <span className="hidden sm:inline">متقدم</span>
+        </button>
+      )}
       {look === 'pill' && (
         <button type="button" onClick={submit} className="shrink-0 h-[calc(100%-12px)] px-6 rounded-full text-white text-sm font-bold flex items-center cursor-pointer" style={{ backgroundColor: accent }}>
           بحث
@@ -104,20 +132,20 @@ export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewA
           onMouseDown={(e) => e.preventDefault()}
         >
           {matches.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-[#8A7B70]">لا توجد منتجات مطابقة</div>
+            <div className="px-4 py-3 text-sm text-[#8A7B70]">{isMenu ? 'لا توجد أطباق مطابقة' : 'لا توجد منتجات مطابقة'}</div>
           ) : (
             matches.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                onClick={() => { setOpenId(p.id); setFocused(false); }}
+                onClick={() => { if (isMenu) { setShopSearch(p.name); setFocused(false); if (!document.querySelector('[data-menu-list="search"]')) onOpenStore?.(); } else { setOpenId(p.id); setFocused(false); } }}
                 className="w-full flex items-center gap-3 px-3 py-2 text-right hover:bg-black/[0.04] cursor-pointer"
               >
                 <span className="w-11 h-11 rounded-xl overflow-hidden bg-neutral-100 shrink-0 flex items-center justify-center text-neutral-300">
-                  {p.images[0] ? <img src={p.images[0]} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : <ImageOff size={18} />}
+                  {p.image ? <img src={p.image} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : <ImageOff size={18} />}
                 </span>
                 <span className="flex-1 min-w-0 text-sm font-bold text-[#2A1F1A] truncate">{p.name}</span>
-                <span className="text-sm font-black shrink-0" style={{ color: accent }}>{formatPrice(p.price, p.currency)}</span>
+                <span className="text-sm font-black shrink-0" style={{ color: accent }}>{formatPrice(p.price, p.currency || source.currency)}</span>
               </button>
             ))
           )}
@@ -128,11 +156,27 @@ export const ShopSearchView: React.FC<ShopSearchViewProps> = ({ elem, isPreviewA
               className="w-full px-4 py-2.5 text-sm font-bold text-center border-t border-black/[0.06] hover:bg-black/[0.04] cursor-pointer"
               style={{ color: accent }}
             >
-              عرض كل النتائج في المتجر ({allMatches.length})
+              {isMenu ? 'عرض كل النتائج في المنيو' : 'عرض كل النتائج في المتجر'} ({allMatches.length})
             </button>
           )}
         </div>,
         document.body
+      )}
+
+      {advanced && isPreviewActive && (
+        <ItemAdvancedSearch
+          items={source.items}
+          groups={source.groups}
+          groupTitle={source.groupTitle}
+          noun={source.noun}
+          currency={source.currency}
+          initial={filters}
+          accent={accent}
+          font="'IBM Plex Sans Arabic', sans-serif"
+          matches={(it) => matchesSearch(it.texts, q)}
+          onApply={applyFilters}
+          onClose={() => setAdvanced(false)}
+        />
       )}
 
       {open && admin && isPreviewActive && (

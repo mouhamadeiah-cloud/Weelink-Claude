@@ -16,14 +16,20 @@ export interface ModelSection {
   mode: SectionMode;
   need?: SectionNeed; // with mode 'if'
   defaultOn?: boolean; // with mode 'ask': ticked from the start
+  slides?: string[]; // the ready slides (readySlides ids) this section may use; none listed = any slide of its category
 }
 
-export interface PageModel { id: string; name: string; sections: ModelSection[] }
+// A page of the site a model builds: its name (the navbar link) and its sections. `sections` of a model is its first page, the one the
+// builder still builds alone; `pages` is what the admin shapes (a model saved before pages existed is one page, «الرئيسية»).
+export interface ModelPage { id: string; name: string; sections: ModelSection[] }
+export interface PageModel { id: string; name: string; sections: ModelSection[]; pages?: ModelPage[] }
 
 // Categories a model may use besides the editor's ready-slide categories.
 export const EXTRA_MODEL_CATEGORIES = [{ id: 'ratings', name: 'التقييمات' }];
 export const MODEL_CATEGORIES = [...READY_SLIDE_CATEGORIES.map((c) => ({ id: c.id, name: c.name })), ...EXTRA_MODEL_CATEGORIES];
 export const MAX_MODEL_SECTIONS = 24;
+export const MAX_MODEL_PAGES = 12;
+export const MAIN_PAGE_NAME = 'الرئيسية';
 
 const sec = (category: string, mode: SectionMode, o: Partial<ModelSection> = {}): ModelSection => ({ id: o.part ? `${category}:${o.part}` : category, category, mode, ...o });
 
@@ -92,15 +98,36 @@ export const cleanSections = (raw: unknown): ModelSection[] | null => {
     const category = String(r?.category || '');
     const part = r?.part === 'front' || r?.part === 'main' || r?.part === 'priceList' ? r.part : undefined;
     const mode = SECTION_MODES.includes(r?.mode) ? (r.mode as SectionMode) : null;
+    const slides = Array.isArray(r?.slides) ? [...new Set<string>(r.slides.map((x: unknown) => String(x).slice(0, 128)).filter(Boolean))].slice(0, 200) : [];
     if (!known.has(category) || !mode) continue;
     const s = sec(category, mode, {
       ...(part ? { part } : {}),
       ...(mode === 'if' ? { need: SECTION_NEEDS.includes(r?.need) ? (r.need as SectionNeed) : 'services' } : {}),
       ...(mode === 'ask' && r?.defaultOn === true ? { defaultOn: true } : {}),
+      ...(slides.length ? { slides } : {}),
     });
     if (seen.has(s.id)) continue;
     seen.add(s.id);
     out.push(s);
+  }
+  return out.length ? out : null;
+};
+
+/** The pages of a model: its saved pages, or the sections as one page. */
+export const pagesOf = (m: Pick<PageModel, 'sections' | 'pages'>): ModelPage[] => (m.pages?.length ? m.pages : [{ id: 'home', name: MAIN_PAGE_NAME, sections: m.sections }]);
+
+// Pages as saved by the admin, cleaned: each page has a name and its cleaned sections; a page with no section is dropped, ids are made unique.
+export const cleanPages = (raw: unknown): ModelPage[] | null => {
+  if (!Array.isArray(raw)) return null;
+  const used = new Set<string>();
+  const out: ModelPage[] = [];
+  for (const r of raw.slice(0, MAX_MODEL_PAGES)) {
+    const sections = cleanSections(r?.sections);
+    if (!sections) continue;
+    let id = String(r?.id || '').replace(/[^\w-]/g, '').slice(0, 24) || `p${out.length + 1}`;
+    while (used.has(id)) id += 'x';
+    used.add(id);
+    out.push({ id, name: String(r?.name || '').trim().slice(0, 40) || (out.length ? `صفحة ${out.length + 1}` : MAIN_PAGE_NAME), sections });
   }
   return out.length ? out : null;
 };

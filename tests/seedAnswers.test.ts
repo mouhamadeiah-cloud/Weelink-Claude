@@ -29,3 +29,18 @@ test('the groups and dishes he typed fill the menu once', () => {
   assert.equal(again.dishes.length, 1);
   assert.equal(seedRestaurant(admin, undefined), admin);
 });
+
+test('shop groups and products fill the store, cars split brand, model and year', async () => {
+  const { createEmptyShopAdmin } = await import('../src/components/shop/shopTypes.ts');
+  const { createEmptyCarAdmin } = await import('../src/components/cars/carTypes.ts');
+  const { seedShop, seedCars } = await import('../src/services/seedAnswers.ts');
+  const shop = seedShop(createEmptyShopAdmin(), { 'shop:main.groups': [{ name: 'أحذية' }], 'shop:main.products': [{ name: 'حذاء رياضي', price: '120000' }] });
+  assert.equal(shop.catalogs.length, 1);
+  assert.equal(shop.products[0].price, 120000);
+  assert.deepEqual(shop.products[0].catalogIds, [shop.catalogs[0].id]);
+  const cars = seedCars(createEmptyCarAdmin(), { 'cars:main.cars': [{ name: 'تويوتا كورولا 2018', price: '9000' }] });
+  assert.equal(cars.cars[0].brand, 'تويوتا');
+  assert.equal(cars.cars[0].model, 'كورولا');
+  assert.equal(cars.cars[0].year, 2018);
+  assert.equal(seedCars(cars, { 'cars:main.cars': [{ name: 'تويوتا كورولا 2018' }] }).cars.length, 1);
+});

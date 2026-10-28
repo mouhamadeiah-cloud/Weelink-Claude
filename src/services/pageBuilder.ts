@@ -410,7 +410,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
     const el = els[i];
     const key = el.aiSlot;
     // An example photo nobody gave a slot is still the example business's: it takes a photo of this one, or goes (never the example's).
-    if (!key && el.type === 'image' && /^https?:|unsplash/i.test(String(el.content || ''))) {
+    if (!key && el.type === 'image' && isStockPhoto(String(el.content || el.imageUrl || ''))) {
       const url = ctx.fallbackQuery ? await ctx.photo(ctx.fallbackQuery, shapeOfEl(el)) : null;
       if (url) Object.assign(el, { content: url, imageUrl: url });
       else removed.add(i);

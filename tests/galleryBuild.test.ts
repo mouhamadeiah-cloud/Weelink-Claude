@@ -1,6 +1,6 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPageFromPlan, socialLinks } from '../src/services/pageBuilder.ts';
+import { buildPageFromPlan, socialLinks, withBlankPage } from '../src/services/pageBuilder.ts';
 // Importing the builder starts Firebase's browser client, which keeps the process alive: close it when the test is over.
 after(async () => {
   const { getApps, deleteApp } = await import('firebase/app');
@@ -131,4 +131,21 @@ test('a calm page drops moving effects, a light one drops glows, and a lively pa
   const lively = await withEffects(true, 'dark');
   assert.deepEqual(lively.map((c: any[]) => c[0]), ['neon-pulse', 'soft-glow', 'shadow-soft']);
   assert.equal(lively[0][1], 'scale-up', 'its own animation, not the section\'s');
+});
+
+test('a later page of the model is built into a new page beside the main one, without a second ratings slide', async () => {
+  const main: any = await basic({ aiAnswers: { optionalSections: ['ratings'] } }, ['intro', 'contact']);
+  const shell = withBlankPage(main.pages, main.pageId, 'من نحن');
+  assert.equal(shell.pages.length, 2);
+  assert.equal(shell.pages[1].name, 'من نحن');
+  assert.deepEqual(shell.pages[1].navbar, main.pages[0].navbar);
+  const planned = ['about'].map((section) => ({ section, template: 'g:abc', tone: 'light', slots: { title: 'من نحن', sub: 'قصتنا' }, icons: {}, links: {}, images: {}, entrance: 'none' }));
+  const extra = { 'g:abc': { name: 't', slide: { height: 400, backgroundColor: '#ffffff' }, elements: [{ id: 'a', type: 'heading', slideId: 's', x: 100, y: 80, width: 600, height: 60, content: 'x', aiSlot: 'title', styles: { fontSize: 30, color: '#111111' } }, { id: 'b', type: 'paragraph', slideId: 's', x: 100, y: 160, width: 600, height: 60, content: 'y', aiSlot: 'sub', styles: { fontSize: 16, color: '#444444' } }] } };
+  const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, extra, sections: planned };
+  const r: any = await buildPageFromPlan(plan, { kind: 'free', answers: { aiAnswers: { optionalSections: ['ratings'] } } as any, siteName: 'تجربة', pages: shell.pages, elements: main.elements, activePageId: shell.pageId, later: true }, async () => null);
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.pages.length, 2);
+  assert.equal(r.pages[0].slides.length, main.pages[0].slides.length, 'the main page keeps its slides');
+  assert.deepEqual(r.pages[1].slides.map((s: any) => s.name), ['t']);
+  assert.equal(r.elements.filter((e: any) => e.type === 'ratings').length, 1);
 });

@@ -91,7 +91,7 @@ import { formatMoney } from './components/shop/adminUi';
 import { PageLookPicker, type LookSample } from './components/rightDrawer/PageLookPicker';
 import type { PageLook } from './data/pageLooks';
 import { tickedSections } from './data/optionalSections';
-import { KIND_OF_PROJECT, buildPageFromPlan, emptyMainPage, buildProfile, pageAssets, requestPagePlan, requestFreeTurn, applyFreeDesign } from './services/pageBuilder';
+import { KIND_OF_PROJECT, buildPageFromPlan, withBlankPage, emptyMainPage, buildProfile, pageAssets, requestPagePlan, requestFreeTurn, applyFreeDesign } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
 import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
@@ -2435,14 +2435,30 @@ export default function App() {
     if (!built.ok) return { ok: false, message: built.message };
     builtBackupRef.current = { ...before, uid: activeUserUid, project };
     setHasBuildBackup(true);
-    setPages(built.pages);
-    setElements(built.elements);
-    setHistory([built.elements]);
+    // The model's later pages («من نحن»...) are built one by one beside the main page; a page that fails is left out.
+    let sitePages = built.pages;
+    let siteElements = built.elements;
+    let laterBuilt = 0;
+    if (kind === 'free') {
+      for (const m of (result.more || []).slice(0, 5)) {
+        const next = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections), modelPage: m.id });
+        if (!next.ok) { console.warn(`Could not build the model page «${m.name}»:`, next.message); break; }
+        const shell = withBlankPage(sitePages, built.pageId, m.name);
+        const more = await buildPageFromPlan(next.plan, { kind, answers, siteName, pages: shell.pages, elements: siteElements, activePageId: shell.pageId, maxPhotos, later: true });
+        if (!more.ok) break;
+        sitePages = more.pages;
+        siteElements = more.elements;
+        laterBuilt += 1;
+      }
+    }
+    setPages(sitePages);
+    setElements(siteElements);
+    setHistory([siteElements]);
     setHistoryIndex(0);
     setActivePageId(built.pageId);
     setActiveSlideId(built.firstSlideId);
     setSelectedElementId(null);
-    return { ok: true, message: `بنى Wee AI ${built.sections} أقسام لصفحتك. عدّل أي شي بدك ياه، أو اكبس «رجّع صفحتي متل ما كانت».` };
+    return { ok: true, message: `بنى Wee AI ${built.sections} أقسام لصفحتك${laterBuilt ? ` و${laterBuilt} صفحات إضافية` : ''}. عدّل أي شي بدك ياه، أو اكبس «رجّع صفحتي متل ما كانت».` };
   };
   // «تصميم حر»: a chat in which Wee AI designs the page's slides itself. Every answer is laid on the page at once; the first one
   // keeps the page as it was (the same «رجّع صفحتي» brings it back). The design and the talk are kept here for the next message.

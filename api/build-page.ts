@@ -604,15 +604,18 @@ const hasPricedServices = (profile: Record<string, string>) => (profile['الخ�
 // A rental of anything but cars is drawn with the shop's slides.
 const rentalPick = <T extends Parameters<typeof forRentalOf>[0]>(planId: string, profile: Record<string, string>, list: T): T => (planId.startsWith('rental') ? (forRentalOf(list, profile['التصنيف']) as T) : list);
 
-const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: string; project: string; kind: Kind; flavor: string; ticked: string[] | undefined; profile: Record<string, string>; assets: Assets }) => {
+// `pageId` names a later page of the model (the main page, the model's first, when unset); `more` lists the pages that follow the main one.
+const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: string; project: string; kind: Kind; flavor: string; ticked: string[] | undefined; profile: Record<string, string>; assets: Assets; pageId?: string }) => {
   if (!db) return null;
   try {
     const planId = await planFor(db, o.uid, o.project, o.flavor);
     const model = (await readModels(db)).find((m) => m.id === modelOf(planId));
     if (!model) return null;
+    const pages = pagesOf(model);
+    const page = (o.pageId && pages.find((p) => p.id === o.pageId)) || pages[0];
     const last = ((await db.collection('platform_build_picks').doc(`${o.uid}__${o.project}`).get()).data() as { last?: string[] } | undefined)?.last;
     const picked = await pickSections({
-      sections: rentalPick(planId, o.profile, sectionsFor(model.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked })),
+      sections: rentalPick(planId, o.profile, sectionsFor(page.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked })),
       // The sections of the project's own kind (a restaurant's front and menu, a shop's search and products...); rentals and hotels build as «free».
       codeSections: SECTIONS[o.kind] || SECTIONS.free,
       specs: TEMPLATES,
@@ -621,7 +624,7 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
       avoid: new Set(Array.isArray(last) ? last : []),
     });
     if (picked.skipped.length) console.warn(`model ${model.id}: no slide for ${picked.skipped.join(', ')}`);
-    return picked.pool.length ? picked : null;
+    return picked.pool.length ? { ...picked, more: o.pageId ? [] : pages.slice(1).map((p) => ({ id: p.id, name: p.name })) } : null;
   } catch (err) {
     console.error('model pick failed:', (err as Error)?.message);
     return null;
@@ -715,7 +718,9 @@ export default {
     }
 
     const project = isProjectKey(body?.project) ? body.project : BUILD_KIND_PROJECT[kind] || 'page';
-    const allowance = await buildAllowance(meterDb(), uid, project);
+    // A later page of the model is part of the same build: it is neither counted nor held to the build limit.
+    const modelPage = typeof body?.modelPage === 'string' && /^[\w-]{1,24}$/.test(body.modelPage) ? body.modelPage : '';
+    const allowance = modelPage ? null : await buildAllowance(meterDb(), uid, project);
     if (BUILD_LIMIT_ENFORCED && allowance?.over) return json({ error: 'build_limit', limit: allowance.limit, perDay: allowance.perDay }, 429);
     // The package's gallery is the most photos the plan may use (only once paying is switched on).
     if (allowance) assets.gallery = Math.min(assets.gallery, allowance.gallery);
@@ -724,7 +729,7 @@ export default {
 
     const flavor = typeof body?.flavor === 'string' ? body.flavor : '';
     const ticked = Array.isArray(body?.ticked) ? body.ticked.filter((t: unknown): t is string => typeof t === 'string' && /^[a-z_]+(:[a-zA-Z]+)?$/.test(t)).slice(0, 30) : undefined;
-    const over = await modelPick(meterDb(), { uid, project, kind, flavor, ticked, profile, assets });
+    const over = await modelPick(meterDb(), { uid, project, kind, flavor, ticked, profile, assets, pageId: modelPage });
     // A section with a ready slide and its elements is filled the form way; a section whose slide is the code's (the menu, the products, the
     // showroom read live data) keeps the old way, the AI writing its slots. Without any form section the AI plans the page as before.
     const asForm = (p: Picked['pool'][number]): FormSection => ({ id: p.id, name: p.name, template: p.templates[0], slide: over!.extra[p.templates[0]].slide, elements: autoSlots(over!.extra[p.templates[0]].elements) });
@@ -766,13 +771,13 @@ export default {
       const extra: Record<string, GallerySlideData> = {};
       if (over) {
         for (const s of plan.sections) if (over.extra[s.template]) extra[s.template] = over.extra[s.template];
-        try {
+        if (!modelPage) try {
           await meterDb()?.collection('platform_build_picks').doc(`${uid}__${project}`).set({ last: plan.sections.map((s) => s.template), at: Date.now() });
         } catch (err) {
           console.error('build picks not saved:', (err as Error)?.message);
         }
       }
-      return json({ plan, ...(Object.keys(extra).length ? { extra } : {}), usage: tokens });
+      return json({ plan, ...(Object.keys(extra).length ? { extra } : {}), ...(over?.more?.length ? { more: over.more } : {}), usage: tokens });
     } catch (err) {
       const failure = err instanceof BuildFailure ? err : new BuildFailure('check', String((err as Error)?.message || '').slice(0, 200));
       await meterClose(meter, 'build-page', MODEL, sumUsage(usage), false, failure.reason, Date.now() - started);

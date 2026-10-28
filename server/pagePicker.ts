@@ -1,7 +1,8 @@
 // «ابن صفحتي», the new way (docs/READY_SLIDES_PLAN.md step 4c): the server, not the AI, decides which sections a page has and which ready
 // slide each one uses. The sections come from the page's model (src/data/pageModels.ts), narrowed by what the owner gave (services,
-// prices, photos) and ticked; each section takes a slide at random from the slides of its category, the code's own and the gallery's
-// that the admin keeps as ready slides (server/readySlides.ts). The AI then only writes the texts of these slides.
+// prices, photos) and ticked; each section takes the first slide of its category in the admin's order (the ones he allowed for it, when
+// he chose some), so Wee AI's questions are asked for the very slide that is built (src/data/slideParts.ts). The AI then only writes
+// the texts of these slides.
 import { describe } from '../src/data/aiSlots.js';
 import { MODEL_CATEGORIES, type ModelSection } from '../src/data/pageModels.js';
 import { FIXED_READY_CATEGORIES } from '../src/data/readyCategories.js';
@@ -53,9 +54,9 @@ export interface Picked {
   skipped: string[]; // sections of the model that found no slide to be built from
 }
 
-/** One ready slide for each section, at random; a slide used in the owner's last build is left for last. */
+/** One ready slide for each section: the first free one in order, or at random when `rng` is given (a slide of the owner's last build left for last). */
 export const pickSections = async (o: { sections: ModelSection[]; codeSections: CodeSection[]; gallery: GalleryPool; rng?: () => number; avoid?: Set<string>; photos?: number; specs?: Record<string, TemplateSpec> }): Promise<Picked> => {
-  const rng = o.rng || Math.random;
+  const rng = o.rng;
   const avoid = o.avoid || new Set<string>();
   const out: Picked = { pool: [], templates: {}, extra: {}, skipped: [] };
   const taken = new Set<string>();
@@ -71,7 +72,9 @@ export const pickSections = async (o: { sections: ModelSection[]; codeSections: 
     const fromGallery = (allowed.length ? allowed : o.gallery.ids(s.category)).map((g) => ({ template: `g:${g}`, gallery: g }));
     // A category switched to the gallery uses only gallery slides, while it has one the AI can fill.
     const order = (list: { template: string; gallery?: string }[]) => {
-      const mix = shuffled(list.filter((c) => !taken.has(c.template)), rng);
+      const free = list.filter((c) => !taken.has(c.template));
+      if (!rng) return free;
+      const mix = shuffled(free, rng);
       return [...mix.filter((c) => !avoid.has(c.template)), ...mix.filter((c) => avoid.has(c.template))];
     };
     const tries = allowed.length ? [order(fromGallery)] : o.gallery.useGallery(s.category) ? [order(fromGallery), order(fromCode)] : [order([...fromCode, ...fromGallery])];

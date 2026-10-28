@@ -218,7 +218,7 @@ export const socialLinks = (contact: WeeAnswers['contactInfo']) =>
     return [{ type: n.type, label: n.label, url: /^https?:\/\//i.test(raw) ? raw : `https://${raw}` }];
   });
 
-const SYSTEM = /^(phone|whatsapp|address|hours)\.(label|value)$/;
+const SYSTEM = /^(phone|whatsapp|address|hours|email)\.(label|value)$/;
 const IMAGE = /^(image|avatar|photos\.\d+)$/;
 // The first part of a list item: without it the item's other parts go too.
 const ITEM_HEAD = /^(.*\.\d+)\.(name|title|number)$/;
@@ -376,7 +376,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   const examples = new Map<number, string>(); // each filled text's example wording, to fit the new text's size to it
   const value = (k: string) => (slots[k] || '').trim();
   const facts = ctx.facts;
-  const systemValue: Record<string, string> = { phone: facts['هاتف'] || '', whatsapp: facts['واتساب'] || '', address: facts['العنوان'] || '', hours: '' };
+  const systemValue: Record<string, string> = { phone: facts['هاتف'] || '', whatsapp: facts['واتساب'] || '', address: facts['العنوان'] || '', hours: facts['ساعات_العمل'] || '', email: facts['بريد'] || '' };
 
   for (let i = 0; i < els.length; i++) {
     const el = els[i];
@@ -400,8 +400,16 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
       continue;
     }
     if (key === 'map') {
-      if (!systemValue.address) removed.add(i);
-      else Object.assign(el, { content: systemValue.address, mapLocation: systemValue.address });
+      // The owner's pin when he put one, else his address.
+      const where = facts['الموقع'] || systemValue.address;
+      if (!where) removed.add(i);
+      else Object.assign(el, { content: where, mapLocation: where });
+      continue;
+    }
+    // The video the owner linked plays in the slide's player; without one the player goes.
+    if (key === 'video') {
+      if (!facts['فيديو']) removed.add(i);
+      else Object.assign(el, { videoUrl: facts['فيديو'] });
       continue;
     }
     if (key === 'form') continue;

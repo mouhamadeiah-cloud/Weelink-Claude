@@ -6,9 +6,12 @@ import { deserializeElements } from '../utils/elementStorage';
 import type { GallerySlide } from './galleryView';
 
 const KEEP_MS = 3 * 60_000;
-const byCategory = new Map<string, { at: number; list: Promise<GallerySlide[]> }>();
+const byCategory = new Map<string, { at: number; list: Promise<ReadySlide[]> }>();
 
-const toSlide = (id: string, x: any): GallerySlide => ({
+export type ReadySlide = GallerySlide & { eligible: boolean };
+
+const toSlide = (id: string, x: any): ReadySlide => ({
+  eligible: x.eligible === true,
   id,
   kind: 'slide',
   page: null,
@@ -27,7 +30,7 @@ const toSlide = (id: string, x: any): GallerySlide => ({
 });
 
 /** The ready slides of a category, in the admin's order. */
-export const readySlidesOf = (category: string): Promise<GallerySlide[]> => {
+export const readySlidesOf = (category: string): Promise<ReadySlide[]> => {
   const hit = byCategory.get(category);
   if (hit && Date.now() - hit.at < KEEP_MS) return hit.list;
   const list = getDocs(query(collection(db, 'readySlides'), where('category', '==', category))).then((snap) =>

@@ -4,8 +4,8 @@ export interface WeeAnswers {
   // A free restaurant, shop or showroom page (plans.ts flavorOf): a page that builds from that type's free model.
   flavor?: 'restaurant' | 'shop' | 'cars' | 'rental' | 'hotel';
   personalInfo?: { title?: string; fullName?: string; pageName?: string; logoUrl?: string };
-  addressInfo?: { governorate?: string; placeType?: string; city?: string; area?: string; district?: string; subdistrict?: string; village?: string; street?: string; details?: string };
-  contactInfo?: { whatsapp?: string; phone?: string; facebook?: string; tiktok?: string };
+  addressInfo?: { governorate?: string; placeType?: string; city?: string; area?: string; district?: string; subdistrict?: string; village?: string; street?: string; details?: string; coordinates?: { lat: number; lng: number } | null };
+  contactInfo?: { whatsapp?: string; phone?: string; email?: string; facebook?: string; tiktok?: string };
   catalogInfo?: { category?: string; subCategory?: string; specialty?: string; customCategory?: string; customSpecialty?: string };
   aiAnswers?: {
     description?: string;
@@ -52,14 +52,17 @@ export const sectionFacts = (a: Record<string, any> | undefined): Record<string,
   const pick = (k: string) => rowsOf(a[k]);
   const groups = [...pick('restaurant:main.groups'), ...pick('shop:main.groups'), ...pick('cars:main.groups')];
   const items = [...pick('restaurant:main.dishes'), ...pick('shop:main.products'), ...pick('cars:main.cars')];
+  const text = (k: string) => (typeof a[k] === 'string' ? a[k].trim() : '');
   const facts: Record<string, string> = {
+    جملة_الواجهة: text('intro.tagline'),
+    ميزة_الواجهة: text('restaurant:front.dishNote') || text('shop:front.shopNote') || text('cars:front.carsNote'),
     المجموعات_الرئيسية: groups.map((r) => r.name.trim()).join('، '),
     عناصر_القائمة: rowLines(items),
     الفريق: pick('team.team').map((r) => [r.name.trim(), r.role?.trim()].filter(Boolean).join(' - ')).join('؛ '),
     الأعمال: rowLines(pick('projects.projects')),
     عروض_خاصة: rowLines(pick('special_offer.offer')),
-    فيديو: typeof a['video.video'] === 'string' ? a['video.video'].trim() : '',
-    ساعات_العمل: typeof a['contact.hours'] === 'string' ? a['contact.hours'].trim() : '',
+    فيديو: text('video.video'),
+    ساعات_العمل: text('contact.hours'),
   };
   return Object.fromEntries(Object.entries(facts).filter(([, v]) => v));
 };
@@ -79,9 +82,12 @@ export const businessFacts = (a: WeeAnswers, siteName: string): Record<string, s
     الكتالوج_الفرعي: cat.subCategory || '',
     الاختصاص: cat.customSpecialty || cat.specialty || '',
     الوصف: ai.description || '',
-    العنوان: (ad.placeType === 'rural' ? [ad.governorate, ad.district, ad.subdistrict, ad.village, ad.street] : [ad.governorate, ad.city, ad.area, ad.street]).filter(Boolean).join('، '),
+    العنوان: (ad.placeType === 'rural' ? [ad.governorate, ad.district, ad.subdistrict, ad.village, ad.street, ad.details] : [ad.governorate, ad.city, ad.area, ad.street, ad.details]).filter(Boolean).join('، '),
+    // The pin the owner put on the map: the map of the contact slide shows it (pageBuilder.ts).
+    الموقع: ad.coordinates && Number.isFinite(ad.coordinates.lat) && Number.isFinite(ad.coordinates.lng) ? `${ad.coordinates.lat.toFixed(6)},${ad.coordinates.lng.toFixed(6)}` : '',
     واتساب: c.whatsapp || '',
     هاتف: c.phone || '',
+    بريد: c.email || '',
     طابع_الصفحة: ai.motionEffects || '',
     ملاحظات: ai.specialInstructions || '',
     الخدمات: serviceLines(ai.services),

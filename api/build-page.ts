@@ -613,7 +613,6 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
     if (!model) return null;
     const pages = pagesOf(model);
     const page = (o.pageId && pages.find((p) => p.id === o.pageId)) || pages[0];
-    const last = ((await db.collection('platform_build_picks').doc(`${o.uid}__${o.project}`).get()).data() as { last?: string[] } | undefined)?.last;
     const picked = await pickSections({
       sections: rentalPick(planId, o.profile, sectionsFor(page.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked })),
       // The sections of the project's own kind (a restaurant's front and menu, a shop's search and products...); rentals and hotels build as «free».
@@ -621,7 +620,6 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
       specs: TEMPLATES,
       photos: o.assets.gallery,
       gallery: await galleryPool(db),
-      avoid: new Set(Array.isArray(last) ? last : []),
     });
     if (picked.skipped.length) console.warn(`model ${model.id}: no slide for ${picked.skipped.join(', ')}`);
     return picked.pool.length ? { ...picked, pageName: page.name, ratings: page.sections.some((x) => x.category === 'ratings'), more: o.pageId ? [] : pages.slice(1).filter((p) => !p.system).map((p) => ({ id: p.id, name: p.name })) } : null;

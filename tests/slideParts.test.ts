@@ -78,3 +78,12 @@ test('the owner\'s front line, store note, email and map pin reach the builder',
   assert.equal(b['الموقع'], '33.500000,36.300000');
   assert.ok(b['العنوان'].endsWith('جانب الجامع'));
 });
+
+test('every example photo of a slide is replaced, the design\'s drawings are not', async () => {
+  const { isStockPhoto } = await import('../src/data/autoSlots.ts');
+  assert.ok(isStockPhoto('/Library/compressed/wee-k2.jpg'), 'the example business\'s own photo');
+  assert.ok(isStockPhoto('/Library/ben-wicks-GjBPLkTDzt4-unsplash.jpg'));
+  assert.ok(isStockPhoto('https://images.unsplash.com/photo-1'));
+  assert.ok(!isStockPhoto('/Library/scenes/paper-warm.svg'));
+  assert.ok(!isStockPhoto(''));
+});

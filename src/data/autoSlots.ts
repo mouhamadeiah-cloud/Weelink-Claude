@@ -31,8 +31,9 @@ const BARE_PRICE = /^[\d٠-٩][\d٠-٩.,٫٬\s]*$/;
 const reading = (a: SlotEl, b: SlotEl) => (Math.abs(a.y - b.y) > 40 ? a.y - b.y : b.x - a.x);
 const overlapX = (a: SlotEl, b: SlotEl) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) / Math.max(1, Math.min(a.width, b.width));
 const photoUrl = (e: SlotEl) => String(e.content || e.imageUrl || '');
-// The built-in pictures (/Library/…) are decoration of the design, except its stock photos (their file names end in -unsplash): those show the example's business and get replaced.
-export const isStockPhoto = (url: string) => !/^\/Library\//.test(url) || /unsplash/i.test(url);
+// The built-in pictures (/Library/…) are decoration of the design, except its photos: the stock ones (file names end in -unsplash) and the
+// example business's own (/Library/compressed/…, e.g. the about slide's building). Those show the example's business and get replaced.
+export const isStockPhoto = (url: string) => !!url && !/\.svg(\?|$)|^data:image\/svg/i.test(url) && (!/^\/Library\//.test(url) || /unsplash/i.test(url) || /^\/Library\/compressed\//.test(url));
 const isPhoto = (e: SlotEl) => e.type === 'image' && isStockPhoto(photoUrl(e)) && e.width >= 80 && e.height >= 80;
 
 /** The slide's elements with the slots found for the ones that have none (earlier automatic marks are redone). */

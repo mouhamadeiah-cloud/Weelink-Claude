@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_MODELS } from '../src/data/pageModels.ts';
-import { SECTION_ASKS, firstNameOf, missingEntries, pruneAnswers, questionPlan, questionsFor, summarizeAnswer, summarizeSection, unknownSections, withName } from '../src/data/sectionQuestions.ts';
+import { SECTION_ASKS, firstNameOf, missingEntries, previewCategoryOf, pruneAnswers, questionPlan, questionsFor, summarizeAnswer, summarizeSection, unknownSections, withName } from '../src/data/sectionQuestions.ts';
 
 const model = (id: string) => DEFAULT_MODELS.find((m) => m.id === id)!;
 
@@ -64,4 +64,13 @@ test('unticking a section removes its answers and no other', () => {
   const answers = { 'team.team': [{ name: 'سامر' }], 'booking.bookingKind': 'موعد أو استشارة', 'booking.bookingSettings': { now: false }, 'video.video': 'x' };
   assert.deepEqual(pruneAnswers(answers, ['booking']), { 'team.team': [{ name: 'سامر' }], 'video.video': 'x' });
   assert.deepEqual(pruneAnswers(answers, []), answers);
+});
+
+test('a section previews with the ready slides of its own category; the live store views and slideless sections do not', () => {
+  assert.equal(previewCategoryOf('about'), 'about');
+  assert.equal(previewCategoryOf('booking'), 'booking');
+  assert.equal(previewCategoryOf('restaurant:front'), 'intro');
+  assert.equal(previewCategoryOf('shop:main'), undefined);
+  assert.equal(previewCategoryOf('search'), undefined);
+  assert.equal(previewCategoryOf('ratings'), undefined);
 });

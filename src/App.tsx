@@ -75,7 +75,8 @@ import { loadCategories } from './utils/businessCategories';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { PageAdminPanel } from './components/pageAdmin/PageAdminPanel';
 import { BookingPage, BookingPageContext } from './services/bookings';
-import { BookingLegacyContext, BookingSettingsFocus, BookingSettingsFocusContext, BookingSettingsOpenContext, scheduleFromElement } from './services/bookingSettings';
+import { seedRestaurant } from './services/seedAnswers';
+import { applyBookingAnswers,BookingLegacyContext,BookingSettingsFocus, BookingSettingsFocusContext, BookingSettingsOpenContext, scheduleFromElement } from './services/bookingSettings';
 import { RatingsSlideContext } from './services/ratings';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
@@ -2423,6 +2424,10 @@ export default function App() {
     const maxPhotos = Math.min(GALLERY_MAX, limitsRef.current.gallery);
     const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections) });
     if (!result.ok) return { ok: false, message: result.message };
+    // The booking times he set in the questions become the page's first schedule (never over one he already has).
+    await applyBookingAnswers(activeUserUid, projectKey, answers.aiAnswers?.sectionAnswers).catch((e) => console.warn('Could not save the booking settings:', e));
+    // The menu groups and dishes he typed become his real menu.
+    if (project === 'restaurant') updateRestaurantAdmin((d) => seedRestaurant(d, answers.aiAnswers?.sectionAnswers));
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
     const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId, maxPhotos });
     if (!built.ok) return { ok: false, message: built.message };

@@ -8,7 +8,7 @@
 // keeps its settings in the element: the admin copies them in the first time it opens
 // (scheduleFromElement), and until then the element still books with its own.
 import { createContext, useEffect, useState } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import type { CanvasElement } from '../types';
 import type { ProjectKey } from '../utils/projectKeys';
@@ -211,10 +211,41 @@ export const newSeatsSchedule = (): BookingSchedule => ({ ...newSchedule('seats'
 // A restaurant's first table schedule when it has none saved: shown by the element and the admin.
 export const newTableSchedule = (): BookingSchedule => ({ ...newSchedule('table', 'حجز الطاولات'), type: 'table', workStart: '12:00', workEnd: '23:00', breakStart: '', breakEnd: '', interval: 'manual', intervalMinutes: 90, meetingTypes: ['personal'] });
 
+// The schedule «تحب تضبط إعدادات حجزك الآن؟» in Wee AI's questions asks for. null when the owner did not set it
+// now (the page then keeps the usual defaults). `choice.days` are 0 = sunday like WEEK_DAYS.
+export const scheduleFromAnswers = (answers: Record<string, any> | undefined): BookingSchedule | null => {
+  const choice = answers?.['booking.bookingSettings'];
+  if (!choice?.now) return null;
+  const seats = answers?.['booking.bookingKind'] === 'مقعد في جلسة أو دورة';
+  const days = Array.isArray(choice.days) ? WEEK_DAYS.filter((_, i) => choice.days.includes(i)) : [];
+  const base = seats ? newSeatsSchedule() : newSchedule('main', 'المواعيد');
+  const minutes = clampInt(choice.minutes, 15, 480, 30);
+  return normalizeSchedule({
+    ...base,
+    workingDays: days.length ? days : base.workingDays,
+    workStart: choice.from,
+    workEnd: choice.to,
+    breakStart: '',
+    breakEnd: '',
+    interval: 'manual',
+    intervalMinutes: minutes,
+  }, base.id);
+};
+
 const settingsDoc = (owner: string, project: ProjectKey) => doc(db, 'bookingSettings', owner, 'pages', project);
 
 export const saveBookingSettings = (owner: string, project: ProjectKey, settings: BookingSettings) =>
   setDoc(settingsDoc(owner, project), { schedules: settings.schedules.slice(0, MAX_SCHEDULES).map((s) => normalizeSchedule(s, s.id)), ...(settings.payments ? { payments: normalizePayments(settings.payments) } : {}) }, { merge: true });
+
+// Saves the schedule from the owner's answers, only when the page has no schedule yet (what he set in the admin wins).
+export const applyBookingAnswers = async (owner: string, project: ProjectKey, answers: Record<string, any> | undefined) => {
+  const schedule = scheduleFromAnswers(answers);
+  if (!schedule) return false;
+  const snap = await getDoc(settingsDoc(owner, project));
+  if (Array.isArray(snap.data()?.schedules) && snap.data()!.schedules.length) return false;
+  await saveBookingSettings(owner, project, { schedules: [schedule] });
+  return true;
+};
 
 // undefined while loading, null when the page has none yet.
 export const useBookingSettings = (owner: string | null | undefined, project: ProjectKey | null | undefined) => {

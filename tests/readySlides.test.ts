@@ -203,3 +203,9 @@ test('the builder\'s own names for price cards and the send button are accepted'
   for (const n of ['packages.0.features.2', 'groups.1.name', 'groups.0.rows.3.price', 'send']) assert.ok(isSlotName(n), n);
   assert.equal(isSlotName('groups.0.rows.x'), false);
 });
+
+test('a booking slide is its calendar: it needs no slot to be ready for the builder', () => {
+  const calendar = [{ id: 'c1', type: 'calendar', x: 0, y: 0, width: 780, height: 500, content: '', calendarBookingType: 'table' }];
+  assert.deepEqual(slideEligibility(calendar as any), { eligible: true, slots: 0, problems: [] });
+  assert.equal(slideEligibility([] as any).eligible, false);
+});

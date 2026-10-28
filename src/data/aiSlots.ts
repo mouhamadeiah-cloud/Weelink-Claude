@@ -88,11 +88,14 @@ export const slideEligibility = (elements: { type: string; aiSlot?: string }[]):
   const problems: string[] = [];
   const marked = elements.filter((e) => e.aiSlot);
   const names = marked.map((e) => String(e.aiSlot));
+  // A booking slide is its calendar: the builder keeps it as it is, so it needs no slot of its own.
+  const booking = elements.some((e) => e.type === 'calendar');
+  if (!marked.length && booking) return { eligible: true, slots: 0, problems };
   if (!marked.length) return { eligible: false, slots: 0, problems: ['لم تُعلَّم أي خانة'] };
   for (const e of marked) if (!isSlotName(String(e.aiSlot))) problems.push(`خانة غير معروفة: ${e.aiSlot}`);
   const dup = names.filter((n, i) => names.indexOf(n) !== i);
   if (dup.length) problems.push(`خانة مكررة: ${[...new Set(dup)].join('، ')}`);
-  if (!names.some((n) => n === 'title' || n === 'text' || /^(points|items|packages)\.\d+\.(title|text|name)$/.test(n))) problems.push('تحتاج عنواناً أو نصاً يكتبه الذكاء');
+  if (!booking && !names.some((n) => n === 'title' || n === 'text' || /^(points|items|packages)\.\d+\.(title|text|name)$/.test(n))) problems.push('تحتاج عنواناً أو نصاً يكتبه الذكاء');
   const lists = new Map<string, Set<number>>();
   for (const n of names) {
     const m = /^(chips|facts|points|items|packages|photos|caption)\.(\d+)/.exec(n);

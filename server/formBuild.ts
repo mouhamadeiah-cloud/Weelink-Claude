@@ -268,7 +268,10 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
 
   const built = await inPool(sections, SIMULTANEOUS, async (section, index): Promise<FormPlannedSection | null> => {
     const form = forms[index];
-    if (!form.fields.length) return null;
+    // A booking slide is its calendar: it goes into the page as designed, with nothing for the AI to write.
+    const fixed = section.elements.some((e: any) => e.type === 'calendar');
+    const kept = (): FormPlannedSection => ({ section: section.id, template: section.template, tone: 'light', slots: {}, icons: {}, links: {}, images: {}, entrance: 'none' });
+    if (!form.fields.length) return fixed ? kept() : null;
     const buttonKeys = form.fields.filter((f) => f.kind === 'button').map((f) => f.key);
     const others = sections.filter((s) => s.id !== section.id && angles[s.id]).map((s) => angles[s.id]);
     let answer: any;
@@ -315,7 +318,7 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
       }
     }
     // Nothing the AI wrote and nothing left of it: an empty slide is not built.
-    if (!Object.keys(slots).length) return null;
+    if (!Object.keys(slots).length) return fixed ? kept() : null;
     const links: Record<string, string> = {};
     for (const k of buttonKeys) {
       const to = String(answer?.links?.[k] || '');

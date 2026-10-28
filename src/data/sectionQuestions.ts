@@ -2,6 +2,7 @@
 // page gets are worked out from its model and package, so a section added to a model, or a package that opens one, changes the questions
 // by itself. A question is skipped with «تخطّى»: the AI then writes the section's content from what it knows (examples are marked as such).
 import { MODEL_CATEGORIES, ModelSection, SectionMode, pagesOf, PageModel } from './pageModels';
+import { hasPart } from './slideParts';
 
 export type QuestionKind =
   | 'text' // one short line
@@ -23,6 +24,7 @@ export interface SectionQuestion {
   saves: string; // where the answer goes, for the builder and the editor
   existing?: boolean; // already asked by an earlier step of Wee AI (the description), so not asked again
   custom?: string; // asked with a form of the chat's own (gallery, hero, services, features); sections that share one form ask it once
+  needs?: RegExp; // the place on the section's slide its answer goes to (src/data/slideParts.ts); a slide without one is not asked it
 }
 
 export interface SectionAsk {
@@ -35,14 +37,18 @@ export interface SectionAsk {
 
 const LATER = 'تقدر تغيّرها أو تزيد عليها لاحقاً من المحرر.';
 const SKIP = 'إذا تخطّيت، يكتبها Wee AI ويعلّمها «مثال» لتحذفها.';
+// The places on a slide that take rows (cards, a price list, a table), rows with a price, and any text at all.
+const ROWS = /^((points|items|packages)\.N\.(title|name)|groups\.N\.rows\.N\.name|table)$/;
+const PRICED = /^((items|packages)\.N\.price|groups\.N\.rows\.N\.price|table)$/;
+const ANY_TEXT = /^(title|sub|text|eyebrow|note|extra\.N|(points|items|packages)\.N\.\w+)$/;
 
 // Keys are a model section's category, or `${category}:${part}` for the parts of a restaurant, shop and cars.
 export const SECTION_ASKS: Record<string, SectionAsk> = {
   intro: {
     title: 'الواجهة', explain: 'هاد أول شي بيشوفه زبونك لما يفتح صفحتك، فهالجملة لازم تقول شو بتشتغل بسطر واحد. يا {name}، اكتبها متل ما بتحكيها لزبون جديد، وWee AI بيحطها تحت اسم صفحتك. الصورة اختيارية، وإذا حطيتها بتصير خلفية الواجهة.',
     questions: [
-      { id: 'tagline', kind: 'text', label: 'جملة تعرّف بعملك بسطر واحد', hint: 'مثال: أبواب وشبابيك بمقاس طلبك', saves: 'aiAnswers.description' },
-      { id: 'heroPhoto', custom: 'hero', kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' },
+      { id: 'tagline', needs: /^(sub|text)$/, kind: 'text', label: 'جملة تعرّف بعملك بسطر واحد', hint: 'مثال: أبواب وشبابيك بمقاس طلبك', saves: 'aiAnswers.description' },
+      { id: 'heroPhoto', needs: /^(background|image)$/, custom: 'hero', kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' },
     ],
   },
   about: {
@@ -52,36 +58,36 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
   services: {
     title: 'الخدمات', explain: 'هون بتعرض خدماتك على شكل بطاقات واضحة، كل بطاقة بإسم الخدمة وسطر قصير عنها. اكتب الأهم أولاً لأنه بيظهر أول. الي ما بتكتبه، Wee AI بيقترحه ويعلّمه «مثال» لتحذفه.',
     note: LATER,
-    questions: [{ id: 'services', custom: 'services', kind: 'list', label: 'خدماتك', hint: 'اكتب أهم خدماتك', count: 5, fields: ['name', 'note'], saves: 'aiAnswers.services' }],
+    questions: [{ id: 'services', needs: ROWS, custom: 'services', kind: 'list', label: 'خدماتك', hint: 'اكتب أهم خدماتك', count: 5, fields: ['name', 'note'], saves: 'aiAnswers.services' }],
   },
   prices: {
     title: 'قائمة الأسعار', explain: 'قائمة الأسعار بتوفّر على زبونك سؤال «بكم؟». كل عنصر بتكتبه مع سعره بيصير سطر بلوحة الأسعار بصفحتك، وهي نفسها اللوحة اللي بتعدّلها من المحرر بأي وقت.',
     intro: 'نضيف العناصر التي تكتبها في لوحة الأسعار مع أسعارها.',
     note: LATER,
-    questions: [{ id: 'priceRows', custom: 'services', kind: 'list', label: 'خمسة عناصر مع أسعارها', hint: 'سنضيف هذه الخمسة مبدئياً ويمكنك الزيادة عليها.', count: 5, fields: ['name', 'price'], saves: 'aiAnswers.services' }],
+    questions: [{ id: 'priceRows', needs: PRICED, custom: 'services', kind: 'list', label: 'خمسة عناصر مع أسعارها', hint: 'سنضيف هذه الخمسة مبدئياً ويمكنك الزيادة عليها.', count: 5, fields: ['name', 'price'], saves: 'aiAnswers.services' }],
   },
   gallery: {
     title: 'معرض الصور', explain: 'الصور بتحكي أكتر من الكلام. المعرض بيعرض صور شغلك بشكل مرتب، وعدد الصور بيتبع باقتك. تقدر تضيف الصور الآن أو تتركها للمحرر.',
     note: 'تقدر تبدّل الصور وترتبها لاحقاً.',
-    questions: [{ id: 'photos', custom: 'gallery', kind: 'photos', label: 'صور عن عملك', hint: 'أضف ما تريد الآن، وحد المعرض يتبع باقتك.', saves: 'aiAnswers.galleryImages' }],
+    questions: [{ id: 'photos', needs: /^(gallery|photos\.N)$/, custom: 'gallery', kind: 'photos', label: 'صور عن عملك', hint: 'أضف ما تريد الآن، وحد المعرض يتبع باقتك.', saves: 'aiAnswers.galleryImages' }],
   },
   features: {
     title: 'لماذا نحن', explain: 'هون بتقول «ليش نختارك؟» بكم نقطة قصيرة، متل: سرعة بالتوصيل، ضمان، خبرة طويلة. كل ميزة بتظهر ببطاقة صغيرة مع أيقونة، وإذا تخطّيت Wee AI بيقترح مزايا مناسبة لشغلك.',
-    questions: [{ id: 'features', custom: 'features', kind: 'list', label: 'المميزات التي تحب إضافتها', hint: SKIP, count: 4, fields: ['name'], saves: 'aiAnswers.features' }],
+    questions: [{ id: 'features', needs: /^(points|chips|facts)\.N/, custom: 'features', kind: 'list', label: 'المميزات التي تحب إضافتها', hint: SKIP, count: 4, fields: ['name'], saves: 'aiAnswers.features' }],
   },
   team: {
     title: 'فريق العمل', explain: 'زبونك بيحب يعرف مين رح يتعامل معه. اكتب اسم كل شخص بالفريق ودوره، والصور بتضيفها من المحرر. إذا تخطّيت، Wee AI بيحط أسماء مثال وبتبدّلها.',
     note: 'تقدر تغيّر الأسماء والصور لاحقاً.',
-    questions: [{ id: 'team', kind: 'list', label: 'هل ترغب بإضافة أسماء فريقك وصورهم؟', hint: SKIP, count: 3, fields: ['name', 'role', 'photo'], saves: 'team' }],
+    questions: [{ id: 'team', needs: /^(points|items)\.N\.(title|name)$/, kind: 'list', label: 'هل ترغب بإضافة أسماء فريقك وصورهم؟', hint: SKIP, count: 3, fields: ['name', 'role', 'photo'], saves: 'team' }],
   },
   projects: {
     title: 'أعمالنا', explain: '«أعمالنا» بتثبت كلامك بالدليل: مشاريع أو شغلات نفّذتها فعلاً. اكتب اسم كل عمل وسطر عنه، والصور بتزيدها من المحرر.',
     note: LATER,
-    questions: [{ id: 'projects', kind: 'list', label: 'أبرز أعمالك أو مشاريعك', hint: SKIP, count: 3, fields: ['name', 'note', 'photo'], saves: 'aiAnswers.projects' }],
+    questions: [{ id: 'projects', needs: /^((points|items)\.N\.(title|name)|photos\.N)$/, kind: 'list', label: 'أبرز أعمالك أو مشاريعك', hint: SKIP, count: 3, fields: ['name', 'note', 'photo'], saves: 'aiAnswers.projects' }],
   },
   video: {
     title: 'فيديو', explain: 'فيديو قصير بيعرّف بشغلك بيخلي الصفحة أحيّ. حط رابط فيديو من يوتيوب مثلاً. إذا ما عندك، الأمر عادي: القسم بيتخبّى وما بيطلع فاضي.',
-    questions: [{ id: 'video', kind: 'text', label: 'رابط فيديو يعرّف بعملك (اختياري)', hint: 'إن لم يكن لديك، يُترك القسم دون فيديو.', saves: 'aiAnswers.video' }],
+    questions: [{ id: 'video', needs: /^video$/, kind: 'text', label: 'رابط فيديو يعرّف بعملك (اختياري)', hint: 'إن لم يكن لديك، يُترك القسم دون فيديو.', saves: 'aiAnswers.video' }],
   },
   booking: {
     title: 'حجز المواعيد', explain: 'هيك زبونك بيحجز موعد بنفسه من صفحتك بدون اتصال. بتحدد أيام عملك وساعاته ومدة كل موعد، وكل حجز بيوصلك على إيميلك وبيظهر بلوحة «المواعيد». وإذا تخطّيت، منضع أيام العمل المعتادة.',
@@ -95,7 +101,7 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
   special_offer: {
     title: 'عرض خاص', explain: 'العرض الخاص بيظهر ببطاقة لافتة على الصفحة ليجذب الزبون: خصم، باقة، أو مناسبة. اكتب اسم العرض وسطر عنه وسعره إن وجد.',
     note: LATER,
-    questions: [{ id: 'offer', kind: 'list', label: 'عرض أو أكثر تحب إبرازه', hint: SKIP, count: 1, fields: ['name', 'note', 'price'], saves: 'aiAnswers.offers' }],
+    questions: [{ id: 'offer', needs: ANY_TEXT, kind: 'list', label: 'عرض أو أكثر تحب إبرازه', hint: SKIP, count: 1, fields: ['name', 'note', 'price'], saves: 'aiAnswers.offers' }],
   },
   ratings: {
     title: 'التقييمات', explain: 'زوار صفحتك بيقيّموك بنجوم وبيكتبوا رأيهم، وبتشوف التقييمات وبتردّ عليها من لوحتك. ما بدك تعمل شي هون، بس انتبه إن التقييم بيحتاج من الزائر إيميل لتأكيده.',
@@ -104,7 +110,7 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
   },
   contact: {
     title: 'تواصل معنا', explain: 'هون بيلاقوا طريقهم إليك: العنوان والهاتف وواتساب اللي أعطيتنا إياهم، مع الخريطة. اللي ناقص بس ساعات عملك لتظهر بالصفحة.',
-    questions: [{ id: 'hours', kind: 'text', label: 'ساعات عملك (اختياري)', saves: 'contactInfo.hours' }],
+    questions: [{ id: 'hours', needs: /^hours\.(label|value)$/, kind: 'text', label: 'ساعات عملك (اختياري)', saves: 'contactInfo.hours' }],
   },
   privacy: {
     title: 'الشروط والخصوصية', explain: 'الشروط وسياسة الخصوصية بتحمي شغلك وبتعطي زبونك ثقة. Wee AI بيحط نصوص جاهزة، وبتقدر تعدلها أو تحذفها لاحقاً.',
@@ -113,7 +119,7 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
   },
   'restaurant:front': {
     title: 'واجهة المطعم', explain: 'واجهة المطعم بتفتح شهية الزبون من أول نظرة. اذكر طبقك الأشهر أو الشي اللي بيميّزك، وWee AI بيبني الواجهة حوله.',
-    questions: [{ id: 'dishNote', kind: 'text', label: 'طبقك أو ميزتك الأشهر', hint: SKIP, saves: 'aiAnswers.description' }, { id: 'heroPhoto', custom: 'hero', kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' }],
+    questions: [{ id: 'dishNote', kind: 'text', label: 'طبقك أو ميزتك الأشهر', hint: SKIP, saves: 'aiAnswers.description' }, { id: 'heroPhoto', needs: /^(background|image)$/, custom: 'hero', kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' }],
   },
   'restaurant:main': {
     title: 'المنيو', explain: 'المنيو هو قلب صفحة مطعمك: الزبون بيتصفحه وبيطلب منه. اكتب مجموعاتك الرئيسية (مقبلات، مشاوي...) وخمسة أطباق بأسعارها، وبتنضاف فعلاً لقائمة مطعمك. بعدين بتكمّل الباقي بنفسك من المحرر.',
@@ -124,7 +130,7 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
       { id: 'dishes', kind: 'list', label: 'خمسة أطباق مع أسعارها', hint: 'تظهر مبدئياً في المنيو ويمكنك الزيادة عليها. ' + SKIP, count: 5, fields: ['name', 'price', 'photo'], saves: 'restaurant.menu' },
     ],
   },
-  'shop:front': { title: 'واجهة المتجر', explain: 'واجهة المتجر هي أول انطباع عن بضاعتك. قل شو بيميّز متجرك، سواء جودة أو سعر أو تنوّع، وWee AI بيبني الواجهة عليه.', questions: [{ id: 'shopNote', kind: 'text', label: 'ما الذي يميّز متجرك؟', hint: SKIP, saves: 'aiAnswers.description' }, { id: 'heroPhoto', custom: 'hero', kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' }] },
+  'shop:front': { title: 'واجهة المتجر', explain: 'واجهة المتجر هي أول انطباع عن بضاعتك. قل شو بيميّز متجرك، سواء جودة أو سعر أو تنوّع، وWee AI بيبني الواجهة عليه.', questions: [{ id: 'shopNote', kind: 'text', label: 'ما الذي يميّز متجرك؟', hint: SKIP, saves: 'aiAnswers.description' }, { id: 'heroPhoto', needs: /^(background|image)$/, custom: 'hero', kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' }] },
   'shop:main': {
     title: 'المنتجات', explain: 'هاد قسم منتجاتك: الزبون بيتصفحها وبيضيفها للسلة. اكتب مجموعات متجرك وخمسة منتجات بأسعارها، وبتنضاف فعلاً لمستودعك، وبعدين بتزيد الباقي من المحرر.',
     note: LATER,
@@ -133,7 +139,7 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
       { id: 'products', kind: 'list', label: 'خمسة منتجات مع أسعارها', hint: 'تظهر مبدئياً في المتجر ويمكنك الزيادة عليها. ' + SKIP, count: 5, fields: ['name', 'price', 'photo'], saves: 'shop.products' },
     ],
   },
-  'cars:front': { title: 'واجهة المعرض', explain: 'واجهة المعرض بتعرّف الزبون على نوع سياراتك وثقته فيك. قل شو بيميّز معرضك، مثلاً فحص مضمون أو تقسيط، وWee AI بيبني الواجهة عليه.', questions: [{ id: 'carsNote', kind: 'text', label: 'ما الذي يميّز معرضك؟', hint: SKIP, saves: 'aiAnswers.description' }, { id: 'heroPhoto', custom: 'hero', kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' }] },
+  'cars:front': { title: 'واجهة المعرض', explain: 'واجهة المعرض بتعرّف الزبون على نوع سياراتك وثقته فيك. قل شو بيميّز معرضك، مثلاً فحص مضمون أو تقسيط، وWee AI بيبني الواجهة عليه.', questions: [{ id: 'carsNote', kind: 'text', label: 'ما الذي يميّز معرضك؟', hint: SKIP, saves: 'aiAnswers.description' }, { id: 'heroPhoto', needs: /^(background|image)$/, custom: 'hero', kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' }] },
   'cars:main': {
     title: 'السيارات', explain: 'هون بتعرض سياراتك بسعرها لتظهر ببطاقات بمعرضك. اكتب أنواع السيارات الرئيسية وخمس سيارات بأسعارها (الماركة أول كلمة، والسنة إذا بتحب)، وبتنضاف فعلاً لمعرضك.',
     note: LATER,
@@ -145,7 +151,7 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
   table: {
     title: 'قائمة الأسعار', explain: 'جدول الأسعار بيعرض عناصرك وأسعارها بشكل مرتب سطر سطر، وبيسهّل على زبونك المقارنة. العناصر اللي كتبتها بالأسئلة السابقة هي اللي بتظهر فيه.',
     note: LATER,
-    questions: [{ id: 'priceRows', custom: 'services', kind: 'list', label: 'خمسة عناصر مع أسعارها', hint: 'سنضيف هذه الخمسة مبدئياً ويمكنك الزيادة عليها.', count: 5, fields: ['name', 'price'], saves: 'aiAnswers.services' }],
+    questions: [{ id: 'priceRows', needs: PRICED, custom: 'services', kind: 'list', label: 'خمسة عناصر مع أسعارها', hint: 'سنضيف هذه الخمسة مبدئياً ويمكنك الزيادة عليها.', count: 5, fields: ['name', 'price'], saves: 'aiAnswers.services' }],
   },
   search: { title: 'البحث', explain: 'شريط بحث بيساعد زبونك يلاقي اللي بدو ياه بسرعة بين أقسام صفحتك. ما بدك تعمل شي، Wee AI بيضيفه لحاله.', intro: 'شريط بحث على أقسام صفحتك، ولا يحتاج منك شيئاً.', questions: [] },
   featured: { title: 'عروض مميزة', explain: 'هون بتظهر العناصر اللي بتعلّمها «مميز» من لوحتك، كعروض أو أصناف بدك تبرزها. بتختار المميّز بعدين من المحرر.', intro: 'تظهر هنا العناصر التي تعلّمها «مميز» من لوحتك.', questions: [] },
@@ -203,7 +209,7 @@ export const questionPlan = (model: Pick<PageModel, 'sections' | 'pages'>, kind?
 };
 
 /** The questions to show once the owner ticked these sections: the fixed ones and the ticked ones, in the model's order. */
-export const questionsFor = (model: Pick<PageModel, 'sections' | 'pages'>, ticked: string[] | undefined, kind?: string): AskedSection[] => {
+export const questionsFor = (model: Pick<PageModel, 'sections' | 'pages'> & { parts?: Record<string, string[]> }, ticked: string[] | undefined, kind?: string): AskedSection[] => {
   const plan = questionPlan(model, kind);
   const on = new Set(ticked ?? plan.choices.filter((c) => c.defaultOn).map((c) => c.id));
   // Questions an earlier step already asked are left out; a section left with none is not asked.
@@ -220,6 +226,9 @@ export const questionsFor = (model: Pick<PageModel, 'sections' | 'pages'>, ticke
         ...s.ask,
         questions: s.ask.questions.filter((q) => {
           if (q.existing) return false;
+          // A question whose answer has no place on the section's slide is not asked (all are, while the slide is not known).
+          const parts = model.parts?.[s.id];
+          if (q.needs && parts && !hasPart(parts, q.needs)) return false;
           if (q.custom) { if (formsAsked.has(q.custom)) return false; formsAsked.add(q.custom); }
           return true;
         }),

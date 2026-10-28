@@ -24,6 +24,7 @@ const plain = (html: unknown) => String(html || '').replace(/<[^>]*>/g, ' ').rep
 const fontOf = (e: SlotEl) => Number(e.styles?.fontSize) || 16;
 const PRICE = /[\d٠-٩].*(\$|€|£|ل\.?\s?س|ر\.?\s?س|د\.?\s?إ|دينار|ريال|درهم|ليرة|SYP|USD|EUR)|(\$|€|£)\s?[\d٠-٩]/;
 const PHONE = /^\+?[\d٠-٩][\d٠-٩\s\-()]{6,}$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
 const NUMBER = /^[+\-~]?[\d٠-٩][\d٠-٩.,٫٬]*\s*[%٪+kKmMxX×]?\+?$/;
 const BARE_PRICE = /^[\d٠-٩][\d٠-٩.,٫٬\s]*$/;
 // Reading order of a right-to-left page: top to bottom, and in a row from the right.
@@ -58,6 +59,7 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
     if (e.type === 'map') take(e, 'map');
     else if (e.type === 'contactForm') take(e, 'form');
     else if (e.type === 'gallery') take(e, 'gallery');
+    else if (e.type === 'video') take(e, 'video');
   }
 
   // Buttons: the main one, and the contact ones by their words or link.
@@ -144,6 +146,12 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
     const label = near.sort((a, b) => Math.abs(a.y - ph.y) - Math.abs(b.y - ph.y))[0];
     const part = label && /واتس|whats/i.test(plain(label.content)) ? 'whatsapp' : 'phone';
     if (take(ph, `${part}.value`) && label) take(label, `${part}.label`);
+  }
+
+  // An email address, with its label beside or above it.
+  for (const em of texts.filter((e) => free(e) && EMAIL.test(plain(e.content))).slice(0, 1)) {
+    const label = texts.filter((t) => free(t) && t !== em && plain(t.content).length <= 30 && Math.abs(t.y + t.height / 2 - (em.y + em.height / 2)) <= 70 && Math.abs(t.x - em.x) <= 420).sort((a, b) => Math.abs(a.y - em.y) - Math.abs(b.y - em.y))[0];
+    if (take(em, 'email.value') && label) take(label, 'email.label');
   }
 
   // Repeated figures: «+500 / عميل» pairs.

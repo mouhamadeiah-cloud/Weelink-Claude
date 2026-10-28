@@ -3,7 +3,7 @@
 // (server/readySlides.ts; the slots are found by src/data/autoSlots.ts), so the two never drift apart.
 
 // Filled by Weelink from the owner's answers, never by the AI.
-export const SYSTEM_SLOTS = /^(phone|whatsapp|address|hours)\.(label|value)$|^(map|form|gallery)$/;
+export const SYSTEM_SLOTS = /^(phone|whatsapp|address|hours|email)\.(label|value)$|^(map|form|gallery|video)$/;
 export const IMAGE_SLOTS = /^(image|avatar|photos\.\d+)$/;
 
 // Generous room: the builder grows a box (and moves what is under it) to fit a longer text, so the

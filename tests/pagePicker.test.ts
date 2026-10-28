@@ -152,3 +152,17 @@ test('the slides the admin allowed for a section are the only ones it takes; whe
   const gone = await pickSections({ sections: [{ ...sections[0], slides: ['gone'] }], codeSections: code, gallery: pool({ byCat: { about: ['g1'] }, on: ['about'] }), rng: seq(0.1) });
   assert.deepEqual(gone.pool[0].templates, ['g:g1']);
 });
+
+test('a section that finds no slide is named in skipped, and a restaurant\'s live section builds from the restaurant\'s own sections', async () => {
+  const restaurant: CodeSection[] = [
+    { id: 'intro', name: 'مدخل', required: true, place: 'first', templates: ['hero.split'] },
+    { id: 'featured', name: 'المنيو', required: true, place: 'any', templates: ['rest.menuBig'] },
+  ];
+  const model = DEFAULT_MODELS.find((m) => m.id === 'restaurant')!.sections.filter((s) => s.category === 'restaurant');
+  const own = await pickSections({ sections: model, codeSections: restaurant, gallery: pool() });
+  assert.deepEqual(own.pool.map((p) => p.id), ['intro', 'featured']);
+  assert.deepEqual(own.skipped, []);
+  const generic = await pickSections({ sections: model, codeSections: code, gallery: pool() });
+  assert.deepEqual(generic.pool.map((p) => p.id), ['intro']);
+  assert.deepEqual(generic.skipped, ['featured']);
+});

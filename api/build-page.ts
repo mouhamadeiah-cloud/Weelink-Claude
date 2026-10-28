@@ -613,12 +613,14 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
     const last = ((await db.collection('platform_build_picks').doc(`${o.uid}__${o.project}`).get()).data() as { last?: string[] } | undefined)?.last;
     const picked = await pickSections({
       sections: rentalPick(planId, o.profile, sectionsFor(model.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked })),
-      codeSections: SECTIONS.free,
+      // The sections of the project's own kind (a restaurant's front and menu, a shop's search and products...); rentals and hotels build as «free».
+      codeSections: SECTIONS[o.kind] || SECTIONS.free,
       specs: TEMPLATES,
       photos: o.assets.gallery,
       gallery: await galleryPool(db),
       avoid: new Set(Array.isArray(last) ? last : []),
     });
+    if (picked.skipped.length) console.warn(`model ${model.id}: no slide for ${picked.skipped.join(', ')}`);
     return picked.pool.length ? picked : null;
   } catch (err) {
     console.error('model pick failed:', (err as Error)?.message);

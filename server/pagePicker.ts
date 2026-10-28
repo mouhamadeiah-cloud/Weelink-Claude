@@ -50,13 +50,14 @@ export interface Picked {
   pool: CodeSection[]; // one section per model section, each with the one template chosen
   templates: Record<string, TemplateSpec>; // the specs of the gallery slides chosen (keys `g:{id}`)
   extra: Record<string, GallerySlideData>; // their slides, for the browser to build from
+  skipped: string[]; // sections of the model that found no slide to be built from
 }
 
 /** One ready slide for each section, at random; a slide used in the owner's last build is left for last. */
 export const pickSections = async (o: { sections: ModelSection[]; codeSections: CodeSection[]; gallery: GalleryPool; rng?: () => number; avoid?: Set<string>; photos?: number; specs?: Record<string, TemplateSpec> }): Promise<Picked> => {
   const rng = o.rng || Math.random;
   const avoid = o.avoid || new Set<string>();
-  const out: Picked = { pool: [], templates: {}, extra: {} };
+  const out: Picked = { pool: [], templates: {}, extra: {}, skipped: [] };
   const taken = new Set<string>();
   for (const s of o.sections) {
     const id = planSectionId(s);
@@ -87,7 +88,10 @@ export const pickSections = async (o: { sections: ModelSection[]; codeSections: 
       }
       if (chosen) break;
     }
-    if (!chosen) continue; // nothing to build this section from yet (e.g. the ratings)
+    if (!chosen) {
+      out.skipped.push(id); // nothing to build this section from yet (e.g. the ratings)
+      continue;
+    }
     taken.add(chosen.template);
     if (chosen.data && chosen.spec) {
       out.templates[chosen.template] = chosen.spec;

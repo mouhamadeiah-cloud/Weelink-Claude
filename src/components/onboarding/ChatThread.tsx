@@ -5,13 +5,14 @@ import { Pencil } from 'lucide-react';
 import { WeeDots } from '../ui/WeeDots';
 
 /** Wee AI's side: the question, then what it is for (the explanation) and the notes under it. */
-export const AiBubble: React.FC<{ title: string; explain?: string; note?: string; children?: React.ReactNode }> = ({ title, explain, note, children }) => (
+export const AiBubble: React.FC<{ title: string; explain?: string; note?: string; preview?: React.ReactNode; children?: React.ReactNode }> = ({ title, explain, note, preview, children }) => (
   <div className="flex items-start gap-2 animate-in fade-in">
     <div className="w-7 h-7 rounded-full bg-brand/5 flex items-center justify-center shrink-0 mt-0.5"><WeeDots size={18} /></div>
     <div className="min-w-0 flex-1 space-y-2">
       <div className="rounded-2xl rounded-tr-sm bg-[#f5f5f7] px-3 py-2.5 space-y-1.5">
         <p className="text-xs font-bold text-neutral-900 leading-relaxed">{title}</p>
         {explain && <p className="text-[11.5px] font-semibold text-neutral-600 leading-relaxed">{explain}</p>}
+        {preview}
         {note && <p className="text-[11px] font-bold text-brand leading-relaxed">تنويه: {note}</p>}
       </div>
       {children}

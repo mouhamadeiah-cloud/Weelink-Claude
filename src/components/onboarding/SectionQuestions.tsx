@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react';
 import { AskedSection, DAYS, SectionQuestion, answerKey, pruneAnswers, questionPlan, questionsFor, summarizeSection, withName } from '../../data/sectionQuestions';
 import type { QuestionModel } from '../../services/questionModel';
 import { AiBubble, AnswerBox, SKIPPED_TEXT, UserBubble } from './ChatThread';
+import { SectionPreview } from './SectionPreview';
 
 export type SectionAnswers = Record<string, any>;
 export interface BookingChoice { now: boolean; days: number[]; from: string; to: string; minutes: number }
@@ -165,6 +166,7 @@ export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', tick
           title={section.ask.title}
           explain={[section.ask.intro, section.ask.explain && withName(section.ask.explain, name)].filter(Boolean).join(' ')}
           note={section.ask.note}
+          preview={<SectionPreview sectionId={section.id} />}
         >
           <AnswerBox>
             <div className="space-y-3">

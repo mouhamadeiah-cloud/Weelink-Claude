@@ -257,3 +257,10 @@ export const summarizeSection = (id: string, ask: SectionAsk, answers: Record<st
 /** The answers without those of the given sections (an unticked section leaves nothing behind). */
 export const pruneAnswers = (answers: Record<string, any>, sectionIds: string[]): Record<string, any> =>
   Object.fromEntries(Object.entries(answers).filter(([k]) => !sectionIds.some((id) => k.startsWith(`${id}.`))));
+
+/** The ready-slide category that shows what a section looks like in the page (none for the live store views, which read the owner's own data). */
+export const previewCategoryOf = (sectionId: string): string | undefined => {
+  if (sectionId.endsWith(':front')) return 'intro';
+  if (sectionId.includes(':')) return undefined;
+  return ['search', 'featured', 'table', 'ratings'].includes(sectionId) ? undefined : sectionId;
+};

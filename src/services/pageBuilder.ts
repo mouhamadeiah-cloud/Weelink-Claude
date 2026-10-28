@@ -106,7 +106,7 @@ export const pageAssets = (a: WeeAnswers, max: number = GALLERY_MAX) => ({
   logo: !!a.personalInfo?.logoUrl,
 });
 
-export type PlanResult = { ok: true; plan: Plan; more?: { id: string; name: string }[] } | { ok: false; message: string };
+export type PlanResult = { ok: true; plan: Plan; more?: { id: string; name: string }[]; pageName?: string; ratings?: boolean; missing?: string[] } | { ok: false; message: string };
 
 // What went wrong, in words the owner can act on, with the server's code for whoever fixes it.
 const failureMessage = (status: number, data: { reason?: string; detail?: string }) => {
@@ -140,7 +140,7 @@ export const requestPagePlan = async (kind: BuildKind, profile: Record<string, s
     if (res.ok && Array.isArray(data.plan?.sections)) {
       // The tokens this build used, for working out its cost (browser console).
       if (data.usage) console.info('Wee AI build tokens:', data.usage);
-      return { ok: true, plan: data.extra ? { ...data.plan, extra: data.extra } : data.plan, ...(Array.isArray(data.more) && data.more.length ? { more: data.more } : {}) };
+      return { ok: true, plan: data.extra ? { ...data.plan, extra: data.extra } : data.plan, ...(Array.isArray(data.more) && data.more.length ? { more: data.more } : {}), ...(typeof data.pageName === 'string' ? { pageName: data.pageName } : {}), ...(typeof data.ratings === 'boolean' ? { ratings: data.ratings } : {}), ...(Array.isArray(data.missing) && data.missing.length ? { missing: data.missing.map(String) } : {}) };
     }
     if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
     if (data.error === 'no_tokens') return { ok: false, message: 'انتهى رصيد Wee AI في حسابك. تواصل مع الإدارة لشحن رصيد جديد.' };
@@ -652,6 +652,8 @@ export interface BuildInput {
   elements: CanvasElement[];
   activePageId: string;
   later?: boolean; // a later page of the model: built beside the main page, which already got the ratings slide
+  ratings?: boolean; // the model has «التقييمات» on this page; false = not even when ticked (the model is the law). Unset: no model, as before.
+  targetPageId?: string; // build into this page, not the store's home
 }
 export type BuildResult = { ok: false; message: string } | { ok: true; pages: Page[]; elements: CanvasElement[]; pageId: string; firstSlideId: string; sections: number };
 
@@ -694,7 +696,7 @@ const ratingsSlide = (slideId: string, to: TargetColours, fonts: { head: string;
 export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q: string) => Promise<string | null> = photoFinder()): Promise<BuildResult> => {
   const { kind, answers, pages } = input;
   const home = HOME_PAGE[kind];
-  const page = pages.find((p) => p.id === (home && pages.some((x) => x.id === home) ? home : input.activePageId)) || pages[0];
+  const page = pages.find((p) => p.id === (input.targetPageId || (home && pages.some((x) => x.id === home) ? home : input.activePageId))) || pages[0];
   // The page look Wee AI chose gives the fonts. The owner's colours are the page's (Eyad: the chosen
   // colours are the page colours); the look's colours only when the owner chose none, and then the
   // site is also kept in that look («ستايل الصفحة»), so a ready slide added later comes in it.
@@ -742,7 +744,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
     }
   }
   // The owner ticked «التقييمات»: its slide comes before the contact and the terms at the end.
-  if (kind === 'free' && !input.later && tickedSections(answers.aiAnswers?.optionalSections).includes('ratings')) {
+  if (kind === 'free' && !input.later && input.ratings !== false && tickedSections(answers.aiAnswers?.optionalSections).includes('ratings')) {
     let at = built.length;
     while (at > 0 && ['contact', 'privacy'].includes(builtSection[at - 1])) at -= 1;
     built.splice(at, 0, ratingsSlide(`slide-ai-${stamp}-ratings`, to, fonts));
@@ -752,7 +754,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
   const oldSlides = new Set(page.slides.map((s) => s.id));
   const logo = answers.personalInfo?.logoUrl;
   // A store's other pages (menu, products, cart…) keep their layout and take the new colours and fonts.
-  const restyle = kind !== 'free';
+  const restyle = kind !== 'free' && !input.later;
   // A page in a look («ستايل الصفحة») has that look's colours; the build gives it the owner's.
   const pageOf = new Map(pages.flatMap((p) => p.slides.map((s) => [s.id, p] as const)));
   const sceneFor = (aiTemplate: string | undefined, els: CanvasElement[], photoBg: boolean, slide?: Slide, p?: Page): RecolourScene => ({

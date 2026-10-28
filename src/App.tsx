@@ -75,7 +75,7 @@ import { loadCategories } from './utils/businessCategories';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { PageAdminPanel } from './components/pageAdmin/PageAdminPanel';
 import { BookingPage, BookingPageContext } from './services/bookings';
-import { seedRestaurant } from './services/seedAnswers';
+import { seedCars, seedRestaurant, seedShop } from './services/seedAnswers';
 import { applyBookingAnswers,BookingLegacyContext,BookingSettingsFocus, BookingSettingsFocusContext, BookingSettingsOpenContext, scheduleFromElement } from './services/bookingSettings';
 import { RatingsSlideContext } from './services/ratings';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
@@ -2428,6 +2428,8 @@ export default function App() {
     await applyBookingAnswers(activeUserUid, projectKey, answers.aiAnswers?.sectionAnswers).catch((e) => console.warn('Could not save the booking settings:', e));
     // The menu groups and dishes he typed become his real menu.
     if (project === 'restaurant') updateRestaurantAdmin((d) => seedRestaurant(d, answers.aiAnswers?.sectionAnswers));
+    if (project === 'shop') updateShopAdmin((d) => seedShop(d, answers.aiAnswers?.sectionAnswers));
+    if (project === 'cars') updateCarAdmin((d) => seedCars(d, answers.aiAnswers?.sectionAnswers));
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
     const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId, maxPhotos });
     if (!built.ok) return { ok: false, message: built.message };

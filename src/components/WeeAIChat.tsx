@@ -147,9 +147,7 @@ const getConciseQuestionText = (stepNum: number, name?: string, kind?: ProjectTy
     5: 'احكيلي عن صفحتك: شو بتقدّم وشو بيميزك؟',
     6: 'في لون أو ستايل بتحب تكون عليه صفحتك؟',
     7: 'أي شكل للفواصل بين أقسام صفحتك بتفضّل؟',
-    8: `بتحب نعمل معرض صور لشغلك (لحد ${photos === 5 ? 'خمس' : photos} ${photos === 1 ? 'صورة' : 'صور'})؟`,
     9: 'ارفع شعارك (اللوغو) لصفحتك:',
-    10: 'في صورة بتحب تكون خلفية واجهة صفحتك؟',
   } as Record<number, string>)[stepNum] || 'خلصنا، وإجاباتك جاهزة للبناء.';
   return name && stepNum > 1 && !text.includes('يا ') ? `يا ${name}، ${text}` : text;
 };
@@ -230,6 +228,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   // The answered question being changed (the thread opens its form again); null while the owner is at the newest question.
   const [editing, setEditing] = useState<number | null>(null);
   const [askedLogo, setAskedLogo] = useState(false);
+  const [ownFeature, setOwnFeature] = useState('');
   const active = editing ?? step;
   const liveRef = useRef<HTMLDivElement>(null);
   const scrolled = useRef(false);
@@ -405,7 +404,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       if (data.aiAnswers) setAiAnswers({ services: [], features: [], ...data.aiAnswers, ...(otherKind ? { description: '', services: [], features: [], specialInstructions: '' } : {}) });
       finishedRef.current = data.currentStep >= 13;
       if (fromStart) setStep(1);
-      else if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep === 11 ? 12 : data.currentStep);
+      else if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep === 8 ? (data.personalInfo?.logoUrl ? 12 : 9) : data.currentStep === 10 || data.currentStep === 11 ? 12 : data.currentStep);
       // Photos saved full size by older versions move to Firebase Storage (the next save keeps their links).
       if (!isGuest) {
         hostAnswerImages(data).then((hosted) => {
@@ -502,12 +501,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   const goToNextStep = () => {
     let nextStep = step + 1;
-    // Skip step 9 (logo prompt) if user already uploaded logo in step 1
-    if (step === 8 && personalInfo.logoUrl) {
-      nextStep = 10;
-    }
-    // The visual-effects question (step 11) is not asked any more: the page keeps the calm default.
-    if (nextStep === 11) nextStep = 12;
+    // The gallery (8) and the front photo (10) are no longer steps: the sections of the page model ask them, when the model has them.
+    // The logo (9) is skipped when it was already uploaded in step 1, and the visual-effects question (11) is not asked any more.
+    if (nextStep === 8) nextStep = personalInfo.logoUrl ? 12 : 9;
+    if (nextStep === 10 || nextStep === 11) nextStep = 12;
     if (nextStep === 9) setAskedLogo(true);
     setStep(nextStep);
     saveProgress(nextStep);
@@ -599,7 +596,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // The thread's helpers: the owner's first name, the questions reached so far, and his answers in a line.
   const firstName = firstNameOf(personalInfo.fullName, personalInfo.title);
-  const path = [1, 2, 3, 4, 5, 6, 7, 8, ...(step >= 9 && (askedLogo || !personalInfo.logoUrl || step === 9) ? [9] : []), ...(step >= 10 ? [10] : []), ...(step >= 12 ? [12] : [])].filter((n) => n <= Math.min(step, 12));
+  const path = [1, 2, 3, 4, 5, 6, 7, ...(step >= 9 && (askedLogo || !personalInfo.logoUrl || step === 9) ? [9] : []), ...(step >= 12 ? [12] : [])].filter((n) => n <= Math.min(step, 12));
   const askText = (n: number) => getConciseQuestionText(n, firstName, tone, galleryMax);
   const answerText = (n: number): string => {
     switch (n) {
@@ -610,13 +607,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       case 5: return aiAnswers.description.trim() || 'بدون وصف، اكتب أنت يا Wee AI';
       case 6: return colorSummary;
       case 7: return SLIDE_DIVIDER_OPTIONS.find((d) => d.id === currentDivider)?.name || currentDivider;
-      case 8: return aiAnswers.wantsGallery ? `معرض صور${aiAnswers.galleryImages.length ? ` (${aiAnswers.galleryImages.length})` : ''}` : 'بدون معرض';
       case 9: return personalInfo.logoUrl ? 'رفعت الشعار' : 'بدون شعار الآن';
-      case 10: return aiAnswers.heroBgImage ? 'أضفت صورة للواجهة' : 'بدون صورة، اختار أنت يا Wee AI';
       default: return '';
     }
   };
 
+  // The steps before the sections: the owner, the address, the contacts, the work, the description, the colours, the dividers and the logo.
+  // Everything else is asked by the sections of the page model.
+  const FIXED_STEPS = 8;
   // What the panel beside the chat shows: the step being asked, or (from step 12) the section SectionQuestions reports. The bar counts both.
   const sectionTotal = qModel
     ? (questionPlan(forCategory(qModel, tone, catalogInfo.customCategory || catalogInfo.category), tone).choices.length ? 1 : 0)
@@ -625,12 +623,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const topicRef = useRef(onTopic);
   topicRef.current = onTopic;
   const notesTopic = (): Topic => (step >= 13
-    ? { id: 'done', title: 'خلصنا', explain: withName('يا {name}، كل إجاباتك انحفظت. فيك ترجع لأي سؤال فوق وتعدّله بأي وقت، والأسئلة اللي بتتأثر بتعديلك بتتجدد لحالها. وبس تكون جاهز بيفتح لك المحرر، وهناك زر «ابن صفحتي» بيخلّيني ابني صفحتك من هالإجابات.', firstName), progress: { n: 10 + sectionTotal, total: 10 + sectionTotal } }
-    : { id: 'notes', title: 'ملاحظات خاصة', explain: withName('آخر شي يا {name}، إذا في شي خاص بدك ياه اكتبه هون: شي لازم يظهر بالصفحة، شي ما بدك ياه، أو أسلوب معيّن بالكتابة. وإذا ما في، بتتركه فاضي وبتخلّص.', firstName), note: 'ما بنفّذ غير اللي بتكتبه، وبتقدر تعدّله بعدين.', progress: { n: 10 + sectionTotal, total: 10 + sectionTotal } });
+    ? { id: 'done', title: 'خلصنا', explain: withName('يا {name}، كل إجاباتك انحفظت. فيك ترجع لأي سؤال فوق وتعدّله بأي وقت، والأسئلة اللي بتتأثر بتعديلك بتتجدد لحالها. وبس تكون جاهز بيفتح لك المحرر، وهناك زر «ابن صفحتي» بيخلّيني ابني صفحتك من هالإجابات.', firstName), progress: { n: FIXED_STEPS + sectionTotal, total: FIXED_STEPS + sectionTotal } }
+    : { id: 'notes', title: 'ملاحظات خاصة', explain: withName('آخر شي يا {name}، إذا في شي خاص بدك ياه اكتبه هون: شي لازم يظهر بالصفحة، شي ما بدك ياه، أو أسلوب معيّن بالكتابة. وإذا ما في، بتتركه فاضي وبتخلّص.', firstName), note: 'ما بنفّذ غير اللي بتكتبه، وبتقدر تعدّله بعدين.', progress: { n: FIXED_STEPS + sectionTotal, total: FIXED_STEPS + sectionTotal } });
   const onSectionTopic = (t: (Omit<Topic, 'progress'> & { at: { n: number; total: number } }) | null) => {
     if (!t) { topicRef.current?.(notesTopic()); return; }
     const { at, ...rest } = t;
-    topicRef.current?.({ ...rest, pageName: personalInfo.pageName, logo: personalInfo.logoUrl, progress: { n: 10 + at.n, total: 10 + sectionTotal } });
+    topicRef.current?.({ ...rest, pageName: personalInfo.pageName, logo: personalInfo.logoUrl, progress: { n: FIXED_STEPS + at.n, total: FIXED_STEPS + sectionTotal } });
   };
   useEffect(() => {
     if (step >= 13 && editing == null) { topicRef.current?.(notesTopic()); return; }
@@ -645,11 +643,202 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       note: help.note,
       pageName: personalInfo.pageName || personalInfo.fullName,
       logo: personalInfo.logoUrl,
-      progress: { n: Math.min(n, 10), total: 10 + sectionTotal },
+      progress: { n: n === 9 ? FIXED_STEPS : Math.min(n, 7), total: FIXED_STEPS + sectionTotal },
     });
   }, [active, step, editing, firstName, personalInfo.pageName, personalInfo.fullName, personalInfo.logoUrl, sectionTotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The form of one question; it opens under Wee AI's question while it is asked, or again when the owner edits his answer.
+  // The forms of the questions that the page model's sections ask (Eyad, 28 Oct: the model decides what is asked, and when).
+  const servicesFields = () => (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-500 block">خدماتك وأسعارها (اختياري، حتى 8)</label>
+                {(aiAnswers.services || []).map((row, i) => (
+                  <div key={i} className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={row.name}
+                      onChange={e => setAiAnswers(p => ({ ...p, services: (p.services || []).map((r, j) => (j === i ? { ...r, name: e.target.value } : r)) }))}
+                      placeholder="اسم الخدمة"
+                      className="flex-1 min-w-0 text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={row.price}
+                      onChange={e => setAiAnswers(p => ({ ...p, services: (p.services || []).map((r, j) => (j === i ? { ...r, price: e.target.value } : r)) }))}
+                      placeholder="السعر (اختياري)"
+                      className="w-28 text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      aria-label="احذف الخدمة"
+                      onClick={() => setAiAnswers(p => ({ ...p, services: (p.services || []).filter((_, j) => j !== i) }))}
+                      className="px-2 text-neutral-400 hover:text-rose-600 text-sm"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {(aiAnswers.services || []).length < 8 && (
+                  <button
+                    type="button"
+                    onClick={() => setAiAnswers(p => ({ ...p, services: [...(p.services || []), { name: '', price: '' }] }))}
+                    className="w-full py-1.5 border border-dashed border-neutral-300 rounded-lg text-xs font-bold text-neutral-600 hover:bg-neutral-50"
+                  >
+                    + أضف خدمة
+                  </button>
+                )}
+                <p className="text-xs text-neutral-400">الخدمة بلا سعر بتظهر «حسب الطلب». ما منكتب أي سعر ما كتبته.</p>
+              </div>
+  );
+  const featuresFields = () => (
+    <div className="space-y-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-500 block">شو بتقدموا كمان؟ (اختر اللي بينطبق)</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[...(FEATURE_CHOICES[pageKind || 'page'] || []), ...(aiAnswers.features || []).filter((x) => !(FEATURE_CHOICES[pageKind || 'page'] || []).includes(x))].map((f) => {
+                    const on = (aiAnswers.features || []).includes(f);
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => setAiAnswers(p => ({ ...p, features: on ? (p.features || []).filter(x => x !== f) : [...(p.features || []), f] }))}
+                        className={`px-2.5 py-1 rounded-full border text-xs font-bold transition-all cursor-pointer ${on ? 'bg-black text-white border-black' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:border-neutral-300'}`}
+                      >
+                        {f}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+      <div className="flex gap-1.5">
+        <input
+          type="text"
+          value={ownFeature}
+          onChange={e => setOwnFeature(e.target.value)}
+          placeholder="ميزة ثانية تريدها"
+          className="flex-1 min-w-0 text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => { const v = ownFeature.trim(); if (v) setAiAnswers(p => ({ ...p, features: (p.features || []).includes(v) ? p.features : [...(p.features || []), v] })); setOwnFeature(''); }}
+          className="px-3 text-xs font-bold rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 cursor-pointer"
+        >
+          + أضف
+        </button>
+      </div>
+    </div>
+  );
+  const galleryFields = () => (
+    <div className="space-y-3.5">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setAiAnswers(p => ({ ...p, wantsGallery: true }))}
+                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all ${
+                  aiAnswers.wantsGallery ? 'bg-black text-white border-black' : 'bg-neutral-50 border-neutral-200'
+                }`}
+              >
+                نعم
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiAnswers(p => ({ ...p, wantsGallery: false, galleryImages: [] }))}
+                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all ${
+                  !aiAnswers.wantsGallery ? 'bg-black text-white border-black' : 'bg-neutral-50 border-neutral-200'
+                }`}
+              >
+                لا
+              </button>
+            </div>
+
+            {aiAnswers.wantsGallery && (
+              <div className="space-y-2 pt-2 border-t border-neutral-100">
+                <label className="w-full py-2 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
+                  <Upload size={13} />
+                  <span>رفع حتى {galleryMax} {galleryMax === 1 ? 'صورة' : 'صور'} من الجهاز</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleGalleryFilesUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                {aiAnswers.galleryImages.length > 0 && (
+                  <div className="grid grid-cols-5 gap-1.5 pt-1">
+                    {aiAnswers.galleryImages.slice(0, galleryMax).map((img, i) => (
+                      <div key={i} className="relative aspect-square rounded border border-neutral-300 overflow-hidden bg-neutral-100">
+                        <img src={img} alt="Thumb" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setAiAnswers(p => ({ ...p, galleryImages: p.galleryImages.filter((_, idx) => idx !== i) }))}
+                          className="absolute inset-0 bg-black/40 text-white flex items-center justify-center text-xs"
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+    </div>
+  );
+  const heroFields = () => (
+            <div className="space-y-2">
+              <label className="w-full py-2.5 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
+                <Upload size={14} />
+                <span>رفع صورة الخلفية من الجهاز</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => handleDeviceImageUpload(e, url => setAiAnswers(p => ({ ...p, heroBgImage: url })))}
+                  className="hidden"
+                />
+              </label>
+
+              {aiAnswers.heroBgImage && (
+                <div className="relative h-20 rounded-lg border border-neutral-300 overflow-hidden bg-neutral-100">
+                  <img src={aiAnswers.heroBgImage} alt="Hero BG" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setAiAnswers(p => ({ ...p, heroBgImage: '' }))}
+                    className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded text-xs"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+
+              <input
+                type="url"
+                value={aiAnswers.heroBgImage}
+                onChange={e => setAiAnswers(p => ({ ...p, heroBgImage: e.target.value }))}
+                placeholder="أو ضع رابط صورة الخلفية المباشر"
+                className="w-full text-xs py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg font-mono text-left"
+              />
+            </div>
+
+  );
+  const customForms: Record<string, () => React.ReactNode> = { services: servicesFields, features: featuresFields, gallery: galleryFields, hero: heroFields };
+  const customSummary = (id: string): string => {
+    if (id === 'services') return (aiAnswers.services || []).filter((r) => r.name?.trim()).map((r) => `${r.name.trim()}${r.price?.trim() ? ` (${r.price.trim()})` : ''}`).join('، ');
+    if (id === 'features') return (aiAnswers.features || []).join('، ');
+    if (id === 'gallery') return aiAnswers.wantsGallery && aiAnswers.galleryImages.length ? `معرض صور (${aiAnswers.galleryImages.length})` : '';
+    if (id === 'hero') return aiAnswers.heroBgImage ? 'أضفت صورة للواجهة' : '';
+    return '';
+  };
+  const customClear = (id: string) => {
+    if (id === 'services') setAiAnswers(p => ({ ...p, services: [] }));
+    else if (id === 'features') setAiAnswers(p => ({ ...p, features: [] }));
+    else if (id === 'gallery') setAiAnswers(p => ({ ...p, wantsGallery: false, galleryImages: [] }));
+    else if (id === 'hero') setAiAnswers(p => ({ ...p, heroBgImage: '' }));
+  };
+
   const renderForm = (cur: number) => (
     <>
         
@@ -1067,71 +1256,6 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               rows={4}
               className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
             />
-            {/* الخدمات وأسعارها: قسم الأسعار في الصفحة (المتجر والمطعم والمعرض أسعارهم من الإدارة) */}
-            {(!pageKind || pageKind === 'page') && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-500 block">خدماتك وأسعارها (اختياري، حتى 8)</label>
-                {(aiAnswers.services || []).map((row, i) => (
-                  <div key={i} className="flex gap-1.5">
-                    <input
-                      type="text"
-                      value={row.name}
-                      onChange={e => setAiAnswers(p => ({ ...p, services: (p.services || []).map((r, j) => (j === i ? { ...r, name: e.target.value } : r)) }))}
-                      placeholder="اسم الخدمة"
-                      className="flex-1 min-w-0 text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
-                    />
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={row.price}
-                      onChange={e => setAiAnswers(p => ({ ...p, services: (p.services || []).map((r, j) => (j === i ? { ...r, price: e.target.value } : r)) }))}
-                      placeholder="السعر (اختياري)"
-                      className="w-28 text-xs font-semibold py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white focus:border-black focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      aria-label="احذف الخدمة"
-                      onClick={() => setAiAnswers(p => ({ ...p, services: (p.services || []).filter((_, j) => j !== i) }))}
-                      className="px-2 text-neutral-400 hover:text-rose-600 text-sm"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                {(aiAnswers.services || []).length < 8 && (
-                  <button
-                    type="button"
-                    onClick={() => setAiAnswers(p => ({ ...p, services: [...(p.services || []), { name: '', price: '' }] }))}
-                    className="w-full py-1.5 border border-dashed border-neutral-300 rounded-lg text-xs font-bold text-neutral-600 hover:bg-neutral-50"
-                  >
-                    + أضف خدمة
-                  </button>
-                )}
-                <p className="text-xs text-neutral-400">الخدمة بلا سعر بتظهر «حسب الطلب». ما منكتب أي سعر ما كتبته.</p>
-              </div>
-            )}
-            {/* المزايا: للمطعم والمتجر والمعرض (أسعارهم من الإدارة) */}
-            {pageKind && FEATURE_CHOICES[pageKind] && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-neutral-500 block">شو بتقدموا كمان؟ (اختر اللي بينطبق)</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {FEATURE_CHOICES[pageKind]!.map((f) => {
-                    const on = (aiAnswers.features || []).includes(f);
-                    return (
-                      <button
-                        key={f}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => setAiAnswers(p => ({ ...p, features: on ? (p.features || []).filter(x => x !== f) : [...(p.features || []), f] }))}
-                        className={`px-2.5 py-1 rounded-full border text-xs font-bold transition-all cursor-pointer ${on ? 'bg-black text-white border-black' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:border-neutral-300'}`}
-                      >
-                        {f}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1256,75 +1380,6 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           </div>
         )}
 
-        {/* STEP 8: معرض الصور */}
-        {cur === 8 && (
-          <div className="space-y-3.5">
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setAiAnswers(p => ({ ...p, wantsGallery: true }))}
-                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all ${
-                  aiAnswers.wantsGallery ? 'bg-black text-white border-black' : 'bg-neutral-50 border-neutral-200'
-                }`}
-              >
-                نعم
-              </button>
-              <button
-                type="button"
-                onClick={() => setAiAnswers(p => ({ ...p, wantsGallery: false, galleryImages: [] }))}
-                className={`flex-1 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-all ${
-                  !aiAnswers.wantsGallery ? 'bg-black text-white border-black' : 'bg-neutral-50 border-neutral-200'
-                }`}
-              >
-                لا
-              </button>
-            </div>
-
-            {aiAnswers.wantsGallery && (
-              <div className="space-y-2 pt-2 border-t border-neutral-100">
-                <label className="w-full py-2 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
-                  <Upload size={13} />
-                  <span>رفع حتى {galleryMax} {galleryMax === 1 ? 'صورة' : 'صور'} من الجهاز</span>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleGalleryFilesUpload}
-                    className="hidden"
-                  />
-                </label>
-
-                {aiAnswers.galleryImages.length > 0 && (
-                  <div className="grid grid-cols-5 gap-1.5 pt-1">
-                    {aiAnswers.galleryImages.slice(0, galleryMax).map((img, i) => (
-                      <div key={i} className="relative aspect-square rounded border border-neutral-300 overflow-hidden bg-neutral-100">
-                        <img src={img} alt="Thumb" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setAiAnswers(p => ({ ...p, galleryImages: p.galleryImages.filter((_, idx) => idx !== i) }))}
-                          className="absolute inset-0 bg-black/40 text-white flex items-center justify-center text-xs"
-                        >
-                          <X size={11} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={onNext}
-                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
-              >
-                التالي
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* STEP 9: صورة اللوغو (إن لم يرفع واحدة في الخطوة 1) */}
         {cur === 9 && (
           <div className="space-y-3.5">
@@ -1352,55 +1407,6 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 value={personalInfo.logoUrl}
                 onChange={e => setPersonalInfo(p => ({ ...p, logoUrl: e.target.value }))}
                 placeholder="أو ضع رابط صورة اللوغو"
-                className="w-full text-xs py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg font-mono text-left"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={onNext}
-                className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
-              >
-                التالي
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 10: صورة لخلفية الشريحة الأولى */}
-        {cur === 10 && (
-          <div className="space-y-3.5">
-            <div className="space-y-2">
-              <label className="w-full py-2.5 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
-                <Upload size={14} />
-                <span>رفع صورة الخلفية من الجهاز</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={e => handleDeviceImageUpload(e, url => setAiAnswers(p => ({ ...p, heroBgImage: url })))}
-                  className="hidden"
-                />
-              </label>
-
-              {aiAnswers.heroBgImage && (
-                <div className="relative h-20 rounded-lg border border-neutral-300 overflow-hidden bg-neutral-100">
-                  <img src={aiAnswers.heroBgImage} alt="Hero BG" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setAiAnswers(p => ({ ...p, heroBgImage: '' }))}
-                    className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded text-xs"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              )}
-
-              <input
-                type="url"
-                value={aiAnswers.heroBgImage}
-                onChange={e => setAiAnswers(p => ({ ...p, heroBgImage: e.target.value }))}
-                placeholder="أو ضع رابط صورة الخلفية المباشر"
                 className="w-full text-xs py-1.5 px-2 bg-neutral-50 border border-neutral-200 rounded-lg font-mono text-left"
               />
             </div>
@@ -1500,6 +1506,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   onAnswers={(a) => setAiAnswers((p) => ({ ...p, sectionAnswers: a }))}
                   finale={finale}
                   onTopic={onSectionTopic}
+                  custom={{ form: (id) => customForms[id]?.(), summary: customSummary, clear: customClear }}
                 />
               ) : (<>
                 <AiBubble title={askText(12)} live>

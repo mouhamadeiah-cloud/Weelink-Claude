@@ -77,7 +77,14 @@ test('a section previews with the ready slides of its own category; the store se
   assert.equal(previewCategoryOf('ratings'), undefined);
 });
 
-test('every one of Wee AI\'s first ten questions has its explanation and note for the panel beside the chat', () => {
-  for (let n = 1; n <= 10; n++) assert.ok(STEP_HELP[n]?.explain.length > 60 && STEP_HELP[n]?.note, `step ${n}`);
+test('every one of Wee AI\'s fixed questions (the rest come from the page model) has its explanation and note for the panel beside the chat', () => {
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 9]) assert.ok(STEP_HELP[n]?.explain.length > 60 && STEP_HELP[n]?.note, `step ${n}`);
   assert.match(withName(STEP_HELP[2].explain, 'أحمد'), /يا أحمد، وين/);
+});
+
+test('the gallery, the front photo, the services and the features are asked by the sections of the model, each form once', () => {
+  const forms = (id: string) => questionsFor(model(id), undefined).flatMap((s) => s.ask.questions.map((q) => q.custom)).filter(Boolean);
+  const free = forms('page-free');
+  assert.deepEqual(free.filter((f) => f === 'services'), ['services'], 'services and the price list share one form');
+  assert.ok(free.includes('gallery') && free.includes('hero'));
 });

@@ -92,9 +92,11 @@ interface Props {
   finale: React.ReactNode;
   /** What the panel beside the chat shows: the section being asked (null once every section is passed). */
   onTopic?: (t: (Omit<Topic, 'progress'> & { at: { n: number; total: number } }) | null) => void;
+  /** The chat's own forms (gallery, front photo, services, features): their form, their answer in a line, and how to clear them. */
+  custom?: { form: (id: string) => React.ReactNode; summary: (id: string) => string; clear: (id: string) => void };
 }
 
-export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', ticked, answers, onTicked, onAnswers, finale, onTopic }) => {
+export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', ticked, answers, onTicked, onAnswers, finale, onTopic, custom }) => {
   const plan = useMemo(() => questionPlan(model, kind), [model, kind]);
   const on = ticked ?? plan.choices.filter((c) => c.defaultOn).map((c) => c.id);
   const asked: AskedSection[] = useMemo(() => questionsFor(model, ticked, kind), [model, ticked, kind]);
@@ -163,7 +165,7 @@ export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', tick
   };
 
   const sectionItem = (section: AskedSection, live: boolean) => {
-    const text = summarizeSection(section.id, section.ask, answers);
+    const text = summarizeSection(section.id, section.ask, answers, custom?.summary);
     if (!live) return (
       <div key={section.id} className="space-y-2">
         <AiBubble title={section.ask.title} />
@@ -172,6 +174,7 @@ export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', tick
     );
     const skip = () => {
       onAnswers(pruneAnswers(answers, [section.id]));
+      section.ask.questions.forEach((q) => q.custom && custom?.clear(q.custom));
       pass(section.id);
     };
     return (
@@ -185,7 +188,8 @@ export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', tick
                   <div key={k} className="space-y-1.5">
                     <p className="text-xs font-bold text-neutral-800">{q.label}</p>
                     {q.hint && <p className="text-[11px] font-semibold text-neutral-500">{q.hint}</p>}
-                    {q.kind === 'list' && <ListQuestion q={q} rows={answers[k] || []} onChange={(rows) => set(k, rows)} />}
+                    {q.custom && custom?.form(q.custom)}
+                    {!q.custom && q.kind === 'list' && <ListQuestion q={q} rows={answers[k] || []} onChange={(rows) => set(k, rows)} />}
                     {q.kind === 'settings' && <BookingQuestion value={answers[k]} onChange={(v) => set(k, v)} />}
                     {q.kind === 'choice' && (
                       <div className="flex flex-wrap gap-2">

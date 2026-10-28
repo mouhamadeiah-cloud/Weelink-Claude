@@ -2,10 +2,10 @@
 // The admin adds and names pages, adds any section to a page, says which ready slides each section may use, reorders, and changes when a
 // section appears; «الافتراضي» goes back to the defaults.
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Loader2, Lock, Plus, Trash2 } from 'lucide-react';
 import { AdminError, ReadyCategory, adminModelReset, adminModelSave, adminModels, adminReadyOverview } from '../../services/adminApi';
 import { FIXED_READY_CATEGORIES } from '../../data/readyCategories';
-import { MAIN_PAGE_NAME, MAX_MODEL_PAGES, MAX_MODEL_SECTIONS, MODEL_CATEGORIES, ModelPage, ModelSection, PageModel, SectionMode, SectionNeed, pagesOf } from '../../data/pageModels';
+import { MAIN_PAGE_NAME, MAX_MODEL_PAGES, MAX_MODEL_SECTIONS, MODEL_CATEGORIES, ModelPage, ModelProblem, ModelSection, PageModel, SYSTEM_PAGES, SectionMode, SectionNeed, modelProblems, pagesOf } from '../../data/pageModels';
 
 const MODE_LABEL: Record<SectionMode, string> = { always: 'دائماً', if: 'إذا توفّر', ask: 'يختاره الزبون' };
 const NEED_LABEL: Record<SectionNeed, string> = { services: 'خدمات', priced: 'خدمات بأسعار', photos: 'صور المعرض' };
@@ -37,6 +37,7 @@ export const ModelsView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEn
 
   const fail = useCallback((e: unknown) => {
     if ((e as AdminError)?.code === 'session') return onSessionEnd();
+    if ((e as AdminError)?.code === 'no_slides') return setNote(`ما انحفظ النموذج: ${((e as AdminError).extra.problems as ModelProblem[] | undefined)?.length || 'في'} أقسام ما إلها شريحة جاهزة صالحة. شوف الأقسام المعلّمة بالأحمر.`);
     setNote('تعذّر تنفيذ العملية، جرّب مرة ثانية.');
   }, [onSessionEnd]);
   const load = useCallback(() => adminModels().then((r) => { setModels(r.models); return r.models; }).catch(fail), [fail]);
@@ -56,15 +57,28 @@ export const ModelsView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEn
   const patch = (i: number, p: Partial<ModelSection>) => setSections((s) => s.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const move = (i: number, by: number) => setSections((s) => { const n = [...s]; [n[i], n[i + by]] = [n[i + by], n[i]]; return n; });
   const movePage = (by: number) => { setDraft((d) => { const n = [...d]; [n[at], n[at + by]] = [n[at + by], n[at]]; return n; }); setPageIx(at + by); };
-  const addPage = () => { setDraft((d) => [...d, { id: `p${Date.now().toString(36)}`, name: `صفحة ${d.length + 1}`, sections: [] }]); setPageIx(draft.length); };
+  // A new page goes before the cart page, which stays last unless the admin moves it.
+  const addPage = () => {
+    const sys = draft.findIndex((p) => p.system);
+    const where = sys < 0 ? draft.length : sys;
+    setDraft((d) => [...d.slice(0, where), { id: `p${Date.now().toString(36)}`, name: `صفحة ${d.filter((p) => !p.system).length + 1}`, sections: [] }, ...d.slice(where)]);
+    setPageIx(where);
+  };
   const removePage = () => { setDraft((d) => d.filter((_, j) => j !== at)); setPageIx(Math.max(0, at - 1)); };
+  // The cart page never comes first: the first page is the site's main page, built from its sections.
+  const canMove = (by: number) => { const to = at + by; return to >= 0 && to < draft.length && !(to === 0 && page.system) && !(at === 0 && draft[to]?.system); };
+  const contentPages = draft.filter((p) => !p.system).length;
+  // Every section needs a ready slide to be built from (checked again on the server when saving).
+  const eligibleOf = (c: string) => ready.find((x) => x.id === c)?.items.filter((x) => x.eligible).map((x) => x.id) || [];
+  const problems = ready.length ? modelProblems(draft, eligibleOf) : [];
+  const problemOf = (pageId: string, sectionId?: string) => problems.find((x) => x.page === pageId && x.section === sectionId)?.why;
   const run = async (fn: () => Promise<unknown>, done: string) => {
     setBusy(true);
     setNote('');
     try { await fn(); await load(); setNote(done); } catch (e) { fail(e); } finally { setBusy(false); }
   };
   const addable = ADDABLE.filter((c) => !page.sections.some((s) => s.id === idOf(c)));
-  const empty = draft.some((p) => !p.sections.length);
+  const empty = draft.some((p) => !p.system && !p.sections.length) || problems.length > 0;
   const toggleSlide = (i: number, all: string[], id: string) => {
     const now = page.sections[i].slides?.length ? page.sections[i].slides! : all;
     const next = now.includes(id) ? now.filter((x) => x !== id) : [...now, id];
@@ -86,25 +100,27 @@ export const ModelsView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEn
       <section className="space-y-3 rounded-card border border-line bg-white p-4">
         <div className="flex flex-wrap items-center gap-1.5">
           {draft.map((p, j) => (
-            <button key={p.id} type="button" onClick={() => { setPageIx(j); setSlidesOf(''); }} className={`rounded-ctl border px-3 py-1 text-sm ${j === at ? 'border-brand bg-bg font-semibold' : 'border-line hover:bg-bg'}`}>{p.name || '—'}</button>
+            <button key={p.id} type="button" onClick={() => { setPageIx(j); setSlidesOf(''); }} className={`inline-flex items-center gap-1 rounded-ctl border px-3 py-1 text-sm ${j === at ? 'border-brand bg-bg font-semibold' : 'border-line hover:bg-bg'} ${problems.some((x) => x.page === p.id) ? 'text-danger' : ''}`}>{p.system && <Lock size={12} />}{p.name || '—'}</button>
           ))}
           <button type="button" disabled={draft.length >= MAX_MODEL_PAGES} onClick={addPage} className="inline-flex items-center gap-1 rounded-ctl border border-dashed border-line px-3 py-1 text-sm hover:bg-bg disabled:opacity-40"><Plus size={14} /> صفحة</button>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <label className="inline-flex items-center gap-2">اسم الصفحة <input value={page.name} maxLength={40} onChange={(e) => setPage({ name: e.target.value })} placeholder={MAIN_PAGE_NAME} className="rounded-ctl border border-line px-2 py-1" /></label>
+          {page.system
+            ? <p className="inline-flex items-center gap-1.5 rounded-ctl bg-bg px-3 py-1.5"><Lock size={14} /> {SYSTEM_PAGES[page.system].note}</p>
+            : <label className="inline-flex items-center gap-2">اسم الصفحة <input value={page.name} maxLength={40} onChange={(e) => setPage({ name: e.target.value })} placeholder={MAIN_PAGE_NAME} className="rounded-ctl border border-line px-2 py-1" /></label>}
           <span className="mr-auto inline-flex gap-1">
-            <button type="button" title="قبل" disabled={at === 0} onClick={() => movePage(-1)} className="rounded-ctl border border-line p-1.5 hover:bg-bg disabled:opacity-40"><ArrowUp size={14} /></button>
-            <button type="button" title="بعد" disabled={at === draft.length - 1} onClick={() => movePage(1)} className="rounded-ctl border border-line p-1.5 hover:bg-bg disabled:opacity-40"><ArrowDown size={14} /></button>
-            <button type="button" title="حذف الصفحة" disabled={draft.length < 2} onClick={() => window.confirm('حذف هذه الصفحة بأقسامها؟') && removePage()} className="rounded-ctl border border-line p-1.5 text-danger hover:bg-bg disabled:opacity-40"><Trash2 size={14} /></button>
+            <button type="button" title="قبل" disabled={!canMove(-1)} onClick={() => movePage(-1)} className="rounded-ctl border border-line p-1.5 hover:bg-bg disabled:opacity-40"><ArrowUp size={14} /></button>
+            <button type="button" title="بعد" disabled={!canMove(1)} onClick={() => movePage(1)} className="rounded-ctl border border-line p-1.5 hover:bg-bg disabled:opacity-40"><ArrowDown size={14} /></button>
+            <button type="button" title="حذف الصفحة" disabled={!!page.system || contentPages < 2} onClick={() => window.confirm('حذف هذه الصفحة بأقسامها؟') && removePage()} className="rounded-ctl border border-line p-1.5 text-danger hover:bg-bg disabled:opacity-40"><Trash2 size={14} /></button>
           </span>
         </div>
-        {!page.sections.length && <p className="text-sm text-muted">الصفحة فارغة: أضف لها قسماً واحداً على الأقل قبل الحفظ.</p>}
+        {!page.system && !page.sections.length && <p className="text-sm text-danger">الصفحة فارغة: أضف لها قسماً واحداً على الأقل قبل الحفظ.</p>}
         {page.sections.map((s, i) => {
           const cat = ready.find((c) => c.id === s.category);
           const all = (cat?.items || []).filter((x) => x.eligible).map((x) => x.id);
           const chosen = s.slides?.length ? s.slides.filter((x) => all.includes(x)) : all;
           return (
-            <div key={s.id} className="space-y-2 rounded-ctl border border-line p-2 text-sm">
+            <div key={s.id} className={`space-y-2 rounded-ctl border p-2 text-sm ${problemOf(page.id, s.id) ? 'border-danger' : 'border-line'}`}>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="w-6 text-center text-muted">{i + 1}</span>
                 <span className="min-w-28 font-semibold">{labelOf(s)}</span>
@@ -126,6 +142,7 @@ export const ModelsView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEn
                   <button type="button" title="حذف القسم" onClick={() => setSections((x) => x.filter((_, j) => j !== i))} className="rounded-ctl border border-line p-1.5 text-danger hover:bg-bg"><Trash2 size={14} /></button>
                 </span>
               </div>
+              {problemOf(page.id, s.id) && <p className="text-danger">{problemOf(page.id, s.id)}</p>}
               {slidesOf === s.id && (
                 <div className="rounded-ctl bg-bg p-2">
                   {!cat ? <p className="text-muted">هذا القسم يقرأ بياناته الحيّة (قائمة، منتجات، سيارات)، وشرائحه من الكود.</p>
@@ -152,15 +169,15 @@ export const ModelsView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEn
           );
         })}
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <select value="" disabled={page.sections.length >= MAX_MODEL_SECTIONS} onChange={(e) => { const c = addable[Number(e.target.value)]; if (c) setSections((s) => [...s, { id: idOf(c), category: c.category, ...(c.part ? { part: c.part } : {}), mode: 'ask' }]); }} className="rounded-ctl border border-line bg-white px-2 py-1.5 text-sm">
+          {!page.system && <select value="" disabled={page.sections.length >= MAX_MODEL_SECTIONS} onChange={(e) => { const c = addable[Number(e.target.value)]; if (c) setSections((s) => [...s, { id: idOf(c), category: c.category, ...(c.part ? { part: c.part } : {}), mode: 'ask' }]); }} className="rounded-ctl border border-line bg-white px-2 py-1.5 text-sm">
             <option value="">إضافة قسم…</option>
             {addable.map((c, k) => <option key={idOf(c)} value={k}>{labelOf(c)}</option>)}
-          </select>
+          </select>}
           <button type="button" disabled={busy || !changed || empty} onClick={() => run(() => adminModelSave(model.id, draft), 'حُفظ النموذج.')} className="inline-flex items-center gap-1.5 rounded-ctl bg-brand px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />} حفظ</button>
           <button type="button" disabled={busy || !changed} onClick={() => { setDraft(saved); setPageIx(0); }} className="rounded-ctl border border-line px-3 py-1.5 text-sm hover:bg-bg disabled:opacity-50">تراجع</button>
           <button type="button" disabled={busy || !model.custom} onClick={() => window.confirm('العودة إلى النموذج الافتراضي؟') && run(() => adminModelReset(model.id), 'عاد النموذج إلى الافتراضي.')} className="rounded-ctl border border-line px-3 py-1.5 text-sm text-danger hover:bg-bg disabled:opacity-50">الافتراضي</button>
         </div>
-        {draft.length > 1 && <p className="text-tiny text-muted">الصفحات الإضافية تُحفظ الآن في النموذج، أما بناء الموقع بالذكاء فيستعمل الصفحة الأولى فقط إلى أن نفعّل بناء كل الصفحات.</p>}
+        {problems.length > 0 && <p className="text-tiny text-danger">ما بينحفظ النموذج وفيه قسم ما إله شريحة جاهزة صالحة: الموقع بينبني من النموذج بالضبط، فما لازم يسقط ولا قسم.</p>}
       </section>
     </div>
   );

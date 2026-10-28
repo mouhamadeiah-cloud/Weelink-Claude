@@ -624,7 +624,7 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
       avoid: new Set(Array.isArray(last) ? last : []),
     });
     if (picked.skipped.length) console.warn(`model ${model.id}: no slide for ${picked.skipped.join(', ')}`);
-    return picked.pool.length ? { ...picked, pageName: page.name, ratings: page.sections.some((x) => x.category === 'ratings'), more: o.pageId ? [] : pages.slice(1).map((p) => ({ id: p.id, name: p.name })) } : null;
+    return picked.pool.length ? { ...picked, pageName: page.name, ratings: page.sections.some((x) => x.category === 'ratings'), more: o.pageId ? [] : pages.slice(1).filter((p) => !p.system).map((p) => ({ id: p.id, name: p.name })) } : null;
   } catch (err) {
     console.error('model pick failed:', (err as Error)?.message);
     return null;

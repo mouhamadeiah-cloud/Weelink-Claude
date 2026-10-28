@@ -1,7 +1,10 @@
 // The models of a page («النماذج», docs/READY_SLIDES_PLAN.md step 4): for each kind of page the sections it is made of, in order.
 // A section names a ready-slide category; the builder (step 4c) picks one of that category's slides at random and the AI writes its texts.
 // The free page is the base every other model starts from. These are the defaults; the admin's changes (pageModels/{id}) replace them.
-import { READY_SLIDE_CATEGORIES } from './readyCategories';
+import { FIXED_READY_CATEGORIES, READY_SLIDE_CATEGORIES } from './readyCategories';
+
+// Sections whose slides the code draws (live shop, showroom and menu data, the featured cards, the search bar, the ratings box).
+const CODE_DRAWN = [...FIXED_READY_CATEGORIES, 'ratings'];
 
 // always: in every page of this model · if: only when the owner gave what it needs · ask: the owner ticks it in the questions
 export type SectionMode = 'always' | 'if' | 'ask';
@@ -21,7 +24,10 @@ export interface ModelSection {
 
 // A page of the site a model builds: its name (the navbar link) and its sections. `sections` of a model is its first page, the one the
 // builder still builds alone; `pages` is what the admin shapes (a model saved before pages existed is one page, «الرئيسية»).
-export interface ModelPage { id: string; name: string; sections: ModelSection[] }
+// A system page is part of the model but not built from it: its place is in the model and nothing in it can be changed (the cart of a
+// restaurant, shop, rental or hotel; Eyad, 28 Oct: the model is the only source of the site, the cart the one fixed exception).
+export type SystemPage = 'cart';
+export interface ModelPage { id: string; name: string; sections: ModelSection[]; system?: SystemPage }
 export interface PageModel { id: string; name: string; sections: ModelSection[]; pages?: ModelPage[] }
 
 // Categories a model may use besides the editor's ready-slide categories.
@@ -80,6 +86,40 @@ export const DEFAULT_MODELS: PageModel[] = [
 
 export const MODEL_IDS = DEFAULT_MODELS.map((m) => m.id);
 
+// The sites that sell or rent through a cart (the paid restaurant, shop, rental and hotel ones): their model holds the locked cart page.
+export const CART_MODELS = ['restaurant', 'restaurant-pro', 'shop', 'shop-pro', 'rental', 'rental-pro', 'hotel', 'hotel-pro'];
+export const SYSTEM_PAGES: Record<SystemPage, { name: string; note: string }> = {
+  cart: { name: 'السلة', note: 'صفحة السلة وإتمام الطلب ثابتة من النظام: ما بتنبني بالذكاء ولا تتعدّل، بس فيك تغيّر مكانها بين الصفحات.' },
+};
+
+/** The pages of a model with its system pages as they must be: the cart in a cart model (added at the end when missing, never first), none elsewhere. */
+export const withSystemPages = (modelId: string, pages: ModelPage[]): ModelPage[] => {
+  const content = pages.filter((p) => !p.system);
+  if (!CART_MODELS.includes(modelId)) return content;
+  const at = pages.findIndex((p) => p.system === 'cart');
+  const cart: ModelPage = { id: 'cart', name: SYSTEM_PAGES.cart.name, sections: [], system: 'cart' };
+  if (at <= 0) return [...content, cart];
+  return pages.filter((p) => !p.system || p.system === 'cart').map((p) => (p.system ? cart : p));
+};
+
+/** What stops a model from being saved: a page with no section, or a section with no ready slide to be built from. */
+export interface ModelProblem { page: string; section?: string; why: string }
+export const modelProblems = (pages: ModelPage[], eligible: (category: string) => string[]): ModelProblem[] => {
+  const out: ModelProblem[] = [];
+  for (const p of pages) {
+    if (p.system) continue;
+    if (!p.sections.length) out.push({ page: p.id, why: 'الصفحة فارغة: أضف لها قسماً واحداً على الأقل.' });
+    for (const s of p.sections) {
+      // The shop, showroom, menu, featured and search sections and the ratings are drawn by the code itself.
+      if (CODE_DRAWN.includes(s.category)) continue;
+      const all = eligible(s.category);
+      const allowed = s.slides?.length ? all.filter((id) => s.slides!.includes(id)) : all;
+      if (!allowed.length) out.push({ page: p.id, section: s.id, why: all.length ? 'ولا شريحة من المعلَّمة صالحة للبناء.' : 'لا شريحة جاهزة صالحة في تصنيفه. أضف واحدة من «الشرائح الجاهزة».' });
+    }
+  }
+  return out;
+};
+
 // The model a package builds from: 30 and 60 share one (they differ only in limits).
 export const modelOf = (planId: string): string => {
   if (planId === 'page-pro') return 'page-pro';
@@ -121,14 +161,22 @@ export const forRentalOf = (sections: ModelSection[], category: string | null | 
   !category || category.trim() === 'سيارات' ? sections : sections.map((s) => (s.category === 'cars' ? { ...s, category: 'shop', id: s.part ? `shop:${s.part}` : 'shop' } : s));
 
 /** The pages of a model: its saved pages, or the sections as one page. */
-export const pagesOf = (m: Pick<PageModel, 'sections' | 'pages'>): ModelPage[] => (m.pages?.length ? m.pages : [{ id: 'home', name: MAIN_PAGE_NAME, sections: m.sections }]);
+export const pagesOf = (m: Pick<PageModel, 'sections' | 'pages'> & { id?: string }): ModelPage[] => {
+  const pages = m.pages?.length ? m.pages : [{ id: 'home', name: MAIN_PAGE_NAME, sections: m.sections }];
+  return m.id ? withSystemPages(m.id, pages) : pages;
+};
 
 // Pages as saved by the admin, cleaned: each page has a name and its cleaned sections; a page with no section is dropped, ids are made unique.
 export const cleanPages = (raw: unknown): ModelPage[] | null => {
   if (!Array.isArray(raw)) return null;
   const used = new Set<string>();
   const out: ModelPage[] = [];
-  for (const r of raw.slice(0, MAX_MODEL_PAGES)) {
+  for (const r of raw.slice(0, MAX_MODEL_PAGES + 1)) {
+    if (r?.system === 'cart') {
+      if (!used.has('cart')) out.push({ id: 'cart', name: SYSTEM_PAGES.cart.name, sections: [], system: 'cart' });
+      used.add('cart');
+      continue;
+    }
     const sections = cleanSections(r?.sections);
     if (!sections) continue;
     let id = String(r?.id || '').replace(/[^\w-]/g, '').slice(0, 24) || `p${out.length + 1}`;
@@ -136,5 +184,5 @@ export const cleanPages = (raw: unknown): ModelPage[] | null => {
     used.add(id);
     out.push({ id, name: String(r?.name || '').trim().slice(0, 40) || (out.length ? `صفحة ${out.length + 1}` : MAIN_PAGE_NAME), sections });
   }
-  return out.length ? out : null;
+  return out.some((p) => !p.system) ? out : null;
 };

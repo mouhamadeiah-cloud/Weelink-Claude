@@ -66,7 +66,7 @@ test('a video player and an email line get their places on the slide', () => {
     { type: 'paragraph', x: 700, y: 500, width: 100, height: 30, content: 'البريد' },
     { type: 'paragraph', x: 300, y: 500, width: 300, height: 30, content: 'info@example.com' },
   ]);
-  assert.deepEqual(els.map((e) => e.aiSlot), ['video', 'title', 'email.label', 'email.value']);
+  assert.deepEqual(els.map((e) => (e as { aiSlot?: string }).aiSlot), ['video', 'title', 'email.label', 'email.value']);
 });
 
 test('the owner\'s front line, store note, email and map pin reach the builder', () => {

@@ -106,7 +106,7 @@ export const pageAssets = (a: WeeAnswers, max: number = GALLERY_MAX) => ({
   logo: !!a.personalInfo?.logoUrl,
 });
 
-export type PlanResult = { ok: true; plan: Plan } | { ok: false; message: string };
+export type PlanResult = { ok: true; plan: Plan; more?: { id: string; name: string }[] } | { ok: false; message: string };
 
 // What went wrong, in words the owner can act on, with the server's code for whoever fixes it.
 const failureMessage = (status: number, data: { reason?: string; detail?: string }) => {
@@ -127,20 +127,20 @@ const failureMessage = (status: number, data: { reason?: string; detail?: string
   return `${lead} جرّب مرة ثانية بعد شوي. (السبب للدعم: ${reason}${detail})`;
 };
 
-export const requestPagePlan = async (kind: BuildKind, profile: Record<string, string>, assets: ReturnType<typeof pageAssets>, project?: string, model: { flavor?: string; ticked?: string[] } = {}): Promise<PlanResult> => {
+export const requestPagePlan = async (kind: BuildKind, profile: Record<string, string>, assets: ReturnType<typeof pageAssets>, project?: string, model: { flavor?: string; ticked?: string[]; modelPage?: string } = {}): Promise<PlanResult> => {
   const user = auth.currentUser;
   if (!user) return { ok: false, message: 'سجّل الدخول أولاً حتى يبني Wee AI صفحتك.' };
   try {
     const res = await fetch('/api/build-page', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
-      body: JSON.stringify({ kind, profile, assets, project, ...(model.flavor ? { flavor: model.flavor } : {}), ...(model.ticked ? { ticked: model.ticked } : {}) }),
+      body: JSON.stringify({ kind, profile, assets, project, ...(model.flavor ? { flavor: model.flavor } : {}), ...(model.ticked ? { ticked: model.ticked } : {}), ...(model.modelPage ? { modelPage: model.modelPage } : {}) }),
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && Array.isArray(data.plan?.sections)) {
       // The tokens this build used, for working out its cost (browser console).
       if (data.usage) console.info('Wee AI build tokens:', data.usage);
-      return { ok: true, plan: data.extra ? { ...data.plan, extra: data.extra } : data.plan };
+      return { ok: true, plan: data.extra ? { ...data.plan, extra: data.extra } : data.plan, ...(Array.isArray(data.more) && data.more.length ? { more: data.more } : {}) };
     }
     if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
     if (data.error === 'no_tokens') return { ok: false, message: 'انتهى رصيد Wee AI في حسابك. تواصل مع الإدارة لشحن رصيد جديد.' };
@@ -651,6 +651,7 @@ export interface BuildInput {
   pages: Page[];
   elements: CanvasElement[];
   activePageId: string;
+  later?: boolean; // a later page of the model: built beside the main page, which already got the ratings slide
 }
 export type BuildResult = { ok: false; message: string } | { ok: true; pages: Page[]; elements: CanvasElement[]; pageId: string; firstSlideId: string; sections: number };
 
@@ -666,6 +667,14 @@ export const emptyMainPage = (kind: BuildKind, pages: Page[], elements: CanvasEl
     pageId: page.id,
     slideId: slide.id,
   };
+};
+
+/** The site with one more empty page after the others (its navbar the main page's), for a later page of the model to be built into. */
+export const withBlankPage = (pages: Page[], fromPageId: string, name: string) => {
+  const from = pages.find((p) => p.id === fromPageId) || pages[0];
+  const id = `page-ai-${Date.now().toString(36)}-${pages.length}`;
+  const page: Page = { id, name, slug: `/${id}`, navbar: { ...from.navbar }, slides: [{ id: `${id}-blank`, name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff' }] };
+  return { pages: [...pages, page], pageId: id };
 };
 
 /** The «التقييمات» slide of a page whose owner ticked it: a title over the ratings box, in the page's colours. */
@@ -733,7 +742,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
     }
   }
   // The owner ticked «التقييمات»: its slide comes before the contact and the terms at the end.
-  if (kind === 'free' && tickedSections(answers.aiAnswers?.optionalSections).includes('ratings')) {
+  if (kind === 'free' && !input.later && tickedSections(answers.aiAnswers?.optionalSections).includes('ratings')) {
     let at = built.length;
     while (at > 0 && ['contact', 'privacy'].includes(builtSection[at - 1])) at -= 1;
     built.splice(at, 0, ratingsSlide(`slide-ai-${stamp}-ratings`, to, fonts));

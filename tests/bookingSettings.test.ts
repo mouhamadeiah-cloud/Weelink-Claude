@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeSchedule, normalizeSettings, scheduleFor, scheduleFromElement } from '../src/services/bookingSettings';
+import { normalizeSchedule, normalizeSettings, scheduleFor, scheduleFromAnswers, scheduleFromElement } from '../src/services/bookingSettings';
 
 test('a booking element made before the admin settings keeps what it had', () => {
   const s = scheduleFromElement({
@@ -58,4 +58,17 @@ test('a table schedule starts a booking every durationMinutes', () => {
   const s = normalizeSchedule({ type: 'table', durationMinutes: 120, interval: '30' });
   assert.equal(s.interval, 'manual');
   assert.equal(s.intervalMinutes, 120);
+});
+
+test('the booking answers of Wee AI make the first schedule, only when set now', () => {
+  assert.equal(scheduleFromAnswers(undefined), null);
+  assert.equal(scheduleFromAnswers({ 'booking.bookingSettings': { now: false } }), null);
+  const s = scheduleFromAnswers({ 'booking.bookingSettings': { now: true, days: [6, 0, 1], from: '10:00', to: '16:00', minutes: 45 } })!;
+  assert.equal(s.type, 'appointment');
+  assert.deepEqual(s.workingDays, ['sunday', 'monday', 'saturday']);
+  assert.equal(s.workStart, '10:00');
+  assert.equal(s.intervalMinutes, 45);
+  const seats = scheduleFromAnswers({ 'booking.bookingKind': 'مقعد في جلسة أو دورة', 'booking.bookingSettings': { now: true, days: [], from: '09:00', to: '17:00', minutes: 30 } })!;
+  assert.equal(seats.type, 'seats');
+  assert.ok(seats.workingDays.length > 0);
 });

@@ -10,6 +10,8 @@ import { MAIN_PAGE_NAME, MAX_MODEL_PAGES, MAX_MODEL_SECTIONS, MODEL_CATEGORIES, 
 const MODE_LABEL: Record<SectionMode, string> = { always: 'دائماً', if: 'إذا توفّر', ask: 'يختاره الزبون' };
 const NEED_LABEL: Record<SectionNeed, string> = { services: 'خدمات', priced: 'خدمات بأسعار', photos: 'صور المعرض' };
 const PART_LABEL: Record<string, string> = { front: 'الواجهة', main: 'القسم الحي', priceList: 'قائمة الأسعار' };
+// What a booking slide books, shown beside it so the right ones are ticked for each kind of page.
+const BOOKING_LABEL: Record<string, string> = { appointment: 'موعد أو استشارة', table: 'طاولة مطعم', stay: 'غرف وليالي', seats: 'مقاعد في جلسة', rental: 'تأجير' };
 const nameOf = (id: string) => MODEL_CATEGORIES.find((c) => c.id === id)?.name || id;
 const idOf = (s: Pick<ModelSection, 'category' | 'part'>) => (s.part ? `${s.category}:${s.part}` : s.category);
 
@@ -138,6 +140,7 @@ export const ModelsView: React.FC<{ onSessionEnd: () => void }> = ({ onSessionEn
                           <label key={x.id} className={`flex items-center gap-2 ${x.eligible ? '' : 'opacity-50'}`}>
                             <input type="checkbox" disabled={!x.eligible} checked={x.eligible && chosen.includes(x.id)} onChange={() => toggleSlide(i, all, x.id)} />
                             <span>{x.name || x.id}</span>
+                            {x.booking && <span className="text-tiny text-muted">· {BOOKING_LABEL[x.booking] || 'حجز'}</span>}
                             {!x.eligible && <span className="text-tiny text-danger">غير صالحة للبناء</span>}
                           </label>
                         ))}

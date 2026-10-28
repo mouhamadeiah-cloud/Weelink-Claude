@@ -17,15 +17,33 @@ type Err = { error: 'not_found' | 'bad_category' | 'not_a_slide' | 'bad_request'
 // The list is read without the slides themselves (a ready slide holds all its elements), so moving, deleting and the overview stay light.
 // A document of the earlier way (only a category and an order) has no `eligible` and is ignored.
 const isNew = (d: any) => typeof d.data()?.category === 'string' && typeof d.data()?.eligible === 'boolean';
-const LIST_FIELDS = ['category', 'order', 'name', 'eligible', 'slotCount', 'problems', 'from'];
-const readyDocs = async (db: Db): Promise<any[]> => (await db.collection('readySlides').select(...LIST_FIELDS).get()).docs.filter(isNew) as any[];
+const LIST_FIELDS = ['category', 'order', 'name', 'eligible', 'slotCount', 'problems', 'from', 'booking'];
+// What a booking slide books (its calendar's kind), '' for a slide with no calendar.
+export const bookingOf = (elements: any[]): string => {
+  const c = elements.find((e) => e?.type === 'calendar');
+  return c ? String(c.calendarBookingType || 'appointment') : '';
+};
+// A booking slide saved before calendars counted as ready is marked ready the first time it is listed.
+const readyDocs = async (db: Db): Promise<any[]> => {
+  const docs = (await db.collection('readySlides').select(...LIST_FIELDS).get()).docs.filter(isNew) as any[];
+  const stale = docs.filter((d) => d.data().booking === undefined).slice(0, 60);
+  for (const d of stale) {
+    const x = d.data();
+    const full = (await d.ref.get()).data();
+    const els: any[] = Array.isArray(full?.elements) ? full.elements : [];
+    const status = slideEligibility(els);
+    const mark = x.eligible !== true && !Number(x.slotCount) ? { eligible: status.eligible, slotCount: status.slots, problems: status.problems } : {};
+    await d.ref.update({ booking: bookingOf(els), ...mark });
+  }
+  return stale.length ? ((await db.collection('readySlides').select(...LIST_FIELDS).get()).docs.filter(isNew) as any[]) : docs;
+};
 
 const summary = (d: any) => {
   const x = d.data();
   return {
     id: String(d.id), category: String(x.category || ''), order: Number(x.order) || 0, name: String(x.name || ''),
     eligible: x.eligible === true, slots: Number(x.slotCount) || 0, problems: Array.isArray(x.problems) ? x.problems.map(String) : [],
-    from: String(x.from || ''),
+    from: String(x.from || ''), booking: String(x.booking || ''),
   };
 };
 
@@ -58,7 +76,7 @@ export const readySave = async (
   const now = Date.now();
   const fields = {
     slide: checked.slide, elements: made.elements, name: checked.name || 'شريحة جاهزة', category,
-    eligible: made.eligible, slotCount: made.slotCount, problems: made.problems, updatedAt: now, updatedBy: by,
+    eligible: made.eligible, slotCount: made.slotCount, problems: made.problems, booking: bookingOf(made.elements), updatedAt: now, updatedBy: by,
   };
   const ref = db.collection('readySlides').doc(id || undefined);
   if (old) {

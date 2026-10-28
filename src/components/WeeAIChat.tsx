@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { OPTIONAL_SECTIONS, tickedSections } from '../data/optionalSections';
 import { SectionQuestions } from './onboarding/SectionQuestions';
+import { AiBubble, AnswerBox, UserBubble } from './onboarding/ChatThread';
+import { firstNameOf, withName } from '../data/sectionQuestions';
 import { QuestionModel, forCategory, loadQuestionModel } from '../services/questionModel';
 import { db } from '../services/firebase';
 import { WeeDots } from './ui/WeeDots';
@@ -130,37 +132,66 @@ const normalizeCatalog = (c: any) => ({
   customSpecialty: ''
 });
 
+// Wee AI's question at each step, in its own words to the owner (the kind's wording first; his first name once he gave it).
 const getConciseQuestionText = (stepNum: number, name?: string, kind?: ProjectType, photos = 5): string => {
   const own = kind && KIND_QUESTIONS[kind]?.[stepNum];
-  if (own) return own;
-  switch (stepNum) {
-    case 1:
-      return "يرجى تعبئة المعلومات الشخصية لمالك الصفحة:";
-    case 2:
-      return "يرجى تحديد تفاصيل عنوانك الجغرافي:";
-    case 3:
-      return "يرجى إدخال معلومات الاتصال وروابطك الاجتماعية:";
-    case 4:
-      return "يرجى تحديد تصنيف عملك واختصاصك الدقيق:";
-    case 5:
-      return `${name ? `يا ${name}، ` : ''}اوصف لي طبيعة الصفحة والخدمات التي تقدمها:`;
-    case 6:
-      return "هل لديك لون مفضل تود تطبيقه في الصفحة؟";
-    case 7:
-      return "اختر شكل فواصل تنسيق الشرائح المفضل لديك:";
-    case 8:
-      return `هل ترغب في معرض أعمال يعرض حتى ${photos === 5 ? 'خمس' : photos} ${photos === 1 ? 'صورة' : 'صور'}؟`;
-    case 9:
-      return "يرجى رفع الشعار الرسمي (اللوغو) لصفحتك:";
-    case 10:
-      return "في صورة حابب تحطها بواجهة الصفحة؟";
-    case 11:
-      return "هل تفضل الصفحة هادئة وجادة أم بتأثيرات بصرية وحركية؟";
-    case 12:
-      return "هل هناك ملاحظات خاصة تود التركيز عليها أثناء بناء موقعك؟";
-    default:
-      return "اكتملت الاستشارة وجاهزة للبناء.";
-  }
+  const text = own || ({
+    1: 'عرّفني على حالك:',
+    2: 'وين مكان شغلك؟ حدد عنوانك:',
+    3: 'كيف بيتواصل معك زبائنك؟',
+    4: 'شو نوع شغلك واختصاصك؟',
+    5: 'احكيلي عن صفحتك: شو بتقدّم وشو بيميزك؟',
+    6: 'في لون أو ستايل بتحب تكون عليه صفحتك؟',
+    7: 'أي شكل للفواصل بين أقسام صفحتك بتفضّل؟',
+    8: `بتحب نعمل معرض صور لشغلك (لحد ${photos === 5 ? 'خمس' : photos} ${photos === 1 ? 'صورة' : 'صور'})؟`,
+    9: 'ارفع شعارك (اللوغو) لصفحتك:',
+    10: 'في صورة بتحب تكون خلفية واجهة صفحتك؟',
+  } as Record<number, string>)[stepNum] || 'خلصنا، وإجاباتك جاهزة للبناء.';
+  return name && stepNum > 1 && !text.includes('يا ') ? `يا ${name}، ${text}` : text;
+};
+
+// What each question is for, in Wee AI's words, with the notes under it ({name} = his first name).
+const STEP_HELP: Record<number, { explain: string; note?: string }> = {
+  1: {
+    explain: 'أنا Wee AI، مساعدك الشخصي. رح أسألك كم سؤال بسيط وبعدها بتكون كل المعلومات عندي لأبني صفحتك. نبلش بالتعارف: اللقب والاسم الكامل واسم صفحتك. اسم الصفحة هو اللي بيظهر كعنوان لها وعلى شريط التنقل، واسمك الكامل أخاطبك فيه.',
+    note: 'الاسم الكامل ضروري لنكمل، وباقي المعلومات تقدر تعدّلها بعدين.',
+  },
+  2: {
+    explain: 'العنوان بيخلي زبونك يعرف مكانك وبيلاقيك على الخريطة. اضغط زر الموقع ليعبّي Wee AI العنوان لحاله، أو اختر المحافظة والمنطقة بنفسك. وفيك تحرّك الدبوس على الخريطة لتضبط مكانك بالضبط.',
+    note: 'كل حقل قابل للتعديل بعد ما يعبّيه الموقع.',
+  },
+  3: {
+    explain: 'هي الطرق اللي بيوصلك فيها زبونك: واتساب، هاتف، إيميل وروابط حساباتك. بتظهر بقسم «تواصل معنا» وبأزرار الصفحة. اكتب بس اللي بتحب يتواصلوا معك فيه.',
+    note: 'أي حقل ما عندك إياه اتركه فاضي وما رح يظهر بالصفحة.',
+  },
+  4: {
+    explain: 'نوع شغلك بيحدد الأقسام والكلمات والصور اللي رح أبني عليها صفحتك، وبيساعد زبائنك يلاقوك لما يدوّروا على خدمة متل خدمتك. اختر من القائمة، وإذا ما لقيت شغلك اكتبه بنفسك.',
+    note: 'تقدر تغيّره لاحقاً من المحرر.',
+  },
+  5: {
+    explain: 'الوصف هو أهم شي بعتمد عليه لأكتب نصوص صفحتك. كل ما أعطيتني تفاصيل أكتر عن خدماتك وشو بيميزك، كل ما طلعت النصوص أقرب لشغلك. اكتب بأسلوبك العادي ولا تهتم بالتنسيق.',
+    note: 'ما بكتب إلا من اللي بتعطيني ياه، وأي نص بزيده من عندي بعلّمه «مثال» لتحذفه أو تعدّله.',
+  },
+  6: {
+    explain: 'الألوان بتعطي صفحتك شخصيتها. اختر ستايل جاهز من الستايلات (بيغيّر الألوان والإحساس العام)، أو لون بتحبه، أو خلّيني أنا أختار الأنسب لشغلك.',
+    note: 'تقدر تبدّل الألوان والستايل من المحرر بأي وقت.',
+  },
+  7: {
+    explain: 'الفواصل هي الحدود الصغيرة بين قسم وقسم بصفحتك: مستقيمة، موجة، منحنية وغيرها. تفصيل بسيط بس بيغيّر إحساس الصفحة كلها.',
+    note: 'اختيارك هو البداية وبتعدّله من المحرر.',
+  },
+  8: {
+    explain: 'معرض الصور بيعرض صور شغلك بشكل مرتب، والزبون بيصدّق الصورة أكتر من الكلام. عدد الصور بيتبع باقتك. فيك تضيف الصور الآن أو بعدين من المحرر.',
+    note: 'إذا ما بدك معرض، اختر «بدون» وما رح يظهر القسم.',
+  },
+  9: {
+    explain: 'الشعار بيظهر على شريط التنقل وبعنوان صفحتك. الأفضل صورة واضحة بخلفية شفافة. فيك ترفعها من جهازك أو تحط رابطها.',
+    note: 'إذا ما عندك شعار اضغط «التالي»، وبكتب اسم صفحتك مكانه.',
+  },
+  10: {
+    explain: 'صورة الواجهة هي أول شي بيشوفه الزائر: خلفية الشاشة الأولى من صفحتك. اختر صورة واضحة وعالية الجودة تعبّر عن شغلك.',
+    note: 'إذا تخطّيت، بحط صورة مناسبة لشغلك وبتبدّلها لاحقاً.',
+  },
 };
 
 // The answers in short, in the editor's panel; the questions themselves are on the start page.
@@ -235,10 +266,18 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // Current Step (1 through 12, then 13 = complete)
   const [step, setStep] = useState<number>(1);
-  useEffect(() => { if (step < 12) setSectionsDone(false); }, [step]);
+  // The answered question being changed (the thread opens its form again); null while the owner is at the newest question.
+  const [editing, setEditing] = useState<number | null>(null);
+  const [askedLogo, setAskedLogo] = useState(false);
+  const active = editing ?? step;
+  const liveRef = useRef<HTMLDivElement>(null);
+  const scrolled = useRef(false);
+  useEffect(() => {
+    if (!scrolled.current) { scrolled.current = true; return; }
+    if (step < 12 || editing) liveRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [step, editing]);
   // The section questions follow the page model of the chosen package; none = the fixed list of optional sections.
   const [qModel, setQModel] = useState<QuestionModel | null>(null);
-  const [sectionsDone, setSectionsDone] = useState(false);
   useEffect(() => {
     if (!planId) { setQModel(null); return; }
     let live = true;
@@ -253,9 +292,6 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [locationNote, setLocationNote] = useState<{ text: string; ok: boolean } | null>(null);
   const geocodeRun = useRef(0);
-
-  // Typewriter text state
-  const [typedText, setTypedText] = useState<string>('');
 
   // Form State Values
   const [personalInfo, setPersonalInfo] = useState({
@@ -294,8 +330,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     customCategory: '',
     customSpecialty: ''
   });
-  const places = useGovernoratePlaces(step === 2 ? addressInfo.governorate : '');
-  const occupationList = useCategories(catalogSource, step === 4);
+  const places = useGovernoratePlaces(active === 2 ? addressInfo.governorate : '');
+  const occupationList = useCategories(catalogSource, active === 4);
   const catalogEntry = occupationList?.find(c => c.name === catalogInfo.category.trim());
   const subEntry = catalogEntry?.subs.find(s => s.name === catalogInfo.subCategory.trim());
   const jobOptions = subEntry
@@ -385,7 +421,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       services: [],
       features: [],
     });
-    setSectionsDone(false);
+    setEditing(null);
     setStep(1);
   };
 
@@ -466,22 +502,6 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     loadProgress();
   }, [userId, userEmail]);
 
-  // Typewriter effect on step / question change
-  useEffect(() => {
-    const question = getConciseQuestionText(step, personalInfo.fullName, tone, galleryMax);
-    setTypedText('');
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < question.length) {
-        setTypedText(question.substring(0, i + 1));
-        i++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 18); // Smooth and readable typing speed
-    return () => clearInterval(interval);
-  }, [step, personalInfo.fullName]);
-
   // Silently trigger canvas loading loop simulation on step changes
   useEffect(() => {
     if (step > 1 || embedded) {
@@ -527,17 +547,17 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     }
     // The visual-effects question (step 11) is not asked any more: the page keeps the calm default.
     if (nextStep === 11) nextStep = 12;
+    if (nextStep === 9) setAskedLogo(true);
     setStep(nextStep);
     saveProgress(nextStep);
   };
 
-  const goToPrevStep = () => {
-    let prevStep = Math.max(1, step - 1);
-    if (step === 10 && personalInfo.logoUrl) {
-      prevStep = 8;
-    }
-    if (prevStep === 11) prevStep = 10;
-    setStep(prevStep);
+  // «التالي» of a form: at the newest question it moves on; on an answer being edited it closes the form and the thread goes on where it was.
+  const onNext = () => {
+    if (editing != null) {
+      setEditing(null);
+      saveProgress(step);
+    } else goToNextStep();
   };
 
   // Helper: a photo from the device, shrunk (a phone photo is several MB) and, once signed in,
@@ -616,65 +636,32 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     );
   };
 
-  // IF COLLAPSED: We return null to avoid covering any bottom sections in the control panel
-  if (isCollapsed) {
-    return null;
-  }
+  // The thread's helpers: the owner's first name, the questions reached so far, and his answers in a line.
+  const firstName = firstNameOf(personalInfo.fullName, personalInfo.title);
+  const path = [1, 2, 3, 4, 5, 6, 7, 8, ...(step >= 9 && (askedLogo || !personalInfo.logoUrl || step === 9) ? [9] : []), ...(step >= 10 ? [10] : []), ...(step >= 12 ? [12] : [])].filter((n) => n <= Math.min(step, 12));
+  const askText = (n: number) => getConciseQuestionText(n, firstName, tone, galleryMax);
+  const answerText = (n: number): string => {
+    switch (n) {
+      case 1: return [`${personalInfo.title} ${personalInfo.fullName}`.trim(), personalInfo.pageName && `صفحتي: ${personalInfo.pageName}`].filter(Boolean).join(' · ');
+      case 2: return [addressInfo.governorate, addressInfo.city || addressInfo.village || addressInfo.area, addressInfo.street].filter(Boolean).join('، ');
+      case 3: return [contactInfo.phone, contactInfo.whatsapp && `واتساب ${contactInfo.whatsapp}`, contactInfo.email, contactInfo.facebook && 'فيسبوك', contactInfo.tiktok && 'تيك توك'].filter(Boolean).join(' · ') || 'بدون وسائل تواصل الآن';
+      case 4: return [catalogInfo.customCategory || catalogInfo.category, catalogInfo.subCategory, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ');
+      case 5: return aiAnswers.description.trim() || 'بدون وصف، اكتب أنت يا Wee AI';
+      case 6: return colorSummary;
+      case 7: return SLIDE_DIVIDER_OPTIONS.find((d) => d.id === currentDivider)?.name || currentDivider;
+      case 8: return aiAnswers.wantsGallery ? `معرض صور${aiAnswers.galleryImages.length ? ` (${aiAnswers.galleryImages.length})` : ''}` : 'بدون معرض';
+      case 9: return personalInfo.logoUrl ? 'رفعت الشعار' : 'بدون شعار الآن';
+      case 10: return aiAnswers.heroBgImage ? 'أضفت صورة للواجهة' : 'بدون صورة، اختار أنت يا Wee AI';
+      default: return '';
+    }
+  };
 
-  // IF EXPANDED: Positioned exactly below top drag handle/headers (64px offset) so handle remains free!
-  return (
-    <div 
-      className={`${inFlow ? 'relative flex-1 min-h-0' : `absolute ${embedded ? 'top-0' : 'top-[64px]'} left-0 right-0 bottom-0 z-30`} bg-white flex flex-col overflow-hidden text-right select-none font-sans`}
-      dir="rtl"
-    >
-      {/* Dynamic Typewriter Active Question Header */}
-      <div className="flex items-start justify-between gap-2.5 p-3 bg-[#fbfbfd] border-b border-neutral-150 shrink-0">
-        <div className="flex items-start gap-2.5">
-          {/* The same three dots as the editor's side column */}
-          <div className="w-8 h-8 rounded-full bg-brand/5 flex items-center justify-center shrink-0">
-            <WeeDots size={22} />
-          </div>
-          <div className="space-y-0.5 text-right">
-            <div className="text-xs font-black text-neutral-400 select-none tracking-wider">مساعدك الشخصي (wee ai)</div>
-            <h4 className="font-bold text-neutral-900 text-base leading-relaxed min-h-[3em] transition-all">
-              {onEditAnswers ? (step >= 13 ? 'هي إجاباتك. Wee AI بيبني صفحتك منها.' : 'جاوب على أسئلة Wee AI أولاً، وبعدها بيبني صفحتك.') : typedText}
-            </h4>
-          </div>
-        </div>
-
-        {/* Minimize Button (the docked panel's column has Wee AI's own tile for that) */}
-        {!inFlow && <button
-          type="button"
-          onClick={toggleCollapse}
-          className="w-7 h-7 rounded-lg hover:bg-neutral-200 border border-neutral-200/50 text-neutral-500 hover:text-black flex items-center justify-center transition-all cursor-pointer shrink-0 mt-0.5"
-          title="تصغير المحاورة لأسفل لوحة التحكم"
-        >
-          <ChevronDown size={15} strokeWidth={2.4} />
-        </button>}
-      </div>
-
-      {introSlot && <div className="p-3 pb-0 shrink-0">{introSlot}</div>}
-
-      {/* In the editor: the answers in short, and the way back to the questions */}
-      {onEditAnswers ? (
-        <AnswersSummary
-          done={step >= 13}
-          rows={[
-            ['اسم الصفحة', personalInfo.pageName || personalInfo.fullName],
-            [tone === 'restaurant' ? 'نوع المطعم' : tone === 'shop' ? 'المنتجات' : tone === 'cars' ? 'نوع المعرض' : tone === 'rental' ? 'شو بتأجّر' : tone === 'hotel' ? 'نوع المكان' : 'العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.subCategory, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
-            ['الوصف', aiAnswers.description],
-            ['الألوان', colorSummary],
-            ['طابع الصفحة', aiAnswers.motionEffects],
-            ['الخدمات', (aiAnswers.services || []).filter((r: { name: string }) => r.name?.trim()).map((r: { name: string }) => r.name).join('، ')],
-            ['المزايا', (aiAnswers.features || []).join('، ')],
-          ]}
-          onEdit={onEditAnswers}
-        />
-      ) : (
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs text-neutral-800">
+  // The form of one question; it opens under Wee AI's question while it is asked, or again when the owner edits his answer.
+  const renderForm = (cur: number) => (
+    <>
         
         {/* STEP 1: معلومات شخصية */}
-        {step === 1 && (
+        {cur === 1 && (
           <div className="space-y-3.5">
             {/* اللقب */}
             <div className="flex gap-1.5">
@@ -773,7 +760,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   alert('الرجاء إدخال الاسم الكامل لمتابعة البناء.');
                   return;
                 }
-                goToNextStep();
+                onNext();
               }}
               className="w-full py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
@@ -783,7 +770,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 2: العنوان */}
-        {step === 2 && (
+        {cur === 2 && (
           <div className="space-y-3.5">
             {/* Fill the address from the map: the device's location, then a pin the owner can move. */}
             <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-100 space-y-2">
@@ -922,19 +909,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   if (!addressInfo.governorate) {
                     alert('يرجى اختيار المحافظة.');
                     return;
                   }
-                  goToNextStep();
+                  onNext();
                 }}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
@@ -945,7 +925,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 3: معلومات الاتصال */}
-        {step === 3 && (
+        {cur === 3 && (
           <div className="space-y-3.5">
             <div className="space-y-1">
               <label className="text-xs font-bold text-neutral-600 flex items-center gap-1.5"><EmailIcon size={20} />الإيميل الافتراضي</label>
@@ -1004,19 +984,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   if (!contactInfo.whatsapp.trim()) {
                     alert('رقم واتساب إجباري لضمان التواصل.');
                     return;
                   }
-                  goToNextStep();
+                  onNext();
                 }}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
@@ -1027,7 +1000,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 4: المهنة والكتالوج */}
-        {step === 4 && (
+        {cur === 4 && (
           <div className="space-y-3.5">
             <div className="space-y-1">
               <label className="text-xs font-bold text-neutral-500 block">{labels.category}</label>
@@ -1076,19 +1049,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   if (!catalogInfo.category.trim()) {
                     alert(labels.need);
                     return;
                   }
-                  goToNextStep();
+                  onNext();
                 }}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
@@ -1099,7 +1065,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 5: وصف الصفحة والخدمات (طبيعة الصفحة) */}
-        {step === 5 && (
+        {cur === 5 && (
           <div className="space-y-3.5">
             <textarea
               value={aiAnswers.description}
@@ -1176,19 +1142,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
                 onClick={() => {
                   if (!aiAnswers.description.trim()) {
                     alert('يرجى كتابة وصف بسيط للصفحة.');
                     return;
                   }
-                  goToNextStep();
+                  onNext();
                 }}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
@@ -1199,7 +1158,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 6: اللون المفضل: the 12 page looks, or the personal five colours */}
-        {step === 6 && (
+        {cur === 6 && (
           <div className="space-y-3.5">
             <button
               type="button"
@@ -1260,14 +1219,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
-                onClick={goToNextStep}
+                onClick={onNext}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
@@ -1277,7 +1229,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 7: تنسيق الشرائح */}
-        {step === 7 && (
+        {cur === 7 && (
           <div className="space-y-3.5">
             <div className="grid grid-cols-3 gap-2.5">
               {SLIDE_DIVIDER_OPTIONS.map(div => {
@@ -1302,14 +1254,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
-                onClick={goToNextStep}
+                onClick={onNext}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
@@ -1319,7 +1264,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 8: معرض الصور */}
-        {step === 8 && (
+        {cur === 8 && (
           <div className="space-y-3.5">
             <div className="flex gap-2">
               <button
@@ -1378,14 +1323,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
-                onClick={goToNextStep}
+                onClick={onNext}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
@@ -1395,7 +1333,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 9: صورة اللوغو (إن لم يرفع واحدة في الخطوة 1) */}
-        {step === 9 && (
+        {cur === 9 && (
           <div className="space-y-3.5">
             <div className="space-y-2">
               <label className="w-full py-2.5 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
@@ -1428,14 +1366,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
-                onClick={goToNextStep}
+                onClick={onNext}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
@@ -1445,7 +1376,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 10: صورة لخلفية الشريحة الأولى */}
-        {step === 10 && (
+        {cur === 10 && (
           <div className="space-y-3.5">
             <div className="space-y-2">
               <label className="w-full py-2.5 px-3 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-lg text-center cursor-pointer text-xs font-bold text-neutral-700 flex items-center justify-center gap-1.5 transition-all">
@@ -1484,14 +1415,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
-                onClick={goToNextStep}
+                onClick={onNext}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
@@ -1501,7 +1425,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
 
         {/* STEP 11: هادئة وتدل على الجدية أم تأثيرات حركية وبصرية */}
-        {step === 11 && (
+        {cur === 11 && (
           <div className="space-y-3.5">
             <div className="space-y-2">
               {[
@@ -1524,14 +1448,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
-                onClick={goToNextStep}
+                onClick={onNext}
                 className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
               >
                 التالي
@@ -1539,108 +1456,180 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             </div>
           </div>
         )}
+    </>
+  );
 
-        {/* STEP 12: ما يجب الانتباه له */}
-        {step === 12 && (
-          <div className="space-y-3.5">
-            {qModel && !sectionsDone ? (
-              <SectionQuestions
-                model={forCategory(qModel, tone, catalogInfo.customCategory || catalogInfo.category)}
-                kind={tone}
-                ticked={aiAnswers.optionalSections}
-                answers={aiAnswers.sectionAnswers || {}}
-                onTicked={(ids) => setAiAnswers((p) => ({ ...p, optionalSections: ids }))}
-                onAnswers={(a) => setAiAnswers((p) => ({ ...p, sectionAnswers: a }))}
-                onBack={goToPrevStep}
-                onDone={() => setSectionsDone(true)}
-              />
-            ) : (<>
-            {!qModel && <div className="space-y-1.5">
-              <p className="text-xs font-bold text-neutral-700">أقسام إضافية تريدها في صفحتك (اختياري):</p>
-              {OPTIONAL_SECTIONS.map((o) => {
-                const on = tickedSections(aiAnswers.optionalSections).includes(o.id);
-                return (
-                  <label key={o.id} className="flex items-start gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={(e) => setAiAnswers((p) => {
-                        const now = tickedSections(p.optionalSections);
-                        return { ...p, optionalSections: e.target.checked ? [...now, o.id] : now.filter((id) => id !== o.id) };
+  // The special notes and the finish button: the last bubble of the thread (Wee AI builds nothing until «ابن صفحتي»).
+  const finale = (
+    <AiBubble
+      title={withName('آخر شي يا {name}، في ملاحظات خاصة بتحب أنتبه إلها؟', firstName)}
+      explain="اكتب أي طلب أو تفصيل ما سألتك عنه: شي لازم يظهر بالصفحة، شي لا بدك ياه، أو أسلوب معيّن بالكتابة. تقدر تتركه فاضي."
+    >
+      <AnswerBox>
+        <div className="space-y-3">
+          <textarea
+            value={aiAnswers.specialInstructions}
+            onChange={e => setAiAnswers(p => ({ ...p, specialInstructions: e.target.value }))}
+            placeholder="اكتب أي ملاحظات أو متطلبات خاصة هنا (يمكن تركه فارغاً)..."
+            rows={4}
+            className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              // Finishing saves the answers and opens the editor; nothing is built until «ابن صفحتي».
+              finishedRef.current = true;
+              setStep(13);
+              saveProgress(13);
+              onCompleteChat?.({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(ownFlavor ? { flavor: ownFlavor } : {}) });
+            }}
+            className="w-full py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5"
+          >
+            <span>إنهاء وتجهيز الإجابات</span>
+          </button>
+        </div>
+      </AnswerBox>
+    </AiBubble>
+  );
+
+  // The thread: every question already reached, Wee AI's words and the answer beneath it. The one being asked (or edited) holds its form.
+  const thread = (
+    <div className="space-y-3">
+      {path.map((n) => {
+        if (n === 12) {
+          return (
+            <div key={n} className="space-y-3">
+              {qModel ? (
+                <SectionQuestions
+                  model={forCategory(qModel, tone, catalogInfo.customCategory || catalogInfo.category)}
+                  kind={tone}
+                  name={firstName}
+                  ticked={aiAnswers.optionalSections}
+                  answers={aiAnswers.sectionAnswers || {}}
+                  onTicked={(ids) => setAiAnswers((p) => ({ ...p, optionalSections: ids }))}
+                  onAnswers={(a) => setAiAnswers((p) => ({ ...p, sectionAnswers: a }))}
+                  finale={finale}
+                />
+              ) : (<>
+                <AiBubble title={askText(12)} explain="هي أقسام اختيارية بتزيدها على صفحتك.">
+                  <AnswerBox>
+<div className="space-y-1.5">
+                      <p className="text-xs font-bold text-neutral-700">أقسام إضافية تريدها في صفحتك (اختياري):</p>
+                      {OPTIONAL_SECTIONS.map((o) => {
+                        const on = tickedSections(aiAnswers.optionalSections).includes(o.id);
+                        return (
+                          <label key={o.id} className="flex items-start gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={on}
+                              onChange={(e) => setAiAnswers((p) => {
+                                const now = tickedSections(p.optionalSections);
+                                return { ...p, optionalSections: e.target.checked ? [...now, o.id] : now.filter((id) => id !== o.id) };
+                              })}
+                              className="mt-0.5"
+                            />
+                            <span className="text-xs">
+                              <span className="font-bold text-neutral-800">{o.label}</span>
+                              <span className="block text-neutral-500 font-semibold">{o.hint}</span>
+                            </span>
+                          </label>
+                        );
                       })}
-                      className="mt-0.5"
-                    />
-                    <span className="text-xs">
-                      <span className="font-bold text-neutral-800">{o.label}</span>
-                      <span className="block text-neutral-500 font-semibold">{o.hint}</span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>}
-            <textarea
-              value={aiAnswers.specialInstructions}
-              onChange={e => setAiAnswers(p => ({ ...p, specialInstructions: e.target.value }))}
-              placeholder="اكتب أي ملاحظات أو متطلبات خاصة هنا (يمكن تركه فارغاً)..."
-              rows={4}
-              className="w-full text-xs font-semibold py-2 px-2.5 bg-neutral-50 border border-neutral-200 rounded-lg focus:bg-white"
-            />
-
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={qModel ? () => setSectionsDone(false) : goToPrevStep}
-                className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
-              >
-                السابق
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  // Finishing saves the answers and opens the editor; nothing is built until «ابن صفحتي».
-                  finishedRef.current = true;
-                  setStep(13);
-                  saveProgress(13);
-                  onCompleteChat?.({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(ownFlavor ? { flavor: ownFlavor } : {}) });
-                }}
-                className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5"
-              >
-                <span>إنهاء وتجهيز الإجابات</span>
-              </button>
+                    </div>
+                  </AnswerBox>
+                </AiBubble>
+                {finale}
+              </>)}
             </div>
-            </>)}
+          );
+        }
+        const live = active === n;
+        const text = answerText(n);
+        return (
+          <div key={n} ref={live ? liveRef : undefined} className="space-y-2 scroll-mt-2">
+            <AiBubble title={askText(n)} explain={live || n === step ? withName(STEP_HELP[n]?.explain || '', firstName) : undefined} note={live || n === step ? STEP_HELP[n]?.note : undefined}>
+              {live && <AnswerBox>{renderForm(n)}</AnswerBox>}
+            </AiBubble>
+            {n < step && !live && <UserBubble text={text} onEdit={() => setEditing(n)} />}
           </div>
-        )}
-
-        {/* STEP 13: اكتملت الإجابات */}
-        {step >= 13 && (
-          <div className="space-y-3 text-center py-4">
-            <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center mx-auto text-base">
-              ✓
-            </div>
-            <h4 className="font-bold text-neutral-900 text-xs">اكتملت جميع الإجابات بنجاح</h4>
-            <p className="text-xs text-neutral-500 leading-relaxed font-semibold">
-              تم جمع وحفظ كامل معلوماتك ومواصفات موقعك السحابي.
-            </p>
-            {embedded && onCompleteChat && (
-              <button
-                type="button"
-                onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(ownFlavor ? { flavor: ownFlavor } : {}) })}
-                className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
-              >
-                {isGuest ? 'اعمل حسابك لتنحفظ صفحتك' : 'افتح صفحتي بالمحرر'}
-              </button>
-            )}
+        );
+      })}
+      {step >= 13 && (
+        <AiBubble
+          title={withName('خلصنا يا {name}! كل إجاباتك انحفظت.', firstName)}
+          explain="فيك ترجع لأي سؤال فوق وتعدّله بأي وقت، والأسئلة اللي بتتأثر بتعديلك بتتجدد لحالها. لما تكون جاهز افتح المحرر، وهناك زر «ابن صفحتي» بيخلي Wee AI يبني صفحتك من هالإجابات."
+        >
+          {embedded && onCompleteChat && (
             <button
               type="button"
-              onClick={() => setStep(1)}
-              className="text-xs text-brand hover:underline font-bold"
+              onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(ownFlavor ? { flavor: ownFlavor } : {}) })}
+              className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
             >
-              مراجعة الإجابات من البداية
+              {isGuest ? 'اعمل حسابك لتنحفظ صفحتك' : 'افتح صفحتي بالمحرر'}
             </button>
-          </div>
-        )}
+          )}
+        </AiBubble>
+      )}
+    </div>
+  );
 
+  // IF COLLAPSED: We return null to avoid covering any bottom sections in the control panel
+  if (isCollapsed) {
+    return null;
+  }
+
+  // IF EXPANDED: Positioned exactly below top drag handle/headers (64px offset) so handle remains free!
+  return (
+    <div 
+      className={`${inFlow ? 'relative flex-1 min-h-0' : `absolute ${embedded ? 'top-0' : 'top-[64px]'} left-0 right-0 bottom-0 z-30`} bg-white flex flex-col overflow-hidden text-right select-none font-sans`}
+      dir="rtl"
+    >
+      {/* Dynamic Typewriter Active Question Header */}
+      <div className="flex items-start justify-between gap-2.5 p-3 bg-[#fbfbfd] border-b border-neutral-150 shrink-0">
+        <div className="flex items-start gap-2.5">
+          {/* The same three dots as the editor's side column */}
+          <div className="w-8 h-8 rounded-full bg-brand/5 flex items-center justify-center shrink-0">
+            <WeeDots size={22} />
+          </div>
+          <div className="space-y-0.5 text-right">
+            <div className="text-xs font-black text-neutral-400 select-none tracking-wider">مساعدك الشخصي (wee ai)</div>
+            <h4 className="font-bold text-neutral-900 text-sm leading-relaxed">
+              {onEditAnswers ? (step >= 13 ? 'هي إجاباتك. Wee AI بيبني صفحتك منها.' : 'جاوب على أسئلة Wee AI أولاً، وبعدها بيبني صفحتك.') : 'نحكي سوا خطوة خطوة، وبعدها بيبني Wee AI صفحتك.'}
+            </h4>
+          </div>
+        </div>
+
+        {/* Minimize Button (the docked panel's column has Wee AI's own tile for that) */}
+        {!inFlow && <button
+          type="button"
+          onClick={toggleCollapse}
+          className="w-7 h-7 rounded-lg hover:bg-neutral-200 border border-neutral-200/50 text-neutral-500 hover:text-black flex items-center justify-center transition-all cursor-pointer shrink-0 mt-0.5"
+          title="تصغير المحاورة لأسفل لوحة التحكم"
+        >
+          <ChevronDown size={15} strokeWidth={2.4} />
+        </button>}
+      </div>
+
+      {introSlot && <div className="p-3 pb-0 shrink-0">{introSlot}</div>}
+
+      {/* In the editor: the answers in short, and the way back to the questions */}
+      {onEditAnswers ? (
+        <AnswersSummary
+          done={step >= 13}
+          rows={[
+            ['اسم الصفحة', personalInfo.pageName || personalInfo.fullName],
+            [tone === 'restaurant' ? 'نوع المطعم' : tone === 'shop' ? 'المنتجات' : tone === 'cars' ? 'نوع المعرض' : tone === 'rental' ? 'شو بتأجّر' : tone === 'hotel' ? 'نوع المكان' : 'العمل', [catalogInfo.customCategory || catalogInfo.category, catalogInfo.subCategory, catalogInfo.customSpecialty || catalogInfo.specialty].filter(Boolean).join('، ')],
+            ['الوصف', aiAnswers.description],
+            ['الألوان', colorSummary],
+            ['طابع الصفحة', aiAnswers.motionEffects],
+            ['الخدمات', (aiAnswers.services || []).filter((r: { name: string }) => r.name?.trim()).map((r: { name: string }) => r.name).join('، ')],
+            ['المزايا', (aiAnswers.features || []).join('، ')],
+          ]}
+          onEdit={onEditAnswers}
+        />
+      ) : (
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs text-neutral-800">
+        {thread}
       </div>
       )}
 

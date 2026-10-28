@@ -179,3 +179,15 @@ test('the navbar is drawn by the server, so it differs from page to page', async
   const b = await run(() => 0.99);
   assert.notDeepEqual(a.navbar, b.navbar);
 });
+
+test('a booking slide goes into the plan as designed, with nothing for the AI to write', async () => {
+  const booking: FormSection = { id: 'booking', name: 'حجز طاولة', template: 'g:table-booking', elements: [{ id: 'c1', type: 'calendar', x: 0, y: 0, width: 780, height: 500, content: '', calendarBookingType: 'table' }] };
+  const intro = section('intro-10');
+  const plan = await buildFormPlan({
+    env: env(async (prompt: string) => (/values/.test(prompt) ? { values: fill(intro).values, links: fill(intro).links } : brief([intro, booking]))),
+    kind: 'restaurant', profile, assets, sections: [intro, booking], motion: false,
+  });
+  const kept = plan.sections.find((s) => s.section === 'booking');
+  assert.ok(kept);
+  assert.deepEqual(kept!.slots, {});
+});

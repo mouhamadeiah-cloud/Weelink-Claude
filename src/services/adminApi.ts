@@ -209,7 +209,7 @@ export interface SeedResult { published: string[]; waiting: string[]; limited: b
 export const adminSeedStatus = () => call<SeedStatus>({ action: 'gallery-seed-status' });
 export const adminSeed = (opts: { overwrite?: boolean; publish?: boolean } = {}) => call<SeedResult>({ action: 'gallery-seed', overwrite: !!opts.overwrite, publish: !!opts.publish });
 export const adminReadyFromGallery = (id: string, category: string) => call<{ ok: true; id: string; category: string; eligible: boolean; slots: number; problems: string[] }>({ action: 'ready-from-gallery', id, category });
-export interface ReadyItem { id: string; category: string; order: number; name: string; eligible: boolean; slots: number; problems: string[]; from: string }
+export interface ReadyItem { id: string; category: string; order: number; name: string; eligible: boolean; slots: number; problems: string[]; from: string; booking: string }
 export interface ReadyCategory { id: string; name: string; icon: string; items: ReadyItem[] }
 export const adminReadyOverview = () => call<{ categories: ReadyCategory[] }>({ action: 'ready-overview' });
 export const adminReadyDoc = (id: string) => call<{ design: { id: string; name: string; category: string; slide: any; elements: any[] } }>({ action: 'ready-doc', id });

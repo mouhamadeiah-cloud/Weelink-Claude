@@ -22,8 +22,10 @@ export interface OwnerFacts { services: boolean; priced: boolean; photos: boolea
 export const sectionsFor = (model: ModelSection[], o: OwnerFacts): ModelSection[] =>
   model.filter((s) => (s.mode === 'always' ? true : s.mode === 'if' ? !!o[s.need || 'services'] : o.ticked ? o.ticked.includes(s.id) : !!s.defaultOn));
 
+// The front and live parts exist only inside the restaurant, shop and cars categories; «بحث» and «عروض مميزة» are one section each.
+const PARTED = ['restaurant', 'shop', 'cars'];
 /** The name the plan and the builder know a model section by (the code's ready-slide sections have their own ids). */
-export const planSectionId = (s: ModelSection) => (s.part === 'front' ? 'intro' : s.part === 'main' ? 'featured' : s.category === 'features' ? 'why' : s.category);
+export const planSectionId = (s: ModelSection) => (PARTED.includes(s.category) && s.part === 'front' ? 'intro' : PARTED.includes(s.category) && s.part === 'main' ? 'featured' : s.category === 'features' ? 'why' : s.category);
 
 const placeOf = (id: string, index: number): CodeSection['place'] => (index === 0 ? 'first' : id === 'contact' || id === 'privacy' ? 'last' : 'any');
 const nameOf = (s: ModelSection) => MODEL_CATEGORIES.find((c) => c.id === s.category)?.name || s.category;

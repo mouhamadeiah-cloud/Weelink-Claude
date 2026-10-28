@@ -258,9 +258,9 @@ export const summarizeSection = (id: string, ask: SectionAsk, answers: Record<st
 export const pruneAnswers = (answers: Record<string, any>, sectionIds: string[]): Record<string, any> =>
   Object.fromEntries(Object.entries(answers).filter(([k]) => !sectionIds.some((id) => k.startsWith(`${id}.`))));
 
-/** The ready-slide category that shows what a section looks like in the page (none for the live store views, which read the owner's own data). */
+/** The ready-slide category that shows what a section looks like in the page (the store sections show their store slide; ratings have none). */
 export const previewCategoryOf = (sectionId: string): string | undefined => {
   if (sectionId.endsWith(':front')) return 'intro';
-  if (sectionId.includes(':')) return undefined;
-  return ['search', 'featured', 'table', 'ratings'].includes(sectionId) ? undefined : sectionId;
+  if (sectionId.endsWith(':main')) return sectionId.split(':')[0];
+  return sectionId === 'ratings' ? undefined : sectionId;
 };

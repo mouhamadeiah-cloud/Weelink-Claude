@@ -9,6 +9,7 @@ import type { User } from 'firebase/auth';
 import { ArrowLeft, BedDouble, CarFront, Check, ClipboardList, FileText, KeyRound, Loader2, Palette, ShoppingBag, Sparkles, UtensilsCrossed } from 'lucide-react';
 import { WeeAIChat, WEE_GUEST_ID } from '../WeeAIChat';
 import { PlanPicker } from './PlanPicker';
+import { ExplainPanel, type Topic } from './ExplainPanel';
 import { flavorOf, type Flavor } from '../../data/plans';
 import { GALLERY_MAX, limitsOf } from '../../utils/planLimits';
 import { DesignerGallery } from '../gallery/DesignerGallery';
@@ -116,6 +117,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
   // the editor opens straight on the questions.
   const [stage, setStage] = useState<'plans' | 'questions'>(initialKind ? 'questions' : 'plans');
   const [step, setStep] = useState(1);
+  const [topic, setTopic] = useState<Topic | null>(null);
   // The design orders window («طلبات التصميم»), open on an order or on the list.
   const [orders, setOrders] = useState<{ id: string } | null>(null);
   const saved = signedIn ? null : guestKindOf(readGuestAnswers());
@@ -171,7 +173,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
   };
 
   const chosen = KINDS.find((k) => k.type === kind);
-  const progress = Math.min(1, (Math.min(step, QUESTION_COUNT + 1) - 1) / QUESTION_COUNT);
+  const progress = topic?.progress ? (topic.id === 'done' ? 1 : (topic.progress.n - 1) / topic.progress.total) : Math.min(1, (Math.min(step, QUESTION_COUNT + 1) - 1) / QUESTION_COUNT);
 
   return (
     <div className="min-h-screen bg-bg text-ink" dir="rtl">
@@ -293,32 +295,23 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
         <PlanPicker key={`plans-${chosen.type}`} kind={chosen.type} owner={signedIn ? accountId : 'guest'} title={chosen.title} onPicked={(planId) => pickPlan(planId)} freeTaken={signedIn && owned.includes('page')} />
       ) : (
         <main key="chat" className="max-w-6xl mx-auto px-4 py-4 sm:py-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:gap-6 lg:items-start space-y-3 lg:space-y-0">
-          {/* The chosen kind's photo: a banner on a phone, a tall panel beside the questions on a wide screen */}
-          <aside className="wl-rise relative rounded-card overflow-hidden text-white bg-ink h-36 lg:h-[calc(100dvh-7rem)] lg:sticky lg:top-20 lg:order-2">
-            <img src={chosen.image} alt="" className="wl-drift absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
-            <div className="absolute bottom-0 inset-x-0 p-4 lg:p-7 space-y-2 lg:space-y-4">
-              <div className="flex items-center gap-2.5">
-                <chosen.icon size={22} className="shrink-0" />
-                <span className="text-heading lg:text-title font-bold">{chosen.title}</span>
+          {/* Beside the questions: what the question being asked is for — a big picture of the step, the explanation in large type and the note */}
+          <aside className="wl-rise rounded-card border border-line bg-surface p-4 lg:p-6 flex flex-col gap-4 lg:h-[calc(100dvh-7rem)] lg:sticky lg:top-20 lg:order-2 overflow-y-auto">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <span className="w-9 h-9 rounded-xl bg-brand/10 text-brand flex items-center justify-center shrink-0"><chosen.icon size={18} /></span>
+              <span className="text-heading font-bold">{chosen.title}</span>
+            </div>
+            {/* How far along the questions are */}
+            <div className="space-y-1 shrink-0">
+              <div className="flex justify-between text-xs font-bold text-muted">
+                <span>{topic?.progress ? (topic.id === 'done' ? 'خلصت الأسئلة' : `السؤال ${topic.progress.n} من ${topic.progress.total}`) : 'الأسئلة'}</span>
+                <span>{Math.round(progress * 100)}٪</span>
               </div>
-              <p className="hidden lg:block text-sm opacity-90 leading-relaxed max-w-md">{chosen.line}</p>
-              <ul className="hidden lg:grid gap-2">
-                {chosen.perks.map((p) => (
-                  <li key={p} className="flex items-center gap-2 text-sm font-bold"><span className="w-6 h-6 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"><Check size={13} /></span>{p}</li>
-                ))}
-              </ul>
-              {/* How far along the questions are */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-bold opacity-90">
-                  <span>{step > QUESTION_COUNT ? 'خلصت الأسئلة' : `السؤال ${step} من ${QUESTION_COUNT}`}</span>
-                  <span>{Math.round(progress * 100)}٪</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-white/25 overflow-hidden">
-                  <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${Math.max(4, progress * 100)}%` }} />
-                </div>
+              <div className="h-1.5 rounded-full bg-line overflow-hidden">
+                <div className="h-full rounded-full bg-brand transition-all duration-700" style={{ width: `${Math.max(4, progress * 100)}%` }} />
               </div>
             </div>
+            <ExplainPanel topic={topic} />
           </aside>
           <div className="wl-rise relative h-[calc(100dvh-14rem)] lg:h-[calc(100dvh-7rem)] min-h-[440px] rounded-card overflow-hidden border border-line bg-surface lg:order-1" style={{ animationDelay: '120ms' }}>
             <WeeAIChat
@@ -334,6 +327,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               isCollapsed={false}
               onToggleCollapse={stepBack}
               onStepChange={setStep}
+              onTopic={setTopic}
               onCompleteChat={(answers) => {
                 setStep(QUESTION_COUNT + 1);
                 const buildKind = flavor ? 'page' : chosen.type;

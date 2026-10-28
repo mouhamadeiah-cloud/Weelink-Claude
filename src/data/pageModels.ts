@@ -30,6 +30,17 @@ export type SystemPage = 'cart';
 export interface ModelPage { id: string; name: string; sections: ModelSection[]; system?: SystemPage }
 export interface PageModel { id: string; name: string; sections: ModelSection[]; pages?: ModelPage[] }
 
+/** What a page of the model is to the store it is built in: its cart, the page of its live list (menu, products, cars), or its contact page. */
+export type PageRole = 'cart' | 'menu' | 'products' | 'cars' | 'contact';
+const LIVE_ROLE: Record<string, PageRole> = { restaurant: 'menu', shop: 'products', cars: 'cars' };
+export const pageRole = (p: Pick<ModelPage, 'name' | 'sections' | 'system'>): PageRole | undefined => {
+  if (p.system === 'cart') return 'cart';
+  const live = p.sections.find((s) => s.part === 'main' && LIVE_ROLE[s.category]);
+  if (live) return LIVE_ROLE[live.category];
+  if (/^\s*(تواصل معنا|تواصل|اتصل بنا)\s*$/.test(p.name) || (p.sections.some((s) => s.category === 'contact') && p.sections.every((s) => s.category === 'contact' || s.category === 'privacy'))) return 'contact';
+  return undefined;
+};
+
 // Categories a model may use besides the editor's ready-slide categories.
 export const EXTRA_MODEL_CATEGORIES = [{ id: 'ratings', name: 'التقييمات' }];
 export const MODEL_CATEGORIES = [...READY_SLIDE_CATEGORIES.map((c) => ({ id: c.id, name: c.name })), ...EXTRA_MODEL_CATEGORIES];

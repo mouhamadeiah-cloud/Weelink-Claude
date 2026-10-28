@@ -25,7 +25,7 @@ import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
 import designer from '../src/data/ai/weelinkDesigner.json' with { type: 'json' };
 import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
 import { GALLERY_MAX, limitsOf } from '../src/utils/planLimits.js';
-import { DEFAULT_MODELS, forRentalOf, modelOf, pagesOf } from '../src/data/pageModels.js';
+import { DEFAULT_MODELS, forRentalOf, modelOf, pageRole, pagesOf } from '../src/data/pageModels.js';
 import { readModels } from '../server/pageModels.js';
 import { ON_REQUEST, clip, cleanText, numbersAreOwners, ownersNumbers } from '../server/aiText.js';
 import { autoSlots } from '../src/data/autoSlots.js';
@@ -622,7 +622,9 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
       gallery: await galleryPool(db),
     });
     if (picked.skipped.length) console.warn(`model ${model.id}: no slide for ${picked.skipped.join(', ')}`);
-    return picked.pool.length ? { ...picked, pageName: page.name, ratings: page.sections.some((x) => x.category === 'ratings'), more: o.pageId ? [] : pages.slice(1).filter((p) => !p.system).map((p) => ({ id: p.id, name: p.name })) } : null;
+    // The whole site as the model has it (its pages in order, the locked ones too), so the browser keeps exactly these pages.
+    const site = pages.map((p) => ({ id: p.id, name: p.name, ...(p.system ? { system: p.system } : {}), ...(pageRole(p) ? { role: pageRole(p) } : {}) }));
+    return picked.pool.length ? { ...picked, pageName: page.name, site, ratings: page.sections.some((x) => x.category === 'ratings'), more: o.pageId ? [] : pages.slice(1).filter((p) => !p.system).map((p) => ({ id: p.id, name: p.name })) } : null;
   } catch (err) {
     console.error('model pick failed:', (err as Error)?.message);
     return null;
@@ -631,6 +633,8 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
 
 const formEnv = (ask: (prompt: string, schema: object, system: string) => Promise<any>) => ({
   ask,
+  // Eyad's constitution and its appendix bind every question of the form way too (28 Oct).
+  rules: SYSTEM,
   looks: LOOKS,
   defaultLook: DEFAULT_LOOKS.free,
   icons: [...ICONS],
@@ -778,7 +782,9 @@ export default {
       // The sections the model asked for that did not get built (no slide yet, or the AI gave a slide nothing), so the owner is told.
       const built = new Set(plan.sections.map((s) => s.template));
       const missing = over ? [...over.skipped, ...over.pool.filter((p) => !built.has(p.templates[0])).map((p) => p.name)] : [];
-      return json({ plan, ...(Object.keys(extra).length ? { extra } : {}), ...(over?.more?.length ? { more: over.more } : {}), ...(over ? { pageName: over.pageName, ratings: over.ratings } : {}), ...(missing.length ? { missing } : {}), usage: tokens });
+      // Sections the AI could not fill, written from the owner's card alone: named in the report.
+      const plain = (plan.sections as any[]).filter((s) => s.fallback).map((s) => over?.pool.find((p) => p.id === s.section)?.name || s.section);
+      return json({ plan, ...(Object.keys(extra).length ? { extra } : {}), ...(over?.more?.length ? { more: over.more } : {}), ...(over ? { pageName: over.pageName, ratings: over.ratings } : {}), ...(missing.length ? { missing } : {}), ...(over ? { site: over.site } : {}), ...(plain.length ? { plain } : {}), usage: tokens });
     } catch (err) {
       const failure = err instanceof BuildFailure ? err : new BuildFailure('check', String((err as Error)?.message || '').slice(0, 200));
       await meterClose(meter, 'build-page', MODEL, sumUsage(usage), false, failure.reason, Date.now() - started);

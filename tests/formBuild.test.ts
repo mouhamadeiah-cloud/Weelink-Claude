@@ -124,7 +124,7 @@ test('figures the owner wrote are kept, and a price without them is «حسب ا�
   assert.equal(bad.slots[priceKey], 'حسب الطلب');
 });
 
-test('buttons lead only to sections that are on the page, renumbered', async () => {
+test('a section the AI cannot fill is written from the owner\'s card, never dropped; buttons keep their target', async () => {
   const intro = section('intro-10');
   const about = section('about-1', 'about');
   const contact = section('contact-1', 'contact');
@@ -132,16 +132,18 @@ test('buttons lead only to sections that are on the page, renumbered', async () 
   const plan = await buildFormPlan({
     env: env(async (prompt: string) => {
       if (!prompt.includes('أجزاء الشريحة')) return brief([intro, about, contact]);
-      if (prompt.includes(`هذا القسم: «${about.name}»`)) return { values: {}, links: {} }; // fails to answer fully: dropped
+      if (prompt.includes(`هذا القسم: «${about.name}»`)) return { values: {}, links: {} }; // fails to answer fully
       const a = fill(intro);
       for (const b of buttons) a.links[b] = 'slide:2';
       return a;
     }),
     kind: 'free', profile, assets, sections: [intro, about, contact], motion: false,
   });
-  assert.deepEqual(plan.sections.map((s) => s.section), ['intro', 'contact'], 'a section whose answer holds nothing is not built');
+  assert.deepEqual(plan.sections.map((s) => s.section), ['intro', 'about', 'contact'], 'no section goes silently');
+  assert.equal(plan.sections[1].fallback, true);
+  assert.equal(plan.sections[1].slots.title, about.name, 'its title is the section\'s name');
   const toContact = Object.values(plan.sections[0].links);
-  assert.ok(toContact.length > 0 && toContact.every((l) => l === 'slide:1'), 'slide:2 became slide:1 once the about section went');
+  assert.ok(toContact.length > 0 && toContact.every((l) => l === 'slide:2'));
 });
 
 test('form sections and a code-slide section are merged in the model\'s order, with buttons renumbered', () => {
@@ -190,4 +192,36 @@ test('a booking slide goes into the plan as designed, with nothing for the AI to
   const kept = plan.sections.find((s) => s.section === 'booking');
   assert.ok(kept);
   assert.deepEqual(kept!.slots, {});
+});
+
+test('the constitution and its appendix come first in every question, above the form rules and the owner\'s notes rule', async () => {
+  const { formSystem, FORM_SYSTEM } = await import('../server/formBuild.ts');
+  const systems: string[] = [];
+  const intro = section('intro-10');
+  await buildFormPlan({
+    env: { ...env(async (prompt: string, _s: object, system: string) => { systems.push(system); return prompt.includes('أجزاء الشريحة') ? fill(intro) : brief([intro]); }), rules: 'دستور ويلينك' },
+    kind: 'free', profile, assets, sections: [intro], motion: false,
+  });
+  assert.ok(systems.length >= 2 && systems.every((s) => s.startsWith('دستور ويلينك') && s.endsWith(FORM_SYSTEM)));
+  assert.match(FORM_SYSTEM, /ملاحظات.*ملزمة/);
+  assert.equal(formSystem(), FORM_SYSTEM);
+});
+
+test('a text that copies the example (or a long piece of it) is asked again, unless the owner wrote it', async () => {
+  const { copiesExample } = await import('../server/formBuild.ts');
+  assert.equal(copiesExample('مطعم الشام', 'مطعم الشام'), true);
+  assert.equal(copiesExample('أهلاً بكم في مطعم الشام للمشاوي الأصيلة اليوم', 'مطعم الشام للمشاوي الأصيلة'), true);
+  assert.equal(copiesExample('ورشة أبواب', 'مطعم الشام'), false);
+  assert.equal(copiesExample('مطعم الشام', 'مطعم الشام', 'اسم الصفحة: مطعم الشام'), false, 'the owner\'s own words stay');
+});
+
+test('a slide written from the owner\'s card: the section\'s name, his description, his services, never the example', async () => {
+  const { ownersFallback } = await import('../server/formBuild.ts');
+  const about = section('about-1', 'about');
+  const form = slideForm(about.slide, about.elements);
+  const out = ownersFallback(form, about, { ...profile, 'الخدمات': 'أبواب: 100؛ شبابيك: حسب الطلب' }, 'wooden doors workshop');
+  assert.equal(out.fallback, true);
+  assert.equal(out.slots.title, about.name);
+  for (const f of form.fields) if (out.slots[f.key]) assert.notEqual(out.slots[f.key], f.example);
+  for (const v of Object.values(out.images)) assert.match(v, /^wooden doors workshop/);
 });

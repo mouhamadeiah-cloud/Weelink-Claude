@@ -30,6 +30,7 @@ export interface FormEnv {
   navLayouts: readonly string[];
   navTones: readonly string[];
   rng?: () => number; // the dice for the navbar's variety (tests set it)
+  rules?: string; // Eyad's weelink-designer constitution and its appendix: binding in every question (src/data/ai/weelinkDesigner.json)
 }
 
 export interface FormPlannedSection {
@@ -41,6 +42,7 @@ export interface FormPlannedSection {
   links: Record<string, string>;
   images: Record<string, string>;
   entrance: string;
+  fallback?: boolean; // the AI could not fill it twice: written from the owner's card alone (named in the build's report)
 }
 export interface FormPlan {
   look: string;
@@ -70,7 +72,14 @@ export const FORM_SYSTEM = `أنت كاتب تسويقي ومصمم ويب أو�
 6. الصور: كلمات بحث Unsplash بالإنجليزية من 3 إلى 6 كلمات: الموضوع المحدد + المكان + الجو + الإضاءة. صور الأعمال والمواد والأماكن والأدوات، لا وجوه ولا بورتريه. الصفحة الهادئة: soft natural light, muted tones. الصفحة الحركية: vibrant, bold colors. لا تعتمد على أي صورة من المثال.
 7. عربية فصحى سهلة ودافئة تناسب السوق السوري. العنوان بفائدة واضحة. نص الزر فعل + مفعول (احجز موعدك، اطلب معاينة).
 8. ممنوع: الإيموجي والرموز (✓ ★)، «نحن الأفضل»، «جودة عالية»، «خدمة مميزة»، «حلول متكاملة»، علامات التعجب المتكررة، وأي ذكر للذكاء الاصطناعي.
-9. لا تكتب رقم الهاتف أو العنوان أو ساعات الدوام: تُوضَع من البطاقة.`;
+9. لا تكتب رقم الهاتف أو العنوان أو ساعات الدوام: تُوضَع من البطاقة.
+10. «ملاحظات» في البطاقة هي طلبات صاحب العمل الخاصة: ملزمة، نفّذها في كل قسم تخصه، ولا تخالفها أبداً.
+11. لا يبقى شيء من المثال: كل نص وكل صورة في الشريحة تُستبدل بما يناسب هذا العمل وموضوعه. ما كتبه صاحب العمل نفسه (اسمه، خدماته، أسعاره، أسماء فريقه) يُكتب كما هو.`;
+
+// Above the form rules, Eyad's constitution (taste, wording, photos, language) binds every answer; only its output format is not this one's.
+const BRIDGE = 'الدستور أعلاه ملزم بكل بنوده في الذوق والنصوص والصور واللغة والسياق الثقافي. صيغة الإخراج هنا ليست شريحة كاملة: الشريحة مصممة سلفاً، والمطلوب JSON بأجزائها فقط كما يلي.';
+/** The rules every question of the form way is asked under: the constitution and its appendix first, then the form's own. */
+export const formSystem = (rules?: string) => (rules ? `${rules}\n\n${BRIDGE}\n\n${FORM_SYSTEM}` : FORM_SYSTEM);
 
 const FIELD_NOTE: Record<string, string> = { text: 'نص', button: 'نص زر', image: 'كلمات بحث صورة بالإنجليزية', icon: 'اسم أيقونة من القائمة' };
 const shapeWord = { wide: 'عريضة', tall: 'طولية', square: 'مربعة' } as const;
@@ -174,8 +183,19 @@ const cutAt = (text: string, max: number) => {
 
 const LEAF = (key: string) => key.split('.').pop() || key;
 
+const norm = (t: string) => t.replace(/[\s،,.:؛!؟?«»"'()\-–]+/g, ' ').trim();
+/** The text is the example's (or holds a long piece of it), unless the owner wrote those words himself. */
+export const copiesExample = (text: string, example: string | undefined, ownerText = '') => {
+  const a = norm(text);
+  const b = norm(example || '');
+  if (!a || [...b].length < 4) return false;
+  if (ownerText && norm(ownerText).includes(a)) return false;
+  if (a === b) return true;
+  return [...b].length >= 14 && (a.includes(b) || ([...a].length >= 14 && b.includes(a)));
+};
+
 /** Checks the values the AI gave for one slide: what is good goes in, what is not comes back as a problem to ask again. */
-export const checkValues = (form: SlideForm, values: Record<string, unknown>, o: { owners: Set<string>; assets: FormAssets; icons: Set<string>; section: string }): Checked => {
+export const checkValues = (form: SlideForm, values: Record<string, unknown>, o: { owners: Set<string>; assets: FormAssets; icons: Set<string>; section: string; ownerText?: string }): Checked => {
   const out: Checked = { slots: {}, icons: {}, images: {}, problems: [] };
   for (const f of form.fields) {
     const raw = typeof values?.[f.key] === 'string' ? (values[f.key] as string) : '';
@@ -214,7 +234,7 @@ export const checkValues = (form: SlideForm, values: Record<string, unknown>, o:
       out.problems.push({ key: f.key, why: 'فيه رقم لم يكتبه صاحب العمل: اكتب كلمة أو عبارة بدل الرقم', was: text });
       continue;
     }
-    if (f.target >= 15 && text === f.example) {
+    if (copiesExample(text, f.example, o.ownerText)) {
       out.problems.push({ key: f.key, why: 'منسوخ من المثال: اكتب نصاً يخص هذا العمل', was: text });
       continue;
     }
@@ -229,6 +249,47 @@ export const checkValues = (form: SlideForm, values: Record<string, unknown>, o:
 };
 
 const fallbackQuery = (subject: string, f: FormField | undefined) => `${subject}${f?.big ? ' wallpaper' : ''}`.replace(/[^a-z0-9 ,\-]/gi, ' ').replace(/\s+/g, ' ').trim().slice(0, 78);
+
+// ---------- A slide from the owner's card alone ----------
+
+const rowsOf = (line: string | undefined) => (line || '').split(/[؛;]/).map((r) => r.trim()).filter(Boolean).map((r) => { const [name, ...rest] = r.split(':'); return { name: name.trim(), price: rest.join(':').trim() }; });
+
+/**
+ * The slots of a slide written without the AI: the section's name as its title, the owner's description as its text, his services and
+ * features as its cards and rows, photos of his business's subject. What the card has nothing for is left empty, and the builder takes
+ * that part off the slide (never the example's words).
+ */
+export const ownersFallback = (form: SlideForm, section: Pick<FormSection, 'id' | 'name' | 'template'>, profile: Record<string, string>, subject: string, buttons: string[] = []): Omit<FormPlannedSection, 'entrance'> => {
+  const slots: Record<string, string> = {};
+  const images: Record<string, string> = {};
+  const services = rowsOf(profile['الخدمات']);
+  const features = (profile['المزايا'] || '').split(/[،,]/).map((x) => x.trim()).filter(Boolean);
+  const description = (profile['الوصف'] || '').trim();
+  const fit = (t: string, f: FormField) => cutAt(cleanText(t, f.max * 2 + 20), f.max);
+  for (const f of form.fields) {
+    if (f.kind === 'image') { images[f.key] = fallbackQuery(subject, f); continue; }
+    if (f.kind === 'icon') continue;
+    const item = /^(points|items|packages|chips|facts)\.(\d+)(?:\.(\w+))?$/.exec(f.key);
+    let text = '';
+    if (item) {
+      const n = +item[2];
+      const leaf = item[3] || '';
+      const fromServices = item[1] === 'items' || item[1] === 'packages' || (item[1] === 'points' && services.length);
+      const row = fromServices ? services[n] : undefined;
+      if (row && (leaf === 'title' || leaf === 'name')) text = row.name;
+      else if (row && leaf === 'price' && row.price && row.price !== ON_REQUEST) text = row.price;
+      else if (!row && (item[1] === 'chips' || leaf === 'title' || leaf === 'name' || leaf === 'label') && features[n]) text = features[n];
+    } else if (f.key === 'title') text = section.name;
+    else if (f.key === 'eyebrow') text = profile['اسم_الصفحة'] || '';
+    else if (f.key === 'sub' || f.key === 'text') text = description;
+    else if (f.kind === 'button' && buttons.includes(f.key)) text = profile['واتساب'] || profile['هاتف'] ? 'تواصل معنا' : '';
+    if (text) slots[f.key] = fit(text, f);
+  }
+  if (!slots.title && form.fields.some((f) => f.key === 'title')) slots.title = section.name;
+  const links: Record<string, string> = {};
+  for (const k of buttons) if (slots[k]) links[k] = profile['واتساب'] ? 'whatsapp' : 'phone';
+  return { section: section.id, template: section.template, tone: 'light', slots, icons: {}, links, images, fallback: true };
+};
 
 // ---------- The whole plan ----------
 
@@ -257,31 +318,49 @@ const inPool = async <T, R>(items: T[], size: number, fn: (item: T, index: numbe
 export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
   const { env, kind, profile, assets, sections } = inp;
   const owners = ownersNumbers(profile);
+  const ownerText = Object.values(profile).join(' \n ');
+  const system = formSystem(env.rules);
   const icons = new Set(env.icons);
   const forms = sections.map((s) => slideForm(s.slide, s.elements));
 
-  const brief = await env.ask(briefPrompt(env, kind, profile, sections, inp.motion), briefSchema(env, sections), FORM_SYSTEM);
+  const brief = await env.ask(briefPrompt(env, kind, profile, sections, inp.motion), briefSchema(env, sections), system);
   const angles: Record<string, string> = {};
   for (const s of Array.isArray(brief?.sections) ? brief.sections : []) if (s && typeof s.angle === 'string') angles[s.section] = s.angle.slice(0, 200);
   const subject = typeof brief?.imageSubject === 'string' && IMAGE_QUERY.test(brief.imageSubject.trim()) ? brief.imageSubject.trim() : 'professional workplace';
   const safeBrief = { ...brief, voice: String(brief?.voice || '').slice(0, 120), imageSubject: subject, sections: Array.isArray(brief?.sections) ? brief.sections : [] };
+
+  // The owner's own photos: the gallery shows only them, one in each frame, in order.
+  const ownersPhotos = (section: FormSection, form: SlideForm, images: Record<string, string>) => {
+    if (section.id !== 'gallery') return;
+    for (const f of form.fields) {
+      if (!/^photos\.\d+$/.test(f.key)) continue;
+      const n = +f.key.split('.')[1];
+      if (n < assets.gallery) images[f.key] = `user:gallery:${n + 1}`;
+      else delete images[f.key];
+    }
+  };
+  const fallback = (section: FormSection, form: SlideForm, buttons: string[]): FormPlannedSection => {
+    const out = { ...ownersFallback(form, section, profile, subject, buttons), entrance: 'none' };
+    ownersPhotos(section, form, out.images);
+    return out;
+  };
 
   const built = await inPool(sections, SIMULTANEOUS, async (section, index): Promise<FormPlannedSection | null> => {
     const form = forms[index];
     // A booking slide is its calendar: it goes into the page as designed, with nothing for the AI to write.
     const fixed = section.elements.some((e: any) => e.type === 'calendar');
     const kept = (): FormPlannedSection => ({ section: section.id, template: section.template, tone: 'light', slots: {}, icons: {}, links: {}, images: {}, entrance: 'none' });
-    if (!form.fields.length) return fixed ? kept() : null;
+    if (!form.fields.length) return kept();
     const buttonKeys = form.fields.filter((f) => f.kind === 'button').map((f) => f.key);
     const others = sections.filter((s) => s.id !== section.id && angles[s.id]).map((s) => angles[s.id]);
     let answer: any;
     try {
-      answer = await env.ask(sectionPrompt({ kind, profile, assets, brief: safeBrief, section, index, sections, form, others }), valueSchema(form, env, buttonKeys), FORM_SYSTEM);
-    } catch (err) {
-      if (index === 0) throw err;
-      return null; // another section may go; the page needs its first
+      answer = await env.ask(sectionPrompt({ kind, profile, assets, brief: safeBrief, section, index, sections, form, others }), valueSchema(form, env, buttonKeys), system);
+    } catch {
+      // No section goes silently (Eyad, 28 Oct): the AI failed after its retry, so the slide is written from the owner's card alone.
+      return fallback(section, form, buttonKeys);
     }
-    let checked = checkValues(form, answer?.values || {}, { owners, assets, icons, section: section.id });
+    let checked = checkValues(form, answer?.values || {}, { owners, assets, icons, section: section.id, ownerText });
     // Only what failed is asked again, once.
     if (checked.problems.length) {
       const again = new Set(checked.problems.map((p) => p.key));
@@ -294,10 +373,10 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
             'أعد JSON فقط.',
           ].join('\n\n'),
           valueSchema(form, env, [], again),
-          FORM_SYSTEM,
+          system,
         );
         const merged = { ...(answer?.values || {}), ...(fix?.values || {}) };
-        checked = checkValues(form, merged, { owners, assets, icons, section: section.id });
+        checked = checkValues(form, merged, { owners, assets, icons, section: section.id, ownerText });
       } catch {
         // the first answers stay; what failed goes without text
       }
@@ -308,17 +387,9 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
       const f = form.fields.find((x) => x.key === p.key);
       if (f?.kind === 'image') imagesOut[f.key] = fallbackQuery(subject, f);
     }
-    // The owner's own photos: the gallery shows only them, one in each frame, in order.
-    if (section.id === 'gallery') {
-      for (const f of form.fields) {
-        if (!/^photos\.\d+$/.test(f.key)) continue;
-        const n = +f.key.split('.')[1];
-        if (n < assets.gallery) imagesOut[f.key] = `user:gallery:${n + 1}`;
-        else delete imagesOut[f.key];
-      }
-    }
-    // Nothing the AI wrote and nothing left of it: an empty slide is not built.
-    if (!Object.keys(slots).length) return fixed ? kept() : null;
+    ownersPhotos(section, form, imagesOut);
+    // Nothing the AI wrote and nothing left of it: the slide is written from the owner's card alone.
+    if (!Object.keys(slots).length) return fixed ? kept() : fallback(section, form, buttonKeys);
     const links: Record<string, string> = {};
     for (const k of buttonKeys) {
       const to = String(answer?.links?.[k] || '');

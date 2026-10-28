@@ -4,7 +4,7 @@
 // becomes slides and elements: the ready slides recoloured to the palette, their slots filled,
 // what the owner did not give (a phone number, an address, a price) taken off the page with the
 // icons and lines that belonged to it.
-import { autoSlots } from '../data/autoSlots';
+import { autoSlots, isStockPhoto } from '../data/autoSlots';
 import { auth } from './firebase';
 import type { CanvasElement, Page, Slide } from '../types';
 import { businessFacts, ownerServices, type WeeAnswers } from './weeWriter';
@@ -17,6 +17,8 @@ import { DEFAULT_LOOK, pageLookById } from '../data/pageLooks';
 import { SLIDE_DIVIDER_OPTIONS } from '../components/SlideDividers';
 import { REST_PAGE_IDS } from '../data/restaurantTemplate';
 import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
+import { RENTAL_CART_PAGE } from '../data/rentalCartPage';
+import type { PageRole } from '../data/pageModels';
 import { applyPageLook, lookColours, slideSource } from './applyLook';
 import { TEXT_EFFECTS } from '../utils/textEffects';
 import { lookOf, luminance, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
@@ -63,20 +65,46 @@ const dividerOf = (answer: string | undefined): Slide['dividerShape'] =>
 // The pages a button may open, by the kind of page the AI named.
 const PAGE_TARGETS: Record<string, string[]> = {
   menu: [REST_PAGE_IDS.menu],
-  products: ['shop-page-products'],
+  products: ['shop-page-products', CAR_PAGE_IDS.showroom], // a rental of things lists them in the showroom's page
   cars: [CAR_PAGE_IDS.showroom],
   cart: [REST_PAGE_IDS.cart, 'shop-page-cart'],
   contact: [REST_PAGE_IDS.contact, 'shop-page-contact', CAR_PAGE_IDS.contact],
 };
-// The built-in pages a page of the model takes the place of (same job, same name): the model builds into them, so the page, the buttons that
-// open it and its navbar entry stay one, instead of a second «تواصل معنا» beside the store's own (Eyad, 28 Oct: the model is the only source).
-const SYSTEM_TWINS: { name: RegExp; ids: string[] }[] = [
-  { name: /^\s*(تواصل معنا|تواصل|اتصل بنا)\s*$/, ids: [REST_PAGE_IDS.contact, 'shop-page-contact', CAR_PAGE_IDS.contact] },
-  { name: /^\s*(من نحن|عنّا|عنا)\s*$/, ids: [CAR_PAGE_IDS.about] },
-];
-export const systemTwin = (name: string, pages: Page[], taken: string[]): string | null => {
-  const ids = SYSTEM_TWINS.find((t) => t.name.test(name))?.ids || [];
-  return ids.find((id) => pages.some((p) => p.id === id) && !taken.includes(id)) || null;
+// The built-in pages a page of the model is (Eyad, 28 Oct: the model is the only source): the model builds into them, or keeps them as they
+// are (the cart, the live menu, products and cars), so the page, the buttons that open it and its navbar entry stay one.
+const TWINS: Record<PageRole, string[]> = {
+  cart: [REST_PAGE_IDS.cart, 'shop-page-cart', RENTAL_CART_PAGE],
+  menu: [REST_PAGE_IDS.menu],
+  products: ['shop-page-products', CAR_PAGE_IDS.showroom], // a rental of things lists them in the showroom's page
+  cars: [CAR_PAGE_IDS.showroom],
+  contact: [REST_PAGE_IDS.contact, 'shop-page-contact', CAR_PAGE_IDS.contact],
+};
+/** A page of the model as the server names it: its id, name, and what it is to a store. */
+export interface SitePage { id: string; name: string; system?: 'cart'; role?: PageRole }
+/** The site's own page this page of the model is, when it has one not taken yet. */
+export const twinOf = (p: Pick<SitePage, 'role'>, pages: Page[], taken: string[]): string | null =>
+  (p.role ? TWINS[p.role] : []).find((id) => pages.some((x) => x.id === id) && !taken.includes(id)) || null;
+/** The pages kept as the store has them (its cart and live lists): the model names them, nothing is built in them. */
+export const keptAsIs = (p: Pick<SitePage, 'role'>) => p.role === 'cart' || p.role === 'menu' || p.role === 'products' || p.role === 'cars';
+
+/**
+ * The site as the model has it: these pages only, in this order, under these names. Every other page goes with its slides' elements,
+ * and a button or the navbar's own button that opened a page that went now opens the first page.
+ */
+export const keepModelPages = (pages: Page[], elements: CanvasElement[], order: { pageId: string; name: string }[]) => {
+  const byId = new Map(pages.map((p) => [p.id, p]));
+  const kept = order.filter((o, i) => byId.has(o.pageId) && order.findIndex((x) => x.pageId === o.pageId) === i).map((o) => ({ ...byId.get(o.pageId)!, name: o.name }));
+  if (!kept.length) return { pages, elements };
+  const ids = new Set(kept.map((p) => p.id));
+  const first = kept[0].id;
+  const slides = new Set(kept.flatMap((p) => p.slides.map((s) => s.id)));
+  const goneLink = (e: { linkType?: string; linkTargetId?: string }) => e.linkType === 'page' && !!e.linkTargetId && !ids.has(e.linkTargetId);
+  return {
+    pages: kept.map((p) => (p.navbar.ctaLinkType === 'page' && p.navbar.ctaLinkTargetId && !ids.has(p.navbar.ctaLinkTargetId)
+      ? { ...p, navbar: { ...p.navbar, ctaLinkTargetId: first, ctaHref: `#page-${first}` } }
+      : p)),
+    elements: elements.filter((e) => slides.has(e.slideId)).map((e) => (goneLink(e) ? { ...e, linkTargetId: first, linkUrl: `#page-${first}` } : e)),
+  };
 };
 const HOME_PAGE: Record<BuildKind, string | null> = { free: null, restaurant: REST_PAGE_IDS.home, shop: 'shop-page-home', cars: CAR_PAGE_IDS.home };
 
@@ -116,7 +144,7 @@ export const pageAssets = (a: WeeAnswers, max: number = GALLERY_MAX) => ({
   logo: !!a.personalInfo?.logoUrl,
 });
 
-export type PlanResult = { ok: true; plan: Plan; more?: { id: string; name: string }[]; pageName?: string; ratings?: boolean; missing?: string[] } | { ok: false; message: string };
+export type PlanResult = { ok: true; plan: Plan; more?: { id: string; name: string }[]; pageName?: string; ratings?: boolean; missing?: string[]; site?: SitePage[]; plain?: string[] } | { ok: false; message: string };
 
 // What went wrong, in words the owner can act on, with the server's code for whoever fixes it.
 const failureMessage = (status: number, data: { reason?: string; detail?: string }) => {
@@ -150,7 +178,7 @@ export const requestPagePlan = async (kind: BuildKind, profile: Record<string, s
     if (res.ok && Array.isArray(data.plan?.sections)) {
       // The tokens this build used, for working out its cost (browser console).
       if (data.usage) console.info('Wee AI build tokens:', data.usage);
-      return { ok: true, plan: data.extra ? { ...data.plan, extra: data.extra } : data.plan, ...(Array.isArray(data.more) && data.more.length ? { more: data.more } : {}), ...(typeof data.pageName === 'string' ? { pageName: data.pageName } : {}), ...(typeof data.ratings === 'boolean' ? { ratings: data.ratings } : {}), ...(Array.isArray(data.missing) && data.missing.length ? { missing: data.missing.map(String) } : {}) };
+      return { ok: true, plan: data.extra ? { ...data.plan, extra: data.extra } : data.plan, ...(Array.isArray(data.more) && data.more.length ? { more: data.more } : {}), ...(typeof data.pageName === 'string' ? { pageName: data.pageName } : {}), ...(typeof data.ratings === 'boolean' ? { ratings: data.ratings } : {}), ...(Array.isArray(data.missing) && data.missing.length ? { missing: data.missing.map(String) } : {}), ...(Array.isArray(data.site) && data.site.length ? { site: data.site as SitePage[] } : {}), ...(Array.isArray(data.plain) && data.plain.length ? { plain: data.plain.map(String) } : {}) };
     }
     if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
     if (data.error === 'no_tokens') return { ok: false, message: 'انتهى رصيد Wee AI في حسابك. تواصل مع الإدارة لشحن رصيد جديد.' };
@@ -381,10 +409,11 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   for (let i = 0; i < els.length; i++) {
     const el = els[i];
     const key = el.aiSlot;
-    // An example photo nobody gave a slot is still the example business's: it takes a photo of this one.
-    if (!key && el.type === 'image' && /^https?:|unsplash/i.test(String(el.content || '')) && ctx.fallbackQuery) {
-      const url = await ctx.photo(ctx.fallbackQuery, shapeOfEl(el));
+    // An example photo nobody gave a slot is still the example business's: it takes a photo of this one, or goes (never the example's).
+    if (!key && el.type === 'image' && /^https?:|unsplash/i.test(String(el.content || ''))) {
+      const url = ctx.fallbackQuery ? await ctx.photo(ctx.fallbackQuery, shapeOfEl(el)) : null;
       if (url) Object.assign(el, { content: url, imageUrl: url });
+      else removed.add(i);
       continue;
     }
     if (!key) continue;
@@ -425,11 +454,11 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
       const ref = section.images[key];
       const url = (await imageFor(ref, ctx, shape)) || (ctx.fallbackQuery && !key.startsWith('photos.') ? await ctx.photo(ctx.fallbackQuery, shape) : null);
       if (url) Object.assign(el, { content: url, imageUrl: url, ...(ref && !ref.startsWith('user:') && !el.alt ? { alt: ref } : {}) });
-      // The example photos belong to the example business: a gallery frame with no photo of
-      // this one goes with its caption, a main photo keeps the example only when no search worked.
-      else if (key.startsWith('photos.')) {
+      // The example photos belong to the example business (Eyad, 28 Oct: none may stay): a photo with none of
+      // this one goes, a gallery frame with its caption.
+      else {
         removed.add(i);
-        els.forEach((c, j) => c.aiSlot === `caption.${key.split('.')[1]}` && removed.add(j));
+        if (key.startsWith('photos.')) els.forEach((c, j) => c.aiSlot === `caption.${key.split('.')[1]}` && removed.add(j));
       }
       continue;
     }
@@ -584,7 +613,9 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   // A faint photo wash fades the slide colour with it, to near white: on a dark section it goes.
   const wash = (backgroundOpacity ?? 1) < 0.5;
   const dropWash = wash && to.deep === to.bg;
-  const bgUrl = dropWash ? null : await imageFor(section.images.background, ctx);
+  // The example's background photo is never kept: this business's, a photo of its subject, or none (the slide's colour).
+  const stockBg = !!backgroundImage && isStockPhoto(backgroundImage);
+  const bgUrl = dropWash ? null : (await imageFor(section.images.background, ctx)) || (stockBg && ctx.fallbackQuery ? await ctx.photo(ctx.fallbackQuery, 'wide') : null);
   const divider = dividerOf(ctx.answers.aiAnswers?.dividerStyle);
   let slide: Slide = {
     id: slideId,
@@ -595,7 +626,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
     aiTemplate,
     ...(divider ? { dividerShape: divider } : ready.dividerShape ? { dividerShape: ready.dividerShape } : {}),
     ...(backgroundVideo && !bgUrl ? { backgroundVideo } : {}),
-    ...(!dropWash && (bgUrl || backgroundImage)
+    ...(!dropWash && (bgUrl || (backgroundImage && !stockBg))
       ? {
           backgroundImage: bgUrl || backgroundImage,
           backgroundSize: 'cover' as const,

@@ -113,6 +113,13 @@ export const cleanSections = (raw: unknown): ModelSection[] | null => {
   return out.length ? out : null;
 };
 
+/**
+ * A rental model is drawn with the showroom's slides (cars). Renting anything else (equipment, chalets, halls...) lists product cards,
+ * so its sections take the shop's slides instead; the sections the admin allowed stay when they exist in the shop's category.
+ */
+export const forRentalOf = (sections: ModelSection[], category: string | null | undefined): ModelSection[] =>
+  !category || category.trim() === 'سيارات' ? sections : sections.map((s) => (s.category === 'cars' ? { ...s, category: 'shop', id: s.part ? `shop:${s.part}` : 'shop' } : s));
+
 /** The pages of a model: its saved pages, or the sections as one page. */
 export const pagesOf = (m: Pick<PageModel, 'sections' | 'pages'>): ModelPage[] => (m.pages?.length ? m.pages : [{ id: 'home', name: MAIN_PAGE_NAME, sections: m.sections }]);
 

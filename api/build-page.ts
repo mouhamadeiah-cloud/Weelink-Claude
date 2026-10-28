@@ -25,7 +25,7 @@ import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
 import designer from '../src/data/ai/weelinkDesigner.json' with { type: 'json' };
 import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
 import { GALLERY_MAX, limitsOf } from '../src/utils/planLimits.js';
-import { modelOf } from '../src/data/pageModels.js';
+import { forRentalOf, modelOf } from '../src/data/pageModels.js';
 import { readModels } from '../server/pageModels.js';
 import { ON_REQUEST, clip, cleanText, numbersAreOwners, ownersNumbers } from '../server/aiText.js';
 import { autoSlots } from '../src/data/autoSlots.js';
@@ -601,6 +601,9 @@ const hasPricedServices = (profile: Record<string, string>) => (profile['الخ�
  * a kind that still builds the old way, a model with nothing to build from), and then the AI plans the page as before.
  * Only the page projects use it for now: a restaurant, shop or showroom still plans its home page with the AI.
  */
+// A rental of anything but cars is drawn with the shop's slides.
+const rentalPick = <T extends Parameters<typeof forRentalOf>[0]>(planId: string, profile: Record<string, string>, list: T): T => (planId.startsWith('rental') ? (forRentalOf(list, profile['التصنيف']) as T) : list);
+
 const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: string; project: string; kind: Kind; flavor: string; ticked: string[] | undefined; profile: Record<string, string>; assets: Assets }) => {
   if (!db) return null;
   try {
@@ -609,7 +612,7 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
     if (!model) return null;
     const last = ((await db.collection('platform_build_picks').doc(`${o.uid}__${o.project}`).get()).data() as { last?: string[] } | undefined)?.last;
     const picked = await pickSections({
-      sections: sectionsFor(model.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked }),
+      sections: rentalPick(planId, o.profile, sectionsFor(model.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked })),
       codeSections: SECTIONS.free,
       specs: TEMPLATES,
       photos: o.assets.gallery,

@@ -100,3 +100,13 @@ test('a model is saved as pages; the first page stays as `sections` for the buil
   assert.deepEqual(pagesOf(DEFAULT_MODELS[0]).map((p) => p.name), ['الرئيسية']);
   reset();
 });
+
+test('a rental of things other than cars takes the shop\'s slides, a rental of cars keeps the showroom\'s', async () => {
+  const { forRentalOf, DEFAULT_MODELS } = await import('../src/data/pageModels.ts');
+  const rental = DEFAULT_MODELS.find((m) => m.id === 'rental')!.sections;
+  assert.ok(rental.some((s) => s.category === 'cars'));
+  assert.deepEqual(forRentalOf(rental, 'سيارات'), rental);
+  const other = forRentalOf(rental, 'معدات');
+  assert.ok(!other.some((s) => s.category === 'cars'));
+  assert.ok(other.some((s) => s.id === 'shop:main'));
+});

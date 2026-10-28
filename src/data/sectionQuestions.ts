@@ -21,6 +21,7 @@ export interface SectionQuestion {
   fields?: string[]; // list: the parts of a row
   choices?: string[]; // choice
   saves: string; // where the answer goes, for the builder and the editor
+  existing?: boolean; // already asked by an earlier step of Wee AI (description, services, features, photos), so not asked again
 }
 
 export interface SectionAsk {
@@ -39,32 +40,32 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
     title: 'الواجهة',
     questions: [
       { id: 'tagline', kind: 'text', label: 'جملة تعرّف بعملك بسطر واحد', hint: 'مثال: أبواب وشبابيك بمقاس طلبك', saves: 'aiAnswers.description' },
-      { id: 'heroPhoto', kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' },
+      { id: 'heroPhoto', existing: true, kind: 'photo', label: 'صورة الواجهة (اختياري)', hint: SKIP, saves: 'aiAnswers.heroBgImage' },
     ],
   },
   about: {
     title: 'من نحن',
-    questions: [{ id: 'story', kind: 'longText', label: 'احكِ لنا عن عملك وبدايته وما يميّزك', hint: SKIP, saves: 'aiAnswers.description' }],
+    questions: [{ id: 'story', existing: true, kind: 'longText', label: 'احكِ لنا عن عملك وبدايته وما يميّزك', hint: SKIP, saves: 'aiAnswers.description' }],
   },
   services: {
     title: 'الخدمات',
     note: LATER,
-    questions: [{ id: 'services', kind: 'list', label: 'خدماتك', hint: 'اكتب أهم خدماتك', count: 5, fields: ['name', 'note'], saves: 'aiAnswers.services' }],
+    questions: [{ id: 'services', existing: true, kind: 'list', label: 'خدماتك', hint: 'اكتب أهم خدماتك', count: 5, fields: ['name', 'note'], saves: 'aiAnswers.services' }],
   },
   prices: {
     title: 'قائمة الأسعار',
     intro: 'نضيف العناصر التي تكتبها في لوحة الأسعار مع أسعارها.',
     note: LATER,
-    questions: [{ id: 'priceRows', kind: 'list', label: 'خمسة عناصر مع أسعارها', hint: 'سنضيف هذه الخمسة مبدئياً ويمكنك الزيادة عليها.', count: 5, fields: ['name', 'price'], saves: 'aiAnswers.services' }],
+    questions: [{ id: 'priceRows', existing: true, kind: 'list', label: 'خمسة عناصر مع أسعارها', hint: 'سنضيف هذه الخمسة مبدئياً ويمكنك الزيادة عليها.', count: 5, fields: ['name', 'price'], saves: 'aiAnswers.services' }],
   },
   gallery: {
     title: 'معرض الصور',
     note: 'تقدر تبدّل الصور وترتبها لاحقاً.',
-    questions: [{ id: 'photos', kind: 'photos', label: 'صور عن عملك', hint: 'أضف ما تريد الآن، وحد المعرض يتبع باقتك.', saves: 'aiAnswers.galleryImages' }],
+    questions: [{ id: 'photos', existing: true, kind: 'photos', label: 'صور عن عملك', hint: 'أضف ما تريد الآن، وحد المعرض يتبع باقتك.', saves: 'aiAnswers.galleryImages' }],
   },
   features: {
     title: 'لماذا نحن',
-    questions: [{ id: 'features', kind: 'list', label: 'المميزات التي تحب إضافتها', hint: SKIP, count: 4, fields: ['name'], saves: 'aiAnswers.features' }],
+    questions: [{ id: 'features', existing: true, kind: 'list', label: 'المميزات التي تحب إضافتها', hint: SKIP, count: 4, fields: ['name'], saves: 'aiAnswers.features' }],
   },
   team: {
     title: 'فريق العمل',
@@ -86,7 +87,7 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
     note: 'كل الإعدادات تقدر تغيّرها من «إعدادات الحجز».',
     questions: [
       { id: 'bookingKind', kind: 'choice', label: 'ماذا يحجز زبونك؟', choices: ['موعد أو استشارة', 'مقعد في جلسة أو دورة'], saves: 'bookingSettings.type' },
-      { id: 'bookingSettings', kind: 'settings', label: 'أيام العمل وساعاته ومدة الموعد', hint: 'إذا تخطّيت، نضع أيام العمل المعتادة ومدة 30 دقيقة.', saves: 'bookingSettings' },
+      { id: 'bookingSettings', kind: 'settings', label: 'تحب تضبط إعدادات حجزك الآن؟', hint: 'أيام العمل وساعاته ومدة الموعد. إذا تخطّيت، نضع أيام العمل المعتادة ومدة 30 دقيقة.', saves: 'bookingSettings' },
     ],
   },
   special_offer: {
@@ -116,27 +117,55 @@ export const SECTION_ASKS: Record<string, SectionAsk> = {
     title: 'المنيو',
     intro: 'نضيف الأطباق التي تكتبها إلى المنيو بأسعارها.',
     note: LATER,
-    questions: [{ id: 'dishes', kind: 'list', label: 'خمسة أطباق مع أسعارها', hint: 'تظهر مبدئياً في المنيو ويمكنك الزيادة عليها. ' + SKIP, count: 5, fields: ['name', 'price', 'photo'], saves: 'restaurant.menu' }],
+    questions: [
+      { id: 'groups', kind: 'list', label: 'ما المجموعات الرئيسية لأطباق مطعمك؟', hint: 'مثل: مشاويات، مقبلات، حلويات، مشروبات. ' + SKIP, count: 4, fields: ['name'], saves: 'restaurant.catalogs' },
+      { id: 'dishes', kind: 'list', label: 'خمسة أطباق مع أسعارها', hint: 'تظهر مبدئياً في المنيو ويمكنك الزيادة عليها. ' + SKIP, count: 5, fields: ['name', 'price', 'photo'], saves: 'restaurant.menu' },
+    ],
   },
   'shop:front': { title: 'واجهة المتجر', questions: [{ id: 'shopNote', kind: 'text', label: 'ما الذي يميّز متجرك؟', hint: SKIP, saves: 'aiAnswers.description' }] },
   'shop:main': {
     title: 'المنتجات',
     note: LATER,
-    questions: [{ id: 'products', kind: 'list', label: 'خمسة منتجات مع أسعارها', hint: 'تظهر مبدئياً في المتجر ويمكنك الزيادة عليها. ' + SKIP, count: 5, fields: ['name', 'price', 'photo'], saves: 'shop.products' }],
+    questions: [
+      { id: 'groups', kind: 'list', label: 'ما المجموعات الرئيسية لمتجرك؟', hint: 'مثل: ملابس، أحذية، إكسسوارات. ' + SKIP, count: 4, fields: ['name'], saves: 'shop.catalogs' },
+      { id: 'products', kind: 'list', label: 'خمسة منتجات مع أسعارها', hint: 'تظهر مبدئياً في المتجر ويمكنك الزيادة عليها. ' + SKIP, count: 5, fields: ['name', 'price', 'photo'], saves: 'shop.products' },
+    ],
   },
   'cars:front': { title: 'واجهة المعرض', questions: [{ id: 'carsNote', kind: 'text', label: 'ما الذي يميّز معرضك؟', hint: SKIP, saves: 'aiAnswers.description' }] },
   'cars:main': {
     title: 'السيارات',
     note: LATER,
-    questions: [{ id: 'cars', kind: 'list', label: 'خمس سيارات مع أسعارها', hint: 'تظهر مبدئياً في المعرض ويمكنك الزيادة عليها. ' + SKIP, count: 5, fields: ['name', 'price', 'photo'], saves: 'cars.listings' }],
+    questions: [
+      { id: 'groups', kind: 'list', label: 'ما أنواع السيارات الرئيسية في معرضك؟', hint: 'مثل: سياحية، رباعية الدفع، فانات. ' + SKIP, count: 3, fields: ['name'], saves: 'cars.groups' },
+      { id: 'cars', kind: 'list', label: 'خمس سيارات مع أسعارها', hint: 'تظهر مبدئياً في المعرض ويمكنك الزيادة عليها. ' + SKIP, count: 5, fields: ['name', 'price', 'photo'], saves: 'cars.listings' },
+    ],
   },
   table: {
     title: 'قائمة الأسعار',
     note: LATER,
-    questions: [{ id: 'priceRows', kind: 'list', label: 'خمسة عناصر مع أسعارها', hint: 'سنضيف هذه الخمسة مبدئياً ويمكنك الزيادة عليها.', count: 5, fields: ['name', 'price'], saves: 'aiAnswers.services' }],
+    questions: [{ id: 'priceRows', existing: true, kind: 'list', label: 'خمسة عناصر مع أسعارها', hint: 'سنضيف هذه الخمسة مبدئياً ويمكنك الزيادة عليها.', count: 5, fields: ['name', 'price'], saves: 'aiAnswers.services' }],
   },
   search: { title: 'البحث', intro: 'شريط بحث على أقسام صفحتك، ولا يحتاج منك شيئاً.', questions: [] },
   featured: { title: 'عروض مميزة', intro: 'تظهر هنا العناصر التي تعلّمها «مميز» من لوحتك.', questions: [] },
+};
+
+// How the sections of a rental or hotel are worded (they build from the showroom's and the shop's sections but rent things out).
+const BY_KIND: Record<string, Record<string, Partial<SectionAsk> & { questionLabels?: Record<string, string> }>> = {
+  rental: {
+    'cars:main': { title: 'ما تؤجّره', questionLabels: { groups: 'ما الأنواع الرئيسية لما تؤجّره؟', cars: 'خمسة عناصر للتأجير مع سعر اليوم' } },
+    'shop:main': { title: 'ما تؤجّره', questionLabels: { groups: 'ما الأنواع الرئيسية لما تؤجّره؟', products: 'خمسة عناصر للتأجير مع سعر اليوم' } },
+  },
+  hotel: {
+    'shop:main': { title: 'الغرف والوحدات', questionLabels: { groups: 'ما أنواع غرفك أو وحداتك؟', products: 'خمس غرف أو وحدات مع سعر الليلة' } },
+  },
+};
+
+/** The entry of a section worded for the kind of project (a rental's items, a hotel's rooms). */
+export const askFor = (s: Pick<ModelSection, 'category' | 'part'>, kind?: string): SectionAsk | undefined => {
+  const base = askOf(s);
+  const over = kind ? BY_KIND[kind]?.[s.part ? `${s.category}:${s.part}` : s.category] : undefined;
+  if (!base || !over) return base;
+  return { ...base, title: over.title || base.title, questions: base.questions.map((q) => ({ ...q, label: over.questionLabels?.[q.id] || q.label })) };
 };
 
 /** The entry of a model section: its part first (restaurant:main), then its category. */
@@ -155,13 +184,13 @@ export interface QuestionPlan {
  * The questions of a model, over all of its pages: the sections the owner can tick, and those asked whatever he ticks. A section found twice
  * (the same in two pages) is asked once. A model section the registry does not know is left out here and named by `unknownSections`.
  */
-export const questionPlan = (model: Pick<PageModel, 'sections' | 'pages'>): QuestionPlan => {
+export const questionPlan = (model: Pick<PageModel, 'sections' | 'pages'>, kind?: string): QuestionPlan => {
   const out: QuestionPlan = { choices: [], fixed: [] };
   const seen = new Set<string>();
   for (const page of pagesOf(model)) {
     for (const s of page.sections) {
       const id = s.part ? `${s.category}:${s.part}` : s.category;
-      const ask = askOf(s);
+      const ask = askFor(s, kind);
       if (!ask || seen.has(id)) continue;
       seen.add(id);
       const item: AskedSection = { id, mode: s.mode, defaultOn: s.defaultOn === true, ask };
@@ -172,10 +201,13 @@ export const questionPlan = (model: Pick<PageModel, 'sections' | 'pages'>): Ques
 };
 
 /** The questions to show once the owner ticked these sections: the fixed ones, then the ticked ones in the model's order. */
-export const questionsFor = (model: Pick<PageModel, 'sections' | 'pages'>, ticked: string[] | undefined): AskedSection[] => {
-  const plan = questionPlan(model);
+export const questionsFor = (model: Pick<PageModel, 'sections' | 'pages'>, ticked: string[] | undefined, kind?: string): AskedSection[] => {
+  const plan = questionPlan(model, kind);
   const on = new Set(ticked ?? plan.choices.filter((c) => c.defaultOn).map((c) => c.id));
-  return [...plan.fixed, ...plan.choices.filter((c) => on.has(c.id))].filter((s) => s.ask.questions.length > 0);
+  // Questions an earlier step already asked are left out; a section left with none is not asked.
+  return [...plan.fixed, ...plan.choices.filter((c) => on.has(c.id))]
+    .map((s) => ({ ...s, ask: { ...s.ask, questions: s.ask.questions.filter((q) => !q.existing) } }))
+    .filter((s) => s.ask.questions.length > 0);
 };
 
 /** Model sections the registry has no entry for: a new section must get its questions (or an empty entry) here. */

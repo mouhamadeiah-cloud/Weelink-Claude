@@ -26,7 +26,7 @@ const photo = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}
 
 const HERO = photo('1522071820081-009f0129c71c', 1600);
 const STEPS = ['اختار نوع مشروعك', 'اختار باقتك', 'اعمل حسابك', 'جاوب على أسئلة Wee AI'];
-const QUESTION_COUNT = 12;
+const QUESTION_COUNT = 11;
 
 // Photos of running the business, unlike the home page's search and order cards (Eyad, 12 Oct).
 const KINDS: { type: ProjectType; title: string; line: string; perks: string[]; icon: React.ElementType; image: string }[] = [
@@ -327,6 +327,7 @@ export const StartPage: React.FC<StartPageProps> = ({ user, accountId, initialKi
               userEmail={signedIn ? user?.email || "" : ""}
               pageKind={flavor ? 'page' : chosen.type}
               flavor={flavor || undefined}
+              planId={planId || undefined}
               galleryMax={planId ? Math.min(GALLERY_MAX, limitsOf(planId).gallery) : undefined}
               embedded
               fromStart

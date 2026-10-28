@@ -1,6 +1,7 @@
 // The models of a page, as the admin shaped them (pageModels/{id} = { sections }) over the defaults in src/data/pageModels.ts.
 // Server only: the builder (api/build-page.ts) reads them; nothing in the browser does.
-import { DEFAULT_MODELS, MODEL_IDS, PageModel, cleanPages, cleanSections, pagesOf } from '../src/data/pageModels.js';
+import { DEFAULT_MODELS, MODEL_IDS, ModelProblem, PageModel, cleanPages, cleanSections, modelProblems, pagesOf, withSystemPages } from '../src/data/pageModels.js';
+import { readyPool } from './readySlides.js';
 
 type Db = { collection: (name: string) => any };
 
@@ -10,16 +11,22 @@ export const readModels = async (db: Db): Promise<(PageModel & { custom: boolean
   return DEFAULT_MODELS.map((m) => {
     const doc = saved.get(m.id);
     // A model saved before pages existed has only `sections`: it is one page.
-    const pages = cleanPages(doc?.pages) || (cleanSections(doc?.sections) ? cleanPages([{ sections: doc.sections }]) : null);
+    const cleaned = cleanPages(doc?.pages) || (cleanSections(doc?.sections) ? cleanPages([{ sections: doc.sections }]) : null);
+    const pages = cleaned ? withSystemPages(m.id, cleaned) : null;
     return pages ? { ...m, pages, sections: pages[0].sections, custom: true } : { ...m, pages: pagesOf(m), custom: false };
   });
 };
 
 // `raw` is the pages, or (older callers) one list of sections, saved as the single page «الرئيسية».
-export const saveModel = async (db: Db, id: string, raw: unknown, by: string): Promise<{ ok: true; pages: NonNullable<PageModel['pages']> } | { error: 'bad_model' | 'bad_sections' }> => {
+export const saveModel = async (db: Db, id: string, raw: unknown, by: string): Promise<{ ok: true; pages: NonNullable<PageModel['pages']> } | { error: 'bad_model' | 'bad_sections' } | { error: 'no_slides'; problems: ModelProblem[] }> => {
   if (!MODEL_IDS.includes(id)) return { error: 'bad_model' };
-  const pages = cleanPages(Array.isArray(raw) && raw.some((r: any) => r && typeof r === 'object' && Array.isArray(r.sections)) ? raw : [{ sections: raw }]);
-  if (!pages) return { error: 'bad_sections' };
+  const cleaned = cleanPages(Array.isArray(raw) && raw.some((r: any) => r && typeof r === 'object' && (Array.isArray(r.sections) || r.system)) ? raw : [{ sections: raw }]);
+  if (!cleaned) return { error: 'bad_sections' };
+  const pages = withSystemPages(id, cleaned);
+  // Every section must have a ready slide to be built from: the model is what the site will be, nothing of it may fall out (Eyad, 28 Oct).
+  const pool = await readyPool(db);
+  const problems = modelProblems(pages, (c) => (pool.get(c) || []).map((r) => r.id));
+  if (problems.length) return { error: 'no_slides', problems };
   await db.collection('pageModels').doc(id).set({ pages, sections: pages[0].sections, changedAt: Date.now(), changedBy: by });
   return { ok: true, pages };
 };

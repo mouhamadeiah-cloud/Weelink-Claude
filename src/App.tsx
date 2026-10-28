@@ -91,7 +91,7 @@ import { formatMoney } from './components/shop/adminUi';
 import { PageLookPicker, type LookSample } from './components/rightDrawer/PageLookPicker';
 import type { PageLook } from './data/pageLooks';
 import { tickedSections } from './data/optionalSections';
-import { KIND_OF_PROJECT, buildPageFromPlan, withBlankPage, emptyMainPage, buildProfile, pageAssets, requestPagePlan, requestFreeTurn, applyFreeDesign } from './services/pageBuilder';
+import { KIND_OF_PROJECT, buildPageFromPlan, systemTwin, withBlankPage, emptyMainPage, buildProfile, pageAssets, requestPagePlan, requestFreeTurn, applyFreeDesign } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
 import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
@@ -2451,7 +2451,9 @@ export default function App() {
     for (const m of (result.more || []).slice(0, 11)) {
       const next = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections), modelPage: m.id });
       if (!next.ok) { console.warn(`Could not build the model page «${m.name}»:`, next.message); failed.push(m.name); continue; }
-      const shell = withBlankPage(sitePages, built.pageId, m.name);
+      // A page of the model with a built-in twin (the store's «تواصل معنا») is built into the twin; otherwise it is a new page.
+      const twin = systemTwin(m.name, sitePages, laterIds);
+      const shell = twin ? { pages: sitePages, pageId: twin } : withBlankPage(sitePages, built.pageId, m.name);
       const more = await buildPageFromPlan(next.plan, { kind, answers, siteName, pages: shell.pages, elements: siteElements, activePageId: shell.pageId, targetPageId: shell.pageId, maxPhotos, later: true });
       if (!more.ok) { failed.push(m.name); continue; }
       sitePages = more.pages;

@@ -68,6 +68,16 @@ const PAGE_TARGETS: Record<string, string[]> = {
   cart: [REST_PAGE_IDS.cart, 'shop-page-cart'],
   contact: [REST_PAGE_IDS.contact, 'shop-page-contact', CAR_PAGE_IDS.contact],
 };
+// The built-in pages a page of the model takes the place of (same job, same name): the model builds into them, so the page, the buttons that
+// open it and its navbar entry stay one, instead of a second «تواصل معنا» beside the store's own (Eyad, 28 Oct: the model is the only source).
+const SYSTEM_TWINS: { name: RegExp; ids: string[] }[] = [
+  { name: /^\s*(تواصل معنا|تواصل|اتصل بنا)\s*$/, ids: [REST_PAGE_IDS.contact, 'shop-page-contact', CAR_PAGE_IDS.contact] },
+  { name: /^\s*(من نحن|عنّا|عنا)\s*$/, ids: [CAR_PAGE_IDS.about] },
+];
+export const systemTwin = (name: string, pages: Page[], taken: string[]): string | null => {
+  const ids = SYSTEM_TWINS.find((t) => t.name.test(name))?.ids || [];
+  return ids.find((id) => pages.some((p) => p.id === id) && !taken.includes(id)) || null;
+};
 const HOME_PAGE: Record<BuildKind, string | null> = { free: null, restaurant: REST_PAGE_IDS.home, shop: 'shop-page-home', cars: CAR_PAGE_IDS.home };
 
 // The owner's colour choice (Wee AI step 6): a named choice gives its accent and second colour,

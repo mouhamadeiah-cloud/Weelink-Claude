@@ -23,6 +23,8 @@ export interface WeeAnswers {
     features?: string[];
     // The optional sections the owner ticked (src/data/optionalSections.ts); nothing saved = the defaults.
     optionalSections?: string[];
+    // The answers of the section questions (src/data/sectionQuestions.ts), by `${section}.${question}`.
+    sectionAnswers?: Record<string, any>;
   };
 }
 
@@ -39,6 +41,28 @@ export const ownerServices = (rows: { name: string; price: string }[] | undefine
   (rows || []).map((r) => ({ name: (r.name || '').trim(), price: (r.price || '').trim() })).filter((r) => r.name).slice(0, 8);
 const serviceLines = (rows: { name: string; price: string }[] | undefined) =>
   ownerServices(rows).map((r) => `${r.name}: ${r.price || 'حسب الطلب'}`).join('؛ ');
+
+type Row = Record<string, string>;
+const rowsOf = (v: unknown): Row[] => (Array.isArray(v) ? (v as Row[]).filter((r) => (r?.name || '').trim()) : []);
+const rowLines = (rows: Row[]) => rows.map((r) => (r.price?.trim() ? `${r.name.trim()}: ${r.price.trim()}` : r.name.trim())).join('؛ ').slice(0, 600);
+
+/** What the owner answered to the section questions, as facts for the writer (the menu groups and items, the team, the work shown...). */
+export const sectionFacts = (a: Record<string, any> | undefined): Record<string, string> => {
+  if (!a) return {};
+  const pick = (k: string) => rowsOf(a[k]);
+  const groups = [...pick('restaurant:main.groups'), ...pick('shop:main.groups'), ...pick('cars:main.groups')];
+  const items = [...pick('restaurant:main.dishes'), ...pick('shop:main.products'), ...pick('cars:main.cars')];
+  const facts: Record<string, string> = {
+    المجموعات_الرئيسية: groups.map((r) => r.name.trim()).join('، '),
+    عناصر_القائمة: rowLines(items),
+    الفريق: pick('team.team').map((r) => [r.name.trim(), r.role?.trim()].filter(Boolean).join(' - ')).join('؛ '),
+    الأعمال: rowLines(pick('projects.projects')),
+    عروض_خاصة: rowLines(pick('special_offer.offer')),
+    فيديو: typeof a['video.video'] === 'string' ? a['video.video'].trim() : '',
+    ساعات_العمل: typeof a['contact.hours'] === 'string' ? a['contact.hours'].trim() : '',
+  };
+  return Object.fromEntries(Object.entries(facts).filter(([, v]) => v));
+};
 
 // What the owner told Wee AI, as the few facts the writer needs.
 export const businessFacts = (a: WeeAnswers, siteName: string): Record<string, string> => {
@@ -62,6 +86,7 @@ export const businessFacts = (a: WeeAnswers, siteName: string): Record<string, s
     ملاحظات: ai.specialInstructions || '',
     الخدمات: serviceLines(ai.services),
     المزايا: (ai.features || []).slice(0, 12).join('، '),
+    ...sectionFacts(ai.sectionAnswers),
   };
   return Object.fromEntries(Object.entries(facts).filter(([, v]) => v && v.trim()));
 };

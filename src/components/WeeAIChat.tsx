@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { OPTIONAL_SECTIONS, tickedSections } from '../data/optionalSections';
+import { SectionQuestions } from './onboarding/SectionQuestions';
+import { QuestionModel, forCategory, loadQuestionModel } from '../services/questionModel';
 import { db } from '../services/firebase';
 import { WeeDots } from './ui/WeeDots';
 import { SYRIAN_GOVERNORATES, GOVERNORATE_CENTERS, addressFromPoint, areasOf, findSubdistrict, findVillage, subdistrictsOf, villagesOf, useGovernoratePlaces } from '../utils/syriaLists';
@@ -42,6 +44,8 @@ interface WeeAIChatProps {
   flavor?: ProjectType;
   // How many photos the gallery question takes: the package's gallery (5 on the free page, up to 15 on Pro); 5 when not told.
   galleryMax?: number;
+  // The chosen package: its page model decides which section questions follow (none = the fixed list of optional sections).
+  planId?: string;
   // Fills its own box (the start page) instead of sitting under the control panel's tabs.
   embedded?: boolean;
   // In the docked panel: takes the place of the other tabs' content under the breadcrumb, like them,
@@ -149,7 +153,7 @@ const getConciseQuestionText = (stepNum: number, name?: string, kind?: ProjectTy
     case 9:
       return "يرجى رفع الشعار الرسمي (اللوغو) لصفحتك:";
     case 10:
-      return "صورة لخلفية الشريحة التعريفية الأولى لموقعك:";
+      return "في صورة حابب تحطها بواجهة الصفحة؟";
     case 11:
       return "هل تفضل الصفحة هادئة وجادة أم بتأثيرات بصرية وحركية؟";
     case 12:
@@ -199,6 +203,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   pageKind,
   flavor,
   galleryMax: galleryMaxProp,
+  planId,
   embedded,
   inFlow,
   onEditAnswers,
@@ -230,6 +235,16 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // Current Step (1 through 12, then 13 = complete)
   const [step, setStep] = useState<number>(1);
+  useEffect(() => { if (step < 12) setSectionsDone(false); }, [step]);
+  // The section questions follow the page model of the chosen package; none = the fixed list of optional sections.
+  const [qModel, setQModel] = useState<QuestionModel | null>(null);
+  const [sectionsDone, setSectionsDone] = useState(false);
+  useEffect(() => {
+    if (!planId) { setQModel(null); return; }
+    let live = true;
+    loadQuestionModel(planId).then((m) => live && setQModel(m));
+    return () => { live = false; };
+  }, [planId]);
   const [writeNote, setWriteNote] = useState<{ ok: boolean; message: string } | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [canRestore, setCanRestore] = useState(false);
@@ -299,6 +314,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     wantsGallery: true,
     galleryImages: [] as string[],
     optionalSections: undefined as string[] | undefined,
+    sectionAnswers: {} as Record<string, any>,
     heroBgImage: '',
     motionEffects: 'صفحة هادئة وجادة',
     specialInstructions: '',
@@ -362,12 +378,14 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       wantsGallery: true,
       galleryImages: [],
       optionalSections: undefined,
+      sectionAnswers: {},
       heroBgImage: '',
       motionEffects: 'صفحة هادئة وجادة',
       specialInstructions: '',
       services: [],
       features: [],
     });
+    setSectionsDone(false);
     setStep(1);
   };
 
@@ -390,7 +408,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       if (data.aiAnswers) setAiAnswers({ services: [], features: [], ...data.aiAnswers, ...(otherKind ? { description: '', services: [], features: [], specialInstructions: '' } : {}) });
       finishedRef.current = data.currentStep >= 13;
       if (fromStart) setStep(1);
-      else if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep);
+      else if (data.currentStep && data.currentStep <= 13) setStep(data.currentStep === 11 ? 12 : data.currentStep);
       // Photos saved full size by older versions move to Firebase Storage (the next save keeps their links).
       if (!isGuest) {
         hostAnswerImages(data).then((hosted) => {
@@ -467,7 +485,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   // Silently trigger canvas loading loop simulation on step changes
   useEffect(() => {
     if (step > 1 || embedded) {
-      onStepChange?.(step);
+      onStepChange?.(step > 11 ? step - 1 : step); // step 11 is skipped
     }
   }, [step]);
 
@@ -507,6 +525,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     if (step === 8 && personalInfo.logoUrl) {
       nextStep = 10;
     }
+    // The visual-effects question (step 11) is not asked any more: the page keeps the calm default.
+    if (nextStep === 11) nextStep = 12;
     setStep(nextStep);
     saveProgress(nextStep);
   };
@@ -516,6 +536,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     if (step === 10 && personalInfo.logoUrl) {
       prevStep = 8;
     }
+    if (prevStep === 11) prevStep = 10;
     setStep(prevStep);
   };
 
@@ -1522,7 +1543,19 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         {/* STEP 12: ما يجب الانتباه له */}
         {step === 12 && (
           <div className="space-y-3.5">
-            <div className="space-y-1.5">
+            {qModel && !sectionsDone ? (
+              <SectionQuestions
+                model={forCategory(qModel, tone, catalogInfo.customCategory || catalogInfo.category)}
+                kind={tone}
+                ticked={aiAnswers.optionalSections}
+                answers={aiAnswers.sectionAnswers || {}}
+                onTicked={(ids) => setAiAnswers((p) => ({ ...p, optionalSections: ids }))}
+                onAnswers={(a) => setAiAnswers((p) => ({ ...p, sectionAnswers: a }))}
+                onBack={goToPrevStep}
+                onDone={() => setSectionsDone(true)}
+              />
+            ) : (<>
+            {!qModel && <div className="space-y-1.5">
               <p className="text-xs font-bold text-neutral-700">أقسام إضافية تريدها في صفحتك (اختياري):</p>
               {OPTIONAL_SECTIONS.map((o) => {
                 const on = tickedSections(aiAnswers.optionalSections).includes(o.id);
@@ -1544,7 +1577,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   </label>
                 );
               })}
-            </div>
+            </div>}
             <textarea
               value={aiAnswers.specialInstructions}
               onChange={e => setAiAnswers(p => ({ ...p, specialInstructions: e.target.value }))}
@@ -1556,7 +1589,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                onClick={goToPrevStep}
+                onClick={qModel ? () => setSectionsDone(false) : goToPrevStep}
                 className="py-2 px-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg text-xs font-bold transition-all"
               >
                 السابق
@@ -1575,6 +1608,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                 <span>إنهاء وتجهيز الإجابات</span>
               </button>
             </div>
+            </>)}
           </div>
         )}
 

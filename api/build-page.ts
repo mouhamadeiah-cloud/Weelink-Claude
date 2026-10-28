@@ -25,7 +25,7 @@ import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
 import designer from '../src/data/ai/weelinkDesigner.json' with { type: 'json' };
 import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
 import { GALLERY_MAX, limitsOf } from '../src/utils/planLimits.js';
-import { forRentalOf, modelOf } from '../src/data/pageModels.js';
+import { DEFAULT_MODELS, forRentalOf, modelOf, pagesOf } from '../src/data/pageModels.js';
 import { readModels } from '../server/pageModels.js';
 import { ON_REQUEST, clip, cleanText, numbersAreOwners, ownersNumbers } from '../server/aiText.js';
 import { autoSlots } from '../src/data/autoSlots.js';
@@ -639,9 +639,33 @@ const formEnv = (ask: (prompt: string, schema: object, system: string) => Promis
   navTones: NAV_TONES,
 });
 
+const PLAN_ID = /^(page-(free|pro)|(restaurant|shop|cars|rental|hotel)-(free|30|60|pro))$/;
+// The pages and sections of the model of a package: the admin's, else the default.
+const modelAnswer = async (plan: unknown) => {
+  if (typeof plan !== 'string' || !PLAN_ID.test(plan)) return json({ error: 'bad_request' }, 400);
+  const id = modelOf(plan);
+  let model: { id: string; name: string; pages: ReturnType<typeof pagesOf> } | null = null;
+  try {
+    const db = meterDb();
+    const found = db ? (await readModels(db)).find((m) => m.id === id) : null;
+    if (found) model = { id: found.id, name: found.name, pages: pagesOf(found) };
+  } catch (err) {
+    console.error('model read failed:', (err as Error)?.message);
+  }
+  if (!model) {
+    const d = DEFAULT_MODELS.find((m) => m.id === id)!;
+    model = { id: d.id, name: d.name, pages: pagesOf(d) };
+  }
+  return json({ model });
+};
+
 export default {
   async fetch(request: Request): Promise<Response> {
     if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+    // The model a package builds from (its sections decide which questions Wee AI asks). Public: it only names the sections.
+    const peek = await request.clone().json().catch(() => null);
+    if (peek?.mode === 'model') return modelAnswer(peek?.plan);
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return json({ error: 'not_configured' }, 503);

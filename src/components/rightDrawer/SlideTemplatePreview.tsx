@@ -293,9 +293,11 @@ interface Props {
   categoryId: string;
   index: number;
   onAdd: () => void;
+  // Only the drawing: no name bar, no hover (the slide shown as a picture beside a question).
+  bare?: boolean;
 }
 
-export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, index, onAdd }) => {
+export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, index, onAdd, bare }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(300);
   useLayoutEffect(() => {
@@ -316,13 +318,13 @@ export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, ind
 
   return (
     <div
-      onClick={onAdd}
+      onClick={bare ? undefined : onAdd}
       className="w-full bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-2xs group cursor-pointer hover:shadow-md transition-all relative"
       style={{ ['--kind' as any]: kind.color }}
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = kind.color)}
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = '')}
     >
-      <div className="px-2.5 py-2 border-b border-neutral-100 flex items-center gap-2" style={{ background: kind.bg }}>
+      {!bare && <div className="px-2.5 py-2 border-b border-neutral-100 flex items-center gap-2" style={{ background: kind.bg }}>
         <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ background: kind.color }} />
         <div className="min-w-0 flex-1">
           <div className="text-[12.5px] font-black leading-tight truncate" style={{ color: kind.color }}>
@@ -335,7 +337,7 @@ export const SlideTemplatePreview: React.FC<Props> = ({ payload, categoryId, ind
             </span>
           </div>
         </div>
-      </div>
+      </div>}
 
       <div ref={boxRef} className="w-full relative overflow-hidden" style={{ height: Math.max(8, Math.round(shownHeight * scale)), background: bg }}>
         {payload.backgroundImage && (

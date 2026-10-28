@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_MODELS } from '../src/data/pageModels.ts';
+import { STEP_HELP } from '../src/data/stepExplain.ts';
 import { SECTION_ASKS, firstNameOf, missingEntries, previewCategoryOf, pruneAnswers, questionPlan, questionsFor, summarizeAnswer, summarizeSection, unknownSections, withName } from '../src/data/sectionQuestions.ts';
 
 const model = (id: string) => DEFAULT_MODELS.find((m) => m.id === id)!;
@@ -66,11 +67,17 @@ test('unticking a section removes its answers and no other', () => {
   assert.deepEqual(pruneAnswers(answers, []), answers);
 });
 
-test('a section previews with the ready slides of its own category; the live store views and slideless sections do not', () => {
+test('a section previews with the ready slides of its own category; the store sections with their store slide, ratings with none', () => {
   assert.equal(previewCategoryOf('about'), 'about');
   assert.equal(previewCategoryOf('booking'), 'booking');
   assert.equal(previewCategoryOf('restaurant:front'), 'intro');
-  assert.equal(previewCategoryOf('shop:main'), undefined);
-  assert.equal(previewCategoryOf('search'), undefined);
+  assert.equal(previewCategoryOf('shop:main'), 'shop');
+  assert.equal(previewCategoryOf('cars:main'), 'cars');
+  assert.equal(previewCategoryOf('search'), 'search');
   assert.equal(previewCategoryOf('ratings'), undefined);
+});
+
+test('every one of Wee AI\'s first ten questions has its explanation and note for the panel beside the chat', () => {
+  for (let n = 1; n <= 10; n++) assert.ok(STEP_HELP[n]?.explain.length > 60 && STEP_HELP[n]?.note, `step ${n}`);
+  assert.match(withName(STEP_HELP[2].explain, 'أحمد'), /يا أحمد، وين/);
 });

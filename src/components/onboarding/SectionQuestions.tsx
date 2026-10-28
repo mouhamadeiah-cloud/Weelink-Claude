@@ -7,7 +7,7 @@ import { Plus } from 'lucide-react';
 import { AskedSection, DAYS, SectionQuestion, answerKey, pruneAnswers, questionPlan, questionsFor, summarizeSection, withName } from '../../data/sectionQuestions';
 import type { QuestionModel } from '../../services/questionModel';
 import { AiBubble, AnswerBox, SKIPPED_TEXT, UserBubble } from './ChatThread';
-import { SectionPreview } from './SectionPreview';
+import type { Topic } from './ExplainPanel';
 
 export type SectionAnswers = Record<string, any>;
 export interface BookingChoice { now: boolean; days: number[]; from: string; to: string; minutes: number }
@@ -90,9 +90,11 @@ interface Props {
   onAnswers: (a: SectionAnswers) => void;
   /** The last bubble of the thread, once every section is passed (the special notes and the finish button). */
   finale: React.ReactNode;
+  /** What the panel beside the chat shows: the section being asked (null once every section is passed). */
+  onTopic?: (t: (Omit<Topic, 'progress'> & { at: { n: number; total: number } }) | null) => void;
 }
 
-export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', ticked, answers, onTicked, onAnswers, finale }) => {
+export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', ticked, answers, onTicked, onAnswers, finale, onTopic }) => {
   const plan = useMemo(() => questionPlan(model, kind), [model, kind]);
   const on = ticked ?? plan.choices.filter((c) => c.defaultOn).map((c) => c.id);
   const asked: AskedSection[] = useMemo(() => questionsFor(model, ticked, kind), [model, ticked, kind]);
@@ -111,6 +113,18 @@ export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', tick
     liveRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [current, editing]);
 
+  const TICKS_EXPLAIN = 'يا {name}، هي أقسام اختيارية بتزيدها على صفحتك. كل قسم بتعلّم عليه بسألك عنه بعد شوي، والقسم اللي ما بتعلّم عليه ما رح يظهر. وإذا غيّرت رأيك بترجع لهون وبتعدّل، والأسئلة اللي بعدها بتتجدد لحالها.';
+  const openId = editing ?? current;
+  useEffect(() => {
+    if (!onTopic) return;
+    if (openId === TICKS) onTopic({ id: 'section-ticks', title: 'أي أقسام تريدها في صفحتك؟', explain: withName(TICKS_EXPLAIN, name), note: 'تقدر تغيّر اختيارك لاحقاً وتتجدد الأسئلة.', at: { n: 1, total: ids.length + 1 } });
+    else {
+      const sec = asked.find((a) => a.id === openId);
+      if (sec) onTopic({ id: `section-${sec.id}`, title: sec.ask.title, explain: [sec.ask.intro, sec.ask.explain && withName(sec.ask.explain, name)].filter(Boolean).join(' '), note: sec.ask.note, at: { n: ids.indexOf(sec.id) + 1, total: ids.length + 1 } });
+      else onTopic(null);
+    }
+  }, [openId, name]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const tick = (id: string, checked: boolean) => {
     const next = checked ? [...on, id] : on.filter((x) => x !== id);
     onTicked(next);
@@ -128,7 +142,7 @@ export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', tick
     );
     return (
       <div key={TICKS} ref={liveRef} className="space-y-2 scroll-mt-2">
-        <AiBubble title={title} explain={withName('يا {name}، هي أقسام اختيارية بتزيدها على صفحتك. كل قسم بتعلّم عليه بتسألك Wee AI عنه بعد شوي، والقسم اللي ما بتعلّم عليه ما بيظهر. وإذا غيّرت رأيك لاحقاً بترجع لهون وبتعدّل، والأسئلة اللي بعدها بتتجدد لحالها.', name)}>
+        <AiBubble title={title} live>
           <AnswerBox>
             <div className="space-y-2">
               {plan.choices.map((c) => (
@@ -162,12 +176,7 @@ export const SectionQuestions: React.FC<Props> = ({ model, kind, name = '', tick
     };
     return (
       <div key={section.id} ref={liveRef} className="space-y-2 scroll-mt-2">
-        <AiBubble
-          title={section.ask.title}
-          explain={[section.ask.intro, section.ask.explain && withName(section.ask.explain, name)].filter(Boolean).join(' ')}
-          note={section.ask.note}
-          preview={<SectionPreview sectionId={section.id} />}
-        >
+        <AiBubble title={section.ask.title} live>
           <AnswerBox>
             <div className="space-y-3">
               {section.ask.questions.map((q) => {

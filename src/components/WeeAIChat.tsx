@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { OPTIONAL_SECTIONS, tickedSections } from '../data/optionalSections';
 import { SectionQuestions } from './onboarding/SectionQuestions';
 import { AiBubble, AnswerBox, UserBubble } from './onboarding/ChatThread';
-import { firstNameOf, withName } from '../data/sectionQuestions';
+import { firstNameOf, questionPlan, questionsFor, withName } from '../data/sectionQuestions';
+import { STEP_HELP } from '../data/stepExplain';
+import type { Topic } from './onboarding/ExplainPanel';
 import { QuestionModel, forCategory, loadQuestionModel } from '../services/questionModel';
 import { db } from '../services/firebase';
 import { WeeDots } from './ui/WeeDots';
@@ -62,6 +64,8 @@ interface WeeAIChatProps {
   restoreAvailable?: boolean;
   // The explainer of Wee AI, under the header.
   introSlot?: React.ReactNode;
+  // What the panel beside the chat shows for the question being asked (the start page draws it: picture, explanation, note).
+  onTopic?: (topic: Topic | null) => void;
 }
 
 // Answers given before signing up are kept on this device under this id, then moved to the new
@@ -150,50 +154,6 @@ const getConciseQuestionText = (stepNum: number, name?: string, kind?: ProjectTy
   return name && stepNum > 1 && !text.includes('يا ') ? `يا ${name}، ${text}` : text;
 };
 
-// What each question is for, in Wee AI's words, with the notes under it ({name} = his first name).
-const STEP_HELP: Record<number, { explain: string; note?: string }> = {
-  1: {
-    explain: 'أنا Wee AI، مساعدك الشخصي. رح أسألك كم سؤال بسيط وبعدها بتكون كل المعلومات عندي لأبني صفحتك. نبلش بالتعارف: اللقب والاسم الكامل واسم صفحتك. اسم الصفحة هو اللي بيظهر كعنوان لها وعلى شريط التنقل، واسمك الكامل أخاطبك فيه.',
-    note: 'الاسم الكامل ضروري لنكمل، وباقي المعلومات تقدر تعدّلها بعدين.',
-  },
-  2: {
-    explain: 'العنوان بيخلي زبونك يعرف مكانك وبيلاقيك على الخريطة. اضغط زر الموقع ليعبّي Wee AI العنوان لحاله، أو اختر المحافظة والمنطقة بنفسك. وفيك تحرّك الدبوس على الخريطة لتضبط مكانك بالضبط.',
-    note: 'كل حقل قابل للتعديل بعد ما يعبّيه الموقع.',
-  },
-  3: {
-    explain: 'هي الطرق اللي بيوصلك فيها زبونك: واتساب، هاتف، إيميل وروابط حساباتك. بتظهر بقسم «تواصل معنا» وبأزرار الصفحة. اكتب بس اللي بتحب يتواصلوا معك فيه.',
-    note: 'أي حقل ما عندك إياه اتركه فاضي وما رح يظهر بالصفحة.',
-  },
-  4: {
-    explain: 'نوع شغلك بيحدد الأقسام والكلمات والصور اللي رح أبني عليها صفحتك، وبيساعد زبائنك يلاقوك لما يدوّروا على خدمة متل خدمتك. اختر من القائمة، وإذا ما لقيت شغلك اكتبه بنفسك.',
-    note: 'تقدر تغيّره لاحقاً من المحرر.',
-  },
-  5: {
-    explain: 'الوصف هو أهم شي بعتمد عليه لأكتب نصوص صفحتك. كل ما أعطيتني تفاصيل أكتر عن خدماتك وشو بيميزك، كل ما طلعت النصوص أقرب لشغلك. اكتب بأسلوبك العادي ولا تهتم بالتنسيق.',
-    note: 'ما بكتب إلا من اللي بتعطيني ياه، وأي نص بزيده من عندي بعلّمه «مثال» لتحذفه أو تعدّله.',
-  },
-  6: {
-    explain: 'الألوان بتعطي صفحتك شخصيتها. اختر ستايل جاهز من الستايلات (بيغيّر الألوان والإحساس العام)، أو لون بتحبه، أو خلّيني أنا أختار الأنسب لشغلك.',
-    note: 'تقدر تبدّل الألوان والستايل من المحرر بأي وقت.',
-  },
-  7: {
-    explain: 'الفواصل هي الحدود الصغيرة بين قسم وقسم بصفحتك: مستقيمة، موجة، منحنية وغيرها. تفصيل بسيط بس بيغيّر إحساس الصفحة كلها.',
-    note: 'اختيارك هو البداية وبتعدّله من المحرر.',
-  },
-  8: {
-    explain: 'معرض الصور بيعرض صور شغلك بشكل مرتب، والزبون بيصدّق الصورة أكتر من الكلام. عدد الصور بيتبع باقتك. فيك تضيف الصور الآن أو بعدين من المحرر.',
-    note: 'إذا ما بدك معرض، اختر «بدون» وما رح يظهر القسم.',
-  },
-  9: {
-    explain: 'الشعار بيظهر على شريط التنقل وبعنوان صفحتك. الأفضل صورة واضحة بخلفية شفافة. فيك ترفعها من جهازك أو تحط رابطها.',
-    note: 'إذا ما عندك شعار اضغط «التالي»، وبكتب اسم صفحتك مكانه.',
-  },
-  10: {
-    explain: 'صورة الواجهة هي أول شي بيشوفه الزائر: خلفية الشاشة الأولى من صفحتك. اختر صورة واضحة وعالية الجودة تعبّر عن شغلك.',
-    note: 'إذا تخطّيت، بحط صورة مناسبة لشغلك وبتبدّلها لاحقاً.',
-  },
-};
-
 // The answers in short, in the editor's panel; the questions themselves are on the start page.
 const AnswersSummary: React.FC<{ done: boolean; rows: [string, string | undefined][]; onEdit: () => void }> = ({ done, rows, onEdit }) => (
   <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs text-neutral-800">
@@ -240,7 +200,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   onEditAnswers,
   fromStart,
   restoreAvailable,
-  introSlot
+  introSlot,
+  onTopic
 }) => {
   // Answers finished once stay finished while the owner walks through them again.
   const finishedRef = useRef(false);
@@ -655,6 +616,38 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
       default: return '';
     }
   };
+
+  // What the panel beside the chat shows: the step being asked, or (from step 12) the section SectionQuestions reports. The bar counts both.
+  const sectionTotal = qModel
+    ? (questionPlan(forCategory(qModel, tone, catalogInfo.customCategory || catalogInfo.category), tone).choices.length ? 1 : 0)
+      + questionsFor(forCategory(qModel, tone, catalogInfo.customCategory || catalogInfo.category), aiAnswers.optionalSections, tone).length + 1
+    : 1;
+  const topicRef = useRef(onTopic);
+  topicRef.current = onTopic;
+  const notesTopic = (): Topic => (step >= 13
+    ? { id: 'done', title: 'خلصنا', explain: withName('يا {name}، كل إجاباتك انحفظت. فيك ترجع لأي سؤال فوق وتعدّله بأي وقت، والأسئلة اللي بتتأثر بتعديلك بتتجدد لحالها. وبس تكون جاهز بيفتح لك المحرر، وهناك زر «ابن صفحتي» بيخلّيني ابني صفحتك من هالإجابات.', firstName), progress: { n: 10 + sectionTotal, total: 10 + sectionTotal } }
+    : { id: 'notes', title: 'ملاحظات خاصة', explain: withName('آخر شي يا {name}، إذا في شي خاص بدك ياه اكتبه هون: شي لازم يظهر بالصفحة، شي ما بدك ياه، أو أسلوب معيّن بالكتابة. وإذا ما في، بتتركه فاضي وبتخلّص.', firstName), note: 'ما بنفّذ غير اللي بتكتبه، وبتقدر تعدّله بعدين.', progress: { n: 10 + sectionTotal, total: 10 + sectionTotal } });
+  const onSectionTopic = (t: (Omit<Topic, 'progress'> & { at: { n: number; total: number } }) | null) => {
+    if (!t) { topicRef.current?.(notesTopic()); return; }
+    const { at, ...rest } = t;
+    topicRef.current?.({ ...rest, pageName: personalInfo.pageName, logo: personalInfo.logoUrl, progress: { n: 10 + at.n, total: 10 + sectionTotal } });
+  };
+  useEffect(() => {
+    if (step >= 13 && editing == null) { topicRef.current?.(notesTopic()); return; }
+    if (step >= 12 && editing == null) return; // SectionQuestions reports it
+    const n = active;
+    const help = STEP_HELP[n];
+    if (!help) return;
+    topicRef.current?.({
+      id: `step-${n}`,
+      title: getConciseQuestionText(n, firstName, tone, galleryMax),
+      explain: withName(help.explain, firstName),
+      note: help.note,
+      pageName: personalInfo.pageName || personalInfo.fullName,
+      logo: personalInfo.logoUrl,
+      progress: { n: Math.min(n, 10), total: 10 + sectionTotal },
+    });
+  }, [active, step, editing, firstName, personalInfo.pageName, personalInfo.fullName, personalInfo.logoUrl, sectionTotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The form of one question; it opens under Wee AI's question while it is asked, or again when the owner edits his answer.
   const renderForm = (cur: number) => (
@@ -1461,10 +1454,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
   // The special notes and the finish button: the last bubble of the thread (Wee AI builds nothing until «ابن صفحتي»).
   const finale = (
-    <AiBubble
-      title={withName('آخر شي يا {name}، في ملاحظات خاصة بتحب أنتبه إلها؟', firstName)}
-      explain="اكتب أي طلب أو تفصيل ما سألتك عنه: شي لازم يظهر بالصفحة، شي لا بدك ياه، أو أسلوب معيّن بالكتابة. تقدر تتركه فاضي."
-    >
+    <AiBubble title={withName('آخر شي يا {name}، في ملاحظات خاصة بتحب أنتبه إلها؟', firstName)} live={step < 13}>
       <AnswerBox>
         <div className="space-y-3">
           <textarea
@@ -1509,9 +1499,10 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   onTicked={(ids) => setAiAnswers((p) => ({ ...p, optionalSections: ids }))}
                   onAnswers={(a) => setAiAnswers((p) => ({ ...p, sectionAnswers: a }))}
                   finale={finale}
+                  onTopic={onSectionTopic}
                 />
               ) : (<>
-                <AiBubble title={askText(12)} explain="هي أقسام اختيارية بتزيدها على صفحتك.">
+                <AiBubble title={askText(12)} live>
                   <AnswerBox>
 <div className="space-y-1.5">
                       <p className="text-xs font-bold text-neutral-700">أقسام إضافية تريدها في صفحتك (اختياري):</p>
@@ -1547,7 +1538,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         const text = answerText(n);
         return (
           <div key={n} ref={live ? liveRef : undefined} className="space-y-2 scroll-mt-2">
-            <AiBubble title={askText(n)} explain={live || n === step ? withName(STEP_HELP[n]?.explain || '', firstName) : undefined} note={live || n === step ? STEP_HELP[n]?.note : undefined}>
+            <AiBubble title={askText(n)} live={live}>
               {live && <AnswerBox>{renderForm(n)}</AnswerBox>}
             </AiBubble>
             {n < step && !live && <UserBubble text={text} onEdit={() => setEditing(n)} />}
@@ -1555,10 +1546,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         );
       })}
       {step >= 13 && (
-        <AiBubble
-          title={withName('خلصنا يا {name}! كل إجاباتك انحفظت.', firstName)}
-          explain="فيك ترجع لأي سؤال فوق وتعدّله بأي وقت، والأسئلة اللي بتتأثر بتعديلك بتتجدد لحالها. لما تكون جاهز افتح المحرر، وهناك زر «ابن صفحتي» بيخلي Wee AI يبني صفحتك من هالإجابات."
-        >
+        <AiBubble title={withName('خلصنا يا {name}! كل إجاباتك انحفظت.', firstName)} live>
           {embedded && onCompleteChat && (
             <button
               type="button"

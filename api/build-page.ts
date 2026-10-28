@@ -624,7 +624,7 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
       avoid: new Set(Array.isArray(last) ? last : []),
     });
     if (picked.skipped.length) console.warn(`model ${model.id}: no slide for ${picked.skipped.join(', ')}`);
-    return picked.pool.length ? { ...picked, more: o.pageId ? [] : pages.slice(1).map((p) => ({ id: p.id, name: p.name })) } : null;
+    return picked.pool.length ? { ...picked, pageName: page.name, ratings: page.sections.some((x) => x.category === 'ratings'), more: o.pageId ? [] : pages.slice(1).map((p) => ({ id: p.id, name: p.name })) } : null;
   } catch (err) {
     console.error('model pick failed:', (err as Error)?.message);
     return null;
@@ -777,7 +777,10 @@ export default {
           console.error('build picks not saved:', (err as Error)?.message);
         }
       }
-      return json({ plan, ...(Object.keys(extra).length ? { extra } : {}), ...(over?.more?.length ? { more: over.more } : {}), usage: tokens });
+      // The sections the model asked for that did not get built (no slide yet, or the AI gave a slide nothing), so the owner is told.
+      const built = new Set(plan.sections.map((s) => s.template));
+      const missing = over ? [...over.skipped, ...over.pool.filter((p) => !built.has(p.templates[0])).map((p) => p.name)] : [];
+      return json({ plan, ...(Object.keys(extra).length ? { extra } : {}), ...(over?.more?.length ? { more: over.more } : {}), ...(over ? { pageName: over.pageName, ratings: over.ratings } : {}), ...(missing.length ? { missing } : {}), usage: tokens });
     } catch (err) {
       const failure = err instanceof BuildFailure ? err : new BuildFailure('check', String((err as Error)?.message || '').slice(0, 200));
       await meterClose(meter, 'build-page', MODEL, sumUsage(usage), false, failure.reason, Date.now() - started);

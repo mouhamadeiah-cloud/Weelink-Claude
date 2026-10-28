@@ -2416,7 +2416,7 @@ export default function App() {
     const siteName = page.navbar.brandName || PROJECT_KIND_LABEL[project];
     const target = kind === 'free' ? `شرائح صفحة «${page.name}»` : 'شرائح الصفحة الرئيسية';
     // Right after the questions the owner asked for the build: no question then, the old page is kept.
-    if (!auto && !window.confirm(`Wee AI رح يصمم ${target} من جديد من معلوماتك ويستبدل الشرائح الموجودة. بتقدر ترجع الصفحة القديمة بعدين. نكمل؟`)) {
+    if (!auto && !window.confirm(`Wee AI رح يصمم ${target} من جديد من معلوماتك ويستبدل الشرائح الموجودة${project === 'page' ? '، وصفحات موقعك رح تصير متل صفحات النموذج بالضبط' : ''}. بتقدر ترجع الصفحة القديمة بعدين. نكمل؟`)) {
       return { ok: false, message: 'ما تغير شي بصفحتك.' };
     }
     // The owner's photos go into the page as links, never as full-size inline images.
@@ -2431,26 +2431,43 @@ export default function App() {
     if (project === 'shop') updateShopAdmin((d) => seedShop(d, answers.aiAnswers?.sectionAnswers));
     if (project === 'cars') updateCarAdmin((d) => seedCars(d, answers.aiAnswers?.sectionAnswers));
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
-    const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: before.pages, elements: before.elements, activePageId, maxPhotos });
+    // The model is the law: the pages Wee AI built before are not kept beside the new ones, and a plain page project keeps only the model's pages.
+    // (A rental or hotel keeps the pages the system gave it, a store its menu, cart...: pages the owner cannot add by hand.)
+    const modelOnly = project === 'page';
+    const startPages = before.pages.filter((p) => !p.id.startsWith('page-ai-'));
+    const startSlides = new Set(startPages.flatMap((p) => p.slides.map((s) => s.id)));
+    const startElements = before.elements.filter((e) => startSlides.has(e.slideId));
+    const mainId = startPages.some((p) => p.id === activePageId) ? activePageId : startPages[0].id;
+    const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: startPages, elements: startElements, activePageId: mainId, maxPhotos, ratings: result.ratings });
     if (!built.ok) return { ok: false, message: built.message };
     builtBackupRef.current = { ...before, uid: activeUserUid, project };
     setHasBuildBackup(true);
-    // The model's later pages («من نحن»...) are built one by one beside the main page; a page that fails is left out.
+    // The model's later pages («من نحن»...) are built one by one beside the main page; the ones that fail are named in the answer.
     let sitePages = built.pages;
     let siteElements = built.elements;
     let laterBuilt = 0;
-    if (kind === 'free') {
-      for (const m of (result.more || []).slice(0, 5)) {
-        const next = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections), modelPage: m.id });
-        if (!next.ok) { console.warn(`Could not build the model page «${m.name}»:`, next.message); break; }
-        const shell = withBlankPage(sitePages, built.pageId, m.name);
-        const more = await buildPageFromPlan(next.plan, { kind, answers, siteName, pages: shell.pages, elements: siteElements, activePageId: shell.pageId, maxPhotos, later: true });
-        if (!more.ok) break;
-        sitePages = more.pages;
-        siteElements = more.elements;
-        laterBuilt += 1;
-      }
+    const laterIds: string[] = [];
+    const failed: string[] = [];
+    for (const m of (result.more || []).slice(0, 11)) {
+      const next = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections), modelPage: m.id });
+      if (!next.ok) { console.warn(`Could not build the model page «${m.name}»:`, next.message); failed.push(m.name); continue; }
+      const shell = withBlankPage(sitePages, built.pageId, m.name);
+      const more = await buildPageFromPlan(next.plan, { kind, answers, siteName, pages: shell.pages, elements: siteElements, activePageId: shell.pageId, targetPageId: shell.pageId, maxPhotos, later: true });
+      if (!more.ok) { failed.push(m.name); continue; }
+      sitePages = more.pages;
+      siteElements = more.elements;
+      laterIds.push(shell.pageId);
+      laterBuilt += 1;
+      if (next.missing?.length) failed.push(`${m.name} (بدون: ${next.missing.join('، ')})`);
     }
+    if (modelOnly) {
+      // The main page takes the model's name, and no page is left that the model does not have.
+      const keep = new Set([built.pageId, ...laterIds]);
+      sitePages = sitePages.filter((p) => keep.has(p.id)).map((p) => (p.id === built.pageId && result.pageName ? { ...p, name: result.pageName } : p));
+      const slides = new Set(sitePages.flatMap((p) => p.slides.map((s) => s.id)));
+      siteElements = siteElements.filter((e) => slides.has(e.slideId));
+    }
+    const gaps = [...(result.missing?.length ? [`الرئيسية بدون: ${result.missing.join('، ')}`] : []), ...failed];
     setPages(sitePages);
     setElements(siteElements);
     setHistory([siteElements]);
@@ -2458,7 +2475,7 @@ export default function App() {
     setActivePageId(built.pageId);
     setActiveSlideId(built.firstSlideId);
     setSelectedElementId(null);
-    return { ok: true, message: `بنى Wee AI ${built.sections} أقسام لصفحتك${laterBuilt ? ` و${laterBuilt} صفحات إضافية` : ''}. عدّل أي شي بدك ياه، أو اكبس «رجّع صفحتي متل ما كانت».` };
+    return { ok: true, message: `بنى Wee AI ${built.sections} أقسام لصفحتك${laterBuilt ? ` و${laterBuilt} صفحات إضافية` : ''}.${gaps.length ? ` ما انبنى من النموذج: ${gaps.join(' | ')}.` : ''} عدّل أي شي بدك ياه، أو اكبس «رجّع صفحتي متل ما كانت».` };
   };
   // «تصميم حر»: a chat in which Wee AI designs the page's slides itself. Every answer is laid on the page at once; the first one
   // keeps the page as it was (the same «رجّع صفحتي» brings it back). The design and the talk are kept here for the next message.

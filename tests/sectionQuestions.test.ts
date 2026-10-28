@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_MODELS } from '../src/data/pageModels.ts';
-import { SECTION_ASKS, missingEntries, questionPlan, questionsFor, unknownSections } from '../src/data/sectionQuestions.ts';
+import { SECTION_ASKS, firstNameOf, missingEntries, pruneAnswers, questionPlan, questionsFor, summarizeAnswer, summarizeSection, unknownSections, withName } from '../src/data/sectionQuestions.ts';
 
 const model = (id: string) => DEFAULT_MODELS.find((m) => m.id === id)!;
 
@@ -34,4 +34,34 @@ test('a price list asks for five rows to start with', () => {
 test('a restaurant asks for its dishes through its menu section, a package without it does not', () => {
   assert.ok(questionsFor(model('restaurant'), []).some((s) => s.id === 'restaurant:main'));
   assert.ok(!questionsFor(model('restaurant-free'), []).some((s) => s.id === 'restaurant:main'));
+});
+
+test('every section explains itself to the owner, in Wee AI\'s words', () => {
+  for (const [id, ask] of Object.entries(SECTION_ASKS)) assert.ok(ask.explain && ask.explain.length > 40, `${id} has no explanation`);
+});
+
+test('the owner is called by his first name once he gave it, and the sentence loses it while Wee AI does not know it', () => {
+  assert.equal(firstNameOf('أحمد محمد العلي'), 'أحمد');
+  assert.equal(firstNameOf('أحمد محمد', 'شركة'), '', 'a company has no first name');
+  assert.equal(firstNameOf(''), '');
+  assert.equal(withName('يا {name}، هاد قسمك', 'أحمد'), 'يا أحمد، هاد قسمك');
+  assert.equal(withName('يا {name}، هاد قسمك', ''), 'هاد قسمك');
+  assert.equal(withName('اسمك {name}', 'سارة'), 'اسمك سارة');
+});
+
+test('an answer is shown to the owner in a line: names with prices, his choice, or the booking hours', () => {
+  const list = SECTION_ASKS['restaurant:main'].questions[1];
+  assert.equal(summarizeAnswer(list, [{ name: 'شيش طاووق', price: '25000' }, { name: '' }, { name: 'كبة' }]), 'شيش طاووق (25000)، كبة');
+  assert.equal(summarizeAnswer(list, []), '');
+  const booking = SECTION_ASKS.booking.questions[1];
+  assert.equal(summarizeAnswer(booking, { now: false }), 'أضبطها لاحقاً من الإدارة');
+  assert.match(summarizeAnswer(booking, { now: true, days: [6, 0], from: '09:00', to: '17:00', minutes: 30 }), /السبت، الأحد من 09:00 إلى 17:00، مدة الموعد 30 دقيقة/);
+  assert.equal(summarizeAnswer(SECTION_ASKS.booking.questions[0], 'موعد أو استشارة'), 'موعد أو استشارة');
+  assert.equal(summarizeSection('video', SECTION_ASKS.video, {}), '');
+});
+
+test('unticking a section removes its answers and no other', () => {
+  const answers = { 'team.team': [{ name: 'سامر' }], 'booking.bookingKind': 'موعد أو استشارة', 'booking.bookingSettings': { now: false }, 'video.video': 'x' };
+  assert.deepEqual(pruneAnswers(answers, ['booking']), { 'team.team': [{ name: 'سامر' }], 'video.video': 'x' });
+  assert.deepEqual(pruneAnswers(answers, []), answers);
 });

@@ -624,7 +624,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
   const topicRef = useRef(onTopic);
   topicRef.current = onTopic;
   const notesTopic = (): Topic => (step >= 13
-    ? { id: 'done', title: 'خلصنا', explain: withName('يا {name}، كل إجاباتك انحفظت. فيك ترجع لأي سؤال فوق وتعدّله بأي وقت، والأسئلة اللي بتتأثر بتعديلك بتتجدد لحالها. وبس تكون جاهز بيفتح لك المحرر، وهناك زر «ابن صفحتي» بيخلّيني ابني صفحتك من هالإجابات.', firstName), progress: { n: FIXED_STEPS + sectionTotal, total: FIXED_STEPS + sectionTotal } }
+    ? { id: 'done', title: 'خلصنا', explain: withName('يا {name}، كل إجاباتك انحفظت. فيك ترجع لأي سؤال فوق وتعدّله بأي وقت، والأسئلة اللي بتتأثر بتعديلك بتتجدد لحالها. وبس تخلّص، بتنفتح صفحتك وبلّش ابنيها فوراً من هالإجابات.', firstName), progress: { n: FIXED_STEPS + sectionTotal, total: FIXED_STEPS + sectionTotal } }
     : { id: 'notes', title: 'ملاحظات خاصة', explain: withName('آخر شي يا {name}، إذا في شي خاص بدك ياه اكتبه هون: شي لازم يظهر بالصفحة، شي ما بدك ياه، أو أسلوب معيّن بالكتابة. وإذا ما في، بتتركه فاضي وبتخلّص.', firstName), note: 'ما بنفّذ غير اللي بتكتبه، وبتقدر تعدّله بعدين.', progress: { n: FIXED_STEPS + sectionTotal, total: FIXED_STEPS + sectionTotal } });
   const onSectionTopic = (t: (Omit<Topic, 'progress'> & { at: { n: number; total: number } }) | null) => {
     if (!t) { topicRef.current?.(notesTopic()); return; }
@@ -1459,7 +1459,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     </>
   );
 
-  // The special notes and the finish button: the last bubble of the thread (Wee AI builds nothing until «ابن صفحتي»).
+  // The special notes and the finish button: the last bubble of the thread (finishing opens the site, and Wee AI builds it at once).
   const finale = (
     <AiBubble title={withName('آخر شي يا {name}، في ملاحظات خاصة بتحب أنتبه إلها؟', firstName)} live={step < 13}>
       <AnswerBox>
@@ -1474,7 +1474,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           <button
             type="button"
             onClick={() => {
-              // Finishing saves the answers and opens the editor; nothing is built until «ابن صفحتي».
+              // Finishing saves the answers and opens the editor, where Wee AI builds the site from them at once.
               finishedRef.current = true;
               setStep(13);
               saveProgress(13);
@@ -1537,7 +1537,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
               onClick={() => onCompleteChat({ personalInfo, addressInfo, contactInfo, catalogInfo, aiAnswers, ...(ownFlavor ? { flavor: ownFlavor } : {}) })}
               className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white text-xs font-bold rounded-lg transition-all"
             >
-              {isGuest ? 'اعمل حسابك لتنحفظ صفحتك' : 'افتح صفحتي بالمحرر'}
+              {isGuest ? 'اعمل حسابك لتنحفظ صفحتك' : 'ابني صفحتي'}
             </button>
           )}
         </AiBubble>

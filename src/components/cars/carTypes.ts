@@ -590,3 +590,18 @@ export const exampleCars = (): Car[] => {
     }),
   ];
 };
+
+// A car rental's example cars (Eyad, 29 Oct): the showroom's examples in a rental's words, a price for the day and nothing of a sale
+// (no mileage, old price, haggling or buying price).
+const RENTAL_DAY: Record<string, { price: number; badge?: string; description: string }> = {
+  'بي إم دبليو': { price: 90, badge: 'الأكثر طلبًا', description: 'سيدان مريحة للمشاوير والسفر، مع تأمين شامل. السعر لليوم الواحد.' },
+  'مرسيدس': { price: 110, badge: 'للمناسبات', description: 'مرسيدس فخمة للأعراس والمناسبات والاستقبال. السعر لليوم الواحد.' },
+  'أودي': { price: 95, description: 'دفع رباعي مريحة للطرق الطويلة. السعر لليوم الواحد.' },
+  'تويوتا': { price: 55, badge: 'اقتصادية', description: 'هايبرد اقتصادية جدًا بالوقود للمشاوير اليومية. السعر لليوم الواحد.' },
+  'فولكس فاغن': { price: 60, description: 'هاتشباك صغيرة وسهلة بالمدينة. السعر لليوم الواحد.' },
+};
+export const exampleRentalCars = (): Car[] =>
+  exampleCars().map((c) => {
+    const day = RENTAL_DAY[c.brand] || { price: 60, description: 'السعر لليوم الواحد.' };
+    return { ...c, mileage: 0, oldPrice: 0, negotiable: false, purchasePrice: 0, owners: 0, price: day.price, badge: day.badge || '', description: day.description, paint: 'original' };
+  });

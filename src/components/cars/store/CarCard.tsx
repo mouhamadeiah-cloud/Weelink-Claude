@@ -114,7 +114,7 @@ export const CarWide: React.FC<CardProps> = ({ car, look, onOpen }) => (
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
         {car.year > 0 && <Fact icon={Calendar} text={String(car.year)} />}
-        <Fact icon={Gauge} text={car.condition === 'new' ? 'جديدة' : formatKm(car.mileage)} />
+        {(car.condition === 'new' || car.mileage > 0) && <Fact icon={Gauge} text={car.condition === 'new' ? 'جديدة' : formatKm(car.mileage)} />}
         {car.transmission && <Fact icon={Settings2} text={car.transmission} />}
         {car.fuel && <Fact icon={Fuel} text={car.fuel} />}
       </div>

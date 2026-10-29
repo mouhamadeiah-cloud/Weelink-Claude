@@ -107,14 +107,15 @@ test('a model is saved as pages; the first page stays as `sections` for the buil
   reset();
 });
 
-test('a rental of things other than cars takes the shop\'s slides, a rental of cars keeps the showroom\'s', async () => {
-  const { forRentalOf, DEFAULT_MODELS } = await import('../src/data/pageModels.ts');
+test('a rental model holds the showroom\'s and the shop\'s sections; each rental is built and asked from its own kind only', async () => {
+  const { pagesForKind, fitsKind, DEFAULT_MODELS } = await import('../src/data/pageModels.ts');
   const rental = DEFAULT_MODELS.find((m) => m.id === 'rental')!.sections;
-  assert.ok(rental.some((s) => s.category === 'cars'));
-  assert.deepEqual(forRentalOf(rental, 'سيارات'), rental);
-  const other = forRentalOf(rental, 'معدات');
-  assert.ok(!other.some((s) => s.category === 'cars'));
-  assert.ok(other.some((s) => s.id === 'shop:main'));
+  assert.ok(rental.some((s) => s.id === 'cars:main') && rental.some((s) => s.id === 'shop:main'));
+  const [cars] = pagesForKind([{ sections: rental }], 'rental-cars');
+  assert.ok(cars.sections.some((s) => s.id === 'cars:main') && !cars.sections.some((s) => s.category === 'shop'));
+  const [things] = pagesForKind([{ sections: rental }], 'rental-items');
+  assert.ok(things.sections.some((s) => s.id === 'shop:main') && !things.sections.some((s) => s.category === 'cars'));
+  assert.ok(fitsKind({ category: 'about' }, 'rental-cars') && fitsKind({ category: 'shop' }, 'hotel') && !fitsKind({ category: 'restaurant' }, 'shop'));
 });
 
 test('the cart page is in the model of every site that sells or rents through a cart, locked, never first, and nowhere else', async () => {

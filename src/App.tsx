@@ -62,15 +62,13 @@ import { AccountPage } from './components/platform/AccountPage';
 import { CarAdminPanel } from './components/cars/CarAdminPanel';
 import { CarDataContext, CarRequestContext } from './components/cars/store/CarDataContext';
 import { submitRequest, RequestInput } from './components/cars/carMoney';
-import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars } from './components/cars/carTypes';
+import { CarAdminData, createEmptyCarAdmin, normalizeCarAdmin, exampleCars, exampleRentalCars } from './components/cars/carTypes';
 import { RentalAdminPanel } from './components/rental/RentalAdminPanel';
 import { withFeaturedKind } from './data/featuredSlide';
+import { CAR_PAGE_IDS } from './data/carShowroomTemplate';
 import { withRentalCart } from './data/rentalCartPage';
 import { EstateModeContext, RentalAdminData, RentalModeContext, createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentalItemCount, rentalShopView, rentsCars } from './components/rental/rentalTypes';
-import { getRentalTemplate } from './data/rentalTemplate';
 import { normalizeHotelAdmin, rentalFromHotel } from './components/hotel/hotelTypes';
-import { getHotelTemplate } from './data/hotelTemplate';
-import { getCarShowroomTemplate } from './data/carShowroomTemplate';
 import { loadCategories } from './utils/businessCategories';
 import { RestaurantAdminPanel } from './components/restaurant/RestaurantAdminPanel';
 import { PageAdminPanel } from './components/pageAdmin/PageAdminPanel';
@@ -81,19 +79,21 @@ import { RatingsSlideContext } from './services/ratings';
 import { RestaurantDataContext, RestaurantOrderContext } from './components/restaurant/store/RestaurantDataContext';
 import { RestaurantAdminData, MenuOrder, createEmptyRestaurantAdmin, normalizeRestaurantAdmin, exampleRestaurantAdmin, submitOrder } from './components/restaurant/restaurantTypes';
 import { dropStaffFromDesign, placeOrder, publishRestaurant, readStaff, restaurantSiteUrl, saveStaff, withoutStaff } from './components/restaurant/restaurantCloud';
-import { getRestaurantTemplate } from './data/restaurantTemplate';
 import { WeeAIChat } from './components/WeeAIChat';
 import type { FreeDesign } from './utils/freeDesign';
 import { Eye, FileText, FolderTree, LayoutTemplate, Loader2, MousePointer2, Plus, Redo2, Settings, SlidersHorizontal, Store, Undo2 } from 'lucide-react';
 import type { WeeAnswers } from './services/weeWriter';
-import { applyPageLook, inStartingLook } from './services/applyLook';
+import { applyPageLook } from './services/applyLook';
 import { formatMoney } from './components/shop/adminUi';
 import { PageLookPicker, type LookSample } from './components/rightDrawer/PageLookPicker';
 import type { PageLook } from './data/pageLooks';
-import { KIND_OF_PROJECT, buildPageFromPlan, keepModelPages, keptAsIs, twinOf, withBlankPage, type SitePage, emptyMainPage, buildProfile, pageAssets, requestPagePlan, requestFreeTurn, applyFreeDesign } from './services/pageBuilder';
+import { KIND_OF_PROJECT, buildPageFromPlan, keepModelPages, buildProfile, pageAssets, requestPagePlan, requestFreeTurn, applyFreeDesign } from './services/pageBuilder';
+import { modelSkeleton, type SitePage } from './services/modelSite';
+import { savedAnswers } from './services/savedAnswers';
+import { WeeDots } from './components/ui/WeeDots';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
-import { getOnlineShopTemplate, withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
+import { withLiveProductGrid, withCheckoutLayout } from './data/onlineShopTemplate';
 import { withPhoneLayouts } from './utils/mobileLayout';
 import { withTemplateGroups } from './utils/templateGroups';
 import { withLocalGraphics } from './utils/localGraphics';
@@ -110,6 +110,9 @@ import { SelectionBar } from './components/SelectionBar';
 import { loadPageFonts } from './services/pageFonts';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
+
+// A site before «ابن صفحتي» builds it: one empty page.
+const emptySite = (): { pages: Page[]; elements: CanvasElement[] } => ({ pages: [initialPage], elements: [] });
 
 const initialPage: Page = {
   id: 'page-home',
@@ -325,8 +328,11 @@ export default function App() {
   // A page to build as soon as its kind is open in the editor: the questions just finished.
   // The kind whose questions just finished: the editor opens on it with an empty page and Wee AI's panel.
   const afterQuestionsRef = useRef<ProjectType | null>(null);
+  // The answers the questions just finished with (the build starts with them); none when they come from the account (a guest's).
+  const afterAnswersRef = useRef<WeeAnswers | null>(null);
+  // The build that starts by itself after the questions: only Wee AI's icon shows until it is done.
+  const [autoBuilding, setAutoBuilding] = useState(false);
   // The project just loaded had nothing saved and started from its template.
-  const freshProjectRef = useRef(false);
   // What the build after the questions is doing, shown over the editor.
   const [buildNotice, setBuildNotice] = useState<{ busy: boolean; ok?: boolean; message: string; undo?: () => void } | null>(null);
   const [hasBuildBackup, setHasBuildBackup] = useState(false);
@@ -422,8 +428,7 @@ export default function App() {
   }, [ownerUid, projectKey, isPublishOpen]);
   // The signed-in owner (or a member) looking at the page as visitors see it: its navbar gets «الإدارة».
   const isOwnerView = isPreviewActive && !!currentUser && !currentUser.isAnonymous;
-  // The «التقييمات» slide (Eyad, 13 Oct): every free page has one and can't remove it; a paid page
-  // gets it once, at the end of its main page, and may remove it. The admins add it back on request.
+  // The «التقييمات» slide the owner adds himself (or the admins on request); the build adds it only when the page model has it.
   const hasRatings = useMemo(() => {
     const slideIds = new Set(pages.flatMap((p) => p.slides.map((sl) => sl.id)));
     return elements.some((el) => el.type === 'ratings' && slideIds.has(el.slideId));
@@ -447,33 +452,28 @@ export default function App() {
       { id: `el-${stamp}-rb`, name: 'التقييمات', type: 'ratings', x: 140, y: 130, width: 1000, height: 380, content: 'التقييمات', slideId, styles: { backgroundColor: '#ffffff', borderRadius: 24 } },
     ]);
   }, []);
-  useEffect(() => {
-    if (!projectReadyRef.current || !pages[0] || designerModeRef.current) return;
-    // A page project gets the ratings slide from Wee AI's build when the owner ticked it, or adds it himself (Eyad, 21 Oct).
-    if (project === 'page') return;
-    if (!pages[0].ratingsSuggested) {
-      if (hasRatings) setPages((prev) => prev.map((p, i) => (i === 0 ? { ...p, ratingsSuggested: true } : p)));
-      else addRatingsSlide();
-    }
-  }, [project, hasRatings, pages[0]?.id, pages[0]?.ratingsSuggested]);
+  // No slide is added by itself (Eyad, 29 Oct): the ratings come from the page model when it has them, or the owner adds them.
   // A rental's featured slide shows the kind that has featured things: an item marked «مميز» appears even when the
   // slide (the car template's) only had car cards, and the other way round.
   const rentalFeaturedItems = rentalLike && shopAdmin.products.some((p) => p.featured);
   const rentalFeaturedCars = rentalLike && carAdmin.cars.some((c) => c.featured);
+  // Only a rental made on the old ready-made site (its home page is the showroom's) is mended so; one built from the model has what
+  // its model gave it and nothing is added to it (Eyad, 29 Oct).
+  const oldRentalSite = rentalLike && pages.some((p) => p.id === CAR_PAGE_IDS.home);
   useEffect(() => {
-    if (!projectReadyRef.current || adminOpenAll || designerModeRef.current) return;
+    if (!oldRentalSite || !projectReadyRef.current || adminOpenAll || designerModeRef.current) return;
     for (const [on, kind] of [[rentalFeaturedItems, 'items'], [rentalFeaturedCars, 'cars']] as const) {
       if (!on) continue;
       const next = withFeaturedKind(pages, elements, kind, Date.now());
       if (next) { setElements(next); return; }
     }
-  }, [rentalFeaturedItems, rentalFeaturedCars, adminOpenAll, pages, elements]);
+  }, [oldRentalSite, rentalFeaturedItems, rentalFeaturedCars, adminOpenAll, pages, elements]);
   // A rental made before its cart page existed gets «السلة» once (rentalCartPage.ts).
   useEffect(() => {
-    if (!rentalLike || !projectReadyRef.current || adminOpenAll || designerModeRef.current) return;
+    if (!oldRentalSite || !projectReadyRef.current || adminOpenAll || designerModeRef.current) return;
     const added = withRentalCart(pages, elements, Date.now());
     if (added) { setPages(added.pages); setElements(added.elements); }
-  }, [rentalLike, adminOpenAll, pages, elements]);
+  }, [oldRentalSite, adminOpenAll, pages, elements]);
   // The ratings slide may be removed from any page (it was fixed on the free page before Eyad's 21 Oct decision).
   const isLockedRatings = (_el: CanvasElement) => false;
   const ratingsSlide = useMemo(() => ({ has: hasRatings, add: addRatingsSlide }), [hasRatings, addRatingsSlide]);
@@ -788,11 +788,9 @@ export default function App() {
     } catch (e) {
       console.warn("Could not read the local shop cache:", e);
     }
-    freshProjectRef.current = shopPages.length === 0;
+    // A new site starts empty: «ابن صفحتي» builds it from the page model (Eyad, 29 Oct: no old ready-made site).
     if (shopPages.length === 0) {
-      const template = inStartingLook(getOnlineShopTemplate({ liveProducts: true }), 'shop');
-      shopPages = template.pages;
-      shopElements = template.elements;
+      ({ pages: shopPages, elements: shopElements } = emptySite());
     } else {
       shopElements = withLiveProductGrid(shopElements);
       ({ pages: shopPages, elements: shopElements } = withCheckoutLayout(shopPages, shopElements));
@@ -858,11 +856,9 @@ export default function App() {
     } catch (e) {
       console.warn("Could not read the local car showroom cache:", e);
     }
-    freshProjectRef.current = carPages.length === 0;
+    // A new site starts empty: «ابن صفحتي» builds it from the page model.
     if (carPages.length === 0) {
-      const template = inStartingLook(getCarShowroomTemplate(), 'cars');
-      carPages = template.pages;
-      carElements = template.elements;
+      ({ pages: carPages, elements: carElements } = emptySite());
       if (!admin) admin = { ...createEmptyCarAdmin(), cars: exampleCars() };
     } else {
       ({ pages: carPages, elements: carElements } = withTemplateGroups(carPages, carElements));
@@ -930,19 +926,18 @@ export default function App() {
     } catch (e) {
       console.warn("Could not read the local rental cache:", e);
     }
-    freshProjectRef.current = rentalPages.length === 0;
     if (rentalPages.length === 0) {
       const estate = kind === 'hotel';
       const category = estate ? '' : readCatalogAnswer(userId, 'rental')?.category || '';
-      const template = inStartingLook(estate ? getHotelTemplate() : getRentalTemplate(category), 'cars');
-      rentalPages = template.pages;
-      rentalElements = template.elements;
+      // A new site starts empty: «ابن صفحتي» builds it from the page model.
+      ({ pages: rentalPages, elements: rentalElements } = emptySite());
       if (!admin) {
         const empty = createEmptyRentalAdmin();
         const kinds = await loadCategories(estate ? 'estate' : 'rental').catch(() => []);
         if (seq !== loadSeqRef.current) return;
         admin = {
-          cars: !estate && rentsCars(category) ? { ...empty.cars, cars: exampleCars() } : empty.cars,
+          // Example cars for rent (a price for the day, no sale words): the owner replaces them with his own.
+          cars: !estate && rentsCars(category) ? { ...empty.cars, cars: exampleRentalCars() } : empty.cars,
           shop: withExampleProducts({ ...empty.shop, catalogs: rentalCatalogs(kinds.map((k) => ({ name: k.name, subs: k.subs.map((x) => x.name) })), category) }, estate ? 'hotel' : 'rental'),
         };
         // A rental of cars shows the example cars; its items would only crowd them.
@@ -1010,11 +1005,9 @@ export default function App() {
     } catch (e) {
       console.warn("Could not read the local restaurant cache:", e);
     }
-    freshProjectRef.current = restPages.length === 0;
     if (restPages.length === 0) {
-      const template = inStartingLook(getRestaurantTemplate(), 'restaurant');
-      restPages = template.pages;
-      restElements = template.elements;
+      // A new site starts empty: «ابن صفحتي» builds it from the page model.
+      ({ pages: restPages, elements: restElements } = emptySite());
       if (!admin) {
         // Ten example dishes of the kind picked in Wee AI, else the general example menu.
         const answer = readCatalogAnswer(userId, 'restaurant');
@@ -1074,11 +1067,7 @@ export default function App() {
     } catch (e) {
       console.warn("Could not read the local page cache:", e);
     }
-    freshProjectRef.current = loadedPages.length === 0;
-    if (loadedPages.length === 0) {
-      loadedPages = [initialPage];
-      loadedElements = [];
-    }
+    if (loadedPages.length === 0) ({ pages: loadedPages, elements: loadedElements } = emptySite());
     setProject('page');
     setProjectKey(key);
     setPageAdmin(loadedPageAdmin || createEmptyPageAdmin());
@@ -1094,9 +1083,10 @@ export default function App() {
     projectReadyRef.current = true;
   };
 
-  // The shop's products page carries the store's name (page title and navbar link).
+  // The products page of a shop made on the old ready-made site carries the store's name (page title and navbar link); a site built
+  // from the model keeps the names its model gave it.
   useEffect(() => {
-    if (project !== 'shop' || !projectReadyRef.current) return;
+    if (project !== 'shop' || !projectReadyRef.current || !pages.some((p) => p.id === 'shop-page-home')) return;
     const label = shopAdmin.settings.storeName.trim() || 'المتجر';
     setPages((prev) => {
       let changed = false;
@@ -2139,6 +2129,7 @@ export default function App() {
     setIsProjectChosen(false);
     moveGuestAnswers(accountId, auth.currentUser?.email || '').then((saved) => {
       const open = saved || kind;
+      afterAnswersRef.current = null;
       // The answers just moved to the account: the editor opens on an empty page, and the owner
       // chooses there to design it themselves or press «ابن صفحتي».
       afterQuestionsRef.current = open;
@@ -2148,8 +2139,9 @@ export default function App() {
 
   // The questions finished on the start page: open the kind on an empty page (nothing is built yet).
   // A kind the account has a project of already gets a new project with its own key (Eyad, 17 Oct).
-  const openAfterQuestions = async (kind: ProjectType) => {
+  const openAfterQuestions = async (kind: ProjectType, answers?: WeeAnswers) => {
     afterQuestionsRef.current = kind;
+    afterAnswersRef.current = answers || null;
     setIsAuthActive(false);
     await handleChooseProject(ownedRef.current[kind] ? newProjectKey(kind) : kind);
     setIsStartActive(false);
@@ -2413,9 +2405,8 @@ export default function App() {
     const kind = KIND_OF_PROJECT[project];
     const page = pagesRef.current.find((p) => p.id === activePageId) || currentPage;
     const siteName = page.navbar.brandName || PROJECT_KIND_LABEL[project];
-    const target = kind === 'free' ? `شرائح صفحة «${page.name}»` : 'شرائح الصفحة الرئيسية';
-    // Right after the questions the owner asked for the build: no question then, the old page is kept.
-    if (!auto && !window.confirm(`Wee AI رح يصمم ${target} من جديد من معلوماتك ويستبدل الشرائح الموجودة، وصفحات موقعك رح تصير متل صفحات النموذج بالضبط. بتقدر ترجع الصفحة القديمة بعدين. نكمل؟`)) {
+    // Right after the questions the build starts by itself: no question then, the old site is kept for «رجّع صفحتي».
+    if (!auto && !window.confirm('Wee AI رح يبني موقعك كله من جديد من نموذج صفحتك ومن معلوماتك، وصفحاتك الحالية رح تنشال. بتقدر ترجع موقعك القديم بعدين. نكمل؟')) {
       return { ok: false, message: 'ما تغير شي بصفحتك.' };
     }
     // The owner's photos go into the page as links, never as full-size inline images.
@@ -2430,50 +2421,44 @@ export default function App() {
     if (project === 'shop') updateShopAdmin((d) => seedShop(d, answers.aiAnswers?.sectionAnswers));
     if (project === 'cars') updateCarAdmin((d) => seedCars(d, answers.aiAnswers?.sectionAnswers));
     const before = { pages: pagesRef.current, elements: elementsRef.current, activePageId };
-    // The model is the law (Eyad, 28 Oct): the site gets exactly the model's pages, in its order and under its names. The pages Wee AI
-    // built before go first; a store's own pages are kept only where the model has them (its cart, its live menu, products or cars).
-    const startPages = before.pages.filter((p) => !p.id.startsWith('page-ai-'));
-    const startSlides = new Set(startPages.flatMap((p) => p.slides.map((s) => s.id)));
-    const startElements = before.elements.filter((e) => startSlides.has(e.slideId));
-    // The model's first page is the site's first page (a store builds into its home page).
-    const mainId = startPages[0].id;
-    const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: startPages, elements: startElements, activePageId: mainId, maxPhotos, ratings: result.ratings });
+    // The model is the only source (Eyad, 29 Oct): the site is built anew as exactly the model's pages, in its order and under its
+    // names. Nothing of the site before stays (it is kept for «رجّع صفحتي»); the cart is the one page the system draws itself.
+    const site: SitePage[] = result.site;
+    const stamp = Date.now();
+    const skeleton = modelSkeleton(project, site, { ...initialPage.navbar, items: [], brandName: siteName }, stamp);
+    const contentPages = skeleton.pages.filter((p) => p.id !== skeleton.cartId);
+    const mainId = contentPages[0]?.id;
+    if (!mainId) return { ok: false, message: 'نموذج صفحتك ما فيه صفحات تنبنى. خبّر الإدارة.' };
+    const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: skeleton.pages, elements: skeleton.elements, activePageId: mainId, targetPageId: mainId, maxPhotos, ratings: result.ratings });
     if (!built.ok) return { ok: false, message: built.message };
     builtBackupRef.current = { ...before, uid: activeUserUid, project };
     setHasBuildBackup(true);
-    // The model's later pages are built one by one beside the main page; the report names what could not be.
+    // The model's later pages are built one by one into their own empty pages; the report names what could not be.
     let sitePages = built.pages;
     let siteElements = built.elements;
-    const site: SitePage[] = result.site;
-    const order: { pageId: string; name: string }[] = [{ pageId: built.pageId, name: result.pageName || site[0]?.name || '' }];
-    const taken: string[] = [built.pageId];
+    const builtIds = new Set([built.pageId]);
     const report: string[] = [];
-    if (result.missing?.length) report.push(`${order[0].name || 'الرئيسية'}: ما انبنى ${result.missing.join('، ')}`);
-    if (result.plain?.length) report.push(`${order[0].name || 'الرئيسية'}: انكتب من معلوماتك بس ${result.plain.join('، ')}`);
+    const mainName = site.find((m) => !m.system)?.name || 'الرئيسية';
+    if (result.missing?.length) report.push(`${mainName}: ما انبنى ${result.missing.join('، ')}`);
+    if (result.plain?.length) report.push(`${mainName}: انكتب من معلوماتك بس ${result.plain.join('، ')}`);
     let laterBuilt = 0;
-    for (const m of site.slice(1, 12)) {
-      const twin = twinOf(m, sitePages, taken);
-      // The cart and the live lists stay as the store has them, under the model's name.
-      if (keptAsIs(m)) {
-        if (twin) { order.push({ pageId: twin, name: m.system === 'cart' ? 'السلة' : m.name }); taken.push(twin); }
-        else report.push(`${m.name}: ما في هالصفحة بنوع موقعك`);
-        continue;
-      }
+    const later = site.filter((m) => !m.system).slice(1, 12);
+    for (const m of later) {
+      const target = contentPages[site.filter((x) => !x.system).indexOf(m)];
+      if (!target) continue;
       const next = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: answers.aiAnswers?.optionalSections, modelPage: m.id });
       if (!next.ok) { console.warn(`Could not build the model page «${m.name}»:`, next.message); report.push(`${m.name}: ما انبنت (${next.message})`); continue; }
-      // A page with a built-in twin (the store's «تواصل معنا») is built into the twin; otherwise it is a new page.
-      const shell = twin ? { pages: sitePages, pageId: twin } : withBlankPage(sitePages, built.pageId, m.name);
-      const more = await buildPageFromPlan(next.plan, { kind, answers, siteName, pages: shell.pages, elements: siteElements, activePageId: shell.pageId, targetPageId: shell.pageId, maxPhotos, later: true, ratings: next.ratings });
+      const more = await buildPageFromPlan(next.plan, { kind, answers, siteName, pages: sitePages, elements: siteElements, activePageId: target.id, targetPageId: target.id, maxPhotos, later: true, ratings: next.ratings });
       if (!more.ok) { report.push(`${m.name}: ما انبنت`); continue; }
       sitePages = more.pages;
       siteElements = more.elements;
-      order.push({ pageId: shell.pageId, name: m.name });
-      taken.push(shell.pageId);
+      builtIds.add(target.id);
       laterBuilt += 1;
       if (next.missing?.length) report.push(`${m.name}: ما انبنى ${next.missing.join('، ')}`);
       if (next.plain?.length) report.push(`${m.name}: انكتب من معلوماتك بس ${next.plain.join('، ')}`);
     }
-    // No page is left that the model does not have.
+    // The model's pages that were built, and the cart, in the model's order; a page that could not be built is left out.
+    const order = sitePages.filter((p) => builtIds.has(p.id) || !contentPages.some((c) => c.id === p.id)).map((p) => ({ pageId: p.id, name: p.name }));
     const finalSite = keepModelPages(sitePages, siteElements, order);
     setPages(finalSite.pages);
     setElements(finalSite.elements);
@@ -2586,29 +2571,26 @@ export default function App() {
     return { ok: true, message: 'رجعت صفحتك متل ما كانت قبل ما يبنيها Wee AI.' };
   };
 
-  // Right after the questions, once their kind is open in the editor: a project that had nothing
-  // saved starts on an empty main page (not the ready template), and Wee AI's panel shows the answers
-  // with «ابن صفحتي». The owner decides there to design the page themselves or let Wee AI build it.
+  // Right after the questions, once their kind is open in the editor, Wee AI builds the site at once (Eyad, 29 Oct): only its icon,
+  // big and moving, shows until the site is built; then what came of it.
   useEffect(() => {
     const kind = afterQuestionsRef.current;
     if (!kind || !isProjectChosen || projectLoading || isStartActive || project !== kind) return;
     afterQuestionsRef.current = null;
-    // Only right after the project was first created: answering again from «عدّل إجاباتي» keeps the page.
-    const fresh = freshProjectRef.current;
-    freshProjectRef.current = false;
-    if (fresh && kind !== 'page') {
-      const blank = emptyMainPage(KIND_OF_PROJECT[kind], pagesRef.current, elementsRef.current, activePageId);
-      setPages(blank.pages);
-      setElements(blank.elements);
-      setHistory([blank.elements]);
-      setHistoryIndex(0);
-      setActivePageId(blank.pageId);
-      setActiveSlideId(blank.slideId);
-      setSelectedElementId(null);
-    }
-    setBuildNotice({ busy: false, ok: true, message: 'انحفظت إجاباتك. صمّم صفحتك بإيدك، أو اكبس «ابن صفحتي» من لوحة Wee AI وهو بيبنيها من إجاباتك.' });
-    setIsChatActive(true);
-    setIsRightDrawerOpen(true);
+    const given = afterAnswersRef.current;
+    afterAnswersRef.current = null;
+    setBuildNotice(null);
+    setAutoBuilding(true);
+    (async () => {
+      const answers = given || (await savedAnswers(activeUserUid, kind));
+      const note = answers ? await handleBuildPage(answers, true) : { ok: false, message: 'ما لقيت إجاباتك. افتح لوحة Wee AI وكمّل الأسئلة، وبعدها اكبس «ابن صفحتي».' };
+      setBuildNotice({ busy: false, ok: note.ok, message: note.message });
+    })()
+      .catch((e) => {
+        console.warn('The build after the questions failed:', e);
+        setBuildNotice({ busy: false, ok: false, message: 'ما قدر Wee AI يبني موقعك هالمرة. اكبس «ابن صفحتي» من لوحة Wee AI لتجرب مرة تانية.' });
+      })
+      .finally(() => setAutoBuilding(false));
   }, [isProjectChosen, projectLoading, isStartActive, project]);
 
   const handleUndo = () => {
@@ -4960,7 +4942,13 @@ export default function App() {
     <BookingSettingsFocusContext.Provider value={bookingFocus}>
     <RatingsSlideContext.Provider value={ratingsSlide}>
     <div className="min-h-screen bg-bg text-ink flex flex-col antialiased selection:bg-brand/15 selection:text-brand">
-      {/* The build after the questions: working, then what came of it */}
+      {/* The build after the questions: Wee AI's icon alone, big and moving, until the site is built */}
+      {autoBuilding && (
+        <div className="fixed inset-0 z-[99999] bg-white flex items-center justify-center" role="status" aria-label="Wee AI عم يبني موقعك">
+          <WeeDots size={180} busy />
+        </div>
+      )}
+      {/* What came of a build */}
       {buildNotice && (
         <div dir="rtl" role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[99999] max-w-[92vw] w-[26rem] bg-white border border-neutral-200 shadow-[0_16px_40px_rgba(0,0,0,0.18)] rounded-2xl px-4 py-3 flex items-start gap-3 text-xs font-semibold text-neutral-800">
           {buildNotice.busy ? <Loader2 size={16} className="animate-spin text-brand shrink-0 mt-0.5" /> : <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${buildNotice.ok ? 'bg-green-500' : 'bg-rose-500'}`} />}

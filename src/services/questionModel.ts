@@ -1,6 +1,6 @@
 // The model Wee AI's questions follow: the sections of the page model of the chosen package (the admin's, else the default), so a
 // section the admin adds, or a package that opens one, changes the questions. Falls back to the default model when the server is out of reach.
-import { DEFAULT_MODELS, ModelPage, ModelSection, forRentalOf, modelOf, pagesOf } from '../data/pageModels';
+import { DEFAULT_MODELS, ModelPage, ModelSection, modelOf, pagesForKind, pagesOf } from '../data/pageModels';
 import { ReadyEntry, partsOf, slideParts } from '../data/slideParts';
 import { readySlidesOf } from './readySlides';
 import { CODE_CATEGORIES, codeSlide, codeSlides } from '../data/codeReady';
@@ -44,6 +44,9 @@ export const loadQuestionModel = async (planId: string): Promise<QuestionModel> 
   return withParts(defaultModel(planId));
 };
 
-/** A rental of things other than cars is asked in the shop's words (its sections are the shop's). */
-export const forCategory = (model: QuestionModel, kind: string | undefined, category: string | undefined): QuestionModel =>
-  kind === 'rental' ? { ...model, pages: model.pages.map((p) => ({ ...p, sections: forRentalOf(p.sections, category) })) } : model;
+/** The model as this site is asked about: only the sections of its kind (a rental of cars the showroom's, of things the shop's). */
+export const forCategory = (model: QuestionModel, kind: string | undefined, category: string | undefined): QuestionModel => {
+  const site = kind === 'rental' ? (!category || category.trim() === 'سيارات' ? 'rental-cars' : 'rental-items') : kind;
+  const pages = pagesForKind(model.pages, site);
+  return { ...model, pages, sections: pages[0]?.sections || [] };
+};

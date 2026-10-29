@@ -21,7 +21,7 @@ import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' 
 import designer from '../src/data/ai/weelinkDesigner.json' with { type: 'json' };
 import iconList from '../src/data/ai/buildIcons.json' with { type: 'json' };
 import { GALLERY_MAX, limitsOf } from '../src/utils/planLimits.js';
-import { DEFAULT_MODELS, forRentalOf, modelOf, pageRole, pagesOf } from '../src/data/pageModels.js';
+import { DEFAULT_MODELS, modelOf, pageRole, pagesForKind, pagesOf } from '../src/data/pageModels.js';
 import { readModels } from '../server/pageModels.js';
 import { ON_REQUEST, clip, cleanText, numbersAreOwners, ownersNumbers } from '../server/aiText.js';
 import { FREE_RULES, freeTurn, type FreeTurn } from '../server/freeDesign.js';
@@ -264,7 +264,6 @@ const planFor = async (db: NonNullable<ReturnType<typeof getFirestore>>, uid: st
 const hasPricedServices = (profile: Record<string, string>) => (profile['الخدمات'] || '').split('؛').some((l) => /:\s*\S/.test(l) && !l.includes(ON_REQUEST));
 
 // A rental of anything but cars is drawn with the shop's slides.
-const rentalPick = <T extends Parameters<typeof forRentalOf>[0]>(planId: string, profile: Record<string, string>, list: T): T => (planId.startsWith('rental') ? (forRentalOf(list, profile['التصنيف']) as T) : list);
 
 /**
  * The sections and slides a page of the model is built from (Eyad, 29 Oct: the model is the only source, the old way of the AI planning the
@@ -277,15 +276,16 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
     const planId = await planFor(db, o.uid, o.project, o.flavor);
     const model = (await readModels(db)).find((m) => m.id === modelOf(planId)) || DEFAULT_MODELS.find((m) => m.id === modelOf(planId));
     if (!model) return 'no_model';
-    const pages = pagesOf(model);
+    // The site's real kind (a rental of cars or of things, a hotel…): the model's sections made for it only (a rental model holds the
+    // showroom's and the shop's), and the search and featured slides made for it. A page left with nothing for this site is not built.
+    const kind = siteKindOf(planId, o.profile['التصنيف']);
+    const pages = pagesForKind(pagesOf(model), kind).filter((p) => p.system || p.sections.length);
     const page = o.pageId ? pages.find((p) => p.id === o.pageId) : pages[0];
     if (!page) return 'no_page';
-    // The site's real kind (a rental of cars or of things, a hotel…) picks the search and featured slides made for it.
-    const kind = siteKindOf(planId, o.profile['التصنيف']);
     const chosen = sectionsFor(page.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked });
-    const picked = await pickSections({ sections: rentalPick(planId, o.profile, chosen), pool: await slidePool(db), kind, photos: o.assets.gallery });
+    const picked = await pickSections({ sections: chosen, pool: await slidePool(db), kind, photos: o.assets.gallery });
     if (picked.skipped.length) console.warn(`model ${model.id}: no slide for ${picked.skipped.join(', ')}`);
-    // The whole site as the model has it (its pages in order, the locked ones too), so the browser keeps exactly these pages.
+    // The whole site as the model has it (its pages in order, the locked ones too), so the browser builds exactly these pages.
     const site = pages.map((p) => ({ id: p.id, name: p.name, ...(p.system ? { system: p.system } : {}), ...(pageRole(p) ? { role: pageRole(p) } : {}) }));
     if (!picked.pool.length) return 'no_slides';
     // The ratings are drawn by the browser: built when the model's page has them and the owner gets them (always, or ticked).

@@ -15,7 +15,8 @@ import { SLIDE_DIVIDER_OPTIONS } from '../components/SlideDividers';
 import { REST_PAGE_IDS } from '../data/restaurantTemplate';
 import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
 import { RENTAL_CART_PAGE } from '../data/rentalCartPage';
-import { opensPage, type PageRole } from '../data/pageModels';
+import { opensPage } from '../data/pageModels';
+import type { SitePage } from './modelSite';
 import { applyPageLook, lookColours, slideSource } from './applyLook';
 import { TEXT_EFFECTS } from '../utils/textEffects';
 import { lookOf, luminance, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
@@ -59,31 +60,14 @@ const DIVIDERS: Record<string, Slide['dividerShape']> = { straight: 'straight', 
 const dividerOf = (answer: string | undefined): Slide['dividerShape'] =>
   DIVIDERS[answer || ''] || SLIDE_DIVIDER_OPTIONS.find((o) => o.id === answer)?.id;
 
-// The pages a button may open, by the kind of page the AI named.
+// The pages a button may open, by the kind of page the AI named: the ids the model's pages take by their role (services/modelSite.ts).
 const PAGE_TARGETS: Record<string, string[]> = {
   menu: [REST_PAGE_IDS.menu],
-  products: ['shop-page-products', CAR_PAGE_IDS.showroom], // a rental of things lists them in the showroom's page
-  cars: [CAR_PAGE_IDS.showroom],
-  cart: [REST_PAGE_IDS.cart, 'shop-page-cart'],
-  contact: [REST_PAGE_IDS.contact, 'shop-page-contact', CAR_PAGE_IDS.contact],
-};
-// The built-in pages a page of the model is (Eyad, 28 Oct: the model is the only source): the model builds into them, or keeps them as they
-// are (the cart, the live menu, products and cars), so the page, the buttons that open it and its navbar entry stay one.
-const TWINS: Record<PageRole, string[]> = {
+  products: ['shop-page-products', CAR_PAGE_IDS.showroom],
+  cars: [CAR_PAGE_IDS.showroom, 'shop-page-products'],
   cart: [REST_PAGE_IDS.cart, 'shop-page-cart', RENTAL_CART_PAGE],
-  menu: [REST_PAGE_IDS.menu],
-  products: ['shop-page-products', CAR_PAGE_IDS.showroom], // a rental of things lists them in the showroom's page
-  cars: [CAR_PAGE_IDS.showroom],
-  contact: [REST_PAGE_IDS.contact, 'shop-page-contact', CAR_PAGE_IDS.contact],
+  contact: ['page-contact'],
 };
-/** A page of the model as the server names it: its id, name, and what it is to a store. */
-export interface SitePage { id: string; name: string; system?: 'cart'; role?: PageRole }
-/** The site's own page this page of the model is, when it has one not taken yet. */
-export const twinOf = (p: Pick<SitePage, 'role'>, pages: Page[], taken: string[]): string | null =>
-  (p.role ? TWINS[p.role] : []).find((id) => pages.some((x) => x.id === id) && !taken.includes(id)) || null;
-/** The pages kept as the store has them (its cart and live lists): the model names them, nothing is built in them. */
-export const keptAsIs = (p: Pick<SitePage, 'role'>) => p.role === 'cart' || p.role === 'menu' || p.role === 'products' || p.role === 'cars';
-
 /**
  * The site as the model has it: these pages only, in this order, under these names. Every other page goes with its slides' elements,
  * and a button or the navbar's own button that opened a page that went now opens the first page.
@@ -701,27 +685,6 @@ export interface BuildInput {
 }
 export type BuildResult = { ok: false; message: string } | { ok: true; pages: Page[]; elements: CanvasElement[]; pageId: string; firstSlideId: string; sections: number };
 
-/** The page Wee AI would build (a store's home page, else the open page) emptied to one white slide. */
-export const emptyMainPage = (kind: BuildKind, pages: Page[], elements: CanvasElement[], activePageId: string) => {
-  const page = mainPageOf(kind, pages, activePageId);
-  const old = new Set(page.slides.map((sl) => sl.id));
-  const slide: Slide = { id: `${page.id}-blank-${Date.now().toString(36)}`, name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' };
-  return {
-    pages: pages.map((p) => (p.id === page.id ? { ...p, slides: [slide] } : p)),
-    elements: elements.filter((el) => !old.has(el.slideId)),
-    pageId: page.id,
-    slideId: slide.id,
-  };
-};
-
-/** The site with one more empty page after the others (its navbar the main page's), for a later page of the model to be built into. */
-export const withBlankPage = (pages: Page[], fromPageId: string, name: string) => {
-  const from = pages.find((p) => p.id === fromPageId) || pages[0];
-  const id = `page-ai-${Date.now().toString(36)}-${pages.length}`;
-  const page: Page = { id, name, slug: `/${id}`, navbar: { ...from.navbar }, slides: [{ id: `${id}-blank`, name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff' }] };
-  return { pages: [...pages, page], pageId: id };
-};
-
 /** The «التقييمات» slide of a page whose owner ticked it: a title over the ratings box, in the page's colours. */
 const ratingsSlide = (slideId: string, to: TargetColours, fonts: { head: string; body: string }): { slide: Slide; elements: CanvasElement[] } => {
   const tone = toneColours(to, 'tint');
@@ -795,8 +758,8 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
 
   const oldSlides = new Set(page.slides.map((s) => s.id));
   const logo = answers.personalInfo?.logoUrl;
-  // A store's other pages (menu, products, cart…) keep their layout and take the new colours and fonts.
-  const restyle = kind !== 'free' && !input.later;
+  // The site's other pages (the cart the system draws) keep their layout and take the new colours and fonts.
+  const restyle = !input.later;
   // A page in a look («ستايل الصفحة») has that look's colours; the build gives it the owner's.
   const pageOf = new Map(pages.flatMap((p) => p.slides.map((s) => [s.id, p] as const)));
   const sceneFor = (aiTemplate: string | undefined, els: CanvasElement[], photoBg: boolean, slide?: Slide, p?: Page): RecolourScene => ({

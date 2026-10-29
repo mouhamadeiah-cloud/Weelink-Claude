@@ -28,12 +28,21 @@ export type SystemPage = 'cart';
 export interface ModelPage { id: string; name: string; sections: ModelSection[]; system?: SystemPage }
 export interface PageModel { id: string; name: string; sections: ModelSection[]; pages?: ModelPage[] }
 
+// The sites the slides of a store's category are for: a showroom's are cars (sold or rented), a shop's are things (sold, rented, or the
+// rooms and halls of a stay), a restaurant's its menu. A model may hold both a showroom's and a shop's sections (a rental model, for the
+// rentals of cars and of things): each site is built from the ones of its own kind only (Eyad, 29 Oct: no section is swapped by the code).
+const CATEGORY_KINDS: Record<string, string[]> = { cars: ['cars', 'rental-cars'], shop: ['shop', 'rental-items', 'hotel'], restaurant: ['restaurant'] };
+/** Whether a section of the model is built (and asked about) for this kind of site. */
+export const fitsKind = (s: Pick<ModelSection, 'category'>, kind: string | undefined) => !kind || !CATEGORY_KINDS[s.category] || CATEGORY_KINDS[s.category].includes(kind);
+/** The model's pages with only the sections for this kind of site. */
+export const pagesForKind = <P extends Pick<ModelPage, 'sections'>>(pages: P[], kind: string | undefined): P[] => pages.map((p) => ({ ...p, sections: p.sections.filter((s) => fitsKind(s, kind)) }));
+
 /** What a page of the model is to the store it is built in: its cart, the page of its live list (menu, products, cars), or its contact page. */
 export type PageRole = 'cart' | 'menu' | 'products' | 'cars' | 'contact';
 const LIVE_ROLE: Record<string, PageRole> = { restaurant: 'menu', shop: 'products', cars: 'cars' };
-export const pageRole = (p: Pick<ModelPage, 'name' | 'sections' | 'system'>): PageRole | undefined => {
+export const pageRole = (p: Pick<ModelPage, 'name' | 'sections' | 'system'>, kind?: string): PageRole | undefined => {
   if (p.system === 'cart') return 'cart';
-  const live = p.sections.find((s) => s.part === 'main' && LIVE_ROLE[s.category]);
+  const live = p.sections.find((s) => s.part === 'main' && LIVE_ROLE[s.category] && fitsKind(s, kind));
   if (live) return LIVE_ROLE[live.category];
   if (/^\s*(تواصل معنا|تواصل|اتصل بنا)\s*$/.test(p.name) || (p.sections.some((s) => s.category === 'contact') && p.sections.every((s) => s.category === 'contact' || s.category === 'privacy'))) return 'contact';
   return undefined;
@@ -77,13 +86,16 @@ const video = sec('video', 'ask');
 // The free page: the base of all.
 const FREE = [intro, about, services, prices, gallery, features, ratings, contact, privacy];
 // A free restaurant, shop or showroom: the base with the type's front slide and a price list the owner types by hand (no live items).
-// A rental builds from the showroom's slides (its cards are the units for rent) and a hotel from the shop's (its cards are the room types).
+// A rental has both the showroom's slides (a rental of cars) and the shop's (a rental of things; fitsKind keeps the site's own), a hotel
+// the shop's (its cards are the room types).
 type ModelType = 'restaurant' | 'shop' | 'cars' | 'rental' | 'hotel';
-const SLIDES_OF: Record<ModelType, 'restaurant' | 'shop' | 'cars'> = { restaurant: 'restaurant', shop: 'shop', cars: 'cars', rental: 'cars', hotel: 'shop' };
-const freeOf = (kind: ModelType) => { const type = SLIDES_OF[kind]; return [sec(type, 'always', { part: 'front' }), about, sec('table', 'always', { part: 'priceList' }), gallery, features, ratings, contact, privacy]; };
+const SLIDES_OF: Record<ModelType, ('restaurant' | 'shop' | 'cars')[]> = { restaurant: ['restaurant'], shop: ['shop'], cars: ['cars'], rental: ['cars', 'shop'], hotel: ['shop'] };
+const fronts = (kind: ModelType) => SLIDES_OF[kind].map((type) => sec(type, 'always', { part: 'front' }));
+const mains = (kind: ModelType) => SLIDES_OF[kind].map((type) => sec(type, 'always', { part: 'main' }));
+const freeOf = (kind: ModelType) => [...fronts(kind), about, sec('table', 'always', { part: 'priceList' }), gallery, features, ratings, contact, privacy];
 // A paid one: the front slide and the live section of its type.
-const paidOf = (kind: ModelType) => { const type = SLIDES_OF[kind]; return [sec(type, 'always', { part: 'front' }), sec(type, 'always', { part: 'main' }), about, gallery, features, ratings, contact, privacy]; };
-const proOf = (kind: ModelType) => { const type = SLIDES_OF[kind]; return [sec(type, 'always', { part: 'front' }), sec(type, 'always', { part: 'main' }), about, gallery, features, team, video, ratings, contact, privacy]; };
+const paidOf = (kind: ModelType) => [...fronts(kind), ...mains(kind), about, gallery, features, ratings, contact, privacy];
+const proOf = (kind: ModelType) => [...fronts(kind), ...mains(kind), about, gallery, features, team, video, ratings, contact, privacy];
 
 export const DEFAULT_MODELS: PageModel[] = [
   { id: 'page-free', name: 'تعريفية مجانية', sections: FREE },
@@ -176,13 +188,6 @@ export const cleanSections = (raw: unknown): ModelSection[] | null => {
   }
   return out.length ? out : null;
 };
-
-/**
- * A rental model is drawn with the showroom's slides (cars). Renting anything else (equipment, chalets, halls...) lists product cards,
- * so its sections take the shop's slides instead; the sections the admin allowed stay when they exist in the shop's category.
- */
-export const forRentalOf = (sections: ModelSection[], category: string | null | undefined): ModelSection[] =>
-  !category || category.trim() === 'سيارات' ? sections : sections.map((s) => (s.category === 'cars' ? { ...s, category: 'shop', id: s.part ? `shop:${s.part}` : 'shop' } : s));
 
 /** The pages of a model: its saved pages, or the sections as one page. */
 export const pagesOf = (m: Pick<PageModel, 'sections' | 'pages'> & { id?: string }): ModelPage[] => {

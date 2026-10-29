@@ -153,7 +153,7 @@ const getConciseQuestionText = (stepNum: number, name?: string, kind?: ProjectTy
 
 // The answers in short, in the editor's panel; the questions themselves are on the start page.
 const AnswersSummary: React.FC<{ done: boolean; rows: [string, string | undefined][]; onEdit: () => void }> = ({ done, rows, onEdit }) => (
-  <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs text-neutral-800">
+  <div className="p-4 space-y-3 text-xs text-neutral-800">
     {done ? (
       <dl className="rounded-xl border border-neutral-200 divide-y divide-neutral-100 bg-white">
         {rows.filter(([, v]) => v && v.trim()).map(([k, v]) => (
@@ -235,14 +235,16 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
     if (!scrolled.current) { scrolled.current = true; return; }
     if (step < 12 || editing) liveRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [step, editing]);
-  // The section questions follow the page model of the chosen package; none = the fixed list of optional sections.
+  // The section questions follow the page model of the chosen package.
   const [qModel, setQModel] = useState<QuestionModel | null>(null);
+  // No package picked here (the editor's panel, or «كمّل صفحتك» straight to the questions): the kind's own model asks them.
+  const modelPlan = planId || (!pageKind || pageKind === 'page' || ownFlavor ? 'page-free' : `${pageKind}-30`);
   useEffect(() => {
-    if (!planId) { setQModel(null); return; }
     let live = true;
-    loadQuestionModel(planId).then((m) => live && setQModel(m));
+    setQModel(null);
+    loadQuestionModel(modelPlan).then((m) => live && setQModel(m));
     return () => { live = false; };
-  }, [planId]);
+  }, [modelPlan]);
   const [writeNote, setWriteNote] = useState<{ ok: boolean; message: string } | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [canRestore, setCanRestore] = useState(false);
@@ -1582,6 +1584,8 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
 
       {introSlot && <div className="p-3 pb-0 shrink-0">{introSlot}</div>}
 
+      {/* The conversation, and «ابن صفحتي» at its end (Eyad, 29 Oct) */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
       {/* In the editor: the answers in short, and the way back to the questions */}
       {onEditAnswers ? (
         <AnswersSummary
@@ -1598,13 +1602,13 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
           onEdit={onEditAnswers}
         />
       ) : (
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs text-neutral-800">
+      <div className="p-4 space-y-4 text-xs text-neutral-800">
         {thread}
       </div>
       )}
 
-      {/* Wee AI builds the page from the answers above (after signing up) */}
-      {!isGuest && !embedded && <div className="p-3 border-t border-neutral-200 bg-[#fbfbfd] shrink-0 space-y-2">
+      {/* Wee AI builds the page from the answers above (after signing up): the last thing in the conversation */}
+      {!isGuest && !embedded && <div className="px-4 pb-4 space-y-2">
         {writeNote && (
           <p role="status" className={`text-xs font-semibold leading-relaxed ${writeNote.ok ? 'text-green-700' : 'text-rose-600'}`}>
             {writeNote.message}
@@ -1705,6 +1709,7 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
         )}
         {step < 13 && !onEditAnswers && <p className="text-xs text-neutral-400 text-center">جاوب على الأسئلة أولاً، وبعدها بيبني Wee AI صفحتك.</p>}
       </div>}
+      </div>
 
     </div>
   );

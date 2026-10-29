@@ -4,7 +4,6 @@ import { isProjectKey, kindOf, localPrefixOf, newProjectKey } from '../src/utils
 import { createEmptyHotelAdmin, normalizeHotelAdmin, rentalFromHotel, roomsOfType, stayRoomsOf, typeCapacity } from '../src/components/hotel/hotelTypes.ts';
 import { rentalItemCount, rentalShopView } from '../src/components/rental/rentalTypes.ts';
 import { loadCategories } from '../src/utils/businessCategories.ts';
-import { getHotelTemplate } from '../src/data/hotelTemplate.ts';
 import { itemsOf } from '../server/searchIndex.ts';
 import { limitsOf } from '../src/utils/planLimits.ts';
 import { flavorOf, PLANS } from '../src/data/plans.ts';
@@ -99,12 +98,6 @@ test('the published copy holds the warehouse like a rental\'s; the search lists 
   assert.equal(itemsOf('hotel', pub).length, 2);
 });
 
-test('the template: the rental\'s pages with the cart, in the words of a stay, with product cards for the rooms', () => {
-  const t = getHotelTemplate();
-  assert.equal(t.pages.length, 5);
-  assert.equal(t.elements.filter((e) => e.type === 'cart').length, 1);
-  assert.ok(t.elements.some((e) => e.type === 'shopProducts'));
-  assert.ok(!t.elements.some((e) => e.type === 'carListings' || e.type === 'carSearch'));
-  assert.ok(t.pages.some((p) => p.name === 'المتاح'));
+test('the kinds of a stay are listed with their sub kinds', () => {
   assert.ok(categories.length >= 3 && categories.every((c) => c.subs.length > 0));
 });

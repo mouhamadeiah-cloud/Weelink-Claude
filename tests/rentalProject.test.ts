@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { isProjectKey, kindOf, localPrefixOf, newProjectKey } from '../src/utils/projectKeys.ts';
 import { createEmptyRentalAdmin, normalizeRentalAdmin, rentalCatalogs, rentsCars } from '../src/components/rental/rentalTypes.ts';
-import { getRentalTemplate } from '../src/data/rentalTemplate.ts';
 import { itemsOf } from '../server/searchIndex.ts';
 import { limitsOf } from '../src/utils/planLimits.ts';
 import { flavorOf, PLANS } from '../src/data/plans.ts';
@@ -36,24 +35,10 @@ test('the packages: free is a page with the rental flavour, 30 and 60 count cars
   assert.equal(limitsOf('rental-free').bookings, false);
 });
 
-test('a car rental lists car cards; any other rental lists the item cards in their place', () => {
+test('a rental is of cars or of things', () => {
   assert.ok(rentsCars('سيارات'));
   assert.ok(rentsCars(''));
   assert.ok(!rentsCars('صالات'));
-  const cars = getRentalTemplate('سيارات');
-  assert.ok(cars.elements.some((e) => e.type === 'carListings'));
-  assert.ok(!cars.elements.some((e) => e.type === 'shopProducts'));
-  const halls = getRentalTemplate('صالات');
-  assert.ok(!halls.elements.some((e) => e.type === 'carListings' || e.type === 'carSearch'));
-  const grids = halls.elements.filter((e) => e.type === 'shopProducts');
-  assert.equal(grids.length, 2);
-  assert.ok(grids.some((e) => e.shopSource === 'featured'));
-  assert.ok(halls.elements.some((e) => e.type === 'shopSearch'));
-  assert.equal(halls.pages.length, 5);
-  assert.equal(halls.elements.filter((e) => e.type === 'cart').length, 1);
-  assert.equal(halls.elements.filter((e) => e.type === 'checkout').length, 1);
-  assert.ok(halls.pages.every((p) => p.navbar.items.some((i) => i.label === 'للإيجار')));
-  assert.equal(new Set(halls.elements.map((e) => e.id)).size, halls.elements.length);
 });
 
 test('the catalogs of a new rental: everything but cars, the owner\'s kind first', () => {
@@ -86,8 +71,8 @@ test('the rental catalogs repeat no sub kind, and a rental item\'s specs are all
 
 test('a rental made before its cart page gets one, once', async () => {
   const { withRentalCart } = await import('../src/data/rentalCartPage.ts');
-  const t = getRentalTemplate('سيارات');
-  const stripped = { pages: t.pages.filter((p) => p.id !== 'rental-page-cart'), elements: t.elements.filter((e) => e.type !== 'cart' && e.type !== 'checkout') };
+  const home = { id: 'car-page-home', name: 'الرئيسية', slug: '/', navbar: { brandName: '', items: [], ctaText: '', ctaHref: '#', bgColor: '#fff', textColor: '#000', isSticky: true }, slides: [{ id: 's1', name: 'أ', height: 560, backgroundColor: '#fff' }] } as any;
+  const stripped = { pages: [home], elements: [] as any[] };
   const added = withRentalCart(stripped.pages, stripped.elements, 9)!;
   assert.equal(added.pages.length, stripped.pages.length + 1);
   assert.equal(added.elements.filter((e) => e.type === 'cart').length, 1);
@@ -96,10 +81,18 @@ test('a rental made before its cart page gets one, once', async () => {
 
 test('the first rental cart (one cart element) is split into the summary and the booking card, once', async () => {
   const { withRentalCart } = await import('../src/data/rentalCartPage.ts');
-  const t = getRentalTemplate('سيارات');
+  const home = { id: 'car-page-home', name: 'الرئيسية', slug: '/', navbar: { brandName: '', items: [], ctaText: '', ctaHref: '#', bgColor: '#fff', textColor: '#000', isSticky: true }, slides: [] } as any;
+  const t = withRentalCart([home], [], 3)!;
   const first = { pages: t.pages, elements: t.elements.filter((e) => e.type !== 'checkout').map((e) => (e.type === 'cart' ? { ...e, cartSplit: undefined, width: 900 } : e)) };
   const split = withRentalCart(first.pages, first.elements, 11)!;
   assert.ok(split.elements.find((e) => e.type === 'cart')!.cartSplit);
   assert.equal(split.elements.filter((e) => e.type === 'checkout').length, 1);
   assert.equal(withRentalCart(split.pages, split.elements, 12), null);
+});
+
+test('a car rental\'s example cars have a price for the day and nothing of a sale', async () => {
+  const { exampleRentalCars } = await import('../src/components/cars/carTypes.ts');
+  const cars = exampleRentalCars();
+  assert.ok(cars.length > 0);
+  assert.ok(cars.every((c) => c.price > 0 && c.price < 500 && !c.mileage && !c.oldPrice && !c.negotiable && !c.purchasePrice && c.sample));
 });

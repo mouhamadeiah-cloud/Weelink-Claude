@@ -173,15 +173,6 @@ export const lookSlide = <T extends { aiTemplate?: string; backgroundColor: stri
   };
 };
 
-// The look a new store starts in (Eyad, 13 Oct: the shop too starts warm).
-const STARTING_LOOK: Partial<Record<BuildKind, string>> = { restaurant: 'homey', shop: 'homey', cars: 'bold' };
-
-/** A new store's template in its starting look. */
-export const inStartingLook = (site: { pages: Page[]; elements: CanvasElement[] }, kind: BuildKind) => {
-  const look = pageLookById(STARTING_LOOK[kind]);
-  return look ? applyPageLook(site.pages, site.elements, look, kind) : site;
-};
-
 /** The colours a page's slide is drawn in now: its look's when the page has one. */
 export const slideSource = (page: Page, slide: Slide | undefined, kind: BuildKind, els: CanvasElement[]): SourceLook => {
   const look = pageLookById(page.styleLook);

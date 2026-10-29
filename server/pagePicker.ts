@@ -38,15 +38,6 @@ export const photoCapacity = (template: string, spec?: TemplateSpec) => {
   return Object.keys(spec?.slots || {}).filter((k) => /^photos\.\d+$/.test(k)).length;
 };
 
-const shuffled = <T,>(list: T[], rng: () => number) => {
-  const out = [...list];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-};
-
 export interface Picked {
   pool: CodeSection[]; // one section per model section, each with the one template chosen
   templates: Record<string, TemplateSpec>; // the specs of the gallery slides chosen (keys `g:{id}`)
@@ -54,10 +45,8 @@ export interface Picked {
   skipped: string[]; // sections of the model that found no slide to be built from
 }
 
-/** One ready slide for each section: the first free one in order, or at random when `rng` is given (a slide of the owner's last build left for last). */
-export const pickSections = async (o: { sections: ModelSection[]; codeSections: CodeSection[]; gallery: GalleryPool; rng?: () => number; avoid?: Set<string>; photos?: number; specs?: Record<string, TemplateSpec> }): Promise<Picked> => {
-  const rng = o.rng;
-  const avoid = o.avoid || new Set<string>();
+/** One ready slide for each section: the first free one in the admin's order (never at random: the slide the questions were asked for is the one built). */
+export const pickSections = async (o: { sections: ModelSection[]; codeSections: CodeSection[]; gallery: GalleryPool; photos?: number; specs?: Record<string, TemplateSpec> }): Promise<Picked> => {
   const out: Picked = { pool: [], templates: {}, extra: {}, skipped: [] };
   const taken = new Set<string>();
   for (const s of o.sections) {
@@ -71,12 +60,7 @@ export const pickSections = async (o: { sections: ModelSection[]; codeSections: 
     const allowed = s.slides?.length ? o.gallery.ids(s.category).filter((g) => s.slides!.includes(g)) : [];
     const fromGallery = (allowed.length ? allowed : o.gallery.ids(s.category)).map((g) => ({ template: `g:${g}`, gallery: g }));
     // A category switched to the gallery uses only gallery slides, while it has one the AI can fill.
-    const order = (list: { template: string; gallery?: string }[]) => {
-      const free = list.filter((c) => !taken.has(c.template));
-      if (!rng) return free;
-      const mix = shuffled(free, rng);
-      return [...mix.filter((c) => !avoid.has(c.template)), ...mix.filter((c) => avoid.has(c.template))];
-    };
+    const order = (list: { template: string; gallery?: string }[]) => list.filter((c) => !taken.has(c.template));
     const tries = allowed.length ? [order(fromGallery)] : o.gallery.useGallery(s.category) ? [order(fromGallery), order(fromCode)] : [order([...fromCode, ...fromGallery])];
     let chosen: { template: string; spec?: TemplateSpec; data?: GallerySlideData } | null = null;
     for (const list of tries) {

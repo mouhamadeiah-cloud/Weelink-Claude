@@ -3,13 +3,12 @@
 // slides of the catalogue (src/data/ai/buildCatalog.json, written by `npm run ai-catalog`).
 //
 //   POST /api/build-page   { kind, profile, assets }  with  Authorization: Bearer <Firebase ID token>
-//     → { plan }   (checked against the catalogue; the browser builds the slides from it)
+//     → { plan, site, … }   (checked against the model; the browser builds the slides from it)
 //
-// The ready slides are examples, not forms to fill (Eyad, 12 Oct): Gemini picks the sections and
-// their order for the business, an example slide for each, the texts at their natural length, how
-// many cards, rows and figures a list has, an icon per card, the tone of each section, its entrance
-// animation and the photo searches. The browser lays the elements out (src/services/pageBuilder.ts),
-// so Gemini never writes coordinates. Every answer is checked here before it reaches the page
+// The page's model (admin «نماذج الصفحات», else its default) is the only source of the site (Eyad, 29 Oct):
+// the server picks its pages, sections and slides (server/pagePicker.ts) and Gemini only writes their
+// texts, icons, tones and photo searches; without the model nothing is built. The browser lays the
+// elements out (src/services/pageBuilder.ts), so Gemini never writes coordinates. Every answer is checked here before it reaches the page
 // (unknown slides, slots or icons, over-long texts, emoji and AI wording, invented prices or
 // figures, outside links, unknown palettes, fonts or animations).
 // The Gemini key lives only in the Cloudflare environment variable GEMINI_API_KEY.
@@ -74,7 +73,6 @@ interface LookSpec {
   body: string;
 }
 const LOOKS = catalog.looks as Record<string, LookSpec>;
-const SUITS = catalog.suits as Record<Kind, string[]>;
 const DEFAULT_LOOKS = catalog.defaults as Record<Kind, string>;
 const LIST_MAX = catalog.listMax as number;
 const ICONS = new Set(iconList as string[]);
@@ -284,52 +282,26 @@ const specOf = (t: TemplateSpec, key: string): { kind: 'text' | 'button' | 'imag
 };
 
 /** Gemini's answer checked against the catalogue: only what Weelink can build safely comes back. */
-export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>, assets: Assets, over?: Pick<Picked, 'pool' | 'templates'>): Plan => {
-  // With a model (server/pagePicker.ts) the sections and their slides are fixed: the AI only writes their texts.
-  const T: Record<string, TemplateSpec> = over ? { ...TEMPLATES, ...over.templates } : TEMPLATES;
+export const checkPlan = (raw: any, kind: Kind, profile: Record<string, string>, assets: Assets, over: Pick<Picked, 'pool' | 'templates'>): Plan => {
+  // The model (server/pagePicker.ts) fixes the sections and their slides: the AI only writes their texts.
+  const T: Record<string, TemplateSpec> = { ...TEMPLATES, ...over.templates };
   const owners = ownersNumbers(profile);
   const motion = /حرك/.test(profile['الحركة'] || '') && !/هادئ/.test(profile['الحركة'] || '');
-  const hasServices = !!profile['الخدمات'];
   const description = profile['الوصف'] || '';
-  // «من نحن» tells the owner's own description (Eyad, 12 Oct), so it is on every page that has one.
-  const pool: Section[] = over
-    ? over.pool
-    : SECTIONS[kind]
-        .filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true))
-        .map((s) => (s.id === 'about' && description ? { ...s, required: true } : s));
+  const pool: Section[] = over.pool;
   const answered: any[] = Array.isArray(raw?.sections) ? raw.sections : [];
-  const imageTemplate = (s: Section) => s.templates.find((t) => Object.values(T[t].slots).some((v) => v.kind === 'image'));
 
-  // The AI's order, each section once; then any required one it left out.
+  // Each section of the model once, in the model's order, whether the AI answered it or not.
   const chosen: { section: Section; given: any }[] = [];
   for (const given of answered) {
     const section = pool.find((s) => s.id === given?.section) || pool.find((s) => s.templates.includes(given?.template) && !chosen.some((c) => c.section === s));
     if (section && !chosen.some((c) => c.section === section)) chosen.push({ section, given });
   }
-  for (const section of pool) if ((section.required || over) && !chosen.some((c) => c.section === section)) chosen.push({ section, given: null });
-  // At least two sections carry a photo, not the entrance alone (Eyad, 14 Oct): «من نحن» takes the
-  // design with a photo, and is added when the owner wrote a description and the AI left it out.
-  const withPhoto = (c: { section: Section; given: any }) => {
-    const t = c.section.templates.includes(c.given?.template) ? c.given.template : c.section.templates[0];
-    return Object.values(T[t].slots).some((v) => v.kind === 'image');
-  };
-  const forcePhoto = new Set<Section>();
-  // (Only when the AI gave some photo search to take the second photo from: Weelink never shows
-  // the example's own photo for another business.)
-  const hasQuery = answered.some((s) => pairs(s?.images, 'ref').some(([, ref]) => IMAGE_QUERY.test(ref.trim())));
-  if (!over && hasQuery && chosen.filter(withPhoto).length < 2) {
-    const about = pool.find((s) => s.id === 'about' && imageTemplate(s));
-    if (about && chosen.some((c) => c.section === about)) forcePhoto.add(about);
-    else if (about && description) {
-      chosen.push({ section: about, given: null });
-      forcePhoto.add(about);
-    }
-  }
-  const rank = (s: Section) => (s.place === 'first' ? 0 : s.place === 'last' ? 2 + pool.indexOf(s) / 100 : 1);
-  chosen.sort((a, b) => (over ? pool.indexOf(a.section) - pool.indexOf(b.section) : rank(a.section) - rank(b.section)));
+  for (const section of pool) if (!chosen.some((c) => c.section === section)) chosen.push({ section, given: null });
+  chosen.sort((a, b) => pool.indexOf(a.section) - pool.indexOf(b.section));
 
   const sections: PlannedSection[] = chosen.map(({ section, given }): PlannedSection | null => {
-    const template = forcePhoto.has(section) ? imageTemplate(section)! : section.templates.includes(given?.template) ? given.template : section.templates[0];
+    const template = section.templates.includes(given?.template) ? given.template : section.templates[0];
     const spec = T[template];
     const slots: Record<string, string> = {};
     for (const [key, value] of pairs(given?.slots, 'value')) {
@@ -427,8 +399,6 @@ const catalogOf = (pool: Section[], specs: Record<string, TemplateSpec>) =>
         : {}),
     })),
   }));
-const catalogFor = (kind: Kind, hasServices: boolean, assets: Assets) =>
-  catalogOf(SECTIONS[kind].filter((s) => (s.id === 'prices' ? hasServices : s.id === 'gallery' ? assets.gallery > 0 : true)), TEMPLATES);
 
 // One worked example of the answer's shape and quality (a dentist), to learn from, not to copy.
 const EXAMPLE = {
@@ -562,22 +532,17 @@ const askGemini = async (ai: GoogleGenAI, prompt: string, ms: number, usage: Usa
 
 // What is the same for every build comes first and the owner's card last: Gemini reuses (caches) a
 // prompt's unchanged beginning, which makes a build faster and its repeated part cheaper.
-export const buildPrompt = (kind: Kind, profile: Record<string, string>, assets: Assets, over?: Pick<Picked, 'pool' | 'templates'>) =>
+export const buildPrompt = (kind: Kind, profile: Record<string, string>, assets: Assets, over: Pick<Picked, 'pool' | 'templates'>) =>
   [
     `looks (اختر واحداً منها فقط لكل الصفحة: اسمه، لمن يناسب، ألوانه، وخطّاه): ${JSON.stringify(Object.fromEntries(Object.entries(LOOKS).map(([id, l]) => [id, `${l.name}، يناسب: ${l.forWho}. خلفية ${l.bg} ونص ${l.ink} وتمييز ${l.accent}. خط العناوين ${l.head} والنص ${l.body}`])))}`,
     `icons: ${JSON.stringify([...ICONS])}`,
     `listMax: ${LIST_MAX}`,
     `مثال على شكل الرد وجودته لعيادة أسنان (تعلّم منه الأسلوب، لا تنسخه، ولا تستعمل أسماءه أو نصوصه):\n${JSON.stringify(EXAMPLE)}`,
     `نوع الصفحة: ${kind}`,
-    `الأنسب لهذا النوع عادةً: ${JSON.stringify(SUITS[kind])}`,
-    over
-      ? `أقسام هذه الصفحة وشرائحها (اختارها الخادم مسبقاً وبهذا الترتيب: لا تضف قسماً ولا تحذف ولا تبدّل شريحة. لكل شريحة خاناتها: رقم = حد الأحرف لنص، button:حد = زر، image = صورة؛ و lists = قوائم تختار عدد عناصرها):\n${JSON.stringify(catalogOf(over.pool, { ...TEMPLATES, ...over.templates }))}`
-      : `الكتالوج (الأقسام المتاحة لهذه الصفحة؛ لكل شريحة مثال خاناتها: رقم = حد الأحرف لنص، button:حد = زر، image = صورة؛ و lists = قوائم تختار عدد عناصرها):\n${JSON.stringify(catalogFor(kind, !!profile['الخدمات'], assets))}`,
+    `أقسام هذه الصفحة وشرائحها (اختارها الخادم مسبقاً وبهذا الترتيب: لا تضف قسماً ولا تحذف ولا تبدّل شريحة. لكل شريحة خاناتها: رقم = حد الأحرف لنص، button:حد = زر، image = صورة؛ و lists = قوائم تختار عدد عناصرها):\n${JSON.stringify(catalogOf(over.pool, { ...TEMPLATES, ...over.templates }))}`,
     `assets (صور صاحب العمل المتوفرة): ${JSON.stringify({ heroBg: assets.heroBg, galleryCount: assets.gallery, logo: assets.logo })}`,
     `بطاقة صاحب العمل (profile):\n${JSON.stringify(profile, null, 1)}`,
-    over
-      ? 'اكتب الآن نصوص أقسام هذا العمل بالذات (خاناتها، وكلمات بحث صورها، وأيقونات بطاقاتها، ونبرة كل قسم وحركة دخوله)، واختر نمط الصفحة وشريط التنقل، وأعد JSON فقط.'
-      : 'صمّم الآن صفحة هذا العمل بالذات. اختر الأقسام التي يحتاجها فعلاً وبترتيب يقنع زائره، وأعد JSON فقط.',
+    'اكتب الآن نصوص أقسام هذا العمل بالذات (خاناتها، وكلمات بحث صورها، وأيقونات بطاقاتها، ونبرة كل قسم وحركة دخوله)، واختر نمط الصفحة وشريط التنقل، وأعد JSON فقط.',
   ].join('\n\n');
 
 // ---------- The page's model (docs/READY_SLIDES_PLAN.md step 4c) ----------
@@ -596,26 +561,27 @@ const planFor = async (db: NonNullable<ReturnType<typeof getFirestore>>, uid: st
 // Services the owner priced: «name: price» lines where the price is not «حسب الطلب».
 const hasPricedServices = (profile: Record<string, string>) => (profile['الخدمات'] || '').split('؛').some((l) => /:\s*\S/.test(l) && !l.includes(ON_REQUEST));
 
-/**
- * The sections and slides this page is built from, chosen by the server from the project's model; null when it cannot be done (no database,
- * a kind that still builds the old way, a model with nothing to build from), and then the AI plans the page as before.
- * Only the page projects use it for now: a restaurant, shop or showroom still plans its home page with the AI.
- */
 // A rental of anything but cars is drawn with the shop's slides.
 const rentalPick = <T extends Parameters<typeof forRentalOf>[0]>(planId: string, profile: Record<string, string>, list: T): T => (planId.startsWith('rental') ? (forRentalOf(list, profile['التصنيف']) as T) : list);
 
-// `pageId` names a later page of the model (the main page, the model's first, when unset); `more` lists the pages that follow the main one.
+/**
+ * The sections and slides a page of the model is built from (Eyad, 29 Oct: the model is the only source, the old way of the AI planning the
+ * page itself is gone). The admin's model of the package, else its default; `pageId` names a later page (the model's first when unset).
+ * A string when the page cannot be built from the model: the build stops and says so, it never plans the page another way.
+ */
 const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: string; project: string; kind: Kind; flavor: string; ticked: string[] | undefined; profile: Record<string, string>; assets: Assets; pageId?: string }) => {
-  if (!db) return null;
+  if (!db) return 'no_database';
   try {
     const planId = await planFor(db, o.uid, o.project, o.flavor);
-    const model = (await readModels(db)).find((m) => m.id === modelOf(planId));
-    if (!model) return null;
+    const model = (await readModels(db)).find((m) => m.id === modelOf(planId)) || DEFAULT_MODELS.find((m) => m.id === modelOf(planId));
+    if (!model) return 'no_model';
     const pages = pagesOf(model);
-    const page = (o.pageId && pages.find((p) => p.id === o.pageId)) || pages[0];
+    const page = o.pageId ? pages.find((p) => p.id === o.pageId) : pages[0];
+    if (!page) return 'no_page';
+    const chosen = sectionsFor(page.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked });
     const picked = await pickSections({
-      sections: rentalPick(planId, o.profile, sectionsFor(page.sections, { services: !!o.profile['الخدمات'], priced: hasPricedServices(o.profile), photos: o.assets.gallery > 0, ticked: o.ticked })),
-      // The sections of the project's own kind (a restaurant's front and menu, a shop's search and products...); rentals and hotels build as «free».
+      sections: rentalPick(planId, o.profile, chosen),
+      // The code's own slides of the project's kind, for the sections drawn by the code (a restaurant's front and menu, a shop's search...).
       codeSections: SECTIONS[o.kind] || SECTIONS.free,
       specs: TEMPLATES,
       photos: o.assets.gallery,
@@ -624,10 +590,12 @@ const modelPick = async (db: ReturnType<typeof getFirestore> | null, o: { uid: s
     if (picked.skipped.length) console.warn(`model ${model.id}: no slide for ${picked.skipped.join(', ')}`);
     // The whole site as the model has it (its pages in order, the locked ones too), so the browser keeps exactly these pages.
     const site = pages.map((p) => ({ id: p.id, name: p.name, ...(p.system ? { system: p.system } : {}), ...(pageRole(p) ? { role: pageRole(p) } : {}) }));
-    return picked.pool.length ? { ...picked, pageName: page.name, site, ratings: page.sections.some((x) => x.category === 'ratings'), more: o.pageId ? [] : pages.slice(1).filter((p) => !p.system).map((p) => ({ id: p.id, name: p.name })) } : null;
+    if (!picked.pool.length) return 'no_slides';
+    // The ratings are drawn by the browser: built when the model's page has them and the owner gets them (always, or ticked).
+    return { ...picked, pageName: page.name, site, ratings: chosen.some((x) => x.category === 'ratings') };
   } catch (err) {
     console.error('model pick failed:', (err as Error)?.message);
-    return null;
+    return 'model_read';
   }
 };
 
@@ -732,12 +700,17 @@ export default {
     const flavor = typeof body?.flavor === 'string' ? body.flavor : '';
     const ticked = Array.isArray(body?.ticked) ? body.ticked.filter((t: unknown): t is string => typeof t === 'string' && /^[a-z_]+(:[a-zA-Z]+)?$/.test(t)).slice(0, 30) : undefined;
     const over = await modelPick(meterDb(), { uid, project, kind, flavor, ticked, profile, assets, pageId: modelPage });
+    // Without the model nothing is built: there is no other way to plan the page.
+    if (typeof over === 'string') {
+      await meterClose(meter, 'build-page', MODEL, { input: 0, cached: 0, output: 0 }, false, over, 0);
+      return json({ error: 'no_model', reason: over }, 503);
+    }
     // A section with a ready slide and its elements is filled the form way; a section whose slide is the code's (the menu, the products, the
-    // showroom read live data) keeps the old way, the AI writing its slots. Without any form section the AI plans the page as before.
-    const asForm = (p: Picked['pool'][number]): FormSection => ({ id: p.id, name: p.name, template: p.templates[0], slide: over!.extra[p.templates[0]].slide, elements: autoSlots(over!.extra[p.templates[0]].elements) });
-    const formSections: FormSection[] | null = over && over.pool.some((p) => over.extra[p.templates[0]]) ? over.pool.filter((p) => over.extra[p.templates[0]]).map(asForm) : null;
-    const codePool = over && formSections ? over.pool.filter((p) => !over.extra[p.templates[0]]) : [];
-    const prompt = !formSections ? buildPrompt(kind, profile, assets, over || undefined) : codePool.length ? buildPrompt(kind, profile, assets, { pool: codePool, templates: over!.templates }) : '';
+    // showroom read live data) has the AI write that slide's slots.
+    const asForm = (p: Picked['pool'][number]): FormSection => ({ id: p.id, name: p.name, template: p.templates[0], slide: over.extra[p.templates[0]].slide, elements: autoSlots(over.extra[p.templates[0]].elements) });
+    const formSections: FormSection[] = over.pool.filter((p) => over.extra[p.templates[0]]).map(asForm);
+    const codePool = over.pool.filter((p) => !over.extra[p.templates[0]]);
+    const prompt = codePool.length ? buildPrompt(kind, profile, assets, { pool: codePool, templates: over.templates }) : '';
     const started = Date.now();
     const usage: Usage[] = [];
     try {
@@ -753,38 +726,32 @@ export default {
         }
       };
       let plan: Plan;
-      if (formSections) {
+      if (formSections.length) {
         // The form way: the slides are fixed, the AI fills every part of each (server/formBuild.ts).
         const formAsk = buildFormPlan({ env: formEnv(ask), kind, profile, assets, sections: formSections, accent: /^#[0-9a-f]{6}$/i.test(profile['اللون_المفضل_رمز'] || '') ? profile['اللون_المفضل_رمز'] : undefined, motion: /حرك/.test(profile['الحركة'] || '') && !/هادئ/.test(profile['الحركة'] || '') });
         if (!codePool.length) plan = (await formAsk) as Plan;
         else {
           const [formPlan, codeRaw] = await Promise.all([formAsk, ask(prompt, RESPONSE_SCHEMA, SYSTEM)]);
-          const codePlan = checkPlan(codeRaw, kind, profile, assets, { pool: codePool, templates: over!.templates });
-          plan = mergePlans(formPlan, codePlan.sections as any[], over!.pool.map((p) => p.id)) as Plan;
+          const codePlan = checkPlan(codeRaw, kind, profile, assets, { pool: codePool, templates: over.templates });
+          plan = mergePlans(formPlan, codePlan.sections as any[], over.pool.map((p) => p.id)) as Plan;
         }
       } else {
-        plan = checkPlan(await ask(prompt, RESPONSE_SCHEMA, SYSTEM), kind, profile, assets, over || undefined);
+        // Every section of this page is drawn by the code (a page of the live list alone).
+        plan = checkPlan(await ask(prompt, RESPONSE_SCHEMA, SYSTEM), kind, profile, assets, over);
       }
       const tokens = sumUsage(usage);
-      console.log(`build-page: ${kind} planned in ${Date.now() - started} ms${formSections ? ' (forms)' : ''}, tokens ${JSON.stringify(tokens)}`);
+      console.log(`build-page: ${kind} planned in ${Date.now() - started} ms${formSections.length ? ' (forms)' : ''}, tokens ${JSON.stringify(tokens)}`);
       await meterClose(meter, 'build-page', MODEL, tokens, true, '', Date.now() - started);
       await countBuild(allowance);
-      // The gallery slides the plan uses go with it, for the browser to build from; the templates are remembered to vary the next build.
+      // The gallery slides the plan uses go with it, for the browser to build from.
       const extra: Record<string, GallerySlideData> = {};
-      if (over) {
-        for (const s of plan.sections) if (over.extra[s.template]) extra[s.template] = over.extra[s.template];
-        if (!modelPage) try {
-          await meterDb()?.collection('platform_build_picks').doc(`${uid}__${project}`).set({ last: plan.sections.map((s) => s.template), at: Date.now() });
-        } catch (err) {
-          console.error('build picks not saved:', (err as Error)?.message);
-        }
-      }
+      for (const s of plan.sections) if (over.extra[s.template]) extra[s.template] = over.extra[s.template];
       // The sections the model asked for that did not get built (no slide yet, or the AI gave a slide nothing), so the owner is told.
       const built = new Set(plan.sections.map((s) => s.template));
-      const missing = over ? [...over.skipped, ...over.pool.filter((p) => !built.has(p.templates[0])).map((p) => p.name)] : [];
+      const missing = [...over.skipped, ...over.pool.filter((p) => !built.has(p.templates[0])).map((p) => p.name)];
       // Sections the AI could not fill, written from the owner's card alone: named in the report.
-      const plain = (plan.sections as any[]).filter((s) => s.fallback).map((s) => over?.pool.find((p) => p.id === s.section)?.name || s.section);
-      return json({ plan, ...(Object.keys(extra).length ? { extra } : {}), ...(over?.more?.length ? { more: over.more } : {}), ...(over ? { pageName: over.pageName, ratings: over.ratings } : {}), ...(missing.length ? { missing } : {}), ...(over ? { site: over.site } : {}), ...(plain.length ? { plain } : {}), usage: tokens });
+      const plain = (plan.sections as any[]).filter((s) => s.fallback).map((s) => over.pool.find((p) => p.id === s.section)?.name || s.section);
+      return json({ plan, ...(Object.keys(extra).length ? { extra } : {}), pageName: over.pageName, ratings: over.ratings, site: over.site, ...(missing.length ? { missing } : {}), ...(plain.length ? { plain } : {}), usage: tokens });
     } catch (err) {
       const failure = err instanceof BuildFailure ? err : new BuildFailure('check', String((err as Error)?.message || '').slice(0, 200));
       await meterClose(meter, 'build-page', MODEL, sumUsage(usage), false, failure.reason, Date.now() - started);

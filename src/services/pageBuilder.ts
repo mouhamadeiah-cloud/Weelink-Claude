@@ -26,7 +26,6 @@ import { closeGaps, fittedFontSize, fitTexts, fitTextsPhone, listItems, reflowLi
 import { arrangeSlideForMobile } from '../utils/mobileLayout';
 import type { ProjectType } from '../components/shop/shopTypes';
 import { deserializeElements } from '../utils/elementStorage';
-import { tickedSections } from '../data/optionalSections';
 import { GALLERY_MAX } from '../utils/planLimits';
 import { freeToBuilt, type FreeDesign } from '../utils/freeDesign';
 
@@ -144,7 +143,7 @@ export const pageAssets = (a: WeeAnswers, max: number = GALLERY_MAX) => ({
   logo: !!a.personalInfo?.logoUrl,
 });
 
-export type PlanResult = { ok: true; plan: Plan; more?: { id: string; name: string }[]; pageName?: string; ratings?: boolean; missing?: string[]; site?: SitePage[]; plain?: string[] } | { ok: false; message: string };
+export type PlanResult = { ok: true; plan: Plan; pageName: string; ratings: boolean; missing?: string[]; site: SitePage[]; plain?: string[] } | { ok: false; message: string };
 
 // What went wrong, in words the owner can act on, with the server's code for whoever fixes it.
 const failureMessage = (status: number, data: { reason?: string; detail?: string }) => {
@@ -165,6 +164,7 @@ const failureMessage = (status: number, data: { reason?: string; detail?: string
   return `${lead} جرّب مرة ثانية بعد شوي. (السبب للدعم: ${reason}${detail})`;
 };
 
+const NO_MODEL = 'ما قدرت إقرا نموذج صفحتك، فما بنيت شي. جرّب بعد شوي، وإذا تكرر خبّر الإدارة.';
 export const requestPagePlan = async (kind: BuildKind, profile: Record<string, string>, assets: ReturnType<typeof pageAssets>, project?: string, model: { flavor?: string; ticked?: string[]; modelPage?: string } = {}): Promise<PlanResult> => {
   const user = auth.currentUser;
   if (!user) return { ok: false, message: 'سجّل الدخول أولاً حتى يبني Wee AI صفحتك.' };
@@ -178,10 +178,13 @@ export const requestPagePlan = async (kind: BuildKind, profile: Record<string, s
     if (res.ok && Array.isArray(data.plan?.sections)) {
       // The tokens this build used, for working out its cost (browser console).
       if (data.usage) console.info('Wee AI build tokens:', data.usage);
-      return { ok: true, plan: data.extra ? { ...data.plan, extra: data.extra } : data.plan, ...(Array.isArray(data.more) && data.more.length ? { more: data.more } : {}), ...(typeof data.pageName === 'string' ? { pageName: data.pageName } : {}), ...(typeof data.ratings === 'boolean' ? { ratings: data.ratings } : {}), ...(Array.isArray(data.missing) && data.missing.length ? { missing: data.missing.map(String) } : {}), ...(Array.isArray(data.site) && data.site.length ? { site: data.site as SitePage[] } : {}), ...(Array.isArray(data.plain) && data.plain.length ? { plain: data.plain.map(String) } : {}) };
+      // The model is the only source (Eyad, 29 Oct): an answer without the model's pages is not built.
+      if (!Array.isArray(data.site) || !data.site.length) return { ok: false, message: NO_MODEL };
+      return { ok: true, plan: data.extra ? { ...data.plan, extra: data.extra } : data.plan, pageName: String(data.pageName || ''), ratings: data.ratings === true, site: data.site as SitePage[], ...(Array.isArray(data.missing) && data.missing.length ? { missing: data.missing.map(String) } : {}), ...(Array.isArray(data.plain) && data.plain.length ? { plain: data.plain.map(String) } : {}) };
     }
     if (data.error === 'not_configured') return { ok: false, message: 'Wee AI غير مفعّل بعد على الخادم (ينقصه مفتاح الذكاء الاصطناعي).' };
     if (data.error === 'no_tokens') return { ok: false, message: 'انتهى رصيد Wee AI في حسابك. تواصل مع الإدارة لشحن رصيد جديد.' };
+    if (data.error === 'no_model') return { ok: false, message: NO_MODEL };
     if (data.error === 'build_limit') {
       return { ok: false, message: data.perDay ? `خلصت مرات «ابن صفحتي» لليوم (${data.limit} حسب باقتك). جرّب بكرا، أو رقّي لـ Pro.` : '«ابن صفحتي» بالصفحة المجانية مرة وحدة. رقّي لـ Pro لتبني أكتر.' };
     }
@@ -701,7 +704,7 @@ export interface BuildInput {
   elements: CanvasElement[];
   activePageId: string;
   later?: boolean; // a later page of the model: built beside the main page, which already got the ratings slide
-  ratings?: boolean; // the model has «التقييمات» on this page; false = not even when ticked (the model is the law). Unset: no model, as before.
+  ratings?: boolean; // the owner gets the model's «التقييمات» on this page (always, or ticked): the server says so
   targetPageId?: string; // build into this page, not the store's home
 }
 export type BuildResult = { ok: false; message: string } | { ok: true; pages: Page[]; elements: CanvasElement[]; pageId: string; firstSlideId: string; sections: number };
@@ -793,7 +796,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
     }
   }
   // The owner ticked «التقييمات»: its slide comes before the contact and the terms at the end.
-  if (kind === 'free' && !input.later && input.ratings !== false && tickedSections(answers.aiAnswers?.optionalSections).includes('ratings')) {
+  if (kind === 'free' && !input.later && input.ratings === true) {
     let at = built.length;
     while (at > 0 && ['contact', 'privacy'].includes(builtSection[at - 1])) at -= 1;
     built.splice(at, 0, ratingsSlide(`slide-ai-${stamp}-ratings`, to, fonts));

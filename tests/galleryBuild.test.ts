@@ -24,16 +24,16 @@ test('a gallery slide in the plan is built with the AI\'s texts in its marked pl
   }
 });
 
-const basic = (answers: any, sections: string[]) => {
+const basic = (answers: any, sections: string[], ratings = false) => {
   const planned = sections.map((section) => ({ section, template: 'g:abc', tone: 'light', slots: { title: `عنوان ${section}`, sub: 'نص القسم' }, icons: {}, links: {}, images: {}, entrance: 'none' }));
   const extra = { 'g:abc': { name: 't', slide: { height: 400, backgroundColor: '#ffffff' }, elements: [{ id: 'a', type: 'heading', slideId: 's', x: 100, y: 80, width: 600, height: 60, content: 'x', aiSlot: 'title', styles: { fontSize: 30, color: '#111111' } }, { id: 'b', type: 'paragraph', slideId: 's', x: 100, y: 160, width: 600, height: 60, content: 'y', aiSlot: 'sub', styles: { fontSize: 16, color: '#444444' } }] } };
   const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, extra, sections: planned };
   const page: any = { id: 'p1', name: 'الرئيسية', slug: '/', slides: [{ id: 'old', name: 'x', height: 500, backgroundColor: '#fff' }], navbar: { brandName: 'x' } };
-  return buildPageFromPlan(plan, { kind: 'free', answers, siteName: 'تجربة', pages: [page], elements: [], activePageId: 'p1' }, async () => null);
+  return buildPageFromPlan(plan, { kind: 'free', answers, siteName: 'تجربة', pages: [page], elements: [], activePageId: 'p1', ratings }, async () => null);
 };
 
-test('a ticked «التقييمات» comes before the contact and the terms; unticked, the page has none', async () => {
-  const yes: any = await basic({ aiAnswers: { optionalSections: ['ratings', 'privacy'] } }, ['intro', 'about', 'contact', 'privacy']);
+test('«التقييمات» the server gives the page comes before the contact and the terms; without it, the page has none', async () => {
+  const yes: any = await basic({ aiAnswers: { optionalSections: ['ratings', 'privacy'] } }, ['intro', 'about', 'contact', 'privacy'], true);
   const slides = yes.pages[0].slides.map((s: any) => s.name);
   assert.equal(slides.length, 5);
   assert.equal(slides[2], 'التقييمات');
@@ -42,8 +42,8 @@ test('a ticked «التقييمات» comes before the contact and the terms; un
   const no: any = await basic({ aiAnswers: { optionalSections: ['privacy'] } }, ['intro', 'about', 'contact', 'privacy']);
   assert.equal(no.pages[0].slides.length, 4);
   assert.ok(!no.elements.some((e: any) => e.type === 'ratings'));
-  const unanswered: any = await basic({}, ['intro', 'contact']); // old answers: the defaults, no ratings
-  assert.ok(!unanswered.elements.some((e: any) => e.type === 'ratings'));
+  const ticksAlone: any = await basic({ aiAnswers: { optionalSections: ['ratings'] } }, ['intro', 'contact']); // the model decides, not the tick alone
+  assert.ok(!ticksAlone.elements.some((e: any) => e.type === 'ratings'));
 });
 
 test('the contact section shows the owner\'s Facebook and TikTok as buttons; a bad address or another section does not', async () => {
@@ -134,7 +134,7 @@ test('a calm page drops moving effects, a light one drops glows, and a lively pa
 });
 
 test('a later page of the model is built into a new page beside the main one, without a second ratings slide', async () => {
-  const main: any = await basic({ aiAnswers: { optionalSections: ['ratings'] } }, ['intro', 'contact']);
+  const main: any = await basic({ aiAnswers: { optionalSections: ['ratings'] } }, ['intro', 'contact'], true);
   const shell = withBlankPage(main.pages, main.pageId, 'من نحن');
   assert.equal(shell.pages.length, 2);
   assert.equal(shell.pages[1].name, 'من نحن');

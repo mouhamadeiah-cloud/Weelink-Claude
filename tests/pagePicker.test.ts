@@ -15,7 +15,6 @@ const pool = (o: Partial<GalleryPool> & { byCat?: Record<string, string[]>; on?:
   ids: (c) => o.byCat?.[c] || [], useGallery: (c) => !!o.on?.includes(c), load: async (id) => (id.startsWith('bad') ? null : slide()), ...o,
 });
 const free = DEFAULT_MODELS[0].sections;
-const seq = (...n: number[]) => { let i = 0; return () => n[i++ % n.length]; };
 
 test('the owner gets the always sections, the ones whose need is met, and the ticked or default-on asked ones', () => {
   const ids = (o: any) => sectionsFor(free, o).map((s) => s.id);
@@ -31,7 +30,7 @@ test('section ids the plan and the builder know', () => {
 });
 
 test('each section takes one template of the code, in the model order, and the first stays first and the legal one last', async () => {
-  const r = await pickSections({ sections: sectionsFor(free, { services: false, priced: false, photos: false }), codeSections: code, gallery: pool(), rng: seq(0.1) });
+  const r = await pickSections({ sections: sectionsFor(free, { services: false, priced: false, photos: false }), codeSections: code, gallery: pool() });
   assert.deepEqual(r.pool.map((p) => p.id), ['intro', 'about', 'contact', 'privacy']);
   assert.ok(r.pool.every((p) => p.templates.length === 1));
   assert.deepEqual(r.pool.map((p) => p.place), ['first', 'any', 'last', 'last']);
@@ -39,7 +38,7 @@ test('each section takes one template of the code, in the model order, and the f
 });
 
 test('a gallery slide marked for the AI can be picked, with its spec and its payload', async () => {
-  const r = await pickSections({ sections: sectionsFor(free, { services: false, priced: false, photos: false }), codeSections: code, gallery: pool({ byCat: { intro: ['g1'] }, on: ['intro'] }), rng: seq(0.5) });
+  const r = await pickSections({ sections: sectionsFor(free, { services: false, priced: false, photos: false }), codeSections: code, gallery: pool({ byCat: { intro: ['g1'] }, on: ['intro'] }) });
   assert.deepEqual(r.pool[0].templates, ['g:g1']);
   assert.deepEqual(Object.keys(r.templates), ['g:g1']);
   assert.deepEqual(Object.keys(r.templates['g:g1'].slots), ['title', 'sub']);
@@ -48,28 +47,20 @@ test('a gallery slide marked for the AI can be picked, with its spec and its pay
 
 test('a category switched to the gallery leaves the code alone while a gallery slide works, and falls back when none does', async () => {
   const sections = sectionsFor(free, { services: false, priced: false, photos: false });
-  for (let k = 0; k < 8; k++) {
-    const r = await pickSections({ sections, codeSections: code, gallery: pool({ byCat: { intro: ['g1', 'g2'] }, on: ['intro'] }), rng: seq(k / 8, 0.3, 0.9) });
-    assert.ok(r.pool[0].templates[0].startsWith('g:'));
-  }
+  const r = await pickSections({ sections, codeSections: code, gallery: pool({ byCat: { intro: ['g1', 'g2'] }, on: ['intro'] }) });
+  assert.equal(r.pool[0].templates[0], 'g:g1', 'the first in the admin\'s order');
   const back = await pickSections({ sections, codeSections: code, gallery: pool({ byCat: { intro: ['bad1'] }, on: ['intro'] }) });
   assert.ok(['hero.cover', 'hero.split'].includes(back.pool[0].templates[0]));
 });
 
-test('without the switch the code and the gallery slides are drawn from together', async () => {
-  const sections = sectionsFor(free, { services: false, priced: false, photos: false });
-  const seen = new Set<string>();
-  let x = 7;
-  const lcg = () => (x = (x * 48271) % 2147483647) / 2147483647;
-  for (let k = 0; k < 60; k++) seen.add((await pickSections({ sections, codeSections: code, gallery: pool({ byCat: { intro: ['g1'] } }), rng: lcg })).pool[0].templates[0]);
-  assert.ok(seen.has('g:g1') && seen.has('hero.cover') && seen.has('hero.split'));
-});
-
-test('the slide of the owner\'s last build is left for last, and a section nothing can fill is skipped', async () => {
+test('the same answers build the same slides every time, and a section nothing can fill is skipped', async () => {
   const sections = sectionsFor(free, { services: false, priced: false, photos: false, ticked: ['ratings'] });
-  const r = await pickSections({ sections, codeSections: code, gallery: pool(), rng: seq(0.9, 0.1), avoid: new Set(['hero.cover']) });
-  assert.equal(r.pool[0].templates[0], 'hero.split');
-  assert.ok(!r.pool.some((p) => p.id === 'ratings')); // no slide for it yet
+  const a = await pickSections({ sections, codeSections: code, gallery: pool() });
+  const b = await pickSections({ sections, codeSections: code, gallery: pool() });
+  assert.equal(a.pool[0].templates[0], 'hero.cover');
+  assert.deepEqual(a.pool.map((p) => p.templates[0]), b.pool.map((p) => p.templates[0]));
+  assert.ok(!a.pool.some((p) => p.id === 'ratings')); // no slide for it yet
+  assert.deepEqual(a.skipped, ['ratings']);
 });
 
 test('the pool over the database reads the admin\'s ready slides and refuses a slide that is not usable', async () => {
@@ -101,9 +92,9 @@ test('the gallery section takes only a slide that holds all the owner\'s photos:
   const sections = DEFAULT_MODELS[0].sections.filter((s) => s.category === 'gallery');
   const gallery: GalleryPool = { ids: () => [], useGallery: () => false, load: async () => null };
   for (let k = 0; k < 20; k++) {
-    const many = await pickSections({ sections, codeSections, specs, photos: 12, gallery, rng: Math.random });
+    const many = await pickSections({ sections, codeSections, specs, photos: 12, gallery });
     assert.match(many.pool[0].templates[0], /^gallery\.block[1-8]$/);
-    const few = await pickSections({ sections, codeSections, specs, photos: 3, gallery, rng: Math.random });
+    const few = await pickSections({ sections, codeSections, specs, photos: 3, gallery });
     assert.match(few.pool[0].templates[0], /^gallery\.block[1-8]$/);
   }
   // A gallery slide of the gallery with only three photo frames cannot hold 12.
@@ -145,11 +136,11 @@ test('the gallery category holds exactly eight slides, each beside an explanatio
 test('the slides the admin allowed for a section are the only ones it takes; when none of them works the whole category is used', async () => {
   const sections = [{ id: 'about', category: 'about', mode: 'always' as const, slides: ['g2'] }];
   const gallery = pool({ byCat: { about: ['g1', 'g2', 'g3'] }, on: ['about'] });
-  for (const r of [0, 0.4, 0.99]) {
-    const out = await pickSections({ sections, codeSections: code, gallery, rng: seq(r) });
+  {
+    const out = await pickSections({ sections, codeSections: code, gallery });
     assert.deepEqual(out.pool[0].templates, ['g:g2']);
   }
-  const gone = await pickSections({ sections: [{ ...sections[0], slides: ['gone'] }], codeSections: code, gallery: pool({ byCat: { about: ['g1'] }, on: ['about'] }), rng: seq(0.1) });
+  const gone = await pickSections({ sections: [{ ...sections[0], slides: ['gone'] }], codeSections: code, gallery: pool({ byCat: { about: ['g1'] }, on: ['about'] }) });
   assert.deepEqual(gone.pool[0].templates, ['g:g1']);
 });
 

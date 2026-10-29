@@ -10,6 +10,7 @@ import { siteKindsOfModel } from '../data/siteKinds';
 export interface QuestionModel { id: string; name: string; sections: ModelSection[]; pages: ModelPage[]; parts?: Record<string, string[]> }
 
 const PARTS_WAIT_MS = 6000;
+const MODEL_WAIT_MS = 8000;
 
 // The admin's ready slides of a category, or the editor's own for the categories that show live data.
 const readEntries = async (category: string): Promise<ReadyEntry[]> =>
@@ -31,7 +32,10 @@ const defaultModel = (planId: string): QuestionModel => {
 
 export const loadQuestionModel = async (planId: string): Promise<QuestionModel> => {
   try {
-    const res = await fetch('/api/build-page', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'model', plan: planId }) });
+    // A server that does not answer must not hold the questions forever: after a while the default model asks them.
+    const stop = new AbortController();
+    const timer = setTimeout(() => stop.abort(), MODEL_WAIT_MS);
+    const res = await fetch('/api/build-page', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'model', plan: planId }), signal: stop.signal }).finally(() => clearTimeout(timer));
     const data = await res.json().catch(() => ({}));
     if (res.ok && Array.isArray(data?.model?.pages) && data.model.pages.length) return withParts({ id: String(data.model.id), name: String(data.model.name), sections: data.model.pages[0].sections, pages: data.model.pages });
   } catch {

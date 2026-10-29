@@ -17,7 +17,7 @@ const free = DEFAULT_MODELS[0].sections;
 const owner = { services: false, priced: false, photos: false };
 
 test('a model plan keeps the sections and slides the server chose, whatever the AI answered', async () => {
-  const picked = await pickSections({ sections: sectionsFor(free, owner), codeSections, gallery: noGallery, rng: () => 0.2 });
+  const picked = await pickSections({ sections: sectionsFor(free, owner), codeSections, gallery: noGallery });
   // The AI names another slide for «من نحن», adds a section nobody asked for, and leaves the contact out.
   const raw = {
     look: 'fresh', navbar: { layout: 'horizontal', sticky: true, tone: 'light' },
@@ -48,9 +48,9 @@ test('a gallery slide chosen by the server takes the AI\'s texts by its marked s
 });
 
 test('the prompt of a model plan names only the chosen sections and tells the AI not to change them', async () => {
-  const picked = await pickSections({ sections: sectionsFor(free, owner), codeSections, gallery: noGallery, rng: () => 0.1 });
+  const picked = await pickSections({ sections: sectionsFor(free, owner), codeSections, gallery: noGallery });
   const prompt = buildPrompt('free', profile, assets, picked);
   assert.match(prompt, /اختارها الخادم مسبقاً/);
   assert.doesNotMatch(prompt, /الكتالوج \(الأقسام المتاحة/);
-  assert.match(buildPrompt('free', profile, assets), /الكتالوج \(الأقسام المتاحة/); // the old way is untouched
+  assert.doesNotMatch(prompt, /الأنسب لهذا النوع عادةً|صمّم الآن صفحة/, 'the AI never chooses sections: the old way is gone');
 });

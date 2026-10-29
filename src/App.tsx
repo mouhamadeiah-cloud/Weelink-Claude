@@ -90,7 +90,6 @@ import { applyPageLook, inStartingLook } from './services/applyLook';
 import { formatMoney } from './components/shop/adminUi';
 import { PageLookPicker, type LookSample } from './components/rightDrawer/PageLookPicker';
 import type { PageLook } from './data/pageLooks';
-import { tickedSections } from './data/optionalSections';
 import { KIND_OF_PROJECT, buildPageFromPlan, keepModelPages, keptAsIs, twinOf, withBlankPage, type SitePage, emptyMainPage, buildProfile, pageAssets, requestPagePlan, requestFreeTurn, applyFreeDesign } from './services/pageBuilder';
 import { CommandPalette, PaletteCommand } from './components/CommandPalette';
 import { elementDisplayName } from './utils/elementLabels';
@@ -2422,7 +2421,7 @@ export default function App() {
     // The owner's photos go into the page as links, never as full-size inline images.
     const answers = await hostAnswerImages(given);
     const maxPhotos = Math.min(GALLERY_MAX, limitsRef.current.gallery);
-    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections) });
+    const result = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: answers.aiAnswers?.optionalSections });
     if (!result.ok) return { ok: false, message: result.message };
     // The booking times he set in the questions become the page's first schedule (never over one he already has).
     await applyBookingAnswers(activeUserUid, projectKey, answers.aiAnswers?.sectionAnswers).catch((e) => console.warn('Could not save the booking settings:', e));
@@ -2437,7 +2436,7 @@ export default function App() {
     const startSlides = new Set(startPages.flatMap((p) => p.slides.map((s) => s.id)));
     const startElements = before.elements.filter((e) => startSlides.has(e.slideId));
     // The model's first page is the site's first page (a store builds into its home page).
-    const mainId = result.site ? startPages[0].id : startPages.some((p) => p.id === activePageId) ? activePageId : startPages[0].id;
+    const mainId = startPages[0].id;
     const built = await buildPageFromPlan(result.plan, { kind, answers, siteName, pages: startPages, elements: startElements, activePageId: mainId, maxPhotos, ratings: result.ratings });
     if (!built.ok) return { ok: false, message: built.message };
     builtBackupRef.current = { ...before, uid: activeUserUid, project };
@@ -2445,7 +2444,7 @@ export default function App() {
     // The model's later pages are built one by one beside the main page; the report names what could not be.
     let sitePages = built.pages;
     let siteElements = built.elements;
-    const site: SitePage[] = result.site || [{ id: 'main', name: result.pageName || '' }, ...(result.more || [])];
+    const site: SitePage[] = result.site;
     const order: { pageId: string; name: string }[] = [{ pageId: built.pageId, name: result.pageName || site[0]?.name || '' }];
     const taken: string[] = [built.pageId];
     const report: string[] = [];
@@ -2460,7 +2459,7 @@ export default function App() {
         else report.push(`${m.name}: ما في هالصفحة بنوع موقعك`);
         continue;
       }
-      const next = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: tickedSections(answers.aiAnswers?.optionalSections), modelPage: m.id });
+      const next = await requestPagePlan(kind, buildProfile(answers, siteName), pageAssets(answers, maxPhotos), projectKey, { flavor: answers.flavor, ticked: answers.aiAnswers?.optionalSections, modelPage: m.id });
       if (!next.ok) { console.warn(`Could not build the model page «${m.name}»:`, next.message); report.push(`${m.name}: ما انبنت (${next.message})`); continue; }
       // A page with a built-in twin (the store's «تواصل معنا») is built into the twin; otherwise it is a new page.
       const shell = twin ? { pages: sitePages, pageId: twin } : withBlankPage(sitePages, built.pageId, m.name);
@@ -2475,7 +2474,7 @@ export default function App() {
       if (next.plain?.length) report.push(`${m.name}: انكتب من معلوماتك بس ${next.plain.join('، ')}`);
     }
     // No page is left that the model does not have.
-    const finalSite = result.site ? keepModelPages(sitePages, siteElements, order) : { pages: sitePages, elements: siteElements };
+    const finalSite = keepModelPages(sitePages, siteElements, order);
     setPages(finalSite.pages);
     setElements(finalSite.elements);
     setHistory([finalSite.elements]);

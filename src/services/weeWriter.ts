@@ -21,7 +21,7 @@ export interface WeeAnswers {
     heroBgImage?: string;
     services?: { name: string; price: string }[];
     features?: string[];
-    // The optional sections the owner ticked (src/data/optionalSections.ts); nothing saved = the defaults.
+    // The «يختاره الزبون» sections of the page's model the owner ticked (their model ids); nothing saved = the model's defaults.
     optionalSections?: string[];
     // The answers of the section questions (src/data/sectionQuestions.ts), by `${section}.${question}`.
     sectionAnswers?: Record<string, any>;

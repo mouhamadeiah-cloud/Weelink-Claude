@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { OPTIONAL_SECTIONS, tickedSections } from '../data/optionalSections';
 import { SectionQuestions } from './onboarding/SectionQuestions';
 import { AiBubble, AnswerBox, UserBubble } from './onboarding/ChatThread';
 import { firstNameOf, questionPlan, questionsFor, withName } from '../data/sectionQuestions';
@@ -1508,36 +1507,12 @@ export const WeeAIChat: React.FC<WeeAIChatProps> = ({
                   onTopic={onSectionTopic}
                   custom={{ form: (id) => customForms[id]?.(), summary: customSummary, clear: customClear }}
                 />
-              ) : (<>
+              ) : (
+                // The questions come from the page's model only: while it loads there is nothing to ask yet.
                 <AiBubble title={askText(12)} live>
-                  <AnswerBox>
-<div className="space-y-1.5">
-                      <p className="text-xs font-bold text-neutral-700">أقسام إضافية تريدها في صفحتك (اختياري):</p>
-                      {OPTIONAL_SECTIONS.map((o) => {
-                        const on = tickedSections(aiAnswers.optionalSections).includes(o.id);
-                        return (
-                          <label key={o.id} className="flex items-start gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={on}
-                              onChange={(e) => setAiAnswers((p) => {
-                                const now = tickedSections(p.optionalSections);
-                                return { ...p, optionalSections: e.target.checked ? [...now, o.id] : now.filter((id) => id !== o.id) };
-                              })}
-                              className="mt-0.5"
-                            />
-                            <span className="text-xs">
-                              <span className="font-bold text-neutral-800">{o.label}</span>
-                              <span className="block text-neutral-500 font-semibold">{o.hint}</span>
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </AnswerBox>
+                  <p className="text-xs font-bold text-neutral-500">عم جهّز أسئلة أقسام صفحتك من نموذجها...</p>
                 </AiBubble>
-                {finale}
-              </>)}
+              )}
             </div>
           );
         }

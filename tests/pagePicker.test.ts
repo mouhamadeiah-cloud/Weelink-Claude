@@ -1,69 +1,59 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { galleryPool, pickSections, planSectionId, sectionsFor, type CodeSection, type GalleryPool } from '../server/pagePicker.ts';
+import { photoCapacity, pickSections, sectionsFor, slidePool, type SlidePool } from '../server/pagePicker.ts';
 import { DEFAULT_MODELS } from '../src/data/pageModels.ts';
 import { getFirestore, store } from './fakeAdmin.ts';
 
-const code: CodeSection[] = [
-  { id: 'intro', name: 'مدخل', required: true, place: 'first', templates: ['hero.cover', 'hero.split'] },
-  { id: 'about', name: 'من نحن', required: false, place: 'any', templates: ['about.story'] },
-  { id: 'contact', name: 'تواصل', required: true, place: 'last', templates: ['contact.card'] },
-  { id: 'privacy', name: 'الشروط', required: true, place: 'last', templates: ['legal.columns'] },
-];
 const slide = (texts = ['title', 'sub']) => ({ slide: { id: 's', height: 500 }, name: 'تصميم', elements: texts.map((t, i) => ({ id: `e${i}`, type: 'heading', aiSlot: t, content: 'نص' })) });
-const pool = (o: Partial<GalleryPool> & { byCat?: Record<string, string[]>; on?: string[] } = {}): GalleryPool => ({
-  ids: (c) => o.byCat?.[c] || [], useGallery: (c) => !!o.on?.includes(c), load: async (id) => (id.startsWith('bad') ? null : slide()), ...o,
+const pool = (byCat: Record<string, string[]> = {}): SlidePool => ({
+  ids: (c) => (byCat[c] || []).map((id) => ({ id })), load: async (id) => (id.startsWith('bad') ? null : slide()),
 });
 const free = DEFAULT_MODELS[0].sections;
+const none = { services: false, priced: false, photos: false };
 
 test('the owner gets the always sections, the ones whose need is met, and the ticked or default-on asked ones', () => {
   const ids = (o: any) => sectionsFor(free, o).map((s) => s.id);
-  assert.deepEqual(ids({ services: false, priced: false, photos: false }), ['intro', 'about', 'contact', 'privacy']); // privacy is ticked from the start
+  assert.deepEqual(ids(none), ['intro', 'about', 'contact', 'privacy']); // privacy is ticked from the start
   assert.deepEqual(ids({ services: true, priced: true, photos: true }), ['intro', 'about', 'services', 'prices', 'gallery', 'contact', 'privacy']);
-  assert.deepEqual(ids({ services: false, priced: false, photos: false, ticked: ['ratings'] }), ['intro', 'about', 'ratings', 'contact']); // he unticked the legal slide
+  assert.deepEqual(ids({ ...none, ticked: ['ratings'] }), ['intro', 'about', 'ratings', 'contact']); // he unticked the legal slide
 });
 
-test('section ids the plan and the builder know', () => {
-  const rest = DEFAULT_MODELS.find((m) => m.id === 'restaurant')!.sections;
-  assert.deepEqual(rest.map(planSectionId).slice(0, 4), ['intro', 'featured', 'about', 'gallery']);
-  assert.equal(planSectionId({ id: 'features', category: 'features', mode: 'ask' }), 'why');
+test('each section takes the first ready slide of its category, by the model\'s own section id, in the model\'s order', async () => {
+  const r = await pickSections({ sections: sectionsFor(free, none), pool: pool({ intro: ['i1', 'i2'], about: ['a1'], contact: ['c1'], privacy: ['p1'] }), kind: 'page' });
+  assert.deepEqual(r.pool.map((p) => [p.id, p.template]), [['intro', 'g:i1'], ['about', 'g:a1'], ['contact', 'g:c1'], ['privacy', 'g:p1']]);
+  assert.deepEqual(Object.keys(r.extra), ['g:i1', 'g:a1', 'g:c1', 'g:p1']);
+  assert.equal(r.pool[1].name, 'من نحن');
 });
 
-test('each section takes one template of the code, in the model order, and the first stays first and the legal one last', async () => {
-  const r = await pickSections({ sections: sectionsFor(free, { services: false, priced: false, photos: false }), codeSections: code, gallery: pool() });
-  assert.deepEqual(r.pool.map((p) => p.id), ['intro', 'about', 'contact', 'privacy']);
-  assert.ok(r.pool.every((p) => p.templates.length === 1));
-  assert.deepEqual(r.pool.map((p) => p.place), ['first', 'any', 'last', 'last']);
-  assert.deepEqual(r.extra, {});
+test('the same answers build the same slides every time; a section with no slide is skipped by name, the ratings are the browser\'s', async () => {
+  const sections = sectionsFor(free, { ...none, ticked: ['ratings', 'privacy'] });
+  const a = await pickSections({ sections, pool: pool({ intro: ['i1', 'i2'], contact: ['c1'] }), kind: 'page' });
+  const b = await pickSections({ sections, pool: pool({ intro: ['i1', 'i2'], contact: ['c1'] }), kind: 'page' });
+  assert.deepEqual(a.pool.map((p) => p.template), b.pool.map((p) => p.template));
+  assert.ok(!a.pool.some((p) => p.id === 'ratings'));
+  assert.deepEqual(a.skipped, ['من نحن', 'قوانين وخصوصية']); // the ratings are not missing: the browser draws them
 });
 
-test('a gallery slide marked for the AI can be picked, with its spec and its payload', async () => {
-  const r = await pickSections({ sections: sectionsFor(free, { services: false, priced: false, photos: false }), codeSections: code, gallery: pool({ byCat: { intro: ['g1'] }, on: ['intro'] }) });
-  assert.deepEqual(r.pool[0].templates, ['g:g1']);
-  assert.deepEqual(Object.keys(r.templates), ['g:g1']);
-  assert.deepEqual(Object.keys(r.templates['g:g1'].slots), ['title', 'sub']);
-  assert.equal(r.extra['g:g1'].elements.length, 2);
+test('the slides the admin allowed for a section are the only ones it takes; when none of them works the whole category is used', async () => {
+  const sections = [{ id: 'about', category: 'about', mode: 'always' as const, slides: ['g2'] }];
+  assert.equal((await pickSections({ sections, pool: pool({ about: ['g1', 'g2', 'g3'] }), kind: 'page' })).pool[0].template, 'g:g2');
+  assert.equal((await pickSections({ sections: [{ ...sections[0], slides: ['gone'] }], pool: pool({ about: ['g1'] }), kind: 'page' })).pool[0].template, 'g:g1');
+  // A slide that cannot be read is passed over.
+  assert.equal((await pickSections({ sections: [{ id: 'about', category: 'about', mode: 'always' }], pool: pool({ about: ['bad1', 'g4'] }), kind: 'page' })).pool[0].template, 'g:g4');
 });
 
-test('a category switched to the gallery leaves the code alone while a gallery slide works, and falls back when none does', async () => {
-  const sections = sectionsFor(free, { services: false, priced: false, photos: false });
-  const r = await pickSections({ sections, codeSections: code, gallery: pool({ byCat: { intro: ['g1', 'g2'] }, on: ['intro'] }) });
-  assert.equal(r.pool[0].templates[0], 'g:g1', 'the first in the admin\'s order');
-  const back = await pickSections({ sections, codeSections: code, gallery: pool({ byCat: { intro: ['bad1'] }, on: ['intro'] }) });
-  assert.ok(['hero.cover', 'hero.split'].includes(back.pool[0].templates[0]));
+test('the gallery section takes only a slide that holds all the owner\'s photos: the photo-gallery block holds 15', async () => {
+  const frames = (n: number) => ({ name: 'x', slide: {}, elements: [...Array.from({ length: n }, (_, i) => ({ id: `p${i}`, type: 'image', aiSlot: `photos.${i}` })), { id: 't', type: 'heading', aiSlot: 'title' }] });
+  const block = { name: 'y', slide: {}, elements: [{ id: 'g', type: 'gallery', aiSlot: 'gallery' }, { id: 't', type: 'heading', aiSlot: 'title' }] };
+  assert.equal(photoCapacity(frames(3) as any), 3);
+  assert.equal(photoCapacity(block as any), 15);
+  const p: SlidePool = { ids: () => [{ id: 'three' }, { id: 'block' }], load: async (id) => (id === 'three' ? frames(3) : block) as any };
+  const sections = free.filter((s) => s.category === 'gallery');
+  assert.equal((await pickSections({ sections, pool: p, kind: 'page', photos: 12 })).pool[0].template, 'g:block');
+  assert.equal((await pickSections({ sections, pool: p, kind: 'page', photos: 3 })).pool[0].template, 'g:three');
 });
 
-test('the same answers build the same slides every time, and a section nothing can fill is skipped', async () => {
-  const sections = sectionsFor(free, { services: false, priced: false, photos: false, ticked: ['ratings'] });
-  const a = await pickSections({ sections, codeSections: code, gallery: pool() });
-  const b = await pickSections({ sections, codeSections: code, gallery: pool() });
-  assert.equal(a.pool[0].templates[0], 'hero.cover');
-  assert.deepEqual(a.pool.map((p) => p.templates[0]), b.pool.map((p) => p.templates[0]));
-  assert.ok(!a.pool.some((p) => p.id === 'ratings')); // no slide for it yet
-  assert.deepEqual(a.skipped, ['ratings']);
-});
-
-test('the pool over the database reads the admin\'s ready slides and refuses a slide that is not usable', async () => {
+test('the pool reads the admin\'s ready slides, and the editor\'s own for search, featured and the live lists', async () => {
   const db = getFirestore() as any;
   for (const k of [...store.keys()]) if (/^(gallerySlides|readySlides|readyConfig)\//.test(k)) store.delete(k);
   const doc = (o: any) => ({ category: 'intro', order: 1, slide: {}, name: 'x', ...o });
@@ -71,89 +61,36 @@ test('the pool over the database reads the admin\'s ready slides and refuses a s
   store.set('readySlides/unmarked', doc({ eligible: false, elements: [{ id: 'a', type: 'heading' }] }));
   store.set('readySlides/old', { category: 'intro', order: 3, galleryId: 'g' });
   store.set('readySlides/shop', doc({ category: 'shop', eligible: true, elements: [] }));
-  const p = await galleryPool(db);
-  assert.deepEqual(p.ids('intro'), ['ok']);
-  assert.equal(p.useGallery('intro'), true);
-  assert.equal(p.useGallery('about'), false);
-  assert.deepEqual(p.ids('shop'), []); // fixed categories stay in the code
+  const p = await slidePool(db);
+  assert.deepEqual(p.ids('intro').map((x) => x.id), ['ok']);
   assert.equal((await p.load('ok'))?.name, 'جيد');
   assert.equal(await p.load('unmarked'), null);
   assert.equal(await p.load('old'), null);
   assert.equal(await p.load('missing'), null);
+  // A live category lists the editor's own slides (never a design added to it), each a slide the builder can load.
+  const search = p.ids('search');
+  assert.ok(search.length >= 5 && search.every((x) => x.id.startsWith('code:search:')));
+  assert.ok(!p.ids('shop').some((x) => x.id === 'shop'));
+  assert.equal((await p.load(search[0].id))?.elements[0].type, 'shopSearch');
 });
 
-import catalog from '../src/data/ai/buildCatalog.json' with { type: 'json' };
-import { photoCapacity } from '../server/pagePicker.ts';
-
-test('the gallery section takes only a slide that holds all the owner\'s photos: the photo-gallery block holds 15', async () => {
-  const codeSections = (catalog.sections as any).free as CodeSection[];
-  const specs = catalog.templates as any;
-  assert.deepEqual(['gallery.block1', 'gallery.block5', 'gallery.block8'].map((t) => photoCapacity(t, specs[t])), [15, 15, 15]);
-  const sections = DEFAULT_MODELS[0].sections.filter((s) => s.category === 'gallery');
-  const gallery: GalleryPool = { ids: () => [], useGallery: () => false, load: async () => null };
-  for (let k = 0; k < 20; k++) {
-    const many = await pickSections({ sections, codeSections, specs, photos: 12, gallery });
-    assert.match(many.pool[0].templates[0], /^gallery\.block[1-8]$/);
-    const few = await pickSections({ sections, codeSections, specs, photos: 3, gallery });
-    assert.match(few.pool[0].templates[0], /^gallery\.block[1-8]$/);
-  }
-  // A gallery slide of the gallery with only three photo frames cannot hold 12.
-  const three: GalleryPool = { ids: () => ['g3'], useGallery: () => true, load: async () => ({ name: 'x', slide: {}, elements: [0, 1, 2].map((i) => ({ id: `p${i}`, type: 'image', aiSlot: `photos.${i}` })).concat([{ id: 't', type: 'heading', aiSlot: 'title' } as any]) }) };
-  const r = await pickSections({ sections, codeSections, specs, photos: 12, gallery: three });
-  assert.match(r.pool[0].templates[0], /^gallery\.block[1-8]$/);
-});
-
-test('the fixed categories (shop, showroom, menu) never take gallery slides, even ones that were added to them', async () => {
+test('a rental of cars and a rental of things each take the search and featured slides made for them, never another kind\'s', async () => {
   const db = getFirestore() as any;
-  for (const k of [...store.keys()]) if (/^(gallerySlides|readySlides|readyConfig)\//.test(k)) store.delete(k);
-  store.set('readySlides/x', { category: 'shop', order: 1, slide: {}, elements: [], eligible: true });
-  store.set('readySlides/y', { category: 'intro', order: 1, slide: {}, elements: [], eligible: true });
-  const p = await galleryPool(db);
-  assert.deepEqual(p.ids('shop'), []);
-  assert.equal(p.useGallery('shop'), false);
-  assert.deepEqual(p.ids('intro'), ['y']);
+  const p = await slidePool(db);
+  const sections = [{ id: 'search', category: 'search', mode: 'always' as const }, { id: 'featured', category: 'featured', mode: 'always' as const }];
+  const name = async (kind: any) => Promise.all((await pickSections({ sections, pool: p, kind })).pool.map(async (x) => (await p.load(x.template))!.name));
+  assert.deepEqual(await name('rental-cars'), ['بحث السيارات', 'شريحة التأجير (سيارات) المميزة · شريط متحرك']);
+  assert.deepEqual(await name('rental-items'), ['بحث التأجير', 'شريحة التأجير (أغراض) المميزة · شريط متحرك']);
+  assert.deepEqual(await name('hotel'), ['بحث الفنادق والمساحات', 'شريحة الفندق المميزة · بطاقات']);
+  // A free page has no search or featured slide: those sections are not built and are named.
+  assert.deepEqual((await pickSections({ sections, pool: p, kind: 'page' })).skipped, ['شرائح البحث', 'عروض مميزة']);
 });
 
-import { WEE_SLIDES } from '../src/data/weeSlideTemplates.ts';
-import { slideTemplateCount } from '../src/data/slideTemplates.ts';
-
-test('the gallery category holds exactly eight slides, each beside an explanation, in all four layouts', () => {
-  const made = WEE_SLIDES.gallery.map((m) => m() as any);
-  assert.equal(made.length, 8);
-  assert.equal(slideTemplateCount('gallery'), 8); // the editor's panel lists only these
-  assert.deepEqual(made.map((s) => s.aiTemplate), ['gallery.block1', 'gallery.block2', 'gallery.block3', 'gallery.block4', 'gallery.block5', 'gallery.block6', 'gallery.block7', 'gallery.block8']);
-  for (const s of made) {
-    const block = s.elements.find((e: any) => e.type === 'gallery');
-    assert.ok(block, `${s.aiTemplate} has the photo-gallery block`);
-    assert.equal(block.aiSlot, 'gallery');
-    assert.ok(s.elements.some((e: any) => e.aiSlot === 'title') && s.elements.some((e: any) => e.aiSlot === 'sub'), `${s.aiTemplate} has its explanation`);
-    assert.ok(s.elements.every((e: any) => e.mobile), `${s.aiTemplate} has its phone layout`);
-  }
-  const layouts = new Set(made.map((s) => s.elements.find((e: any) => e.type === 'gallery').galleryConfig.layout));
-  assert.equal(layouts.size, 4); // all four layouts of the block are used
-});
-
-test('the slides the admin allowed for a section are the only ones it takes; when none of them works the whole category is used', async () => {
-  const sections = [{ id: 'about', category: 'about', mode: 'always' as const, slides: ['g2'] }];
-  const gallery = pool({ byCat: { about: ['g1', 'g2', 'g3'] }, on: ['about'] });
-  {
-    const out = await pickSections({ sections, codeSections: code, gallery });
-    assert.deepEqual(out.pool[0].templates, ['g:g2']);
-  }
-  const gone = await pickSections({ sections: [{ ...sections[0], slides: ['gone'] }], codeSections: code, gallery: pool({ byCat: { about: ['g1'] }, on: ['about'] }) });
-  assert.deepEqual(gone.pool[0].templates, ['g:g1']);
-});
-
-test('a section that finds no slide is named in skipped, and a restaurant\'s live section builds from the restaurant\'s own sections', async () => {
-  const restaurant: CodeSection[] = [
-    { id: 'intro', name: 'مدخل', required: true, place: 'first', templates: ['hero.split'] },
-    { id: 'featured', name: 'المنيو', required: true, place: 'any', templates: ['rest.menuBig'] },
-  ];
+test('a store\'s front takes a front slide and its live section a slide with the live list', async () => {
+  const p = await slidePool(getFirestore() as any);
   const model = DEFAULT_MODELS.find((m) => m.id === 'restaurant')!.sections.filter((s) => s.category === 'restaurant');
-  const own = await pickSections({ sections: model, codeSections: restaurant, gallery: pool() });
-  assert.deepEqual(own.pool.map((p) => p.id), ['intro', 'featured']);
-  assert.deepEqual(own.skipped, []);
-  const generic = await pickSections({ sections: model, codeSections: code, gallery: pool() });
-  assert.deepEqual(generic.pool.map((p) => p.id), ['intro']);
-  assert.deepEqual(generic.skipped, ['featured']);
+  const r = await pickSections({ sections: model, pool: p, kind: 'restaurant' });
+  assert.deepEqual(r.pool.map((x) => x.id), ['restaurant:front', 'restaurant:main']);
+  assert.ok(!r.extra[r.pool[0].template].elements.some((e) => e.type === 'menuList'));
+  assert.ok(r.extra[r.pool[1].template].elements.some((e) => e.type === 'menuList'));
 });

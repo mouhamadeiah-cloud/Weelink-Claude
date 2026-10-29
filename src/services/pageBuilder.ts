@@ -10,15 +10,12 @@ import type { CanvasElement, Page, Slide } from '../types';
 import { businessFacts, ownerServices, type WeeAnswers } from './weeWriter';
 import { trackUnsplashDownload } from './unsplashService';
 import { WEE_COLOR_CHOICES } from '../data/weeColorChoices';
-import { WEE_SLIDE_BY_ID } from '../data/weeSlideTemplates';
-import { getStoreSlideRaw } from '../data/slideTemplates';
-import { STORE_SLIDE_IDS } from '../data/storeSlideAi';
 import { DEFAULT_LOOK, pageLookById } from '../data/pageLooks';
 import { SLIDE_DIVIDER_OPTIONS } from '../components/SlideDividers';
 import { REST_PAGE_IDS } from '../data/restaurantTemplate';
 import { CAR_PAGE_IDS } from '../data/carShowroomTemplate';
 import { RENTAL_CART_PAGE } from '../data/rentalCartPage';
-import type { PageRole } from '../data/pageModels';
+import { opensPage, type PageRole } from '../data/pageModels';
 import { applyPageLook, lookColours, slideSource } from './applyLook';
 import { TEXT_EFFECTS } from '../utils/textEffects';
 import { lookOf, luminance, ownerPalette, recolourDeep, targetColours, textOn, toneColours, type RecolourScene, type TargetColours } from '../utils/pageRecolour';
@@ -30,7 +27,8 @@ import { GALLERY_MAX } from '../utils/planLimits';
 import { freeToBuilt, type FreeDesign } from '../utils/freeDesign';
 
 export type BuildKind = 'free' | 'restaurant' | 'shop' | 'cars';
-// A rental builds its main page like a free page (its intro slides); its cards stay on «للإيجار».
+// The look family of a project (the colours and fonts its slides start in, src/utils/pageRecolour.ts). It never decides what is built:
+// the server builds from the page model and the site's real kind (src/data/siteKinds.ts).
 export const KIND_OF_PROJECT: Record<ProjectType, BuildKind> = { page: 'free', restaurant: 'restaurant', shop: 'shop', cars: 'cars', rental: 'free', hotel: 'free' };
 
 // As api/build-page.ts returns it.
@@ -44,10 +42,10 @@ interface PlannedSection {
   images: Record<string, string>;
   entrance: string; // an editor animation, or 'none'
 }
-// A gallery slide the server chose for a section (server/pagePicker.ts): the template id is `g:{id}`.
+// The ready slide the server chose for a section (server/pagePicker.ts): `g:{id}` an admin's, `code:…` the editor's own.
 export interface GalleryPayload { slide: Record<string, any>; elements: any[]; name?: string }
 export interface Plan {
-  extra?: Record<string, GalleryPayload>; // the gallery slides the plan uses, by template id
+  extra?: Record<string, GalleryPayload>; // the ready slides the plan uses, by template id
   look: string; // the page look Wee AI chose (its colours and two fonts)
   navbar: { layout: 'horizontal' | 'hamburger' | 'vertical'; sticky: boolean; tone: 'light' | 'tint' | 'accent' | 'dark' };
   accentColor?: string; // the owner's own colour only
@@ -105,7 +103,8 @@ export const keepModelPages = (pages: Page[], elements: CanvasElement[], order: 
     elements: elements.filter((e) => slides.has(e.slideId)).map((e) => (goneLink(e) ? { ...e, linkTargetId: first, linkUrl: `#page-${first}` } : e)),
   };
 };
-const HOME_PAGE: Record<BuildKind, string | null> = { free: null, restaurant: REST_PAGE_IDS.home, shop: 'shop-page-home', cars: CAR_PAGE_IDS.home };
+// The page Wee AI builds on: a store's main page is its first, a page project builds the open page.
+const mainPageOf = (kind: BuildKind, pages: Page[], activePageId: string) => (kind === 'free' && pages.find((p) => p.id === activePageId)) || pages[0];
 
 // The owner's colour choice (Wee AI step 6): a named choice gives its accent and second colour,
 // «مخصص» the colour picked by hand. Nothing when the owner left the question.
@@ -200,27 +199,20 @@ export const requestPagePlan = async (kind: BuildKind, profile: Record<string, s
 
 type Draft = Omit<CanvasElement, 'id' | 'slideId'> & { id?: string; slideId?: string };
 
-/** A gallery slide as a ready slide: the designer's slide and elements, whose marked texts the AI fills. */
-const galleryReady = (g: GalleryPayload): Record<string, any> & { elements: Draft[] } => {
-  const { id: _id, aiTemplate: _ai, ...slide } = g.slide || {};
+/** A ready slide as the server sent it: the slide and its elements, whose marked parts the AI filled. */
+const readySlide = (template: string, extra?: Record<string, GalleryPayload>): (Record<string, any> & { elements: Draft[] }) | null => {
+  const g = extra?.[template];
+  if (!g) return null;
+  // The editor's own slides keep the look they are drawn in (their `aiTemplate`), so the page's colours map onto them.
+  const { id: _id, aiTemplate, ...slide } = g.slide || {};
   return {
     ...slide,
+    ...(template.startsWith('code:') && aiTemplate ? { aiTemplate } : {}),
     name: slide.name || g.name || 'شريحة',
     height: Number(slide.height) || 560,
     backgroundColor: slide.backgroundColor || '#ffffff',
     elements: autoSlots(deserializeElements(JSON.parse(JSON.stringify(g.elements || [])))).map(({ id: _e, slideId: _s, ...el }) => el as Draft),
   };
-};
-
-/** A ready slide by its AI id, fresh. */
-const readySlide = (template: string, extra?: Record<string, GalleryPayload>): (Record<string, any> & { elements: Draft[] }) | null => {
-  if (template.startsWith('g:')) return extra?.[template] ? galleryReady(extra[template]) : null;
-  if (WEE_SLIDE_BY_ID[template]) return JSON.parse(JSON.stringify(WEE_SLIDE_BY_ID[template]()));
-  for (const [kind, ids] of Object.entries(STORE_SLIDE_IDS)) {
-    const i = ids.indexOf(template);
-    if (i >= 0) return JSON.parse(JSON.stringify(getStoreSlideRaw(kind as 'shop' | 'cars' | 'restaurant', i)));
-  }
-  return null;
 };
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -386,7 +378,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
   const section = withServices(planned, ctx.services, templateKeys);
   const { slots, icons, counts } = compactLists(section);
   // The page's name heads its first section (Eyad: the name is the page's title).
-  if (section.section === 'intro' && templateKeys.includes('title') && ctx.title) slots.title = ctx.title;
+  if (opensPage(section.section) && templateKeys.includes('title') && ctx.title) slots.title = ctx.title;
 
   // Each list with as many items as the AI wrote, on the example's grid.
   let els = ready.elements.map((e) => ({ ...e, styles: { ...e.styles } })) as (Draft & FlexEl)[];
@@ -579,7 +571,7 @@ const buildSlide = async (planned: PlannedSection, index: number, ctx: Context, 
         delete styles.animation;
         delete styles.animationTrigger;
       }
-    } else if (section.section === 'intro' && j === firstButton) {
+    } else if (opensPage(section.section) && j === firstButton) {
       // The page's main call to action keeps pulsing on a lively page.
       Object.assign(styles, { animation: 'pulse', animationTrigger: 'loop', animationDuration: 2 });
     } else if (ANIMATED.test(section.entrance) && !styles.animation && !el.isGroupContainer && el.width < 1280 * 0.7) {
@@ -703,7 +695,7 @@ export interface BuildInput {
   pages: Page[];
   elements: CanvasElement[];
   activePageId: string;
-  later?: boolean; // a later page of the model: built beside the main page, which already got the ratings slide
+  later?: boolean; // a later page of the model: built beside the main page, the rest of the site left as it is
   ratings?: boolean; // the owner gets the model's «التقييمات» on this page (always, or ticked): the server says so
   targetPageId?: string; // build into this page, not the store's home
 }
@@ -711,8 +703,7 @@ export type BuildResult = { ok: false; message: string } | { ok: true; pages: Pa
 
 /** The page Wee AI would build (a store's home page, else the open page) emptied to one white slide. */
 export const emptyMainPage = (kind: BuildKind, pages: Page[], elements: CanvasElement[], activePageId: string) => {
-  const home = HOME_PAGE[kind];
-  const page = pages.find((p) => p.id === (home && pages.some((x) => x.id === home) ? home : activePageId)) || pages[0];
+  const page = mainPageOf(kind, pages, activePageId);
   const old = new Set(page.slides.map((sl) => sl.id));
   const slide: Slide = { id: `${page.id}-blank-${Date.now().toString(36)}`, name: 'شريحة فارغة', height: 560, backgroundColor: '#ffffff', dividerShape: 'straight' };
   return {
@@ -747,8 +738,7 @@ const ratingsSlide = (slideId: string, to: TargetColours, fonts: { head: string;
 /** The page built from a checked plan: the target page's slides replaced, the rest of the site recoloured for a store. */
 export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q: string) => Promise<string | null> = photoFinder()): Promise<BuildResult> => {
   const { kind, answers, pages } = input;
-  const home = HOME_PAGE[kind];
-  const page = pages.find((p) => p.id === (input.targetPageId || (home && pages.some((x) => x.id === home) ? home : input.activePageId))) || pages[0];
+  const page = (input.targetPageId && pages.find((p) => p.id === input.targetPageId)) || mainPageOf(kind, pages, input.activePageId);
   // The page look Wee AI chose gives the fonts. The owner's colours are the page's (Eyad: the chosen
   // colours are the page colours); the look's colours only when the owner chose none, and then the
   // site is also kept in that look («ستايل الصفحة»), so a ready slide added later comes in it.
@@ -779,7 +769,7 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
     facts: buildProfile(answers, input.siteName),
     slideIds: plan.sections.map((_, i) => `slide-ai-${stamp}-${i}`),
     pageIds: new Set(pages.map((p) => p.id)),
-    contactIndex: plan.sections.findIndex((s) => s.section === 'contact' || s.section === 'order' || s.section === 'request'),
+    contactIndex: plan.sections.findIndex((s) => s.section === 'contact'),
     photo: moodPhoto(photo, plan.motion),
     fallbackQuery: plan.sections.flatMap((s) => Object.values(s.images)).find((ref) => !ref.startsWith('user:')),
     services: ownerServices(answers.aiAnswers?.services),
@@ -795,8 +785,8 @@ export const buildPageFromPlan = async (plan: Plan, input: BuildInput, photo: (q
       builtSection.push(plan.sections[i].section);
     }
   }
-  // The owner ticked «التقييمات»: its slide comes before the contact and the terms at the end.
-  if (kind === 'free' && !input.later && input.ratings === true) {
+  // The model's page has «التقييمات» for this owner (any kind of site): its slide comes before the contact and the terms at the end.
+  if (input.ratings === true) {
     let at = built.length;
     while (at > 0 && ['contact', 'privacy'].includes(builtSection[at - 1])) at -= 1;
     built.splice(at, 0, ratingsSlide(`slide-ai-${stamp}-ratings`, to, fonts));
@@ -903,8 +893,7 @@ export const requestFreeTurn = async (
 /** The free design laid on the page Wee AI builds on (as «ابن صفحتي»): that page's slides are replaced, the rest of the site stays. */
 export const applyFreeDesign = async (design: FreeDesign, input: { kind: BuildKind; answers: WeeAnswers; siteName: string; pages: Page[]; elements: CanvasElement[]; activePageId: string }, photo: (q: string) => Promise<string | null> = photoFinder()) => {
   const { kind, answers, pages } = input;
-  const home = HOME_PAGE[kind];
-  const page = pages.find((p) => p.id === (home && pages.some((x) => x.id === home) ? home : input.activePageId)) || pages[0];
+  const page = mainPageOf(kind, pages, input.activePageId);
   const stamp = Date.now().toString(36);
   const ids = design.sections.map((sec) => `slide-ai-${stamp}-${sec.key}`);
   const ctx = { facts: buildProfile(answers, input.siteName), slideIds: ids, pageIds: new Set(pages.map((p) => p.id)) } as unknown as Context;

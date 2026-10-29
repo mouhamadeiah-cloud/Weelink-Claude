@@ -1,7 +1,8 @@
 // The models of a page, as the admin shaped them (pageModels/{id} = { sections }) over the defaults in src/data/pageModels.ts.
 // Server only: the builder (api/build-page.ts) reads them; nothing in the browser does.
 import { DEFAULT_MODELS, MODEL_IDS, ModelProblem, PageModel, cleanPages, cleanSections, modelProblems, pagesOf, withSystemPages } from '../src/data/pageModels.js';
-import { readyPool } from './readySlides.js';
+import { siteKindsOfModel } from '../src/data/siteKinds.js';
+import { slidePool } from './pagePicker.js';
 
 type Db = { collection: (name: string) => any };
 
@@ -24,8 +25,8 @@ export const saveModel = async (db: Db, id: string, raw: unknown, by: string): P
   if (!cleaned) return { error: 'bad_sections' };
   const pages = withSystemPages(id, cleaned);
   // Every section must have a ready slide to be built from: the model is what the site will be, nothing of it may fall out (Eyad, 28 Oct).
-  const pool = await readyPool(db);
-  const problems = modelProblems(pages, (c) => (pool.get(c) || []).map((r) => r.id));
+  const pool = await slidePool(db);
+  const problems = modelProblems(pages, pool.ids, siteKindsOfModel(id));
   if (problems.length) return { error: 'no_slides', problems };
   await db.collection('pageModels').doc(id).set({ pages, sections: pages[0].sections, changedAt: Date.now(), changedBy: by });
   return { ok: true, pages };

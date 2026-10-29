@@ -23,6 +23,7 @@ export const READY_SLIDE_CATEGORIES = [
 ];
 
 // Their slides read live shop, showroom or menu data: they stay in the code and the admin cannot add a gallery design to them
-// (Eyad, 21 Oct). The contact, booking and gallery blocks are elements like any other, so a designer can design those slides too.
+// (Eyad, 21 Oct); the page model picks among them like among his own (src/data/codeReady.ts). The contact, booking and gallery blocks
+// are elements like any other, so a designer can design those slides too.
 export const FIXED_READY_CATEGORIES = ['shop', 'cars', 'restaurant', 'featured', 'search'];
 export const GALLERY_READY_CATEGORIES = READY_SLIDE_CATEGORIES.filter((c) => !FIXED_READY_CATEGORIES.includes(c.id));

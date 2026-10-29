@@ -12,6 +12,7 @@ export interface SlotEl {
   imageUrl?: string;
   linkType?: string;
   linkUrl?: string;
+  contactType?: string;
   isGroupContainer?: boolean;
   styles?: { fontSize?: number };
   aiSlot?: string;
@@ -66,7 +67,7 @@ export const autoSlots = <T extends SlotEl>(input: T[]): T[] => {
   // Buttons: the main one, and the contact ones by their words or link.
   for (const e of els.filter((x) => x.type === 'button' && plain(x.content)).sort(reading)) {
     const label = plain(e.content).toLowerCase();
-    const link = `${e.linkType || ''} ${e.linkUrl || ''}`.toLowerCase();
+    const link = `${e.linkType || ''} ${e.linkUrl || ''} ${e.contactType || ''}`.toLowerCase();
     if (/whatsapp|واتس/.test(label + link)) take(e, 'whatsapp');
     else if (/tel:|phone|اتصل|هاتف/.test(label + link)) take(e, 'phone');
     else take(e, 'cta');

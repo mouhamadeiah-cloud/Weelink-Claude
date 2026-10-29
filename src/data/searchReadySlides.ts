@@ -3,6 +3,7 @@
 // The bar's «بحث متقدم» opens the filters window of its kind. A rental of cars uses the cars slide; any other
 // rental uses the rental one (its items). Placed under the intro slide, so a visitor can search from the front page.
 import { typeSize } from './pageLooks';
+import type { SiteKind } from './siteKinds';
 
 interface SearchSlide {
   label: string; // the kind of page
@@ -12,14 +13,15 @@ interface SearchSlide {
   look: 'minimal' | 'pill' | 'glass';
   placeholder: string;
   kind?: 'menu'; // a shopSearch that looks through dishes
+  kinds: SiteKind[]; // the sites it is for
 }
 
 export const SEARCH_READY: SearchSlide[] = [
-  { label: 'المطعم', background: '#FFE9D6', accent: '#D9480F', type: 'shopSearch', look: 'pill', placeholder: 'ابحث عن طبق أو مشروب...', kind: 'menu' },
-  { label: 'المتجر', background: '#E3F0FF', accent: '#1C64C8', type: 'shopSearch', look: 'pill', placeholder: 'ابحث عن منتج...' },
-  { label: 'السيارات', background: '#1E1E24', accent: '#E03131', type: 'carSearch', look: 'glass', placeholder: 'ابحث بالماركة أو الموديل أو السنة...' },
-  { label: 'التأجير', background: '#E6F6EC', accent: '#2B8A3E', type: 'shopSearch', look: 'pill', placeholder: 'شو بدك تستأجر؟' },
-  { label: 'الفنادق والمساحات', background: '#EDE7F6', accent: '#6741D9', type: 'shopSearch', look: 'pill', placeholder: 'شو بدك تحجز؟' },
+  { label: 'المطعم', background: '#FFE9D6', accent: '#D9480F', type: 'shopSearch', look: 'pill', placeholder: 'ابحث عن طبق أو مشروب...', kind: 'menu', kinds: ['restaurant'] },
+  { label: 'المتجر', background: '#E3F0FF', accent: '#1C64C8', type: 'shopSearch', look: 'pill', placeholder: 'ابحث عن منتج...', kinds: ['shop'] },
+  { label: 'السيارات', background: '#1E1E24', accent: '#E03131', type: 'carSearch', look: 'glass', placeholder: 'ابحث بالماركة أو الموديل أو السنة...', kinds: ['cars', 'rental-cars'] },
+  { label: 'التأجير', background: '#E6F6EC', accent: '#2B8A3E', type: 'shopSearch', look: 'pill', placeholder: 'شو بدك تستأجر؟', kinds: ['rental-items'] },
+  { label: 'الفنادق والمساحات', background: '#EDE7F6', accent: '#6741D9', type: 'shopSearch', look: 'pill', placeholder: 'شو بدك تحجز؟', kinds: ['hotel'] },
 ];
 
 export const searchReadySlide = (s: SearchSlide) => ({

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { autoSlots } from '../src/data/autoSlots.ts';
 import { slideForm } from '../src/data/slideForm.ts';
-import { buildFormPlan, checkValues, mergePlans, type FormEnv, type FormSection } from '../server/formBuild.ts';
+import { buildFormPlan, checkValues, type FormEnv, type FormSection } from '../server/formBuild.ts';
 
 const ready: any[] = JSON.parse(fs.readFileSync(new URL('../src/data/galleryReady/ready.json', import.meta.url), 'utf8'));
 const slideOf = (key: string) => {
@@ -144,15 +144,6 @@ test('a section the AI cannot fill is written from the owner\'s card, never drop
   assert.equal(plan.sections[1].slots.title, about.name, 'its title is the section\'s name');
   const toContact = Object.values(plan.sections[0].links);
   assert.ok(toContact.length > 0 && toContact.every((l) => l === 'slide:2'));
-});
-
-test('form sections and a code-slide section are merged in the model\'s order, with buttons renumbered', () => {
-  const sec = (section: string, links: Record<string, string> = {}) => ({ section, template: `t-${section}`, tone: 'light' as const, slots: {}, icons: {}, links, images: {}, entrance: 'none' });
-  const formPlan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, sections: [sec('intro', { cta: 'slide:1', send: 'whatsapp' }), sec('contact')] };
-  const merged = mergePlans(formPlan, [sec('featured')], ['intro', 'featured', 'contact']);
-  assert.deepEqual(merged.sections.map((s) => s.section), ['intro', 'featured', 'contact']);
-  assert.equal(merged.sections[0].links.cta, 'slide:2');
-  assert.equal(merged.sections[0].links.send, 'whatsapp');
 });
 
 test('a card title shorter than the example is accepted, only a scrap is asked again', () => {

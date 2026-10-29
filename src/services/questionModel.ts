@@ -3,18 +3,23 @@
 import { DEFAULT_MODELS, ModelPage, ModelSection, forRentalOf, modelOf, pagesOf } from '../data/pageModels';
 import { ReadyEntry, partsOf, slideParts } from '../data/slideParts';
 import { readySlidesOf } from './readySlides';
+import { CODE_CATEGORIES, codeSlide, codeSlides } from '../data/codeReady';
+import { siteKindsOfModel } from '../data/siteKinds';
 
 // `parts`: by section id, the places on the slide the section is built from (src/data/slideParts.ts); a section left out asks everything.
 export interface QuestionModel { id: string; name: string; sections: ModelSection[]; pages: ModelPage[]; parts?: Record<string, string[]> }
 
 const PARTS_WAIT_MS = 6000;
 
-const readEntries = (category: string): Promise<ReadyEntry[]> =>
-  readySlidesOf(category).then((list) => list.map((g) => ({ id: g.id, eligible: g.eligible, parts: slideParts(g) })));
+// The admin's ready slides of a category, or the editor's own for the categories that show live data.
+const readEntries = async (category: string): Promise<ReadyEntry[]> =>
+  CODE_CATEGORIES.includes(category)
+    ? codeSlides(category).map((x) => ({ ...x, parts: slideParts(codeSlide(x.id)!) }))
+    : readySlidesOf(category).then((list) => list.map((g) => ({ id: g.id, eligible: g.eligible, parts: slideParts(g) })));
 
 // Read with a limit: without the slides every question is asked, as before.
 const withParts = async (m: QuestionModel): Promise<QuestionModel> => {
-  const parts = await Promise.race([partsOf(m.pages, readEntries).catch(() => undefined), new Promise<undefined>((r) => setTimeout(() => r(undefined), PARTS_WAIT_MS))]);
+  const parts = await Promise.race([partsOf(m.pages, readEntries, siteKindsOfModel(m.id)).catch(() => undefined), new Promise<undefined>((r) => setTimeout(() => r(undefined), PARTS_WAIT_MS))]);
   return parts ? { ...m, parts } : m;
 };
 

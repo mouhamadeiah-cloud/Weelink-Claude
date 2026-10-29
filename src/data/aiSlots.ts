@@ -1,6 +1,6 @@
 // The slots of a ready slide for «ابن صفحتي»: which of its elements the AI fills (element.aiSlot), with the character limit of each.
-// Read from the slide itself, for the slides of the code (scripts/build-ai-catalog.ts) and for the admin's ready slides
-// (server/readySlides.ts; the slots are found by src/data/autoSlots.ts), so the two never drift apart.
+// Read from the slide itself, for the admin's ready slides and the editor's own (server/readySlides.ts, src/data/codeReady.ts; the slots
+// are found by src/data/autoSlots.ts).
 
 // Filled by Weelink from the owner's answers, never by the AI.
 export const SYSTEM_SLOTS = /^(phone|whatsapp|address|hours|email)\.(label|value)$|^(map|form|gallery|video)$/;
@@ -84,12 +84,16 @@ export interface Eligibility { eligible: boolean; slots: number; problems: strin
  * Can the AI use this slide? It needs a title or a text to write, every slot name known and used once, and its lists counted from 0
  * without gaps. A slide with no marked slot is simply «not marked yet».
  */
+// Elements that show the site's own data and are never written by the AI.
+export const LIVE_TYPES = ['calendar', 'shopSearch', 'carSearch', 'shopProducts', 'carListings', 'menuList', 'menuCart', 'cart', 'checkout'];
+
 export const slideEligibility = (elements: { type: string; aiSlot?: string }[]): Eligibility => {
   const problems: string[] = [];
   const marked = elements.filter((e) => e.aiSlot);
   const names = marked.map((e) => String(e.aiSlot));
-  // A booking slide is its calendar: the builder keeps it as it is, so it needs no slot of its own.
-  const booking = elements.some((e) => e.type === 'calendar');
+  // A slide built around a live element (a booking calendar, a search bar, the menu, products or cars, a cart) is kept as it is: it needs
+  // no slot of its own, and its title is optional.
+  const booking = elements.some((e) => LIVE_TYPES.includes(e.type));
   if (!marked.length && booking) return { eligible: true, slots: 0, problems };
   if (!marked.length) return { eligible: false, slots: 0, problems: ['لم تُعلَّم أي خانة'] };
   for (const e of marked) if (!isSlotName(String(e.aiSlot))) problems.push(`خانة غير معروفة: ${e.aiSlot}`);

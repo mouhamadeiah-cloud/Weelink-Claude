@@ -1183,7 +1183,3 @@ export const WEE_SLIDES: Record<string, (() => WeeSlide)[]> = Object.fromEntries
 
 export const weeSlideCount = (categoryId: string) => WEE_SLIDES[categoryId]?.length || 0;
 
-// Every design by its id, for the AI page build.
-export const WEE_SLIDE_BY_ID: Record<string, () => WeeSlide> = Object.fromEntries(
-  Object.values(WEE_SLIDES).flat().map((make) => [make().aiTemplate, make]),
-);

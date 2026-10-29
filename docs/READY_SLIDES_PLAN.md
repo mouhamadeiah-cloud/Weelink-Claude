@@ -55,7 +55,7 @@ The ready-slide panel stays for adding any slide, and booking stays an option. A
 4b. Slot marking tool in the admin + the eligibility rule.
 4c. New server build: picks the slides, AI text-only prompt, images by service; tests.
 4d. «املأها من بطاقتي».
-4e. Remove the old catalog (`ai-catalog`, buildCatalog.json) once the new build is live.
+4e. Remove the old catalog (`ai-catalog`, buildCatalog.json) once the new build is live. Done 29 Oct: one engine, the editor's own live slides picked by id (`src/data/codeReady.ts`).
 
 ### Decisions (Eyad, 21 Oct) — final for step 4
 - Page types (14): تعريفية مجانية / برو؛ مطعم، متجر، سيارات × (مجاني، 30، 60، برو).

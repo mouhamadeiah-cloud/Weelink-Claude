@@ -71,9 +71,9 @@ import { SHOP_SLIDE_COUNT, getShopSlidePayload } from './shopSlideTemplates';
 import { groupTemplateCards } from '../utils/templateGroups';
 import { CAR_SLIDE_COUNT, getCarSlidePayload } from './carSlideTemplates';
 import { REST_SLIDE_COUNT, getRestaurantSlidePayload } from './restaurantSlideTemplates';
-import { withStoreSlideNames } from './storeSlideAi';
 import { WEE_SLIDES, weeSlideCount } from './weeSlideTemplates';
 import { SEARCH_READY, searchReadySlide } from './searchReadySlides';
+import type { SiteKind } from './siteKinds';
 
 import { READY_SLIDE_CATEGORIES } from './readyCategories';
 export { READY_SLIDE_CATEGORIES };
@@ -240,18 +240,19 @@ export const slideTemplateCount = (categoryId: string) =>
 
 // «عروض مميزة» (Eyad, 26 Oct): the featured slides of every kind of page live in a category of their own, each named
 // for the page it belongs to («شريحة السيارات المميزة»…); each is a live grid of what the owner marked «مميز».
-// The shop, showroom and menu ones were moved out of their own lists (MOVED: their place in the kind's list, which the
-// AI ids in storeSlideAi.ts follow). The hotel's rooms and a rental's cars and items use the same cards and effects:
-// the hotel's rooms are product cards, so its slides are the shop's with the words of rooms (`derived`).
+// The shop, showroom and menu ones were moved out of their own lists (MOVED: their place in the kind's list).
+// The hotel's rooms and a rental's cars and items use the same cards and effects: the hotel's rooms are product cards, so its
+// slides are the shop's with the words of rooms (`derived`).
 type StoreKind = 'shop' | 'cars' | 'restaurant';
 interface FeaturedReady {
   kind: StoreKind;
   index: number;
   label: string; // the page it belongs to
   variant: string; // cards, a running strip or shaking cards
-  derived?: boolean; // made from another kind's slide: no AI id of its own
+  derived?: boolean; // made from another kind's slide: drawn in no look of its own
   still?: boolean; // the cards without the shake
   words?: Record<string, string>; // the words of the page, instead of the original's
+  kinds: SiteKind[]; // the sites it is for (the page model picks only these for them)
 }
 const CARDS = 'بطاقات', STRIP = 'شريط متحرك', SHAKE = 'بطاقات باهتزاز';
 const MOVED: { kind: StoreKind; index: number }[] = [
@@ -263,22 +264,22 @@ const ROOMS = { 'منتجات مختارة': 'غرف مميزة', 'الأكثر 
 const RENTAL_ITEMS = { 'منتجات مختارة': 'مميز للإيجار', 'الأكثر طلبًا من عملائنا هذا الأسبوع': 'الأكثر طلبًا عندنا' };
 const RENTAL_CARS = { 'في المعرض الآن': 'متاح للإيجار الآن', 'اخترناها لك من أفضل ما في المعرض': 'الأكثر طلبًا للإيجار' };
 const FEATURED_READY: FeaturedReady[] = [
-  { kind: 'cars', index: 2, label: 'السيارات', variant: CARDS },
-  { kind: 'cars', index: 6, label: 'السيارات', variant: STRIP },
-  { kind: 'cars', index: 7, label: 'السيارات', variant: SHAKE },
-  { kind: 'restaurant', index: 1, label: 'المطعم', variant: CARDS },
-  { kind: 'restaurant', index: 2, label: 'المطعم', variant: STRIP },
-  { kind: 'restaurant', index: 3, label: 'المطعم', variant: SHAKE },
-  { kind: 'shop', index: 10, label: 'المتجر', variant: CARDS, derived: true, still: true },
-  { kind: 'shop', index: 8, label: 'المتجر', variant: STRIP },
-  { kind: 'shop', index: 10, label: 'المتجر', variant: SHAKE },
-  { kind: 'shop', index: 10, label: 'الفندق', variant: CARDS, derived: true, still: true, words: ROOMS },
-  { kind: 'shop', index: 8, label: 'الفندق', variant: STRIP, derived: true },
-  { kind: 'shop', index: 10, label: 'الفندق', variant: SHAKE, derived: true, words: ROOMS },
-  { kind: 'cars', index: 6, label: 'التأجير (سيارات)', variant: STRIP, derived: true, words: RENTAL_CARS },
-  { kind: 'cars', index: 7, label: 'التأجير (سيارات)', variant: SHAKE, derived: true, words: RENTAL_CARS },
-  { kind: 'shop', index: 8, label: 'التأجير (أغراض)', variant: STRIP, derived: true },
-  { kind: 'shop', index: 10, label: 'التأجير (أغراض)', variant: SHAKE, derived: true, words: RENTAL_ITEMS },
+  { kind: 'cars', index: 2, label: 'السيارات', variant: CARDS, kinds: ['cars'] },
+  { kind: 'cars', index: 6, label: 'السيارات', variant: STRIP, kinds: ['cars'] },
+  { kind: 'cars', index: 7, label: 'السيارات', variant: SHAKE, kinds: ['cars'] },
+  { kind: 'restaurant', index: 1, label: 'المطعم', variant: CARDS, kinds: ['restaurant'] },
+  { kind: 'restaurant', index: 2, label: 'المطعم', variant: STRIP, kinds: ['restaurant'] },
+  { kind: 'restaurant', index: 3, label: 'المطعم', variant: SHAKE, kinds: ['restaurant'] },
+  { kind: 'shop', index: 10, label: 'المتجر', variant: CARDS, derived: true, still: true, kinds: ['shop'] },
+  { kind: 'shop', index: 8, label: 'المتجر', variant: STRIP, kinds: ['shop'] },
+  { kind: 'shop', index: 10, label: 'المتجر', variant: SHAKE, kinds: ['shop'] },
+  { kind: 'shop', index: 10, label: 'الفندق', variant: CARDS, derived: true, still: true, words: ROOMS, kinds: ['hotel'] },
+  { kind: 'shop', index: 8, label: 'الفندق', variant: STRIP, derived: true, kinds: ['hotel'] },
+  { kind: 'shop', index: 10, label: 'الفندق', variant: SHAKE, derived: true, words: ROOMS, kinds: ['hotel'] },
+  { kind: 'cars', index: 6, label: 'التأجير (سيارات)', variant: STRIP, derived: true, words: RENTAL_CARS, kinds: ['rental-cars'] },
+  { kind: 'cars', index: 7, label: 'التأجير (سيارات)', variant: SHAKE, derived: true, words: RENTAL_CARS, kinds: ['rental-cars'] },
+  { kind: 'shop', index: 8, label: 'التأجير (أغراض)', variant: STRIP, derived: true, kinds: ['rental-items'] },
+  { kind: 'shop', index: 10, label: 'التأجير (أغراض)', variant: SHAKE, derived: true, words: RENTAL_ITEMS, kinds: ['rental-items'] },
 ];
 // One of the featured slides: named for its page, in the words of its page.
 const featuredReadySlide = (f: FeaturedReady) => {
@@ -287,7 +288,6 @@ const featuredReadySlide = (f: FeaturedReady) => {
     const next = { ...e };
     if (f.words && f.words[next.content]) next.content = f.words[next.content];
     if (f.still && next.shopCardAnimation) next.shopCardAnimation = 'none';
-    if (f.derived) delete next.aiSlot;
     return next;
   };
   const out: any = { ...slide, name: `شريحة ${f.label} المميزة · ${f.variant}`, elements: slide.elements.map((e: any) => (e.items ? { ...e, items: e.items.map(retext) } : retext(e))) };
@@ -304,12 +304,18 @@ const storeRawIndex = (kind: StoreKind, n: number) => {
   return raw;
 };
 
-/** A shop, showroom or menu slide by its place in its own list (the AI page build finds them by id). */
+// The look a store slide is drawn in (src/utils/pageRecolour.ts reads it from the start of `aiTemplate`), so a page look recolours it.
+const LOOK_TAG: Record<StoreKind, string> = { restaurant: 'rest', shop: 'shop', cars: 'cars' };
+/** A shop, showroom or menu slide by its place in its own list. */
 export const getStoreSlideRaw = (kind: StoreKind, rawIndex: number) => {
   const payload = kind === 'shop' ? getShopSlidePayload(rawIndex) : kind === 'cars' ? getCarSlidePayload(rawIndex) : getRestaurantSlidePayload(rawIndex);
   // Cards in these slides arrive as groups (moved, copied and phone-arranged together).
-  return withStoreSlideNames(kind, rawIndex, { ...payload, elements: groupTemplateCards(payload.elements as any[]) });
+  return { ...payload, aiTemplate: `${LOOK_TAG[kind]}.${rawIndex}`, elements: groupTemplateCards(payload.elements as any[]) };
 };
+
+/** The sites a search or featured slide is for (the others are for any site of their category). */
+export const readySlideKinds = (categoryId: string, index: number): SiteKind[] | undefined =>
+  categoryId === 'search' ? SEARCH_READY[index]?.kinds : categoryId === 'featured' ? FEATURED_READY[index]?.kinds : undefined;
 
 export const getSlideTemplatePayload = (categoryId: string, index: number, catName: string) => {
   const wee = weeSlideCount(categoryId);

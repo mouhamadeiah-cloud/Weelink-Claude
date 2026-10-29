@@ -1,10 +1,8 @@
 // The models of a page («النماذج», docs/READY_SLIDES_PLAN.md step 4): for each kind of page the sections it is made of, in order.
-// A section names a ready-slide category; the builder (step 4c) picks one of that category's slides at random and the AI writes its texts.
+// A section names a ready-slide category; the builder takes the first of that category's slides that fits it (in the admin's order, among
+// the ones he ticked for it) and the AI writes its texts. The model is the only source of the site (Eyad, 29 Oct).
 // The free page is the base every other model starts from. These are the defaults; the admin's changes (pageModels/{id}) replace them.
-import { FIXED_READY_CATEGORIES, READY_SLIDE_CATEGORIES } from './readyCategories';
-
-// Sections whose slides the code draws (live shop, showroom and menu data, the featured cards, the search bar, the ratings box).
-const CODE_DRAWN = [...FIXED_READY_CATEGORIES, 'ratings'];
+import { READY_SLIDE_CATEGORIES } from './readyCategories';
 
 // always: in every page of this model · if: only when the owner gave what it needs · ask: the owner ticks it in the questions
 export type SectionMode = 'always' | 'if' | 'ask';
@@ -14,12 +12,12 @@ export const SECTION_NEEDS: SectionNeed[] = ['services', 'priced', 'photos'];
 
 export interface ModelSection {
   id: string; // `${category}` or `${category}:${part}`, unique inside a model
-  category: string; // a ready-slide category (or 'ratings', whose slides come later)
+  category: string; // a ready-slide category (or 'ratings', the browser's own box)
   part?: 'front' | 'main' | 'priceList'; // inside the shop, showroom and menu categories: their front slide, or their live section
   mode: SectionMode;
   need?: SectionNeed; // with mode 'if'
   defaultOn?: boolean; // with mode 'ask': ticked from the start
-  slides?: string[]; // the ready slides (readySlides ids) this section may use; none listed = any slide of its category
+  slides?: string[]; // the ready slides this section may use (readySlides ids, `code:…` for the editor's own); none listed = any that fits
 }
 
 // A page of the site a model builds: its name (the navbar link) and its sections. `sections` of a model is its first page, the one the
@@ -47,6 +45,18 @@ export const MODEL_CATEGORIES = [...READY_SLIDE_CATEGORIES.map((c) => ({ id: c.i
 export const MAX_MODEL_SECTIONS = 24;
 export const MAX_MODEL_PAGES = 12;
 export const MAIN_PAGE_NAME = 'الرئيسية';
+
+export const PART_LABEL: Record<string, string> = { front: 'الواجهة', main: 'القسم الحي', priceList: 'قائمة الأسعار' };
+/** A section's name, as the admin, the AI and the build's report read it. */
+export const sectionName = (s: Pick<ModelSection, 'category' | 'part'>) => `${MODEL_CATEGORIES.find((c) => c.id === s.category)?.name || s.category}${s.part ? ` · ${PART_LABEL[s.part]}` : ''}`;
+/** The section that opens a page: it takes the page's name as its title and the owner's big photo. */
+export const opensPage = (sectionId: string) => sectionId === 'intro' || sectionId.endsWith(':front');
+
+/** What the builder knows of a ready slide to say if it can build a section: its role in a store's category, the sites it is for. */
+export interface SlideFit { id: string; role?: 'front' | 'main' | 'other'; kinds?: string[] }
+/** A front or live (main) part takes only a slide of that role; a search or featured slide is only for its sites. */
+export const slideFits = (slide: SlideFit, section: Pick<ModelSection, 'part'>, kinds?: string[]) =>
+  ((section.part !== 'front' && section.part !== 'main') || !slide.role || slide.role === section.part) && (!slide.kinds || !kinds || slide.kinds.some((k) => kinds.includes(k)));
 
 const sec = (category: string, mode: SectionMode, o: Partial<ModelSection> = {}): ModelSection => ({ id: o.part ? `${category}:${o.part}` : category, category, mode, ...o });
 
@@ -113,19 +123,22 @@ export const withSystemPages = (modelId: string, pages: ModelPage[]): ModelPage[
   return pages.filter((p) => !p.system || p.system === 'cart').map((p) => (p.system ? cart : p));
 };
 
-/** What stops a model from being saved: a page with no section, or a section with no ready slide to be built from. */
+/**
+ * What stops a model from being saved: a page with no section, or a section with no ready slide to be built from. `eligible` lists a
+ * category's slides that are ready to build with; `kinds` are the sites the model builds (a search or featured slide must be for one).
+ */
 export interface ModelProblem { page: string; section?: string; why: string }
-export const modelProblems = (pages: ModelPage[], eligible: (category: string) => string[]): ModelProblem[] => {
+export const modelProblems = (pages: ModelPage[], eligible: (category: string) => SlideFit[], kinds?: string[]): ModelProblem[] => {
   const out: ModelProblem[] = [];
   for (const p of pages) {
     if (p.system) continue;
     if (!p.sections.length) out.push({ page: p.id, why: 'الصفحة فارغة: أضف لها قسماً واحداً على الأقل.' });
     for (const s of p.sections) {
-      // The shop, showroom, menu, featured and search sections and the ratings are drawn by the code itself.
-      if (CODE_DRAWN.includes(s.category)) continue;
-      const all = eligible(s.category);
+      // The ratings box is the browser's own: it has no ready slide.
+      if (s.category === 'ratings') continue;
+      const all = eligible(s.category).filter((x) => slideFits(x, s, kinds)).map((x) => x.id);
       const allowed = s.slides?.length ? all.filter((id) => s.slides!.includes(id)) : all;
-      if (!allowed.length) out.push({ page: p.id, section: s.id, why: all.length ? 'ولا شريحة من المعلَّمة صالحة للبناء.' : 'لا شريحة جاهزة صالحة في تصنيفه. أضف واحدة من «الشرائح الجاهزة».' });
+      if (!allowed.length) out.push({ page: p.id, section: s.id, why: all.length ? 'ولا شريحة من المعلَّمة صالحة للبناء.' : 'لا شريحة جاهزة صالحة في تصنيفه لهذا النوع من المواقع. أضف واحدة من «الشرائح الجاهزة».' });
     }
   }
   return out;

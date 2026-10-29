@@ -2463,7 +2463,7 @@ export default function App() {
       if (!next.ok) { console.warn(`Could not build the model page «${m.name}»:`, next.message); report.push(`${m.name}: ما انبنت (${next.message})`); continue; }
       // A page with a built-in twin (the store's «تواصل معنا») is built into the twin; otherwise it is a new page.
       const shell = twin ? { pages: sitePages, pageId: twin } : withBlankPage(sitePages, built.pageId, m.name);
-      const more = await buildPageFromPlan(next.plan, { kind, answers, siteName, pages: shell.pages, elements: siteElements, activePageId: shell.pageId, targetPageId: shell.pageId, maxPhotos, later: true });
+      const more = await buildPageFromPlan(next.plan, { kind, answers, siteName, pages: shell.pages, elements: siteElements, activePageId: shell.pageId, targetPageId: shell.pageId, maxPhotos, later: true, ratings: next.ratings });
       if (!more.ok) { report.push(`${m.name}: ما انبنت`); continue; }
       sitePages = more.pages;
       siteElements = more.elements;

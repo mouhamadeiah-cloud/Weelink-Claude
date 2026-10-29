@@ -8,12 +8,14 @@
 //      asked again, once; what still fails goes without its text, never with the example's.
 // The AI is reached through `env.ask`, so tests can answer for it. The plan it returns is the one the browser builds from.
 import { slideForm, type FormField, type SlideForm } from '../src/data/slideForm.js';
+import { LIVE_TYPES } from '../src/data/aiSlots.js';
+import { opensPage } from '../src/data/pageModels.js';
 import { ON_REQUEST, cleanText, numbersAreOwners, ownersNumbers } from './aiText.js';
 
 export interface FormSection {
-  id: string; // the plan's section id (intro, about, contact …)
+  id: string; // the model's section id (intro, about, cars:front …)
   name: string;
-  template: string; // `g:{id}`
+  template: string; // `g:{id}` an admin's ready slide, `code:…` the editor's own
   slide?: { backgroundImage?: string; backgroundVideo?: string };
   elements: any[];
 }
@@ -81,6 +83,50 @@ const BRIDGE = 'الدستور أعلاه ملزم بكل بنوده في الذ
 /** The rules every question of the form way is asked under: the constitution and its appendix first, then the form's own. */
 export const formSystem = (rules?: string) => (rules ? `${rules}\n\n${BRIDGE}\n\n${FORM_SYSTEM}` : FORM_SYSTEM);
 
+// The site's kind as the AI reads it (src/data/siteKinds.ts).
+const KIND_WORDS: Record<string, string> = {
+  page: 'صفحة تعريفية لعمل أو مهنة', restaurant: 'مطعم', shop: 'متجر', cars: 'معرض سيارات', 'rental-cars': 'تأجير سيارات',
+  'rental-items': 'تأجير أغراض ومعدات ومساحات', hotel: 'فندق أو مساحات وعقارات للإيجار',
+};
+const kindWords = (kind: string) => KIND_WORDS[kind] || kind;
+
+// ---------- What the business does ----------
+
+// An activity the AI may name only when the owner did, or when it is what this kind of site does (Eyad, 29 Oct: «نؤجر ونبيع» on a rental
+// that only rents). Whole words, with the joined و ف ب ل in front.
+const AR = '\u0621-\u064A';
+const words = (forms: string) => new RegExp(`(^|[^${AR}])[وفبل]?(${forms})(?=$|[^${AR}])`);
+export const ACTIVITIES: { name: string; re: RegExp; kinds: string[] }[] = [
+  { name: 'البيع', re: words('نبيع|يبيع|تبيع|بيع|البيع|للبيع|مبيع|مبيعات|المبيعات'), kinds: ['shop', 'cars'] },
+  { name: 'الشراء', re: words('نشتري|شراء|الشراء'), kinds: ['shop'] },
+  { name: 'التأجير', re: words('نؤجر|نؤجّر|يؤجر|تأجير|التأجير|للتأجير|إيجار|الإيجار|للإيجار|استئجار|الاستئجار'), kinds: ['rental-cars', 'rental-items', 'hotel'] },
+  { name: 'التوصيل', re: words('توصيل|التوصيل|نوصل|نوصّل|ديليفري|دليفري'), kinds: [] },
+  { name: 'التقسيط', re: words('تقسيط|التقسيط|أقساط|الأقساط'), kinds: [] },
+  { name: 'الصيانة', re: words('صيانة|الصيانة|تصليح|التصليح|نصلح|نصلّح'), kinds: [] },
+];
+/** The activity a text names that the owner never wrote and this kind of site does not do, if any. */
+export const inventedActivity = (text: string, kind: string, ownerText: string) =>
+  ACTIVITIES.find((a) => a.re.test(text) && !a.kinds.includes(kind) && !a.re.test(ownerText))?.name;
+
+// ---------- Photos ----------
+
+// Every photo search is of the business (Eyad, 29 Oct: shoes and shop shelves on a car rental): its subject, from the owner's kind and
+// category, leads every search, and the AI's words only describe the shot. These kinds always carry their own word.
+const KIND_PHOTO: Record<string, string> = { restaurant: 'restaurant', cars: 'car', 'rental-cars': 'car', hotel: 'hotel' };
+/** The business's photo subject: the AI's translation of the owner's category, with the site's own word when it has one. */
+export const photoSubject = (kind: string, subject: string) => {
+  const anchor = KIND_PHOTO[kind];
+  const base = subject.trim() || 'small local business';
+  return anchor && !base.toLowerCase().split(/\s+/).some((w) => w.startsWith(anchor)) ? `${anchor} ${base}` : base;
+};
+/** A photo search kept on the business: the subject leads it unless the search already names it. */
+export const onSubject = (query: string, subject: string) => {
+  const q = query.trim();
+  const keys = subject.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  const out = keys.some((w) => q.toLowerCase().includes(w)) ? q : `${subject} ${q}`;
+  return out.split(/\s+/).slice(0, 9).join(' ').slice(0, 78).trim();
+};
+
 const FIELD_NOTE: Record<string, string> = { text: 'نص', button: 'نص زر', image: 'كلمات بحث صورة بالإنجليزية', icon: 'اسم أيقونة من القائمة' };
 const shapeWord = { wide: 'عريضة', tall: 'طولية', square: 'مربعة' } as const;
 
@@ -118,14 +164,14 @@ const briefSchema = (env: FormEnv, sections: FormSection[]) => ({
 
 const briefPrompt = (env: FormEnv, kind: string, profile: Record<string, string>, sections: FormSection[], motion: boolean) =>
   [
-    `نوع الصفحة: ${kind}`,
+    `نوع الموقع: ${kindWords(kind)}`,
     `looks (اختر واحداً منها لكل الصفحة): ${JSON.stringify(Object.fromEntries(Object.entries(env.looks).map(([id, l]) => [id, `${l.name}، يناسب: ${l.forWho}. خلفية ${l.bg} ونص ${l.ink} وتمييز ${l.accent}. خط العناوين ${l.head} والنص ${l.body}`])))}`,
     `navbar: layout أفقي (الأشيع) أو hamburger للصفحات البصرية أو vertical نادراً؛ sticky يثبّت الشريط؛ tone لون الشريط. اختر ما يناسب العمل.`,
     `أقسام الصفحة (ثابتة وبهذا الترتيب؛ شرائحها مختارة سلفاً): ${JSON.stringify(sections.map((s) => ({ section: s.id, name: s.name })))}`,
     `بطاقة صاحب العمل (profile):\n${JSON.stringify(profile, null, 1)}`,
     'اكتب الآن ملخص الصفحة:',
     '- voice: صفة نبرة الكلام في جملة (دافئة وواضحة، رسمية هادئة …) تناسب هذا العمل وجمهوره.',
-    '- imageSubject: بالإنجليزية 3 إلى 5 كلمات تصف ما تُظهره صور هذا العمل (الأعمال والمواد والمكان والأدوات، لا الوجوه).',
+    '- imageSubject: بالإنجليزية 2 إلى 5 كلمات: ترجمة تصنيف هذا العمل واختصاصه كما في البطاقة (التصنيف، الاختصاص، الكتالوج الفرعي) ونوع الموقع، أي ما تُظهره صوره (الأعمال والمواد والمكان والأدوات، لا الوجوه). كل صور الصفحة تُبحث بها.',
     '- لكل قسم: angle جملة واحدة بالعربية عن الفكرة التي يقولها هذا القسم تحديداً، بحيث لا يكرر قسمان الفكرة نفسها؛ و tone (light خلفية الصفحة، tint تمييز خفيف، dark داكن، ولا قسمين داكنين متتاليين)؛ و entrance حركة الدخول' + (motion ? ' (نوّع بين الأقسام)' : ' (none: صفحة هادئة)') + '.',
     'أعد JSON فقط.',
   ].join('\n\n');
@@ -154,13 +200,14 @@ const sectionPrompt = (o: { kind: string; profile: Record<string, string>; asset
   const buttons = form.fields.filter((f) => f.kind === 'button').map((f) => f.key);
   const targets = ['whatsapp', 'phone', ...o.sections.map((s, i) => (s.id === section.id ? '' : `slide:${i}`)).filter(Boolean)];
   return [
-    `نوع الصفحة: ${o.kind}`,
+    `نوع الموقع: ${kindWords(o.kind)}`,
     `بطاقة صاحب العمل (profile):\n${JSON.stringify(o.profile, null, 1)}`,
     `ملخص الصفحة: النبرة: ${brief.voice}. موضوع الصور بالإنجليزية: ${brief.imageSubject}. أقسام الصفحة بترتيبها: ${o.sections.map((s) => s.name).join('، ')}.`,
     `هذا القسم: «${section.name}». الفكرة التي يقولها: ${mine?.angle || section.name}.${o.others.length ? ` لا تكرر ما قالته الأقسام الأخرى: ${o.others.join(' / ')}` : ''}`,
     `أجزاء الشريحة (اكتب كل واحد في values بمفتاحه، لا تترك أحدها):\n${form.fields.map(describeField).join('\n')}`,
     buttons.length ? `الأزرار (${buttons.join('، ')}): ضع في links لكل زر وجهته من: ${targets.join('، ')}. whatsapp و phone لأزرار التواصل، وslide:رقم لزر ينقل لقسم من الصفحة (الأقسام مرقمة من 0 بترتيبها: ${o.sections.map((s, i) => `${i}=${s.name}`).join('، ')}).` : '',
-    `assets (صور صاحب العمل): ${JSON.stringify({ heroBg: o.assets.heroBg, galleryCount: o.assets.gallery })}.${o.assets.heroBg && section.id === 'intro' ? ' للصورة الكبيرة في المدخل اكتب user:heroBg.' : ''}`,
+    `assets (صور صاحب العمل): ${JSON.stringify({ heroBg: o.assets.heroBg, galleryCount: o.assets.gallery })}.${o.assets.heroBg && opensPage(section.id) ? ' للصورة الكبيرة في هذا القسم (أول الصفحة) اكتب user:heroBg.' : ''}`,
+    'اذكر من نشاط العمل فقط ما ذكره صاحبه في البطاقة: لا تضف بيعاً أو تأجيراً أو توصيلاً أو تقسيطاً أو صيانة لم يذكرها.',
     'أعد JSON فقط.',
   ].filter(Boolean).join('\n\n');
 };
@@ -195,7 +242,7 @@ export const copiesExample = (text: string, example: string | undefined, ownerTe
 };
 
 /** Checks the values the AI gave for one slide: what is good goes in, what is not comes back as a problem to ask again. */
-export const checkValues = (form: SlideForm, values: Record<string, unknown>, o: { owners: Set<string>; assets: FormAssets; icons: Set<string>; section: string; ownerText?: string }): Checked => {
+export const checkValues = (form: SlideForm, values: Record<string, unknown>, o: { owners: Set<string>; assets: FormAssets; icons: Set<string>; section: string; ownerText?: string; kind?: string }): Checked => {
   const out: Checked = { slots: {}, icons: {}, images: {}, problems: [] };
   for (const f of form.fields) {
     const raw = typeof values?.[f.key] === 'string' ? (values[f.key] as string) : '';
@@ -232,6 +279,11 @@ export const checkValues = (form: SlideForm, values: Record<string, unknown>, o:
     text = cutAt(text, f.max + 8);
     if (/[0-9٠-٩]/.test(text) && leaf !== 'price' && !numbersAreOwners(text, o.owners)) {
       out.problems.push({ key: f.key, why: 'فيه رقم لم يكتبه صاحب العمل: اكتب كلمة أو عبارة بدل الرقم', was: text });
+      continue;
+    }
+    const invented = o.kind ? inventedActivity(text, o.kind, o.ownerText || '') : undefined;
+    if (invented) {
+      out.problems.push({ key: f.key, why: `فيه نشاط «${invented}» لم يذكره صاحب العمل: لا تذكره`, was: text });
       continue;
     }
     if (copiesExample(text, f.example, o.ownerText)) {
@@ -326,7 +378,7 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
   const brief = await env.ask(briefPrompt(env, kind, profile, sections, inp.motion), briefSchema(env, sections), system);
   const angles: Record<string, string> = {};
   for (const s of Array.isArray(brief?.sections) ? brief.sections : []) if (s && typeof s.angle === 'string') angles[s.section] = s.angle.slice(0, 200);
-  const subject = typeof brief?.imageSubject === 'string' && IMAGE_QUERY.test(brief.imageSubject.trim()) ? brief.imageSubject.trim() : 'professional workplace';
+  const subject = photoSubject(kind, typeof brief?.imageSubject === 'string' && IMAGE_QUERY.test(brief.imageSubject.trim()) ? brief.imageSubject.trim() : '');
   const safeBrief = { ...brief, voice: String(brief?.voice || '').slice(0, 120), imageSubject: subject, sections: Array.isArray(brief?.sections) ? brief.sections : [] };
 
   // The owner's own photos: the gallery shows only them, one in each frame, in order.
@@ -347,8 +399,9 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
 
   const built = await inPool(sections, SIMULTANEOUS, async (section, index): Promise<FormPlannedSection | null> => {
     const form = forms[index];
-    // A booking slide is its calendar: it goes into the page as designed, with nothing for the AI to write.
-    const fixed = section.elements.some((e: any) => e.type === 'calendar');
+    // A slide built around a live element (a booking calendar, a search bar, the menu, products or cars) goes into the page as designed
+    // when it has nothing for the AI to write.
+    const fixed = section.elements.some((e: any) => LIVE_TYPES.includes(e.type));
     const kept = (): FormPlannedSection => ({ section: section.id, template: section.template, tone: 'light', slots: {}, icons: {}, links: {}, images: {}, entrance: 'none' });
     if (!form.fields.length) return kept();
     const buttonKeys = form.fields.filter((f) => f.kind === 'button').map((f) => f.key);
@@ -360,7 +413,7 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
       // No section goes silently (Eyad, 28 Oct): the AI failed after its retry, so the slide is written from the owner's card alone.
       return fallback(section, form, buttonKeys);
     }
-    let checked = checkValues(form, answer?.values || {}, { owners, assets, icons, section: section.id, ownerText });
+    let checked = checkValues(form, answer?.values || {}, { owners, assets, icons, section: section.id, ownerText, kind });
     // Only what failed is asked again, once.
     if (checked.problems.length) {
       const again = new Set(checked.problems.map((p) => p.key));
@@ -376,7 +429,7 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
           system,
         );
         const merged = { ...(answer?.values || {}), ...(fix?.values || {}) };
-        checked = checkValues(form, merged, { owners, assets, icons, section: section.id, ownerText });
+        checked = checkValues(form, merged, { owners, assets, icons, section: section.id, ownerText, kind });
       } catch {
         // the first answers stay; what failed goes without text
       }
@@ -402,6 +455,15 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
   });
 
   const planned = built.filter((s): s is FormPlannedSection => !!s);
+  // The owner's own photos come first (Eyad, 29 Oct): on a page without a gallery section they take the photo places in order, and
+  // only the places left over are searched; every search is of the business.
+  let next = planned.some((s) => s.section === 'gallery') ? assets.gallery : 0;
+  for (const s of planned) {
+    for (const [key, ref] of Object.entries(s.images)) {
+      if (ref.startsWith('user:')) continue;
+      s.images[key] = next < assets.gallery ? `user:gallery:${++next}` : onSubject(ref, subject);
+    }
+  }
   // Buttons may lead only to sections that are on the page, numbered as they are now.
   const ids = sections.map((s) => s.id);
   for (const s of planned) {
@@ -439,22 +501,4 @@ export const buildFormPlan = async (inp: FormBuildInput): Promise<FormPlan> => {
     motion: inp.motion,
     sections: planned,
   };
-};
-
-/** The form plan and the code-slide sections in the model's order. The form sections' `slide:N` buttons were numbered among the form
- * sections only: they are renumbered among all. */
-export const mergePlans = (formPlan: FormPlan, codeSections: FormPlannedSection[], order: string[]): FormPlan => {
-  const byId = new Map<string, FormPlannedSection>([...formPlan.sections, ...codeSections].map((x) => [x.section, x]));
-  const ordered = order.map((id) => byId.get(id)).filter((x): x is FormPlannedSection => !!x);
-  const sections = formPlan.sections.map((fs) => {
-    const links: Record<string, string> = {};
-    for (const [key, to] of Object.entries(fs.links)) {
-      const n = /^slide:(\d+)$/.exec(to);
-      if (!n) { links[key] = to; continue; }
-      const now = ordered.findIndex((x) => x.section === formPlan.sections[+n[1]]?.section);
-      if (now >= 0) links[key] = `slide:${now}`;
-    }
-    return { ...fs, links };
-  });
-  return { ...formPlan, sections: ordered.map((x) => sections.find((f) => f.section === x.section) || x) };
 };

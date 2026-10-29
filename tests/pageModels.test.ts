@@ -140,6 +140,8 @@ test('a model is not saved while a section has no ready slide to be built from',
     { id: 'p3', name: 'فاضية', sections: [] },
     { id: 'cart', name: 'السلة', sections: [], system: 'cart' as const },
   ];
-  const problems = modelProblems(pages, (c) => (c === 'intro' || c === 'gallery' ? ['a'] : []));
-  assert.deepEqual(problems.map((p) => `${p.page}:${p.section || ''}`), ['p2:gallery', 'p3:'], 'the code draws the shop and the ratings; the cart has no sections');
+  const problems = modelProblems(pages, (c) => (c === 'intro' || c === 'gallery' ? [{ id: 'a' }] : c === 'shop' ? [{ id: 'code:shop:0', role: 'front' }, { id: 'code:shop:2', role: 'main' }] : []), ['shop']);
+  assert.deepEqual(problems.map((p) => `${p.page}:${p.section || ''}`), ['p2:gallery', 'p3:'], 'the shop\'s live section has its slide, the ratings need none, the cart has no sections');
+  // A live section with no slide of the live list cannot be saved.
+  assert.deepEqual(modelProblems([pages[0]], (c) => (c === 'shop' ? [{ id: 'code:shop:0', role: 'front' }] : [{ id: 'a' }]), ['shop']).map((p) => p.section), ['shop:main']);
 });

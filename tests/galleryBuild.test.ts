@@ -1,6 +1,7 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildPageFromPlan, socialLinks, withBlankPage } from '../src/services/pageBuilder.ts';
+import { WEE_SLIDES } from '../src/data/weeSlideTemplates.ts';
 // Importing the builder starts Firebase's browser client, which keeps the process alive: close it when the test is over.
 after(async () => {
   const { getApps, deleteApp } = await import('firebase/app');
@@ -79,11 +80,15 @@ test('the photos of a gallery section open in the viewer: its photo frames share
   assert.ok(!r.elements.some((e: any) => e.slideId === aboutId && e.lightboxGroup)); // another section's photos are not in it
 });
 
+// The ready slides these builds use, as the server sends them (the gallery designs of the editor, by the admin's ids).
+const asExtra = (make: () => any) => { const { elements, ...slide } = make(); return { slide, elements, name: slide.name }; };
+const WEE_EXTRA = { 'g:hero': asExtra(WEE_SLIDES.intro[0]), 'g:block1': asExtra(WEE_SLIDES.gallery[0]), 'g:block4': asExtra(WEE_SLIDES.gallery[3]) };
+
 test('the photo-viewer gallery takes the owner\'s photos in order and goes when there are none', async () => {
   const build = (galleryImages: string[]) => {
-    const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, sections: [
-      { section: 'intro', template: 'hero.cover', tone: 'light', slots: { title: 'مرحبا', sub: 'أهلاً بكم في مطعمنا', eyebrow: 'مطعم' }, icons: {}, links: {}, images: {}, entrance: 'none' },
-      { section: 'gallery', template: 'gallery.block1', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: {}, entrance: 'none' },
+    const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, extra: WEE_EXTRA, sections: [
+      { section: 'intro', template: 'g:hero', tone: 'light', slots: { title: 'مرحبا', sub: 'أهلاً بكم في مطعمنا', eyebrow: 'مطعم' }, icons: {}, links: {}, images: {}, entrance: 'none' },
+      { section: 'gallery', template: 'g:block1', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: {}, entrance: 'none' },
     ] };
     const page: any = { id: 'p1', name: 'الرئيسية', slug: '/', slides: [{ id: 'old', name: 'x', height: 500, backgroundColor: '#fff' }], navbar: { brandName: 'x' } };
     return buildPageFromPlan(plan, { kind: 'free', answers: { aiAnswers: { galleryImages } } as any, siteName: 'تجربة', pages: [page], elements: [], activePageId: 'p1' }, async () => 'https://x/s.jpg') as Promise<any>;
@@ -100,9 +105,9 @@ test('the photo-viewer gallery takes the owner\'s photos in order and goes when 
 test('a gallery of up to 15 photos: the 15-photo viewer takes them all in order; a smaller package cuts the list', async () => {
   const urls = Array.from({ length: 15 }, (_, i) => `https://x/${i + 1}.jpg`);
   const build = (maxPhotos?: number) => {
-    const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, sections: [
-      { section: 'intro', template: 'hero.cover', tone: 'light', slots: { title: 'مرحبا', sub: 'أهلاً بكم', eyebrow: 'مطعم' }, icons: {}, links: {}, images: {}, entrance: 'none' },
-      { section: 'gallery', template: 'gallery.block4', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: {}, entrance: 'none' },
+    const plan: any = { look: 'clear', navbar: { layout: 'horizontal', sticky: true, tone: 'light' }, motion: false, extra: WEE_EXTRA, sections: [
+      { section: 'intro', template: 'g:hero', tone: 'light', slots: { title: 'مرحبا', sub: 'أهلاً بكم', eyebrow: 'مطعم' }, icons: {}, links: {}, images: {}, entrance: 'none' },
+      { section: 'gallery', template: 'g:block4', tone: 'light', slots: { title: 'أعمالنا' }, icons: {}, links: {}, images: {}, entrance: 'none' },
     ] };
     const page: any = { id: 'p1', name: 'الرئيسية', slug: '/', slides: [{ id: 'old', name: 'x', height: 500, backgroundColor: '#fff' }], navbar: { brandName: 'x' } };
     return buildPageFromPlan(plan, { kind: 'free', answers: { aiAnswers: { galleryImages: urls } } as any, siteName: 'تجربة', pages: [page], elements: [], activePageId: 'p1', ...(maxPhotos ? { maxPhotos } : {}) }, async () => null) as Promise<any>;
